@@ -1964,11 +1964,27 @@ const AdminSubscriptionManagement = ({ user }) => {
               {selectedPayment.screenshot_url && (
                 <div>
                   <p className="text-gray-500 text-sm mb-2">Payment Screenshot</p>
-                  <img 
-                    src={selectedPayment.screenshot_url} 
-                    alt="Payment Screenshot" 
-                    className="w-full rounded-lg border border-gray-700"
-                  />
+                  <div className="relative group">
+                    <a 
+                      href={selectedPayment.screenshot_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img 
+                        src={selectedPayment.screenshot_url} 
+                        alt="Payment Screenshot" 
+                        className="w-full max-h-64 object-contain rounded-lg border border-gray-700 bg-gray-800 cursor-pointer hover:border-amber-500 transition-all"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+                        <div className="text-white flex items-center gap-2">
+                          <Eye className="w-5 h-5" />
+                          <span className="text-sm font-medium">Click to view full size</span>
+                        </div>
+                      </div>
+                    </a>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1 text-center">Tap/Click image to view full screenshot</p>
                 </div>
               )}
 
