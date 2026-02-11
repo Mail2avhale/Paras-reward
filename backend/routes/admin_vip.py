@@ -122,7 +122,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         
         # Filter out entries without user_id for approved status
         if status == "approved":
-            query["user_id"] = {"$exists": True, "$ne": None, "$ne": ""}
+            query["user_id"] = {"$exists": True, "$nin": [None, ""]}
         
         skip = (page - 1) * limit
         total = await db.vip_payments.count_documents(query)
