@@ -360,6 +360,59 @@ async def delete_vip_payment(payment_id: str, admin_id: str):
     return {"success": True, "message": "Payment deleted"}
 
 
+@router.delete("/vip-payments/{payment_id}")
+async def delete_vip_payment_alt(payment_id: str):
+    """Delete VIP payment record"""
+    result = await db.vip_payments.delete_one({"payment_id": payment_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return {"success": True, "message": "Payment deleted"}
+
+
+@router.put("/vip-payments/{payment_id}")
+async def update_vip_payment(payment_id: str, request: Request):
+    """Update VIP payment/subscription details"""
+    data = await request.json()
+    
+    payment = await db.vip_payments.find_one({"payment_id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Allowed updates
+    updates = {}
+    if "plan" in data:
+        updates["plan"] = data["plan"]
+    if "duration" in data:
+        updates["duration"] = data["duration"]
+    if "amount" in data:
+        updates["amount"] = data["amount"]
+    if "expires_at" in data:
+        updates["expires_at"] = data["expires_at"]
+    
+    if updates:
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.vip_payments.update_one(
+            {"payment_id": payment_id},
+            {"$set": updates}
+        )
+        
+        # Also update user subscription if plan changed
+        if "plan" in updates or "expires_at" in updates:
+            user_updates = {}
+            if "plan" in updates:
+                user_updates["subscription_plan"] = updates["plan"]
+            if "expires_at" in updates:
+                user_updates["subscription_expires_at"] = updates["expires_at"]
+            
+            if user_updates:
+                await db.users.update_one(
+                    {"uid": payment.get("user_id")},
+                    {"$set": user_updates}
+                )
+    
+    return {"success": True, "message": "Subscription updated"}
+
+
 # ========== SUBSCRIPTION MANAGEMENT ==========
 
 @router.get("/subscription-stats")
