@@ -58,6 +58,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     new: '',
     confirm: ''
   });
+  const [showPinPassword, setShowPinPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
   const [changingPin, setChangingPin] = useState(false);
 
   // Delete account
