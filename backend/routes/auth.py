@@ -435,7 +435,9 @@ async def login(
         )
         raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
     
-    stored_password = user.get("password_hash") or user.get("password")
+    # Verify password - check pin_hash, password_hash (new format), and password (legacy format)
+    # Priority: pin_hash > password_hash > password (legacy)
+    stored_password = user.get("pin_hash") or user.get("password_hash") or user.get("password")
     if stored_password:
         if not verify_password(password, stored_password):
             record_login_attempt(identifier, False)
@@ -472,6 +474,7 @@ async def login(
                 )
             raise HTTPException(status_code=401, detail=f"Wrong PIN. {attempts_left - 1} attempts remaining.")
     else:
+        # No password/PIN stored - reject login
         record_login_attempt(identifier, False)
         await record_login_attempt_db(db, identifier, False, real_ip)
         raise HTTPException(status_code=401, detail="PIN not set. Please contact Admin to reset your PIN.")
