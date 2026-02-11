@@ -275,8 +275,8 @@ const LoginNew = ({ onLogin }) => {
     
     setForgotPinLoading(true);
     try {
-      const response = await axios.post(`${API}/auth/forgot-pin/send-otp`, {
-        identifier: forgotPinEmail
+      const response = await axios.post(`${API}/auth/forgot-pin/check-mobile`, {
+        mobile: forgotPinEmail
       });
       
       if (response.data.success) {
