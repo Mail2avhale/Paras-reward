@@ -1211,142 +1211,198 @@ const AdminSubscriptionManagement = ({ user }) => {
                     key={payment.payment_id || idx}
                     className={`p-4 bg-gray-900/50 border-gray-800 hover:bg-gray-900/80 transition-all ${
                       isFraud ? 'border-red-500/50 ring-1 ring-red-500/30' : ''
-                    } ${selectedPayment?.payment_id === payment.payment_id ? 'ring-2 ring-amber-500' : ''}`}
+                    }`}
                   >
-                    <div className="flex flex-col md:flex-row md:items-center gap-4">
-                      {/* Plan Icon & User Info */}
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className={`p-3 rounded-xl ${
-                          payment.subscription_plan === 'elite' ? 'bg-amber-500/10' :
-                          payment.subscription_plan === 'growth' ? 'bg-emerald-500/10' :
-                          payment.subscription_plan === 'startup' ? 'bg-blue-500/10' : 'bg-gray-500/10'
-                        }`}>
-                          <Icon className={`w-5 h-5 ${
-                            payment.subscription_plan === 'elite' ? 'text-amber-400' :
-                            payment.subscription_plan === 'growth' ? 'text-emerald-400' :
-                            payment.subscription_plan === 'startup' ? 'text-blue-400' : 'text-gray-400'
-                          }`} />
+                    {/* Main Content - Two Column Layout */}
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      
+                      {/* LEFT SIDE: Payment Screenshot */}
+                      <div className="lg:w-48 flex-shrink-0">
+                        {payment.screenshot_url ? (
+                          <a 
+                            href={payment.screenshot_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block relative group"
+                          >
+                            <img 
+                              src={payment.screenshot_url} 
+                              alt="Payment Screenshot" 
+                              className="w-full h-48 lg:h-56 object-cover rounded-lg border-2 border-gray-700 group-hover:border-amber-500 transition-all"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
+                              <Eye className="w-6 h-6 text-white" />
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="w-full h-48 lg:h-56 bg-gray-800 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center">
+                            <div className="text-center text-gray-500">
+                              <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-xs">No Screenshot</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* RIGHT SIDE: All Details */}
+                      <div className="flex-1 flex flex-col">
+                        
+                        {/* Header: User Name + Plan Badge */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                              {payment.user_name || 'Unknown User'}
+                              {isFraud && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                                  ⚠️ Fraud Alert
+                                </span>
+                              )}
+                            </h3>
+                            <p className="text-gray-400 text-sm">{payment.user_email}</p>
+                            {payment.user_phone && <p className="text-gray-500 text-xs">📱 {payment.user_phone}</p>}
+                          </div>
+                          <div className={`p-2 rounded-xl ${
+                            payment.subscription_plan === 'elite' ? 'bg-amber-500/20' :
+                            payment.subscription_plan === 'growth' ? 'bg-emerald-500/20' :
+                            payment.subscription_plan === 'startup' ? 'bg-blue-500/20' : 'bg-gray-500/20'
+                          }`}>
+                            <Icon className={`w-6 h-6 ${
+                              payment.subscription_plan === 'elite' ? 'text-amber-400' :
+                              payment.subscription_plan === 'growth' ? 'text-emerald-400' :
+                              payment.subscription_plan === 'startup' ? 'text-blue-400' : 'text-gray-400'
+                            }`} />
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-white">{payment.user_name || 'Unknown User'}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${
-                              payment.subscription_plan === 'elite' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                              payment.subscription_plan === 'growth' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                              'bg-blue-500/10 text-blue-400 border-blue-500/30'
+
+                        {/* Key Details Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div className="bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 text-xs">Amount Paid</p>
+                            <p className={`text-xl font-bold ${isFraud ? 'text-red-400' : 'text-green-400'}`}>
+                              ₹{(payment.amount || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 text-xs">Plan Requested</p>
+                            <p className={`text-lg font-semibold capitalize ${
+                              payment.subscription_plan === 'elite' ? 'text-amber-400' :
+                              payment.subscription_plan === 'growth' ? 'text-emerald-400' :
+                              'text-blue-400'
                             }`}>
                               {payment.subscription_plan || 'VIP'}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-400">
-                              {payment.plan_type || 'monthly'}
-                            </span>
-                            {isFraud && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
-                                ⚠️ Amount Mismatch
-                              </span>
-                            )}
-                            {/* SLA Warning Badge for pending payments */}
-                            {payment.status === 'pending' && <SLABadge createdAt={payment.submitted_at || payment.created_at} status={payment.status} />}
+                            </p>
                           </div>
-                          <p className="text-gray-500 text-sm truncate">{payment.user_email || payment.user_id}</p>
-                          {payment.user_phone && <p className="text-gray-600 text-xs">📱 {payment.user_phone}</p>}
+                          <div className="bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 text-xs">Duration</p>
+                            <p className="text-lg font-semibold text-white capitalize">
+                              {payment.plan_type || 'Monthly'}
+                            </p>
+                          </div>
+                          <div className="bg-gray-800/50 rounded-lg p-2">
+                            <p className="text-gray-500 text-xs">Current Plan</p>
+                            <p className="text-lg font-semibold text-purple-400 capitalize">
+                              {payment.current_plan || 'Explorer'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Amount & Date */}
-                      <div className="text-right">
-                        <p className={`text-xl font-bold ${isFraud ? 'text-red-400' : 'text-amber-400'}`}>
-                          ₹{(payment.amount || 0).toLocaleString()}
-                        </p>
-                        <p className="text-gray-500 text-xs">
-                          {new Date(payment.submitted_at || payment.created_at).toLocaleDateString('en-IN', {
-                            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                          })}
-                        </p>
-                        <p className="text-gray-600 text-xs font-mono">UTR: {payment.utr_number || 'N/A'}</p>
-                      </div>
-
-                      {/* Quick Actions */}
-                      {paymentFilter === 'pending' && (
-                        <div className="flex gap-2 md:ml-4">
-                          <Button
-                            size="sm"
-                            onClick={() => setSelectedPayment(payment)}
-                            variant="outline"
-                            className="border-gray-700 text-gray-300"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprovePayment(payment)}
-                            disabled={processing}
-                            className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRejectPayment(payment)}
-                            disabled={processing}
-                            className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {/* Actions for Approved/Rejected payments - Delete option */}
-                      {(paymentFilter === 'approved' || payment.status === 'approved' || payment.status === 'rejected') && paymentFilter !== 'pending' && (
-                        <div className="flex gap-2 md:ml-4">
-                          <Button
-                            size="sm"
-                            onClick={() => setSelectedPayment(payment)}
-                            variant="outline"
-                            className="border-gray-700 text-gray-300"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeletePayment(payment)}
-                            disabled={processing}
-                            className="border-red-500/30 text-red-400 hover:bg-red-500/20"
-                            title={payment.status === 'approved' ? 'Delete & Revoke Subscription' : 'Delete Payment'}
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Fraud Warning Details */}
-                    {isFraud && (
-                      <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                        <p className="text-red-400 text-sm flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          <strong>Potential Fraud:</strong> Amount ₹{payment.amount} does not match {payment.subscription_plan} {payment.plan_type} pricing.
-                          {pricingReference?.amount_to_plan_map?.[String(payment.amount)] && (
-                            <span className="text-gray-400">
-                              Expected: {pricingReference.amount_to_plan_map[String(payment.amount)].plan} ({pricingReference.amount_to_plan_map[String(payment.amount)].duration})
+                        {/* Additional Info Row */}
+                        <div className="flex flex-wrap gap-4 text-sm mb-3">
+                          <div>
+                            <span className="text-gray-500">UTR: </span>
+                            <span className="text-white font-mono">{payment.utr_number || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Payment: </span>
+                            <span className="text-white capitalize">{payment.payment_method || 'UPI'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Submitted: </span>
+                            <span className="text-white">
+                              {new Date(payment.submitted_at || payment.created_at).toLocaleDateString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
                             </span>
+                          </div>
+                          {payment.user_prc_balance !== undefined && (
+                            <div>
+                              <span className="text-gray-500">PRC Balance: </span>
+                              <span className="text-green-400">{payment.user_prc_balance?.toFixed(2) || '0'}</span>
+                            </div>
                           )}
-                        </p>
+                        </div>
+
+                        {/* Fraud Warning */}
+                        {isFraud && (
+                          <div className="p-2 bg-red-500/10 border border-red-500/30 rounded-lg mb-3">
+                            <p className="text-red-400 text-sm flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              <strong>Amount Mismatch!</strong> ₹{payment.amount} doesn't match {payment.subscription_plan} pricing
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-auto pt-2">
+                          {paymentFilter === 'pending' && (
+                            <>
+                              <Button
+                                onClick={() => handleApprovePayment(payment)}
+                                disabled={processing}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white h-10"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Approve
+                              </Button>
+                              <Button
+                                onClick={() => handleRejectPayment(payment)}
+                                disabled={processing}
+                                variant="outline"
+                                className="flex-1 border-red-500/50 text-red-400 hover:bg-red-500/10 h-10"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
+                              </Button>
+                              <Button
+                                onClick={() => setSelectedPayment(payment)}
+                                variant="outline"
+                                className="border-gray-600 text-gray-300 h-10 px-3"
+                                title="View Full Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {paymentFilter !== 'pending' && (
+                            <>
+                              <Button
+                                onClick={() => setSelectedPayment(payment)}
+                                variant="outline"
+                                className="border-gray-600 text-gray-300 h-10"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                              <Button
+                                onClick={() => handleDeletePayment(payment)}
+                                disabled={processing}
+                                variant="outline"
+                                className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-10"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
                     
-                    {/* Request Timeline */}
-                    {selectedPayment?.payment_id === payment.payment_id && (
-                      <RequestTimeline
-                        createdAt={payment.submitted_at || payment.created_at}
-                        processedAt={payment.processed_at}
-                        processedBy={payment.processed_by}
-                        status={payment.status}
-                      />
+                    {/* SLA Badge for pending */}
+                    {payment.status === 'pending' && (
+                      <div className="mt-2 pt-2 border-t border-gray-800">
+                        <SLABadge createdAt={payment.submitted_at || payment.created_at} status={payment.status} />
+                      </div>
                     )}
                   </Card>
                 );
