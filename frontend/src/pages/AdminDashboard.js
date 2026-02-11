@@ -229,6 +229,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="gray"
             icon="👤"
+            onClick={() => navigate('/admin/users?plan=explorer')}
           />
           <SubscriptionCard 
             plan="Startup" 
@@ -236,6 +237,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="blue"
             icon="🚀"
+            onClick={() => navigate('/admin/subscriptions?plan=startup')}
           />
           <SubscriptionCard 
             plan="Growth" 
@@ -243,6 +245,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="purple"
             icon="📈"
+            onClick={() => navigate('/admin/subscriptions?plan=growth')}
           />
           <SubscriptionCard 
             plan="Elite" 
@@ -250,6 +253,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="amber"
             icon="👑"
+            onClick={() => navigate('/admin/subscriptions?plan=elite')}
           />
         </div>
 
