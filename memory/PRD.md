@@ -12,6 +12,17 @@ Build a PRC (point-based reward currency) system web application where users can
 - **Database**: MongoDB
 - **Authentication**: JWT-based custom auth
 
+## Upcoming/Future Tasks (P2/P3)
+- [ ] Revenue Chart/Graph (Weekly/Monthly subscription revenue trends)
+- [ ] User Growth Chart (Daily new user signups)
+- [ ] Real-time Activity Feed (Live notifications for logins, orders, etc.)
+- [ ] System Health Status card
+- [ ] Export Reports button (Quick download of daily/weekly reports)
+- [ ] Admin Activity Log (Track admin actions)
+- [ ] Dark/Light Mode Toggle
+- [ ] Customizable Dashboard (Drag & drop cards)
+- [ ] Global Search functionality
+
 ## Core Requirements
 
 ### User Features
