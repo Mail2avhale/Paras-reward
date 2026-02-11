@@ -129,9 +129,9 @@ async def get_admin_stats():
             "generated_at": now.isoformat()
         }
         
-        # Cache result
+        # Cache result for 2 minutes for faster dashboard loading
         if cache:
-            await cache.set(cache_key, result, ttl=60)
+            await cache.set(cache_key, result, ttl=120)
         
         return result
         
