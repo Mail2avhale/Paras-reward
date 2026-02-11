@@ -26,6 +26,74 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [activeTab, setActiveTab] = useState('orders');
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  
+  // User List Browse Mode State
+  const [viewMode, setViewMode] = useState('search'); // 'search' or 'browse'
+  const [userList, setUserList] = useState([]);
+  const [userListLoading, setUserListLoading] = useState(false);
+  const [userListPage, setUserListPage] = useState(1);
+  const [userListTotal, setUserListTotal] = useState(0);
+  const [userListTotalPages, setUserListTotalPages] = useState(1);
+  const [filterRole, setFilterRole] = useState('');
+  const [filterMembership, setFilterMembership] = useState('');
+  const [filterKYC, setFilterKYC] = useState('');
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [browseSearchTerm, setBrowseSearchTerm] = useState('');
+
+  // Fetch user list for browse mode
+  const fetchUserList = async () => {
+    setUserListLoading(true);
+    try {
+      let url = `${API}/api/admin/users/all?page=${userListPage}&limit=20`;
+      if (browseSearchTerm) url += `&search=${encodeURIComponent(browseSearchTerm)}`;
+      if (filterRole) url += `&role=${filterRole}`;
+      if (filterMembership) url += `&membership=${filterMembership}`;
+      if (filterKYC) url += `&kyc_status=${filterKYC}`;
+      if (showDeleted) url += `&show_deleted=true`;
+      
+      const response = await axios.get(url);
+      setUserList(response.data.users || []);
+      setUserListTotal(response.data.total || 0);
+      setUserListTotalPages(response.data.pages || 1);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setUserListLoading(false);
+    }
+  };
+
+  // Load user list when browse mode is active
+  useEffect(() => {
+    if (viewMode === 'browse') {
+      fetchUserList();
+    }
+  }, [viewMode, userListPage, browseSearchTerm, filterRole, filterMembership, filterKYC, showDeleted]);
+
+  // Select user from list to view 360°
+  const selectUserFromList = (user) => {
+    setSearchQuery(user.uid);
+    setViewMode('search');
+    // Trigger search
+    handleSearchByUid(user.uid);
+  };
+
+  // Search by UID directly
+  const handleSearchByUid = async (uid) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/admin/user-360?query=${encodeURIComponent(uid)}`);
+      setUserData(response.data);
+      setAdminNotes(response.data.user?.admin_notes || '');
+      toast.success('User found!');
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to search user');
+      setUserData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Search user
   const handleSearch = async () => {
