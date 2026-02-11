@@ -53,9 +53,9 @@ async def get_pending_payments_count():
         return {"count": 0, "error": str(e)}
 
 
-@router.post("/clear-cache")
+@router.post("/vip-cache-clear")
 async def clear_admin_cache(request: Request = None):
-    """Clear admin cache for fresh data"""
+    """Clear admin VIP cache for fresh data"""
     try:
         if cache:
             # Clear common cache keys
