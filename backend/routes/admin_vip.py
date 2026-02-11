@@ -30,9 +30,35 @@ def set_cache(cache_manager):
     cache = cache_manager
 
 def set_helpers(helpers: dict):
-    global log_admin_action, check_and_grant_referral_reward
+    global log_admin_action, check_and_grant_referral_reward, create_user_notification
     log_admin_action = helpers.get('log_admin_action')
     check_and_grant_referral_reward = helpers.get('check_and_grant_referral_reward')
+    create_user_notification = helpers.get('create_notification')
+
+
+async def send_notification(user_id: str, title: str, message: str, notif_type: str, icon: str = "🔔", action_url: str = None):
+    """Send notification to user"""
+    try:
+        if create_user_notification:
+            await create_user_notification(user_id, title, message, notif_type, None, icon, action_url)
+        else:
+            # Fallback: direct insert
+            notification = {
+                "notification_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "user_uid": user_id,
+                "title": title,
+                "message": message,
+                "type": notif_type,
+                "icon": icon,
+                "action_url": action_url,
+                "read": False,
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notification)
+    except Exception as e:
+        logging.error(f"Failed to send notification: {e}")
 
 
 # ========== VIP PAYMENTS ==========
