@@ -309,9 +309,8 @@ const DashboardModern = ({ user, onLogout }) => {
                 </span>
               </div>
             )}
-            <NotificationBell user={user} />
             <button 
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/profile')}}
               className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center"
             >
               <User className="w-5 h-5 text-black" />
