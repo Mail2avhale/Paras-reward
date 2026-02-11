@@ -256,81 +256,164 @@ const SubscriptionPlans = ({ user }) => {
 
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
-        <div className="px-5 mt-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white mb-4">{t('chooseYourPlan')}</h2>
+        <div className="px-5 mt-6 space-y-6">
+          {/* Limited Time Offer Banner */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative overflow-hidden bg-gradient-to-r from-red-600 via-pink-600 to-purple-600 rounded-2xl p-4 text-center"
+          >
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
+            <div className="relative">
+              <span className="inline-block px-3 py-1 bg-yellow-400 text-black text-xs font-bold rounded-full mb-2 animate-pulse">
+                LIMITED TIME OFFER
+              </span>
+              <h2 className="text-white text-lg font-bold">Up to 60% OFF on All Plans!</h2>
+              <p className="text-white/80 text-sm">Hurry! Offer ends soon</p>
+            </div>
+          </motion.div>
+
+          <h2 className="text-lg font-semibold text-white">{t('chooseYourPlan')}</h2>
           
-          {plans.map((plan, index) => {
-            const IconComponent = planIcons[plan.id] || Star;
-            const isCurrentPlan = currentSubscription?.plan === plan.id;
-            
-            return (
-              <motion.div
-                key={plan.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => handleSelectPlan(plan)}
-                className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                  isCurrentPlan
-                    ? 'bg-amber-500/10 border-amber-500/50'
-                    : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
-                }`}
-                data-testid={`plan-${plan.id}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${planColors[plan.id]} flex items-center justify-center`}>
-                    <IconComponent className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                      {isCurrentPlan && (
-                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">{t('current')}</span>
-                      )}
-                      {plan.id === 'elite' && (
-                        <span className="px-2 py-0.5 bg-amber-500 text-black text-xs rounded-full font-bold">{t('best')}</span>
-                      )}
-                    </div>
-                    <p className="text-gray-400 text-sm mt-1">
-                      {plan.multiplier}x {t('rewardRate')} • {plan.tap_limit} {t('dailyTapsLimit')}
-                    </p>
-                    
-                    {/* Benefits */}
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="px-2 py-1 bg-gray-800 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-500" /> {plan.multiplier}x {t('rewards')}
+          {/* Pricing Cards Grid */}
+          <div className="grid gap-4">
+            {plans.map((plan, index) => {
+              const IconComponent = planIcons[plan.id] || Star;
+              const isCurrentPlan = currentSubscription?.plan === plan.id;
+              const offer = specialOffers[plan.id];
+              const isPopular = plan.id === 'growth';
+              const isBest = plan.id === 'elite';
+              
+              return (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => handleSelectPlan(plan)}
+                  className={`relative p-5 rounded-2xl border cursor-pointer transition-all transform hover:scale-[1.02] ${
+                    isCurrentPlan
+                      ? 'bg-amber-500/10 border-amber-500/50'
+                      : isBest
+                      ? 'bg-gradient-to-br from-amber-900/30 to-orange-900/30 border-amber-500/50 shadow-lg shadow-amber-500/20'
+                      : isPopular
+                      ? 'bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-emerald-500/50'
+                      : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+                  }`}
+                  data-testid={`plan-${plan.id}`}
+                >
+                  {/* Discount Badge */}
+                  {offer && (
+                    <div className="absolute -top-3 -right-2 z-10">
+                      <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full shadow-lg ${
+                        isBest ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black' :
+                        isPopular ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-black' :
+                        'bg-gradient-to-r from-blue-400 to-indigo-500 text-white'
+                      }`}>
+                        {offer.discount}% OFF
                       </span>
-                      <span className="px-2 py-1 bg-gray-800 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                        <Users className="w-3 h-3 text-blue-500" /> {plan.referral_weight}x {t('referralWeight')}
-                      </span>
-                      {plan.can_redeem && (
-                        <span className="px-2 py-1 bg-emerald-500/20 rounded-lg text-xs text-emerald-400 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" /> {t('canRedeem')}
-                        </span>
-                      )}
                     </div>
-                    
-                    {/* Price */}
-                    <div className="mt-3 flex items-end justify-between">
-                      <div>
-                        {plan.is_free ? (
-                          <span className="text-2xl font-bold text-white">FREE</span>
-                        ) : (
-                          <>
-                            <span className="text-2xl font-bold text-white">₹{plan.pricing?.monthly}</span>
-                            <span className="text-gray-500 text-sm">/month</span>
-                          </>
+                  )}
+
+                  {/* Popular/Best Tags */}
+                  {isPopular && !isCurrentPlan && (
+                    <div className="absolute top-4 left-4">
+                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-xs rounded-full font-bold flex items-center gap-1">
+                        <Star className="w-3 h-3" /> POPULAR
+                      </span>
+                    </div>
+                  )}
+                  {isBest && !isCurrentPlan && (
+                    <div className="absolute top-4 left-4">
+                      <span className="px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-xs rounded-full font-bold flex items-center gap-1">
+                        <Crown className="w-3 h-3" /> BEST VALUE
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-4 mt-4">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${planColors[plan.id]} flex items-center justify-center shadow-lg`}>
+                      <IconComponent className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-white font-bold text-xl">{plan.name}</h3>
+                        {isCurrentPlan && (
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">{t('current')}</span>
                         )}
                       </div>
-                      {!plan.is_free && (
-                        <ChevronRight className="w-5 h-5 text-gray-500" />
-                      )}
+                      
+                      {/* Features */}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-500" /> {plan.multiplier}x Rewards
+                        </span>
+                        <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-blue-500" /> {plan.tap_limit} Taps/Day
+                        </span>
+                      </div>
+                      
+                      {/* Price Section */}
+                      <div className="mt-4 flex items-end justify-between">
+                        <div>
+                          {plan.is_free ? (
+                            <span className="text-3xl font-bold text-white">FREE</span>
+                          ) : offer ? (
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-bold text-white">₹{offer.offer}</span>
+                              <span className="text-lg text-gray-500 line-through">₹{offer.original}</span>
+                              <span className="text-sm text-gray-400">/month</span>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-3xl font-bold text-white">₹{plan.pricing?.monthly}</span>
+                              <span className="text-gray-500 text-sm">/month</span>
+                            </>
+                          )}
+                          
+                          {/* Savings Message */}
+                          {offer && (
+                            <p className={`text-sm mt-1 font-medium ${
+                              isBest ? 'text-amber-400' : isPopular ? 'text-emerald-400' : 'text-blue-400'
+                            }`}>
+                              You save ₹{offer.original - offer.offer}!
+                            </p>
+                          )}
+                        </div>
+                        
+                        {!plan.is_free && (
+                          <div className={`px-4 py-2 rounded-xl font-semibold text-sm ${
+                            isBest ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black' :
+                            isPopular ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' :
+                            'bg-blue-500 text-white'
+                          }`}>
+                            Subscribe
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
+
+                  {/* Bottom Features for Premium Plans */}
+                  {!plan.is_free && (
+                    <div className="mt-4 pt-4 border-t border-gray-800/50 grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <CheckCircle className="w-4 h-4 text-green-500 mx-auto mb-1" />
+                        <span className="text-xs text-gray-400">Withdrawals</span>
+                      </div>
+                      <div>
+                        <Gift className="w-4 h-4 text-purple-500 mx-auto mb-1" />
+                        <span className="text-xs text-gray-400">Referral Bonus</span>
+                      </div>
+                      <div>
+                        <Shield className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                        <span className="text-xs text-gray-400">Priority Support</span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
 
           {/* Plan Comparison */}
           <div className="mt-8 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
