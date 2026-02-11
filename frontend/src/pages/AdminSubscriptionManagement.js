@@ -690,6 +690,7 @@ const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending'
         </div>
       </div>
     </div>
+    </>
   );
 };
 
