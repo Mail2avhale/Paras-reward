@@ -38,18 +38,18 @@ const AdminDashboard = ({ user }) => {
     else setLoading(true);
     
     try {
-      // Parallel API calls for faster loading
+      // Single combined API call + parallel secondary calls
       const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
         axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
-        axios.get(`${API}/api/kyc/list?limit=10`).catch(() => ({ data: [] }))
+        axios.get(`${API}/api/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
       setRecentOrders(ordersRes.data.orders || []);
-      const allKyc = Array.isArray(kycRes.data) ? kycRes.data : [];
+      const allKyc = Array.isArray(kycRes.data) ? kycRes.data : (kycRes.data?.users || []);
       setPendingKYC(allKyc.filter(k => k.status === 'pending').slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard:', error);
