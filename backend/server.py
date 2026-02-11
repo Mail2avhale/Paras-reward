@@ -1078,6 +1078,41 @@ async def root():
 # Create scheduler for automated tasks
 scheduler = AsyncIOScheduler()
 
+# ========== AUTO LOCKOUT CLEAR FUNCTION ==========
+async def auto_clear_all_lockouts():
+    """
+    Automatically clear all login lockouts.
+    Runs at 12 PM (noon) and 12 AM (midnight) daily.
+    """
+    try:
+        global login_attempt_storage
+        login_attempt_storage.clear()
+        
+        # Clear database login_attempts
+        db_result = await db.login_attempts.delete_many({})
+        
+        # Clear user-level lock flags
+        user_result = await db.users.update_many(
+            {"$or": [
+                {"failed_login_attempts": {"$gt": 0}},
+                {"locked_until": {"$ne": None}},
+                {"failed_pin_attempts": {"$gt": 0}},
+                {"pin_locked_until": {"$ne": None}}
+            ]},
+            {
+                "$set": {
+                    "failed_login_attempts": 0,
+                    "locked_until": None,
+                    "failed_pin_attempts": 0,
+                    "pin_locked_until": None
+                }
+            }
+        )
+        
+        print(f"[AUTO LOCKOUT CLEAR] {datetime.now(timezone.utc).isoformat()} - Cleared {db_result.deleted_count} login attempts, {user_result.modified_count} users unlocked")
+    except Exception as e:
+        print(f"[AUTO LOCKOUT CLEAR ERROR] {e}")
+
 # ========== MODELS ==========
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
