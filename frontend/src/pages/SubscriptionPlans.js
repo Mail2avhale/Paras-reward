@@ -478,34 +478,53 @@ const SubscriptionPlans = ({ user }) => {
         <div className="px-5 mt-6 space-y-4">
           <h2 className="text-lg font-semibold text-white mb-4">{t('selectDuration')} - {selectedPlan.name}</h2>
           
-          {Object.entries(durationLabels).map(([key, duration], index) => (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => handleSelectDuration(key)}
-              className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                selectedDuration === key
-                  ? 'bg-amber-500/10 border-amber-500/50'
-                  : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
-              }`}
-              data-testid={`duration-${key}`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white font-semibold">{duration.label}</h3>
-                  <p className="text-gray-400 text-sm">{duration.days} days</p>
+          {Object.entries(durationLabels).map(([key, duration], index) => {
+            const actualPrice = selectedPlan.pricing?.[key] || selectedPlan.pricing?.monthly;
+            const monthlyPrice = selectedPlan.pricing?.monthly || 0;
+            
+            // Calculate original price (monthly * months)
+            const months = key === 'monthly' ? 1 : key === 'quarterly' ? 3 : key === 'half_yearly' ? 6 : 12;
+            const originalPrice = monthlyPrice * months;
+            const savings = originalPrice - actualPrice;
+            const hasDiscount = key !== 'monthly' && savings > 0;
+            
+            return (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => handleSelectDuration(key)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  selectedDuration === key
+                    ? 'bg-amber-500/10 border-amber-500/50'
+                    : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+                }`}
+                data-testid={`duration-${key}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold">{duration.label}</h3>
+                    <p className="text-gray-400 text-sm">{duration.days} days</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-2">
+                      {hasDiscount && (
+                        <span className="text-gray-500 line-through text-sm">₹{originalPrice.toLocaleString()}</span>
+                      )}
+                      <p className="text-xl font-bold text-white">₹{actualPrice?.toLocaleString()}</p>
+                    </div>
+                    {hasDiscount && (
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-emerald-400 text-xs font-medium">{duration.discount}</span>
+                        <span className="text-emerald-400 text-xs">(Save ₹{savings.toLocaleString()})</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-white">₹{selectedPlan.pricing?.[key] || selectedPlan.pricing?.monthly}</p>
-                  {duration.discount && (
-                    <span className="text-emerald-400 text-xs">{duration.discount}</span>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
