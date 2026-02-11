@@ -393,11 +393,15 @@ const AdminSubscriptionManagement = () => {
               {viewModal.payment.screenshot_url && (
                 <div>
                   <p className="text-gray-500 text-sm mb-2">Payment Screenshot</p>
-                  <a 
-                    href={viewModal.payment.screenshot_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="relative group inline-block"
+                  <button 
+                    onClick={() => setFullImageModal({ 
+                      show: true, 
+                      url: viewModal.payment.screenshot_url,
+                      userName: viewModal.payment.user_name,
+                      amount: viewModal.payment.amount,
+                      plan: viewModal.payment.plan
+                    })}
+                    className="relative group inline-block cursor-pointer"
                   >
                     <img 
                       src={viewModal.payment.screenshot_url} 
@@ -407,7 +411,7 @@ const AdminSubscriptionManagement = () => {
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-all">
                       <Eye className="w-6 h-6 text-white" />
                     </div>
-                  </a>
+                  </button>
                   <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
                 </div>
               )}
