@@ -280,6 +280,38 @@ const AdminSubscriptionManagement = () => {
               ))
           )}
         </div>
+        
+        {/* Pending Pagination */}
+        {pendingTotal > ITEMS_PER_PAGE && (
+          <div className="p-4 border-t border-gray-800 flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Showing {((pendingPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(pendingPage * ITEMS_PER_PAGE, pendingTotal)} of {pendingTotal}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setPendingPage(p => Math.max(1, p - 1))}
+                disabled={pendingPage === 1}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1.5 bg-gray-800 rounded text-white text-sm">
+                {pendingPage} / {Math.ceil(pendingTotal / ITEMS_PER_PAGE)}
+              </span>
+              <Button
+                onClick={() => setPendingPage(p => p + 1)}
+                disabled={pendingPage >= Math.ceil(pendingTotal / ITEMS_PER_PAGE)}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       )}
 
