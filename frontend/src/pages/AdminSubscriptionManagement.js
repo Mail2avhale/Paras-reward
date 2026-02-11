@@ -166,7 +166,34 @@ const AdminSubscriptionManagement = () => {
         />
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            activeTab === 'pending'
+              ? 'bg-amber-500 text-black'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <Clock className="w-4 h-4 inline mr-2" />
+          Pending ({pendingPayments.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('approved')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            activeTab === 'approved'
+              ? 'bg-green-500 text-black'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4 inline mr-2" />
+          Approved ({approvedPayments.length})
+        </button>
+      </div>
+
       {/* Pending Payments Section */}
+      {activeTab === 'pending' && (
       <div className="bg-gray-900 rounded-xl border border-gray-800">
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -216,11 +243,66 @@ const AdminSubscriptionManagement = () => {
                   onApprove={() => handleApprove(payment.payment_id)}
                   onReject={() => handleReject(payment.payment_id)}
                   processing={processing === payment.payment_id}
+                  type="pending"
                 />
               ))
           )}
         </div>
       </div>
+      )}
+
+      {/* Approved Subscriptions Section */}
+      {activeTab === 'approved' && (
+      <div className="bg-gray-900 rounded-xl border border-gray-800">
+        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <h2 className="text-lg font-semibold text-white">
+              Approved Subscriptions
+            </h2>
+          </div>
+          
+          {/* Search */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Search subscriptions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-gray-800 border-gray-700 text-white text-sm h-9"
+            />
+          </div>
+        </div>
+
+        {/* Approved List */}
+        <div className="divide-y divide-gray-800">
+          {approvedPayments.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-400">No approved subscriptions</p>
+            </div>
+          ) : (
+            approvedPayments
+              .filter(p => 
+                !searchQuery || 
+                p.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.utr_number?.includes(searchQuery)
+              )
+              .map((payment) => (
+                <ApprovedRow
+                  key={payment.payment_id}
+                  payment={payment}
+                  onView={() => setViewModal({ show: true, payment })}
+                  onEdit={() => setEditModal({ show: true, payment })}
+                  onDelete={() => handleDelete(payment.payment_id)}
+                  processing={processing === payment.payment_id}
+                />
+              ))
+          )}
+        </div>
+      </div>
+      )}
 
       {/* Quick Stats Footer */}
       <div className="mt-6 grid grid-cols-3 gap-4">
