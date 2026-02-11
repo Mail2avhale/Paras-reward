@@ -185,20 +185,20 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
   const handleChangePin = async () => {
     if (pinData.new !== pinData.confirm) {
-      toast.error(language === 'mr' ? 'नवीन PIN जुळत नाही' : 'New PINs do not match');
+      toast.error('New PINs do not match');
       return;
     }
     if (pinData.new.length !== 6) {
-      toast.error(language === 'mr' ? 'PIN 6 अंकी असावा' : 'PIN must be 6 digits');
+      toast.error('PIN must be 6 digits');
       return;
     }
     if (pinData.current.length !== 6) {
-      toast.error(language === 'mr' ? 'सध्याचा PIN टाका' : 'Enter current PIN');
+      toast.error('Enter current PIN');
       return;
     }
     // Check for weak PINs
     if (new Set(pinData.new).size === 1) {
-      toast.error(language === 'mr' ? 'कमकुवत PIN - सर्व अंक सारखे नसावेत' : 'Weak PIN - all digits cannot be same');
+      toast.error('Weak PIN - all digits cannot be same');
       return;
     }
     
@@ -208,11 +208,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         current_pin: pinData.current,
         new_pin: pinData.new
       });
-      toast.success(language === 'mr' ? 'PIN बदलला!' : 'PIN changed successfully!');
+      toast.success('PIN changed successfully!');
       setShowPinSection(false);
       setPinData({ current: '', new: '', confirm: '' });
     } catch (error) {
-      toast.error(error.response?.data?.detail || (language === 'mr' ? 'PIN बदलता आला नाही' : 'Failed to change PIN'));
+      toast.error(error.response?.data?.detail || 'Failed to change PIN');
     } finally {
       setChangingPin(false);
     }
