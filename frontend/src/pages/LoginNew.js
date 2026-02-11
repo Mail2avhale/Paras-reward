@@ -483,9 +483,16 @@ const LoginNew = ({ onLogin }) => {
             
             {/* Forgot PIN/Password */}
             {identifierChecked && authType !== 'unknown' && (
-              <Link to={authType === 'pin' ? '/forgot-pin' : '/forgot-password'} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                {authType === 'pin' ? 'Forgot PIN?' : 'Forgot Password?'}
-              </Link>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowForgotPin(true);
+                  setForgotPinEmail(loginData.identifier);
+                }}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              >
+                {authType === 'pin' ? 'PIN विसरलात?' : 'Forgot Password?'}
+              </button>
             )}
           </div>
 
