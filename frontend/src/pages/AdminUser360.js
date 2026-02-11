@@ -1675,6 +1675,8 @@ const AdminUser360 = ({ user: adminUser }) => {
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
   );
 };
