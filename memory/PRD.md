@@ -45,6 +45,40 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 11, 2026)
 
+- [x] **Notification System Activated**
+  - Fixed notification field mismatch (`user_uid` vs `user_id`)
+  - Added `read` field for API compatibility
+  - Bell icon now glows purple/pink when unread notifications exist
+  - Added broadcast API for sending to all users
+  - Added send API for individual user notifications
+  - Testing: 18/18 tests passed (100%)
+  - Broadcast sent to 207 users
+  - Files: `/app/backend/server.py`, `/app/frontend/src/components/NotificationBell.js`
+
+- [x] **Dashboard Stats Fix**
+  - Fixed Total PRC showing 0 (added `total_prc` field to API response)
+  - Fixed Explorer count showing 0 (now includes null/empty subscription_plan)
+  - Files: `/app/backend/routes/admin_dashboard.py`, `/app/backend/routes/admin_vip.py`
+
+- [x] **Duplicate Bell Icon Removed**
+  - Removed extra NotificationBell from Dashboard page
+  - Now only Navbar has the notification bell (consistent across all pages)
+  - File: `/app/frontend/src/pages/DashboardModern.js`
+
+- [x] **Subscription Pagination Added**
+  - Added pagination for pending/approved payments (10 per page)
+  - Oldest requests show first, latest at end
+  - Previous/Next buttons with page counter
+  - File: `/app/frontend/src/pages/AdminSubscriptionManagement.js`
+
+- [x] **Pricing Display Fixed**
+  - Updated to correct monthly prices: Startup ₹299, Growth ₹549, Elite ₹799
+  - File: `/app/frontend/src/pages/AdminSubscriptionManagement.js`
+
+- [x] **Toast Messages Centered**
+  - Toast notifications now appear in center of screen
+  - File: `/app/frontend/src/App.js`
+
 - [x] **Subscription Approval "Expecting value" Bug Fix (P0 - Critical)**
   - Fixed JSON parse error when clicking Approve button
   - Root cause: Frontend sending POST with no body, backend expecting JSON
