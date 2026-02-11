@@ -4088,6 +4088,25 @@ async def register_user(request: Request):
     
     await db.users.insert_one(user_dict)
     
+    # ========== SEND WELCOME NOTIFICATION TO NEW USER ==========
+    try:
+        welcome_notification = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user.uid,
+            "user_uid": user.uid,
+            "title": "🎉 Welcome to Paras Reward!",
+            "message": f"Hi {user_dict.get('name', 'there')}! Welcome to Paras Reward. Start your journey by completing your profile and exploring amazing rewards!",
+            "type": "welcome",
+            "icon": "🎉",
+            "action_url": "/dashboard",
+            "read": False,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(welcome_notification)
+    except Exception as e:
+        logging.error(f"Failed to send welcome notification: {e}")
+    
     # ========== NOTIFY REFERRER ABOUT NEW REFERRAL ==========
     if user_dict.get("referred_by"):
         referrer_uid = user_dict["referred_by"]
