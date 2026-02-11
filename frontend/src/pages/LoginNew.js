@@ -592,14 +592,14 @@ const LoginNew = ({ onLogin }) => {
                 <KeyRound className="w-8 h-8 text-purple-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
-                {forgotPinStep === 1 && 'PIN विसरलात?'}
-                {forgotPinStep === 2 && 'OTP Verify करा'}
-                {forgotPinStep === 3 && 'नवीन PIN सेट करा'}
+                {forgotPinStep === 1 && 'Forgot PIN?'}
+                {forgotPinStep === 2 && 'Verify OTP'}
+                {forgotPinStep === 3 && 'Set New PIN'}
               </h2>
               <p className="text-gray-500 text-sm mt-1">
-                {forgotPinStep === 1 && 'तुमचा Email टाका, आम्ही OTP पाठवू'}
-                {forgotPinStep === 2 && 'Email वर आलेला OTP टाका'}
-                {forgotPinStep === 3 && '6 अंकी नवीन PIN टाका'}
+                {forgotPinStep === 1 && 'Enter your Email/Mobile to receive OTP'}
+                {forgotPinStep === 2 && 'Enter the OTP sent to your Email/Mobile'}
+                {forgotPinStep === 3 && 'Create a new 6-digit PIN'}
               </p>
             </div>
 
@@ -608,7 +608,7 @@ const LoginNew = ({ onLogin }) => {
               <div className="space-y-4">
                 <Input
                   type="text"
-                  placeholder="Email किंवा Mobile"
+                  placeholder="Email or Mobile"
                   value={forgotPinEmail}
                   onChange={(e) => setForgotPinEmail(e.target.value)}
                   className="w-full"
@@ -618,7 +618,7 @@ const LoginNew = ({ onLogin }) => {
                   disabled={forgotPinLoading}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
-                  {forgotPinLoading ? 'पाठवत आहे...' : 'OTP पाठवा'}
+                  {forgotPinLoading ? 'Sending...' : 'Send OTP'}
                 </Button>
               </div>
             )}
@@ -628,7 +628,7 @@ const LoginNew = ({ onLogin }) => {
               <div className="space-y-4">
                 <Input
                   type="text"
-                  placeholder="OTP टाका"
+                  placeholder="Enter OTP"
                   value={forgotPinOtp}
                   onChange={(e) => setForgotPinOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-full text-center text-2xl tracking-widest"
@@ -639,13 +639,13 @@ const LoginNew = ({ onLogin }) => {
                   disabled={forgotPinLoading}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
-                  {forgotPinLoading ? 'Verify करत आहे...' : 'Verify OTP'}
+                  {forgotPinLoading ? 'Verifying...' : 'Verify OTP'}
                 </Button>
                 <button
                   onClick={() => setForgotPinStep(1)}
                   className="w-full text-sm text-gray-500 hover:text-gray-700"
                 >
-                  ← मागे जा
+                  ← Go Back
                 </button>
               </div>
             )}
@@ -654,7 +654,7 @@ const LoginNew = ({ onLogin }) => {
             {forgotPinStep === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">नवीन PIN</label>
+                  <label className="block text-sm text-gray-600 mb-1">New PIN</label>
                   <Input
                     type="password"
                     inputMode="numeric"
@@ -666,7 +666,7 @@ const LoginNew = ({ onLogin }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">PIN पुन्हा टाका</label>
+                  <label className="block text-sm text-gray-600 mb-1">Confirm PIN</label>
                   <Input
                     type="password"
                     inputMode="numeric"
@@ -682,7 +682,7 @@ const LoginNew = ({ onLogin }) => {
                   disabled={forgotPinLoading}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  {forgotPinLoading ? 'बदलत आहे...' : 'PIN बदला'}
+                  {forgotPinLoading ? 'Changing...' : 'Change PIN'}
                 </Button>
               </div>
             )}
@@ -691,7 +691,7 @@ const LoginNew = ({ onLogin }) => {
               onClick={resetForgotPin}
               className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600"
             >
-              रद्द करा
+              Cancel
             </button>
           </div>
         </div>
