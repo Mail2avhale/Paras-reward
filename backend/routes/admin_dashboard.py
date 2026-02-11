@@ -96,11 +96,21 @@ async def get_admin_stats():
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(1)
         
-        # Subscription stats
-        explorer_count = await db.users.count_documents({"subscription_plan": "explorer"})
+        # Subscription stats - Explorer includes users with no plan or null/empty plan
+        explorer_count = await db.users.count_documents({
+            "$or": [
+                {"subscription_plan": "explorer"},
+                {"subscription_plan": None},
+                {"subscription_plan": ""},
+                {"subscription_plan": {"$exists": False}}
+            ]
+        })
         startup_count = await db.users.count_documents({"subscription_plan": "startup"})
         growth_count = await db.users.count_documents({"subscription_plan": "growth"})
         elite_count = await db.users.count_documents({"subscription_plan": "elite"})
+        
+        # Calculate total PRC circulation
+        total_prc_value = round(total_prc[0]["total"], 4) if total_prc else 0
         
         result = {
             "users": {
@@ -124,8 +134,9 @@ async def get_admin_stats():
                 "pending": pending_orders
             },
             "prc": {
-                "total_circulation": round(total_prc[0]["total"], 4) if total_prc else 0
+                "total_circulation": total_prc_value
             },
+            "total_prc": total_prc_value,
             "generated_at": now.isoformat()
         }
         
