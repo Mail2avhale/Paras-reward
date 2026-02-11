@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import logging
+import uuid
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Users"])
@@ -26,6 +27,28 @@ def set_db(database):
 def set_cache(cache_manager):
     global cache
     cache = cache_manager
+
+
+async def send_notification(user_id: str, title: str, message: str, notif_type: str, icon: str = "🔔", action_url: str = None):
+    """Send notification to user"""
+    try:
+        notification = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_uid": user_id,
+            "title": title,
+            "message": message,
+            "type": notif_type,
+            "icon": icon,
+            "action_url": action_url,
+            "read": False,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification)
+    except Exception as e:
+        logging.error(f"Failed to send notification: {e}")
+
 
 def set_helpers(helpers: dict):
     global log_admin_action, hash_password
