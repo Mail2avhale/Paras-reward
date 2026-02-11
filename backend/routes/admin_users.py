@@ -239,6 +239,66 @@ async def ban_user(uid: str, request: Request):
     return {"success": True, "message": f"User {uid} has been banned"}
 
 
+@router.post("/users/{uid}/reset-pin")
+async def admin_reset_user_pin(uid: str, request: Request):
+    """Admin reset user's PIN to default (102938)"""
+    data = await request.json()
+    admin_id = data.get("admin_id")
+    custom_pin = data.get("custom_pin")  # Optional: admin can set custom PIN
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Default PIN or custom PIN
+    new_pin = custom_pin if custom_pin and len(custom_pin) == 6 and custom_pin.isdigit() else "102938"
+    
+    if not hash_password:
+        raise HTTPException(status_code=500, detail="Hash function not available")
+    
+    hashed_pin = hash_password(new_pin)
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {
+            "$set": {
+                "password": hashed_pin,
+                "pin_migrated": True,
+                "pin_reset_by_admin": True,
+                "pin_reset_at": datetime.now(timezone.utc).isoformat(),
+                "pin_reset_by": admin_id,
+                "failed_login_attempts": 0,
+                "locked_until": None
+            }
+        }
+    )
+    
+    # Clear any lockouts
+    await db.login_attempts.delete_many({
+        "$or": [
+            {"identifier": user.get("email", "")},
+            {"identifier": user.get("mobile", "")},
+            {"identifier": uid}
+        ]
+    })
+    
+    if log_admin_action:
+        await log_admin_action(
+            admin_uid=admin_id,
+            action="user_pin_reset",
+            entity_type="user",
+            entity_id=uid,
+            details={"pin_set_to": "default" if new_pin == "102938" else "custom"}
+        )
+    
+    return {
+        "success": True, 
+        "message": f"PIN reset successfully for user {uid}",
+        "new_pin": new_pin,
+        "note": "User should change PIN after login"
+    }
+
+
 @router.post("/users/{uid}/unban")
 async def unban_user(uid: str, request: Request):
     """Unban a user"""
