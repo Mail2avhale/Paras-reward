@@ -26907,17 +26907,21 @@ async def create_notification(
     message: str,
     notification_type: str,
     related_id: Optional[str] = None,
-    icon: Optional[str] = None
+    icon: Optional[str] = None,
+    action_url: Optional[str] = None
 ):
     """Helper function to create notifications"""
     notification = {
         "notification_id": str(uuid.uuid4()),
         "user_id": user_id,
+        "user_uid": user_id,  # For compatibility with API queries
         "title": title,
         "message": message,
         "type": notification_type,
         "related_id": related_id,
         "icon": icon or "🔔",
+        "action_url": action_url,
+        "read": False,
         "is_read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
