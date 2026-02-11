@@ -321,6 +321,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const isExpanded = expandedGroups[groupKey];
     const groupActive = isGroupActive(groupKey);
     const filteredSubItems = getFilteredSubItems(groupKey);
+    const showTotalBadge = groupKey === 'requestApprovals' && group.totalPending > 0;
     
     // Don't render group if no items are accessible
     if (filteredSubItems.length === 0) return null;
@@ -338,7 +339,15 @@ const AdminLayout = ({ children, user, onLogout }) => {
         >
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5 flex-shrink-0" />
-            {!sidebarCollapsed && <span className="text-sm font-medium">{group.label}</span>}
+            {!sidebarCollapsed && (
+              <span className="text-sm font-medium">{group.label}</span>
+            )}
+            {/* Total pending badge for Request Approvals */}
+            {!sidebarCollapsed && showTotalBadge && (
+              <span className="px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[20px] text-center">
+                {group.totalPending > 99 ? '99+' : group.totalPending}
+              </span>
+            )}
           </div>
           {!sidebarCollapsed && (
             <ChevronDown 
@@ -353,18 +362,29 @@ const AdminLayout = ({ children, user, onLogout }) => {
             {filteredSubItems.map((subItem) => {
               const SubIcon = subItem.icon;
               const active = isActive(subItem.path);
+              const hasPending = subItem.pendingCount && subItem.pendingCount > 0;
               return (
                 <button
                   key={subItem.id}
                   onClick={() => handleNavigation(subItem.path)}
-                  className={`w-full flex items-center gap-3 pl-10 pr-4 py-2.5 transition-colors ${
+                  className={`w-full flex items-center justify-between pl-10 pr-4 py-2.5 transition-colors ${
                     active
                       ? 'bg-purple-600 text-white'
                       : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                   }`}
                 >
-                  <SubIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm">{subItem.label}</span>
+                  <div className="flex items-center gap-3">
+                    <SubIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">{subItem.label}</span>
+                  </div>
+                  {/* Individual pending count badge */}
+                  {hasPending && (
+                    <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full min-w-[20px] text-center ${
+                      active ? 'bg-white/20 text-white' : 'bg-amber-500 text-black'
+                    }`}>
+                      {subItem.pendingCount > 99 ? '99+' : subItem.pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
