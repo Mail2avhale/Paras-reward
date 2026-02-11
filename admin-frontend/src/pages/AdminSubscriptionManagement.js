@@ -287,7 +287,8 @@ const AdminSubscriptionManagement = ({ user }) => {
       const response = await axios.get(`${API}/api/admin/subscription-pricing-reference`);
       setPricingReference(response.data);
     } catch (error) {
-      console.error('Error fetching pricing reference:', error);
+      // Silently fail - pricing reference is optional for fraud detection
+      console.error('Pricing reference not available:', error?.response?.status);
     }
   };
 
