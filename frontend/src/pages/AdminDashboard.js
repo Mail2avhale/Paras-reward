@@ -229,6 +229,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="gray"
             icon="👤"
+            price="Free"
             onClick={() => navigate('/admin/users?plan=explorer')}
           />
           <SubscriptionCard 
@@ -237,6 +238,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="blue"
             icon="🚀"
+            price="₹199 - ₹1,799"
             onClick={() => navigate('/admin/subscriptions?plan=startup')}
           />
           <SubscriptionCard 
@@ -245,6 +247,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="purple"
             icon="📈"
+            price="₹499 - ₹4,499"
             onClick={() => navigate('/admin/subscriptions?plan=growth')}
           />
           <SubscriptionCard 
@@ -253,6 +256,7 @@ const AdminDashboard = ({ user }) => {
             total={totalUsers}
             color="amber"
             icon="👑"
+            price="₹799 - ₹7,191"
             onClick={() => navigate('/admin/subscriptions?plan=elite')}
           />
         </div>
