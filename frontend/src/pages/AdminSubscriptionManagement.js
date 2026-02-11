@@ -519,7 +519,7 @@ const EditSubscriptionModal = ({ payment, onClose, onSave, processing }) => {
 };
 
 // Simple Stat Card Component
-const StatCard = ({ icon, label, value, color, subtitle }) => {
+const StatCard = ({ icon, label, value, color, subtitle, onClick }) => {
   const colors = {
     gray: 'from-gray-600 to-gray-700 text-gray-400',
     blue: 'from-blue-500 to-indigo-600 text-blue-400',
@@ -528,7 +528,10 @@ const StatCard = ({ icon, label, value, color, subtitle }) => {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <div 
+      className={`bg-gray-900 rounded-xl border border-gray-800 p-4 ${onClick ? 'cursor-pointer hover:bg-gray-800 transition-all' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${colors[color].split(' ')[0]} ${colors[color].split(' ')[1]} flex items-center justify-center text-white`}>
           {icon}
