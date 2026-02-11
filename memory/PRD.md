@@ -47,6 +47,12 @@ Build a PRC (point-based reward currency) system web application where users can
   - Auto-refresh every 2 minutes
   - APIs used: `/api/admin/kyc/pending`, `/api/admin/vip-payments`, `/api/admin/bill-payments`, `/api/admin/gift-vouchers`, `/api/admin/luxury-claims`
 
+- [x] **Admin/Manager User Page Access Block**
+  - Admin and Manager roles now cannot access user pages
+  - All user routes redirect Admin/Manager to `/admin`
+  - Removed "User View" button from Admin sidebar
+  - File: `/app/frontend/src/App.js`, `/app/frontend/src/components/layouts/AdminLayout.js`
+
 ### Recently Completed (Feb 10, 2026)
 - [x] **Stock/Stockist System Removal**
   - Removed Stock Request System (~820 lines)
