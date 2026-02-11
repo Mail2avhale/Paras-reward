@@ -221,14 +221,11 @@ const LoginNew = ({ onLogin }) => {
       console.error('Login error:', error);
       const errorMsg = error.response?.data?.detail || 'Login failed. Please try again.';
       
-      if (errorMsg.includes('Invalid') || errorMsg.includes('password') || errorMsg.includes('PIN')) {
-        if (authType === 'pin') {
-          setPinError(errorMsg);
-          // Clear PIN on error so user can re-enter
-          setLoginData(prev => ({ ...prev, pin: '' }));
-        } else {
-          toast.error(errorMsg);
-        }
+      // Always show error in center for PIN errors
+      if (errorMsg.toLowerCase().includes('pin') || errorMsg.toLowerCase().includes('wrong') || errorMsg.toLowerCase().includes('attempts') || errorMsg.toLowerCase().includes('locked')) {
+        setPinError(errorMsg);
+        // Clear PIN on error so user can re-enter
+        setLoginData(prev => ({ ...prev, pin: '' }));
       } else {
         toast.error(errorMsg);
       }
