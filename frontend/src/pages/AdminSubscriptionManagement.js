@@ -67,7 +67,7 @@ const AdminSubscriptionManagement = () => {
   const handleApprove = async (paymentId) => {
     setProcessing(paymentId);
     try {
-      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/approve`);
+      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/approve`, {});
       toast.success('Payment approved!');
       fetchData();
     } catch (error) {
