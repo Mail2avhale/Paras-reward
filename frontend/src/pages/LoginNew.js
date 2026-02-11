@@ -429,7 +429,10 @@ const LoginNew = ({ onLogin }) => {
                 value={loginData.pin}
                 onChange={(val) => {
                   setLoginData({ ...loginData, pin: val });
-                  setPinError('');
+                  // Only clear error when user actually types something
+                  if (val.length > 0) {
+                    setPinError('');
+                  }
                 }}
                 error={pinError}
                 label="Enter 6-Digit PIN"
