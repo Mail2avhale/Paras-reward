@@ -365,6 +365,38 @@ const AdminSubscriptionManagement = () => {
               ))
           )}
         </div>
+        
+        {/* Approved Pagination */}
+        {approvedTotal > ITEMS_PER_PAGE && (
+          <div className="p-4 border-t border-gray-800 flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Showing {((approvedPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(approvedPage * ITEMS_PER_PAGE, approvedTotal)} of {approvedTotal}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setApprovedPage(p => Math.max(1, p - 1))}
+                disabled={approvedPage === 1}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1.5 bg-gray-800 rounded text-white text-sm">
+                {approvedPage} / {Math.ceil(approvedTotal / ITEMS_PER_PAGE)}
+              </span>
+              <Button
+                onClick={() => setApprovedPage(p => p + 1)}
+                disabled={approvedPage >= Math.ceil(approvedTotal / ITEMS_PER_PAGE)}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       )}
 
