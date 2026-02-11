@@ -60,6 +60,18 @@ Build a PRC (point-based reward currency) system web application where users can
   - Added hint text: "Tap/Click image to view full screenshot"
   - File: `/app/admin-frontend/src/pages/AdminSubscriptionManagement.js`
 
+- [x] **Subscription Approve API Fix (P0 - Critical)**
+  - Fixed API endpoint URL mismatch
+  - Old: `/api/admin/vip-payments/{id}/approve` (404 error)
+  - New: `/api/admin/vip-payment/{id}/approve` (singular)
+  - Same fix for reject, delete, edit endpoints
+  - File: `/app/frontend/src/pages/AdminSubscriptionManagement.js`
+
+- [x] **Admin Dashboard Card Routing**
+  - Added onClick handlers to subscription cards (Explorer, Startup, Growth, Elite)
+  - Added routing to Revenue Stats cards (Revenue, Approved, Pending)
+  - Files: `AdminDashboard.js`, `AdminSubscriptionManagement.js`
+
 - [x] **Admin Sidebar - Request Approvals Collapsible Menu**
   - Created new "Request Approvals" collapsible parent menu in admin sidebar
   - Sub-items: KYC, Subscription, Bill, Gift Vouchers, Luxury Life Claim
