@@ -350,7 +350,7 @@ const StatCard = ({ icon, label, value, color, subtitle }) => {
 };
 
 // Payment Row Component
-const PaymentRow = ({ payment, onApprove, onReject, processing }) => {
+const PaymentRow = ({ payment, onApprove, onReject, processing, type = 'pending' }) => {
   const planColors = {
     startup: 'text-blue-400 bg-blue-500/10',
     growth: 'text-emerald-400 bg-emerald-500/10',
@@ -443,6 +443,100 @@ const PaymentRow = ({ payment, onApprove, onReject, processing }) => {
           </a>
         </div>
       )}
+    </div>
+  );
+};
+
+// Approved Row Component
+const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
+  const planColors = {
+    startup: 'text-blue-400 bg-blue-500/10',
+    growth: 'text-emerald-400 bg-emerald-500/10',
+    elite: 'text-amber-400 bg-amber-500/10'
+  };
+
+  const isExpired = payment.expires_at && new Date(payment.expires_at) < new Date();
+
+  return (
+    <div className="p-4 hover:bg-gray-800/50 transition-colors">
+      <div className="flex items-center justify-between">
+        {/* User Info */}
+        <div className="flex items-center gap-4 flex-1">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">
+            {payment.user_name?.charAt(0) || 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium truncate">
+              {payment.user_name || 'Unknown User'}
+            </p>
+            <p className="text-gray-500 text-sm truncate">
+              {payment.user_email || payment.user_id}
+            </p>
+          </div>
+        </div>
+
+        {/* Plan Badge */}
+        <div className="px-3">
+          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[payment.plan] || 'text-gray-400 bg-gray-700'}`}>
+            {payment.plan?.toUpperCase() || 'N/A'}
+          </span>
+        </div>
+
+        {/* Amount */}
+        <div className="px-4 text-right">
+          <p className="text-white font-bold">₹{payment.amount}</p>
+          <p className="text-gray-500 text-xs">{payment.duration || 'monthly'}</p>
+        </div>
+
+        {/* Status */}
+        <div className="px-4 w-32">
+          {isExpired ? (
+            <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-lg">
+              Expired
+            </span>
+          ) : (
+            <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg">
+              Active
+            </span>
+          )}
+          <p className="text-gray-500 text-xs mt-1">
+            {payment.approved_at ? new Date(payment.approved_at).toLocaleDateString() : '-'}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            onClick={onView}
+            size="sm"
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700 h-9 px-3"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={onEdit}
+            size="sm"
+            variant="outline"
+            className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10 h-9 px-3"
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={onDelete}
+            disabled={processing}
+            size="sm"
+            variant="outline"
+            className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9 px-3"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
