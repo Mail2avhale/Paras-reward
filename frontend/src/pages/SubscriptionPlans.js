@@ -414,6 +414,7 @@ const SubscriptionPlans = ({ user }) => {
                 </motion.div>
               );
             })}
+          </div>
 
           {/* Plan Comparison */}
           <div className="mt-8 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
