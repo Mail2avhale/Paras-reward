@@ -585,6 +585,120 @@ const LoginNew = ({ onLogin }) => {
           onSkip={() => setShowBiometricSetupPrompt(false)}
         />
       )}
+
+      {/* Forgot PIN Modal */}
+      {showForgotPin && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <KeyRound className="w-8 h-8 text-purple-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {forgotPinStep === 1 && 'PIN विसरलात?'}
+                {forgotPinStep === 2 && 'OTP Verify करा'}
+                {forgotPinStep === 3 && 'नवीन PIN सेट करा'}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">
+                {forgotPinStep === 1 && 'तुमचा Email टाका, आम्ही OTP पाठवू'}
+                {forgotPinStep === 2 && 'Email वर आलेला OTP टाका'}
+                {forgotPinStep === 3 && '6 अंकी नवीन PIN टाका'}
+              </p>
+            </div>
+
+            {/* Step 1: Enter Email */}
+            {forgotPinStep === 1 && (
+              <div className="space-y-4">
+                <Input
+                  type="text"
+                  placeholder="Email किंवा Mobile"
+                  value={forgotPinEmail}
+                  onChange={(e) => setForgotPinEmail(e.target.value)}
+                  className="w-full"
+                />
+                <Button
+                  onClick={handleForgotPinSendOtp}
+                  disabled={forgotPinLoading}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  {forgotPinLoading ? 'पाठवत आहे...' : 'OTP पाठवा'}
+                </Button>
+              </div>
+            )}
+
+            {/* Step 2: Verify OTP */}
+            {forgotPinStep === 2 && (
+              <div className="space-y-4">
+                <Input
+                  type="text"
+                  placeholder="OTP टाका"
+                  value={forgotPinOtp}
+                  onChange={(e) => setForgotPinOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full text-center text-2xl tracking-widest"
+                  maxLength={6}
+                />
+                <Button
+                  onClick={handleForgotPinVerifyOtp}
+                  disabled={forgotPinLoading}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  {forgotPinLoading ? 'Verify करत आहे...' : 'Verify OTP'}
+                </Button>
+                <button
+                  onClick={() => setForgotPinStep(1)}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
+                  ← मागे जा
+                </button>
+              </div>
+            )}
+
+            {/* Step 3: Set New PIN */}
+            {forgotPinStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">नवीन PIN</label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="••••••"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full text-center text-2xl tracking-widest"
+                    maxLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">PIN पुन्हा टाका</label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="••••••"
+                    value={confirmNewPin}
+                    onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full text-center text-2xl tracking-widest"
+                    maxLength={6}
+                  />
+                </div>
+                <Button
+                  onClick={handleForgotPinReset}
+                  disabled={forgotPinLoading}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {forgotPinLoading ? 'बदलत आहे...' : 'PIN बदला'}
+                </Button>
+              </div>
+            )}
+
+            <button
+              onClick={resetForgotPin}
+              className="mt-4 w-full text-sm text-gray-400 hover:text-gray-600"
+            >
+              रद्द करा
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
