@@ -13681,6 +13681,85 @@ async def user_360_quick_action(request: Request):
             {"$set": {"admin_notes": notes, "updated_at": now.isoformat()}}
         )
         result_message = "Admin notes saved"
+    
+    elif action == "update_subscription":
+        # Admin can update user subscription plan
+        plan = data.get("plan", "explorer")
+        expiry_date = data.get("expiry_date", "")
+        is_free = data.get("is_free", True)
+        admin_notes = data.get("admin_notes", "")
+        
+        if not expiry_date:
+            raise HTTPException(status_code=400, detail="Expiry date is required")
+        
+        # Validate plan
+        valid_plans = ["explorer", "startup", "growth", "elite"]
+        if plan.lower() not in valid_plans:
+            raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
+        
+        plan = plan.lower()
+        
+        # Convert expiry date
+        try:
+            expiry_dt = datetime.fromisoformat(expiry_date.replace('Z', '+00:00')) if 'T' in expiry_date else datetime.strptime(expiry_date, "%Y-%m-%d")
+            expiry_dt = expiry_dt.replace(hour=23, minute=59, second=59)
+        except:
+            raise HTTPException(status_code=400, detail="Invalid expiry date format")
+        
+        # Update user subscription
+        old_plan = user.get("subscription_plan", "explorer")
+        old_expiry = user.get("subscription_expiry") or user.get("membership_expiry")
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "subscription_plan": plan,
+                "membership_type": plan,
+                "subscription_expiry": expiry_dt.isoformat(),
+                "membership_expiry": expiry_dt.isoformat(),
+                "subscription_updated_at": now.isoformat(),
+                "subscription_updated_by": admin_id,
+                "updated_at": now.isoformat()
+            }}
+        )
+        
+        # Create subscription record
+        subscription_record = {
+            "subscription_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "plan": plan,
+            "subscription_plan": plan,
+            "start_date": now.isoformat(),
+            "end_date": expiry_dt.isoformat(),
+            "expiry": expiry_dt.isoformat(),
+            "status": "active",
+            "is_free": is_free,
+            "payment_status": "free" if is_free else "paid",
+            "admin_notes": admin_notes,
+            "created_by": admin_id,
+            "created_at": now.isoformat(),
+            "previous_plan": old_plan,
+            "previous_expiry": old_expiry
+        }
+        await db.subscriptions.insert_one(subscription_record)
+        
+        # Log the change
+        await db.admin_audit_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "admin_id": admin_id,
+            "action": "subscription_update",
+            "target_user_id": user_id,
+            "details": {
+                "old_plan": old_plan,
+                "new_plan": plan,
+                "expiry": expiry_dt.isoformat(),
+                "is_free": is_free,
+                "notes": admin_notes
+            },
+            "timestamp": now.isoformat()
+        })
+        
+        result_message = f"Subscription updated to {plan.capitalize()} plan. Expires: {expiry_date}"
         
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
