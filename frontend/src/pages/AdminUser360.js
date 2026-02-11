@@ -882,17 +882,6 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (confirm('Generate a new temporary password for this user?')) handleQuickAction('reset_password');
-                  }}
-                  disabled={processing}
-                  variant="outline"
-                  className="h-auto py-3 border-cyan-500/50 text-cyan-400"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Reset Password
-                </Button>
-                <Button
-                  onClick={() => {
                     if (confirm('Generate a new 6-digit PIN for this user?')) handleQuickAction('reset_pin');
                   }}
                   disabled={processing}
