@@ -682,7 +682,7 @@ async def migrate_to_pin_get(identifier: str):
 
 
 # DISABLED - Moved to routes/admin_*.py
-@api_router.post("/_disabled_admin/clear-all-lockouts")
+@api_router.post("/admin/clear-all-lockouts")
 async def clear_all_login_lockouts():
     """
     Emergency API to clear ALL login lockouts from database and memory.
