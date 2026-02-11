@@ -347,51 +347,258 @@ const AdminUser360 = ({ user: adminUser }) => {
   return (
     <div className="p-4 md:p-6 bg-gray-950 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-gray-400">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Eye className="w-7 h-7 text-purple-400" />
-            User 360° View
-          </h1>
-          <p className="text-gray-400 text-sm">Complete user analysis and management</p>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="text-gray-400">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Eye className="w-7 h-7 text-purple-400" />
+              User 360° View
+            </h1>
+            <p className="text-gray-400 text-sm">Complete user analysis and management</p>
+          </div>
+        </div>
+        
+        {/* View Mode Toggle */}
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'search' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('search')}
+            className={viewMode === 'search' ? 'bg-purple-600' : 'border-gray-700 text-gray-400'}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Search
+          </Button>
+          <Button
+            variant={viewMode === 'browse' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('browse')}
+            className={viewMode === 'browse' ? 'bg-purple-600' : 'border-gray-700 text-gray-400'}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Browse All
+          </Button>
         </div>
       </div>
 
-      {/* Search Section */}
-      <Card className="p-6 mb-6 bg-gray-900 border-gray-800">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-            <Input
-              placeholder="Search by Email, Mobile, Aadhaar, PAN, UID, or Referral Code..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-12 bg-gray-800 border-gray-700 text-white text-lg h-12"
-            />
+      {/* Browse Mode - User List */}
+      {viewMode === 'browse' && (
+        <Card className="p-6 mb-6 bg-gray-900 border-gray-800">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 mb-6">
+            <div className="flex-1 min-w-[200px]">
+              <Input
+                placeholder="Search users..."
+                value={browseSearchTerm}
+                onChange={(e) => { setBrowseSearchTerm(e.target.value); setUserListPage(1); }}
+                className="bg-gray-800 border-gray-700"
+              />
+            </div>
+            <select
+              value={filterRole}
+              onChange={(e) => { setFilterRole(e.target.value); setUserListPage(1); }}
+              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            >
+              <option value="">All Roles</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+            </select>
+            <select
+              value={filterMembership}
+              onChange={(e) => { setFilterMembership(e.target.value); setUserListPage(1); }}
+              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            >
+              <option value="">All Plans</option>
+              <option value="elite">Elite</option>
+              <option value="growth">Growth</option>
+              <option value="startup">Startup</option>
+              <option value="explorer">Explorer</option>
+            </select>
+            <select
+              value={filterKYC}
+              onChange={(e) => { setFilterKYC(e.target.value); setUserListPage(1); }}
+              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            >
+              <option value="">All KYC</option>
+              <option value="verified">Verified</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+              <option value="none">Not Submitted</option>
+            </select>
+            <label className="flex items-center gap-2 text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => { setShowDeleted(e.target.checked); setUserListPage(1); }}
+                className="rounded bg-gray-800 border-gray-700"
+              />
+              Show Deleted
+            </label>
           </div>
-          <Button 
-            onClick={handleSearch} 
-            disabled={loading}
-            className="bg-purple-600 hover:bg-purple-700 h-12 px-8"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Search className="w-5 h-5 mr-2" />}
-            Search User
-          </Button>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-          <span className="px-2 py-1 bg-gray-800 rounded">Email</span>
-          <span className="px-2 py-1 bg-gray-800 rounded">Mobile</span>
-          <span className="px-2 py-1 bg-gray-800 rounded">Aadhaar (last 4 digits)</span>
-          <span className="px-2 py-1 bg-gray-800 rounded">PAN</span>
-          <span className="px-2 py-1 bg-gray-800 rounded">User ID</span>
-          <span className="px-2 py-1 bg-gray-800 rounded">Referral Code</span>
-        </div>
-      </Card>
+          
+          {/* User List */}
+          {userListLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+            </div>
+          ) : userList.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No users found</p>
+            </div>
+          ) : (
+            <>
+              <div className="text-sm text-gray-400 mb-4">
+                Showing {userList.length} of {userListTotal} users
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 text-sm border-b border-gray-800">
+                      <th className="pb-3 pr-4">User</th>
+                      <th className="pb-3 pr-4">Role</th>
+                      <th className="pb-3 pr-4">Plan</th>
+                      <th className="pb-3 pr-4">KYC</th>
+                      <th className="pb-3 pr-4">Balance</th>
+                      <th className="pb-3 pr-4">Joined</th>
+                      <th className="pb-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userList.map((u) => (
+                      <tr key={u.uid} className={`border-b border-gray-800/50 hover:bg-gray-800/50 ${u.deleted_at ? 'opacity-50' : ''}`}>
+                        <td className="py-4 pr-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+                              {u.name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-white">{u.name || 'Unknown'}</div>
+                              <div className="text-xs text-gray-500">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            u.role === 'admin' ? 'bg-red-500/20 text-red-400' :
+                            u.role === 'manager' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {u.role || 'user'}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            u.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                            u.subscription_plan === 'growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                            u.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {u.subscription_plan || 'explorer'}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            u.kyc_status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                            u.kyc_status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                            u.kyc_status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {u.kyc_status || 'none'}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <span className="text-white font-mono">{(u.prc_balance || 0).toLocaleString()}</span>
+                          <span className="text-gray-500 text-xs ml-1">PRC</span>
+                        </td>
+                        <td className="py-4 pr-4 text-gray-400 text-sm">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="py-4">
+                          <Button
+                            size="sm"
+                            onClick={() => selectUserFromList(u)}
+                            className="bg-purple-600 hover:bg-purple-700"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              {userListTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={userListPage === 1}
+                    onClick={() => setUserListPage(p => p - 1)}
+                    className="border-gray-700"
+                  >
+                    Previous
+                  </Button>
+                  <span className="px-4 py-2 text-gray-400">
+                    Page {userListPage} of {userListTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={userListPage === userListTotalPages}
+                    onClick={() => setUserListPage(p => p + 1)}
+                    className="border-gray-700"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* Search Mode - Search Section */}
+      {viewMode === 'search' && (
+        <>
+          <Card className="p-6 mb-6 bg-gray-900 border-gray-800">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Input
+                  placeholder="Search by Email, Mobile, Aadhaar, PAN, UID, or Referral Code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="pl-12 bg-gray-800 border-gray-700 text-white text-lg h-12"
+                />
+              </div>
+              <Button 
+                onClick={handleSearch} 
+                disabled={loading}
+                className="bg-purple-600 hover:bg-purple-700 h-12 px-8"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Search className="w-5 h-5 mr-2" />}
+                Search User
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+              <span className="px-2 py-1 bg-gray-800 rounded">Email</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">Mobile</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">Aadhaar (last 4 digits)</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">PAN</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">User ID</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">Referral Code</span>
+            </div>
+          </Card>
 
       {/* User Data */}
       {userData && (
