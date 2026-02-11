@@ -491,7 +491,7 @@ const LoginNew = ({ onLogin }) => {
                 }}
                 className="text-sm text-purple-600 hover:text-purple-700 font-medium"
               >
-                {authType === 'pin' ? 'PIN विसरलात?' : 'Forgot Password?'}
+                {authType === 'pin' ? 'Forgot PIN?' : 'Forgot Password?'}
               </button>
             )}
           </div>
