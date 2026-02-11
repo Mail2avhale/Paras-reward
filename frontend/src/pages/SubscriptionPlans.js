@@ -41,6 +41,13 @@ const SubscriptionPlans = ({ user }) => {
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
   });
 
+  // Special Offer Prices
+  const specialOffers = {
+    startup: { original: 500, offer: 299, discount: 40 },
+    growth: { original: 1000, offer: 549, discount: 45 },
+    elite: { original: 2000, offer: 799, discount: 60 }
+  };
+
   const planIcons = {
     explorer: Users,
     startup: Rocket,
@@ -50,9 +57,9 @@ const SubscriptionPlans = ({ user }) => {
 
   const planColors = {
     explorer: 'from-gray-500 to-gray-600',
-    startup: 'from-blue-500 to-blue-600',
-    growth: 'from-emerald-500 to-emerald-600',
-    elite: 'from-amber-500 to-amber-600'
+    startup: 'from-blue-500 to-indigo-600',
+    growth: 'from-emerald-500 to-teal-600',
+    elite: 'from-amber-500 to-orange-600'
   };
 
   const durationLabels = {
