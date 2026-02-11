@@ -64,7 +64,7 @@ const AdminSubscriptionManagement = () => {
   const handleApprove = async (paymentId) => {
     setProcessing(paymentId);
     try {
-      await axios.post(`${API}/api/admin/vip-payments/${paymentId}/approve`);
+      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/approve`);
       toast.success('Payment approved!');
       fetchData();
     } catch (error) {
@@ -78,7 +78,7 @@ const AdminSubscriptionManagement = () => {
     if (!confirm('Reject this payment?')) return;
     setProcessing(paymentId);
     try {
-      await axios.post(`${API}/api/admin/vip-payments/${paymentId}/reject`, {
+      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/reject`, {
         reason: 'Payment verification failed'
       });
       toast.success('Payment rejected');
@@ -94,7 +94,7 @@ const AdminSubscriptionManagement = () => {
     if (!confirm('Are you sure you want to delete this subscription? This action cannot be undone.')) return;
     setProcessing(paymentId);
     try {
-      await axios.delete(`${API}/api/admin/vip-payments/${paymentId}`);
+      await axios.delete(`${API}/api/admin/vip-payment/${paymentId}`);
       toast.success('Subscription deleted');
       fetchData();
     } catch (error) {
@@ -107,7 +107,7 @@ const AdminSubscriptionManagement = () => {
   const handleEdit = async (paymentId, updates) => {
     setProcessing(paymentId);
     try {
-      await axios.put(`${API}/api/admin/vip-payments/${paymentId}`, updates);
+      await axios.put(`${API}/api/admin/vip-payment/${paymentId}`, updates);
       toast.success('Subscription updated');
       setEditModal({ show: false, payment: null });
       fetchData();
