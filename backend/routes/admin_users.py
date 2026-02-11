@@ -241,17 +241,22 @@ async def ban_user(uid: str, request: Request):
 
 @router.post("/users/{uid}/reset-pin")
 async def admin_reset_user_pin(uid: str, request: Request):
-    """Admin reset user's PIN to default (102938)"""
+    """Admin reset user's PIN to random 6-digit PIN"""
+    import random
+    
     data = await request.json()
     admin_id = data.get("admin_id")
-    custom_pin = data.get("custom_pin")  # Optional: admin can set custom PIN
     
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Default PIN or custom PIN
-    new_pin = custom_pin if custom_pin and len(custom_pin) == 6 and custom_pin.isdigit() else "102938"
+    # Generate random 6-digit PIN (avoiding weak patterns)
+    while True:
+        new_pin = str(random.randint(100000, 999999))
+        # Ensure not all same digits
+        if len(set(new_pin)) > 1:
+            break
     
     if not hash_password:
         raise HTTPException(status_code=500, detail="Hash function not available")
@@ -267,6 +272,7 @@ async def admin_reset_user_pin(uid: str, request: Request):
                 "pin_reset_by_admin": True,
                 "pin_reset_at": datetime.now(timezone.utc).isoformat(),
                 "pin_reset_by": admin_id,
+                "must_change_pin": True,
                 "failed_login_attempts": 0,
                 "locked_until": None
             }
@@ -288,14 +294,16 @@ async def admin_reset_user_pin(uid: str, request: Request):
             action="user_pin_reset",
             entity_type="user",
             entity_id=uid,
-            details={"pin_set_to": "default" if new_pin == "102938" else "custom"}
+            details={"user_email": user.get("email"), "user_name": user.get("name")}
         )
     
     return {
         "success": True, 
-        "message": f"PIN reset successfully for user {uid}",
+        "message": f"PIN reset successfully",
         "new_pin": new_pin,
-        "note": "User should change PIN after login"
+        "user_email": user.get("email"),
+        "user_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or user.get("name", ""),
+        "note": "Share this PIN with user. They must change it after login."
     }
 
 
