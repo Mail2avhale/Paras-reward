@@ -54,7 +54,7 @@ async def get_pending_payments_count():
 
 
 @router.post("/clear-cache")
-async def clear_admin_cache():
+async def clear_admin_cache(request: Request = None):
     """Clear admin cache for fresh data"""
     try:
         if cache:
