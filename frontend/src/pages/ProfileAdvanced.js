@@ -697,43 +697,70 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               <label className="text-gray-400 text-sm mb-1 block">
                 Current PIN
               </label>
-              <Input 
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                value={pinData.current}
-                onChange={(e) => setPinData({...pinData, current: e.target.value.replace(/\D/g, '').slice(0, 6)})}
-                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
-                placeholder="••••••"
-              />
+              <div className="relative">
+                <Input 
+                  type={showPinPassword.current ? "text" : "password"}
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={pinData.current}
+                  onChange={(e) => setPinData({...pinData, current: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                  className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest pr-12"
+                  placeholder="••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPinPassword({...showPinPassword, current: !showPinPassword.current})}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPinPassword.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">
                 New PIN
               </label>
-              <Input 
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                value={pinData.new}
-                onChange={(e) => setPinData({...pinData, new: e.target.value.replace(/\D/g, '').slice(0, 6)})}
-                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
-                placeholder="••••••"
-              />
+              <div className="relative">
+                <Input 
+                  type={showPinPassword.new ? "text" : "password"}
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={pinData.new}
+                  onChange={(e) => setPinData({...pinData, new: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                  className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest pr-12"
+                  placeholder="••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPinPassword({...showPinPassword, new: !showPinPassword.new})}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPinPassword.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="text-gray-400 text-sm mb-1 block">
                 Confirm New PIN
               </label>
-              <Input 
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                value={pinData.confirm}
-                onChange={(e) => setPinData({...pinData, confirm: e.target.value.replace(/\D/g, '').slice(0, 6)})}
-                className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest"
-                placeholder="••••••"
-              />
+              <div className="relative">
+                <Input 
+                  type={showPinPassword.confirm ? "text" : "password"}
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={pinData.confirm}
+                  onChange={(e) => setPinData({...pinData, confirm: e.target.value.replace(/\D/g, '').slice(0, 6)})}
+                  className="bg-gray-800 border-gray-700 text-white text-center text-xl tracking-widest pr-12"
+                  placeholder="••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPinPassword({...showPinPassword, confirm: !showPinPassword.confirm})}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPinPassword.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <Button 
               onClick={handleChangePin}
