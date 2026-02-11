@@ -823,6 +823,186 @@ async def forgot_pin_reset(request: ResetPinRequest):
     return {"success": True, "message": "PIN reset successfully. Please login with your new PIN."}
 
 
+# ========== EMAIL OTP FOR FORGOT PIN ==========
+
+class ForgotPinEmailRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-pin/send-email-otp")
+async def forgot_pin_send_email_otp(request: ForgotPinEmailRequest):
+    """Send OTP to user's email for PIN reset"""
+    import random
+    
+    email = request.email.strip().lower()
+    
+    # Find user by email
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not registered")
+    
+    # Generate 6-digit OTP
+    otp = str(random.randint(100000, 999999))
+    otp_expiry = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    # Store OTP in database
+    await db.email_otps.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "email": email,
+                "otp": otp,
+                "purpose": "pin_reset",
+                "expiry": otp_expiry.isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "verified": False
+            }
+        },
+        upsert=True
+    )
+    
+    # For now, store OTP in user document (in production, send via email service)
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "email_otp": otp,
+                "email_otp_expiry": otp_expiry.isoformat(),
+                "email_otp_purpose": "pin_reset"
+            }
+        }
+    )
+    
+    # Log for admin visibility (in production, this would be sent via email)
+    print(f"[EMAIL OTP] User: {email}, OTP: {otp}, Expiry: 10 minutes")
+    
+    return {
+        "success": True, 
+        "message": "OTP sent to your email",
+        "email_hint": f"{email[:3]}***{email.split('@')[0][-1]}@{email.split('@')[1]}" if '@' in email else email[:4] + "***"
+    }
+
+
+@router.post("/forgot-pin/verify-email-otp")
+async def forgot_pin_verify_email_otp(request: Request):
+    """Verify Email OTP and generate reset token"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    otp = data.get("otp", "").strip()
+    
+    if not email or not otp:
+        raise HTTPException(status_code=400, detail="Email and OTP are required")
+    
+    # Find user and verify OTP
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not registered")
+    
+    stored_otp = user.get("email_otp")
+    expiry_str = user.get("email_otp_expiry", "")
+    
+    if not stored_otp:
+        raise HTTPException(status_code=400, detail="No OTP found. Please request a new one.")
+    
+    # Check expiry
+    if expiry_str:
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
+        except:
+            pass
+    
+    # Verify OTP
+    if stored_otp != otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())
+    reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    # Store reset token and clear OTP
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "pin_reset_token": reset_token,
+                "pin_reset_expiry": reset_expiry.isoformat()
+            },
+            "$unset": {
+                "email_otp": "",
+                "email_otp_expiry": "",
+                "email_otp_purpose": ""
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "OTP verified successfully",
+        "reset_token": reset_token
+    }
+
+
+@router.post("/forgot-pin/reset-by-email")
+async def forgot_pin_reset_by_email(request: Request):
+    """Reset PIN after email OTP verification"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    reset_token = data.get("reset_token", "")
+    new_pin = data.get("new_pin", "").strip()
+    
+    if not email or not reset_token or not new_pin:
+        raise HTTPException(status_code=400, detail="Email, reset token and new PIN are required")
+    
+    if len(new_pin) != 6 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 6 digits")
+    
+    if len(set(new_pin)) == 1:
+        raise HTTPException(status_code=400, detail="PIN cannot be all same digits")
+    
+    # Find user with valid reset token
+    user = await db.users.find_one({
+        "email": email,
+        "pin_reset_token": reset_token
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check token expiry
+    expiry_str = user.get("pin_reset_expiry", "")
+    if expiry_str:
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
+        except:
+            pass
+    
+    # Hash and save new PIN
+    hashed_pin = hash_password(new_pin)
+    
+    await db.users.update_one(
+        {"email": email},
+        {
+            "$set": {
+                "password": hashed_pin,
+                "pin_migrated": True,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$unset": {
+                "pin_reset_token": "",
+                "pin_reset_expiry": ""
+            }
+        }
+    )
+    
+    # Clear any lockouts for this user
+    await db.login_attempts.delete_many({"identifier": email})
+    
+    return {"success": True, "message": "PIN reset successfully. Please login with your new PIN."}
+
+
 # ========== BIOMETRIC AUTHENTICATION ==========
 
 @router.post("/biometric/register-options")
