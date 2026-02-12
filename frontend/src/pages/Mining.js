@@ -4,11 +4,67 @@ import { Button } from '@/components/ui/button';
 import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle, Pause, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+// Animated counter component for live PRC display
+const AnimatedCounter = ({ value, decimals = 4 }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const prevValueRef = useRef(value);
+  
+  useEffect(() => {
+    const prevValue = prevValueRef.current;
+    const diff = value - prevValue;
+    
+    if (Math.abs(diff) < 0.0001) {
+      setDisplayValue(value);
+      prevValueRef.current = value;
+      return;
+    }
+    
+    // Smooth animation over 100ms
+    const steps = 10;
+    const stepValue = diff / steps;
+    let currentStep = 0;
+    
+    const interval = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        setDisplayValue(value);
+        prevValueRef.current = value;
+        clearInterval(interval);
+      } else {
+        setDisplayValue(prev => prev + stepValue);
+      }
+    }, 10);
+    
+    return () => clearInterval(interval);
+  }, [value]);
+  
+  return (
+    <span className="tabular-nums">
+      {displayValue.toFixed(decimals)}
+    </span>
+  );
+};
+
+// Floating coin animation for visual feedback
+const FloatingCoin = ({ onComplete }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 1, y: 0, scale: 1 }}
+      animate={{ opacity: 0, y: -30, scale: 0.5 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      onAnimationComplete={onComplete}
+      className="absolute text-amber-400 text-sm font-bold"
+    >
+      +PRC
+    </motion.div>
+  );
+};
 
 const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
@@ -24,8 +80,10 @@ const DailyRewards = ({ user }) => {
   const [isCollecting, setIsCollecting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
+  const [showFloatingCoin, setShowFloatingCoin] = useState(false);
   
   const timerRef = useRef(null);
+  const liveCounterRef = useRef(null);
   
   // Get global translation function
   const { t: globalT } = useLanguage();
