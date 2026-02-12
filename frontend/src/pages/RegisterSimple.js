@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound, Loader2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PinInput from '@/components/PinInput';
 
@@ -28,13 +28,59 @@ const RegisterSimple = () => {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  // Referral lookup state
+  const [referralLookup, setReferralLookup] = useState({
+    loading: false,
+    valid: false,
+    referrerName: '',
+    error: ''
+  });
+
+  // Debounced referral code lookup
+  const lookupReferralCode = useCallback(async (code) => {
+    if (!code || code.length < 3) {
+      setReferralLookup({ loading: false, valid: false, referrerName: '', error: '' });
+      return;
+    }
+    
+    setReferralLookup(prev => ({ ...prev, loading: true, error: '' }));
+    
+    try {
+      const response = await axios.get(`${API}/referral/lookup/${code.toUpperCase()}`);
+      if (response.data.valid) {
+        setReferralLookup({
+          loading: false,
+          valid: true,
+          referrerName: response.data.referrer_name,
+          error: ''
+        });
+      }
+    } catch (error) {
+      setReferralLookup({
+        loading: false,
+        valid: false,
+        referrerName: '',
+        error: error.response?.status === 404 ? 'Invalid referral code' : ''
+      });
+    }
+  }, []);
+
+  // Debounce effect for referral code lookup
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.referral_code) {
+        lookupReferralCode(formData.referral_code);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [formData.referral_code, lookupReferralCode]);
 
   useEffect(() => {
     if (refCode) {
       setFormData(prev => ({ ...prev, referral_code: refCode }));
-      toast.success(`Referral code ${refCode} applied!`, {
-        icon: <Gift className="h-5 w-5" />
-      });
+      // Lookup will be triggered automatically via the debounce effect
     }
   }, [refCode]);
 
