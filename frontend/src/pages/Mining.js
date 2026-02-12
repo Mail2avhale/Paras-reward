@@ -173,27 +173,37 @@ const DailyRewards = ({ user }) => {
     }
     
     if (isMining && sessionTimeRemaining > 0) {
-      // Update every 5 seconds to reduce re-renders while keeping UI smooth
+      // Main timer updates every 5 seconds for time display
       timerRef.current = setInterval(() => {
         setSessionTimeRemaining(prev => {
           if (prev <= 5) {
             setIsMining(false);
             toast.success('Session complete! Collect your rewards.');
             clearInterval(timerRef.current);
+            if (liveCounterRef.current) clearInterval(liveCounterRef.current);
             return 0;
           }
           return prev - 5;
         });
         
-        // Accumulate PRC for 5 seconds
-        const prcPer5Seconds = (miningRate / 3600) * 5;
-        setSessionPRC(prev => prev + prcPer5Seconds);
+        // Show floating coin animation periodically
+        setShowFloatingCoin(true);
+        setTimeout(() => setShowFloatingCoin(false), 800);
       }, 5000);
+      
+      // Live counter updates every 100ms for smooth real-time feel
+      liveCounterRef.current = setInterval(() => {
+        const prcPer100ms = miningRate / 36000; // Per 100ms
+        setSessionPRC(prev => prev + prcPer100ms);
+      }, 100);
     }
     
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+      }
+      if (liveCounterRef.current) {
+        clearInterval(liveCounterRef.current);
       }
     };
   }, [isMining, miningRate]);
