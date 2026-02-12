@@ -25032,6 +25032,234 @@ async def broadcast_notification(request: Request):
     return {"success": True, "sent_count": len(notifications)}
 
 
+# ========== ADVANCED NOTIFICATION FEATURES ==========
+
+@api_router.post("/notifications/{uid}/bulk-delete")
+async def bulk_delete_notifications(uid: str, request: Request):
+    """Delete multiple notifications by IDs"""
+    data = await request.json()
+    notification_ids = data.get("notification_ids", [])
+    
+    if not notification_ids:
+        raise HTTPException(status_code=400, detail="notification_ids required")
+    
+    result = await db.notifications.delete_many({
+        "user_uid": uid,
+        "notification_id": {"$in": notification_ids}
+    })
+    
+    return {"success": True, "deleted_count": result.deleted_count}
+
+
+@api_router.post("/notifications/{uid}/bulk-mark-read")
+async def bulk_mark_notifications_read(uid: str, request: Request):
+    """Mark multiple notifications as read by IDs"""
+    data = await request.json()
+    notification_ids = data.get("notification_ids", [])
+    
+    if not notification_ids:
+        raise HTTPException(status_code=400, detail="notification_ids required")
+    
+    result = await db.notifications.update_many(
+        {"user_uid": uid, "notification_id": {"$in": notification_ids}},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "marked_count": result.modified_count}
+
+
+@api_router.delete("/notifications/{uid}/by-type/{notification_type}")
+async def delete_notifications_by_type(uid: str, notification_type: str):
+    """Delete all notifications of a specific type for a user"""
+    result = await db.notifications.delete_many({
+        "user_uid": uid,
+        "type": notification_type
+    })
+    
+    return {"success": True, "deleted_count": result.deleted_count}
+
+
+@api_router.delete("/notifications/{uid}/read")
+async def delete_read_notifications(uid: str):
+    """Delete all read notifications for a user (cleanup)"""
+    result = await db.notifications.delete_many({
+        "user_uid": uid,
+        "read": True
+    })
+    
+    return {"success": True, "deleted_count": result.deleted_count}
+
+
+@api_router.delete("/notifications/{uid}/older-than/{days}")
+async def delete_old_notifications(uid: str, days: int):
+    """Delete notifications older than specified days"""
+    if days < 1:
+        raise HTTPException(status_code=400, detail="Days must be at least 1")
+    
+    cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    
+    result = await db.notifications.delete_many({
+        "user_uid": uid,
+        "created_at": {"$lt": cutoff_date}
+    })
+    
+    return {"success": True, "deleted_count": result.deleted_count}
+
+
+@api_router.get("/notifications/{uid}/grouped")
+async def get_grouped_notifications(uid: str, limit: int = 50):
+    """Get notifications grouped by date (Today, Yesterday, This Week, Older)"""
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    week_start = today_start - timedelta(days=7)
+    
+    notifications = await db.notifications.find(
+        {"user_uid": uid},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    grouped = {
+        "today": [],
+        "yesterday": [],
+        "this_week": [],
+        "older": []
+    }
+    
+    for notif in notifications:
+        created_at = notif.get("created_at", "")
+        try:
+            notif_date = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if notif_date >= today_start:
+                grouped["today"].append(notif)
+            elif notif_date >= yesterday_start:
+                grouped["yesterday"].append(notif)
+            elif notif_date >= week_start:
+                grouped["this_week"].append(notif)
+            else:
+                grouped["older"].append(notif)
+        except:
+            grouped["older"].append(notif)
+    
+    unread_count = await db.notifications.count_documents({"user_uid": uid, "read": False})
+    
+    return {
+        "grouped": grouped,
+        "total": len(notifications),
+        "unread_count": unread_count,
+        "counts": {
+            "today": len(grouped["today"]),
+            "yesterday": len(grouped["yesterday"]),
+            "this_week": len(grouped["this_week"]),
+            "older": len(grouped["older"])
+        }
+    }
+
+
+@api_router.get("/notifications/{uid}/by-type")
+async def get_notifications_by_type(uid: str):
+    """Get notification counts and samples by type"""
+    pipeline = [
+        {"$match": {"user_uid": uid}},
+        {"$group": {
+            "_id": "$type",
+            "count": {"$sum": 1},
+            "unread": {"$sum": {"$cond": [{"$eq": ["$read", False]}, 1, 0]}},
+            "latest": {"$first": "$created_at"}
+        }},
+        {"$sort": {"count": -1}}
+    ]
+    
+    results = await db.notifications.aggregate(pipeline).to_list(50)
+    
+    types = {}
+    for r in results:
+        type_name = r["_id"] or "general"
+        types[type_name] = {
+            "count": r["count"],
+            "unread": r["unread"],
+            "latest": r["latest"]
+        }
+    
+    return {"types": types, "total_types": len(types)}
+
+
+@api_router.get("/notifications/{uid}/stats")
+async def get_notification_stats(uid: str):
+    """Get detailed notification statistics for a user"""
+    total = await db.notifications.count_documents({"user_uid": uid})
+    unread = await db.notifications.count_documents({"user_uid": uid, "read": False})
+    read = total - unread
+    
+    # Get oldest and newest
+    oldest = await db.notifications.find_one(
+        {"user_uid": uid},
+        {"_id": 0, "created_at": 1},
+        sort=[("created_at", 1)]
+    )
+    newest = await db.notifications.find_one(
+        {"user_uid": uid},
+        {"_id": 0, "created_at": 1},
+        sort=[("created_at", -1)]
+    )
+    
+    # Count by type
+    type_counts = await db.notifications.aggregate([
+        {"$match": {"user_uid": uid}},
+        {"$group": {"_id": "$type", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]).to_list(10)
+    
+    return {
+        "total": total,
+        "unread": unread,
+        "read": read,
+        "read_percentage": round((read / total * 100), 1) if total > 0 else 0,
+        "oldest": oldest.get("created_at") if oldest else None,
+        "newest": newest.get("created_at") if newest else None,
+        "by_type": {t["_id"] or "general": t["count"] for t in type_counts}
+    }
+
+
+@api_router.put("/notifications/{uid}/preferences")
+async def update_notification_preferences(uid: str, request: Request):
+    """Update user's notification preferences (mute types, etc.)"""
+    data = await request.json()
+    
+    # Preferences structure
+    preferences = {
+        "muted_types": data.get("muted_types", []),  # Types to not show
+        "email_enabled": data.get("email_enabled", True),
+        "push_enabled": data.get("push_enabled", True),
+        "sound_enabled": data.get("sound_enabled", True),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {"notification_preferences": preferences}}
+    )
+    
+    return {"success": True, "preferences": preferences}
+
+
+@api_router.get("/notifications/{uid}/preferences")
+async def get_notification_preferences(uid: str):
+    """Get user's notification preferences"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "notification_preferences": 1})
+    
+    # Default preferences
+    default_prefs = {
+        "muted_types": [],
+        "email_enabled": True,
+        "push_enabled": True,
+        "sound_enabled": True
+    }
+    
+    return user.get("notification_preferences", default_prefs) if user else default_prefs
+
+
 # ========== USER SEARCH & DISCOVERY ==========
 
 @api_router.get("/social/search-users")
