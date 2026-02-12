@@ -575,20 +575,28 @@ const AdminKYC = ({ user }) => {
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 h-8"
+                        className="bg-green-600 hover:bg-green-700 h-8 min-w-[40px]"
                         onClick={(e) => handleQuickApprove(doc, e)}
-                        disabled={processing}
+                        disabled={processing === doc.kyc_id}
                       >
-                        <CheckCircle className="w-4 h-4" />
+                        {processing === doc.kyc_id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="h-8"
+                        className="h-8 min-w-[40px]"
                         onClick={(e) => handleQuickReject(doc, e)}
-                        disabled={processing}
+                        disabled={processing === doc.kyc_id}
                       >
-                        <XCircle className="w-4 h-4" />
+                        {processing === doc.kyc_id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
                   )}
