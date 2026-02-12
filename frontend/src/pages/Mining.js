@@ -481,20 +481,40 @@ const DailyRewards = ({ user }) => {
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   />
                   
+                  {/* Pulse ring effect */}
+                  <PulseRing />
+                  
+                  {/* Sparkle particles */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    {[...Array(5)].map((_, i) => (
+                      <SparkleParticle key={i} delay={i * 0.4} x={(i - 2) * 15} />
+                    ))}
+                  </div>
+                  
                   <p className="text-gray-400 text-xs mb-1 relative z-10">{globalT('sessionEarnings')}</p>
                   <div className="flex items-center justify-center gap-2 relative z-10">
-                    {/* Animated coin icon */}
+                    {/* Animated coin icon with glow */}
                     <motion.div
+                      className="relative"
                       animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
-                      <Coins className="w-6 h-6 text-amber-400" />
+                      <motion.div
+                        className="absolute inset-0 bg-amber-400 rounded-full blur-md"
+                        animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.8, 1.2, 0.8] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                      <Coins className="w-6 h-6 text-amber-400 relative z-10" />
                     </motion.div>
                     
-                    {/* Live animated counter */}
-                    <span className="text-3xl font-bold text-amber-400">
+                    {/* Live animated counter with gradient text */}
+                    <motion.span 
+                      className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400 bg-clip-text text-transparent bg-[length:200%_100%]"
+                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    >
                       <AnimatedCounter value={sessionPRC} decimals={4} />
-                    </span>
+                    </motion.span>
                     <span className="text-amber-400 text-lg">PRC</span>
                     
                     {/* Floating +PRC indicator */}
@@ -505,14 +525,38 @@ const DailyRewards = ({ user }) => {
                     </AnimatePresence>
                   </div>
                   
-                  {/* Per-second rate indicator */}
-                  <motion.p 
-                    className="text-emerald-400 text-xs mt-2 relative z-10"
+                  {/* Per-second rate indicator with breathing animation */}
+                  <motion.div 
+                    className="flex items-center justify-center gap-2 mt-2 relative z-10"
                     animate={{ opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    +{(miningRate / 3600).toFixed(6)} PRC/sec
-                  </motion.p>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
+                    >
+                      <Zap className="w-3 h-3 text-emerald-400" />
+                    </motion.div>
+                    <p className="text-emerald-400 text-xs">
+                      +{(miningRate / 3600).toFixed(6)} PRC/sec
+                    </p>
+                  </motion.div>
+                  
+                  {/* Mini progress bar showing earning progress */}
+                  <div className="mt-3 h-1 bg-gray-700/50 rounded-full overflow-hidden relative z-10">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"
+                      animate={{ 
+                        x: ['-100%', '100%']
+                      }}
+                      transition={{ 
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "linear"
+                      }}
+                      style={{ width: '50%' }}
+                    />
+                  </div>
                 </div>
                 
                 {/* Collect Button */}
