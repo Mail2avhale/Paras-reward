@@ -212,7 +212,7 @@ const AdminKYC = ({ user }) => {
     }
   };
 
-  // Quick action handlers
+  // Quick action handlers - NO CONFIRM for approve (instant), only for reject
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
     const kycId = doc.kyc_id;
@@ -226,14 +226,10 @@ const AdminKYC = ({ user }) => {
         action: 'approve',
         admin_id: user?.uid
       });
-      toast.success(`KYC Approved for ${userName}!`);
+      toast.success(`✅ KYC Approved: ${userName}`);
       
-      // Optimistic update
-      setKycDocuments(prev => prev.map(d => 
-        d.kyc_id === kycId 
-          ? {...d, status: 'verified', verified_at: new Date().toISOString()} 
-          : d
-      ));
+      // Optimistic update - remove from list immediately
+      setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
       
       // Update stats immediately
       setStats(prev => ({
@@ -242,11 +238,11 @@ const AdminKYC = ({ user }) => {
         verified: prev.verified + 1
       }));
       
-      // Background refresh
-      setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC approve error:', error);
       toast.error(error.response?.data?.detail || 'Failed to approve');
+      // Refresh on error
+      fetchKYCDocuments(currentPage, statusFilter);
     } finally {
       setProcessing(null);
     }
@@ -269,14 +265,10 @@ const AdminKYC = ({ user }) => {
         admin_id: user?.uid,
         notes: reason
       });
-      toast.success(`KYC Rejected for ${userName}`);
+      toast.success(`❌ KYC Rejected: ${userName}`);
       
-      // Optimistic update
-      setKycDocuments(prev => prev.map(d => 
-        d.kyc_id === kycId 
-          ? {...d, status: 'rejected', verified_at: new Date().toISOString()} 
-          : d
-      ));
+      // Optimistic update - remove from list immediately
+      setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
       
       // Update stats immediately
       setStats(prev => ({
@@ -285,11 +277,11 @@ const AdminKYC = ({ user }) => {
         rejected: prev.rejected + 1
       }));
       
-      // Background refresh
-      setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC reject error:', error);
       toast.error(error.response?.data?.detail || 'Failed to reject');
+      // Refresh on error
+      fetchKYCDocuments(currentPage, statusFilter);
     } finally {
       setProcessing(null);
     }
