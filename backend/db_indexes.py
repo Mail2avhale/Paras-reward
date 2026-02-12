@@ -64,6 +64,9 @@ async def create_performance_indexes(db):
         await db.transactions.create_index([("user_id", 1), ("transaction_type", 1)], background=True)
         await db.transactions.create_index([("user_id", 1), ("created_at", -1)], background=True)
         await db.transactions.create_index([("transaction_type", 1), ("created_at", -1)], background=True)
+        # NEW: Optimized index for mining activity batch queries
+        await db.transactions.create_index([("user_id", 1), ("type", 1), ("created_at", -1)], background=True)
+        await db.transactions.create_index("type", background=True)
         
         print("  ✅ Transactions indexes created")
         
