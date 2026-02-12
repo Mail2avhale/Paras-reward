@@ -29,7 +29,30 @@ def set_cache(cache_manager):
 
 @router.get("/profit-loss")
 async def get_profit_loss_statement(period: str = "month", year: int = None, month: int = None):
-    """Get comprehensive Profit & Loss statement"""
+    """
+    COMPREHENSIVE Profit & Loss Statement
+    
+    REVENUE SOURCES:
+    ================
+    1. VIP Memberships (Startup ₹299, Growth ₹549, Elite ₹799)
+    2. Service Charges (Bill Payments 2%, Gift Vouchers 5%)
+    3. Delivery Charges (from product orders)
+    4. Ad Revenue (manually tracked)
+    5. Other Income
+    
+    EXPENSE CATEGORIES:
+    ===================
+    1. Payment Gateway Fees (auto: 2% of payments)
+    2. Server/Hosting (manual)
+    3. SMS/Email Services (manual)
+    4. Marketing (manual)
+    5. Cashback/Referral (auto-calculated)
+    6. PRC Rewards Given (auto-calculated liability)
+    7. Staff Salaries (manual)
+    8. Fixed Expenses (auto from fixed_expenses)
+    
+    STATUS: PROFIT / LOSS / BREAKEVEN
+    """
     try:
         now = datetime.now(timezone.utc)
         
@@ -61,48 +84,236 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
         
-        # Revenue calculation
-        revenue = {"vip_memberships": 0, "service_charges": 0, "delivery_charges": 0, "other_income": 0}
+        # ===== REVENUE CALCULATION =====
+        revenue = {
+            "vip_memberships": 0,
+            "service_charges": 0,
+            "delivery_charges": 0,
+            "ad_revenue": 0,
+            "other_income": 0
+        }
+        revenue_details = {
+            "vip_count": 0,
+            "vip_plans": {},
+            "bill_payments_count": 0,
+            "bill_service_charges": 0,
+            "gift_voucher_count": 0,
+            "gift_service_charges": 0,
+            "orders_count": 0
+        }
         
-        # VIP Membership Revenue
+        # 1. VIP Membership Revenue
         vip_payments = await db.vip_payments.find({
             "status": "approved",
-            "approved_at": {"$gte": start_str, "$lte": end_str}
+            "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount": 1, "plan_type": 1, "plan_name": 1}).to_list(10000)
+        
+        for p in vip_payments:
+            amount = p.get("amount", 0)
+            revenue["vip_memberships"] += amount
+            revenue_details["vip_count"] += 1
+            plan = p.get("plan_type") or p.get("plan_name") or "unknown"
+            revenue_details["vip_plans"][plan] = revenue_details["vip_plans"].get(plan, 0) + 1
+        
+        # 2. Service Charges from Bill Payments (2%)
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "service_charge": 1, "amount_inr": 1}).to_list(10000)
+        
+        bill_charges = sum(bp.get("service_charge", bp.get("amount_inr", 0) * 0.02) for bp in bill_payments)
+        revenue["service_charges"] += bill_charges
+        revenue_details["bill_payments_count"] = len(bill_payments)
+        revenue_details["bill_service_charges"] = round(bill_charges, 2)
+        
+        # 3. Service Charges from Gift Vouchers (5%)
+        gift_vouchers = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "service_charge": 1, "denomination": 1}).to_list(10000)
+        
+        gift_charges = sum(gv.get("service_charge", gv.get("denomination", 0) * 0.05) for gv in gift_vouchers)
+        revenue["service_charges"] += gift_charges
+        revenue_details["gift_voucher_count"] = len(gift_vouchers)
+        revenue_details["gift_service_charges"] = round(gift_charges, 2)
+        
+        # 4. Delivery Charges from Orders
+        orders = await db.orders.find({
+            "status": "delivered",
+            "$or": [
+                {"delivered_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "delivery_charge": 1}).to_list(10000)
+        
+        revenue["delivery_charges"] = sum(o.get("delivery_charge", 0) for o in orders)
+        revenue_details["orders_count"] = len(orders)
+        
+        # 5. Ad Revenue
+        ads_income = await db.ads_income.find({
+            "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0, "amount": 1}).to_list(1000)
-        revenue["vip_memberships"] = sum(p.get("amount", 0) for p in vip_payments)
+        revenue["ad_revenue"] = sum(ai.get("amount", 0) for ai in ads_income)
+        
+        # 6. Other Income
+        other_income = await db.other_income.find({
+            "date": {"$gte": start_str, "$lte": end_str}
+        }, {"_id": 0, "amount": 1}).to_list(1000)
+        revenue["other_income"] = sum(oi.get("amount", 0) for oi in other_income)
         
         total_revenue = sum(revenue.values())
         
-        # Expense calculation
-        expenses = {"payment_gateway_fees": 0, "miscellaneous": 0}
+        # ===== EXPENSE CALCULATION =====
+        expenses = {
+            "payment_gateway_fees": 0,
+            "server_hosting": 0,
+            "sms_email_services": 0,
+            "marketing": 0,
+            "cashback_referral": 0,
+            "prc_rewards": 0,
+            "staff_salary": 0,
+            "office_rent": 0,
+            "fixed_expenses": 0,
+            "miscellaneous": 0
+        }
         
+        # 1. Manual Expenses
         manual_expenses = await db.expenses.find({
             "date": {"$gte": start_str, "$lte": end_str}
-        }, {"_id": 0}).to_list(1000)
+        }, {"_id": 0}).to_list(10000)
         
         for exp in manual_expenses:
             category = exp.get("category", "miscellaneous")
-            if category not in expenses:
-                expenses[category] = 0
-            expenses[category] += exp.get("amount", 0)
+            amount = exp.get("amount", 0)
+            if category in expenses:
+                expenses[category] += amount
+            else:
+                expenses["miscellaneous"] += amount
         
-        expenses["payment_gateway_fees"] = revenue["vip_memberships"] * 0.02
+        # 2. Auto: Payment Gateway Fees (2% of VIP revenue)
+        expenses["payment_gateway_fees"] = round(revenue["vip_memberships"] * 0.02, 2)
+        
+        # 3. Auto: Fixed Monthly Expenses (prorated if not full month)
+        fixed_expenses = await db.fixed_expenses.find({"active": True}, {"_id": 0}).to_list(100)
+        fixed_total = sum(fe.get("monthly_amount", 0) for fe in fixed_expenses)
+        
+        # Prorate for partial periods
+        if period == "day":
+            expenses["fixed_expenses"] = round(fixed_total / 30, 2)  # Daily portion
+        elif period == "week":
+            expenses["fixed_expenses"] = round(fixed_total / 4, 2)  # Weekly portion
+        else:
+            expenses["fixed_expenses"] = round(fixed_total, 2)  # Full month
+        
+        # 4. Auto: Cashback/Referral bonuses
+        referral_txns = await db.transactions.find({
+            "transaction_type": {"$in": ["referral_bonus", "cashback", "referral"]},
+            "$or": [
+                {"timestamp": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount": 1}).to_list(50000)
+        expenses["cashback_referral"] = round(sum(abs(t.get("amount", 0)) for t in referral_txns) * 0.10, 2)  # PRC value
+        
+        # 5. Auto: PRC Mining rewards (liability at ₹0.10 per PRC)
+        mining_txns = await db.transactions.find({
+            "transaction_type": {"$in": ["mining", "tap_game", "prc_rain_gain"]},
+            "$or": [
+                {"timestamp": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount": 1}).to_list(100000)
+        prc_given = sum(abs(t.get("amount", 0)) for t in mining_txns)
+        expenses["prc_rewards"] = round(prc_given * 0.10, 2)
+        
         total_expenses = sum(expenses.values())
         
+        # ===== PROFIT/LOSS =====
         net_profit = total_revenue - total_expenses
-        profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+        profit_margin = round((net_profit / total_revenue * 100), 2) if total_revenue > 0 else 0
+        
+        # Status determination
+        if net_profit > 100:
+            status = "profit"
+            status_emoji = "📈"
+            status_color = "green"
+            status_message_mr = f"Profit: ₹{net_profit:,.2f}"
+        elif net_profit < -100:
+            status = "loss"
+            status_emoji = "📉"
+            status_color = "red"
+            status_message_mr = f"Loss: ₹{abs(net_profit):,.2f}"
+        else:
+            status = "breakeven"
+            status_emoji = "➡️"
+            status_color = "yellow"
+            status_message_mr = "Breakeven"
+        
+        # Health Score (0-100)
+        health_score = min(100, max(0, int(50 + profit_margin)))
+        
+        # ===== INSIGHTS =====
+        insights = []
+        
+        if revenue["vip_memberships"] > 0 and total_revenue > 0:
+            vip_pct = round(revenue["vip_memberships"] / total_revenue * 100, 1)
+            insights.append(f"VIP Memberships = {vip_pct}% of revenue ({revenue_details['vip_count']} members)")
+        
+        if expenses["prc_rewards"] > total_revenue * 0.3:
+            insights.append("⚠️ PRC rewards खूप जास्त आहेत (>30% of revenue)")
+        
+        if expenses["cashback_referral"] > total_revenue * 0.2:
+            insights.append("⚠️ Referral bonus खर्च जास्त आहे")
+        
+        if profit_margin > 50:
+            insights.append("✅ उत्कृष्ट profit margin!")
+        elif profit_margin < 10 and profit_margin > 0:
+            insights.append("💡 Profit margin कमी आहे - expenses कमी करा")
         
         return {
             "period": period,
             "period_label": period_label,
             "start_date": start_str,
             "end_date": end_str,
-            "revenue": revenue,
-            "total_revenue": round(total_revenue, 2),
-            "expenses": expenses,
-            "total_expenses": round(total_expenses, 2),
-            "net_profit": round(net_profit, 2),
-            "profit_margin": round(profit_margin, 2),
+            
+            # Easy-to-understand summary
+            "summary": {
+                "gross_revenue": round(total_revenue, 2),
+                "total_expenses": round(total_expenses, 2),
+                "net_profit": round(net_profit, 2),
+                "profit_margin": profit_margin,
+                "status": status,
+                "status_emoji": status_emoji,
+                "status_color": status_color,
+                "status_message": status_message_mr,
+                "health_score": health_score
+            },
+            
+            # Revenue breakdown
+            "revenue": {
+                "total": round(total_revenue, 2),
+                "breakdown": {k: round(v, 2) for k, v in revenue.items()},
+                "details": revenue_details
+            },
+            
+            # Expense breakdown  
+            "expenses": {
+                "total": round(total_expenses, 2),
+                "breakdown": {k: round(v, 2) for k, v in expenses.items()}
+            },
+            
+            # Insights in Marathi
+            "insights": insights,
+            
             "generated_at": now.isoformat()
         }
     except Exception as e:
