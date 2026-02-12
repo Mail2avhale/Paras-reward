@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Sidebar from '@/components/Sidebar';
 import NotificationCenter from '@/components/NotificationCenter';
 import { LanguageSelectorCompact } from '@/components/LanguageSelector';
+import axios from 'axios';
 
+const API = process.env.REACT_APP_BACKEND_URL;
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 
 const TopBar = ({ user, onLogout }) => {
@@ -16,6 +18,27 @@ const TopBar = ({ user, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.uid) return;
+    try {
+      const response = await axios.get(`${API}/api/notifications/${user.uid}/unread-count`);
+      setUnreadCount(response.data.unread_count || 0);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  }, [user?.uid]);
+  
+  // Fetch unread count on mount and periodically
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 60000); // Poll every 60 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user?.uid, fetchUnreadCount]);
 
   // Auto-hide on scroll down, show on scroll up
   useEffect(() => {
