@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,19 @@ import Pagination from '@/components/Pagination';
 import {
   FileText, Search, CheckCircle, XCircle, Clock, User,
   Eye, Download, AlertCircle, Filter, RefreshCw, Loader2,
-  ChevronDown, ChevronUp, Image
+  ChevronDown, ChevronUp, Image, Zap, CheckCheck, Square, CheckSquare
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 20;
-const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds for faster updates
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
 
 const AdminKYC = ({ user }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('pending'); // Default to pending
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -29,6 +29,8 @@ const AdminKYC = ({ user }) => {
   const [stats, setStats] = useState({ pending: 0, verified: 0, rejected: 0 });
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [selectedIds, setSelectedIds] = useState(new Set()); // For bulk selection
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Fetch KYC documents with server-side pagination
   const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter) => {
@@ -43,13 +45,8 @@ const AdminKYC = ({ user }) => {
       setKycDocuments(docs);
       setTotalPages(data.pages || 1);
       setTotalDocs(data.total || 0);
-      
-      // Update pending count from response
-      if (data.pending_count !== undefined) {
-        setStats(prev => ({ ...prev, pending: data.pending_count }));
-      }
-      
       setLastRefresh(new Date());
+      setSelectedIds(new Set()); // Clear selection on refresh
     } catch (error) {
       console.error('Error fetching KYC documents:', error);
       toast.error('Failed to fetch KYC documents');
@@ -58,18 +55,14 @@ const AdminKYC = ({ user }) => {
     }
   }, [statusFilter]);
 
-  // Fetch stats separately (fast endpoint)
+  // Fetch stats in SINGLE API call (OPTIMIZED)
   const fetchStats = useCallback(async () => {
     try {
-      const [pendingRes, verifiedRes, rejectedRes] = await Promise.all([
-        axios.get(`${API}/kyc/list?status=pending&limit=1`),
-        axios.get(`${API}/kyc/list?status=verified&limit=1`),
-        axios.get(`${API}/kyc/list?status=rejected&limit=1`)
-      ]);
+      const response = await axios.get(`${API}/kyc/stats`);
       setStats({
-        pending: pendingRes.data?.total || 0,
-        verified: verifiedRes.data?.total || 0,
-        rejected: rejectedRes.data?.total || 0
+        pending: response.data?.pending || 0,
+        verified: response.data?.verified || 0,
+        rejected: response.data?.rejected || 0
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -79,7 +72,7 @@ const AdminKYC = ({ user }) => {
   useEffect(() => {
     fetchKYCDocuments(1, statusFilter);
     fetchStats();
-  }, [statusFilter]);
+  }, [statusFilter, fetchKYCDocuments, fetchStats]);
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -91,19 +84,47 @@ const AdminKYC = ({ user }) => {
   const handleStatusChange = (newStatus) => {
     setStatusFilter(newStatus);
     setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
-  // Auto-refresh for pending items
+  // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchKYCDocuments(currentPage, statusFilter);
+      fetchStats();
     }, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [autoRefresh, currentPage, statusFilter]);
+  }, [autoRefresh, currentPage, statusFilter, fetchKYCDocuments, fetchStats]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+A - Select all on current page
+      if (e.ctrlKey && e.key === 'a' && statusFilter === 'pending') {
+        e.preventDefault();
+        const pendingIds = kycDocuments.filter(d => d.status === 'pending').map(d => d.kyc_id);
+        setSelectedIds(new Set(pendingIds));
+        toast.info(`${pendingIds.length} documents selected`);
+      }
+      // Escape - Clear selection
+      if (e.key === 'Escape') {
+        setSelectedIds(new Set());
+        setSelectedDoc(null);
+      }
+      // R - Refresh
+      if (e.key === 'r' && !e.ctrlKey && !selectedDoc) {
+        fetchKYCDocuments(currentPage, statusFilter);
+        fetchStats();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [kycDocuments, statusFilter, currentPage, selectedDoc, fetchKYCDocuments, fetchStats]);
 
   // Filter by search (client-side for current page)
-  const filteredDocs = React.useMemo(() => {
+  const filteredDocs = useMemo(() => {
     if (!searchTerm) return kycDocuments;
     
     const search = searchTerm.toLowerCase();
@@ -116,13 +137,87 @@ const AdminKYC = ({ user }) => {
     );
   }, [kycDocuments, searchTerm]);
 
+  // Toggle selection
+  const toggleSelect = (kycId, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(kycId)) {
+        newSet.delete(kycId);
+      } else {
+        newSet.add(kycId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all pending on current page
+  const selectAllPending = () => {
+    const pendingIds = filteredDocs.filter(d => d.status === 'pending').map(d => d.kyc_id);
+    setSelectedIds(new Set(pendingIds));
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Bulk approve/reject
+  const handleBulkAction = async (action) => {
+    if (selectedIds.size === 0) {
+      toast.error('No documents selected');
+      return;
+    }
+    
+    const actionText = action === 'approve' ? 'approve' : 'reject';
+    if (!window.confirm(`${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ${selectedIds.size} documents?`)) {
+      return;
+    }
+    
+    let reason = '';
+    if (action === 'reject') {
+      reason = window.prompt('Rejection reason (optional):') || '';
+    }
+    
+    try {
+      setBulkProcessing(true);
+      const response = await axios.post(`${API}/kyc/bulk-verify`, {
+        kyc_ids: Array.from(selectedIds),
+        action,
+        admin_id: user?.uid,
+        reason
+      });
+      
+      toast.success(`${response.data.modified} documents ${actionText}d!`);
+      setSelectedIds(new Set());
+      
+      // Optimistic update
+      const newStatus = action === 'approve' ? 'verified' : 'rejected';
+      setKycDocuments(prev => prev.map(doc =>
+        selectedIds.has(doc.kyc_id) 
+          ? { ...doc, status: newStatus, verified_at: new Date().toISOString() }
+          : doc
+      ));
+      
+      // Background refresh
+      setTimeout(() => {
+        fetchKYCDocuments(currentPage, statusFilter);
+        fetchStats();
+      }, 1500);
+    } catch (error) {
+      console.error('Bulk action error:', error);
+      toast.error(error.response?.data?.detail || `Failed to ${actionText} documents`);
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   // Quick action handlers
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
-    if (processing) return; // Prevent multiple clicks
+    if (processing) return;
     if (!window.confirm(`Approve KYC for ${doc.user_name || doc.user_id}?`)) return;
     
-    // Store kyc_id immediately before any async operations
     const kycId = doc.kyc_id;
     const userName = doc.user_name || doc.user_id;
     
@@ -134,14 +229,21 @@ const AdminKYC = ({ user }) => {
       });
       toast.success(`KYC Approved for ${userName}!`);
       
-      // Optimistic local update instead of full refetch
+      // Optimistic update
       setKycDocuments(prev => prev.map(d => 
         d.kyc_id === kycId 
           ? {...d, status: 'verified', verified_at: new Date().toISOString()} 
           : d
       ));
       
-      // Background refresh after delay
+      // Update stats immediately
+      setStats(prev => ({
+        ...prev,
+        pending: Math.max(0, prev.pending - 1),
+        verified: prev.verified + 1
+      }));
+      
+      // Background refresh
       setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC approve error:', error);
@@ -153,11 +255,10 @@ const AdminKYC = ({ user }) => {
 
   const handleQuickReject = async (doc, e) => {
     e.stopPropagation();
-    if (processing) return; // Prevent multiple clicks
+    if (processing) return;
     const reason = window.prompt('Rejection reason (optional):');
-    if (reason === null) return; // User cancelled
+    if (reason === null) return;
     
-    // Store kyc_id immediately before any async operations
     const kycId = doc.kyc_id;
     const userName = doc.user_name || doc.user_id;
     
@@ -170,14 +271,21 @@ const AdminKYC = ({ user }) => {
       });
       toast.success(`KYC Rejected for ${userName}`);
       
-      // Optimistic local update instead of full refetch
+      // Optimistic update
       setKycDocuments(prev => prev.map(d => 
         d.kyc_id === kycId 
           ? {...d, status: 'rejected', verified_at: new Date().toISOString()} 
           : d
       ));
       
-      // Background refresh after delay
+      // Update stats immediately
+      setStats(prev => ({
+        ...prev,
+        pending: Math.max(0, prev.pending - 1),
+        rejected: prev.rejected + 1
+      }));
+      
+      // Background refresh
       setTimeout(() => fetchKYCDocuments(currentPage, statusFilter), 2000);
     } catch (error) {
       console.error('KYC reject error:', error);
@@ -188,7 +296,7 @@ const AdminKYC = ({ user }) => {
   };
 
   const handleVerify = async (kycId, action) => {
-    if (processing) return; // Prevent multiple clicks
+    if (processing) return;
     
     try {
       setProcessing(true);
@@ -198,7 +306,6 @@ const AdminKYC = ({ user }) => {
       });
       toast.success(`KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
       
-      // Optimistic local update instead of full refetch (FASTER!)
       const newStatus = action === 'approve' ? 'verified' : 'rejected';
       setKycDocuments(prev => prev.map(doc => 
         doc.kyc_id === kycId 
@@ -207,11 +314,10 @@ const AdminKYC = ({ user }) => {
       ));
       
       setSelectedDoc(null);
-      
-      // Background refresh (non-blocking)
       setTimeout(() => {
-        fetchKYCDocuments();
-      }, 3000);
+        fetchKYCDocuments(currentPage, statusFilter);
+        fetchStats();
+      }, 2000);
     } catch (error) {
       console.error('KYC verify error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update KYC status');
@@ -239,6 +345,8 @@ const AdminKYC = ({ user }) => {
       minute: '2-digit'
     });
   };
+
+  const pendingInSelection = filteredDocs.filter(d => selectedIds.has(d.kyc_id) && d.status === 'pending').length;
 
   return (
     <div className="p-4 md:p-6 bg-gray-950 min-h-screen">
