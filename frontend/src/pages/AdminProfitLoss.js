@@ -316,7 +316,14 @@ const AdminProfitLoss = ({ user }) => {
             {Object.entries(revenue.breakdown || {}).map(([key, value]) => (
               <div key={key} className="flex items-center justify-between py-2 border-b border-gray-700/50">
                 <span className="text-sm text-gray-300">
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  {key === 'processing_fees' ? '🔧 Processing Fees (₹10 × services)' :
+                   key === 'admin_charges' ? '💼 Admin Charges (20%)' :
+                   key === 'vip_memberships' ? '👑 VIP Memberships' :
+                   key === 'service_charges' ? '📋 Service Charges' :
+                   key === 'delivery_charges' ? '🚚 Delivery Charges' :
+                   key === 'ad_revenue' ? '📢 Ad Revenue' :
+                   key === 'other_income' ? '📦 Other Income' :
+                   key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
                 <span className="font-medium text-green-400">{formatCurrency(value)}</span>
               </div>
@@ -357,6 +364,86 @@ const AdminProfitLoss = ({ user }) => {
           </div>
         </Card>
       </div>
+
+      {/* Service-wise Fee Breakdown (NEW) */}
+      {revenue.details && (revenue.details.bill_payments_count > 0 || revenue.details.gift_voucher_count > 0 || revenue.details.luxury_claims_count > 0 || revenue.details.withdrawal_count > 0) && (
+        <Card className="p-6 bg-purple-900/20 border-purple-500/30">
+          <h3 className="text-lg font-bold text-purple-400 flex items-center gap-2 mb-4">
+            <Receipt className="w-5 h-5" />
+            Service-wise Fee Breakdown (₹10 + 20%)
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Bill Payments */}
+            {revenue.details.bill_payments_count > 0 && (
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-5 h-5 text-blue-400" />
+                  <span className="font-medium text-white">Bill Payments</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-400">{revenue.details.bill_payments_count}</p>
+                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                  <p>Processing: {formatCurrency(revenue.details.bill_processing_fees || 0)}</p>
+                  <p>Admin (20%): {formatCurrency(revenue.details.bill_admin_charges || 0)}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Gift Vouchers */}
+            {revenue.details.gift_voucher_count > 0 && (
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="w-5 h-5 text-pink-400" />
+                  <span className="font-medium text-white">Gift Vouchers</span>
+                </div>
+                <p className="text-2xl font-bold text-pink-400">{revenue.details.gift_voucher_count}</p>
+                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                  <p>Processing: {formatCurrency(revenue.details.gift_processing_fees || 0)}</p>
+                  <p>Admin (20%): {formatCurrency(revenue.details.gift_admin_charges || 0)}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Luxury Claims */}
+            {revenue.details.luxury_claims_count > 0 && (
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CreditCard className="w-5 h-5 text-amber-400" />
+                  <span className="font-medium text-white">Luxury Claims</span>
+                </div>
+                <p className="text-2xl font-bold text-amber-400">{revenue.details.luxury_claims_count}</p>
+                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                  <p>Processing: {formatCurrency(revenue.details.luxury_processing_fees || 0)}</p>
+                  <p>Admin (20%): {formatCurrency(revenue.details.luxury_admin_charges || 0)}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Withdrawals */}
+            {revenue.details.withdrawal_count > 0 && (
+              <div className="p-4 bg-gray-800/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="w-5 h-5 text-green-400" />
+                  <span className="font-medium text-white">Withdrawals</span>
+                </div>
+                <p className="text-2xl font-bold text-green-400">{revenue.details.withdrawal_count}</p>
+                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                  <p>Processing: {formatCurrency(revenue.details.withdrawal_processing_fees || 0)}</p>
+                  <p>Admin (20%): {formatCurrency(revenue.details.withdrawal_admin_charges || 0)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Total Fee Revenue */}
+          <div className="mt-4 pt-4 border-t border-purple-500/30 flex justify-between items-center">
+            <span className="text-gray-300">Total Fee Revenue:</span>
+            <span className="text-xl font-bold text-purple-400">
+              {formatCurrency((revenue.breakdown?.processing_fees || 0) + (revenue.breakdown?.admin_charges || 0))}
+            </span>
+          </div>
+        </Card>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
