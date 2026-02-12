@@ -4,16 +4,16 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import Pagination from '@/components/Pagination';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
-  DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2,
-  Calendar, RefreshCw, Download, FileText, PieChart as PieIcon,
+  DollarSign, TrendingUp, TrendingDown, Plus, Trash2,
+  Calendar, RefreshCw, FileText, PieChart as PieIcon,
   ArrowUpRight, ArrowDownRight, Receipt, CreditCard, Building,
-  Smartphone, Megaphone, Package, Gift, Users, Wallet
+  Smartphone, Megaphone, Users, Wallet, AlertTriangle, CheckCircle,
+  Info, ChevronRight, Loader2, Heart
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -26,12 +26,8 @@ const EXPENSE_CATEGORIES = [
   { value: 'payment_gateway_fees', label: 'Payment Gateway Fees', icon: CreditCard },
   { value: 'sms_email_services', label: 'SMS/Email Services', icon: Smartphone },
   { value: 'marketing', label: 'Marketing', icon: Megaphone },
-  { value: 'product_cost', label: 'Product Cost', icon: Package },
-  { value: 'gift_voucher_cost', label: 'Gift Voucher Cost', icon: Gift },
-  { value: 'cashback_referral', label: 'Cashback/Referral', icon: Users },
   { value: 'staff_salary', label: 'Staff Salary', icon: Users },
   { value: 'office_rent', label: 'Office Rent', icon: Building },
-  { value: 'utilities', label: 'Utilities', icon: Building },
   { value: 'miscellaneous', label: 'Miscellaneous', icon: FileText }
 ];
 
@@ -41,23 +37,20 @@ const AdminProfitLoss = ({ user }) => {
   const [period, setPeriod] = useState('month');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  
-  // Expense management
-  const [expenses, setExpenses] = useState([]);
-  const [expensePage, setExpensePage] = useState(1);
-  const [expenseTotal, setExpenseTotal] = useState(0);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [expenses, setExpenses] = useState([]);
+  const [fixedExpenses, setFixedExpenses] = useState([]);
   const [expenseForm, setExpenseForm] = useState({
     category: '',
     amount: '',
     description: '',
-    vendor: '',
     date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
     fetchPLData();
     fetchExpenses();
+    fetchFixedExpenses();
   }, [period, selectedYear, selectedMonth]);
 
   const fetchPLData = async () => {
@@ -83,17 +76,25 @@ const AdminProfitLoss = ({ user }) => {
 
   const fetchExpenses = async () => {
     try {
-      const response = await axios.get(`${API}/admin/finance/expenses?page=${expensePage}&limit=10`);
+      const response = await axios.get(`${API}/admin/finance/expenses?limit=20`);
       setExpenses(response.data.expenses || []);
-      setExpenseTotal(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching expenses:', error);
     }
   };
 
+  const fetchFixedExpenses = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/finance/fixed-expenses`);
+      setFixedExpenses(response.data.expenses || []);
+    } catch (error) {
+      console.error('Error fetching fixed expenses:', error);
+    }
+  };
+
   const handleAddExpense = async () => {
     if (!expenseForm.category || !expenseForm.amount) {
-      toast.error('Please fill required fields');
+      toast.error('Category आणि Amount आवश्यक आहे');
       return;
     }
     
@@ -103,9 +104,9 @@ const AdminProfitLoss = ({ user }) => {
         amount: parseFloat(expenseForm.amount),
         admin_id: user?.uid
       });
-      toast.success('Expense added successfully');
+      toast.success('Expense added!');
       setShowAddExpense(false);
-      setExpenseForm({ category: '', amount: '', description: '', vendor: '', date: new Date().toISOString().split('T')[0] });
+      setExpenseForm({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
       fetchExpenses();
       fetchPLData();
     } catch (error) {
@@ -114,15 +115,15 @@ const AdminProfitLoss = ({ user }) => {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    if (!window.confirm('Are you sure you want to delete this expense?')) return;
+    if (!window.confirm('Delete this expense?')) return;
     
     try {
-      await axios.delete(`${API}/admin/finance/expense/${expenseId}?admin_id=${user?.uid}`);
+      await axios.delete(`${API}/admin/finance/expense/${expenseId}`);
       toast.success('Expense deleted');
       fetchExpenses();
       fetchPLData();
     } catch (error) {
-      toast.error('Failed to delete expense');
+      toast.error('Failed to delete');
     }
   };
 
@@ -134,64 +135,50 @@ const AdminProfitLoss = ({ user }) => {
     }).format(amount || 0);
   };
 
-  const StatCard = ({ title, value, change, icon: Icon, color, isProfit }) => (
-    <Card className={`p-5 ${color}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-400">{title}</p>
-          <p className={`text-2xl font-bold mt-1 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-white'}`}>
-            {formatCurrency(value)}
-          </p>
-          {change !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {change >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-              <span>{Math.abs(change).toFixed(1)}% vs prev</span>
-            </div>
-          )}
-        </div>
-        <div className={`p-3 rounded-xl ${isProfit !== undefined ? (isProfit ? 'bg-green-500/20' : 'bg-red-500/20') : 'bg-gray-800'}`}>
-          <Icon className={`h-6 w-6 ${isProfit !== undefined ? (isProfit ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`} />
-        </div>
-      </div>
-    </Card>
-  );
-
   if (loading && !data) {
     return (
-      <div className="p-6">
-        <div className="text-center py-20">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-500 mt-4">Loading P&L Data...</p>
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto" />
+          <p className="text-gray-400 mt-4">Loading P&L Data...</p>
         </div>
       </div>
     );
   }
 
-  const revenueData = data?.revenue?.breakdown ? Object.entries(data.revenue.breakdown)
-    .filter(([_, v]) => v > 0)
-    .map(([key, value]) => ({
-      name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      value: value
-    })) : [];
+  const summary = data?.summary || {};
+  const revenue = data?.revenue || {};
+  const expensesData = data?.expenses || {};
+  const insights = data?.insights || [];
 
-  const expenseData = data?.expenses?.breakdown ? Object.entries(data.expenses.breakdown)
+  // Prepare chart data
+  const revenueChartData = Object.entries(revenue.breakdown || {})
     .filter(([_, v]) => v > 0)
     .map(([key, value]) => ({
       name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
       value: value
-    })) : [];
+    }));
+
+  const expenseChartData = Object.entries(expensesData.breakdown || {})
+    .filter(([_, v]) => v > 0)
+    .map(([key, value]) => ({
+      name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      value: value
+    }));
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-6 bg-gray-950 min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <DollarSign className="h-7 w-7 text-green-600" />
+            <DollarSign className="h-7 w-7 text-green-500" />
             Profit & Loss Statement
           </h1>
           <p className="text-gray-500">{data?.period_label || 'Financial Overview'}</p>
         </div>
+        
+        {/* Period Selector */}
         <div className="flex flex-wrap items-center gap-2">
           {['day', 'week', 'month', 'year'].map((p) => (
             <Button
@@ -199,118 +186,188 @@ const AdminProfitLoss = ({ user }) => {
               variant={period === p ? 'default' : 'outline'}
               onClick={() => setPeriod(p)}
               size="sm"
-              className={period === p ? 'bg-purple-600 hover:bg-purple-700' : ''}
+              className={period === p ? 'bg-purple-600 hover:bg-purple-700' : 'border-gray-700'}
             >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {p === 'day' ? 'आज' : p === 'week' ? 'या आठवडा' : p === 'month' ? 'या महिना' : 'या वर्ष'}
             </Button>
           ))}
-          {period === 'month' && (
-            <>
-              <select
-                className="px-3 py-1 border rounded-lg text-sm"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              >
-                {Array.from({length: 12}, (_, i) => (
-                  <option key={i+1} value={i+1}>
-                    {new Date(2000, i).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="px-3 py-1 border rounded-lg text-sm"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              >
-                {[2023, 2024, 2025].map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </>
+          
+          {(period === 'month' || period === 'year') && (
+            <select
+              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
+              {[2024, 2025, 2026].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           )}
-          <Button onClick={fetchPLData} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4" />
+          
+          {period === 'month' && (
+            <select
+              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            >
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                <option key={i+1} value={i+1}>{m}</option>
+              ))}
+            </select>
+          )}
+          
+          <Button onClick={fetchPLData} variant="outline" size="sm" className="border-gray-700">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Gross Revenue"
-          value={data?.summary?.gross_revenue}
-          change={data?.summary?.revenue_change}
-          icon={TrendingUp}
-          color="bg-green-500/10 border-green-500/30"
-        />
-        <StatCard
-          title="Total Expenses"
-          value={data?.summary?.total_expenses}
-          icon={TrendingDown}
-          color="bg-red-500/10 border-red-500/30"
-        />
-        <StatCard
-          title="Net Profit/Loss"
-          value={data?.summary?.net_profit}
-          icon={data?.summary?.net_profit >= 0 ? TrendingUp : TrendingDown}
-          color={data?.summary?.net_profit >= 0 ? "bg-emerald-500/10 border-emerald-200" : "bg-rose-500/10 border-rose-200"}
-          isProfit={data?.summary?.net_profit >= 0}
-        />
-        <StatCard
-          title="Profit Margin"
-          value={null}
-          icon={PieIcon}
-          color="bg-purple-500/10 border-purple-500/30"
-        />
-      </div>
-
-      {/* Profit Margin Display */}
-      <Card className="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
-        <div className="flex items-center justify-between">
+      {/* Main Status Card */}
+      <Card className={`p-6 ${
+        summary.status === 'profit' ? 'bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-green-500/50' :
+        summary.status === 'loss' ? 'bg-gradient-to-r from-red-900/50 to-rose-900/50 border-red-500/50' :
+        'bg-gradient-to-r from-yellow-900/50 to-amber-900/50 border-yellow-500/50'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <p className="text-lg opacity-90">Profit Margin</p>
-            <p className="text-4xl font-bold mt-2">{data?.summary?.profit_margin?.toFixed(1) || 0}%</p>
-            <p className="text-sm opacity-80 mt-1">
-              {data?.summary?.status === 'profit' ? '📈 Profitable' : 
-               data?.summary?.status === 'loss' ? '📉 Loss' : '➡️ Breakeven'}
-            </p>
-          </div>
-          <div className="relative w-32 h-32">
-            <svg className="transform -rotate-90 w-32 h-32">
-              <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.2)" strokeWidth="12" fill="none" />
-              <circle cx="64" cy="64" r="56" stroke="white" strokeWidth="12" fill="none"
-                strokeDasharray={`${Math.max(0, Math.min(100, data?.summary?.profit_margin || 0)) * 3.52} 352`} 
-                strokeLinecap="round" />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <DollarSign className="h-10 w-10 opacity-80" />
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-4xl">{summary.status_emoji || '📊'}</span>
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  {summary.status === 'profit' ? 'PROFIT' : summary.status === 'loss' ? 'LOSS' : 'BREAKEVEN'}
+                </h2>
+                <p className="text-gray-300">{summary.status_message}</p>
+              </div>
             </div>
+            
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div>
+                <p className="text-xs text-gray-400">Revenue</p>
+                <p className="text-xl font-bold text-green-400">{formatCurrency(summary.gross_revenue)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Expenses</p>
+                <p className="text-xl font-bold text-red-400">{formatCurrency(summary.total_expenses)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Net</p>
+                <p className={`text-xl font-bold ${summary.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(summary.net_profit)}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Health Score */}
+          <div className="text-center">
+            <div className="relative w-32 h-32 mx-auto">
+              <svg className="w-32 h-32 transform -rotate-90">
+                <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
+                <circle cx="64" cy="64" r="56" 
+                  stroke={summary.health_score > 70 ? '#22c55e' : summary.health_score > 40 ? '#eab308' : '#ef4444'} 
+                  strokeWidth="12" fill="none"
+                  strokeDasharray={`${(summary.health_score || 0) * 3.52} 352`}
+                  strokeLinecap="round" 
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold text-white">{summary.health_score || 0}</span>
+                <span className="text-xs text-gray-400">Health Score</span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400 mt-2">Profit Margin: {summary.profit_margin || 0}%</p>
           </div>
         </div>
       </Card>
 
+      {/* Insights */}
+      {insights.length > 0 && (
+        <Card className="p-4 bg-blue-900/20 border-blue-500/30">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-blue-300 mb-2">Insights</h3>
+              <ul className="space-y-1">
+                {insights.map((insight, i) => (
+                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                    <ChevronRight className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                    {insight}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Revenue & Expense Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Revenue Card */}
+        <Card className="p-6 bg-green-900/20 border-green-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-green-400 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Revenue (आवक)
+            </h3>
+            <span className="text-2xl font-bold text-green-400">{formatCurrency(revenue.total)}</span>
+          </div>
+          
+          <div className="space-y-3">
+            {Object.entries(revenue.breakdown || {}).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between py-2 border-b border-gray-700/50">
+                <span className="text-sm text-gray-300">
+                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+                <span className="font-medium text-green-400">{formatCurrency(value)}</span>
+              </div>
+            ))}
+          </div>
+          
+          {/* Revenue Details */}
+          {revenue.details && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <p className="text-xs text-gray-500">
+                VIP Members: {revenue.details.vip_count || 0} | 
+                Bill Payments: {revenue.details.bill_payments_count || 0} |
+                Gift Vouchers: {revenue.details.gift_voucher_count || 0}
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* Expense Card */}
+        <Card className="p-6 bg-red-900/20 border-red-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-red-400 flex items-center gap-2">
+              <TrendingDown className="w-5 h-5" />
+              Expenses (खर्च)
+            </h3>
+            <span className="text-2xl font-bold text-red-400">{formatCurrency(expensesData.total)}</span>
+          </div>
+          
+          <div className="space-y-3">
+            {Object.entries(expensesData.breakdown || {}).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between py-2 border-b border-gray-700/50">
+                <span className="text-sm text-gray-300">
+                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+                <span className="font-medium text-red-400">{formatCurrency(value)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Breakdown */}
+        {/* Revenue Pie */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            Revenue Breakdown
-          </h3>
-          {revenueData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+          <h3 className="text-lg font-bold text-white mb-4">Revenue Breakdown</h3>
+          {revenueChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie
-                  data={revenueData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  innerRadius={50}
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                >
-                  {revenueData.map((_, index) => (
+                <Pie data={revenueChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                  {revenueChartData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -319,33 +376,18 @@ const AdminProfitLoss = ({ user }) => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-30" />
-              <p>No revenue data for this period</p>
-            </div>
+            <div className="text-center py-12 text-gray-500">No revenue data</div>
           )}
         </Card>
 
-        {/* Expense Breakdown */}
+        {/* Expense Pie */}
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingDown className="h-5 w-5 text-red-600" />
-            Expense Breakdown
-          </h3>
-          {expenseData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+          <h3 className="text-lg font-bold text-white mb-4">Expense Breakdown</h3>
+          {expenseChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie
-                  data={expenseData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  innerRadius={50}
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                >
-                  {expenseData.map((_, index) => (
+                <Pie data={expenseChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                  {expenseChartData.map((_, index) => (
                     <Cell key={index} fill={COLORS[(index + 3) % COLORS.length]} />
                   ))}
                 </Pie>
@@ -354,39 +396,17 @@ const AdminProfitLoss = ({ user }) => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-400">
-              <TrendingDown className="h-12 w-12 mx-auto mb-2 opacity-30" />
-              <p>No expense data for this period</p>
-            </div>
+            <div className="text-center py-12 text-gray-500">No expense data</div>
           )}
         </Card>
       </div>
-
-      {/* Monthly Trend */}
-      {data?.monthly_trend?.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-bold text-white mb-4">6-Month Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.monthly_trend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Legend />
-              <Bar dataKey="revenue" name="Revenue" fill="#10b981" />
-              <Bar dataKey="expenses" name="Expenses" fill="#ef4444" />
-              <Bar dataKey="profit" name="Profit" fill="#8b5cf6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
 
       {/* Expense Management */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-purple-600" />
-            Expense Management
+            <Receipt className="h-5 w-5 text-purple-500" />
+            Manual Expenses (व्यक्तिगत खर्च)
           </h3>
           <Button onClick={() => setShowAddExpense(true)} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="h-4 w-4 mr-2" /> Add Expense
@@ -397,44 +417,37 @@ const AdminProfitLoss = ({ user }) => {
           <table className="w-full">
             <thead className="bg-gray-800/50">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-semibold">Date</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold">Category</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold">Description</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold">Vendor</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold">Amount</th>
-                <th className="text-center py-3 px-4 text-xs font-semibold">Actions</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Date</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Category</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400">Description</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-400">Amount</th>
+                <th className="text-center py-3 px-4 text-xs font-semibold text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody>
               {expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-500">
+                  <td colSpan={5} className="text-center py-8 text-gray-500">
                     No expenses recorded. Click "Add Expense" to start tracking.
                   </td>
                 </tr>
               ) : (
                 expenses.map((exp) => (
-                  <tr key={exp.expense_id} className="border-b hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-sm">
-                      {new Date(exp.date).toLocaleDateString()}
+                  <tr key={exp.expense_id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                    <td className="py-3 px-4 text-sm text-gray-300">
+                      {new Date(exp.date).toLocaleDateString('en-IN')}
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium">
+                    <td className="py-3 px-4 text-sm font-medium text-white">
                       {exp.category?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-400 max-w-xs truncate">
                       {exp.description || '-'}
                     </td>
-                    <td className="py-3 px-4 text-sm">{exp.vendor || '-'}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-right text-red-600">
+                    <td className="py-3 px-4 text-sm font-bold text-right text-red-400">
                       {formatCurrency(exp.amount)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="text-red-600"
-                        onClick={() => handleDeleteExpense(exp.expense_id)}
-                      >
+                      <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-400" onClick={() => handleDeleteExpense(exp.expense_id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
@@ -444,35 +457,58 @@ const AdminProfitLoss = ({ user }) => {
             </tbody>
           </table>
         </div>
+      </Card>
 
-        {expenseTotal > 10 && (
-          <div className="mt-4">
-            <Pagination
-              currentPage={expensePage}
-              totalPages={Math.ceil(expenseTotal / 10)}
-              totalItems={expenseTotal}
-              itemsPerPage={10}
-              onPageChange={setExpensePage}
-            />
+      {/* Fixed Monthly Expenses */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-amber-500" />
+            Fixed Monthly Expenses (नियमित खर्च)
+          </h3>
+          <Button variant="outline" size="sm" className="border-gray-700" onClick={() => window.location.href = '/admin/fixed-expenses'}>
+            Manage
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {fixedExpenses.length > 0 ? fixedExpenses.map((fe) => (
+            <div key={fe.expense_id} className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-sm text-gray-400">{fe.name}</p>
+              <p className="text-lg font-bold text-amber-400">{formatCurrency(fe.monthly_amount)}/mo</p>
+            </div>
+          )) : (
+            <div className="col-span-4 text-center py-4 text-gray-500">
+              No fixed expenses set. Add your monthly recurring costs.
+            </div>
+          )}
+        </div>
+        
+        {fixedExpenses.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between">
+            <span className="text-gray-400">Total Monthly Fixed Cost:</span>
+            <span className="font-bold text-amber-400">
+              {formatCurrency(fixedExpenses.reduce((sum, fe) => sum + (fe.monthly_amount || 0), 0))}
+            </span>
           </div>
         )}
       </Card>
 
       {/* Add Expense Modal */}
       {showAddExpense && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-lg">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-700">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">Add New Expense</h2>
-                <button onClick={() => setShowAddExpense(false)} className="text-gray-500 hover:text-gray-300">✕</button>
+                <h2 className="text-xl font-bold text-white">Add New Expense</h2>
+                <button onClick={() => setShowAddExpense(false)} className="text-gray-500 hover:text-gray-300 text-2xl">&times;</button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-400">Category *</label>
+                  <label className="text-sm text-gray-400 block mb-1">Category *</label>
                   <select
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm({...expenseForm, category: e.target.value})}
                   >
@@ -484,44 +520,38 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Amount (₹) *</label>
+                  <label className="text-sm text-gray-400 block mb-1">Amount (₹) *</label>
                   <Input
                     type="number"
                     placeholder="0"
                     value={expenseForm.amount}
                     onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                    className="bg-gray-800 border-gray-700"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Date</label>
+                  <label className="text-sm text-gray-400 block mb-1">Date</label>
                   <Input
                     type="date"
                     value={expenseForm.date}
                     onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
+                    className="bg-gray-800 border-gray-700"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Description</label>
+                  <label className="text-sm text-gray-400 block mb-1">Description</label>
                   <Input
                     placeholder="What was this expense for?"
                     value={expenseForm.description}
                     onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm text-gray-400">Vendor/Payee</label>
-                  <Input
-                    placeholder="Who did you pay?"
-                    value={expenseForm.vendor}
-                    onChange={(e) => setExpenseForm({...expenseForm, vendor: e.target.value})}
+                    className="bg-gray-800 border-gray-700"
                   />
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <Button variant="outline" onClick={() => setShowAddExpense(false)} className="flex-1">
+                  <Button variant="outline" onClick={() => setShowAddExpense(false)} className="flex-1 border-gray-700">
                     Cancel
                   </Button>
                   <Button onClick={handleAddExpense} className="flex-1 bg-purple-600 hover:bg-purple-700">
