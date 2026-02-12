@@ -1045,23 +1045,6 @@ const DashboardModern = ({ user, onLogout }) => {
           </button>
         </div>
 
-        {/* Activity Button */}
-        <button 
-          onClick={() => navigate('/activity')}
-          className="w-full mt-4 bg-gradient-to-r from-cyan-900/40 to-teal-900/30 rounded-2xl border border-cyan-500/30 p-4 hover:border-cyan-500/50 transition-all flex items-center justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-bold text-white text-sm">{t('activity')}</h3>
-              <p className="text-[10px] text-gray-400">{t('activityLiveFeed')}</p>
-            </div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-cyan-400" />
-        </button>
-
         {/* Luxury Life Banner - Available for ALL users */}
         <motion.button 
           initial={{ opacity: 0, y: 20 }}
