@@ -6718,7 +6718,15 @@ async def get_user_redemption_stats(uid: str):
     - Total PRC earned (mining, referral, tap game, etc.)
     - Cashback received
     - Orders count
+    
+    OPTIMIZED: Cached for 2 minutes to reduce DB load on Mining page
     """
+    # Try cache first (2 minute TTL)
+    cache_key = f"redemption_stats:{uid}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     try:
         # Get user data
         user = await db.users.find_one({"uid": uid}, {"_id": 0})
@@ -6862,7 +6870,7 @@ async def get_user_redemption_stats(uid: str):
         expected_balance = total_additions - total_deductions
         unaccounted = round(abs(expected_balance - current_balance), 2)
         
-        return {
+        result = {
             "total_prc_redeemed": round(total_prc_redeemed, 2),
             "total_money_value": round(total_prc_redeemed * 0.1, 2),  # 1 PRC = ₹0.10
             "total_earned": round(total_earned, 2),
@@ -6909,6 +6917,11 @@ async def get_user_redemption_stats(uid: str):
                 "equals_balance": current_balance
             }
         }
+        
+        # Cache for 2 minutes
+        await cache.set(cache_key, result, ttl=120)
+        
+        return result
     except HTTPException:
         raise
     except Exception as e:
