@@ -334,9 +334,31 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         # ===== INSIGHTS =====
         insights = []
         
+        # Fee-based revenue insights
+        total_fee_revenue = revenue["processing_fees"] + revenue["admin_charges"]
+        if total_fee_revenue > 0:
+            insights.append(f"💰 Fees कडून एकूण कमाई: ₹{total_fee_revenue:,.2f} (Processing: ₹{revenue['processing_fees']:,.2f} + Admin: ₹{revenue['admin_charges']:,.2f})")
+        
         if revenue["vip_memberships"] > 0 and total_revenue > 0:
             vip_pct = round(revenue["vip_memberships"] / total_revenue * 100, 1)
             insights.append(f"VIP Memberships = {vip_pct}% of revenue ({revenue_details['vip_count']} members)")
+        
+        # Service-wise fee breakdown
+        if revenue_details["bill_payments_count"] > 0:
+            bill_fee_total = revenue_details["bill_processing_fees"] + revenue_details["bill_admin_charges"]
+            insights.append(f"📄 Bill Payments: {revenue_details['bill_payments_count']} completed, Fees: ₹{bill_fee_total:,.2f}")
+        
+        if revenue_details["gift_voucher_count"] > 0:
+            gift_fee_total = revenue_details["gift_processing_fees"] + revenue_details["gift_admin_charges"]
+            insights.append(f"🎁 Gift Vouchers: {revenue_details['gift_voucher_count']} completed, Fees: ₹{gift_fee_total:,.2f}")
+        
+        if revenue_details["luxury_claims_count"] > 0:
+            luxury_fee_total = revenue_details["luxury_processing_fees"] + revenue_details["luxury_admin_charges"]
+            insights.append(f"✨ Luxury Claims: {revenue_details['luxury_claims_count']} completed, Fees: ₹{luxury_fee_total:,.2f}")
+        
+        if revenue_details["withdrawal_count"] > 0:
+            withdrawal_fee_total = revenue_details["withdrawal_processing_fees"] + revenue_details["withdrawal_admin_charges"]
+            insights.append(f"💸 Withdrawals: {revenue_details['withdrawal_count']} completed, Fees: ₹{withdrawal_fee_total:,.2f}")
         
         if expenses["prc_rewards"] > total_revenue * 0.3:
             insights.append("⚠️ PRC rewards खूप जास्त आहेत (>30% of revenue)")
