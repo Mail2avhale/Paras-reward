@@ -98,22 +98,29 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
     return date.toLocaleDateString();
   };
 
+  // If external control (isOpen prop provided), don't render our own button
+  const isExternallyControlled = propIsOpen !== undefined;
+
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
-      >
-        <Bell className="w-5 h-5 text-gray-400" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      {/* Only show button if not externally controlled */}
+      {!isExternallyControlled && (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
+          data-testid="notification-bell"
+        >
+          <Bell className="w-5 h-5 text-gray-400" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-gray-900 rounded-xl border border-gray-800 shadow-xl z-50 overflow-hidden">
+        <div className={`${isExternallyControlled ? 'fixed top-16 right-4' : 'absolute right-0 mt-2'} w-80 bg-gray-900 rounded-xl border border-gray-800 shadow-xl z-50 overflow-hidden`}>
           <div className="p-3 border-b border-gray-800 flex items-center justify-between">
             <h3 className="text-white font-semibold">Notifications</h3>
             {unreadCount > 0 && (
