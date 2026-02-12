@@ -43,7 +43,27 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
-### Recently Completed (Feb 12, 2026)
+### Recently Completed (Feb 12, 2026 - Session 2)
+
+- [x] **P&L Service-wise Fee Breakdown (10 Rs + 20% Admin Charge)**
+  - Backend: Added `processing_fees` and `admin_charges` to revenue breakdown
+  - Service-wise fee details: Bill Payments, Gift Vouchers, Luxury Claims, Withdrawals
+  - Each service shows: count, processing_fees (₹10 × count), admin_charges (20% of amount)
+  - Marathi insights: "Fees कडून एकूण कमाई: ₹X (Processing: ₹Y + Admin: ₹Z)"
+  - Frontend: New "Service-wise Fee Breakdown" card with individual service stats
+  - Testing: 14/14 backend tests passed
+  - Files: `admin_finance.py` (Lines 88-220), `AdminProfitLoss.js` (Lines 303-395)
+
+- [x] **Mining Page Advanced Animations**
+  - Added `SparkleParticle` component: Floating sparkle particles around PRC counter
+  - Added `PulseRing` component: Breathing ring animation around counter
+  - Gradient text animation: Shifting amber-yellow gradient on PRC value
+  - Coin glow effect: Animated blur-md glow behind coin icon
+  - Mini progress bar: Moving gradient bar showing earning activity
+  - Per-second rate indicator with Zap icon and breathing animation
+  - Files: `Mining.js` (Lines 55-100, 418-525)
+
+### Previously Completed (Feb 12, 2026 - Session 1)
 
 - [x] **Comprehensive P&L System**
   - Backend: Enhanced `/api/admin/finance/profit-loss` with detailed revenue/expense breakdown
