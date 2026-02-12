@@ -250,7 +250,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/marketplace" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Marketplace user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Orders user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
-            <Route path="/activity" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyActivity user={user} />) : <Navigate to="/login" />} />
+            {/* Removed: Activity page */}
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
