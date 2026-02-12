@@ -45,6 +45,16 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026)
 
+- [x] **Comprehensive P&L System**
+  - Backend: Enhanced `/api/admin/finance/profit-loss` with detailed revenue/expense breakdown
+  - Revenue tracking: VIP Memberships, Service Charges (2% + 5%), Delivery, Ads, Other
+  - Expense tracking: Auto (Payment Gateway 2%, Cashback, PRC Rewards), Manual (Server, SMS, Marketing, Salary)
+  - Health Score (0-100), Status (Profit/Loss/Breakeven) with Marathi messages
+  - Insights generation (automatic warnings and tips)
+  - Frontend: Complete redesign with visual status card, pie charts, insights panel
+  - Fixed expenses integration with auto-proration
+  - Files: `admin_finance.py`, `AdminProfitLoss.js`
+
 - [x] **KYC Verification Page Advanced Optimization**
   - NEW `/api/kyc/stats` endpoint - single call for all counts (3 API calls → 1)
   - NEW `/api/kyc/bulk-verify` endpoint - approve/reject multiple KYCs at once
