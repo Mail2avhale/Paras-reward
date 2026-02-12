@@ -107,27 +107,29 @@ const DailyRewards = ({ user }) => {
   }, [user, fetchUserData]);
 
   // Timer effect - separate from data fetch
+  // OPTIMIZED: Timer runs every 5 seconds instead of 1 second to reduce re-renders
   useEffect(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     
     if (isMining && sessionTimeRemaining > 0) {
+      // Update every 5 seconds to reduce re-renders while keeping UI smooth
       timerRef.current = setInterval(() => {
         setSessionTimeRemaining(prev => {
-          if (prev <= 1) {
+          if (prev <= 5) {
             setIsMining(false);
             toast.success('Session complete! Collect your rewards.');
             clearInterval(timerRef.current);
             return 0;
           }
-          return prev - 1;
+          return prev - 5;
         });
         
-        // Accumulate PRC
-        const prcPerSecond = miningRate / 3600;
-        setSessionPRC(prev => prev + prcPerSecond);
-      }, 1000);
+        // Accumulate PRC for 5 seconds
+        const prcPer5Seconds = (miningRate / 3600) * 5;
+        setSessionPRC(prev => prev + prcPer5Seconds);
+      }, 5000);
     }
     
     return () => {
