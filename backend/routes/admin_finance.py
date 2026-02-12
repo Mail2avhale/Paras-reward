@@ -216,7 +216,7 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         revenue_details["withdrawal_processing_fees"] = round(withdrawal_processing_fees, 2)
         revenue_details["withdrawal_admin_charges"] = round(withdrawal_admin_charges, 2)
         
-        # 4. Delivery Charges from Orders
+        # 6. Delivery Charges from Orders
         orders = await db.orders.find({
             "status": "delivered",
             "$or": [
@@ -228,13 +228,13 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         revenue["delivery_charges"] = sum(o.get("delivery_charge", 0) for o in orders)
         revenue_details["orders_count"] = len(orders)
         
-        # 5. Ad Revenue
+        # 7. Ad Revenue
         ads_income = await db.ads_income.find({
             "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0, "amount": 1}).to_list(1000)
         revenue["ad_revenue"] = sum(ai.get("amount", 0) for ai in ads_income)
         
-        # 6. Other Income
+        # 8. Other Income
         other_income = await db.other_income.find({
             "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0, "amount": 1}).to_list(1000)
