@@ -182,6 +182,14 @@ async def create_performance_indexes(db):
         except Exception as e:
             print(f"  ⚠️ Text search index skipped (may already exist): {e}")
         
+        # ============ KYC DOCUMENTS COLLECTION ============
+        await db.kyc_documents.create_index("kyc_id", unique=True, background=True)
+        await db.kyc_documents.create_index("user_id", background=True)
+        await db.kyc_documents.create_index("status", background=True)
+        await db.kyc_documents.create_index([("status", 1), ("submitted_at", 1)], background=True)
+        await db.kyc_documents.create_index("submitted_at", background=True)
+        print("  ✅ KYC documents indexes created")
+        
         print("✅ All database indexes created successfully!")
         print("🚀 Database is now optimized for high performance!")
         
