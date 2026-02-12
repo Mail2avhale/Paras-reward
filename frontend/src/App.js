@@ -102,7 +102,7 @@ const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHisto
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 // Removed: ReferralDashboard, ReferralDashboardAI - using ReferralsEnhanced
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
-const MyActivity = lazy(() => import("@/pages/MyActivity"));
+// Removed: MyActivity - feature removed
 
 // Social Feature Pages
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
