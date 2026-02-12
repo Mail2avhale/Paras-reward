@@ -45,6 +45,16 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026)
 
+- [x] **PIN Entry UX Improvements**
+  - Auto-focus first input when error occurs or PIN is cleared
+  - Shake animation on error for visual feedback
+  - Clear all button (🗑️ icon) when PIN has input
+  - "Clear and try again" link in error message
+  - Better keyboard navigation: Home, End, Shift+Delete to clear all
+  - Backspace now clears current digit AND moves back
+  - Focus scales the active input for better visibility
+  - Files: `PinInput.js`, `tailwind.config.js`
+
 - [x] **Mining Page Performance Optimization**
   - Added caching to `/api/user/{uid}/redemption-stats` API (2 min TTL)
   - Optimized `count_active_referrals_by_level_with_weights` with batch queries (N+1 → 2 queries)
