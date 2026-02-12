@@ -433,12 +433,25 @@ async def set_new_pin(request: Request):
 @router.post("/login")
 async def login(
     request: Request,
-    identifier: str,
-    password: str,
+    identifier: Optional[str] = None,
+    password: Optional[str] = None,
     device_id: Optional[str] = None,
     ip_address: Optional[str] = None
 ):
-    """User login with email/mobile and password"""
+    """User login with email/mobile and PIN/password"""
+    # Support both query params and JSON body
+    if not identifier or not password:
+        try:
+            data = await request.json()
+            identifier = data.get("identifier") or data.get("email") or data.get("mobile")
+            password = data.get("password") or data.get("pin")
+            device_id = data.get("device_id") or device_id
+        except:
+            pass
+    
+    if not identifier or not password:
+        raise HTTPException(status_code=400, detail="Email/mobile and PIN are required")
+    
     real_ip = get_client_ip(request) or ip_address or "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
     
