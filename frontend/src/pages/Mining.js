@@ -409,16 +409,47 @@ const DailyRewards = ({ user }) => {
                   {formatTime(sessionTimeRemaining)}
                 </div>
                 
-                {/* Earned PRC Display */}
-                <div className="mt-4 bg-black/30 rounded-2xl p-4">
-                  <p className="text-gray-400 text-xs mb-1">{globalT('sessionEarnings')}</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <Coins className="w-6 h-6 text-amber-400" />
+                {/* Earned PRC Display - LIVE ANIMATED COUNTER */}
+                <div className="mt-4 bg-black/30 rounded-2xl p-4 relative overflow-hidden">
+                  {/* Animated background pulse */}
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-yellow-500/5"
+                    animate={{ opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                  
+                  <p className="text-gray-400 text-xs mb-1 relative z-10">{globalT('sessionEarnings')}</p>
+                  <div className="flex items-center justify-center gap-2 relative z-10">
+                    {/* Animated coin icon */}
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <Coins className="w-6 h-6 text-amber-400" />
+                    </motion.div>
+                    
+                    {/* Live animated counter */}
                     <span className="text-3xl font-bold text-amber-400">
-                      {sessionPRC.toFixed(4)}
+                      <AnimatedCounter value={sessionPRC} decimals={4} />
                     </span>
                     <span className="text-amber-400 text-lg">PRC</span>
+                    
+                    {/* Floating +PRC indicator */}
+                    <AnimatePresence>
+                      {showFloatingCoin && (
+                        <FloatingCoin onComplete={() => setShowFloatingCoin(false)} />
+                      )}
+                    </AnimatePresence>
                   </div>
+                  
+                  {/* Per-second rate indicator */}
+                  <motion.p 
+                    className="text-emerald-400 text-xs mt-2 relative z-10"
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    +{(miningRate / 3600).toFixed(6)} PRC/sec
+                  </motion.p>
                 </div>
                 
                 {/* Collect Button */}
