@@ -109,7 +109,7 @@ class ResetPinRequest(BaseModel):
 
 @router.post("/register/simple")
 async def simple_register(request: Request):
-    """Simplified registration - full name, mobile, email, password required"""
+    """Simplified registration - full name, mobile, email, PIN required"""
     # Check if registration is enabled
     settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
     if settings and not settings.get("registration_enabled", True):
@@ -121,12 +121,20 @@ async def simple_register(request: Request):
     full_name = data.get("full_name", "").strip()
     mobile = data.get("mobile", "").strip()
     email = data.get("email")
-    password = data.get("password")
+    password = data.get("password")  # This is actually the PIN from frontend
     role = data.get("role", "user")
     referral_code = data.get("referral_code", "").strip()
     
     if not email or not password:
-        raise HTTPException(status_code=400, detail="Email and password are required")
+        raise HTTPException(status_code=400, detail="Email and PIN are required")
+    
+    # Validate PIN format (6 digits)
+    if not password.isdigit() or len(password) != 6:
+        raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+    
+    # Check for weak PINs
+    if len(set(password)) == 1:
+        raise HTTPException(status_code=400, detail="PIN cannot be all same digits (e.g., 111111)")
     
     if full_name and len(full_name) < 2:
         raise HTTPException(status_code=400, detail="Full name must be at least 2 characters")
@@ -153,11 +161,17 @@ async def simple_register(request: Request):
         if not referrer:
             raise HTTPException(status_code=400, detail="Invalid referral code")
     
+    # Hash the PIN and store in both fields for compatibility
+    hashed_pin = hash_password(password)
+    
     user_data = {
         "uid": str(uuid.uuid4()),
         "email": email,
         "mobile": mobile if mobile else None,
-        "password_hash": hash_password(password),
+        "password_hash": hashed_pin,  # Keep for backwards compatibility
+        "pin_hash": hashed_pin,       # Primary PIN field for login
+        "pin_migrated": True,         # Mark as PIN user
+        "default_pin_set": False,     # Not using default PIN
         "role": role,
         "name": full_name if full_name else email.split("@")[0],
         "profile_complete": bool(full_name and mobile),
@@ -167,6 +181,7 @@ async def simple_register(request: Request):
         "cashback_wallet_balance": 0,
         "profit_wallet_balance": 0,
         "membership_type": "free",
+        "subscription_plan": "explorer",
         "kyc_status": "not_submitted",
         "is_active": True,
         "is_banned": False,
@@ -180,6 +195,25 @@ async def simple_register(request: Request):
     
     await db.users.insert_one(user_data)
     
+    # Send welcome notification
+    try:
+        welcome_notification = {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": user_data["uid"],
+            "user_uid": user_data["uid"],
+            "title": "🎉 Welcome to Paras Reward!",
+            "message": f"Hi {user_data['name']}! Welcome to Paras Reward. Start your journey by completing your profile and exploring amazing rewards!",
+            "type": "welcome",
+            "icon": "🎉",
+            "action_url": "/dashboard",
+            "read": False,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(welcome_notification)
+    except Exception as e:
+        logging.error(f"Failed to send welcome notification: {e}")
+    
     if referrer:
         await db.users.update_one(
             {"uid": referrer["uid"]},
@@ -188,9 +222,28 @@ async def simple_register(request: Request):
                 "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
             }
         )
+        
+        # Notify referrer about new referral
+        try:
+            referrer_notification = {
+                "notification_id": str(uuid.uuid4()),
+                "user_id": referrer["uid"],
+                "user_uid": referrer["uid"],
+                "title": "👋 New Referral Joined!",
+                "message": f"{user_data['name']} joined using your referral code. Keep inviting to earn more rewards!",
+                "type": "referral",
+                "icon": "👋",
+                "action_url": "/referrals",
+                "read": False,
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(referrer_notification)
+        except Exception as e:
+            logging.error(f"Failed to send referral notification: {e}")
     
     return {
-        "message": "Registration successful!" if user_data["profile_complete"] else "Registration successful! Please complete your profile.",
+        "message": "Registration successful!" if user_data["profile_complete"] else "Registration successful! Please login to continue.",
         "uid": user_data["uid"],
         "profile_complete": user_data["profile_complete"],
         "referred_by": referrer["name"] if referrer else None
