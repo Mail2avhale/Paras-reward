@@ -300,10 +300,43 @@ const RegisterSimple = () => {
                 placeholder="Enter referral code"
                 value={formData.referral_code}
                 onChange={(e) => handleChange('referral_code', e.target.value.toUpperCase())}
-                className="pl-10"
+                className={`pl-10 pr-10 ${referralLookup.valid ? 'border-green-500 bg-green-50' : referralLookup.error ? 'border-red-500' : ''}`}
                 data-testid="register-referral"
               />
+              {/* Loading/Valid/Invalid indicator */}
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {referralLookup.loading && (
+                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                )}
+                {!referralLookup.loading && referralLookup.valid && (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                )}
+                {!referralLookup.loading && referralLookup.error && formData.referral_code && (
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                )}
+              </div>
             </div>
+            
+            {/* Referrer Name Display */}
+            {referralLookup.valid && referralLookup.referrerName && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2" data-testid="referrer-info">
+                <UserCheck className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="text-green-800 font-medium">
+                    Referred by: <span className="font-bold">{referralLookup.referrerName}</span>
+                  </p>
+                  <p className="text-green-600 text-xs">You'll get bonus PRC on signup!</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Invalid Code Error */}
+            {referralLookup.error && formData.referral_code && (
+              <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{referralLookup.error}</span>
+              </div>
+            )}
           </div>
 
           {/* Terms */}
