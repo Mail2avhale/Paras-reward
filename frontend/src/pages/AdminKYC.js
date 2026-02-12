@@ -359,11 +359,12 @@ const AdminKYC = ({ user }) => {
           </h1>
           <p className="text-gray-400 text-sm mt-1">
             Last updated: {lastRefresh.toLocaleTimeString()}
+            <span className="ml-2 text-xs text-gray-600">(Press R to refresh, Ctrl+A to select all)</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={fetchKYCDocuments}
+            onClick={() => { fetchKYCDocuments(currentPage, statusFilter); fetchStats(); }}
             variant="outline"
             size="sm"
             disabled={loading}
@@ -424,6 +425,52 @@ const AdminKYC = ({ user }) => {
         </Card>
       </div>
 
+      {/* Bulk Actions Bar - Shows when items selected */}
+      {selectedIds.size > 0 && (
+        <Card className="p-3 mb-4 bg-blue-900/30 border-blue-500/50 animate-fadeIn">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="w-5 h-5 text-blue-400" />
+              <span className="text-blue-300 font-medium">
+                {selectedIds.size} selected ({pendingInSelection} pending)
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearSelection}
+                className="text-gray-400 hover:text-white"
+              >
+                Clear
+              </Button>
+              {pendingInSelection > 0 && (
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => handleBulkAction('approve')}
+                    disabled={bulkProcessing}
+                  >
+                    {bulkProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCheck className="w-4 h-4 mr-1" />}
+                    Approve All
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleBulkAction('reject')}
+                    disabled={bulkProcessing}
+                  >
+                    {bulkProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <XCircle className="w-4 h-4 mr-1" />}
+                    Reject All
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card className="p-4 mb-6 bg-gray-900 border-gray-800">
         <div className="flex flex-col md:flex-row gap-4">
@@ -436,13 +483,24 @@ const AdminKYC = ({ user }) => {
               className="pl-10 bg-gray-800 border-gray-700 text-white"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {statusFilter === 'pending' && filteredDocs.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAllPending}
+                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+              >
+                <CheckSquare className="w-4 h-4 mr-1" />
+                Select All
+              </Button>
+            )}
             {['all', 'pending', 'verified', 'rejected'].map((status) => (
               <Button
                 key={status}
                 variant={statusFilter === status ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setStatusFilter(status)}
+                onClick={() => handleStatusChange(status)}
                 className={statusFilter === status ? 'bg-blue-600' : 'border-gray-700 text-gray-300'}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -472,11 +530,25 @@ const AdminKYC = ({ user }) => {
               key={doc.kyc_id}
               className={`p-4 bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
                 doc.status === 'pending' ? 'border-l-4 border-l-yellow-500' : ''
-              }`}
+              } ${selectedIds.has(doc.kyc_id) ? 'ring-2 ring-blue-500 bg-blue-900/20' : ''}`}
               onClick={() => setSelectedDoc(doc)}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
+                  {/* Selection checkbox for pending */}
+                  {doc.status === 'pending' && (
+                    <button
+                      onClick={(e) => toggleSelect(doc.kyc_id, e)}
+                      className="p-1 hover:bg-gray-700 rounded"
+                    >
+                      {selectedIds.has(doc.kyc_id) ? (
+                        <CheckSquare className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-500" />
+                      )}
+                    </button>
+                  )}
+                  
                   <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
                     <User className="w-6 h-6 text-gray-400" />
                   </div>
