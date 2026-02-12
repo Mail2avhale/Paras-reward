@@ -43,6 +43,18 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
+### Recently Completed (Feb 12, 2026)
+
+- [x] **Notifications for Regular Users Fixed (P0 - Critical)**
+  - Fixed: Regular users were not seeing notifications, only admins could see them
+  - Root cause 1: `create_notification` helper was not passed to `set_admin_vip_helpers()` in server.py
+  - Root cause 2: TopBar.js was using stale `user.unread_notifications` from login instead of live API call
+  - Backend fix: Added `create_notification` to `set_admin_vip_helpers()` (server.py line 36682-36685)
+  - Frontend fix: Added live `fetchUnreadCount()` API call with 60-second polling in TopBar.js
+  - Frontend fix: Updated NotificationCenter.js to handle external `isOpen/onClose` props
+  - Testing: All 11 tests passed (notifications CRUD, subscription approval notification)
+  - Files: `/app/backend/server.py`, `/app/frontend/src/components/TopBar.js`, `/app/frontend/src/components/NotificationCenter.js`
+
 ### Recently Completed (Feb 11, 2026)
 
 - [x] **Notification System Activated**
