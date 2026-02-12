@@ -33,11 +33,12 @@ const DailyRewards = ({ user }) => {
   // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
     // Set a timeout to prevent infinite loading on slow networks
+    // OPTIMIZED: Reduced timeout from 10s to 5s for faster failure
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setUserData(user);
       console.warn('Mining data fetch timeout - using fallback');
-    }, 10000); // 10 second timeout
+    }, 5000); // 5 second timeout
     
     try {
       // Fetch user data, mining status, and redemption stats in parallel
