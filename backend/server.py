@@ -2602,6 +2602,8 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
       3. Tap Game or Rain Drop played in last 24h
     
     PAID = subscription_plan NOT in ['explorer', 'free', None, '']
+    
+    OPTIMIZED: Uses batch queries instead of N+1 individual queries
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     level_data = {
@@ -2615,7 +2617,14 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     # Free/Explorer plan identifiers (case-insensitive)
     FREE_PLANS = ['explorer', 'free', '', None]
     
+    # Collect all paid user UIDs for batch activity check
+    now = datetime.now(timezone.utc)
+    twenty_four_hours_ago = now - timedelta(hours=24)
+    
+    paid_users_by_level = {}  # level -> {uid: user_data}
+    
     for level, users in referrals_by_level.items():
+        paid_users_by_level[level] = {}
         for user in users:
             user_uid = user.get("uid")
             user_plan = (user.get("subscription_plan") or "").lower().strip()
@@ -2626,12 +2635,68 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
             if is_free_user:
                 # Track free users but DON'T count them for bonus
                 level_data[level]['free_count'] += 1
-                continue  # Skip free users for referral bonus calculation
-            
-            # Only count PAID users
-            is_active, _ = await check_user_active_status(user_uid, user)
-            
-            if is_active:
+            else:
+                # Paid user - add to batch check list
+                paid_users_by_level[level][user_uid] = user
+    
+    # Get all paid user UIDs across all levels
+    all_paid_uids = []
+    for level_users in paid_users_by_level.values():
+        all_paid_uids.extend(level_users.keys())
+    
+    if not all_paid_uids:
+        return level_data
+    
+    # BATCH QUERY: Get all active users in ONE query
+    # Active = mining_active OR mining_session_end > now
+    active_by_mining = set()
+    try:
+        async for user in db.users.find(
+            {
+                "uid": {"$in": all_paid_uids},
+                "$or": [
+                    {"mining_active": True},
+                    {"mining_session_end": {"$gt": now.isoformat()}}
+                ]
+            },
+            {"_id": 0, "uid": 1}
+        ):
+            active_by_mining.add(user["uid"])
+    except Exception as e:
+        print(f"Batch mining check error: {e}")
+    
+    # BATCH QUERY: Check recent transactions for remaining users
+    remaining_uids = [uid for uid in all_paid_uids if uid not in active_by_mining]
+    active_by_transactions = set()
+    
+    if remaining_uids:
+        try:
+            # Single aggregation query for all remaining users
+            pipeline = [
+                {
+                    "$match": {
+                        "user_id": {"$in": remaining_uids},
+                        "type": {"$in": ["mining", "tap_game", "prc_rain_gain", "prc_rain_loss"]},
+                        "$or": [
+                            {"created_at": {"$gte": twenty_four_hours_ago.isoformat()}},
+                            {"timestamp": {"$gte": twenty_four_hours_ago.isoformat()}}
+                        ]
+                    }
+                },
+                {"$group": {"_id": "$user_id"}}
+            ]
+            async for doc in db.transactions.aggregate(pipeline):
+                active_by_transactions.add(doc["_id"])
+        except Exception as e:
+            print(f"Batch transaction check error: {e}")
+    
+    # Combine all active users
+    all_active_uids = active_by_mining | active_by_transactions
+    
+    # Calculate level data
+    for level, users_dict in paid_users_by_level.items():
+        for user_uid, user in users_dict.items():
+            if user_uid in all_active_uids:
                 # Get referral's subscription weight
                 sub_info = await get_user_subscription_info(user)
                 referral_weight = sub_info.get("referral_weight", 1.0)
