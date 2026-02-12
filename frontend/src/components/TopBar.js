@@ -131,6 +131,7 @@ const TopBar = ({ user, onLogout }) => {
             {/* Notifications */}
             <button
               id="notification-bell-btn"
+              data-testid="notification-bell-topbar"
               onClick={(e) => {
                 e.stopPropagation();
                 setNotificationsOpen(!notificationsOpen);
@@ -138,9 +139,9 @@ const TopBar = ({ user, onLogout }) => {
               className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Bell className="h-5 w-5 text-gray-700" />
-              {user?.unread_notifications > 0 && (
+              {unreadCount > 0 && (
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs p-0 rounded-full">
-                  {user.unread_notifications > 9 ? '9+' : user.unread_notifications}
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </Badge>
               )}
             </button>
