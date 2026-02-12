@@ -29,6 +29,8 @@ async def create_performance_indexes(db):
         # Mining queries
         await db.users.create_index("mining_active", background=True)
         await db.users.create_index([("mining_active", 1), ("mining_session_end", 1)], background=True)
+        # NEW: For batch mining status queries
+        await db.users.create_index("mining_session_end", background=True)
         
         # KYC queries
         await db.users.create_index("kyc_verified", background=True)
