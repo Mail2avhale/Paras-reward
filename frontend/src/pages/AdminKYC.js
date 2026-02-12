@@ -22,7 +22,7 @@ const AdminKYC = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending');
   const [selectedDoc, setSelectedDoc] = useState(null);
-  const [processing, setProcessing] = useState(false);
+  const [processing, setProcessing] = useState(null); // Now stores kyc_id being processed
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalDocs, setTotalDocs] = useState(0);
