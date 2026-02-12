@@ -45,6 +45,14 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026 - Session 2)
 
+- [x] **Real-time Referral Code Lookup in Registration**
+  - NEW `/api/referral/lookup/{code}` endpoint - validates code and returns referrer name
+  - Frontend: Debounced lookup (500ms) as user types referral code
+  - Shows green checkmark + "Referred by: [Name]" box when valid
+  - Shows red error "Invalid referral code" when invalid
+  - Loading spinner while checking
+  - Files: `referral.py` (Lines 55-75), `RegisterSimple.js` (Lines 35-75, 246-285)
+
 - [x] **P&L Service-wise Fee Breakdown (10 Rs + 20% Admin Charge)**
   - Backend: Added `processing_fees` and `admin_charges` to revenue breakdown
   - Service-wise fee details: Bill Payments, Gift Vouchers, Luxury Claims, Withdrawals
