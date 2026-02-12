@@ -66,8 +66,11 @@ async def create_all_indexes():
         await db.vip_payments.create_index("payment_id", unique=True, background=True)
         await db.vip_payments.create_index("status", background=True)
         await db.vip_payments.create_index("created_at", background=True)
+        await db.vip_payments.create_index("submitted_at", background=True)  # For sorting
+        await db.vip_payments.create_index("utr_number", background=True)  # For duplicate check
         await db.vip_payments.create_index([("user_id", 1), ("status", 1)], background=True)
-        print("   ✅ 5 indexes created")
+        await db.vip_payments.create_index([("status", 1), ("submitted_at", 1)], background=True)  # For admin list
+        print("   ✅ 8 indexes created")
         
         # ============ ORDERS COLLECTION ============
         print("📁 orders collection:")
