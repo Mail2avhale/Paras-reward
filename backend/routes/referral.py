@@ -53,6 +53,33 @@ async def get_referral_code(uid: str):
     return {"referral_code": user.get("referral_code")}
 
 
+@router.get("/lookup/{referral_code}")
+async def lookup_referral_code(referral_code: str):
+    """
+    Lookup referrer info by referral code
+    Returns referrer's name if code is valid
+    Used for real-time validation in registration form
+    """
+    if not referral_code or len(referral_code) < 3:
+        raise HTTPException(status_code=400, detail="Invalid referral code format")
+    
+    # Find referrer by code (case-insensitive)
+    referrer = await db.users.find_one(
+        {"referral_code": referral_code.upper()},
+        {"_id": 0, "name": 1, "subscription_plan": 1, "referral_code": 1}
+    )
+    
+    if not referrer:
+        raise HTTPException(status_code=404, detail="Referral code not found")
+    
+    return {
+        "valid": True,
+        "referrer_name": referrer.get("name", "Unknown"),
+        "referrer_plan": referrer.get("subscription_plan", "explorer"),
+        "referral_code": referrer.get("referral_code")
+    }
+
+
 @router.post("/apply/{uid}")
 async def apply_referral(uid: str, referral_code: str):
     """Apply referral code"""
