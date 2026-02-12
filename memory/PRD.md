@@ -45,6 +45,16 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026)
 
+- [x] **KYC Verification Page Advanced Optimization**
+  - NEW `/api/kyc/stats` endpoint - single call for all counts (3 API calls → 1)
+  - NEW `/api/kyc/bulk-verify` endpoint - approve/reject multiple KYCs at once
+  - Database indexes on `kyc_documents(status, submitted_at, user_id)`
+  - Bulk selection UI with checkboxes
+  - Keyboard shortcuts: Ctrl+A (select all), R (refresh), Escape (clear)
+  - Optimistic UI updates with immediate stats update
+  - Performance: Stats API ~42ms, List API ~37ms (cached)
+  - Files: `server.py`, `db_indexes.py`, `AdminKYC.js`
+
 - [x] **PIN Entry UX Improvements**
   - Auto-focus first input when error occurs or PIN is cleared
   - Shake animation on error for visual feedback
