@@ -81,11 +81,15 @@ async def create_all_indexes():
         # ============ NOTIFICATIONS COLLECTION ============
         print("📁 notifications collection:")
         await db.notifications.create_index("user_id", background=True)
+        await db.notifications.create_index("user_uid", background=True)  # Added for compatibility
         await db.notifications.create_index("notification_id", unique=True, background=True)
         await db.notifications.create_index("is_read", background=True)
+        await db.notifications.create_index("read", background=True)  # Added for compatibility
         await db.notifications.create_index([("user_id", 1), ("is_read", 1)], background=True)
+        await db.notifications.create_index([("user_uid", 1), ("read", 1)], background=True)
         await db.notifications.create_index([("user_id", 1), ("created_at", -1)], background=True)
-        print("   ✅ 5 indexes created")
+        await db.notifications.create_index([("user_uid", 1), ("created_at", -1)], background=True)
+        print("   ✅ 9 indexes created")
         
         # ============ BILL PAYMENT REQUESTS ============
         print("📁 bill_payment_requests collection:")
