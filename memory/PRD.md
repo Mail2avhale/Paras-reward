@@ -54,6 +54,25 @@ Build a PRC (point-based reward currency) system web application where users can
   - Performance: Redemption Stats API ~89ms → ~36ms (cached)
   - Files: `server.py`, `db_indexes.py`, `Mining.js`
 
+- [x] **Mining Page Live PRC Counter Animation**
+  - Added `AnimatedCounter` component for smooth real-time PRC counting
+  - Added `FloatingCoin` animation showing "+PRC" indicator every 5 seconds
+  - Live counter updates every 100ms for seamless visual effect
+  - Added animated coin icon rotation and background pulse effect
+  - Added per-second rate indicator showing exact earning speed
+  - Files: `Mining.js`
+
+- [x] **Backend Subscription Pricing Verified**
+  - Confirmed pricing sync: Startup ₹299, Growth ₹549, Elite ₹799
+  - All plans include quarterly, half-yearly, yearly options with discounts
+  - Files: `server.py` (lines 1510-1576)
+
+- [x] **Redis Caching Status**
+  - Upstash Redis credentials present but limit exceeded (500,000 requests)
+  - Fallback to in-memory caching active
+  - User needs to: Profile → Universal Key → Add Balance for more requests
+  - Files: `cache_manager.py`, `.env`
+
 - [x] **Activity Card & Page Removed**
   - Removed "Activity" button from dashboard Services section
   - Removed MyActivity.js page and route from App.js
