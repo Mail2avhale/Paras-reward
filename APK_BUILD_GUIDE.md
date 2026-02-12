@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://mining-boost-1.preview.emergentagent.com",
+    "url": "https://kyc-bulk-ops.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

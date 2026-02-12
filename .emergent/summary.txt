@@ -1,166 +1,155 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to introduce a DIRECTOR 365 subscription plan. However, the session focused on addressing a series of user-reported issues and feature requests.
+The user's initial high-level goal was to introduce a DIRECTOR 365 subscription plan. However, the session was driven by a series of user-prioritized tasks, including performance optimizations, bug fixes, and feature enhancements.
 
-**Key tasks addressed in this session:**
-1.  **Bug Fix:** Notifications were not being delivered to regular users, only to admins.
-2.  **Feature Removal:** The My Activity card and its corresponding page were removed from the user dashboard.
-3.  **Bug Fix & Data Integrity:** The root cause of Unknown User in payment records was identified and fixed. Corrupt historical data in the  collection was corrected.
-4.  **Testing/Verification:** The existing weekly and monthly withdrawal limit functionality was thoroughly tested and confirmed to be working correctly.
-5.  **Feature Enhancement:** Advanced features were added to the notification system, including bulk deletion (all, read), filtering, and an improved UI with selection capabilities.
-6.  **New Request:** The user has now asked to investigate and improve the performance of the Mining page.
+The most recent request is to implement a new fee structure across the application: a fixed 10 Rs processing fee plus a 20% admin charge on all services, and ensure this is accurately reflected in the Profit & Loss report.
 
-**PRODUCT REQUIREMENTS (from previous session, NOT STARTED):**
+**PRODUCT REQUIREMENTS (from previous sessions, NOT STARTED):**
 *   Launch a new high-level subscription plan called DIRECTOR 365. This plan is awarded (not purchased) to users who get 365 direct paid referrals within their first year. Benefits include a lifetime free ELITE subscription, DIRECTOR CLUB status, a SPECIAL DIRECTOR BADGE, and HIGH VOLTAGE WITHDRAWAL.
 
 **User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent **MUST** respond in Marathi only.
 
 **what currently exists?**
-The application is a subscription platform with a Flask backend and a React PWA frontend. In this session, the agent successfully fixed a critical notification delivery bug, ensuring all users receive alerts. The agent also enhanced the notification system with advanced features like bulk actions and filtering. A significant data integrity issue causing Unknown User errors was traced to its root and resolved, with historical data being repaired. The My Activity UI feature was removed as requested. Finally, the agent verified that the existing withdrawal limit logic is functioning correctly.
+The application is a subscription platform with a Flask backend and React frontend. In this session, the agent performed significant optimizations and bug fixes.
+-   **Mining Page:** Backend performance was greatly improved by fixing N+1 queries, adding database indexes, and implementing caching. The frontend polling interval was reduced, and a live animated PRC counter was added to improve user experience.
+-   **KYC Verification Page:** Optimized by replacing multiple API calls with a single unified stats endpoint and adding database indexes. A major feature, bulk approve/reject, was added. A critical UI bug that showed a loading state on both Approve and Reject buttons simultaneously was fixed by implementing per-document processing states.
+-   **PIN Entry:** The user experience for PIN entry on login/registration was enhanced. On error, the input now automatically resets focus to the first digit, and a shake animation provides clear visual feedback for incorrect entries.
+-   **Admin UI:** The notification bell icon was removed from the admin dashboard's top bar as requested.
+-   **P&L Page:** The agent investigated the existing Profit & Loss page and API in preparation for a standard and superior overhaul requested by the user.
 
 **Last working item**:
--   **Last item agent was working:** The user requested performance improvements for the Mining page. The agent has acknowledged the request but has not yet started the investigation.
+-   **Last item agent was working:** The user requested the implementation of a new fee structure: add a fixed 10 Rs processing fee + 20% admin charges to all services and reflect this in the Profit & Loss report.
 -   **Status:** NOT STARTED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both. The investigation will require backend analysis (reviewing API endpoints, database queries, and checking for indexes) and potentially frontend analysis (profiling the component for rendering performance).
+-   **Which testing method agent to use?** backend testing agent. This will involve modifying business logic across multiple backend services to apply the fees and then creating a test plan to verify that the P&L report accurately calculates and displays the new revenue and cost streams.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Improve Mining page performance.**
-    -   **Description:** The user has reported that the Mining page is slow and wants it to be optimized for better performance.
-    -   **Attempted fixes:** None.
-    -   **Next debug checklist:**
-        1.  Identify the frontend component and backend API endpoint associated with the Mining page.
-        2.  Analyze the backend API for slow or inefficient database queries.
-        3.  Ensure necessary database indexes are in place for the collections queried by the mining API.
-        4.  Analyze the frontend component for performance bottlenecks, such as large data loads, frequent re-renders, or inefficient loops.
-    -   **Why fix this issue and what will be achieved with the fix?** Improving performance will enhance the user experience for a potentially high-traffic feature.
+-   **Issue 1 (P0): Implement Fee Structure (10 Rs + 20% Admin Charge).**
+    -   **Description:** A fixed 10 Rs processing fee and a 20% admin charge need to be applied to all services. The Profit & Loss calculation must be updated to reflect these new revenue streams.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** both
-    -   **Blocked on other issue:** None
-
--   **Issue 2 (P2): Intermittent MongoDB Timeout Errors.**
-    -   **Description:** The application has a history of intermittent  errors in the production environment.
-    -   **Attempted fixes:** In this session, the agent added a new database index on . This may help but doesn't guarantee a full resolution.
-    -   **Next debug checklist:**
-        1.  Monitor the production application to see if the timeout errors persist after the new index was added.
-        2.  If errors continue, analyze query performance on the MongoDB Atlas cluster for long-running operations.
-        3.  Consider implementing a more robust retry mechanism with exponential backoff for critical database operations.
-    -   **Why fix this issue and what will be achieved with the fix?** This error causes critical parts of the application to fail, making it unreliable. A permanent fix is needed for application stability.
+-   **Issue 2 (P1): KYC Approval UI Bug.**
+    -   **Description:** The agent fixed a UI bug where both approve/reject buttons showed a loading state. However, due to a lack of pending KYC documents in the test environment, the fix could not be visually confirmed.
+    -   **Status:** USER VERIFICATION PENDING
+-   **Issue 3 (P2): Redis Caching Setup.**
+    -   **Description:** An attempt to implement Redis caching using Upstash failed due to free-tier command limits (). The application was reverted to a less scalable in-memory cache.
+    -   **Status:** BLOCKED (on Upstash free-tier limits). The agent should inform the user about the limitation and suggest alternatives.
+-   **Issue 4 (P3): Intermittent MongoDB Timeout Errors.**
+    -   **Description:** A recurring issue from previous sessions. While more database indexes were added, which may mitigate the problem, the root cause is not definitively resolved and remains a stability risk.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on other issue:** None
 
 **In progress Task List**:
-No tasks are currently in progress.
+-   **Task 1 (P0): Enhance Profit & Loss Page.**
+    -   **Description:** The user wants a standard and superior P&L system. This task is now driven by the immediate need to incorporate the new fee structure.
+    -   **Where to resume:** Modify the P&L API in  to calculate new revenue from fees and update the frontend component  to display this data clearly.
+    -   **Status:** IN PROGRESS
+    -   **Blocked on something:** Blocked on the implementation of the fee structure (Issue 1).
 
 **Upcoming and Future Tasks**
 
 **Upcoming Tasks:**
--   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This remains the highest-priority feature request from the original problem statement. It involves creating a referral tracking system, logic for awarding the plan, and associated UI elements.
+-   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This remains the highest-priority new feature request from the original problem statement. It should be addressed after the current P&L and fee structure tasks are completed.
 
 **Future Tasks:**
 -   **P1: Add Force PIN Change Feature:** Prompt users who are still using the default PIN () to change it after their first login.
--   **P2: Update Backend Subscription Pricing:** Align subscription pricing references in the backend with the frontend UI to ensure consistency.
+-   **P2: Full Audit of Backend Subscription Pricing:** The agent did a quick check, but a full audit is needed to ensure pricing is consistent everywhere in the backend and not just in one file.
 
 **Completed work in this session**
--   **Fixed Notifications for Regular Users:** Resolved a bug preventing non-admin users from receiving notifications by fixing the  assignment in the backend and overhauling the frontend notification components (, ) to use live API data.
--   **Enhanced Notification System:** Implemented advanced features including new backend APIs and frontend UI for bulk actions (delete all, delete read), filtering by status (All, Unread), and individual notification selection.
--   **Fixed Unknown User Data Integrity Issue:** Identified and fixed the root cause in  where a payment creation API was not saving the . A script was run to repair 37 affected records in the  collection.
--   **Removed My Activity Feature:** Deleted the My Activity card from , removed the route from , and deleted the  file.
--   **Verified Withdrawal Limits:** Confirmed through code analysis and extensive  testing that the weekly and monthly withdrawal/redemption limits are being correctly calculated and enforced for bill payments.
--   **Database Indexing:** Added an index on the  field in the  collection to improve query performance.
+-   **Mining Page Performance & UI:** Optimized backend API () by fixing N+1 queries and adding DB indexes. Reduced frontend polling and added a live animated PRC counter in .
+-   **KYC Page Performance & Features:** Consolidated 3 API calls into one (), added bulk approve/reject feature (), and added necessary DB indexes.
+-   **KYC Page Bug Fix:** Resolved an issue with a shared loading state for approve/reject buttons in  by using a per-document state.
+-   **PIN Entry UX Improvement:** Enhanced  to reset focus on error and added a shake animation for invalid PINs in .
+-   **Admin Dashboard UI Cleanup:** Removed the notification bell for admin users in .
 
 **Earlier issues found/mentioned but not fixed**
-None. The issues from the previous handover summary were addressed in this session.
+None.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Intermittent MongoDB Timeout Errors.
 -   **Recurrence count:** High.
--   **Status:** IN PROGRESS. A potential mitigation (adding an index) was implemented, but the issue's resolution is not yet confirmed.
+-   **Status:** IN PROGRESS. Additional indexes were added as a mitigation strategy, but the issue is not confirmed to be fully resolved.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React.js, TailwindCSS, Axios, Sonner (for toasts)
+-   **Frontend:** React.js, TailwindCSS, Axios
 -   **Backend:** Python (Flask), Pydantic
 -   **Database:** MongoDB
--   **Architecture:** Monorepo with a primary React  and a Flask .
+-   **Caching:**  (currently configured for in-memory caching).
 
 **key DB schema**
--   **notifications:**  (new fields: , )
--   **user_preferences:** (New collection) 
--   **vip_payments:** Corrected to ensure  is always present.
--   **bill_payment_requests:** Used for tracking weekly service usage limits.
+-   **kyc_documents:** New indexes added on  and .
+-   **transactions:** New index added on .
+-   **users:** New index added on .
 
 **changes in tech stack**
 None.
 
 **All files of reference**
-*   : Heavily modified to add APIs for bulk actions (delete, clear read) and filtering.
-*   : Fixed an endpoint () that was failing to save , causing data corruption.
-*   : Modified to add an index on .
-*   : Modified to correctly inject the  helper function.
-*   : Reworked to fetch and display a live notification count.
-*   : Overhauled to support advanced features like filtering, bulk actions, and selection.
-*   : Modified to remove the Activity card link.
-*   : Modified to remove the  route.
-*   : **DELETED**.
+*   : Main file for the next task to implement the fee logic.
+*   : Frontend component corresponding to the next task.
+*   : Heavily modified for performance optimizations and the approve/reject bug fix.
+*   : Modified to add bulk actions and a unified stats endpoint.
+*   : Modified for reduced polling and to include the new animated counter.
+*   : Optimized to resolve performance bottlenecks.
+*   : Refactored to improve UX on error.
+*   : Modified to conditionally hide the notification bell.
+*   : Updated with several new database indexes.
+*   : Updated with keyframe animations for the PIN input.
 
 **Areas that need refactoring**:
--   Consolidate the legacy  into the main  application to reduce code duplication and confusion.
--   Organize routes from the main  file into Flask Blueprints within the  directory for better maintainability.
+-   **Caching Strategy:** The current in-memory cache is not scalable. A production-grade caching solution (like a properly configured Redis instance) needs to be implemented.
+-   **Route Organization:** Routes in  should be migrated to Flask Blueprints under  for better maintainability.
+-   **Consolidate Admin Frontend:** The legacy  should be fully deprecated and removed, with all admin functionality consolidated into the main  application.
 
 **key api endpoints**
 -   **New Endpoints:**
-    -   : Deletes multiple notifications by ID.
-    -   : Deletes all notifications for a user.
-    -   : Deletes all read notifications for a user.
-    -   : Manages user notification preferences.
--   **Fixed/Verified Endpoints:**
-    -   : Corrected to save  with payment records.
-    -   : Verified to correctly check weekly and monthly withdrawal limits.
+    -   : Provides unified KYC statistics.
+    -   : For bulk approval/rejection of KYC documents.
+-   **To be Modified:**
+    -   : Needs to be updated to include calculations for the new fee structure.
+    -   All service endpoints that will have the new fees applied.
 
 **Critical Info for New Agent**
--   The user's immediate priority is to **investigate and fix performance issues on the Mining page**.
--   The notification system has been significantly improved and is now fully functional for all users, with advanced features. The relevant files are  and  on the frontend and  on the backend.
--   The Unknown User data integrity bug has been fixed at its source (). Historical data in  has also been corrected.
--   The original high-priority feature, **DIRECTOR 365**, is still pending and should be the next major task after the Mining page optimization.
--   The agent performed extensive self-testing via  and screenshots; no automated test reports were generated in this session.
+-   The user's immediate priority is to implement the new fee structure (10 Rs + 20% admin charge) across all services and update the P&L report accordingly. This is the P0 task.
+-   A UI bug fix for the KYC approval process is awaiting user verification, as there was no test data available to confirm the fix visually.
+-   The attempt to switch to Redis caching failed due to external provider limits. The application is currently using a less performant in-memory cache. You should inform the user of this limitation.
+-   The agent MUST communicate with the user in Marathi.
 
 **documents and test reports created in this job**
--   : Updated with completed tasks.
+-   : Updated multiple times throughout the session.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Mining page फास्ट चालण्यासाठी काही सुधारणा आहेत का ते चेक करून सांग (Check and suggest improvements to make the Mining page faster). **(PENDING)**
-2.  **User:** Notification read, delete अजून काही advance यामध्ये करता येईल का (Can we add more advanced read/delete features to notifications?). **(RESOLVED)**
-3.  **User:** Withdrawal limit monthly आणि weekly व्यवस्थित काम करत आहे का ते टेस्ट कर (Test if the monthly and weekly withdrawal limits are working correctly). **(RESOLVED)**
-4.  **User:** मला my activity card remove करायचे आहे आणि पेज (I want to remove the 'my activity' card and page). **(RESOLVED)**
-5.  **User:** आधी Card feature remove करतो... he तसेच राहुदे remove करू नको. (First remove the Card feature... no, leave that, don't remove it). **(CLARIFICATION)**
-6.  **User:** (Sends a screenshot of an updated priority list). **(CONTEXT)**
-7.  **User:** Resume. **(ACTION)**
-8.  **User:** आधी notifications issue fix कर नंतर (First fix the notifications issue, then do other things). **(RESOLVED)**
-9.  **User:** (Asks to check the plan). **(CONTEXT)**
-10. **User:** (Confirms plan). **(CONTEXT)**
+1.  **User:** Add a fixed 10 Rs processing fee + 20% admin charges to all services and update the P&L. **(PENDING)**
+2.  **User:** Make the P&L page standard and superior so I can understand everything. **(IN PROGRESS)**
+3.  **User:** Let me know what you will do for the P&L page. **(CONTEXT)**
+4.  **User:** The Profit and Loss page is very important. **(CONTEXT)**
+5.  **User:** Remove the notification bell from the admin dashboard; it's not needed there. **(RESOLVED)**
+6.  **User:** On the KYC page, when I click approve, both buttons show processing and it gives an error. It's not approving quickly. **(RESOLVED, PENDING VERIFICATION)**
+7.  **User:** Do a full check of the KYC verification page for fast loading and an advanced approval system. **(RESOLVED)**
+8.  **User:** When there's a PIN error, the entry should reset to the beginning. See if you can make the PIN entry smoother and better. **(RESOLVED)**
+9.  **User:** Proceed with backend subscription pricing sync, Redis caching setup, and add a real-time earning animation on the Mining page. **(PARTIALLY RESOLVED)**
+10. **User:** Check and suggest improvements to make the Mining page faster. **(RESOLVED)**
 
 **Project Health Check:**
--   **Broken:** The Mining page has user-reported performance issues that need investigation. The intermittent MongoDB timeout issue is still a potential risk.
+-   **Broken:**
+    -   **Caching:** The application has reverted to a non-scalable in-memory cache after the Redis implementation failed due to external limits. This is a performance and scalability risk.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
 -   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO. The agent relied on extensive manual testing via  for the backend APIs and  for the frontend UI.
+-   **Testing agent used after significant changes:** NO. Agent relied on manual  and  tests.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** None.
+-   **Known regressions:** The screenshot tool began timing out after the mining page animation was added, suggesting a potential new performance issue on the frontend that needs investigation.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
 -   **Test User:** A new user can be created through the registration and PIN login flow for testing regular user functionality.
 
 **What agent forgot to execute**
--   The primary feature request from the original problem statement, the **DIRECTOR 365 subscription plan**, remains unstarted due to the focus on fixing critical bugs and implementing smaller, user-requested features.</analysis>
+-   The agent did not use the  after making significant UI and performance changes, which may have allowed issues like the screenshot timeout to be caught and diagnosed earlier.
+-   The original high-priority feature, **DIRECTOR 365 subscription plan**, remains unstarted.
+-   A scalable caching solution was not successfully implemented.</analysis>
