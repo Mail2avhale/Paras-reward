@@ -132,7 +132,6 @@ const AdminDashboard = ({ user }) => {
           <p className="text-gray-500 text-sm">Welcome back, {user?.name || 'Admin'}</p>
         </div>
         <div className="flex items-center gap-3">
-          <NotificationBell user={user} />
           <Button 
             variant="outline" 
             size="sm" 
