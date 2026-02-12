@@ -36681,7 +36681,8 @@ set_admin_vip_db(db)
 set_admin_vip_cache(cache)
 set_admin_vip_helpers({
     'log_admin_action': log_admin_action,
-    'check_and_grant_referral_reward': check_and_grant_referral_reward
+    'check_and_grant_referral_reward': check_and_grant_referral_reward,
+    'create_notification': create_notification
 })
 api_router.include_router(admin_vip_router)
 
