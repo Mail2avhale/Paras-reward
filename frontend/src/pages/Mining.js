@@ -66,6 +66,63 @@ const FloatingCoin = ({ onComplete }) => {
   );
 };
 
+// Sparkle particle effect for extra visual appeal
+const SparkleParticle = ({ delay = 0, x = 0 }) => {
+  return (
+    <motion.div
+      className="absolute w-1 h-1 bg-amber-400 rounded-full"
+      initial={{ opacity: 0, scale: 0, x: x, y: 0 }}
+      animate={{ 
+        opacity: [0, 1, 0],
+        scale: [0, 1.5, 0],
+        y: [-10, -30],
+        x: [x, x + (Math.random() - 0.5) * 20]
+      }}
+      transition={{ 
+        duration: 1.2, 
+        delay: delay,
+        ease: "easeOut"
+      }}
+    />
+  );
+};
+
+// Pulse ring animation around the counter
+const PulseRing = () => {
+  return (
+    <motion.div
+      className="absolute inset-0 rounded-2xl border-2 border-amber-500/30"
+      animate={{ 
+        scale: [1, 1.05, 1],
+        opacity: [0.3, 0.6, 0.3]
+      }}
+      transition={{ 
+        duration: 2,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    />
+  );
+};
+
+// Number flip animation component
+const FlipDigit = ({ digit, prevDigit }) => {
+  const hasChanged = digit !== prevDigit;
+  
+  return (
+    <motion.span
+      key={digit}
+      initial={hasChanged ? { rotateX: -90, opacity: 0 } : false}
+      animate={{ rotateX: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="inline-block"
+      style={{ transformStyle: 'preserve-3d' }}
+    >
+      {digit}
+    </motion.span>
+  );
+};
+
 const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
