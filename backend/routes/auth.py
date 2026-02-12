@@ -621,21 +621,19 @@ async def login(
         await db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
         user["prc_balance"] = 0
     
-    # Generate JWT tokens for admin
+    # Generate JWT tokens for all users
     token_id = str(uuid.uuid4())
-    access_token = None
-    refresh_token = None
+    token_data = {
+        "uid": user["uid"],
+        "email": user.get("email"),
+        "role": user.get("role", "user"),
+        "token_id": token_id
+    }
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
     
+    # Create session for admin users
     if user.get("role") in ["admin", "sub_admin"]:
-        token_data = {
-            "uid": user["uid"],
-            "email": user.get("email"),
-            "role": user.get("role"),
-            "token_id": token_id
-        }
-        access_token = create_access_token(token_data)
-        refresh_token = create_refresh_token(token_data)
-        
         session_data = {
             "session_id": str(uuid.uuid4()),
             "uid": user["uid"],
