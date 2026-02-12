@@ -693,6 +693,7 @@ async def login(
         response_data["needs_pin_migration"] = True
     
     if access_token:
+        response_data["token"] = access_token  # For frontend compatibility
         response_data["access_token"] = access_token
         response_data["refresh_token"] = refresh_token
         response_data["token_type"] = "bearer"
