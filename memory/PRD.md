@@ -45,6 +45,15 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026)
 
+- [x] **Mining Page Performance Optimization**
+  - Added caching to `/api/user/{uid}/redemption-stats` API (2 min TTL)
+  - Optimized `count_active_referrals_by_level_with_weights` with batch queries (N+1 → 2 queries)
+  - Added database indexes: `transactions(user_id, type, created_at)`, `users(mining_session_end)`
+  - Frontend: Reduced timer interval from 1s to 5s (reduces re-renders by 5x)
+  - Frontend: Reduced API timeout from 10s to 5s (faster failure)
+  - Performance: Redemption Stats API ~89ms → ~36ms (cached)
+  - Files: `server.py`, `db_indexes.py`, `Mining.js`
+
 - [x] **Activity Card & Page Removed**
   - Removed "Activity" button from dashboard Services section
   - Removed MyActivity.js page and route from App.js
