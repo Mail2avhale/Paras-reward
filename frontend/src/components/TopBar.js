@@ -186,9 +186,12 @@ const TopBar = ({ user, onLogout }) => {
 
       {/* Notification Center */}
       <NotificationCenter
-        userId={user?.uid}
+        user={user}
         isOpen={notificationsOpen}
-        onClose={() => setNotificationsOpen(false)}
+        onClose={() => {
+          setNotificationsOpen(false);
+          fetchUnreadCount(); // Refresh count when closing
+        }}
       />
     </>
   );
