@@ -1,9 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { Eye, EyeOff, AlertCircle, Delete } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 /**
  * Reusable 6-Digit PIN Input Component with masking and visibility toggle
+ * 
+ * IMPROVED: 
+ * - Auto-focus first input on error/clear
+ * - Shake animation on error
+ * - Clear all button
+ * - Better keyboard navigation
  * 
  * @param {string} value - Current PIN value
  * @param {function} onChange - Callback when PIN changes
@@ -12,10 +18,11 @@ import { Label } from '@/components/ui/label';
  * @param {string} testId - Base test ID for data-testid attributes
  * @param {boolean} autoFocus - Whether to auto-focus first input on mount
  */
-const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = false }) => {
+const PinInput = forwardRef(({ value, onChange, error, label, testId = 'pin', autoFocus = false }, ref) => {
   const inputRefs = useRef([]);
   const [pins, setPins] = useState(['', '', '', '', '', '']);
   const [showPin, setShowPin] = useState(false);
+  const [shakeError, setShakeError] = useState(false);
   const onChangeRef = useRef(onChange);
   
   // Keep onChangeRef updated
@@ -23,8 +30,24 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // Track previous value to detect external clear
+  // Track previous value and error to detect external clear or error
   const prevValueRef = useRef(value);
+  const prevErrorRef = useRef(error);
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRefs.current[0]?.focus();
+    },
+    clear: () => {
+      setPins(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    },
+    clearAndFocus: () => {
+      setPins(['', '', '', '', '', '']);
+      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+    }
+  }));
 
   // Update parent value when pins change - use ref to avoid infinite loop
   useEffect(() => {
@@ -32,14 +55,29 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     onChangeRef.current(newValue);
   }, [pins]);
 
-  // If value is cleared externally (was not empty, now is empty), reset pins
+  // If value is cleared externally (was not empty, now is empty), reset pins AND focus first input
   useEffect(() => {
     // Only reset if value was previously set and is now cleared externally
     if (prevValueRef.current && !value) {
       setPins(['', '', '', '', '', '']);
+      // Focus first input after clearing
+      setTimeout(() => inputRefs.current[0]?.focus(), 50);
     }
     prevValueRef.current = value;
   }, [value]);
+
+  // Shake animation and focus on error
+  useEffect(() => {
+    if (error && !prevErrorRef.current) {
+      // New error appeared - shake and focus first input
+      setShakeError(true);
+      setTimeout(() => {
+        setShakeError(false);
+        inputRefs.current[0]?.focus();
+      }, 500);
+    }
+    prevErrorRef.current = error;
+  }, [error]);
 
   // Auto-focus first input on mount if autoFocus is true
   useEffect(() => {
@@ -66,8 +104,24 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     // Handle backspace
     if (e.key === 'Backspace') {
       if (!pins[index] && index > 0) {
+        // Move to previous input and clear it
+        const newPins = [...pins];
+        newPins[index - 1] = '';
+        setPins(newPins);
         inputRefs.current[index - 1]?.focus();
+        e.preventDefault();
+      } else if (pins[index]) {
+        // Clear current input
+        const newPins = [...pins];
+        newPins[index] = '';
+        setPins(newPins);
       }
+    }
+    // Handle Delete key - clear all and focus first
+    if (e.key === 'Delete' && e.shiftKey) {
+      e.preventDefault();
+      setPins(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
     }
     // Handle arrow keys
     if (e.key === 'ArrowLeft' && index > 0) {
@@ -76,12 +130,23 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     if (e.key === 'ArrowRight' && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
+    // Handle Home key - go to first input
+    if (e.key === 'Home') {
+      e.preventDefault();
+      inputRefs.current[0]?.focus();
+    }
+    // Handle End key - go to last filled or last input
+    if (e.key === 'End') {
+      e.preventDefault();
+      const lastFilledIndex = pins.reduce((acc, pin, i) => pin ? i : acc, 0);
+      inputRefs.current[Math.min(lastFilledIndex + 1, 5)]?.focus();
+    }
   };
 
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newPins = [...pins];
+    const newPins = ['', '', '', '', '', ''];
     for (let i = 0; i < pastedData.length; i++) {
       newPins[i] = pastedData[i];
     }
@@ -91,15 +156,23 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
     inputRefs.current[focusIndex]?.focus();
   };
 
+  const handleClearAll = () => {
+    setPins(['', '', '', '', '', '']);
+    inputRefs.current[0]?.focus();
+  };
+
   const toggleVisibility = () => {
     setShowPin(!showPin);
   };
 
   // Get display value for each digit
-  const getDisplayValue = (pin, index) => {
+  const getDisplayValue = (pin) => {
     if (!pin) return '';
     return showPin ? pin : '•';
   };
+
+  // Check if any pin is filled
+  const hasValue = pins.some(p => p);
 
   return (
     <div>
@@ -107,7 +180,7 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
       
       <div className="flex items-center gap-3 justify-center">
         {/* PIN Input Boxes */}
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${shakeError ? 'animate-shake' : ''}`}>
           {pins.map((pin, index) => (
             <div key={index} className="relative">
               {/* Hidden actual input for capturing input */}
@@ -120,6 +193,7 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
+                onFocus={(e) => e.target.select()}
                 className="absolute inset-0 w-full h-full z-10"
                 style={{ opacity: 0, caretColor: 'transparent' }}
                 data-testid={`${testId}-${index}`}
@@ -128,47 +202,72 @@ const PinInput = ({ value, onChange, error, label, testId = 'pin', autoFocus = f
               {/* Visual display box */}
               <div
                 className={`w-12 h-14 flex items-center justify-center text-2xl font-bold rounded-xl border-2 transition-all cursor-pointer
-                  ${error ? 'border-red-500 bg-red-50 animate-shake' : 'border-gray-200'}
+                  ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'}
                   ${pin ? 'bg-purple-50 border-purple-400' : 'bg-white'}
-                  ${document.activeElement === inputRefs.current[index] ? 'border-purple-500 ring-2 ring-purple-200' : ''}
+                  ${document.activeElement === inputRefs.current[index] ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : ''}
                 `}
                 onClick={() => inputRefs.current[index]?.focus()}
               >
-                <span className={`${showPin ? 'text-gray-900' : 'text-purple-600'}`}>
-                  {getDisplayValue(pin, index)}
+                <span className={`${showPin ? 'text-gray-900' : 'text-purple-600'} transition-all`}>
+                  {getDisplayValue(pin)}
                 </span>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Eye Toggle Button */}
-        <button
-          type="button"
-          onClick={toggleVisibility}
-          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-300"
-          data-testid={`${testId}-toggle-visibility`}
-          aria-label={showPin ? 'Hide PIN' : 'Show PIN'}
-        >
-          {showPin ? (
-            <EyeOff className="h-5 w-5" />
-          ) : (
-            <Eye className="h-5 w-5" />
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-1">
+          {/* Eye Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleVisibility}
+            className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-300"
+            data-testid={`${testId}-toggle-visibility`}
+            aria-label={showPin ? 'Hide PIN' : 'Show PIN'}
+          >
+            {showPin ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+          
+          {/* Clear Button - only show when there's input */}
+          {hasValue && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-300"
+              data-testid={`${testId}-clear`}
+              aria-label="Clear PIN"
+            >
+              <Delete className="h-5 w-5" />
+            </button>
           )}
-        </button>
+        </div>
       </div>
 
       {/* Error Message - Centered and Prominent */}
       {error && (
-        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-fadeIn">
           <div className="flex items-center justify-center gap-2 text-red-400">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span className="text-sm font-medium text-center">{error}</span>
           </div>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="mt-2 w-full text-xs text-red-400 hover:text-red-500 underline"
+          >
+            Clear and try again
+          </button>
         </div>
       )}
     </div>
   );
-};
+});
+
+PinInput.displayName = 'PinInput';
 
 export default PinInput;
