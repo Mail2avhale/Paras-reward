@@ -12970,6 +12970,7 @@ async def admin_update_user_subscription(uid: str, request: Request):
     # Create payment record for tracking
     payment_record = {
         "payment_id": str(uuid.uuid4()),
+        "user_id": uid,  # Required field for consistency
         "user_uid": uid,
         "user_email": user.get("email"),
         "user_name": user.get("name"),
