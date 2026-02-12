@@ -8681,6 +8681,35 @@ async def get_kyc_documents(
     return result
 
 
+@api_router.get("/kyc/stats")
+async def get_kyc_stats():
+    """Fast endpoint for all KYC stats in ONE call - OPTIMIZED"""
+    cached = await cache.get("kyc_stats")
+    if cached:
+        return cached
+    
+    # Use aggregation pipeline for single DB call
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$status",
+                "count": {"$sum": 1}
+            }
+        }
+    ]
+    
+    stats = {"pending": 0, "verified": 0, "rejected": 0, "total": 0}
+    
+    async for result in db.kyc_documents.aggregate(pipeline):
+        status = result.get("_id")
+        count = result.get("count", 0)
+        if status in stats:
+            stats[status] = count
+        stats["total"] += count
+    
+    await cache.set("kyc_stats", stats, ttl=15)  # 15 sec cache
+    return stats
+
 @api_router.get("/kyc/pending-count")
 async def get_kyc_pending_count():
     """Fast endpoint for pending KYC count only"""
@@ -8691,6 +8720,59 @@ async def get_kyc_pending_count():
     count = await db.kyc_documents.count_documents({"status": "pending"})
     await cache.set("kyc_pending_count", count, ttl=15)
     return {"count": count}
+
+@api_router.post("/kyc/bulk-verify")
+async def bulk_verify_kyc(request: Request):
+    """Bulk approve/reject multiple KYC documents at once - FAST"""
+    data = await request.json()
+    kyc_ids = data.get("kyc_ids", [])
+    action = data.get("action")  # 'approve' or 'reject'
+    admin_id = data.get("admin_id")
+    reason = data.get("reason", "")
+    
+    if not kyc_ids or action not in ['approve', 'reject']:
+        raise HTTPException(status_code=400, detail="Invalid request")
+    
+    new_status = "verified" if action == "approve" else "rejected"
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Bulk update in single DB call
+    result = await db.kyc_documents.update_many(
+        {"kyc_id": {"$in": kyc_ids}, "status": "pending"},
+        {
+            "$set": {
+                "status": new_status,
+                "verified_at": now,
+                "verified_by": admin_id,
+                "rejection_reason": reason if action == "reject" else None
+            }
+        }
+    )
+    
+    # If approved, update user kyc_verified status
+    if action == "approve":
+        # Get user IDs for approved KYCs
+        approved_docs = await db.kyc_documents.find(
+            {"kyc_id": {"$in": kyc_ids}},
+            {"user_id": 1}
+        ).to_list(len(kyc_ids))
+        
+        user_ids = [doc.get("user_id") for doc in approved_docs if doc.get("user_id")]
+        if user_ids:
+            await db.users.update_many(
+                {"uid": {"$in": user_ids}},
+                {"$set": {"kyc_verified": True, "kyc_verified_at": now}}
+            )
+    
+    # Invalidate cache
+    await cache.delete("kyc_stats")
+    await cache.delete("kyc_pending_count")
+    
+    return {
+        "success": True,
+        "modified": result.modified_count,
+        "message": f"{result.modified_count} documents {action}d"
+    }
 
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
