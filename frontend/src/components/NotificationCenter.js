@@ -4,18 +4,35 @@ import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-const NotificationCenter = ({ user, className = '' }) => {
+const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  
+  // Use prop if provided, otherwise use internal state
+  const isOpen = propIsOpen !== undefined ? propIsOpen : internalIsOpen;
+  const setIsOpen = (value) => {
+    if (propIsOpen !== undefined && onClose) {
+      if (!value) onClose();
+    } else {
+      setInternalIsOpen(value);
+    }
+  };
 
   useEffect(() => {
     if (user?.uid) {
       fetchNotifications();
     }
   }, [user?.uid]);
+  
+  // Refetch when opened from external control
+  useEffect(() => {
+    if (isOpen && user?.uid) {
+      fetchNotifications();
+    }
+  }, [isOpen, user?.uid]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -28,12 +45,14 @@ const NotificationCenter = ({ user, className = '' }) => {
   }, []);
 
   const fetchNotifications = async () => {
+    if (!user?.uid) return;
     try {
       setLoading(true);
       const res = await axios.get(`${API}/api/notifications/${user.uid}?limit=10`);
-      const notifs = res.data || [];
+      const data = res.data || {};
+      const notifs = data.notifications || [];
       setNotifications(notifs);
-      setUnreadCount(notifs.filter(n => !n.read).length);
+      setUnreadCount(data.unread_count || notifs.filter(n => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
