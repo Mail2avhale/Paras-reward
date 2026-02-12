@@ -11,7 +11,6 @@ import {
   Zap, Gift, Star, Target, Percent, BadgeCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import NotificationBell from '@/components/NotificationBell';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
