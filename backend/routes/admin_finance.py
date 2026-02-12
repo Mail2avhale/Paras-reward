@@ -88,6 +88,8 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         revenue = {
             "vip_memberships": 0,
             "service_charges": 0,
+            "processing_fees": 0,  # NEW: Fixed 10 Rs processing fee
+            "admin_charges": 0,    # NEW: 20% admin charge
             "delivery_charges": 0,
             "ad_revenue": 0,
             "other_income": 0
@@ -97,10 +99,24 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "vip_plans": {},
             "bill_payments_count": 0,
             "bill_service_charges": 0,
+            "bill_processing_fees": 0,
+            "bill_admin_charges": 0,
             "gift_voucher_count": 0,
             "gift_service_charges": 0,
+            "gift_processing_fees": 0,
+            "gift_admin_charges": 0,
+            "luxury_claims_count": 0,
+            "luxury_processing_fees": 0,
+            "luxury_admin_charges": 0,
+            "withdrawal_count": 0,
+            "withdrawal_processing_fees": 0,
+            "withdrawal_admin_charges": 0,
             "orders_count": 0
         }
+        
+        # Fee settings (10 Rs fixed + 20% admin charge)
+        PROCESSING_FEE_INR = 10
+        ADMIN_CHARGE_PERCENT = 20
         
         # 1. VIP Membership Revenue
         vip_payments = await db.vip_payments.find({
