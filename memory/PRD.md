@@ -45,6 +45,22 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 12, 2026)
 
+- [x] **Activity Card & Page Removed**
+  - Removed "Activity" button from dashboard Services section
+  - Removed MyActivity.js page and route from App.js
+  - Files: `/app/frontend/src/pages/DashboardModern.js`, `/app/frontend/src/App.js`
+
+- [x] **MongoDB Performance: user_uid Indexes Added**
+  - Added indexes on `user_uid` field in notifications collection
+  - Added compound indexes: `user_uid + read`, `user_uid + created_at`, `user_uid + read + created_at`
+  - Added unique index on `notification_id`
+
+- [x] **Unknown User Data Integrity Fixed (P2)**
+  - Root cause: `/api/admin/subscription/grant` endpoint was missing `user_id` field (only had `user_uid`)
+  - Fixed server.py line 12971-12989: Added `user_id: uid` to payment_record
+  - Fixed 37 existing corrupt records by copying `user_uid` to `user_id`
+  - Data integrity: 100% (51/51 records now have valid user_id)
+
 - [x] **Notifications for Regular Users Fixed (P0 - Critical)**
   - Fixed: Regular users were not seeing notifications, only admins could see them
   - Root cause 1: `create_notification` helper was not passed to `set_admin_vip_helpers()` in server.py
