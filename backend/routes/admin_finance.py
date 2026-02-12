@@ -134,33 +134,87 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             plan = p.get("plan_type") or p.get("plan_name") or "unknown"
             revenue_details["vip_plans"][plan] = revenue_details["vip_plans"].get(plan, 0) + 1
         
-        # 2. Service Charges from Bill Payments (2%)
+        # 2. Bill Payment Fees (10 Rs processing + 20% admin charge)
         bill_payments = await db.bill_payment_requests.find({
             "status": "completed",
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "service_charge": 1, "amount_inr": 1}).to_list(10000)
+        }, {"_id": 0, "service_charge": 1, "amount_inr": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
         
-        bill_charges = sum(bp.get("service_charge", bp.get("amount_inr", 0) * 0.02) for bp in bill_payments)
-        revenue["service_charges"] += bill_charges
-        revenue_details["bill_payments_count"] = len(bill_payments)
-        revenue_details["bill_service_charges"] = round(bill_charges, 2)
+        bill_count = len(bill_payments)
+        bill_processing_fees = bill_count * PROCESSING_FEE_INR
+        bill_admin_charges = sum(bp.get("admin_charge", bp.get("amount_inr", 0) * ADMIN_CHARGE_PERCENT / 100) for bp in bill_payments)
+        bill_service_charges = sum(bp.get("service_charge", 0) for bp in bill_payments)
         
-        # 3. Service Charges from Gift Vouchers (5%)
+        revenue["processing_fees"] += bill_processing_fees
+        revenue["admin_charges"] += bill_admin_charges
+        revenue["service_charges"] += bill_service_charges
+        revenue_details["bill_payments_count"] = bill_count
+        revenue_details["bill_processing_fees"] = round(bill_processing_fees, 2)
+        revenue_details["bill_admin_charges"] = round(bill_admin_charges, 2)
+        revenue_details["bill_service_charges"] = round(bill_service_charges, 2)
+        
+        # 3. Gift Voucher Fees (10 Rs processing + 20% admin charge)
         gift_vouchers = await db.gift_voucher_requests.find({
             "status": "completed",
             "$or": [
                 {"completed_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "service_charge": 1, "denomination": 1}).to_list(10000)
+        }, {"_id": 0, "service_charge": 1, "denomination": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
         
-        gift_charges = sum(gv.get("service_charge", gv.get("denomination", 0) * 0.05) for gv in gift_vouchers)
-        revenue["service_charges"] += gift_charges
-        revenue_details["gift_voucher_count"] = len(gift_vouchers)
-        revenue_details["gift_service_charges"] = round(gift_charges, 2)
+        gift_count = len(gift_vouchers)
+        gift_processing_fees = gift_count * PROCESSING_FEE_INR
+        gift_admin_charges = sum(gv.get("admin_charge", gv.get("denomination", 0) * ADMIN_CHARGE_PERCENT / 100) for gv in gift_vouchers)
+        gift_service_charges = sum(gv.get("service_charge", 0) for gv in gift_vouchers)
+        
+        revenue["processing_fees"] += gift_processing_fees
+        revenue["admin_charges"] += gift_admin_charges
+        revenue["service_charges"] += gift_service_charges
+        revenue_details["gift_voucher_count"] = gift_count
+        revenue_details["gift_processing_fees"] = round(gift_processing_fees, 2)
+        revenue_details["gift_admin_charges"] = round(gift_admin_charges, 2)
+        revenue_details["gift_service_charges"] = round(gift_service_charges, 2)
+        
+        # 4. Luxury Life Claims Fees (10 Rs processing + 20% admin charge)
+        luxury_claims = await db.luxury_life_claims.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "claim_amount": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        
+        luxury_count = len(luxury_claims)
+        luxury_processing_fees = luxury_count * PROCESSING_FEE_INR
+        luxury_admin_charges = sum(lc.get("admin_charge", lc.get("claim_amount", 0) * ADMIN_CHARGE_PERCENT / 100) for lc in luxury_claims)
+        
+        revenue["processing_fees"] += luxury_processing_fees
+        revenue["admin_charges"] += luxury_admin_charges
+        revenue_details["luxury_claims_count"] = luxury_count
+        revenue_details["luxury_processing_fees"] = round(luxury_processing_fees, 2)
+        revenue_details["luxury_admin_charges"] = round(luxury_admin_charges, 2)
+        
+        # 5. Withdrawal Fees (10 Rs processing + 20% admin charge)
+        withdrawals = await db.cashback_withdrawals.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount": 1, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+        
+        withdrawal_count = len(withdrawals)
+        withdrawal_processing_fees = withdrawal_count * PROCESSING_FEE_INR
+        withdrawal_admin_charges = sum(w.get("admin_charge", w.get("amount", 0) * ADMIN_CHARGE_PERCENT / 100) for w in withdrawals)
+        
+        revenue["processing_fees"] += withdrawal_processing_fees
+        revenue["admin_charges"] += withdrawal_admin_charges
+        revenue_details["withdrawal_count"] = withdrawal_count
+        revenue_details["withdrawal_processing_fees"] = round(withdrawal_processing_fees, 2)
+        revenue_details["withdrawal_admin_charges"] = round(withdrawal_admin_charges, 2)
         
         # 4. Delivery Charges from Orders
         orders = await db.orders.find({
