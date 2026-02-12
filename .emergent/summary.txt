@@ -1,27 +1,56 @@
 <analysis>**original_problem_statement:**
-The user requested a series of fixes and features:
-1.  Fix the payment screenshot display in the Review Payment modal, which was getting cut off.
-2.  Fix the PIN authentication logic, as some users were unable to log in.
-3.  Improve the UI of the admin subscription management page to directly show the payment screenshot image instead of a URL, along with all important user and subscription details (Username, Amount, Plan, etc.) to simplify the approval process.
-4.  Resolve a Not Found error that occurred when an admin tried to approve a subscription request.
-5.  Add routing to the static cards on the admin dashboard and subscription pages to make them clickable and navigate to the relevant sections.
-6.  Display both the actual (strikethrough) and discounted prices on the landing page's pricing plans and the subscription duration selection page.
-7.  **PRODUCT REQUIREMENTS (New):** The user wants to launch a new high-level subscription plan called DIRECTOR 365. This plan cannot be purchased. It should be awarded to users who achieve 365 direct paid referrals within their first year of joining. The referrals must have maintained a subscription for at least 3 months. Benefits include a lifetime free ELITE subscription, entry into the DIRECTOR CLUB, a SPECIAL DIRECTOR BADGE, and HIGH VOLTAGE WITHDRAWAL. The user has asked for an explanation of how this can be implemented.
+The user's initial goal was to introduce a DIRECTOR 365 subscription plan. However, the session focused on addressing a series of user-reported issues and feature requests.
 
-**User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent MUST respond in Marathi only.
+**Key tasks addressed in this session:**
+1.  **Bug Fix:** Notifications were not being delivered to regular users, only to admins.
+2.  **Feature Removal:** The My Activity card and its corresponding page were removed from the user dashboard.
+3.  **Bug Fix & Data Integrity:** The root cause of Unknown User in payment records was identified and fixed. Corrupt historical data in the  collection was corrected.
+4.  **Testing/Verification:** The existing weekly and monthly withdrawal limit functionality was thoroughly tested and confirmed to be working correctly.
+5.  **Feature Enhancement:** Advanced features were added to the notification system, including bulk deletion (all, read), filtering, and an improved UI with selection capabilities.
+6.  **New Request:** The user has now asked to investigate and improve the performance of the Mining page.
+
+**PRODUCT REQUIREMENTS (from previous session, NOT STARTED):**
+*   Launch a new high-level subscription plan called DIRECTOR 365. This plan is awarded (not purchased) to users who get 365 direct paid referrals within their first year. Benefits include a lifetime free ELITE subscription, DIRECTOR CLUB status, a SPECIAL DIRECTOR BADGE, and HIGH VOLTAGE WITHDRAWAL.
+
+**User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent **MUST** respond in Marathi only.
 
 **what currently exists?**
-The application is a subscription-based platform with a Python/Flask backend, a primary React frontend (used as a PWA), and a separate . The system supports user authentication via password or PIN. The agent has successfully implemented fixes for PIN authentication, the subscription approval workflow, and UI enhancements for displaying pricing and reviewing payments.
+The application is a subscription platform with a Flask backend and a React PWA frontend. In this session, the agent successfully fixed a critical notification delivery bug, ensuring all users receive alerts. The agent also enhanced the notification system with advanced features like bulk actions and filtering. A significant data integrity issue causing Unknown User errors was traced to its root and resolved, with historical data being repaired. The My Activity UI feature was removed as requested. Finally, the agent verified that the existing withdrawal limit logic is functioning correctly.
 
 **Last working item**:
--   **Last item agent was working:** The user has just proposed a new, complex feature: the DIRECTOR 365 subscription plan. The agent has acknowledged the request and was about to explain the implementation plan and technical requirements to the user.
+-   **Last item agent was working:** The user requested performance improvements for the Mining page. The agent has acknowledged the request but has not yet started the investigation.
 -   **Status:** NOT STARTED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both. The backend logic for tracking referrals and awarding the plan needs to be created and tested (backend testing agent). The frontend needs to be updated to display the new status and badge (frontend testing agent).
+-   **Which testing method agent to use?** both. The investigation will require backend analysis (reviewing API endpoints, database queries, and checking for indexes) and potentially frontend analysis (profiling the component for rendering performance).
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending bugs. The main pending item is a new feature request.
+-   **Issue 1 (P0): Improve Mining page performance.**
+    -   **Description:** The user has reported that the Mining page is slow and wants it to be optimized for better performance.
+    -   **Attempted fixes:** None.
+    -   **Next debug checklist:**
+        1.  Identify the frontend component and backend API endpoint associated with the Mining page.
+        2.  Analyze the backend API for slow or inefficient database queries.
+        3.  Ensure necessary database indexes are in place for the collections queried by the mining API.
+        4.  Analyze the frontend component for performance bottlenecks, such as large data loads, frequent re-renders, or inefficient loops.
+    -   **Why fix this issue and what will be achieved with the fix?** Improving performance will enhance the user experience for a potentially high-traffic feature.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on other issue:** None
+
+-   **Issue 2 (P2): Intermittent MongoDB Timeout Errors.**
+    -   **Description:** The application has a history of intermittent  errors in the production environment.
+    -   **Attempted fixes:** In this session, the agent added a new database index on . This may help but doesn't guarantee a full resolution.
+    -   **Next debug checklist:**
+        1.  Monitor the production application to see if the timeout errors persist after the new index was added.
+        2.  If errors continue, analyze query performance on the MongoDB Atlas cluster for long-running operations.
+        3.  Consider implementing a more robust retry mechanism with exponential backoff for critical database operations.
+    -   **Why fix this issue and what will be achieved with the fix?** This error causes critical parts of the application to fail, making it unreliable. A permanent fix is needed for application stability.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
 No tasks are currently in progress.
@@ -29,129 +58,109 @@ No tasks are currently in progress.
 **Upcoming and Future Tasks**
 
 **Upcoming Tasks:**
--   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This is the highest priority task requested by the user.
-    -   **Backend:**
-        -   Develop a robust mechanism to track direct referrals for each user. This likely involves a  table linking new users to their referrers.
-        -   Create logic to verify the conditions:
-            -   Count 365 direct referrals within 365 days of the referrer's join date.
-            -   For each of those referrals, confirm they have an active subscription for at least 3 months.
-        -   Implement an automated process (e.g., a nightly cron job or a trigger-based system) to check for eligible users and automatically upgrade them.
-        -   Grant the lifetime ELITE subscription.
-        -   Add fields/tables to represent DIRECTOR CLUB status, the SPECIAL DIRECTOR BADGE, and handle HIGH VOLTAGE WITHDRAWAL logic.
-    -   **Frontend:**
-        -   Display the SPECIAL DIRECTOR BADGE on the user's profile and other relevant areas.
-        -   Update the UI to reflect the user's DIRECTOR CLUB status and lifetime ELITE plan.
+-   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This remains the highest-priority feature request from the original problem statement. It involves creating a referral tracking system, logic for awarding the plan, and associated UI elements.
 
 **Future Tasks:**
--   **P1: Add Force PIN Change Feature:** The agent suggested prompting users who are on the default PIN () to change it after their first login for security reasons.
--   **P2: Update Backend Subscription Pricing:** The agent noted a discrepancy between the pricing shown in the UI () and the pricing fetched from the backend. The backend pricing data in  might need to be updated to reflect the actual business prices.
+-   **P1: Add Force PIN Change Feature:** Prompt users who are still using the default PIN () to change it after their first login.
+-   **P2: Update Backend Subscription Pricing:** Align subscription pricing references in the backend with the frontend UI to ensure consistency.
 
 **Completed work in this session**
--   **PIN Authentication Fix:** Modified backend logic to correctly check the  field during login, allowing PIN-only users to authenticate successfully.
-    -   
-    -   
--   **Admin Subscription Review UI Overhaul:** Redesigned the payment review card on the admin page to show the screenshot image directly, along with user name, amount, plan, UTR, and submission date, making approvals easier.
-    -   
-    -   
--   **Subscription Approval Not Found Error Fix:** Corrected the API endpoint in the frontend for approving/rejecting subscriptions from  (plural) to  (singular) to match the backend route.
-    -   
--   **Dashboard Card Routing:** Added  handlers and  to make various stat cards on the admin dashboard and subscription pages clickable, routing the admin to the corresponding detailed pages.
-    -   
-    -   
-    -   
--   **Pricing Display Update:** Updated the UI on the public landing page and the subscription duration selection page to display both the original price (with a strikethrough) and the discounted price, along with a discount % badge.
-    -   
-    -   
-    -   
+-   **Fixed Notifications for Regular Users:** Resolved a bug preventing non-admin users from receiving notifications by fixing the  assignment in the backend and overhauling the frontend notification components (, ) to use live API data.
+-   **Enhanced Notification System:** Implemented advanced features including new backend APIs and frontend UI for bulk actions (delete all, delete read), filtering by status (All, Unread), and individual notification selection.
+-   **Fixed Unknown User Data Integrity Issue:** Identified and fixed the root cause in  where a payment creation API was not saving the . A script was run to repair 37 affected records in the  collection.
+-   **Removed My Activity Feature:** Deleted the My Activity card from , removed the route from , and deleted the  file.
+-   **Verified Withdrawal Limits:** Confirmed through code analysis and extensive  testing that the weekly and monthly withdrawal/redemption limits are being correctly calculated and enforced for bill payments.
+-   **Database Indexing:** Added an index on the  field in the  collection to improve query performance.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Unknown User on Admin Payment List:** When displaying pending payments, some records show Unknown User even if a valid  exists. The agent suspected an issue in the backend logic that fetches user details for the payment list but postponed the fix as minor because it was observed with manually inserted test data.
-    -   **Debug checklist:** Review the  function in . Check the database join or lookup logic that retrieves the  based on the  from the  table.
-    -   **Why to solve this issue and what will be achieved with this?** This will ensure the admin always sees the correct username for every pending payment, avoiding confusion.
-    -   **Should Test frontend/backend/both after fix:** Backend.
-    -   **Is recurring issue?** N
+None. The issues from the previous handover summary were addressed in this session.
 
 **Known issue recurrence from previous fork**
-N/A
+-   **Issue recurrence in previous fork:** Intermittent MongoDB Timeout Errors.
+-   **Recurrence count:** High.
+-   **Status:** IN PROGRESS. A potential mitigation (adding an index) was implemented, but the issue's resolution is not yet confirmed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React.js, TailwindCSS, Axios
--   **Backend:** Python (Flask)
--   **Database:** PostgreSQL
--   **Architecture:** Monorepo with separate frontend and backend services. The project contains two distinct frontend applications:  (the main app) and .
+-   **Frontend:** React.js, TailwindCSS, Axios, Sonner (for toasts)
+-   **Backend:** Python (Flask), Pydantic
+-   **Database:** MongoDB
+-   **Architecture:** Monorepo with a primary React  and a Flask .
 
 **key DB schema**
--   **users:** 
--   **vip_payments:** 
--   **subscriptions:** 
+-   **notifications:**  (new fields: , )
+-   **user_preferences:** (New collection) 
+-   **vip_payments:** Corrected to ensure  is always present.
+-   **bill_payment_requests:** Used for tracking weekly service usage limits.
 
 **changes in tech stack**
 None.
 
 **All files of reference**
-*   : Modified for PIN authentication logic.
-*   : Modified for PIN authentication logic.
-*   : Contains subscription approval/rejection endpoints.
-*   : Modified to fix API URL and improve UI.
-*   : Modified to add routing to stat cards.
-*   : Modified to accept  props.
-*   : Modified to show discounted prices.
-*   : Modified to show original (strikethrough) price.
-*   : Modified to show discounted prices.
-*   : Modified to improve payment review UI.
-*   : Modified to add routing to cards.
+*   : Heavily modified to add APIs for bulk actions (delete, clear read) and filtering.
+*   : Fixed an endpoint () that was failing to save , causing data corruption.
+*   : Modified to add an index on .
+*   : Modified to correctly inject the  helper function.
+*   : Reworked to fetch and display a live notification count.
+*   : Overhauled to support advanced features like filtering, bulk actions, and selection.
+*   : Modified to remove the Activity card link.
+*   : Modified to remove the  route.
+*   : **DELETED**.
 
 **Areas that need refactoring**:
-The project contains two separate React applications ( and ) with some overlapping functionality (e.g., admin components). While  seems more detailed, the user appears to be using the admin section within the main  app. This could lead to code duplication and maintenance overhead. It may be beneficial to consolidate all admin features into one of the projects and deprecate the other.
+-   Consolidate the legacy  into the main  application to reduce code duplication and confusion.
+-   Organize routes from the main  file into Flask Blueprints within the  directory for better maintainability.
 
 **key api endpoints**
--   : User login with email and password/PIN.
--   : Approves a pending subscription payment.
--   : Rejects a pending subscription payment.
--   : Fetches all pending subscription payments for review.
--   : Fetches statistics for the admin dashboard.
--   : Provides subscription pricing data to the frontend.
+-   **New Endpoints:**
+    -   : Deletes multiple notifications by ID.
+    -   : Deletes all notifications for a user.
+    -   : Deletes all read notifications for a user.
+    -   : Manages user notification preferences.
+-   **Fixed/Verified Endpoints:**
+    -   : Corrected to save  with payment records.
+    -   : Verified to correctly check weekly and monthly withdrawal limits.
 
 **Critical Info for New Agent**
--   **Primary Frontend:** The user primarily uses the main  project, which functions as their PWA, for both regular users and admins. While  exists, changes requested for the admin experience should be applied to  unless specified otherwise.
--   **PIN Migration:** A migration script has been run on  to set a PIN for all users. The default PIN is . While the agent confirmed this is safe for deployment, you should verify the state of the production database before running any migration scripts there.
--   **New Feature Request:** The immediate next step is to break down and explain the implementation plan for the DIRECTOR 365 feature to the user, as they have specifically asked for an explanation.
+-   The user's immediate priority is to **investigate and fix performance issues on the Mining page**.
+-   The notification system has been significantly improved and is now fully functional for all users, with advanced features. The relevant files are  and  on the frontend and  on the backend.
+-   The Unknown User data integrity bug has been fixed at its source (). Historical data in  has also been corrected.
+-   The original high-priority feature, **DIRECTOR 365**, is still pending and should be the next major task after the Mining page optimization.
+-   The agent performed extensive self-testing via  and screenshots; no automated test reports were generated in this session.
 
 **documents and test reports created in this job**
--   : Updated with the status of completed tasks.
+-   : Updated with completed tasks.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to launch a new DIRECTOR 365 plan with complex rules (365 referrals, lifetime ELITE subscription, etc.) and wants to know how it can be implemented. (PENDING)
-2.  **User:** Confirms the pricing update on the landing page is what they wanted. (RESOLVED)
-3.  **User:** Corrects the agent's implementation of homepage pricing, providing the exact original and discounted prices. (RESOLVED)
-4.  **User:** Requests to show actual and discounted prices on the subscription duration selection page and the homepage. (RESOLVED)
-5.  **User:** Asks if the actual subscription amount can be shown on the admin dashboard cards. (RESOLVED)
-6.  **User:** Reports that cards on the deployed admin dashboard are not routed/clickable. (RESOLVED)
-7.  **User:** Clarifies that the Not Found error happens when an admin *approves* a subscription, and it fails to activate. (RESOLVED)
-8.  **User:** Reports a User not found error with a screenshot. (RESOLVED, was Not Found)
-9.  **User:** Asks to improve the admin subscription page to show the screenshot image directly and all important details to simplify approvals. (RESOLVED)
-10. **User:** Asks what will happen to users who haven't migrated from password to PIN and if their set PINs will change upon deployment. (RESOLVED)
+1.  **User:** Mining page फास्ट चालण्यासाठी काही सुधारणा आहेत का ते चेक करून सांग (Check and suggest improvements to make the Mining page faster). **(PENDING)**
+2.  **User:** Notification read, delete अजून काही advance यामध्ये करता येईल का (Can we add more advanced read/delete features to notifications?). **(RESOLVED)**
+3.  **User:** Withdrawal limit monthly आणि weekly व्यवस्थित काम करत आहे का ते टेस्ट कर (Test if the monthly and weekly withdrawal limits are working correctly). **(RESOLVED)**
+4.  **User:** मला my activity card remove करायचे आहे आणि पेज (I want to remove the 'my activity' card and page). **(RESOLVED)**
+5.  **User:** आधी Card feature remove करतो... he तसेच राहुदे remove करू नको. (First remove the Card feature... no, leave that, don't remove it). **(CLARIFICATION)**
+6.  **User:** (Sends a screenshot of an updated priority list). **(CONTEXT)**
+7.  **User:** Resume. **(ACTION)**
+8.  **User:** आधी notifications issue fix कर नंतर (First fix the notifications issue, then do other things). **(RESOLVED)**
+9.  **User:** (Asks to check the plan). **(CONTEXT)**
+10. **User:** (Confirms plan). **(CONTEXT)**
 
 **Project Health Check:**
--   **Broken:** None.
+-   **Broken:** The Mining page has user-reported performance issues that need investigation. The intermittent MongoDB timeout issue is still a potential risk.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
-- No specific 3rd party service integrations (like Stripe, OpenAI, etc.) were mentioned or used in this session.
+-   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** NO. The agent relied on extensive manual testing via  for the backend APIs and  for the frontend UI.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
 -   **Known regressions:** None.
 
 **Credentials to test flow:**
--   **Username:** 
--   **PIN:** 
-(This user was created in the  for testing the PIN login fix).
+-   **Admin User:**  / PIN: 
+-   **Test User:** A new user can be created through the registration and PIN login flow for testing regular user functionality.
 
 **What agent forgot to execute**
-- The agent identified but postponed fixing an issue where pending payments sometimes show Unknown User on the admin review page. The agent deemed it a minor issue related to test data.</analysis>
+-   The primary feature request from the original problem statement, the **DIRECTOR 365 subscription plan**, remains unstarted due to the focus on fixing critical bugs and implementing smaller, user-requested features.</analysis>
