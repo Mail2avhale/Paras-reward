@@ -162,14 +162,20 @@ const DailyRewards = ({ user }) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (liveCounterRef.current) {
+        clearInterval(liveCounterRef.current);
+      }
     };
   }, [user, fetchUserData]);
 
   // Timer effect - separate from data fetch
-  // OPTIMIZED: Timer runs every 5 seconds instead of 1 second to reduce re-renders
+  // OPTIMIZED: Main timer every 5s, live counter every 100ms for smooth animation
   useEffect(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+    }
+    if (liveCounterRef.current) {
+      clearInterval(liveCounterRef.current);
     }
     
     if (isMining && sessionTimeRemaining > 0) {
