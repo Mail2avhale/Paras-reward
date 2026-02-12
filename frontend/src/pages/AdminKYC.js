@@ -215,14 +215,13 @@ const AdminKYC = ({ user }) => {
   // Quick action handlers
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
-    if (processing) return;
-    if (!window.confirm(`Approve KYC for ${doc.user_name || doc.user_id}?`)) return;
-    
     const kycId = doc.kyc_id;
+    if (processing === kycId) return; // Already processing this doc
+    
     const userName = doc.user_name || doc.user_id;
     
     try {
-      setProcessing(true);
+      setProcessing(kycId); // Track which doc is being processed
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'approve',
         admin_id: user?.uid
@@ -249,21 +248,22 @@ const AdminKYC = ({ user }) => {
       console.error('KYC approve error:', error);
       toast.error(error.response?.data?.detail || 'Failed to approve');
     } finally {
-      setProcessing(false);
+      setProcessing(null);
     }
   };
 
   const handleQuickReject = async (doc, e) => {
     e.stopPropagation();
-    if (processing) return;
-    const reason = window.prompt('Rejection reason (optional):');
-    if (reason === null) return;
-    
     const kycId = doc.kyc_id;
+    if (processing === kycId) return; // Already processing this doc
+    
+    const reason = window.prompt('Rejection reason (optional):');
+    if (reason === null) return; // User cancelled
+    
     const userName = doc.user_name || doc.user_id;
     
     try {
-      setProcessing(true);
+      setProcessing(kycId); // Track which doc is being processed
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'reject',
         admin_id: user?.uid,
@@ -291,7 +291,7 @@ const AdminKYC = ({ user }) => {
       console.error('KYC reject error:', error);
       toast.error(error.response?.data?.detail || 'Failed to reject');
     } finally {
-      setProcessing(false);
+      setProcessing(null);
     }
   };
 
