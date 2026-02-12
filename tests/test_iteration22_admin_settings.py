@@ -12,7 +12,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://director-365-launch.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://user-notifications.preview.emergentagent.com').rstrip('/')
 
 class TestAdminMiningSettings:
     """Test Admin Mining Settings API - Save and Persistence"""

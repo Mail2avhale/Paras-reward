@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://director-365-launch.preview.emergentagent.com",
+    "url": "https://user-notifications.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
