@@ -15,24 +15,30 @@ import requests
 import os
 import uuid
 import time
+import random
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
-# Generate unique test identifiers
-TEST_ID = str(uuid.uuid4())[:8]
-TEST_EMAIL = f"TEST_pinauth_{TEST_ID}@test.com"
-TEST_MOBILE = f"999{TEST_ID[:7].replace('-', '1')}"[:10]  # 10 digit mobile
-TEST_PIN = "147258"  # Valid PIN per main agent note
+
+def generate_unique_mobile():
+    """Generate a unique 10-digit mobile number"""
+    return f"9{random.randint(100000000, 999999999)}"
+
+
+def generate_unique_id():
+    """Generate a short unique ID"""
+    return str(uuid.uuid4())[:8]
+
 
 class TestRegistrationWithPIN:
     """Test registration endpoint with PIN"""
     
     def test_register_success_with_valid_pin(self):
         """Test successful registration with valid 6-digit PIN"""
-        unique_id = str(uuid.uuid4())[:6]
+        unique_id = generate_unique_id()
         payload = {
             "email": f"TEST_reg_{unique_id}@test.com",
-            "mobile": f"91234{unique_id.replace('-', '1')[:5]}",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User Registration",
             "password": "147258"  # Valid 6-digit PIN
         }
@@ -55,9 +61,10 @@ class TestRegistrationWithPIN:
     
     def test_register_rejects_non_6_digit_pin(self):
         """Test registration rejects PIN that's not exactly 6 digits"""
+        unique_id = generate_unique_id()
         payload = {
-            "email": f"TEST_short_pin_{uuid.uuid4()[:6]}@test.com",
-            "mobile": "9123456780",
+            "email": f"TEST_short_pin_{unique_id}@test.com",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User Short PIN",
             "password": "1234"  # Only 4 digits - should fail
         }
@@ -70,9 +77,10 @@ class TestRegistrationWithPIN:
     
     def test_register_rejects_weak_pin_all_same(self):
         """Test registration rejects weak PIN with all same digits"""
+        unique_id = generate_unique_id()
         payload = {
-            "email": f"TEST_weak_pin_{uuid.uuid4()[:6]}@test.com",
-            "mobile": "9123456781",
+            "email": f"TEST_weak_pin_{unique_id}@test.com",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User Weak PIN",
             "password": "111111"  # All same digits - should fail
         }
@@ -85,8 +93,9 @@ class TestRegistrationWithPIN:
     
     def test_register_rejects_invalid_mobile_format(self):
         """Test registration rejects mobile number that's not 10 digits"""
+        unique_id = generate_unique_id()
         payload = {
-            "email": f"TEST_invalid_mobile_{uuid.uuid4()[:6]}@test.com",
+            "email": f"TEST_invalid_mobile_{unique_id}@test.com",
             "mobile": "12345",  # Only 5 digits - should fail
             "full_name": "Test User Invalid Mobile",
             "password": "147258"
@@ -102,7 +111,7 @@ class TestRegistrationWithPIN:
         """Test registration rejects email without @ symbol"""
         payload = {
             "email": "invalidemail.com",  # Missing @ - should fail
-            "mobile": "9123456782",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User Invalid Email",
             "password": "147258"
         }
@@ -116,7 +125,7 @@ class TestRegistrationWithPIN:
     def test_register_rejects_missing_email(self):
         """Test registration rejects request without email"""
         payload = {
-            "mobile": "9123456783",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User No Email",
             "password": "147258"
         }
@@ -128,9 +137,10 @@ class TestRegistrationWithPIN:
     
     def test_register_rejects_missing_pin(self):
         """Test registration rejects request without PIN"""
+        unique_id = generate_unique_id()
         payload = {
-            "email": f"TEST_no_pin_{uuid.uuid4()[:6]}@test.com",
-            "mobile": "9123456784",
+            "email": f"TEST_no_pin_{unique_id}@test.com",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test User No PIN"
             # password/PIN is missing
         }
@@ -147,10 +157,10 @@ class TestDuplicateRegistration:
     @pytest.fixture(scope="class")
     def registered_user(self):
         """Create a test user for duplicate checking"""
-        unique_id = str(uuid.uuid4())[:8]
+        unique_id = generate_unique_id()
         payload = {
             "email": f"TEST_dup_check_{unique_id}@test.com",
-            "mobile": f"98765{unique_id.replace('-', '0')[:5]}",
+            "mobile": generate_unique_mobile(),
             "full_name": "Test Duplicate Check User",
             "password": "147258"
         }
@@ -179,7 +189,7 @@ class TestDuplicateRegistration:
         
         payload = {
             "email": registered_user["email"],  # Same email
-            "mobile": "9876543299",  # Different mobile
+            "mobile": generate_unique_mobile(),  # Different mobile
             "full_name": "Duplicate Email User",
             "password": "258147"
         }
@@ -195,8 +205,9 @@ class TestDuplicateRegistration:
         if not registered_user:
             pytest.skip("Could not create test user")
         
+        unique_id = generate_unique_id()
         payload = {
-            "email": f"TEST_new_email_{uuid.uuid4()[:6]}@test.com",  # Different email
+            "email": f"TEST_new_email_{unique_id}@test.com",  # Different email
             "mobile": registered_user["mobile"],  # Same mobile
             "full_name": "Duplicate Mobile User",
             "password": "258147"
@@ -215,9 +226,9 @@ class TestLoginWithPIN:
     @pytest.fixture(scope="class")
     def test_user_for_login(self):
         """Create a test user specifically for login tests"""
-        unique_id = str(uuid.uuid4())[:8]
+        unique_id = generate_unique_id()
         email = f"TEST_login_user_{unique_id}@test.com"
-        mobile = f"91111{unique_id.replace('-', '2')[:5]}"
+        mobile = generate_unique_mobile()
         pin = "369258"
         
         payload = {
@@ -333,8 +344,9 @@ class TestLoginWithPIN:
     
     def test_login_rejects_nonexistent_user(self):
         """Test login rejects login for non-existent user"""
+        unique_id = generate_unique_id()
         payload = {
-            "identifier": f"nonexistent_{uuid.uuid4()[:6]}@test.com",
+            "identifier": f"nonexistent_{unique_id}@test.com",
             "password": "147258"
         }
         
@@ -372,9 +384,9 @@ class TestPINStorageVerification:
     
     def test_pin_hash_stored_and_login_works(self):
         """End-to-end test: Register with PIN, then login with same PIN"""
-        unique_id = str(uuid.uuid4())[:8]
+        unique_id = generate_unique_id()
         test_email = f"TEST_e2e_pin_{unique_id}@test.com"
-        test_mobile = f"92222{unique_id.replace('-', '3')[:5]}"
+        test_mobile = generate_unique_mobile()
         test_pin = "159357"
         
         # Step 1: Register
@@ -424,9 +436,10 @@ class TestAuthTypeCheck:
     
     def test_auth_type_for_nonexistent_user(self):
         """Test auth type check for non-existent user"""
+        unique_id = generate_unique_id()
         response = requests.get(
             f"{BASE_URL}/api/auth/check-auth-type",
-            params={"identifier": f"nonexistent_{uuid.uuid4()[:6]}@test.com"}
+            params={"identifier": f"nonexistent_{unique_id}@test.com"}
         )
         print(f"Auth type check response: {response.status_code} - {response.text}")
         
@@ -437,12 +450,12 @@ class TestAuthTypeCheck:
     def test_auth_type_for_pin_migrated_user(self):
         """Test auth type check returns 'pin' for newly registered users"""
         # First create a user
-        unique_id = str(uuid.uuid4())[:8]
+        unique_id = generate_unique_id()
         test_email = f"TEST_authtype_{unique_id}@test.com"
         
         register_payload = {
             "email": test_email,
-            "mobile": f"93333{unique_id.replace('-', '4')[:5]}",
+            "mobile": generate_unique_mobile(),
             "full_name": "Auth Type Test User",
             "password": "147258"
         }
@@ -463,6 +476,67 @@ class TestAuthTypeCheck:
         data = response.json()
         assert data.get("user_exists") == True, "Should indicate user exists"
         assert data.get("auth_type") == "pin", "New registrations should use PIN auth"
+
+
+class TestTokenGeneration:
+    """Test that JWT tokens are generated for all users, not just admins"""
+    
+    def test_regular_user_gets_token_on_login(self):
+        """Test that regular (non-admin) users receive JWT token on login"""
+        unique_id = generate_unique_id()
+        test_email = f"TEST_token_test_{unique_id}@test.com"
+        test_mobile = generate_unique_mobile()
+        test_pin = "246813"
+        
+        # Register a regular user
+        register_payload = {
+            "email": test_email,
+            "mobile": test_mobile,
+            "full_name": "Token Test User",
+            "password": test_pin,
+            "role": "user"  # Explicitly set as regular user
+        }
+        
+        reg_response = requests.post(f"{BASE_URL}/api/auth/register/simple", json=register_payload)
+        print(f"Token test - Register: {reg_response.status_code}")
+        
+        if reg_response.status_code != 200:
+            if "already registered" in reg_response.text.lower():
+                pytest.skip("User already exists")
+            pytest.fail(f"Registration failed: {reg_response.text}")
+        
+        # Login and verify token is present
+        login_payload = {
+            "identifier": test_email,
+            "password": test_pin
+        }
+        
+        login_response = requests.post(f"{BASE_URL}/api/auth/login", json=login_payload)
+        print(f"Token test - Login: {login_response.status_code}")
+        print(f"Token test - Response: {login_response.text[:400]}")
+        
+        assert login_response.status_code == 200
+        
+        data = login_response.json()
+        
+        # Check for token
+        has_token = "token" in data or "access_token" in data
+        assert has_token, "Regular user should receive JWT token on login"
+        
+        # Verify token is not empty
+        token = data.get("token") or data.get("access_token")
+        assert token is not None and len(token) > 0, "Token should not be empty"
+        
+        # Check token structure (JWT has 3 parts separated by dots)
+        assert token.count('.') == 2, "Token should be a valid JWT (3 parts separated by dots)"
+        
+        # Verify other token-related fields
+        if "refresh_token" in data:
+            print("Refresh token also provided")
+        if "expires_in" in data:
+            print(f"Token expires in: {data['expires_in']} seconds")
+        
+        print(f"SUCCESS: Regular user received valid JWT token!")
 
 
 # Cleanup fixture
