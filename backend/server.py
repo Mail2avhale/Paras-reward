@@ -926,7 +926,6 @@ async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     If no PIN provided, generates a random 6-digit PIN.
     Use this for users who have password but no PIN.
     """
-    import random
     
     # Find user
     user = await db.users.find_one({
@@ -3940,7 +3939,7 @@ async def check_user_birthday(uid: str):
             return {
                 "is_birthday": True,
                 "message": f"🎂 Happy Birthday, {user_name}! 🎉",
-                "greeting": f"Wishing you a wonderful birthday filled with joy and happiness!",
+                "greeting": "Wishing you a wonderful birthday filled with joy and happiness!",
                 "bonus_message": "Enjoy your special day with PARAS REWARD!"
             }
         
@@ -8343,7 +8342,7 @@ async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
     await log_activity(
         user_id=referrer_uid,
         action_type="referral_reward",
-        description=f"Earned free 1-month Startup subscription (₹299 value) for referring 10 paid members in 7 days!",
+        description="Earned free 1-month Startup subscription (₹299 value) for referring 10 paid members in 7 days!",
         metadata={
             "reward_type": "free_subscription",
             "plan": "startup",
@@ -15546,7 +15545,7 @@ async def reject_cashback_withdrawal(withdrawal_id: str, request: Request):
         wallet_type="cashback",
         transaction_type="withdrawal_rejected",
         amount=refund_amount,
-        description=f"Withdrawal rejected - Amount Refunded",
+        description="Withdrawal rejected - Amount Refunded",
         metadata={
             "withdrawal_id": withdrawal_id,
             "original_amount": refund_amount,
@@ -21338,7 +21337,7 @@ async def export_company_wallets(format: str = "csv"):
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=company_wallets.csv"}
+            headers={"Content-Disposition": "attachment; filename=company_wallets.csv"}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -22310,7 +22309,7 @@ async def process_bill_payment_request(request: Request):
             wallet_type="prc",
             transaction_type="bill_payment_refund",
             amount=total_prc,
-            description=f"Bill payment rejected - PRC Refunded",
+            description="Bill payment rejected - PRC Refunded",
             metadata={
                 "request_id": request_id, 
                 "reason": reject_reason,
@@ -22721,7 +22720,7 @@ async def process_gift_voucher_request(request: Request):
             wallet_type="prc",
             transaction_type="gift_voucher_refund",
             amount=total_prc,
-            description=f"Gift voucher rejected - PRC Refunded",
+            description="Gift voucher rejected - PRC Refunded",
             metadata={
                 "request_id": request_id, 
                 "reason": reject_reason,
@@ -23535,7 +23534,6 @@ async def check_rain_status(uid: str):
             return {"should_rain": False, "reason": "too_soon"}
     
     # Random trigger logic - 30% chance on each check (increased for better engagement)
-    import random
     if random.random() > 0.30:  # 70% chance of no rain, 30% chance to trigger
         return {"should_rain": False, "reason": "not_triggered"}
     
@@ -23593,7 +23591,6 @@ async def tap_rain_drop(request: Request):
     rain_config = settings.get("prc_rain_settings", {}) if settings else {}
     
     # RANDOM PRC calculation - user doesn't know which is positive/negative!
-    import random
     prc_range = rain_config.get("prc_range", {"min": 1, "max": 25})
     prc_min = float(prc_range.get("min", 1) or 1)  # Handle empty/None values
     prc_max = float(prc_range.get("max", 25) or 25)
@@ -23667,7 +23664,7 @@ async def tap_rain_drop(request: Request):
             user_id=user_id,
             transaction_type="prc_rain_gain" if prc_change > 0 else "prc_rain_loss",
             amount=abs(actual_balance_change),
-            description=f"PRC Rain Drop" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
+            description="PRC Rain Drop" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
             wallet_type="prc"
         )
     
@@ -26557,7 +26554,7 @@ async def debug_referred_by(user_id: str):
     if not user:
         user = await db.users.find_one({"email": user_id.lower()}, {"_id": 0, "uid": 1, "referral_code": 1, "referral_count": 1, "name": 1, "email": 1})
     if not user:
-        raise HTTPException(status_code=404, detail=f"User not found. Use your UID or email. Example: /api/referrals/your@email.com/debug-referred-by")
+        raise HTTPException(status_code=404, detail="User not found. Use your UID or email. Example: /api/referrals/your@email.com/debug-referred-by")
     
     uid = user.get("uid")
     ref_code = user.get("referral_code")
@@ -26824,12 +26821,12 @@ async def get_referral_reward_progress(user_id: str):
         "window_info": {
             "window_days": 7,
             "rolling_window": True,
-            "message": f"Referrals are counted from the last 7 days (rolling window)"
+            "message": "Referrals are counted from the last 7 days (rolling window)"
         },
         "status_message": (
             "🎉 You've already claimed this reward!" if reward_claimed else
             "🎉 Congratulations! You're eligible for the free Startup subscription!" if is_eligible else
-            f"⚠️ Only Explorer (Free) plan users are eligible for this reward" if not is_eligible_plan else
+            "⚠️ Only Explorer (Free) plan users are eligible for this reward" if not is_eligible_plan else
             f"🔥 {paid_referrals_7days}/10 paid referrals - {remaining_needed} more to go!"
         )
     }
@@ -27332,7 +27329,7 @@ async def get_ai_referral_suggestions(uid: str):
         suggestions.append({
             "type": "grow_network",
             "priority": "high",
-            "title": f"Grow Your Direct Network",
+            "title": "Grow Your Direct Network",
             "description": f"तुमचे {level1_count} direct referrals आहेत. 10 पर्यंत वाढवा आणि bonus unlock करा!",
             "action": "Share referral link on WhatsApp",
             "target": 10 - level1_count
@@ -34544,7 +34541,7 @@ async def get_trial_balance(as_of_date: str = None):
         for cat, amount in expense_by_category.items():
             if amount != 0:
                 debit_accounts.append({
-                    "code": f"5xxx",
+                    "code": "5xxx",
                     "name": f"{cat.replace('_', ' ').title()} Expense",
                     "debit": round(amount, 2),
                     "credit": 0
@@ -34606,7 +34603,7 @@ async def get_trial_balance(as_of_date: str = None):
         for cat, amount in income_by_category.items():
             if amount != 0:
                 credit_accounts.append({
-                    "code": f"4xxx",
+                    "code": "4xxx",
                     "name": f"{cat.replace('_', ' ').title()} Income",
                     "debit": 0,
                     "credit": round(amount, 2)
@@ -34794,7 +34791,7 @@ async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all
                 "total_burned_prc": round(burned_prc, 2),
                 "total_burned_inr": round(burned_prc * PRC_TO_INR_RATE, 2),
                 "net_circulation_prc": round(mined_prc - consumed_prc - burned_prc, 2),
-                "conversion_rate": f"10 PRC = ₹1"
+                "conversion_rate": "10 PRC = ₹1"
             },
             "entries": entries,
             "pagination": {
@@ -37475,7 +37472,7 @@ async def startup_db():
                 # Don't raise exception - let the app start anyway
                 # The health endpoint will report DB status
                 print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
-                print(f"   App will continue to retry in background")
+                print("   App will continue to retry in background")
                 # Start background task to keep trying
                 asyncio.create_task(retry_db_connection())
                 break
