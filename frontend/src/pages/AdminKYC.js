@@ -296,10 +296,10 @@ const AdminKYC = ({ user }) => {
   };
 
   const handleVerify = async (kycId, action) => {
-    if (processing) return;
+    if (processing === kycId) return;
     
     try {
-      setProcessing(true);
+      setProcessing(kycId);
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action,
         admin_id: user?.uid
@@ -322,7 +322,7 @@ const AdminKYC = ({ user }) => {
       console.error('KYC verify error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update KYC status');
     } finally {
-      setProcessing(false);
+      setProcessing(null);
     }
   };
 
