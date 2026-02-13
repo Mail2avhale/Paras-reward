@@ -127,9 +127,9 @@ const FlipDigit = ({ digit, prevDigit }) => {
 const RainbowBorder = () => {
   return (
     <motion.div
-      className="absolute -inset-1 rounded-3xl opacity-75 blur-sm"
+      className="absolute -inset-1 rounded-3xl opacity-60 blur-sm"
       style={{
-        background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000)',
+        background: 'linear-gradient(90deg, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981)',
         backgroundSize: '400% 100%'
       }}
       animate={{
