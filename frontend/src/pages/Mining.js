@@ -577,19 +577,19 @@ const DailyRewards = ({ user }) => {
   const canCollect = sessionPRC >= 0.01;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-emerald-50 to-teal-50 pb-24">
       {/* Header - with safe area padding */}
       <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center"
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <div>
-            <h1 className="text-white text-xl font-bold">{globalT('dailyRewards')}</h1>
-            <p className="text-gray-400 text-sm">{globalT('collectRewards')}</p>
+            <h1 className="text-gray-800 text-xl font-bold">{globalT('dailyRewards')}</h1>
+            <p className="text-gray-500 text-sm">{globalT('collectRewards')}</p>
           </div>
         </div>
       </div>
@@ -602,9 +602,11 @@ const DailyRewards = ({ user }) => {
           className="relative overflow-hidden rounded-3xl p-6"
           style={{
             background: isMining 
-              ? 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)'
-              : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+              ? 'linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)'
+              : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)',
+            boxShadow: isMining 
+              ? '0 25px 50px -12px rgba(16, 185, 129, 0.4)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
           }}
         >
           {/* Rainbow Border when mining */}
