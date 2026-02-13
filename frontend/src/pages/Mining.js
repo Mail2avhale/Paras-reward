@@ -607,6 +607,43 @@ const DailyRewards = ({ user }) => {
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
           }}
         >
+          {/* Rainbow Border when mining */}
+          {isMining && <RainbowBorder />}
+          
+          {/* Aurora Background Effect */}
+          {isMining && <AuroraBackground />}
+          
+          {/* Floating Bubbles */}
+          {isMining && (
+            <>
+              <FloatingBubble delay={0} size={25} left="10%" />
+              <FloatingBubble delay={1} size={35} left="30%" />
+              <FloatingBubble delay={2} size={20} left="50%" />
+              <FloatingBubble delay={1.5} size={30} left="70%" />
+              <FloatingBubble delay={0.5} size={25} left="90%" />
+            </>
+          )}
+          
+          {/* Orbiting Coins */}
+          {isMining && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <OrbitingCoin delay={0} radius={100} duration={6} />
+              <OrbitingCoin delay={2} radius={120} duration={8} />
+              <OrbitingCoin delay={4} radius={80} duration={5} />
+            </div>
+          )}
+          
+          {/* Confetti Burst on Collect */}
+          <AnimatePresence>
+            {showConfetti && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+                {[...Array(12)].map((_, i) => (
+                  <ConfettiParticle key={i} index={i} onComplete={() => setShowConfetti(false)} />
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
+          
           {/* Glow effect when active */}
           {isMining && (
             <div className="absolute inset-0 opacity-20">
