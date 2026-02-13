@@ -325,10 +325,12 @@ const DailyRewards = ({ user }) => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false); // NEW: Confetti state
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
   
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
+  const progressRef = useRef(null);
   
   // Get global translation function
   const { t: globalT } = useLanguage();
