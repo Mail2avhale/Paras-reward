@@ -408,7 +408,7 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         # Fee-based revenue insights
         total_fee_revenue = revenue["processing_fees"] + revenue["admin_charges"]
         if total_fee_revenue > 0:
-            insights.append(f"💰 Fees कडून एकूण कमाई: ₹{total_fee_revenue:,.2f} (Processing: ₹{revenue['processing_fees']:,.2f} + Admin: ₹{revenue['admin_charges']:,.2f})")
+            insights.append(f"💰 Total Fee Revenue: ₹{total_fee_revenue:,.2f} (Processing: ₹{revenue['processing_fees']:,.2f} + Admin: ₹{revenue['admin_charges']:,.2f})")
         
         if revenue["vip_memberships"] > 0 and total_revenue > 0:
             vip_pct = round(revenue["vip_memberships"] / total_revenue * 100, 1)
@@ -431,16 +431,21 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             withdrawal_fee_total = revenue_details["withdrawal_processing_fees"] + revenue_details["withdrawal_admin_charges"]
             insights.append(f"💸 Withdrawals: {revenue_details['withdrawal_count']} completed, Fees: ₹{withdrawal_fee_total:,.2f}")
         
+        # User payout expenses insights
+        total_user_payouts = expenses["bill_payment_payouts"] + expenses["gift_voucher_payouts"] + expenses["withdrawal_payouts"] + expenses["luxury_claim_payouts"]
+        if total_user_payouts > 0:
+            insights.append(f"💳 Total User Payouts (INR): ₹{total_user_payouts:,.2f}")
+        
         if expenses["prc_rewards"] > total_revenue * 0.3:
-            insights.append("⚠️ PRC rewards खूप जास्त आहेत (>30% of revenue)")
+            insights.append("⚠️ PRC rewards are too high (>30% of revenue)")
         
         if expenses["cashback_referral"] > total_revenue * 0.2:
-            insights.append("⚠️ Referral bonus खर्च जास्त आहे")
+            insights.append("⚠️ Referral bonus expenses are high")
         
         if profit_margin > 50:
-            insights.append("✅ उत्कृष्ट profit margin!")
+            insights.append("✅ Excellent profit margin!")
         elif profit_margin < 10 and profit_margin > 0:
-            insights.append("💡 Profit margin कमी आहे - expenses कमी करा")
+            insights.append("💡 Low profit margin - reduce expenses")
         
         return {
             "period": period,
