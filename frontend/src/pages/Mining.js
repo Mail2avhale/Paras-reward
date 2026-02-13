@@ -638,30 +638,15 @@ const DailyRewards = ({ user }) => {
           {/* Rainbow Border when mining */}
           {isMining && <RainbowBorder />}
           
-          {/* Aurora Background Effect */}
-          {isMining && <AuroraBackground />}
-          
-          {/* Floating Bubbles */}
+          {/* Subtle ambient glow - removed heavy animations */}
           {isMining && (
-            <>
-              <FloatingBubble delay={0} size={25} left="10%" />
-              <FloatingBubble delay={1} size={35} left="30%" />
-              <FloatingBubble delay={2} size={20} left="50%" />
-              <FloatingBubble delay={1.5} size={30} left="70%" />
-              <FloatingBubble delay={0.5} size={25} left="90%" />
-            </>
-          )}
-          
-          {/* Orbiting Coins */}
-          {isMining && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <OrbitingCoin delay={0} radius={100} duration={6} />
-              <OrbitingCoin delay={2} radius={120} duration={8} />
-              <OrbitingCoin delay={4} radius={80} duration={5} />
+            <div className="absolute inset-0 opacity-20 pointer-events-none">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500 rounded-full blur-[100px]" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-400 rounded-full blur-[80px]" />
             </div>
           )}
           
-          {/* Confetti Burst on Collect */}
+          {/* Confetti Burst on Collect - keep this for celebration */}
           <AnimatePresence>
             {showConfetti && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
@@ -671,33 +656,23 @@ const DailyRewards = ({ user }) => {
               </div>
             )}
           </AnimatePresence>
-          
-          {/* Glow effect when active */}
-          {isMining && (
-            <div className="absolute inset-0 opacity-30">
-              <motion.div 
-                className="absolute top-0 right-0 w-64 h-64 bg-emerald-300 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-              <motion.div 
-                className="absolute bottom-0 left-0 w-48 h-48 bg-teal-300 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.4, 0.3] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              />
-            </div>
-          )}
 
           <div className="relative z-10">
-            {/* Status Badge */}
+            {/* Status Badge - Clean Dark Design */}
             <div className="flex items-center justify-between mb-6">
-              <div className={`px-4 py-2 rounded-full ${isMining ? 'bg-white/40 backdrop-blur-sm' : 'bg-gray-200/80'}`}>
-                <span className={`text-sm font-semibold flex items-center gap-2 ${isMining ? 'text-emerald-800' : 'text-gray-600'}`}>
+              <div className={`px-4 py-2 rounded-full border ${
+                isMining 
+                  ? 'bg-emerald-500/10 border-emerald-500/30' 
+                  : 'bg-zinc-800/50 border-zinc-700'
+              }`}>
+                <span className={`text-sm font-medium flex items-center gap-2 ${
+                  isMining ? 'text-emerald-400' : 'text-zinc-400'
+                }`}>
                   {isMining ? (
                     <>
                       <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1, repeat: Infinity }}
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
                       >
                         <Zap className="w-4 h-4" />
                       </motion.div>
@@ -709,12 +684,8 @@ const DailyRewards = ({ user }) => {
                 </span>
               </div>
               {hasPaidPlan && (
-                <div className={`px-3 py-1 rounded-full ${
-                  subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
-                  subscriptionPlan === 'growth' ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
-                  'bg-gradient-to-r from-blue-500 to-cyan-500'
-                }`}>
-                  <span className="text-xs font-bold text-black flex items-center gap-1">
+                <div className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                  <span className="text-xs font-semibold text-amber-400 flex items-center gap-1">
                     <Crown className="w-3 h-3" /> {getMultiplierDisplay(subscriptionPlan)} BONUS
                   </span>
                 </div>
