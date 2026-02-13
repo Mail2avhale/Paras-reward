@@ -216,12 +216,12 @@ const AdminKYC = ({ user }) => {
   const handleQuickApprove = async (doc, e) => {
     e.stopPropagation();
     const kycId = doc.kyc_id;
-    if (processing === kycId) return; // Already processing this doc
+    if (processing?.kyc_id === kycId) return; // Already processing this doc
     
     const userName = doc.user_name || doc.user_id;
     
     try {
-      setProcessing(kycId); // Track which doc is being processed
+      setProcessing({ kyc_id: kycId, action: 'approve' }); // Track both kyc_id AND action
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'approve',
         admin_id: user?.uid
@@ -251,7 +251,7 @@ const AdminKYC = ({ user }) => {
   const handleQuickReject = async (doc, e) => {
     e.stopPropagation();
     const kycId = doc.kyc_id;
-    if (processing === kycId) return; // Already processing this doc
+    if (processing?.kyc_id === kycId) return; // Already processing this doc
     
     const reason = window.prompt('Rejection reason (optional):');
     if (reason === null) return; // User cancelled
@@ -259,7 +259,7 @@ const AdminKYC = ({ user }) => {
     const userName = doc.user_name || doc.user_id;
     
     try {
-      setProcessing(kycId); // Track which doc is being processed
+      setProcessing({ kyc_id: kycId, action: 'reject' }); // Track both kyc_id AND action
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action: 'reject',
         admin_id: user?.uid,
@@ -288,7 +288,7 @@ const AdminKYC = ({ user }) => {
   };
 
   const handleVerify = async (kycId, action) => {
-    if (processing === kycId) return;
+    if (processing?.kyc_id === kycId) return;
     
     try {
       setProcessing(kycId);
