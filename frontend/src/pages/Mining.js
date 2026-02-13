@@ -787,13 +787,13 @@ const DailyRewards = ({ user }) => {
                   animate={{ scale: [1, 1.03, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Star className="w-14 h-14 text-amber-600" />
+                  <Star className="w-12 h-12 text-amber-500" />
                 </motion.div>
-                <p className="text-gray-600 mb-4">{globalT('startEarning')}</p>
+                <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
                 <Button 
                   onClick={startSession}
                   disabled={isStarting}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold py-4 rounded-2xl text-lg shadow-lg shadow-emerald-500/40"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
                 >
                   {isStarting ? (
                     <span className="flex items-center gap-2 justify-center">
@@ -814,39 +814,39 @@ const DailyRewards = ({ user }) => {
               </div>
             )}
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center shadow-md">
+            {/* Stats Grid - Dark Glass Design */}
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-4 text-center border border-zinc-700/50">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <p className="text-gray-600 text-xs">{globalT('currentBalance')}</p>
+                  <p className="text-zinc-500 text-xs">{globalT('currentBalance')}</p>
                   <InfoTooltip>
                     <p>Your available PRC balance that can be used for bill payments, vouchers, and marketplace purchases</p>
                   </InfoTooltip>
                 </div>
-                <p className="text-2xl font-bold text-gray-800">{(userData?.prc_balance || 0).toFixed(2)}</p>
-                <p className="text-amber-600 text-sm">PRC</p>
+                <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">{(userData?.prc_balance || 0).toFixed(2)}</p>
+                <p className="text-amber-500 text-sm">PRC</p>
               </div>
-              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center shadow-md">
+              <div className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-4 text-center border border-zinc-700/50">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <p className="text-gray-600 text-xs">{globalT('rewardRate')}</p>
+                  <p className="text-zinc-500 text-xs">{globalT('rewardRate')}</p>
                   <InfoTooltip>
                     <p>PRC earned per hour. Rate increases with your subscription plan and referral bonuses</p>
                   </InfoTooltip>
                 </div>
-                <p className="text-2xl font-bold text-gray-800">{miningRate.toFixed(1)}</p>
-                <p className="text-emerald-600 text-sm">{globalT('perHour')}</p>
+                <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">{miningRate.toFixed(1)}</p>
+                <p className="text-emerald-500 text-sm">{globalT('perHour')}</p>
               </div>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Free User Warning */}
+      {/* Free User Warning - Dark Theme */}
       {!hasPaidPlan && (
         <div className="px-5 mb-6">
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 shadow-sm">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-amber-600 mt-0.5" />
+              <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
                 <p className="text-amber-700 font-medium text-sm">{globalT('freeUserWarning')}</p>
                 <button 
