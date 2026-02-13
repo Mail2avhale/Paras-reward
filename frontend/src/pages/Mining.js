@@ -923,46 +923,46 @@ const DailyRewards = ({ user }) => {
 
       {/* Quick Stats */}
       <div className="px-5 mb-6">
-        <h2 className="text-white font-bold text-lg mb-4">{globalT('yourStats')}</h2>
+        <h2 className="text-gray-800 font-bold text-lg mb-4">{globalT('yourStats')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
+            className="bg-white/70 backdrop-blur-sm border border-emerald-100 rounded-2xl p-4 shadow-sm"
           >
             <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
             <div className="flex items-center gap-1">
-              <p className="text-gray-400 text-xs">Lifetime Earnings</p>
+              <p className="text-gray-500 text-xs">Lifetime Earnings</p>
               <InfoTooltip>
                 <p>Includes: Mining rewards, Referral bonuses, Tap Game, Rain Drop Game & Cashback</p>
               </InfoTooltip>
             </div>
-            <p className="text-xl font-bold text-white">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
-            <p className="text-emerald-400 text-xs">PRC</p>
+            <p className="text-xl font-bold text-gray-800">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
+            <p className="text-emerald-600 text-xs">PRC</p>
           </motion.div>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4"
+            className="bg-white/70 backdrop-blur-sm border border-purple-100 rounded-2xl p-4 shadow-sm"
           >
             <Gift className="w-8 h-8 text-purple-500 mb-2" />
             <div className="flex items-center gap-1">
-              <p className="text-gray-400 text-xs">{globalT('referralWeight')}</p>
+              <p className="text-gray-500 text-xs">{globalT('referralWeight')}</p>
               <InfoTooltip>
                 <p>Bonus mining rate from your paid referrals. Each paid referral adds +10% to your mining speed (max 100%)</p>
               </InfoTooltip>
             </div>
-            <p className="text-xl font-bold text-white">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
+            <p className="text-xl font-bold text-gray-800">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
           </motion.div>
         </div>
       </div>
 
       {/* How It Works */}
       <div className="px-5">
-        <h2 className="text-white font-bold text-lg mb-4">{globalT('howToPlay')}</h2>
-        <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5 space-y-4">
+        <h2 className="text-gray-800 font-bold text-lg mb-4">{globalT('howToPlay')}</h2>
+        <div className="bg-white/70 backdrop-blur-sm border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
           {[
             { icon: Play, text: globalT('startSession'), color: 'text-emerald-500' },
             { icon: Coins, text: globalT('collectRewards'), color: 'text-amber-500' },
@@ -970,10 +970,10 @@ const DailyRewards = ({ user }) => {
             { icon: Star, text: globalT('referralWeight') + ' +10%', color: 'text-purple-500' },
           ].map((item, index) => (
             <div key={index} className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center`}>
+              <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center`}>
                 <item.icon className={`w-5 h-5 ${item.color}`} />
               </div>
-              <p className="text-gray-300 text-sm">{item.text}</p>
+              <p className="text-gray-700 text-sm">{item.text}</p>
             </div>
           ))}
         </div>
