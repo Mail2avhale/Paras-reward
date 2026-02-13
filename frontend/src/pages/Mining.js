@@ -424,6 +424,9 @@ const DailyRewards = ({ user }) => {
     if (liveCounterRef.current) {
       clearInterval(liveCounterRef.current);
     }
+    if (progressRef.current) {
+      clearInterval(progressRef.current);
+    }
     
     if (isMining && sessionTimeRemaining > 0) {
       // Main timer updates every 5 seconds for time display
@@ -431,9 +434,11 @@ const DailyRewards = ({ user }) => {
         setSessionTimeRemaining(prev => {
           if (prev <= 5) {
             setIsMining(false);
+            setSessionProgress(100);
             toast.success('Session complete! Collect your rewards.');
             clearInterval(timerRef.current);
             if (liveCounterRef.current) clearInterval(liveCounterRef.current);
+            if (progressRef.current) clearInterval(progressRef.current);
             return 0;
           }
           return prev - 5;
@@ -449,6 +454,23 @@ const DailyRewards = ({ user }) => {
         const prcPer100ms = miningRate / 36000; // Per 100ms
         setSessionPRC(prev => prev + prcPer100ms);
       }, 100);
+      
+      // Progress bar updates every second for smooth progression
+      progressRef.current = setInterval(() => {
+        if (sessionStartTime) {
+          const totalDuration = 24 * 60 * 60 * 1000; // 24 hours in ms
+          const elapsed = Date.now() - sessionStartTime;
+          const progress = Math.min(100, (elapsed / totalDuration) * 100);
+          setSessionProgress(progress);
+        }
+      }, 1000);
+      
+      // Calculate initial progress
+      if (sessionStartTime) {
+        const totalDuration = 24 * 60 * 60 * 1000;
+        const elapsed = Date.now() - sessionStartTime;
+        setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
+      }
     }
     
     return () => {
@@ -458,8 +480,11 @@ const DailyRewards = ({ user }) => {
       if (liveCounterRef.current) {
         clearInterval(liveCounterRef.current);
       }
+      if (progressRef.current) {
+        clearInterval(progressRef.current);
+      }
     };
-  }, [isMining, miningRate]);
+  }, [isMining, miningRate, sessionStartTime]);
 
   const startSession = async () => {
     setIsStarting(true);
