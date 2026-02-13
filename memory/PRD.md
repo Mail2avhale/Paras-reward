@@ -45,6 +45,13 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 13, 2026 - Session 3)
 
+- [x] **EMI Pay Special Processing Charges**
+  - For loan_emi requests ≤ ₹499: Processing fee = **50% of amount**
+  - For loan_emi requests > ₹499: Flat **₹10** processing fee
+  - Other services use default configurable processing fee
+  - Examples: ₹100 EMI → ₹50 fee, ₹200 → ₹100, ₹600 → ₹10
+  - Files: `server.py` (Lines 3424-3483)
+
 - [x] **Mining Page Real Progress Bar**
   - Progress bar now shows actual session progress based on start/end time
   - Session Progress percentage displayed (e.g., "21.0%")
