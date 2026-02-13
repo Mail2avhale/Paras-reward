@@ -725,7 +725,7 @@ const DailyRewards = ({ user }) => {
                     ))}
                   </div>
                   
-                  <p className="text-gray-400 text-xs mb-1 relative z-10">{globalT('sessionEarnings')}</p>
+                  <p className="text-emerald-700 text-xs mb-1 relative z-10">{globalT('sessionEarnings')}</p>
                   <div className="flex items-center justify-center gap-2 relative z-10">
                     {/* Animated coin icon with glow */}
                     <motion.div
@@ -734,18 +734,18 @@ const DailyRewards = ({ user }) => {
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <motion.div
-                        className="absolute inset-0 bg-amber-400 rounded-full blur-md"
-                        animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.8, 1.2, 0.8] }}
+                        className="absolute inset-0 bg-amber-500 rounded-full blur-md"
+                        animate={{ opacity: [0.4, 0.7, 0.4], scale: [0.8, 1.2, 0.8] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
-                      <Coins className="w-6 h-6 text-amber-400 relative z-10" />
+                      <Coins className="w-6 h-6 text-amber-600 relative z-10" />
                     </motion.div>
                     
-                    {/* Live animated counter with rainbow gradient text */}
+                    {/* Live animated counter with vibrant gradient text */}
                     <motion.span 
                       className="text-3xl font-bold bg-clip-text text-transparent bg-[length:300%_100%]"
                       style={{
-                        backgroundImage: 'linear-gradient(90deg, #fbbf24, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #fbbf24)'
+                        backgroundImage: 'linear-gradient(90deg, #d97706, #ea580c, #059669, #0284c7, #7c3aed, #db2777, #d97706)'
                       }}
                       animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                       transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
@@ -753,15 +753,12 @@ const DailyRewards = ({ user }) => {
                       <AnimatedCounter value={sessionPRC} decimals={4} />
                     </motion.span>
                     <motion.span 
-                      className="text-lg font-bold bg-clip-text text-transparent"
-                      style={{
-                        backgroundImage: 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                      }}
+                      className="text-lg font-bold text-amber-600"
                       animate={{ 
                         textShadow: [
-                          '0 0 10px rgba(251, 191, 36, 0.5)',
-                          '0 0 20px rgba(251, 191, 36, 0.8)',
-                          '0 0 10px rgba(251, 191, 36, 0.5)'
+                          '0 0 8px rgba(217, 119, 6, 0.4)',
+                          '0 0 16px rgba(217, 119, 6, 0.7)',
+                          '0 0 8px rgba(217, 119, 6, 0.4)'
                         ]
                       }}
                       transition={{ duration: 1.5, repeat: Infinity }}
