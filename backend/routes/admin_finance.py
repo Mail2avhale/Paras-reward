@@ -476,7 +476,8 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             # Expense breakdown  
             "expenses": {
                 "total": round(total_expenses, 2),
-                "breakdown": {k: round(v, 2) for k, v in expenses.items()}
+                "breakdown": {k: round(v, 2) for k, v in expenses.items()},
+                "details": expense_details  # NEW: User payout details
             },
             
             # Insights in Marathi
