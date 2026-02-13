@@ -704,19 +704,27 @@ const AdminKYC = ({ user }) => {
                 <div className="flex gap-3">
                   <Button
                     onClick={() => handleVerify(selectedDoc.kyc_id, 'approve')}
-                    disabled={processing}
+                    disabled={processing?.kyc_id === selectedDoc.kyc_id}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    {processing?.kyc_id === selectedDoc.kyc_id && processing?.action === 'approve' ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
                     Approve KYC
                   </Button>
                   <Button
                     onClick={() => handleVerify(selectedDoc.kyc_id, 'reject')}
-                    disabled={processing}
+                    disabled={processing?.kyc_id === selectedDoc.kyc_id}
                     variant="destructive"
                     className="flex-1"
                   >
-                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                    {processing?.kyc_id === selectedDoc.kyc_id && processing?.action === 'reject' ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="w-4 h-4 mr-2" />
+                    )}
                     Reject KYC
                   </Button>
                 </div>
