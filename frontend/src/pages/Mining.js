@@ -703,6 +703,9 @@ const DailyRewards = ({ user }) => {
                 
                 {/* Earned PRC Display - LIVE ANIMATED COUNTER */}
                 <div className="mt-4 bg-black/30 rounded-2xl p-4 relative overflow-hidden">
+                  {/* Glowing Shadow Effect */}
+                  <GlowingShadow />
+                  
                   {/* Animated background pulse */}
                   <motion.div 
                     className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-yellow-500/5"
@@ -715,8 +718,8 @@ const DailyRewards = ({ user }) => {
                   
                   {/* Sparkle particles */}
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    {[...Array(5)].map((_, i) => (
-                      <SparkleParticle key={i} delay={i * 0.4} x={(i - 2) * 15} />
+                    {[...Array(8)].map((_, i) => (
+                      <SparkleParticle key={i} delay={i * 0.3} x={(i - 4) * 12} />
                     ))}
                   </div>
                   
@@ -736,15 +739,33 @@ const DailyRewards = ({ user }) => {
                       <Coins className="w-6 h-6 text-amber-400 relative z-10" />
                     </motion.div>
                     
-                    {/* Live animated counter with gradient text */}
+                    {/* Live animated counter with rainbow gradient text */}
                     <motion.span 
-                      className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400 bg-clip-text text-transparent bg-[length:200%_100%]"
+                      className="text-3xl font-bold bg-clip-text text-transparent bg-[length:300%_100%]"
+                      style={{
+                        backgroundImage: 'linear-gradient(90deg, #fbbf24, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #fbbf24)'
+                      }}
                       animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                     >
                       <AnimatedCounter value={sessionPRC} decimals={4} />
                     </motion.span>
-                    <span className="text-amber-400 text-lg">PRC</span>
+                    <motion.span 
+                      className="text-lg font-bold bg-clip-text text-transparent"
+                      style={{
+                        backgroundImage: 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                      }}
+                      animate={{ 
+                        textShadow: [
+                          '0 0 10px rgba(251, 191, 36, 0.5)',
+                          '0 0 20px rgba(251, 191, 36, 0.8)',
+                          '0 0 10px rgba(251, 191, 36, 0.5)'
+                        ]
+                      }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      PRC
+                    </motion.span>
                     
                     {/* Floating +PRC indicator */}
                     <AnimatePresence>
@@ -771,12 +792,17 @@ const DailyRewards = ({ user }) => {
                     </p>
                   </motion.div>
                   
-                  {/* Mini progress bar showing earning progress */}
-                  <div className="mt-3 h-1 bg-gray-700/50 rounded-full overflow-hidden relative z-10">
+                  {/* Mini progress bar with rainbow gradient */}
+                  <div className="mt-3 h-1.5 bg-gray-700/50 rounded-full overflow-hidden relative z-10">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"
+                      className="h-full rounded-full"
+                      style={{
+                        background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #fbbf24)',
+                        backgroundSize: '200% 100%'
+                      }}
                       animate={{ 
-                        x: ['-100%', '100%']
+                        x: ['-100%', '100%'],
+                        backgroundPosition: ['0% 50%', '100% 50%']
                       }}
                       transition={{ 
                         duration: 2,
