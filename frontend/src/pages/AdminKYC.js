@@ -569,9 +569,9 @@ const AdminKYC = ({ user }) => {
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 h-8 min-w-[40px]"
                         onClick={(e) => handleQuickApprove(doc, e)}
-                        disabled={processing === doc.kyc_id}
+                        disabled={processing?.kyc_id === doc.kyc_id}
                       >
-                        {processing === doc.kyc_id ? (
+                        {processing?.kyc_id === doc.kyc_id && processing?.action === 'approve' ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <CheckCircle className="w-4 h-4" />
@@ -582,9 +582,9 @@ const AdminKYC = ({ user }) => {
                         variant="destructive"
                         className="h-8 min-w-[40px]"
                         onClick={(e) => handleQuickReject(doc, e)}
-                        disabled={processing === doc.kyc_id}
+                        disabled={processing?.kyc_id === doc.kyc_id}
                       >
-                        {processing === doc.kyc_id ? (
+                        {processing?.kyc_id === doc.kyc_id && processing?.action === 'reject' ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <XCircle className="w-4 h-4" />
