@@ -501,6 +501,10 @@ const DailyRewards = ({ user }) => {
       const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
       const luxurySaved = data.luxury_savings?.deducted || 0;
       
+      // Trigger confetti celebration!
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 1000);
+      
       if (luxurySaved > 0) {
         toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved for Luxury Life)`);
       } else {
