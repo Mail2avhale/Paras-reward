@@ -233,7 +233,7 @@ const AuroraBackground = () => {
       <motion.div
         className="absolute w-[200%] h-[200%] -top-1/2 -left-1/2"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%), radial-gradient(ellipse at 70% 30%, rgba(251, 191, 36, 0.1) 0%, transparent 50%)'
+          background: 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.2) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(59, 130, 246, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 30%, rgba(251, 191, 36, 0.15) 0%, transparent 50%)'
         }}
         animate={{
           rotate: [0, 360]
@@ -247,7 +247,7 @@ const AuroraBackground = () => {
       <motion.div
         className="absolute w-full h-full"
         style={{
-          background: 'linear-gradient(45deg, transparent 30%, rgba(16, 185, 129, 0.05) 50%, transparent 70%)'
+          background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%)'
         }}
         animate={{
           x: ['-100%', '100%']
