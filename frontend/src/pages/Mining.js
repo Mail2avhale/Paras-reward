@@ -839,6 +839,10 @@ const DailyRewards = ({ user }) => {
                           width: { duration: 0.5, ease: "easeOut" },
                           backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" }
                         }}
+                        style={{
+                          background: 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981)',
+                          backgroundSize: '200% 100%'
+                        }}
                       >
                         {/* Shimmer effect on progress bar */}
                         <motion.div
