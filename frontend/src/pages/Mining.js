@@ -583,8 +583,8 @@ const DailyRewards = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-12 h-12 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -607,37 +607,33 @@ const DailyRewards = ({ user }) => {
   const canCollect = sessionPRC >= 0.01;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-emerald-50 to-teal-50 pb-24">
-      {/* Header - with safe area padding */}
+    <div className="min-h-screen bg-zinc-950 pb-24">
+      {/* Header - Premium Dark Theme */}
       <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+            <ArrowLeft className="w-5 h-5 text-zinc-400" />
           </button>
           <div>
-            <h1 className="text-gray-800 text-xl font-bold">{globalT('dailyRewards')}</h1>
-            <p className="text-gray-500 text-sm">{globalT('collectRewards')}</p>
+            <h1 className="text-zinc-100 text-xl font-semibold tracking-tight">{globalT('dailyRewards')}</h1>
+            <p className="text-zinc-500 text-sm">{globalT('collectRewards')}</p>
           </div>
         </div>
       </div>
 
-      {/* Main Rewards Card */}
+      {/* Main Mining Card - Glass Obsidian Design */}
       <div className="px-5 mb-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl p-6"
-          style={{
-            background: isMining 
-              ? 'linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)'
-              : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)',
-            boxShadow: isMining 
-              ? '0 25px 50px -12px rgba(16, 185, 129, 0.4)'
-              : '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
-          }}
+          className={`relative overflow-hidden rounded-[2rem] p-6 backdrop-blur-xl border transition-all duration-500 ${
+            isMining 
+              ? 'bg-zinc-900/80 border-amber-500/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.2)]' 
+              : 'bg-zinc-900/40 border-zinc-800 shadow-2xl shadow-black/40'
+          }`}
         >
           {/* Rainbow Border when mining */}
           {isMining && <RainbowBorder />}
