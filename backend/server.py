@@ -37451,6 +37451,9 @@ async def initialize_database_indexes():
     # ==================== KYC DOCUMENTS INDEXES ====================
     try:
         existing_indexes = await db.kyc_documents.index_information()
+        # Primary lookup index - CRITICAL for fast KYC verification
+        if "kyc_id_1" not in existing_indexes:
+            await db.kyc_documents.create_index("kyc_id", unique=True)
         if "user_id_1" not in existing_indexes:
             await db.kyc_documents.create_index("user_id")
         if "status_1" not in existing_indexes:
@@ -37458,6 +37461,9 @@ async def initialize_database_indexes():
         # Compound for admin KYC queue
         if "status_1_submitted_at_-1" not in existing_indexes:
             await db.kyc_documents.create_index([("status", 1), ("submitted_at", -1)])
+        # Compound index for efficient KYC approval
+        if "kyc_id_1_status_1" not in existing_indexes:
+            await db.kyc_documents.create_index([("kyc_id", 1), ("status", 1)])
         print("✅ KYC documents indexes ready")
     except Exception as e:
         print(f"⚠️  KYC documents indexes: {e}")
