@@ -648,15 +648,15 @@ const DailyRewards = ({ user }) => {
           
           {/* Glow effect when active */}
           {isMining && (
-            <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0 opacity-30">
               <motion.div 
-                className="absolute top-0 right-0 w-64 h-64 bg-emerald-400 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+                className="absolute top-0 right-0 w-64 h-64 bg-emerald-300 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 3, repeat: Infinity }}
               />
               <motion.div 
-                className="absolute bottom-0 left-0 w-48 h-48 bg-green-400 rounded-full blur-3xl"
-                animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.3, 0.2] }}
+                className="absolute bottom-0 left-0 w-48 h-48 bg-teal-300 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.4, 0.3] }}
                 transition={{ duration: 4, repeat: Infinity }}
               />
             </div>
@@ -665,8 +665,8 @@ const DailyRewards = ({ user }) => {
           <div className="relative z-10">
             {/* Status Badge */}
             <div className="flex items-center justify-between mb-6">
-              <div className={`px-4 py-2 rounded-full ${isMining ? 'bg-emerald-500/30' : 'bg-gray-700/50'}`}>
-                <span className={`text-sm font-semibold flex items-center gap-2 ${isMining ? 'text-emerald-400' : 'text-gray-400'}`}>
+              <div className={`px-4 py-2 rounded-full ${isMining ? 'bg-white/40 backdrop-blur-sm' : 'bg-gray-200/80'}`}>
+                <span className={`text-sm font-semibold flex items-center gap-2 ${isMining ? 'text-emerald-800' : 'text-gray-600'}`}>
                   {isMining ? (
                     <>
                       <motion.div
