@@ -332,32 +332,54 @@ const AdminKYC = ({ user }) => {
   const handleVerify = async (kycId, action) => {
     if (processing?.kyc_id === kycId) return;
     
-    try {
-      setProcessing({ kyc_id: kycId, action }); // Track both kyc_id AND action
-      await axios.post(`${API}/kyc/${kycId}/verify`, {
-        action,
-        admin_id: user?.uid
-      });
-      toast.success(`KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
-      
-      const newStatus = action === 'approve' ? 'verified' : 'rejected';
-      setKycDocuments(prev => prev.map(doc => 
-        doc.kyc_id === kycId 
-          ? {...doc, status: newStatus, verified_at: new Date().toISOString()} 
-          : doc
-      ));
-      
-      setSelectedDoc(null);
-      setTimeout(() => {
-        fetchKYCDocuments(currentPage, statusFilter);
-        fetchStats();
-      }, 2000);
-    } catch (error) {
-      console.error('KYC verify error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to update KYC status');
-    } finally {
-      setProcessing(null);
-    }
+    const attemptVerify = async (retryCount = 0) => {
+      try {
+        setProcessing({ kyc_id: kycId, action }); // Track both kyc_id AND action
+        await axios.post(`${API}/kyc/${kycId}/verify`, {
+          action,
+          admin_id: user?.uid
+        }, { timeout: 15000 }); // 15 second timeout
+        
+        toast.success(`KYC ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+        
+        const newStatus = action === 'approve' ? 'verified' : 'rejected';
+        setKycDocuments(prev => prev.map(doc => 
+          doc.kyc_id === kycId 
+            ? {...doc, status: newStatus, verified_at: new Date().toISOString()} 
+            : doc
+        ));
+        
+        setSelectedDoc(null);
+        setTimeout(() => {
+          fetchKYCDocuments(currentPage, statusFilter);
+          fetchStats();
+        }, 1000);
+        
+      } catch (error) {
+        console.error('KYC verify error:', error);
+        
+        // Handle timeout - offer retry
+        if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+          if (retryCount < 2) {
+            toast.info(`Retrying... (${retryCount + 1}/3)`);
+            await attemptVerify(retryCount + 1);
+            return;
+          }
+          toast.error('Connection timeout. Please check your internet and try again.', {
+            action: {
+              label: 'Retry',
+              onClick: () => handleVerify(kycId, action)
+            }
+          });
+        } else {
+          toast.error(error.response?.data?.detail || 'Failed to update KYC status');
+        }
+      } finally {
+        setProcessing(null);
+      }
+    };
+    
+    await attemptVerify();
   };
 
   const getStatusBadge = (status) => {
