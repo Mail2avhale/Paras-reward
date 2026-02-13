@@ -120,9 +120,22 @@ const BillPayments = ({ user, onLogout }) => {
 
   const currentType = requestTypes.find(t => t.id === selectedType);
   
-  // New charge calculation: Amount + ₹10 Processing + 20% Admin
+  // New charge calculation: Amount + Processing Fee + 20% Admin
   const amountINR = formData.amount_inr ? parseFloat(formData.amount_inr) : 0;
-  const processingFeeINR = 10; // Flat ₹10
+  
+  // EMI Special Processing Fee Logic:
+  // - For loan_emi with amount <= 499: Processing Fee = 50% of amount
+  // - For loan_emi with amount > 499: Flat ₹10
+  // - For all other services: Flat ₹10
+  let processingFeeINR = 10; // Default flat ₹10
+  if (selectedType === 'loan_emi') {
+    if (amountINR <= 499) {
+      processingFeeINR = amountINR * 0.50; // 50% of amount
+    } else {
+      processingFeeINR = 10; // Flat ₹10 for amounts > 499
+    }
+  }
+  
   const adminChargePercent = 20; // 20%
   const adminChargeINR = amountINR * (adminChargePercent / 100);
   const totalINR = amountINR + processingFeeINR + adminChargeINR;
