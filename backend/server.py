@@ -3477,13 +3477,19 @@ async def calculate_redemption_charges(amount_inr: float, request_type: str = No
         "request_type": request_type
     }
 
-async def get_bill_payment_service_charge(amount_inr: float, prc_required: float):
+async def get_bill_payment_service_charge(amount_inr: float, prc_required: float, request_type: str = None):
     """
     Calculate service charge for bill payments
-    Uses new formula: Processing Fee (₹10) + Admin Charges (20%)
+    Uses new formula: Processing Fee + Admin Charges (20%)
+    
+    For loan_emi: 
+        - Processing Fee = 50% of amount if <= 499, else flat ₹10
+    For others:
+        - Processing Fee = flat ₹10
+        
     Returns service charge in PRC
     """
-    charges = await calculate_redemption_charges(amount_inr)
+    charges = await calculate_redemption_charges(amount_inr, request_type)
     # Service charge = Processing Fee + Admin Charges (in PRC)
     return charges["processing_fee_prc"] + charges["admin_charge_prc"]
 
