@@ -698,19 +698,19 @@ const DailyRewards = ({ user }) => {
             {/* Timer or Start Button */}
             {isMining ? (
               <div className="text-center mb-6">
-                <p className="text-gray-400 text-sm mb-2">{globalT('timeRemaining')}</p>
-                <div className="text-5xl font-bold text-white font-mono tracking-wider">
+                <p className="text-emerald-700 text-sm mb-2">{globalT('timeRemaining')}</p>
+                <div className="text-5xl font-bold text-emerald-900 font-mono tracking-wider">
                   {formatTime(sessionTimeRemaining)}
                 </div>
                 
                 {/* Earned PRC Display - LIVE ANIMATED COUNTER */}
-                <div className="mt-4 bg-black/30 rounded-2xl p-4 relative overflow-hidden">
+                <div className="mt-4 bg-white/50 backdrop-blur-sm rounded-2xl p-4 relative overflow-hidden shadow-lg">
                   {/* Glowing Shadow Effect */}
                   <GlowingShadow />
                   
                   {/* Animated background pulse */}
                   <motion.div 
-                    className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-yellow-500/5"
+                    className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-yellow-100/50"
                     animate={{ opacity: [0.3, 0.6, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   />
