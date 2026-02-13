@@ -291,7 +291,7 @@ const AdminKYC = ({ user }) => {
     if (processing?.kyc_id === kycId) return;
     
     try {
-      setProcessing(kycId);
+      setProcessing({ kyc_id: kycId, action }); // Track both kyc_id AND action
       await axios.post(`${API}/kyc/${kycId}/verify`, {
         action,
         admin_id: user?.uid
