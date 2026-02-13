@@ -362,13 +362,18 @@ const DailyRewards = ({ user }) => {
       setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       // Set lifetime earnings from redemption stats API for consistency
       setLifetimeEarnings(statsData.total_earned || 0);
-      setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       
       // Check mining session status
       if (miningData.session_active && miningData.remaining_hours > 0) {
         setIsMining(true);
         setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
-        setSessionStartTime(new Date(miningData.session_start).getTime());
+        const sessionStart = new Date(miningData.session_start).getTime();
+        setSessionStartTime(sessionStart);
+        
+        // Calculate initial progress
+        const totalDuration = 24 * 60 * 60 * 1000; // 24 hours
+        const elapsed = Date.now() - sessionStart;
+        setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
         
         // Use mined_this_session from backend
         setSessionPRC(miningData.mined_this_session || 0);
@@ -382,14 +387,22 @@ const DailyRewards = ({ user }) => {
           setIsMining(true);
           setSessionTimeRemaining(remaining);
           setSessionStartTime(startTime);
+          
+          // Calculate initial progress
+          const totalDuration = 24 * 60 * 60 * 1000;
+          const elapsed = now - startTime;
+          setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
+          
           setSessionPRC(miningData.mined_this_session || 0);
         } else {
           setIsMining(false);
           setSessionTimeRemaining(0);
+          setSessionProgress(0);
         }
       } else {
         setIsMining(false);
         setSessionTimeRemaining(0);
+        setSessionProgress(0);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
