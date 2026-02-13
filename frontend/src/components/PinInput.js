@@ -81,8 +81,14 @@ const PinInput = forwardRef(({ value, onChange, error, label, testId = 'pin', au
 
   // Auto-focus first input on mount if autoFocus is true
   useEffect(() => {
-    if (autoFocus && inputRefs.current[0]) {
-      inputRefs.current[0].focus();
+    if (autoFocus) {
+      // Small delay to ensure DOM is ready
+      const focusTimer = setTimeout(() => {
+        if (inputRefs.current[0]) {
+          inputRefs.current[0].focus();
+        }
+      }, 100);
+      return () => clearTimeout(focusTimer);
     }
   }, [autoFocus]);
 
