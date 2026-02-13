@@ -266,7 +266,7 @@ const AuroraBackground = () => {
 const FloatingBubble = ({ delay = 0, size = 30, left = '50%' }) => {
   return (
     <motion.div
-      className="absolute rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-500/10 backdrop-blur-sm border border-amber-400/20"
+      className="absolute rounded-full bg-gradient-to-br from-white/40 to-emerald-200/30 backdrop-blur-sm border border-white/30"
       style={{
         width: size,
         height: size,
