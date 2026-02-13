@@ -848,10 +848,10 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-start gap-3">
               <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
               <div>
-                <p className="text-amber-700 font-medium text-sm">{globalT('freeUserWarning')}</p>
+                <p className="text-amber-400 font-medium text-sm">{globalT('freeUserWarning')}</p>
                 <button 
                   onClick={() => navigate('/subscription')}
-                  className="text-amber-600 text-xs mt-1 underline hover:text-amber-700"
+                  className="text-amber-500 text-xs mt-1 underline hover:text-amber-400"
                 >
                   {globalT('upgradeToVip')} →
                 </button>
@@ -861,59 +861,59 @@ const DailyRewards = ({ user }) => {
         </div>
       )}
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Dark Theme */}
       <div className="px-5 mb-6">
-        <h2 className="text-gray-800 font-bold text-lg mb-4">{globalT('yourStats')}</h2>
+        <h2 className="text-zinc-100 font-semibold text-lg mb-4">{globalT('yourStats')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white/70 backdrop-blur-sm border border-emerald-100 rounded-2xl p-4 shadow-sm"
+            className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4"
           >
-            <TrendingUp className="w-8 h-8 text-emerald-500 mb-2" />
+            <TrendingUp className="w-7 h-7 text-emerald-500 mb-2" />
             <div className="flex items-center gap-1">
-              <p className="text-gray-500 text-xs">Lifetime Earnings</p>
+              <p className="text-zinc-500 text-xs">Lifetime Earnings</p>
               <InfoTooltip>
                 <p>Includes: Mining rewards, Referral bonuses, Tap Game, Rain Drop Game & Cashback</p>
               </InfoTooltip>
             </div>
-            <p className="text-xl font-bold text-gray-800">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
-            <p className="text-emerald-600 text-xs">PRC</p>
+            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
+            <p className="text-emerald-500 text-xs">PRC</p>
           </motion.div>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white/70 backdrop-blur-sm border border-purple-100 rounded-2xl p-4 shadow-sm"
+            className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4"
           >
-            <Gift className="w-8 h-8 text-purple-500 mb-2" />
+            <Gift className="w-7 h-7 text-amber-500 mb-2" />
             <div className="flex items-center gap-1">
-              <p className="text-gray-500 text-xs">{globalT('referralWeight')}</p>
+              <p className="text-zinc-500 text-xs">{globalT('referralWeight')}</p>
               <InfoTooltip>
                 <p>Bonus mining rate from your paid referrals. Each paid referral adds +10% to your mining speed (max 100%)</p>
               </InfoTooltip>
             </div>
-            <p className="text-xl font-bold text-gray-800">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
+            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
           </motion.div>
         </div>
       </div>
 
-      {/* How It Works */}
+      {/* How It Works - Dark Theme */}
       <div className="px-5">
-        <h2 className="text-gray-800 font-bold text-lg mb-4">{globalT('howToPlay')}</h2>
-        <div className="bg-white/70 backdrop-blur-sm border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
+        <h2 className="text-zinc-100 font-semibold text-lg mb-4">{globalT('howToPlay')}</h2>
+        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-5 space-y-4">
           {[
             { icon: Play, text: globalT('startSession'), color: 'text-emerald-500' },
             { icon: Coins, text: globalT('collectRewards'), color: 'text-amber-500' },
-            { icon: CheckCircle, text: globalT('rewardRate'), color: 'text-blue-500' },
-            { icon: Star, text: globalT('referralWeight') + ' +10%', color: 'text-purple-500' },
+            { icon: CheckCircle, text: globalT('rewardRate'), color: 'text-emerald-400' },
+            { icon: Star, text: globalT('referralWeight') + ' +10%', color: 'text-amber-400' },
           ].map((item, index) => (
             <div key={index} className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center`}>
+              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
                 <item.icon className={`w-5 h-5 ${item.color}`} />
               </div>
-              <p className="text-gray-700 text-sm">{item.text}</p>
+              <p className="text-zinc-300 text-sm">{item.text}</p>
             </div>
           ))}
         </div>
