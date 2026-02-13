@@ -123,6 +123,193 @@ const FlipDigit = ({ digit, prevDigit }) => {
   );
 };
 
+// Rainbow Gradient Border Animation
+const RainbowBorder = () => {
+  return (
+    <motion.div
+      className="absolute -inset-1 rounded-3xl opacity-75 blur-sm"
+      style={{
+        background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000)',
+        backgroundSize: '400% 100%'
+      }}
+      animate={{
+        backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+      }}
+      transition={{
+        duration: 3,
+        repeat: Infinity,
+        ease: "linear"
+      }}
+    />
+  );
+};
+
+// Orbiting Coin Animation
+const OrbitingCoin = ({ delay = 0, radius = 60, duration = 4 }) => {
+  return (
+    <motion.div
+      className="absolute"
+      style={{
+        width: 20,
+        height: 20,
+        left: '50%',
+        top: '50%',
+        marginLeft: -10,
+        marginTop: -10
+      }}
+      animate={{
+        rotate: 360
+      }}
+      transition={{
+        duration: duration,
+        repeat: Infinity,
+        ease: "linear",
+        delay: delay
+      }}
+    >
+      <motion.div
+        className="absolute bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full shadow-lg flex items-center justify-center text-xs font-bold text-amber-900"
+        style={{
+          width: 20,
+          height: 20,
+          transform: `translateX(${radius}px)`
+        }}
+        animate={{
+          scale: [1, 1.2, 1],
+          boxShadow: [
+            '0 0 5px rgba(251, 191, 36, 0.5)',
+            '0 0 15px rgba(251, 191, 36, 0.8)',
+            '0 0 5px rgba(251, 191, 36, 0.5)'
+          ]
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity
+        }}
+      >
+        ₹
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Confetti Particle for burst effect
+const ConfettiParticle = ({ index, onComplete }) => {
+  const colors = ['#fbbf24', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const color = colors[index % colors.length];
+  const angle = (index * 360) / 12;
+  const distance = 80 + Math.random() * 40;
+  
+  return (
+    <motion.div
+      className="absolute w-3 h-3 rounded-full"
+      style={{
+        backgroundColor: color,
+        left: '50%',
+        top: '50%',
+        marginLeft: -6,
+        marginTop: -6
+      }}
+      initial={{ scale: 0, x: 0, y: 0 }}
+      animate={{
+        scale: [0, 1, 0],
+        x: Math.cos(angle * Math.PI / 180) * distance,
+        y: Math.sin(angle * Math.PI / 180) * distance,
+        rotate: 360
+      }}
+      transition={{
+        duration: 0.8,
+        ease: "easeOut"
+      }}
+      onAnimationComplete={index === 0 ? onComplete : undefined}
+    />
+  );
+};
+
+// Aurora Background Effect
+const AuroraBackground = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden rounded-3xl">
+      <motion.div
+        className="absolute w-[200%] h-[200%] -top-1/2 -left-1/2"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(16, 185, 129, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%), radial-gradient(ellipse at 70% 30%, rgba(251, 191, 36, 0.1) 0%, transparent 50%)'
+        }}
+        animate={{
+          rotate: [0, 360]
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
+      <motion.div
+        className="absolute w-full h-full"
+        style={{
+          background: 'linear-gradient(45deg, transparent 30%, rgba(16, 185, 129, 0.05) 50%, transparent 70%)'
+        }}
+        animate={{
+          x: ['-100%', '100%']
+        }}
+        transition={{
+          duration: 5,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
+    </div>
+  );
+};
+
+// Floating Bubble Animation
+const FloatingBubble = ({ delay = 0, size = 30, left = '50%' }) => {
+  return (
+    <motion.div
+      className="absolute rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-500/10 backdrop-blur-sm border border-amber-400/20"
+      style={{
+        width: size,
+        height: size,
+        left: left,
+        bottom: -size
+      }}
+      animate={{
+        y: [0, -400],
+        x: [0, (Math.random() - 0.5) * 50],
+        opacity: [0, 0.8, 0],
+        scale: [0.5, 1, 0.8]
+      }}
+      transition={{
+        duration: 4 + Math.random() * 2,
+        repeat: Infinity,
+        delay: delay,
+        ease: "easeOut"
+      }}
+    />
+  );
+};
+
+// Glowing Shadow Effect
+const GlowingShadow = () => {
+  return (
+    <motion.div
+      className="absolute inset-0 rounded-2xl"
+      animate={{
+        boxShadow: [
+          '0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.2)',
+          '0 0 40px rgba(251, 191, 36, 0.5), 0 0 80px rgba(251, 191, 36, 0.3)',
+          '0 0 20px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.2)'
+        ]
+      }}
+      transition={{
+        duration: 2,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    />
+  );
+};
+
 const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
