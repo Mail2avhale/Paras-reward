@@ -220,32 +220,53 @@ const AdminKYC = ({ user }) => {
     
     const userName = doc.user_name || doc.user_id;
     
-    try {
-      setProcessing({ kyc_id: kycId, action: 'approve' }); // Track both kyc_id AND action
-      await axios.post(`${API}/kyc/${kycId}/verify`, {
-        action: 'approve',
-        admin_id: user?.uid
-      });
-      toast.success(`✅ KYC Approved: ${userName}`);
-      
-      // Optimistic update - remove from list immediately
-      setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
-      
-      // Update stats immediately
-      setStats(prev => ({
-        ...prev,
-        pending: Math.max(0, prev.pending - 1),
-        verified: prev.verified + 1
-      }));
-      
-    } catch (error) {
-      console.error('KYC approve error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to approve');
-      // Refresh on error
-      fetchKYCDocuments(currentPage, statusFilter);
-    } finally {
-      setProcessing(null);
-    }
+    const attemptApprove = async (retryCount = 0) => {
+      try {
+        setProcessing({ kyc_id: kycId, action: 'approve' }); // Track both kyc_id AND action
+        await axios.post(`${API}/kyc/${kycId}/verify`, {
+          action: 'approve',
+          admin_id: user?.uid
+        }, { timeout: 15000 }); // 15 second timeout
+        
+        toast.success(`✅ KYC Approved: ${userName}`);
+        
+        // Optimistic update - remove from list immediately
+        setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
+        
+        // Update stats immediately
+        setStats(prev => ({
+          ...prev,
+          pending: Math.max(0, prev.pending - 1),
+          verified: prev.verified + 1
+        }));
+        
+      } catch (error) {
+        console.error('KYC approve error:', error);
+        
+        // Handle timeout - offer retry
+        if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+          if (retryCount < 2) {
+            toast.info(`Retrying... (${retryCount + 1}/3)`);
+            await attemptApprove(retryCount + 1);
+            return;
+          }
+          toast.error('Connection timeout. Please check your internet and try again.', {
+            action: {
+              label: 'Retry',
+              onClick: () => handleQuickApprove(doc, e)
+            }
+          });
+        } else {
+          toast.error(error.response?.data?.detail || 'Failed to approve');
+          // Refresh on error
+          fetchKYCDocuments(currentPage, statusFilter);
+        }
+      } finally {
+        setProcessing(null);
+      }
+    };
+    
+    await attemptApprove();
   };
 
   const handleQuickReject = async (doc, e) => {
@@ -258,33 +279,54 @@ const AdminKYC = ({ user }) => {
     
     const userName = doc.user_name || doc.user_id;
     
-    try {
-      setProcessing({ kyc_id: kycId, action: 'reject' }); // Track both kyc_id AND action
-      await axios.post(`${API}/kyc/${kycId}/verify`, {
-        action: 'reject',
-        admin_id: user?.uid,
-        notes: reason
-      });
-      toast.success(`❌ KYC Rejected: ${userName}`);
-      
-      // Optimistic update - remove from list immediately
-      setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
-      
-      // Update stats immediately
-      setStats(prev => ({
-        ...prev,
-        pending: Math.max(0, prev.pending - 1),
-        rejected: prev.rejected + 1
-      }));
-      
-    } catch (error) {
-      console.error('KYC reject error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to reject');
-      // Refresh on error
-      fetchKYCDocuments(currentPage, statusFilter);
-    } finally {
-      setProcessing(null);
-    }
+    const attemptReject = async (retryCount = 0) => {
+      try {
+        setProcessing({ kyc_id: kycId, action: 'reject' }); // Track both kyc_id AND action
+        await axios.post(`${API}/kyc/${kycId}/verify`, {
+          action: 'reject',
+          admin_id: user?.uid,
+          notes: reason
+        }, { timeout: 15000 }); // 15 second timeout
+        
+        toast.success(`❌ KYC Rejected: ${userName}`);
+        
+        // Optimistic update - remove from list immediately
+        setKycDocuments(prev => prev.filter(d => d.kyc_id !== kycId));
+        
+        // Update stats immediately
+        setStats(prev => ({
+          ...prev,
+          pending: Math.max(0, prev.pending - 1),
+          rejected: prev.rejected + 1
+        }));
+        
+      } catch (error) {
+        console.error('KYC reject error:', error);
+        
+        // Handle timeout - offer retry
+        if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+          if (retryCount < 2) {
+            toast.info(`Retrying... (${retryCount + 1}/3)`);
+            await attemptReject(retryCount + 1);
+            return;
+          }
+          toast.error('Connection timeout. Please check your internet and try again.', {
+            action: {
+              label: 'Retry',
+              onClick: () => handleQuickReject(doc, e)
+            }
+          });
+        } else {
+          toast.error(error.response?.data?.detail || 'Failed to reject');
+          // Refresh on error
+          fetchKYCDocuments(currentPage, statusFilter);
+        }
+      } finally {
+        setProcessing(null);
+      }
+    };
+    
+    await attemptReject();
   };
 
   const handleVerify = async (kycId, action) => {
