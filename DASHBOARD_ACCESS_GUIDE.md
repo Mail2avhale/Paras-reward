@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://kyc-bulk-ops.preview.emergentagent.com/setup
+   https://mining-progress.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
