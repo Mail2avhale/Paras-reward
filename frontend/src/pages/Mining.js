@@ -784,19 +784,19 @@ const DailyRewards = ({ user }) => {
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 0.5, repeat: Infinity }}
                     >
-                      <Zap className="w-3 h-3 text-emerald-400" />
+                      <Zap className="w-3 h-3 text-emerald-600" />
                     </motion.div>
-                    <p className="text-emerald-400 text-xs">
+                    <p className="text-emerald-600 text-xs">
                       +{(miningRate / 3600).toFixed(6)} PRC/sec
                     </p>
                   </motion.div>
                   
-                  {/* Mini progress bar with rainbow gradient */}
-                  <div className="mt-3 h-1.5 bg-gray-700/50 rounded-full overflow-hidden relative z-10">
+                  {/* Mini progress bar with vibrant gradient */}
+                  <div className="mt-3 h-1.5 bg-emerald-100 rounded-full overflow-hidden relative z-10">
                     <motion.div
                       className="h-full rounded-full"
                       style={{
-                        background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899, #fbbf24)',
+                        background: 'linear-gradient(90deg, #d97706, #ea580c, #059669, #0284c7, #7c3aed, #db2777, #d97706)',
                         backgroundSize: '200% 100%'
                       }}
                       animate={{ 
@@ -819,14 +819,14 @@ const DailyRewards = ({ user }) => {
                   disabled={!canCollect || isCollecting}
                   className={`mt-4 w-full py-4 rounded-2xl font-bold text-lg transition-all ${
                     canCollect
-                      ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black shadow-lg shadow-amber-500/30'
-                      : 'bg-gray-700 text-gray-400'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/40'
+                      : 'bg-gray-300 text-gray-500'
                   }`}
                 >
                   {isCollecting ? (
                     <span className="flex items-center gap-2 justify-center">
                       <motion.div 
-                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
