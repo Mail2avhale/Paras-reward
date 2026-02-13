@@ -22086,8 +22086,8 @@ async def create_bill_payment_request(request: Request):
     if not access_check["allowed"]:
         raise HTTPException(status_code=403, detail=access_check["reason"])
     
-    # Calculate all charges using new formula
-    charges = await calculate_redemption_charges(amount_inr)
+    # Calculate all charges using new formula (pass request_type for EMI special handling)
+    charges = await calculate_redemption_charges(amount_inr, request_type)
     total_prc = charges["total_prc"]
     
     # ===== REDEMPTION LIMIT CHECK =====
