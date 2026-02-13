@@ -822,22 +822,24 @@ const DailyRewards = ({ user }) => {
                   <div className="mt-3 relative z-10">
                     <div className="flex justify-between text-xs text-emerald-600 mb-1">
                       <span>Session Progress</span>
-                      <span>{sessionStartTime ? Math.min(100, Math.round(((Date.now() - sessionStartTime) / (24 * 60 * 60 * 1000)) * 100)) : 0}%</span>
+                      <span>{sessionProgress.toFixed(1)}%</span>
                     </div>
                     <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full relative"
-                        style={{
-                          background: 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981)',
-                          backgroundSize: '200% 100%',
-                          width: `${sessionStartTime ? Math.min(100, ((Date.now() - sessionStartTime) / (24 * 60 * 60 * 1000)) * 100) : 0}%`
-                        }}
-                        animate={{
+                        initial={{ width: 0 }}
+                        animate={{ 
+                          width: `${sessionProgress}%`,
                           backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
                         }}
                         transition={{
-                          duration: 3,
-                          repeat: Infinity,
+                          width: { duration: 0.5, ease: "easeOut" },
+                          backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" }
+                        }}
+                        style={{
+                          background: 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981)',
+                          backgroundSize: '200% 100%'
+                        }}
                           ease: "linear"
                         }}
                       >
