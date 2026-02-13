@@ -437,6 +437,7 @@ const LoginNew = ({ onLogin }) => {
                 error={pinError}
                 label="Enter 6-Digit PIN"
                 testId="login-pin"
+                autoFocus={true}
               />
             </div>
           )}
