@@ -791,25 +791,37 @@ const DailyRewards = ({ user }) => {
                     </p>
                   </motion.div>
                   
-                  {/* Mini progress bar with vibrant gradient */}
-                  <div className="mt-3 h-1.5 bg-emerald-100 rounded-full overflow-hidden relative z-10">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{
-                        background: 'linear-gradient(90deg, #d97706, #ea580c, #059669, #0284c7, #7c3aed, #db2777, #d97706)',
-                        backgroundSize: '200% 100%'
-                      }}
-                      animate={{ 
-                        x: ['-100%', '100%'],
-                        backgroundPosition: ['0% 50%', '100% 50%']
-                      }}
-                      transition={{ 
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "linear"
-                      }}
-                      style={{ width: '50%' }}
-                    />
+                  {/* Real Progress Bar - Shows actual session progress */}
+                  <div className="mt-3 relative z-10">
+                    <div className="flex justify-between text-xs text-emerald-600 mb-1">
+                      <span>Session Progress</span>
+                      <span>{sessionStartTime ? Math.min(100, Math.round(((Date.now() - sessionStartTime) / (24 * 60 * 60 * 1000)) * 100)) : 0}%</span>
+                    </div>
+                    <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full relative"
+                        style={{
+                          background: 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981)',
+                          backgroundSize: '200% 100%',
+                          width: `${sessionStartTime ? Math.min(100, ((Date.now() - sessionStartTime) / (24 * 60 * 60 * 1000)) * 100) : 0}%`
+                        }}
+                        animate={{
+                          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "linear"
+                        }}
+                      >
+                        {/* Shimmer effect on progress bar */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                          animate={{ x: ['-100%', '200%'] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        />
+                      </motion.div>
+                    </div>
                   </div>
                 </div>
                 
