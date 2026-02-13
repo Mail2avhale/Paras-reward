@@ -555,16 +555,18 @@ const DailyRewards = ({ user }) => {
         toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`);
       }
       
+      // IMPORTANT: Immediately reset sessionPRC to 0 to avoid negative display
+      setSessionPRC(0);
+      
       // Reset session using response data - this ensures immediate UI update
       if (data.session_reset) {
-        setSessionPRC(0);
-        setSessionStartTime(new Date(data.new_session_start).getTime());
+        const newStartTime = new Date(data.new_session_start).getTime();
+        setSessionStartTime(newStartTime);
         setSessionTimeRemaining(Math.floor(data.remaining_hours * 3600));
         setSessionProgress(0); // Reset progress for new session
         setIsMining(true);
       } else {
-        // Fallback: Reset local session PRC but keep mining
-        setSessionPRC(0);
+        // Fallback: Reset local session but keep mining
         setSessionStartTime(Date.now());
         setSessionProgress(0); // Reset progress
       }
@@ -579,7 +581,7 @@ const DailyRewards = ({ user }) => {
       }
       
       // Refresh user data after a brief delay to ensure cache is cleared
-      setTimeout(() => fetchUserData(), 500);
+      setTimeout(() => fetchUserData(), 1000);
       
     } catch (error) {
       console.error('Claim error:', error);
