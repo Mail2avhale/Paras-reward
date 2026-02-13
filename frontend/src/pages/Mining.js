@@ -468,7 +468,7 @@ const DailyRewards = ({ user }) => {
       // Live counter updates every 100ms for smooth real-time feel
       liveCounterRef.current = setInterval(() => {
         const prcPer100ms = miningRate / 36000; // Per 100ms
-        setSessionPRC(prev => prev + prcPer100ms);
+        setSessionPRC(prev => Math.max(0, prev + prcPer100ms));
       }, 100);
       
       // Progress bar updates every second for smooth progression
