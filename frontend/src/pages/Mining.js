@@ -648,10 +648,7 @@ const DailyRewards = ({ user }) => {
               : 'bg-zinc-900/40 border-zinc-800 shadow-2xl shadow-black/40'
           }`}
         >
-          {/* Rainbow Border when mining */}
-          {isMining && <RainbowBorder />}
-          
-          {/* Subtle ambient glow - removed heavy animations */}
+          {/* Subtle ambient glow when mining */}
           {isMining && (
             <div className="absolute inset-0 opacity-20 pointer-events-none">
               <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500 rounded-full blur-[100px]" />
