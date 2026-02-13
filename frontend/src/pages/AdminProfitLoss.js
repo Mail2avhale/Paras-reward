@@ -307,7 +307,7 @@ const AdminProfitLoss = ({ user }) => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-green-400 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              Revenue (आवक)
+              Revenue (Income)
             </h3>
             <span className="text-2xl font-bold text-green-400">{formatCurrency(revenue.total)}</span>
           </div>
