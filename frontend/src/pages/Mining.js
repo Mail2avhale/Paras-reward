@@ -695,73 +695,26 @@ const DailyRewards = ({ user }) => {
             {/* Timer or Start Button */}
             {isMining ? (
               <div className="text-center mb-6">
-                <p className="text-emerald-700 text-sm mb-2">{globalT('timeRemaining')}</p>
-                <div className="text-5xl font-bold text-emerald-900 font-mono tracking-wider">
+                <p className="text-zinc-500 text-sm mb-2">{globalT('timeRemaining')}</p>
+                <div className="text-5xl font-semibold text-zinc-100 font-mono tracking-wider">
                   {formatTime(sessionTimeRemaining)}
                 </div>
                 
-                {/* Earned PRC Display - LIVE ANIMATED COUNTER */}
-                <div className="mt-4 bg-white/50 backdrop-blur-sm rounded-2xl p-4 relative overflow-hidden shadow-lg">
-                  {/* Glowing Shadow Effect */}
-                  <GlowingShadow />
+                {/* Earned PRC Display - Clean Dark Design */}
+                <div className="mt-6 bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-5 relative overflow-hidden border border-zinc-700/50">
                   
-                  {/* Animated background pulse */}
-                  <motion.div 
-                    className="absolute inset-0 bg-gradient-to-r from-amber-100/50 to-yellow-100/50"
-                    animate={{ opacity: [0.3, 0.6, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  />
-                  
-                  {/* Pulse ring effect */}
-                  <PulseRing />
-                  
-                  {/* Sparkle particles */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    {[...Array(8)].map((_, i) => (
-                      <SparkleParticle key={i} delay={i * 0.3} x={(i - 4) * 12} />
-                    ))}
-                  </div>
-                  
-                  <p className="text-emerald-700 text-xs mb-1 relative z-10">{globalT('sessionEarnings')}</p>
-                  <div className="flex items-center justify-center gap-2 relative z-10">
-                    {/* Animated coin icon with glow */}
-                    <motion.div
-                      className="relative"
-                      animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 bg-amber-500 rounded-full blur-md"
-                        animate={{ opacity: [0.4, 0.7, 0.4], scale: [0.8, 1.2, 0.8] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
-                      <Coins className="w-6 h-6 text-amber-600 relative z-10" />
-                    </motion.div>
+                  <p className="text-zinc-500 text-xs mb-2 relative z-10">{globalT('sessionEarnings')}</p>
+                  <div className="flex items-center justify-center gap-3 relative z-10">
+                    {/* Simple coin icon */}
+                    <Coins className="w-6 h-6 text-amber-500" />
                     
-                    {/* Live animated counter with vibrant gradient text */}
-                    <motion.span 
-                      className="text-3xl font-bold bg-clip-text text-transparent bg-[length:300%_100%]"
-                      style={{
-                        backgroundImage: 'linear-gradient(90deg, #d97706, #ea580c, #059669, #0284c7, #7c3aed, #db2777, #d97706)'
-                      }}
-                      animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    >
+                    {/* Live counter with gold gradient */}
+                    <span className="text-4xl font-semibold text-amber-400 font-mono tabular-nums tracking-wide">
                       <AnimatedCounter value={sessionPRC} decimals={4} />
-                    </motion.span>
-                    <motion.span 
-                      className="text-lg font-bold text-amber-600"
-                      animate={{ 
-                        textShadow: [
-                          '0 0 8px rgba(217, 119, 6, 0.4)',
-                          '0 0 16px rgba(217, 119, 6, 0.7)',
-                          '0 0 8px rgba(217, 119, 6, 0.4)'
-                        ]
-                      }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
+                    </span>
+                    <span className="text-lg font-medium text-amber-500/70">
                       PRC
-                    </motion.span>
+                    </span>
                     
                     {/* Floating +PRC indicator */}
                     <AnimatePresence>
@@ -771,13 +724,34 @@ const DailyRewards = ({ user }) => {
                     </AnimatePresence>
                   </div>
                   
-                  {/* Per-second rate indicator with breathing animation */}
-                  <motion.div 
-                    className="flex items-center justify-center gap-2 mt-2 relative z-10"
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <motion.div
+                  {/* Per-second rate indicator */}
+                  <div className="flex items-center justify-center gap-2 mt-3 relative z-10">
+                    <Zap className="w-3 h-3 text-emerald-500" />
+                    <p className="text-emerald-500 text-xs font-mono">
+                      +{(miningRate / 3600).toFixed(6)} PRC/sec
+                    </p>
+                  </div>
+                  
+                  {/* Real Progress Bar */}
+                  <div className="mt-4 relative z-10">
+                    <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
+                      <span>Session Progress</span>
+                      <span className="text-amber-400 font-mono">{sessionProgress.toFixed(1)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${sessionProgress}%` }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        style={{
+                          background: 'linear-gradient(90deg, #10b981, #34d399)',
+                          boxShadow: '0 0 10px rgba(16, 185, 129, 0.5)'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 0.5, repeat: Infinity }}
                     >
