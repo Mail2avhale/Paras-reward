@@ -461,3 +461,7 @@ The following systems have been deprecated and removed:
 - **Preview URL**: https://mining-progress.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button
+
+## Test Credentials (Updated Feb 13, 2026)
+- **Regular User (for Mining page testing):** `miner@test.com` / PIN: `147258`
+- **Admin User:** `admin@paras.com` / PIN: `123456`
