@@ -3421,14 +3421,16 @@ async def get_redemption_charge_settings():
         "prc_to_inr_rate": 10  # Fixed: 10 PRC = 1 INR
     }
 
-async def calculate_redemption_charges(amount_inr: float):
+async def calculate_redemption_charges(amount_inr: float, request_type: str = None):
     """
     Calculate all charges for bill payment or gift voucher redemption
     
     Formula: Total PRC = (Amount_INR + Processing_Fee + Admin_Charges) × PRC_Rate
     
     Where:
-    - Processing Fee = Flat ₹10 (configurable)
+    - Processing Fee = 
+        * For loan_emi: 50% of amount if amount <= 499, else flat ₹10
+        * For others: Flat ₹10 (configurable)
     - Admin Charges = 20% of Amount_INR (configurable)
     - PRC Rate = 10 (10 PRC = ₹1)
     
@@ -3436,7 +3438,18 @@ async def calculate_redemption_charges(amount_inr: float):
     """
     settings = await get_redemption_charge_settings()
     
-    processing_fee_inr = settings["processing_fee_inr"]
+    # Special EMI Processing Fee Logic
+    # If loan_emi and amount <= 499: processing fee = 50% of amount
+    # If loan_emi and amount > 499: flat ₹10
+    # For all other services: flat ₹10
+    if request_type == "loan_emi":
+        if amount_inr <= 499:
+            processing_fee_inr = amount_inr * 0.50  # 50% of amount
+        else:
+            processing_fee_inr = 10.0  # Flat ₹10 for amounts > 499
+    else:
+        processing_fee_inr = settings["processing_fee_inr"]
+    
     admin_charge_percent = settings["admin_charge_percent"]
     prc_rate = settings["prc_to_inr_rate"]
     
@@ -3460,7 +3473,8 @@ async def calculate_redemption_charges(amount_inr: float):
         "processing_fee_prc": round(processing_fee_prc, 2),
         "admin_charge_prc": round(admin_charge_prc, 2),
         "total_prc": round(total_prc, 2),
-        "prc_rate": prc_rate
+        "prc_rate": prc_rate,
+        "request_type": request_type
     }
 
 async def get_bill_payment_service_charge(amount_inr: float, prc_required: float):
