@@ -8775,80 +8775,110 @@ async def bulk_verify_kyc(request: Request):
 
 @api_router.post("/kyc/{kyc_id}/verify")
 async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
-    """Verify or reject KYC (Admin)"""
+    """Verify or reject KYC (Admin) - Optimized with timeout handling"""
+    import asyncio
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"KYC verify request: kyc_id={kyc_id}, action={action.action}, attempt={attempt+1}")
+            
+            # Quick find with timeout - only get essential fields
+            kyc = await asyncio.wait_for(
+                db.kyc_documents.find_one(
+                    {"kyc_id": kyc_id},
+                    {"_id": 0, "kyc_id": 1, "user_id": 1, "status": 1}
+                ),
+                timeout=10.0
+            )
+            
+            if not kyc:
+                print(f"KYC not found: {kyc_id}")
+                raise HTTPException(status_code=404, detail=f"KYC document not found: {kyc_id}")
+            
+            # Check if already verified/rejected
+            current_status = kyc.get("status", "pending")
+            if current_status in ["verified", "rejected"]:
+                print(f"KYC already {current_status}: {kyc_id}")
+                return {"message": f"KYC already {current_status}", "status": current_status, "success": True}
+            
+            status = "verified" if action.action == "approve" else "rejected"
+            
+            # Update KYC document with timeout
+            result = await asyncio.wait_for(
+                db.kyc_documents.update_one(
+                    {"kyc_id": kyc_id, "status": "pending"},  # Only update if still pending
+                    {"$set": {
+                        "status": status, 
+                        "verified_at": datetime.now(timezone.utc).isoformat(),
+                        "verified_by": getattr(action, 'admin_id', None)
+                    }}
+                ),
+                timeout=10.0
+            )
+            print(f"KYC update result: modified={result.modified_count}")
+            
+            # Update user KYC status with timeout
+            user_result = await asyncio.wait_for(
+                db.users.update_one(
+                    {"uid": kyc["user_id"]},
+                    {"$set": {"kyc_status": status}}
+                ),
+                timeout=10.0
+            )
+            print(f"User KYC status update: modified={user_result.modified_count}")
+            
+            # Notify user (non-blocking, fire and forget)
+            asyncio.create_task(send_kyc_notification(kyc["user_id"], status, kyc_id))
+            
+            # Clear cache (non-blocking)
+            try:
+                await cache.delete("kyc_pending_count")
+                await cache.delete("kyc_list:pending:p1:l20")
+            except:
+                pass
+            
+            return {"message": f"KYC {status} successfully", "status": status, "success": True}
+            
+        except asyncio.TimeoutError:
+            print(f"KYC verify timeout on attempt {attempt+1}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(0.5)  # Brief wait before retry
+                continue
+            raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"KYC verify error on attempt {attempt+1}: {str(e)}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(0.5)
+                continue
+            raise HTTPException(status_code=500, detail=f"Failed to verify KYC: {str(e)}")
+
+
+async def send_kyc_notification(user_id: str, status: str, kyc_id: str):
+    """Send KYC notification in background"""
     try:
-        print(f"KYC verify request: kyc_id={kyc_id}, action={action.action}")
-        
-        kyc = await db.kyc_documents.find_one({"kyc_id": kyc_id})
-        if not kyc:
-            print(f"KYC not found: {kyc_id}")
-            raise HTTPException(status_code=404, detail=f"KYC document not found: {kyc_id}")
-        
-        # Check if already verified/rejected
-        current_status = kyc.get("status", "pending")
-        if current_status in ["verified", "rejected"]:
-            print(f"KYC already {current_status}: {kyc_id}")
-            return {"message": f"KYC already {current_status}", "status": current_status, "success": True}
-        
-        status = "verified" if action.action == "approve" else "rejected"
-        
-        # Update KYC document
-        result = await db.kyc_documents.update_one(
-            {"kyc_id": kyc_id},
-            {"$set": {
-                "status": status, 
-                "verified_at": datetime.now(timezone.utc).isoformat(),
-                "verified_by": getattr(action, 'admin_id', None)
-            }}
-        )
-        print(f"KYC update result: modified={result.modified_count}")
-        
-        # Update user KYC status
-        user_result = await db.users.update_one(
-            {"uid": kyc["user_id"]},
-            {"$set": {"kyc_status": status}}
-        )
-        print(f"User KYC status update: modified={user_result.modified_count}")
-        
-        # Notify user about KYC status
-        try:
-            if status == "verified":
-                await create_notification(
-                    user_id=kyc["user_id"],
-                    title="✅ KYC Verified!",
-                    message="Your KYC verification is complete. You now have full access to all platform features.",
-                    notification_type="kyc",
-                    related_id=kyc_id,
-                    icon="✅"
-                )
-            else:
-                await create_notification(
-                    user_id=kyc["user_id"],
-                    title="❌ KYC Rejected",
-                    message="Your KYC verification was rejected. Please re-upload your documents with clear images.",
-                    notification_type="kyc",
-                    related_id=kyc_id,
-                    icon="❌"
-                )
-        except Exception as notif_error:
-            print(f"Notification error (non-blocking): {notif_error}")
-        
-        # Invalidate KYC cache
-        try:
-            await cache.delete("kyc_pending_count")
-            await cache.delete("kyc_list:pending:p1:l20")
-            await cache.delete("kyc_list:all:p1:l20")
-        except:
-            pass
-        
-        return {"message": f"KYC {status} successfully", "status": status, "success": True}
-    except HTTPException:
-        raise
+        if status == "verified":
+            await create_notification(
+                user_id=user_id,
+                title="✅ KYC Verified!",
+                message="Your KYC verification is complete. You now have full access to all platform features.",
+                notification_type="kyc",
+                related_id=kyc_id,
+                icon="✅"
+            )
+        else:
+            await create_notification(
+                user_id=user_id,
+                title="❌ KYC Rejected",
+                message="Your KYC verification was rejected. Please re-upload your documents with clear images.",
+                notification_type="kyc",
+                related_id=kyc_id,
+                icon="❌"
+            )
     except Exception as e:
-        print(f"KYC verify error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to verify KYC: {str(e)}")
+        print(f"KYC notification error (non-blocking): {e}")
 
 # ========== MARKETPLACE ROUTES ==========
 @api_router.post("/products", response_model=Product)
