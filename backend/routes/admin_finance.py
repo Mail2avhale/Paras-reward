@@ -245,6 +245,10 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         # ===== EXPENSE CALCULATION =====
         expenses = {
             "payment_gateway_fees": 0,
+            "bill_payment_payouts": 0,      # NEW: INR paid for user bill payments
+            "gift_voucher_payouts": 0,      # NEW: INR paid for gift vouchers
+            "withdrawal_payouts": 0,        # NEW: INR paid for user withdrawals
+            "luxury_claim_payouts": 0,      # NEW: INR paid for luxury claims
             "server_hosting": 0,
             "sms_email_services": 0,
             "marketing": 0,
@@ -256,7 +260,74 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "miscellaneous": 0
         }
         
-        # 1. Manual Expenses
+        expense_details = {
+            "bill_payment_count": 0,
+            "bill_payment_total_inr": 0,
+            "gift_voucher_count": 0,
+            "gift_voucher_total_inr": 0,
+            "withdrawal_count": 0,
+            "withdrawal_total_inr": 0,
+            "luxury_claim_count": 0,
+            "luxury_claim_total_inr": 0
+        }
+        
+        # 1. User Payout Expenses - Bill Payments (actual INR paid out)
+        bill_payout_data = await db.bill_payment_requests.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount_inr": 1, "payout_amount": 1}).to_list(10000)
+        
+        bill_payout_total = sum(bp.get("payout_amount", bp.get("amount_inr", 0)) for bp in bill_payout_data)
+        expenses["bill_payment_payouts"] = round(bill_payout_total, 2)
+        expense_details["bill_payment_count"] = len(bill_payout_data)
+        expense_details["bill_payment_total_inr"] = round(bill_payout_total, 2)
+        
+        # 2. User Payout Expenses - Gift Vouchers (actual INR paid out)
+        gift_payout_data = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "denomination": 1, "payout_amount": 1}).to_list(10000)
+        
+        gift_payout_total = sum(gv.get("payout_amount", gv.get("denomination", 0)) for gv in gift_payout_data)
+        expenses["gift_voucher_payouts"] = round(gift_payout_total, 2)
+        expense_details["gift_voucher_count"] = len(gift_payout_data)
+        expense_details["gift_voucher_total_inr"] = round(gift_payout_total, 2)
+        
+        # 3. User Payout Expenses - Withdrawals (actual INR paid out)
+        withdrawal_payout_data = await db.cashback_withdrawals.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount": 1, "payout_amount": 1, "net_amount": 1}).to_list(10000)
+        
+        withdrawal_payout_total = sum(w.get("payout_amount", w.get("net_amount", w.get("amount", 0))) for w in withdrawal_payout_data)
+        expenses["withdrawal_payouts"] = round(withdrawal_payout_total, 2)
+        expense_details["withdrawal_count"] = len(withdrawal_payout_data)
+        expense_details["withdrawal_total_inr"] = round(withdrawal_payout_total, 2)
+        
+        # 4. User Payout Expenses - Luxury Life Claims (actual INR paid out)
+        luxury_payout_data = await db.luxury_life_claims.find({
+            "status": "completed",
+            "$or": [
+                {"completed_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "claim_amount": 1, "payout_amount": 1}).to_list(10000)
+        
+        luxury_payout_total = sum(lc.get("payout_amount", lc.get("claim_amount", 0)) for lc in luxury_payout_data)
+        expenses["luxury_claim_payouts"] = round(luxury_payout_total, 2)
+        expense_details["luxury_claim_count"] = len(luxury_payout_data)
+        expense_details["luxury_claim_total_inr"] = round(luxury_payout_total, 2)
+        
+        # 5. Manual Expenses
         manual_expenses = await db.expenses.find({
             "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0}).to_list(10000)
@@ -269,10 +340,10 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             else:
                 expenses["miscellaneous"] += amount
         
-        # 2. Auto: Payment Gateway Fees (2% of VIP revenue)
+        # 6. Auto: Payment Gateway Fees (2% of VIP revenue)
         expenses["payment_gateway_fees"] = round(revenue["vip_memberships"] * 0.02, 2)
         
-        # 3. Auto: Fixed Monthly Expenses (prorated if not full month)
+        # 7. Auto: Fixed Monthly Expenses (prorated if not full month)
         fixed_expenses = await db.fixed_expenses.find({"active": True}, {"_id": 0}).to_list(100)
         fixed_total = sum(fe.get("monthly_amount", 0) for fe in fixed_expenses)
         
