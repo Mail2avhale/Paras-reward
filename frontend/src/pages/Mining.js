@@ -847,18 +847,18 @@ const DailyRewards = ({ user }) => {
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Star className="w-14 h-14 text-black" />
+                  <Star className="w-14 h-14 text-amber-600" />
                 </motion.div>
-                <p className="text-gray-400 mb-4">{globalT('startEarning')}</p>
+                <p className="text-gray-600 mb-4">{globalT('startEarning')}</p>
                 <Button 
                   onClick={startSession}
                   disabled={isStarting}
-                  className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold py-4 rounded-2xl text-lg shadow-lg shadow-amber-500/30"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold py-4 rounded-2xl text-lg shadow-lg shadow-emerald-500/40"
                 >
                   {isStarting ? (
                     <span className="flex items-center gap-2 justify-center">
                       <motion.div 
-                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
@@ -876,25 +876,25 @@ const DailyRewards = ({ user }) => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="bg-black/20 rounded-2xl p-4 text-center">
+              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center shadow-md">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <p className="text-gray-400 text-xs">{globalT('currentBalance')}</p>
+                  <p className="text-gray-600 text-xs">{globalT('currentBalance')}</p>
                   <InfoTooltip>
                     <p>Your available PRC balance that can be used for bill payments, vouchers, and marketplace purchases</p>
                   </InfoTooltip>
                 </div>
-                <p className="text-2xl font-bold text-white">{(userData?.prc_balance || 0).toFixed(2)}</p>
-                <p className="text-amber-400 text-sm">PRC</p>
+                <p className="text-2xl font-bold text-gray-800">{(userData?.prc_balance || 0).toFixed(2)}</p>
+                <p className="text-amber-600 text-sm">PRC</p>
               </div>
-              <div className="bg-black/20 rounded-2xl p-4 text-center">
+              <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center shadow-md">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <p className="text-gray-400 text-xs">{globalT('rewardRate')}</p>
+                  <p className="text-gray-600 text-xs">{globalT('rewardRate')}</p>
                   <InfoTooltip>
                     <p>PRC earned per hour. Rate increases with your subscription plan and referral bonuses</p>
                   </InfoTooltip>
                 </div>
-                <p className="text-2xl font-bold text-white">{miningRate.toFixed(1)}</p>
-                <p className="text-emerald-400 text-sm">{globalT('perHour')}</p>
+                <p className="text-2xl font-bold text-gray-800">{miningRate.toFixed(1)}</p>
+                <p className="text-emerald-600 text-sm">{globalT('perHour')}</p>
               </div>
             </div>
           </div>
@@ -904,14 +904,14 @@ const DailyRewards = ({ user }) => {
       {/* Free User Warning */}
       {!hasPaidPlan && (
         <div className="px-5 mb-6">
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-amber-500 mt-0.5" />
+              <Clock className="w-5 h-5 text-amber-600 mt-0.5" />
               <div>
-                <p className="text-amber-500 font-medium text-sm">{globalT('freeUserWarning')}</p>
+                <p className="text-amber-700 font-medium text-sm">{globalT('freeUserWarning')}</p>
                 <button 
                   onClick={() => navigate('/subscription')}
-                  className="text-amber-400 text-xs mt-1 underline"
+                  className="text-amber-600 text-xs mt-1 underline hover:text-amber-700"
                 >
                   {globalT('upgradeToVip')} →
                 </button>
