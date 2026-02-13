@@ -544,11 +544,13 @@ const DailyRewards = ({ user }) => {
         setSessionPRC(0);
         setSessionStartTime(new Date(data.new_session_start).getTime());
         setSessionTimeRemaining(Math.floor(data.remaining_hours * 3600));
+        setSessionProgress(0); // Reset progress for new session
         setIsMining(true);
       } else {
         // Fallback: Reset local session PRC but keep mining
         setSessionPRC(0);
         setSessionStartTime(Date.now());
+        setSessionProgress(0); // Reset progress
       }
       
       // Update user balance from response
