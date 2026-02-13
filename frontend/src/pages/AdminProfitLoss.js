@@ -188,7 +188,7 @@ const AdminProfitLoss = ({ user }) => {
               size="sm"
               className={period === p ? 'bg-purple-600 hover:bg-purple-700' : 'border-gray-700'}
             >
-              {p === 'day' ? 'आज' : p === 'week' ? 'या आठवडा' : p === 'month' ? 'या महिना' : 'या वर्ष'}
+              {p === 'day' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : 'This Year'}
             </Button>
           ))}
           
