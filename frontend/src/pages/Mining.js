@@ -752,64 +752,21 @@ const DailyRewards = ({ user }) => {
                     </div>
                   </div>
                 </div>
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.5, repeat: Infinity }}
-                    >
-                      <Zap className="w-3 h-3 text-emerald-600" />
-                    </motion.div>
-                    <p className="text-emerald-600 text-xs">
-                      +{(miningRate / 3600).toFixed(6)} PRC/sec
-                    </p>
-                  </motion.div>
-                  
-                  {/* Real Progress Bar - Shows actual session progress */}
-                  <div className="mt-3 relative z-10">
-                    <div className="flex justify-between text-xs text-emerald-600 mb-1">
-                      <span>Session Progress</span>
-                      <span>{sessionProgress.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full relative"
-                        initial={{ width: 0 }}
-                        animate={{ 
-                          width: `${sessionProgress}%`,
-                          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-                        }}
-                        transition={{
-                          width: { duration: 0.5, ease: "easeOut" },
-                          backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" }
-                        }}
-                        style={{
-                          background: 'linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981)',
-                          backgroundSize: '200% 100%'
-                        }}
-                      >
-                        {/* Shimmer effect on progress bar */}
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                          animate={{ x: ['-100%', '200%'] }}
-                          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                        />
-                      </motion.div>
-                    </div>
-                  </div>
-                </div>
                 
-                {/* Collect Button */}
+                {/* Collect Button - Gold Gradient */}
                 <Button 
                   onClick={collectRewards}
                   disabled={!canCollect || isCollecting}
-                  className={`mt-4 w-full py-4 rounded-2xl font-bold text-lg transition-all ${
+                  className={`mt-6 w-full py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] ${
                     canCollect
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/40'
-                      : 'bg-gray-300 text-gray-500'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] border border-amber-400/50'
+                      : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
                   }`}
                 >
                   {isCollecting ? (
                     <span className="flex items-center gap-2 justify-center">
                       <motion.div 
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
@@ -826,8 +783,8 @@ const DailyRewards = ({ user }) => {
             ) : (
               <div className="text-center mb-6">
                 <motion.div 
-                  className="w-28 h-28 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"
-                  animate={{ scale: [1, 1.05, 1] }}
+                  className="w-24 h-24 mx-auto mb-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center"
+                  animate={{ scale: [1, 1.03, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   <Star className="w-14 h-14 text-amber-600" />
