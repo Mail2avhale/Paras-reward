@@ -10,22 +10,25 @@ import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Animated counter component for live PRC display
+// Animated counter component for live PRC display - ALWAYS shows positive values
 const AnimatedCounter = ({ value, decimals = 4 }) => {
-  const [displayValue, setDisplayValue] = useState(value);
-  const prevValueRef = useRef(value);
+  const [displayValue, setDisplayValue] = useState(Math.max(0, value));
+  const prevValueRef = useRef(Math.max(0, value));
   
   useEffect(() => {
+    // Ensure value is always positive
+    const safeValue = Math.max(0, value);
     const prevValue = prevValueRef.current;
-    const diff = value - prevValue;
+    const diff = safeValue - prevValue;
     
-    if (Math.abs(diff) < 0.0001) {
-      setDisplayValue(value);
-      prevValueRef.current = value;
+    // If new value is less than previous (e.g., after collect), just set it directly without animation
+    if (safeValue < prevValue || Math.abs(diff) < 0.0001) {
+      setDisplayValue(safeValue);
+      prevValueRef.current = safeValue;
       return;
     }
     
-    // Smooth animation over 100ms
+    // Smooth animation over 100ms for increasing values only
     const steps = 10;
     const stepValue = diff / steps;
     let currentStep = 0;
@@ -33,11 +36,11 @@ const AnimatedCounter = ({ value, decimals = 4 }) => {
     const interval = setInterval(() => {
       currentStep++;
       if (currentStep >= steps) {
-        setDisplayValue(value);
-        prevValueRef.current = value;
+        setDisplayValue(safeValue);
+        prevValueRef.current = safeValue;
         clearInterval(interval);
       } else {
-        setDisplayValue(prev => prev + stepValue);
+        setDisplayValue(prev => Math.max(0, prev + stepValue));
       }
     }, 10);
     
@@ -46,7 +49,7 @@ const AnimatedCounter = ({ value, decimals = 4 }) => {
   
   return (
     <span className="tabular-nums">
-      {displayValue.toFixed(decimals)}
+      {Math.max(0, displayValue).toFixed(decimals)}
     </span>
   );
 };
