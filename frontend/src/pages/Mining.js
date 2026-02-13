@@ -325,6 +325,7 @@ const DailyRewards = ({ user }) => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false); // NEW: Confetti state
   
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
