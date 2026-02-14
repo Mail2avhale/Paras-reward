@@ -806,7 +806,7 @@ const DashboardModern = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* ========== REDEEM TO CASH CARD ========== */}
+      {/* ========== REDEEM TO BANK CARD ========== */}
       {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && userData?.kyc_status === 'verified' && (
         <div className="px-5 mb-4">
           <motion.div
@@ -818,7 +818,7 @@ const DashboardModern = ({ user, onLogout }) => {
               background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
               boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
             }}
-            data-testid="redeem-to-cash-card"
+            data-testid="redeem-to-bank-card"
           >
             {/* Background decorations */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
@@ -865,7 +865,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   navigate('/bank-redeem');
                 }}
                 className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
-                data-testid="redeem-to-cash-btn"
+                data-testid="redeem-to-bank-btn"
               >
                 <Building2 className="w-5 h-5" />
                 Redeem To Bank
