@@ -273,6 +273,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/notifications" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Notifications user={user} />) : <Navigate to="/login" />} />
             <Route path="/luxury-life" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasLuxuryLife user={user} />) : <Navigate to="/login" />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeem user={user} />) : <Navigate to="/login" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             <Route path="/admin" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminDashboard user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
