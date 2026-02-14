@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://admin-filter-test.preview.emergentagent.com/setup
+   https://bank-redeem-v2.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
