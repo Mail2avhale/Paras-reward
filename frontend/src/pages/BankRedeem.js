@@ -540,7 +540,8 @@ const BankRedeem = ({ user }) => {
                 {/* Slider */}
                 {(() => {
                   const currentBalance = userData?.prc_balance || 0;
-                  const maxAllowedPRC = Math.floor(currentBalance * 0.5);
+                  // User can redeem 100% of balance
+                  const maxAllowedPRC = currentBalance;
                   const maxAmountINR = Math.floor(maxAllowedPRC / 12); // ~₹1 needs 12 PRC with fees
                   const minAmount = 100;
                   const actualMax = Math.max(minAmount, Math.min(maxAmountINR, 25000));
