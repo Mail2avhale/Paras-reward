@@ -59,11 +59,12 @@ const AdminSubscriptionManagement = () => {
     try {
       const filterQuery = buildFilterQuery();
       
-      // Fetch data with individual error handling
-      const [statsRes, pendingRes, approvedRes] = await Promise.allSettled([
+      // Fetch data with individual error handling - include rejected
+      const [statsRes, pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
         axios.get(`${API}/api/admin/subscription-stats`),
         axios.get(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
-        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
+        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        axios.get(`${API}/api/admin/vip-payments?status=rejected&page=${rejectedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
       ]);
       
       // Handle stats - may fail on some deployments
@@ -83,6 +84,12 @@ const AdminSubscriptionManagement = () => {
       if (approvedRes.status === 'fulfilled') {
         setApprovedPayments(approvedRes.value.data?.payments || []);
         setApprovedTotal(approvedRes.value.data?.total || 0);
+      }
+      
+      // Handle rejected payments
+      if (rejectedRes.status === 'fulfilled') {
+        setRejectedPayments(rejectedRes.value.data?.payments || []);
+        setRejectedTotal(rejectedRes.value.data?.total || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
