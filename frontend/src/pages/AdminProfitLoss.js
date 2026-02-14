@@ -448,6 +448,21 @@ const AdminProfitLoss = ({ user }) => {
                 </div>
               </div>
             )}
+            
+            {/* Bank Withdrawals (PRC to Bank) - NEW */}
+            {revenue.details.bank_withdrawal_rev_count > 0 && (
+              <div className="p-4 bg-gray-800/50 rounded-lg border border-cyan-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Building className="w-5 h-5 text-cyan-400" />
+                  <span className="font-medium text-white">Bank Withdrawals</span>
+                </div>
+                <p className="text-2xl font-bold text-cyan-400">{revenue.details.bank_withdrawal_rev_count}</p>
+                <div className="mt-2 text-xs text-gray-400 space-y-1">
+                  <p>Processing: {formatCurrency(revenue.details.bank_withdrawal_processing_fees || 0)}</p>
+                  <p>Admin (20%): {formatCurrency(revenue.details.bank_withdrawal_admin_charges || 0)}</p>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Total Fee Revenue */}
