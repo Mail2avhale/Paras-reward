@@ -312,6 +312,14 @@ async def create_withdrawal_request(user_id: str, request: Request):
             detail=f"Insufficient PRC balance. Required: {total_prc} PRC, Available: {prc_balance} PRC"
         )
     
+    # Check 50% limit - can only redeem up to 50% of balance
+    max_allowed_prc = int(prc_balance * 0.5)
+    if total_prc > max_allowed_prc:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"You can only redeem up to 50% of your balance. Maximum allowed: {max_allowed_prc} PRC (₹{max_allowed_prc // 10})"
+        )
+    
     # Create request
     now = datetime.now(timezone.utc)
     request_id = f"BWR{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
