@@ -848,8 +848,8 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-emerald-200/80 text-xs">Redeem up to</p>
-                    <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}</p>
+                    <p className="text-emerald-200/80 text-xs">Redeem up to (50% limit)</p>
+                    <p className="text-white text-xl font-bold">₹{Math.floor((stats.prcBalance * 0.5) / 10).toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-emerald-200/60 text-xs">Rate</p>
