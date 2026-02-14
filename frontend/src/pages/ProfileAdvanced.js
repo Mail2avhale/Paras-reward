@@ -15,8 +15,220 @@ import ImageCropUpload from '@/components/ImageCropUpload';
 import { LanguageSelectorFull } from '@/components/LanguageSelector';
 import ShareApp from '@/components/ShareApp';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import { Label } from '@/components/ui/label';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
+
+// Bank Details Card Component
+const BankDetailsCard = ({ user }) => {
+  const [bankDetails, setBankDetails] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    account_holder_name: '',
+    account_number: '',
+    confirm_account_number: '',
+    ifsc_code: '',
+    bank_name: ''
+  });
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchBankDetails();
+    }
+  }, [user]);
+
+  const fetchBankDetails = async () => {
+    try {
+      const response = await axios.get(`${API}/api/bank-details/${user.uid}`);
+      if (response.data.bank_details) {
+        setBankDetails(response.data.bank_details);
+        setFormData({
+          account_holder_name: response.data.bank_details.account_holder_name || '',
+          account_number: response.data.bank_details.account_number || '',
+          confirm_account_number: response.data.bank_details.account_number || '',
+          ifsc_code: response.data.bank_details.ifsc_code || '',
+          bank_name: response.data.bank_details.bank_name || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching bank details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.account_holder_name || !formData.account_number || !formData.ifsc_code || !formData.bank_name) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    if (formData.account_number !== formData.confirm_account_number) {
+      toast.error('Account numbers do not match');
+      return;
+    }
+
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifsc_code.toUpperCase())) {
+      toast.error('Invalid IFSC code format');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await axios.post(`${API}/api/bank-details/${user.uid}`, {
+        account_holder_name: formData.account_holder_name,
+        account_number: formData.account_number,
+        ifsc_code: formData.ifsc_code.toUpperCase(),
+        bank_name: formData.bank_name
+      });
+      toast.success('Bank details saved successfully!');
+      fetchBankDetails();
+      setShowForm(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save bank details');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const maskAccountNumber = (num) => {
+    if (!num) return '';
+    return '••••' + num.slice(-4);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4 animate-pulse">
+        <div className="h-6 bg-gray-700 rounded w-1/3 mb-2"></div>
+        <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <Building2 className="w-5 h-5 text-green-500" />
+          <span className="text-white font-medium">Bank Account</span>
+        </div>
+        {bankDetails && !showForm && (
+          <button 
+            onClick={() => setShowForm(true)}
+            className="text-green-400 text-sm hover:text-green-300"
+          >
+            Edit
+          </button>
+        )}
+      </div>
+
+      {!bankDetails && !showForm ? (
+        <div className="text-center py-4">
+          <p className="text-gray-400 text-sm mb-3">Add your bank account for PRC redemption</p>
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+            data-testid="add-bank-details-btn"
+          >
+            Add Bank Details
+          </Button>
+        </div>
+      ) : bankDetails && !showForm ? (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Account Holder</span>
+            <span className="text-white">{bankDetails.account_holder_name}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Account Number</span>
+            <span className="text-white font-mono">{maskAccountNumber(bankDetails.account_number)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">IFSC Code</span>
+            <span className="text-white font-mono">{bankDetails.ifsc_code}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Bank Name</span>
+            <span className="text-white">{bankDetails.bank_name}</span>
+          </div>
+          <div className="pt-2 border-t border-green-500/20 mt-3">
+            <p className="text-green-400/70 text-xs flex items-center gap-1">
+              <Shield className="w-3 h-3" />
+              Your bank details are encrypted and secure
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 mt-3">
+          <div>
+            <Label className="text-gray-300 text-sm">Account Holder Name *</Label>
+            <Input
+              value={formData.account_holder_name}
+              onChange={(e) => setFormData({...formData, account_holder_name: e.target.value})}
+              className="h-10 bg-gray-900/80 border-gray-700 text-white rounded-lg mt-1"
+              placeholder="As per bank records"
+            />
+          </div>
+          <div>
+            <Label className="text-gray-300 text-sm">Account Number *</Label>
+            <Input
+              value={formData.account_number}
+              onChange={(e) => setFormData({...formData, account_number: e.target.value.replace(/\D/g, '')})}
+              className="h-10 bg-gray-900/80 border-gray-700 text-white rounded-lg mt-1 font-mono"
+              placeholder="Enter account number"
+            />
+          </div>
+          <div>
+            <Label className="text-gray-300 text-sm">Confirm Account Number *</Label>
+            <Input
+              value={formData.confirm_account_number}
+              onChange={(e) => setFormData({...formData, confirm_account_number: e.target.value.replace(/\D/g, '')})}
+              className="h-10 bg-gray-900/80 border-gray-700 text-white rounded-lg mt-1 font-mono"
+              placeholder="Re-enter account number"
+            />
+          </div>
+          <div>
+            <Label className="text-gray-300 text-sm">IFSC Code *</Label>
+            <Input
+              value={formData.ifsc_code}
+              onChange={(e) => setFormData({...formData, ifsc_code: e.target.value.toUpperCase()})}
+              className="h-10 bg-gray-900/80 border-gray-700 text-white rounded-lg mt-1 font-mono"
+              placeholder="e.g., SBIN0001234"
+              maxLength={11}
+            />
+          </div>
+          <div>
+            <Label className="text-gray-300 text-sm">Bank Name *</Label>
+            <Input
+              value={formData.bank_name}
+              onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+              className="h-10 bg-gray-900/80 border-gray-700 text-white rounded-lg mt-1"
+              placeholder="e.g., State Bank of India"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={() => setShowForm(false)}
+              variant="outline"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              {saving ? 'Saving...' : 'Save Details'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ProfileAdvanced = ({ user, onLogout }) => {
   const navigate = useNavigate();
