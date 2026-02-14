@@ -40,25 +40,20 @@ const BankRedeem = ({ user }) => {
     bank_name: ''
   });
 
-  // Calculate fees based on amount (same as backend logic)
+  // Calculate fees based on amount - EMI style charges
   const calculateFees = (amountInr) => {
-    // Processing fee structure from backend
-    const feeStructure = {
-      100: 10, 500: 25, 1000: 50, 5000: 100, 10000: 200, 25000: 500
-    };
-    
-    // Find nearest fee bracket
-    let processingFee = 10; // default
-    const brackets = Object.keys(feeStructure).map(Number).sort((a, b) => a - b);
-    for (let i = brackets.length - 1; i >= 0; i--) {
-      if (amountInr >= brackets[i]) {
-        processingFee = feeStructure[brackets[i]];
-        break;
-      }
+    // EMI style processing fee:
+    // <= ₹499: 50% of amount
+    // > ₹499: Flat ₹10
+    let processingFee;
+    if (amountInr <= 499) {
+      processingFee = Math.floor(amountInr * 0.5); // 50% of amount
+    } else {
+      processingFee = 10; // Flat ₹10
     }
     
-    // Admin charges: 20% of amount
-    const adminCharges = Math.floor(amountInr * 0.20);
+    // No admin charges now
+    const adminCharges = 0;
     const totalCharges = processingFee + adminCharges;
     const prcRequired = (amountInr + totalCharges) * 10; // 10 PRC = ₹1
     
