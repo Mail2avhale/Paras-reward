@@ -759,3 +759,119 @@ async def get_user_dashboard_combined(uid: str):
         await cache.set(cache_key, result, ttl=30)
     
     return result
+
+
+
+# ========== PRC EXPIRY (BURNING CONCEPT) ==========
+
+@router.get("/user/{uid}/prc-expiry")
+async def get_prc_expiry_info(uid: str):
+    """
+    Get PRC expiry information for free users (48h FIFO burn concept)
+    Returns batches of PRC that will expire soon
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # VIP users have lifetime validity - no expiry
+    subscription_plan = user.get("subscription_plan", "explorer")
+    if subscription_plan in ["startup", "growth", "elite"]:
+        # Check if subscription is still active
+        expiry = user.get("subscription_expiry") or user.get("membership_expiry")
+        if expiry:
+            try:
+                expiry_date = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+                if expiry_date.tzinfo is None:
+                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+                if expiry_date > datetime.now(timezone.utc):
+                    return {
+                        "is_vip": True,
+                        "expiring_batches": [],
+                        "total_expiring": 0,
+                        "message": "VIP members have lifetime PRC validity!",
+                        "protected": True
+                    }
+            except:
+                pass
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get mining transactions from last 48 hours that haven't been burned
+    # These are PRC earned from mining that could expire
+    cutoff_time = now - timedelta(hours=48)
+    
+    # Fetch PRC earning transactions (mining, tap_game, referral)
+    prc_transactions = await db.transactions.find({
+        "user_id": uid,
+        "transaction_type": {"$in": ["mining", "tap_game", "prc_rain_gain", "mining_reward"]},
+        "created_at": {"$gte": cutoff_time.isoformat()},
+        "burned": {"$ne": True}
+    }, {"_id": 0}).sort("created_at", 1).to_list(100)  # FIFO order
+    
+    expiring_batches = []
+    total_expiring = 0
+    
+    for txn in prc_transactions:
+        try:
+            created_at = txn.get("created_at") or txn.get("timestamp")
+            if not created_at:
+                continue
+                
+            if isinstance(created_at, str):
+                txn_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            else:
+                txn_time = created_at
+                
+            if txn_time.tzinfo is None:
+                txn_time = txn_time.replace(tzinfo=timezone.utc)
+            
+            # Calculate expiry (48 hours from earning)
+            expiry_time = txn_time + timedelta(hours=48)
+            time_left = expiry_time - now
+            
+            # Only include if still has time left (not yet expired)
+            if time_left.total_seconds() > 0:
+                hours_left = int(time_left.total_seconds() // 3600)
+                minutes_left = int((time_left.total_seconds() % 3600) // 60)
+                
+                amount = abs(txn.get("amount", 0))
+                if amount > 0:
+                    expiring_batches.append({
+                        "amount": amount,
+                        "hoursLeft": hours_left,
+                        "minutesLeft": minutes_left,
+                        "earnedAt": txn_time.isoformat(),
+                        "expiresAt": expiry_time.isoformat(),
+                        "type": txn.get("transaction_type", "mining"),
+                        "isUrgent": hours_left < 12,
+                        "isCritical": hours_left < 6
+                    })
+                    total_expiring += amount
+        except Exception as e:
+            logging.error(f"Error processing transaction for expiry: {e}")
+            continue
+    
+    # Sort by urgency (least time left first)
+    expiring_batches.sort(key=lambda x: x["hoursLeft"] * 60 + x["minutesLeft"])
+    
+    # Warning level
+    warning_level = "none"
+    if total_expiring > 0:
+        if expiring_batches and expiring_batches[0]["hoursLeft"] < 6:
+            warning_level = "critical"
+        elif expiring_batches and expiring_batches[0]["hoursLeft"] < 12:
+            warning_level = "urgent"
+        else:
+            warning_level = "warning"
+    
+    return {
+        "is_vip": False,
+        "expiring_batches": expiring_batches[:10],  # Limit to 10 batches
+        "total_expiring": round(total_expiring, 4),
+        "batch_count": len(expiring_batches),
+        "warning_level": warning_level,
+        "message": f"{len(expiring_batches)} PRC batches expiring in next 48 hours" if expiring_batches else "No PRC expiring soon",
+        "protected": False,
+        "upgrade_cta": "Upgrade to VIP for lifetime PRC validity!"
+    }
