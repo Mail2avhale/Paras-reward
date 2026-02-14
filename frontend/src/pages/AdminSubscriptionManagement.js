@@ -240,6 +240,120 @@ const AdminSubscriptionManagement = () => {
         </button>
       </div>
 
+      {/* Filter Section */}
+      <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-4 mb-4">
+        <div className="flex flex-wrap gap-4">
+          {/* Time Filter */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-gray-500 mb-1 block">Time Period</label>
+            <div className="flex gap-1 flex-wrap">
+              {[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'all', label: 'All Time' }
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTimeFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    timeFilter === opt.value
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Plan Filter */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-gray-500 mb-1 block">Subscription Plan</label>
+            <div className="flex gap-1 flex-wrap">
+              {[
+                { value: 'all', label: 'All Plans' },
+                { value: 'startup', label: 'Startup' },
+                { value: 'growth', label: 'Growth' },
+                { value: 'elite', label: 'Elite' }
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setPlanFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    planFilter === opt.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Duration Filter */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-gray-500 mb-1 block">Duration</label>
+            <div className="flex gap-1 flex-wrap">
+              {[
+                { value: 'all', label: 'All' },
+                { value: 'monthly', label: 'Monthly' },
+                { value: 'quarterly', label: 'Quarterly' },
+                { value: 'half_yearly', label: '6 Months' },
+                { value: 'yearly', label: 'Yearly' }
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDurationFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    durationFilter === opt.value
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Active Filters Summary */}
+        {(timeFilter !== 'all' || planFilter !== 'all' || durationFilter !== 'all') && (
+          <div className="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between">
+            <div className="flex gap-2 flex-wrap">
+              {timeFilter !== 'all' && (
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                  {timeFilter === 'today' ? 'Today' : timeFilter === 'week' ? 'This Week' : 'This Month'}
+                </span>
+              )}
+              {planFilter !== 'all' && (
+                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full capitalize">
+                  {planFilter}
+                </span>
+              )}
+              {durationFilter !== 'all' && (
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full capitalize">
+                  {durationFilter.replace('_', ' ')}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setTimeFilter('all');
+                setPlanFilter('all');
+                setDurationFilter('all');
+              }}
+              className="text-xs text-gray-500 hover:text-white"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Pending Payments Section */}
       {activeTab === 'pending' && (
       <div className="bg-gray-900 rounded-xl border border-gray-800">
