@@ -522,7 +522,7 @@ const BankRedeem = ({ user }) => {
               )}
             </div>
 
-            {/* Redeem Amount Selection */}
+            {/* Redeem Amount Selection - SLIDER */}
             {bankDetails && eligibility?.eligible && (
               <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
                 <div className="flex items-center gap-3 mb-5">
@@ -530,100 +530,105 @@ const BankRedeem = ({ user }) => {
                     <CreditCard className="h-6 w-6 text-amber-400" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">Select Amount</h2>
-                    <p className="text-xs text-gray-500">Choose redeem amount (max 50% of balance)</p>
+                    <h2 className="text-lg font-bold text-white">Redeem Amount</h2>
+                    <p className="text-xs text-gray-500">Slide to select amount</p>
                   </div>
                 </div>
 
-                {/* 50% Limit Info Banner */}
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4 flex items-center gap-3">
-                  <Info className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-blue-300 text-sm font-medium">50% Balance Limit</p>
-                    <p className="text-blue-400/70 text-xs">
-                      Max redeemable: {Math.floor((userData?.prc_balance || 0) * 0.5).toLocaleString()} PRC 
-                      (₹{Math.floor((userData?.prc_balance || 0) * 0.5 / 10).toLocaleString()})
-                    </p>
-                  </div>
+                {/* Amount Display */}
+                <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-2xl p-6 mb-6 text-center border border-amber-500/30">
+                  <p className="text-amber-300/70 text-sm mb-1">You will receive</p>
+                  <p className="text-5xl font-bold text-white mb-2">
+                    ₹{selectedAmount?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-amber-400/60 text-xs">
+                    {(selectedAmount * 10).toLocaleString()} PRC equivalent
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                  {denominations.map((denom) => {
-                    const isSelected = selectedAmount === denom.amount_inr;
-                    const currentBalance = userData?.prc_balance || 0;
-                    const maxAllowedPRC = Math.floor(currentBalance * 0.5); // 50% limit
-                    const withinLimit = denom.total_prc <= maxAllowedPRC;
-                    const canAfford = currentBalance >= denom.total_prc && withinLimit;
-                    
-                    return (
-                      <button
-                        key={denom.amount_inr}
-                        onClick={() => canAfford && setSelectedAmount(denom.amount_inr)}
-                        disabled={!canAfford}
-                        className={`relative p-4 rounded-2xl border-2 transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-amber-500'
-                            : canAfford
-                            ? 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                            : 'bg-gray-800/20 border-gray-800/30 opacity-50 cursor-not-allowed'
-                        }`}
-                        data-testid={`amount-${denom.amount_inr}`}
-                      >
-                        {isSelected && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-black" />
-                          </div>
-                        )}
-                        {!withinLimit && currentBalance >= denom.total_prc && (
-                          <div className="absolute -top-2 -left-2 px-1.5 py-0.5 bg-red-500 rounded text-[10px] text-white">
-                            &gt;50%
-                          </div>
-                        )}
-                        <p className={`text-2xl font-bold ${isSelected ? 'text-amber-400' : 'text-white'}`}>
-                          ₹{denom.amount_inr.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Fee: ₹{denom.processing_fee_inr}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Total: {denom.total_prc.toLocaleString()} PRC
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Slider */}
+                {(() => {
+                  const currentBalance = userData?.prc_balance || 0;
+                  const maxAllowedPRC = Math.floor(currentBalance * 0.5);
+                  const maxAmountINR = Math.floor(maxAllowedPRC / 12); // ~₹1 needs 12 PRC with fees
+                  const minAmount = 100;
+                  const actualMax = Math.max(minAmount, Math.min(maxAmountINR, 25000));
+                  
+                  return (
+                    <div className="mb-6">
+                      {/* Slider Track */}
+                      <div className="relative">
+                        <input
+                          type="range"
+                          min={minAmount}
+                          max={actualMax}
+                          step={100}
+                          value={selectedAmount || minAmount}
+                          onChange={(e) => setSelectedAmount(parseInt(e.target.value))}
+                          className="w-full h-3 bg-gray-800 rounded-full appearance-none cursor-pointer slider-thumb"
+                          style={{
+                            background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${((selectedAmount - minAmount) / (actualMax - minAmount)) * 100}%, #374151 ${((selectedAmount - minAmount) / (actualMax - minAmount)) * 100}%, #374151 100%)`
+                          }}
+                          data-testid="amount-slider"
+                        />
+                      </div>
+                      
+                      {/* Min/Max Labels */}
+                      <div className="flex justify-between mt-2 text-xs text-gray-500">
+                        <span>₹{minAmount}</span>
+                        <span>₹{actualMax.toLocaleString()}</span>
+                      </div>
+                      
+                      {/* Quick Select Buttons */}
+                      <div className="flex gap-2 mt-4 flex-wrap justify-center">
+                        {[100, 500, 1000, 2000, 5000].filter(amt => amt <= actualMax).map(amt => (
+                          <button
+                            key={amt}
+                            onClick={() => setSelectedAmount(amt)}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                              selectedAmount === amt
+                                ? 'bg-amber-500 text-black'
+                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                          >
+                            ₹{amt.toLocaleString()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Charge Breakdown */}
-                {selectedAmount && (
+                {selectedAmount >= 100 && (
                   <div className="bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50 mb-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Info className="h-4 w-4 text-amber-400" />
                       <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
                     </div>
                     {(() => {
-                      const denom = denominations.find(d => d.amount_inr === selectedAmount);
-                      if (!denom) return null;
+                      const fees = calculateFees(selectedAmount);
                       return (
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-400">Redeem Amount</span>
-                            <span className="text-white">₹{denom.amount_inr.toLocaleString()} ({denom.amount_prc.toLocaleString()} PRC)</span>
+                            <span className="text-white">₹{selectedAmount.toLocaleString()} ({(selectedAmount * 10).toLocaleString()} PRC)</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">Processing Fee</span>
-                            <span className="text-orange-400">+₹{denom.processing_fee_inr} ({denom.processing_fee_prc} PRC)</span>
+                            <span className="text-orange-400">+₹{fees.processingFee} ({fees.processingFee * 10} PRC)</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">Admin Charges (20%)</span>
-                            <span className="text-orange-400">+₹{denom.admin_charge_inr.toLocaleString()} ({denom.admin_charge_prc.toLocaleString()} PRC)</span>
+                            <span className="text-orange-400">+₹{fees.adminCharges.toLocaleString()} ({(fees.adminCharges * 10).toLocaleString()} PRC)</span>
                           </div>
                           <div className="flex justify-between pt-3 border-t border-gray-700">
                             <span className="text-amber-400 font-bold">Total PRC Deducted</span>
-                            <span className="text-xl font-bold text-amber-400">{denom.total_prc.toLocaleString()} PRC</span>
+                            <span className="text-xl font-bold text-amber-400">{fees.prcRequired.toLocaleString()} PRC</span>
                           </div>
                           <div className="flex justify-between text-xs">
                             <span className="text-gray-500">You will receive</span>
-                            <span className="text-green-400 font-semibold">₹{denom.amount_inr.toLocaleString()} in your bank</span>
+                            <span className="text-green-400 font-semibold">₹{selectedAmount.toLocaleString()} in your bank</span>
                           </div>
                         </div>
                       );
@@ -633,11 +638,11 @@ const BankRedeem = ({ user }) => {
 
                 <Button
                   onClick={handleRedeem}
-                  disabled={!selectedAmount || submitting}
+                  disabled={!selectedAmount || selectedAmount < 100 || submitting}
                   className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
                   data-testid="submit-redeem-btn"
                 >
-                  {submitting ? 'Processing...' : `Redeem ${selectedAmount ? '₹' + selectedAmount.toLocaleString() : ''}`}
+                  {submitting ? 'Processing...' : `Redeem ₹${selectedAmount?.toLocaleString() || 0}`}
                 </Button>
               </div>
             )}
