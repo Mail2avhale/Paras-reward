@@ -121,9 +121,9 @@ const AdminBankWithdrawals = ({ user }) => {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <Building2 className="h-7 w-7 text-green-400" />
-            Bank Withdrawal Requests
+            Bank Redeem Requests
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Manage PRC to Bank withdrawal requests</p>
+          <p className="text-gray-400 text-sm mt-1">Manage PRC to Bank redeem requests</p>
         </div>
         <Button onClick={fetchRequests} variant="outline" className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
