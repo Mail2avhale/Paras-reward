@@ -502,14 +502,29 @@ const BankRedeem = ({ user }) => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Select Amount</h2>
-                    <p className="text-xs text-gray-500">Choose redeem amount</p>
+                    <p className="text-xs text-gray-500">Choose redeem amount (max 50% of balance)</p>
+                  </div>
+                </div>
+
+                {/* 50% Limit Info Banner */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4 flex items-center gap-3">
+                  <Info className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-blue-300 text-sm font-medium">50% Balance Limit</p>
+                    <p className="text-blue-400/70 text-xs">
+                      Max redeemable: {Math.floor((userData?.prc_balance || 0) * 0.5).toLocaleString()} PRC 
+                      (₹{Math.floor((userData?.prc_balance || 0) * 0.5 / 10).toLocaleString()})
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                   {denominations.map((denom) => {
                     const isSelected = selectedAmount === denom.amount_inr;
-                    const canAfford = (userData?.prc_balance || 0) >= denom.total_prc;
+                    const currentBalance = userData?.prc_balance || 0;
+                    const maxAllowedPRC = Math.floor(currentBalance * 0.5); // 50% limit
+                    const withinLimit = denom.total_prc <= maxAllowedPRC;
+                    const canAfford = currentBalance >= denom.total_prc && withinLimit;
                     
                     return (
                       <button
@@ -528,6 +543,11 @@ const BankRedeem = ({ user }) => {
                         {isSelected && (
                           <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
                             <CheckCircle className="h-4 w-4 text-black" />
+                          </div>
+                        )}
+                        {!withinLimit && currentBalance >= denom.total_prc && (
+                          <div className="absolute -top-2 -left-2 px-1.5 py-0.5 bg-red-500 rounded text-[10px] text-white">
+                            &gt;50%
                           </div>
                         )}
                         <p className={`text-2xl font-bold ${isSelected ? 'text-amber-400' : 'text-white'}`}>
