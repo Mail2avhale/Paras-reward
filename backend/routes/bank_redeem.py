@@ -38,30 +38,31 @@ def set_helpers(helpers: dict):
     log_transaction = helpers.get('log_transaction')
     create_notification = helpers.get('create_notification')
 
-# Processing fees for each denomination
-PROCESSING_FEES = {
-    100: 10,
-    500: 25,
-    1000: 50,
-    5000: 100,
-    10000: 200,
-    25000: 500
-}
+# Processing fees - EMI style
+# <= ₹499: 50% of amount
+# > ₹499: Flat ₹10
+def get_processing_fee(amount_inr: int) -> int:
+    """Calculate processing fee like EMI"""
+    if amount_inr <= 499:
+        return int(amount_inr * 0.5)  # 50% of amount
+    else:
+        return 10  # Flat ₹10
 
-# Admin charge percentage
-ADMIN_CHARGE_PERCENT = 20
+# Admin charge percentage (removed - only processing fee now)
+ADMIN_CHARGE_PERCENT = 0
 
-# Valid denominations
-VALID_DENOMINATIONS = [100, 500, 1000, 5000, 10000, 25000]
+# Slider allows any amount from 100 to max
+MIN_AMOUNT = 100
+MAX_AMOUNT = 25000
 
 
 def calculate_total_prc(amount_inr: int) -> dict:
-    """Calculate total PRC needed for withdrawal"""
-    if amount_inr not in VALID_DENOMINATIONS:
+    """Calculate total PRC needed for withdrawal - EMI style fees"""
+    if amount_inr < MIN_AMOUNT:
         return None
     
-    processing_fee = PROCESSING_FEES.get(amount_inr, 0)
-    admin_charge = amount_inr * (ADMIN_CHARGE_PERCENT / 100)
+    processing_fee = get_processing_fee(amount_inr)
+    admin_charge = 0  # No admin charge now
     total_inr = amount_inr + processing_fee + admin_charge
     
     # PRC rate: 10 PRC = 1 INR
@@ -76,7 +77,7 @@ def calculate_total_prc(amount_inr: int) -> dict:
         "amount_prc": amount_inr * prc_rate,
         "processing_fee_prc": processing_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
-        "total_prc": total_inr * prc_rate
+        "total_prc": int(total_inr * prc_rate)
     }
 
 
