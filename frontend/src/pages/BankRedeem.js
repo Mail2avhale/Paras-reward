@@ -4,13 +4,12 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Shield, Clock, CheckCircle, XCircle,
-  AlertCircle, Info, ChevronDown, ChevronUp, Wallet, BadgeCheck, ChevronRight
+  AlertCircle, Info, ChevronDown, ChevronUp, Wallet, BadgeCheck
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Card } from '../components/ui/card';
-import { formatIFSC, validateIFSC, formatBankAccount, validateBankAccount } from '@/utils/indianValidation';
+import { validateIFSC } from '@/utils/indianValidation';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
 
