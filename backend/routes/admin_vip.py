@@ -295,10 +295,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
             raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
         
         current_status = payment.get("status")
-        if current_status != "pending":
+        # Allow approval of pending OR rejected payments (re-approval feature)
+        if current_status not in ["pending", "rejected"]:
             if current_status == "approved":
                 return {"message": "Payment already approved", "status": "approved", "success": True}
-            raise HTTPException(status_code=400, detail=f"Payment already {current_status}")
+            raise HTTPException(status_code=400, detail=f"Payment cannot be approved - current status: {current_status}")
         
         user_id = payment.get("user_id")
         
