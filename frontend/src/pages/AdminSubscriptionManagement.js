@@ -230,28 +230,39 @@ const AdminSubscriptionManagement = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <button
           onClick={() => setActiveTab('pending')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
             activeTab === 'pending'
               ? 'bg-amber-500 text-black'
               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
           }`}
         >
           <Clock className="w-4 h-4 inline mr-2" />
-          Pending ({pendingPayments.length})
+          Pending ({pendingTotal})
         </button>
         <button
           onClick={() => setActiveTab('approved')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
             activeTab === 'approved'
               ? 'bg-green-500 text-black'
               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
           }`}
         >
           <CheckCircle className="w-4 h-4 inline mr-2" />
-          Approved ({approvedPayments.length})
+          Approved ({approvedTotal})
+        </button>
+        <button
+          onClick={() => setActiveTab('rejected')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+            activeTab === 'rejected'
+              ? 'bg-red-500 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <XCircle className="w-4 h-4 inline mr-2" />
+          Rejected ({rejectedTotal})
         </button>
       </div>
 
