@@ -51,8 +51,9 @@ const BillPayments = ({ user, onLogout }) => {
     borrower_name: '',
     loan_type: '',
     bank_name: '',
+    bank_lender_name: '',  // Combined Bank/Lender Name
     biller_name: '',
-    // New Loan/EMI fields
+    // Loan/EMI fields
     ifsc_code: '',
     registered_mobile: '',
     emi_due_date: '',
