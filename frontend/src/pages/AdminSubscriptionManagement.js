@@ -54,11 +54,13 @@ const AdminSubscriptionManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const filterQuery = buildFilterQuery();
+      
       // Fetch data with individual error handling
       const [statsRes, pendingRes, approvedRes] = await Promise.allSettled([
         axios.get(`${API}/api/admin/subscription-stats`),
-        axios.get(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}`),
-        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}`)
+        axios.get(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
       ]);
       
       // Handle stats - may fail on some deployments
