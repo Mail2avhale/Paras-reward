@@ -37197,6 +37197,12 @@ set_admin_misc_db(db)
 set_admin_misc_helpers({'log_admin_action': log_admin_action, 'hash_password': hash_password})
 api_router.include_router(admin_misc_router)
 
+# Include bank redeem router (NEW - Bank Account Withdrawal)
+set_bank_redeem_db(db)
+set_bank_redeem_cache(cache)
+set_bank_redeem_helpers({'log_transaction': log_transaction, 'create_notification': create_notification})
+api_router.include_router(bank_redeem_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
