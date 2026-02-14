@@ -284,11 +284,17 @@ async def create_withdrawal_request(user_id: str, request: Request):
     data = await request.json()
     amount_inr = data.get("amount_inr")
     
-    # Validate amount
-    if amount_inr not in VALID_DENOMINATIONS:
+    # Validate amount - slider allows any amount from MIN to MAX
+    if not amount_inr or amount_inr < MIN_AMOUNT:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid amount. Valid denominations: {', '.join(map(str, VALID_DENOMINATIONS))}"
+            detail=f"Minimum withdrawal amount is ₹{MIN_AMOUNT}"
+        )
+    
+    if amount_inr > MAX_AMOUNT:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Maximum withdrawal amount is ₹{MAX_AMOUNT}"
         )
     
     # Check bank details
@@ -310,8 +316,10 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if recent_request:
         raise HTTPException(status_code=400, detail="Weekly limit reached. One withdrawal per week allowed.")
     
-    # Calculate charges
+    # Calculate charges - EMI style
     charges = calculate_total_prc(amount_inr)
+    if not charges:
+        raise HTTPException(status_code=400, detail="Invalid amount")
     total_prc = charges["total_prc"]
     
     # Check PRC balance
