@@ -1266,6 +1266,22 @@ const RejectedRow = ({ payment, onView, onDelete, processing }) => {
 
         {/* Actions */}
         <div className="flex gap-2">
+          {/* Re-approve Button */}
+          <Button
+            onClick={onReapprove}
+            disabled={processing}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white h-9 px-3"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Re-approve
+              </>
+            )}
+          </Button>
           <Button
             onClick={onView}
             size="sm"
