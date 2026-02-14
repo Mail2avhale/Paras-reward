@@ -196,14 +196,23 @@ async def delete_bank_details(user_id: str):
 
 @router.get("/bank-redeem/denominations")
 async def get_denominations():
-    """Get available withdrawal denominations and fees"""
-    denominations = []
-    for amount in VALID_DENOMINATIONS:
+    """Get fee info for slider - EMI style fees"""
+    # Sample calculations for common amounts
+    sample_amounts = [100, 200, 300, 400, 500, 1000, 2000, 5000]
+    samples = []
+    for amount in sample_amounts:
         calc = calculate_total_prc(amount)
-        denominations.append(calc)
+        if calc:
+            samples.append(calc)
     
     return {
-        "denominations": denominations,
+        "min_amount": MIN_AMOUNT,
+        "max_amount": MAX_AMOUNT,
+        "fee_structure": {
+            "below_500": "50% of amount",
+            "above_500": "Flat ₹10"
+        },
+        "samples": samples,
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
         "weekly_limit": 1,
         "note": "One withdrawal request allowed per week"
