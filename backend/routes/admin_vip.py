@@ -191,21 +191,28 @@ async def get_admin_vip_payments(
         else:
             sort_field = "submitted_at"
         
-        payments = await db.vip_payments.find(
-            query, 
-            {
-                "_id": 0,
-                "payment_id": 1, "user_id": 1, "subscription_plan": 1, "plan_type": 1,
-                "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
-                "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1,
-                "new_expiry": 1, "rejection_reason": 1
-            }
-        ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
+        # Use retry for find operation
+        async def fetch_payments():
+            return await db.vip_payments.find(
+                query, 
+                {
+                    "_id": 0,
+                    "payment_id": 1, "user_id": 1, "subscription_plan": 1, "plan_type": 1,
+                    "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
+                    "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1,
+                    "new_expiry": 1, "rejection_reason": 1
+                }
+            ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
+        
+        payments = await db_operation_with_retry(fetch_payments)
         
         if not payments:
             result = {"payments": [], "total": total, "page": page, "pages": 0}
             if cache:
-                await cache.set(cache_key, result, ttl=30)
+                try:
+                    await cache.set(cache_key, result, ttl=30)
+                except:
+                    pass
             return result
         
         # Batch fetch user details
@@ -213,11 +220,12 @@ async def get_admin_vip_payments(
         users_data = {}
         
         if user_ids:
-            users_cursor = db.users.find(
-                {"uid": {"$in": user_ids}}, 
-                {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1,
-                 "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
-                 "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
+            async def fetch_users():
+                return await db.users.find(
+                    {"uid": {"$in": user_ids}}, 
+                    {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1,
+                     "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
+                     "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
             )
             async for user in users_cursor:
                 users_data[user.get("uid")] = user
