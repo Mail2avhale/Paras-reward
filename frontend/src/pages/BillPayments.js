@@ -546,7 +546,7 @@ const BillPayments = ({ user, onLogout }) => {
 
                 {currentType?.fields.includes('loan_account') && (
                   <>
-                    {/* Row 1: Loan Account & Bank Name */}
+                    {/* Row 1: Loan Account & Bank/Lender Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="loan_account" className="text-white text-sm font-medium mb-2 block">Loan Account Number *</Label>
@@ -560,20 +560,41 @@ const BillPayments = ({ user, onLogout }) => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="bank_name" className="text-white text-sm font-medium mb-2 block">Bank/NBFC Name *</Label>
+                        <Label htmlFor="bank_lender_name" className="text-white text-sm font-medium mb-2 block">Bank/Lender Name *</Label>
                         <Input
-                          id="bank_name"
-                          value={formData.bank_name}
-                          onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                          placeholder="e.g., HDFC Bank, Bajaj Finance"
+                          id="bank_lender_name"
+                          value={formData.bank_lender_name}
+                          onChange={(e) => setFormData({ ...formData, bank_lender_name: e.target.value })}
+                          placeholder="e.g., HDFC Bank, Bajaj Finance, Tata Capital"
                           required
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
                     </div>
 
-                    {/* Row 2: IFSC Code & Borrower Name */}
+                    {/* Row 2: Loan Type & IFSC Code */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="loan_type" className="text-white text-sm font-medium mb-2 block">Loan Type *</Label>
+                        <select
+                          id="loan_type"
+                          value={formData.loan_type}
+                          onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
+                          required
+                          className="w-full h-12 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl px-4 focus:border-amber-500 focus:outline-none"
+                        >
+                          <option value="">Select Loan Type</option>
+                          <option value="home_loan">Home Loan</option>
+                          <option value="personal_loan">Personal Loan</option>
+                          <option value="car_loan">Car/Vehicle Loan</option>
+                          <option value="education_loan">Education Loan</option>
+                          <option value="gold_loan">Gold Loan</option>
+                          <option value="business_loan">Business Loan</option>
+                          <option value="consumer_durable">Consumer Durable Loan</option>
+                          <option value="two_wheeler">Two Wheeler Loan</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
                       <div>
                         <Label htmlFor="ifsc_code" className="text-white text-sm font-medium mb-2 block">IFSC Code *</Label>
                         <Input
@@ -598,6 +619,10 @@ const BillPayments = ({ user, onLogout }) => {
                           </p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Row 3: Borrower Name & Registered Mobile */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="borrower_name" className="text-white text-sm font-medium mb-2 block">Borrower Name *</Label>
                         <Input
@@ -609,33 +634,63 @@ const BillPayments = ({ user, onLogout }) => {
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="registered_mobile" className="text-white text-sm font-medium mb-2 block">Registered Mobile *</Label>
+                        <Input
+                          id="registered_mobile"
+                          type="tel"
+                          value={formData.registered_mobile}
+                          onChange={(e) => setFormData({ ...formData, registered_mobile: formatMobile(e.target.value) })}
+                          placeholder="10-digit mobile number"
+                          maxLength={10}
+                          required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                        />
+                        {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
+                          <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Enter valid 10-digit mobile (starts with 6-9)
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Row 3: Registered Mobile */}
-                    <div>
-                      <Label htmlFor="registered_mobile" className="text-white text-sm font-medium mb-2 block">Registered Mobile *</Label>
-                      <Input
-                        id="registered_mobile"
-                        type="tel"
-                        value={formData.registered_mobile}
-                        onChange={(e) => setFormData({ ...formData, registered_mobile: formatMobile(e.target.value) })}
-                        placeholder="10-digit mobile number"
-                        maxLength={10}
-                        required
-                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
-                      />
-                      {formData.registered_mobile && formData.registered_mobile.length > 0 && !validateMobile(formData.registered_mobile).isValid && (
-                        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Enter valid 10-digit mobile (starts with 6-9)
-                        </p>
-                      )}
+                    {/* Row 4: EMI Amount & EMI Due Date */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="emi_amount" className="text-white text-sm font-medium mb-2 block">EMI Amount (₹) *</Label>
+                        <Input
+                          id="emi_amount"
+                          type="number"
+                          value={formData.emi_amount}
+                          onChange={(e) => setFormData({ ...formData, emi_amount: e.target.value })}
+                          placeholder="Monthly EMI amount"
+                          required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                        />
+                        <p className="text-gray-400 text-xs mt-1">Enter your monthly EMI amount</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="emi_due_date" className="text-white text-sm font-medium mb-2 block">EMI Due Date *</Label>
+                        <Input
+                          id="emi_due_date"
+                          type="date"
+                          value={formData.emi_due_date}
+                          onChange={(e) => setFormData({ ...formData, emi_due_date: e.target.value })}
+                          required
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                        />
+                        <p className="text-gray-400 text-xs mt-1">Select the EMI due date</p>
+                      </div>
                     </div>
 
                     {/* Info Box */}
                     <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-4 mt-2">
                       <p className="text-sm text-blue-300">
-                        <strong className="text-blue-200">Note:</strong> Please ensure all details match your loan documents. IFSC code is required for payment processing.
+                        <strong className="text-blue-200">📋 Required Documents:</strong> Loan account statement, EMI schedule, or any document showing your loan details.
+                      </p>
+                      <p className="text-xs text-blue-300/70 mt-2">
+                        ⚠️ All fields are mandatory. Please ensure details match your loan documents exactly.
                       </p>
                     </div>
                   </>
