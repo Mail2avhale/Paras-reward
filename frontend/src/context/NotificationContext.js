@@ -64,39 +64,55 @@ export function NotificationProvider({ children, userId }) {
     if (!userId) return;
 
     let isMounted = true;
+    const seenNotifications = new Set(); // Track already shown notifications
+    
     const pollNotifications = async () => {
       if (!isMounted) return;
       try {
-        const response = await fetch(`${BACKEND_URL}/api/notifications/${userId}?limit=5`);
+        const response = await fetch(`${BACKEND_URL}/api/notifications/${userId}?limit=3`);
         if (!response.ok) return;
         const data = await response.json();
         const notifications = data.notifications || [];
 
-        // Show toasts for new unread notifications
-        notifications.forEach((notification) => {
+        // Show toasts for new unread notifications (max 1 at a time to avoid spam)
+        let shownCount = 0;
+        for (const notification of notifications) {
+          if (shownCount >= 1) break; // Only show 1 notification per poll
+          
+          const notificationId = notification._id || notification.id || `${notification.title}-${notification.created_at}`;
           const notificationTime = new Date(notification.created_at).getTime();
+          
+          // Skip if already seen or older than 5 minutes
+          const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+          if (seenNotifications.has(notificationId) || notificationTime < fiveMinutesAgo) {
+            continue;
+          }
+          
           if (!notification.is_read && notificationTime > lastChecked) {
+            seenNotifications.add(notificationId);
             addToast({
               type: 'info',
               title: notification.title,
               message: notification.message,
-              duration: 6000,
+              duration: 4000, // Reduced from 6000
             });
+            shownCount++;
           }
-        });
+        }
 
         if (isMounted) setLastChecked(Date.now());
       } catch (error) {
-        console.error('Error polling notifications:', error);
+        // Silently ignore notification errors
       }
     };
 
-    // Poll immediately and then every 60 seconds (increased from 30s)
-    pollNotifications();
-    const interval = setInterval(pollNotifications, 60000);
+    // Poll after 5 seconds delay, then every 2 minutes (increased from 60s)
+    const initialTimeout = setTimeout(pollNotifications, 5000);
+    const interval = setInterval(pollNotifications, 120000); // 2 minutes
 
     return () => {
       isMounted = false;
+      clearTimeout(initialTimeout);
       clearInterval(interval);
     };
   }, [userId, addToast]); // Removed lastChecked from deps to prevent re-renders
