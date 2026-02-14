@@ -122,12 +122,20 @@ async def clear_admin_cache(request: Request = None):
 
 
 @router.get("/vip-payments")
-async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50, nocache: bool = False):
-    """Get VIP payments for admin verification - OPTIMIZED with caching"""
+async def get_admin_vip_payments(
+    status: str = None, 
+    page: int = 1, 
+    limit: int = 50, 
+    nocache: bool = False,
+    time_filter: str = None,  # today, week, month
+    plan: str = None,  # startup, growth, elite
+    duration: str = None  # monthly, quarterly, half_yearly, yearly
+):
+    """Get VIP payments for admin verification - OPTIMIZED with caching and filters"""
     try:
-        cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}"
+        cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}:{time_filter}:{plan}:{duration}"
         
-        if cache and not nocache:
+        if cache and not nocache and not time_filter and not plan and not duration:
             cached = await cache.get(cache_key)
             if cached:
                 return cached
@@ -139,6 +147,31 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         # Filter out entries without user_id for approved status
         if status == "approved":
             query["user_id"] = {"$exists": True, "$nin": [None, ""]}
+        
+        # Time filter
+        if time_filter:
+            now = datetime.now(timezone.utc)
+            if time_filter == "today":
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif time_filter == "week":
+                start_date = now - timedelta(days=7)
+            elif time_filter == "month":
+                start_date = now - timedelta(days=30)
+            else:
+                start_date = None
+            
+            if start_date:
+                # Check for both created_at and approved_at based on status
+                date_field = "approved_at" if status == "approved" else "created_at"
+                query[date_field] = {"$gte": start_date.isoformat()}
+        
+        # Plan filter
+        if plan and plan != "all":
+            query["subscription_plan"] = plan
+        
+        # Duration filter
+        if duration and duration != "all":
+            query["plan_type"] = duration
         
         skip = (page - 1) * limit
         total = await db.vip_payments.count_documents(query)
