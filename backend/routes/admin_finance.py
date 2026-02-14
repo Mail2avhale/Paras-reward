@@ -331,7 +331,27 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         expense_details["luxury_claim_count"] = len(luxury_payout_data)
         expense_details["luxury_claim_total_inr"] = round(luxury_payout_total, 2)
         
-        # 5. Manual Expenses
+        # 5. Bank Withdrawal Payouts (PRC to Bank - NEW)
+        # Approved bank withdrawals - user receives INR amount, we deduct total PRC
+        bank_withdrawal_data = await db.bank_withdrawal_requests.find({
+            "status": "approved",
+            "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount_inr": 1, "total_prc_deducted": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
+        
+        bank_withdrawal_count = len(bank_withdrawal_data)
+        # Expense = amount actually transferred to user's bank (amount_inr only)
+        bank_withdrawal_payout_total = sum(bw.get("amount_inr", 0) for bw in bank_withdrawal_data)
+        bank_withdrawal_total_prc = sum(bw.get("total_prc_deducted", 0) for bw in bank_withdrawal_data)
+        
+        expenses["bank_withdrawal_payouts"] = round(bank_withdrawal_payout_total, 2)
+        expense_details["bank_withdrawal_count"] = bank_withdrawal_count
+        expense_details["bank_withdrawal_total_inr"] = round(bank_withdrawal_payout_total, 2)
+        expense_details["bank_withdrawal_total_prc"] = round(bank_withdrawal_total_prc, 2)
+        
+        # 6. Manual Expenses
         manual_expenses = await db.expenses.find({
             "date": {"$gte": start_str, "$lte": end_str}
         }, {"_id": 0}).to_list(10000)
