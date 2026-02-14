@@ -49,17 +49,20 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 14, 2026 - Current Session)
 
-- [x] **Redeem Limit Increased to 100% (P0)**
+- [x] **Redeem Limit Increased to 100% (P0)** ✅ TESTED
   - **Change:** Users can now redeem up to 100% of their PRC balance (previously 50%)
-  - **Backend:** Removed 50% limit check in `/app/backend/routes/bank_redeem.py`
-  - **Frontend:** Updated slider max value to use full balance in `BankRedeem.js`
+  - **Backend:** Removed 50% limit check in `/app/backend/routes/bank_redeem.py` (Line 333-334)
+  - **Frontend:** Updated slider max value to use full balance in `BankRedeem.js` (Line 544)
+  - **Dashboard:** Updated "50% limit" text to "100% limit" (Line 851-852)
+  - **Testing:** 13/13 backend tests passed, frontend code verified
   - **Status:** COMPLETED ✅
 
-- [x] **"Redeem to Cash" → "Redeem To Bank" Text Update (P0)**
+- [x] **"Redeem to Cash" → "Redeem To Bank" Text Update (P0)** ✅ TESTED
   - **Global Rename:** All instances of "Redeem to Cash" changed to "Redeem To Bank"
   - **Files Updated:**
-    - `/app/frontend/src/pages/DashboardModern.js` - Button text, card, comments, data-testid
-    - `/app/frontend/src/data/blogData.js` - Help content
+    - `/app/frontend/src/pages/DashboardModern.js` - Button text (Line 871), card comment, data-testid
+    - `/app/frontend/src/data/blogData.js` - Help content (Line 157)
+  - **Verification:** grep confirms no "Redeem to Cash" remaining
   - **Status:** COMPLETED ✅
 
 - [x] **Redeem to Bank - Slider UI (P0)**
