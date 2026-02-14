@@ -152,14 +152,14 @@ const BankRedeem = ({ user }) => {
     }
   };
 
-  const handleWithdraw = async () => {
+  const handleRedeem = async () => {
     if (!selectedAmount) {
       toast.error('Please select an amount');
       return;
     }
     
     if (!eligibility?.eligible) {
-      toast.error(eligibility?.message || 'Not eligible for withdrawal');
+      toast.error(eligibility?.message || 'Not eligible for redeem');
       return;
     }
     
@@ -177,11 +177,11 @@ const BankRedeem = ({ user }) => {
         amount_inr: selectedAmount
       });
       
-      toast.success(`Withdrawal request submitted! ₹${selectedAmount} will be credited to your bank account after approval.`);
+      toast.success(`Redeem request submitted! ₹${selectedAmount} will be credited to your bank account after approval.`);
       setSelectedAmount(null);
       fetchAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to submit withdrawal request');
+      toast.error(error.response?.data?.detail || 'Failed to submit redeem request');
     } finally {
       setSubmitting(false);
     }
