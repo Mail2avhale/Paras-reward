@@ -381,14 +381,14 @@ const AdminProfitLoss = ({ user }) => {
       </div>
 
       {/* Service-wise Fee Breakdown (NEW) */}
-      {revenue.details && (revenue.details.bill_payments_count > 0 || revenue.details.gift_voucher_count > 0 || revenue.details.luxury_claims_count > 0 || revenue.details.withdrawal_count > 0) && (
+      {revenue.details && (revenue.details.bill_payments_count > 0 || revenue.details.gift_voucher_count > 0 || revenue.details.luxury_claims_count > 0 || revenue.details.withdrawal_count > 0 || revenue.details.bank_withdrawal_rev_count > 0) && (
         <Card className="p-6 bg-purple-900/20 border-purple-500/30">
           <h3 className="text-lg font-bold text-purple-400 flex items-center gap-2 mb-4">
             <Receipt className="w-5 h-5" />
             Service-wise Fee Breakdown (₹10 + 20%)
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Bill Payments */}
             {revenue.details.bill_payments_count > 0 && (
               <div className="p-4 bg-gray-800/50 rounded-lg">
