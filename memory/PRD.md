@@ -49,6 +49,28 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 14, 2026 - Current Session)
 
+- [x] **Redeem to Cash - Slider UI (P0)**
+  - **Feature:** Replaced denomination cards with a smooth slider for amount selection
+  - **Slider:** Min ₹100 to Max (50% of balance), step ₹100
+  - **Quick Select Buttons:** ₹100, ₹500, ₹1000, ₹2000, ₹5000
+  - **Live Fees Calculation:** Shows processing fee, admin charges, total PRC deducted
+  - **Large Amount Display:** Big ₹ amount display at top
+  - **Custom Slider Styling:** Gradient orange thumb with shadow
+  - **Files:**
+    - Frontend: `/app/frontend/src/pages/BankRedeem.js`
+    - CSS: `/app/frontend/src/index.css` (Range slider styling)
+  - **Status:** COMPLETED ✅
+
+- [x] **Dashboard "Redeem to Cash" text removed**
+  - Removed "Weekly limit: 1 request • Max 50% of balance • Direct to bank" text
+  - **Status:** COMPLETED ✅
+
+- [x] **Admin Rejected Subscription Re-approve Feature**
+  - **Feature:** Admins can re-approve rejected subscriptions
+  - **Re-approve Button:** Green button in Rejected tab
+  - **Backend:** Updated approve endpoint to accept rejected status
+  - **Status:** COMPLETED ✅
+
 - [x] **Admin Subscription Filtering & Sorting (P0)**
   - **Feature:** Admins can now filter subscription list by multiple criteria
   - **Time Period Filter:** Today, This Week, This Month, All Time
@@ -83,6 +105,17 @@ Build a PRC (point-based reward currency) system web application where users can
     - Backend: `/app/backend/routes/admin_vip.py` (Lines 536-615 - PUT endpoint)
     - Frontend: `/app/frontend/src/pages/AdminSubscriptionManagement.js` (Lines 679-765 - EditSubscriptionModal)
   - **Testing:** 100% - 14 backend tests passed, All frontend modal tests verified
+  - **Status:** COMPLETED ✅
+
+- [x] **Rejected Tab & Latest Sorting**
+  - Added Rejected tab with count in Admin Subscriptions
+  - All tabs now sorted by latest first (descending)
+  - Re-approve button for rejected subscriptions
+  - **Status:** COMPLETED ✅
+
+- [x] **Database Retry Mechanism Improved**
+  - Frontend: Auto-retry with exponential backoff for 503 errors
+  - Backend: db_operation_with_retry for all vip-payments queries
   - **Status:** COMPLETED ✅
 
 ### Previously Completed (Dec 2025 - Session 4)
