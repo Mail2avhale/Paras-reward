@@ -677,77 +677,141 @@ const AdminSubscriptionManagement = () => {
 
 // Edit Modal Component
 const EditSubscriptionModal = ({ payment, onClose, onSave, processing }) => {
+  // Get expiry date from various possible fields
+  const getExpiryDate = () => {
+    const expiry = payment.new_expiry || payment.expires_at || payment.subscription_expiry || '';
+    if (expiry) {
+      return expiry.split('T')[0];
+    }
+    return '';
+  };
+
   const [formData, setFormData] = useState({
-    plan: payment.plan || 'startup',
-    duration: payment.duration || 'monthly',
+    plan: payment.subscription_plan || payment.plan || payment.actual_plan_approved || 'startup',
+    duration: payment.plan_type || payment.duration || payment.actual_duration_approved || 'monthly',
     amount: payment.amount || 0,
-    expires_at: payment.expires_at ? payment.expires_at.split('T')[0] : ''
+    expires_at: getExpiryDate()
   });
+
+  const planName = payment.subscription_plan || payment.plan || 'N/A';
+  const userName = payment.user_name || 'Unknown User';
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-md w-full">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-white">Edit Subscription</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-bold text-white">Edit Subscription</h3>
+            <p className="text-gray-400 text-sm">Correct subscription details</p>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
         
+        {/* User Info Header */}
+        <div className="bg-gray-800/50 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-white font-medium">{userName}</p>
+              <p className="text-gray-400 text-xs">{payment.user_email || payment.user_id}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-lg capitalize">{planName}</span>
+              <p className="text-gray-500 text-xs mt-1">Current Plan</p>
+            </div>
+          </div>
+        </div>
+        
         <div className="space-y-4">
+          {/* Plan Selection */}
           <div>
-            <label className="text-gray-400 text-sm block mb-1">Plan</label>
+            <label className="text-gray-400 text-sm block mb-1">
+              <Crown className="w-3 h-3 inline mr-1" />
+              Subscription Plan
+            </label>
             <select
               value={formData.plan}
               onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+              data-testid="edit-plan-select"
             >
-              <option value="startup">Startup (₹299)</option>
-              <option value="growth">Growth (₹549)</option>
-              <option value="elite">Elite (₹799)</option>
+              <option value="startup">Startup</option>
+              <option value="growth">Growth</option>
+              <option value="elite">Elite</option>
             </select>
           </div>
           
+          {/* Duration Selection */}
           <div>
-            <label className="text-gray-400 text-sm block mb-1">Duration</label>
+            <label className="text-gray-400 text-sm block mb-1">
+              <Clock className="w-3 h-3 inline mr-1" />
+              Duration
+            </label>
             <select
               value={formData.duration}
               onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white"
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+              data-testid="edit-duration-select"
             >
-              <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="half_yearly">Half Yearly</option>
-              <option value="yearly">Yearly</option>
+              <option value="monthly">Monthly (30 days)</option>
+              <option value="quarterly">Quarterly (90 days)</option>
+              <option value="half_yearly">Half Yearly (180 days)</option>
+              <option value="yearly">Yearly (365 days)</option>
             </select>
           </div>
           
+          {/* Amount */}
           <div>
-            <label className="text-gray-400 text-sm block mb-1">Amount (₹)</label>
+            <label className="text-gray-400 text-sm block mb-1">
+              <CreditCard className="w-3 h-3 inline mr-1" />
+              Amount (₹)
+            </label>
             <Input
               type="number"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: parseInt(e.target.value) || 0 })}
-              className="bg-gray-800 border-gray-700 text-white"
+              className="bg-gray-800 border-gray-700 text-white focus:border-purple-500"
+              data-testid="edit-amount-input"
             />
           </div>
           
+          {/* Expiry Date - Key Correction Feature */}
           <div>
-            <label className="text-gray-400 text-sm block mb-1">Expires At</label>
+            <label className="text-gray-400 text-sm block mb-1">
+              <Calendar className="w-3 h-3 inline mr-1" />
+              Subscription Expiry Date
+            </label>
             <Input
               type="date"
               value={formData.expires_at}
               onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-              className="bg-gray-800 border-gray-700 text-white"
+              className="bg-gray-800 border-gray-700 text-white focus:border-purple-500"
+              data-testid="edit-expiry-input"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              User's subscription will be valid until this date
+            </p>
           </div>
+        </div>
+        
+        {/* Warning Notice */}
+        <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <p className="text-amber-400 text-xs flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Changes will immediately update user's subscription status
+          </p>
         </div>
         
         <div className="flex gap-3 mt-6">
           <Button 
             onClick={onClose}
             variant="outline"
-            className="flex-1 border-gray-700"
+            className="flex-1 border-gray-700 text-gray-300"
+            data-testid="edit-cancel-btn"
           >
             Cancel
           </Button>
@@ -755,6 +819,7 @@ const EditSubscriptionModal = ({ payment, onClose, onSave, processing }) => {
             onClick={() => onSave(formData)}
             disabled={processing}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
+            data-testid="edit-save-btn"
           >
             {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Save Changes'}
           </Button>
