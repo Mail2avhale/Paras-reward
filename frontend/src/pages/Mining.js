@@ -650,6 +650,20 @@ const DailyRewards = ({ user }) => {
         </div>
       </div>
 
+      {/* PRC Burn Alert for Free Users */}
+      {showBurnAlert && isFreeUser && expiringBatches.length > 0 && (
+        <div className="px-5 mb-4">
+          <PRCBurnAlert
+            expiringBatches={expiringBatches}
+            totalExpiring={totalExpiring}
+            isFreeUser={isFreeUser}
+            isExpanded={burnAlertExpanded}
+            onToggle={() => setBurnAlertExpanded(!burnAlertExpanded)}
+            onDismiss={() => setShowBurnAlert(false)}
+          />
+        </div>
+      )}
+
       {/* Main Mining Card - Glass Obsidian Design */}
       <div className="px-5 mb-6">
         <motion.div 
