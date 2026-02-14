@@ -615,8 +615,7 @@ const DailyRewards = ({ user }) => {
     );
   }
 
-  // Get subscription plan info
-  const subscriptionPlan = userData?.subscription_plan || 'explorer';
+  // Get subscription plan info - use existing subscriptionPlan from state
   const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
   
   // Get multiplier display
