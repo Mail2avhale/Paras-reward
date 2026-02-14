@@ -125,6 +125,8 @@ const Orders = ({ user, onLogout }) => {
         return 'bg-amber-500/20 text-amber-400';
       case 'gift_voucher':
         return 'bg-pink-500/20 text-pink-400';
+      case 'bank_redeem':
+        return 'bg-emerald-500/20 text-emerald-400';
       default:
         return 'bg-gray-500/20 text-gray-400';
     }
