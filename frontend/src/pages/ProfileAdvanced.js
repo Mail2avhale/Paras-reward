@@ -630,22 +630,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </div>
         </button>
 
-        {/* Bank Redeem - Only for paid subscribers */}
+        {/* Bank Account Details - Only for paid subscribers */}
         {hasPaidPlan && (
-          <button 
-            onClick={() => navigate('/bank-redeem')}
-            className="w-full bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4 flex items-center justify-between"
-            data-testid="bank-redeem-link"
-          >
-            <span className="flex items-center gap-3 text-white">
-              <Building2 className="w-5 h-5 text-green-500" />
-              Bank Redeem
-              <InfoTooltip>
-                <p>Redeem your PRC directly to your bank account. Weekly limit: 1 request</p>
-              </InfoTooltip>
-            </span>
-            <ChevronRight className="w-5 h-5 text-green-400" />
-          </button>
+          <BankDetailsCard user={user} />
         )}
 
         {/* Privacy Settings */}
