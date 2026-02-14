@@ -275,7 +275,7 @@ const BankRedeem = ({ user }) => {
               <div className="flex-1">
                 <p className="text-blue-400 font-semibold">Weekly Limit Reached</p>
                 <p className="text-blue-300/70 text-sm">
-                  You have a pending request. Next withdrawal available after{' '}
+                  You have a pending request. Next redeem available after{' '}
                   {eligibility.next_eligible_date ? new Date(eligibility.next_eligible_date).toLocaleDateString() : '7 days'}
                 </p>
               </div>
@@ -295,7 +295,7 @@ const BankRedeem = ({ user }) => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Bank Account</h2>
-                    <p className="text-xs text-gray-500">Your withdrawal destination</p>
+                    <p className="text-xs text-gray-500">Your redeem destination</p>
                   </div>
                 </div>
                 {bankDetails && (
