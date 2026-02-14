@@ -245,10 +245,11 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         # ===== EXPENSE CALCULATION =====
         expenses = {
             "payment_gateway_fees": 0,
-            "bill_payment_payouts": 0,      # NEW: INR paid for user bill payments
-            "gift_voucher_payouts": 0,      # NEW: INR paid for gift vouchers
-            "withdrawal_payouts": 0,        # NEW: INR paid for user withdrawals
-            "luxury_claim_payouts": 0,      # NEW: INR paid for luxury claims
+            "bill_payment_payouts": 0,      # INR paid for user bill payments
+            "gift_voucher_payouts": 0,      # INR paid for gift vouchers
+            "withdrawal_payouts": 0,        # INR paid for user withdrawals (cashback)
+            "bank_withdrawal_payouts": 0,   # NEW: INR paid for bank withdrawals (PRC to bank)
+            "luxury_claim_payouts": 0,      # INR paid for luxury claims
             "server_hosting": 0,
             "sms_email_services": 0,
             "marketing": 0,
@@ -267,6 +268,9 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "gift_voucher_total_inr": 0,
             "withdrawal_count": 0,
             "withdrawal_total_inr": 0,
+            "bank_withdrawal_count": 0,        # NEW
+            "bank_withdrawal_total_inr": 0,    # NEW
+            "bank_withdrawal_total_prc": 0,    # NEW: Total PRC deducted
             "luxury_claim_count": 0,
             "luxury_claim_total_inr": 0
         }
