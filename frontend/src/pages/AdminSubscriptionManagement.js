@@ -20,7 +20,7 @@ const AdminSubscriptionManagement = () => {
   const [approvedPayments, setApprovedPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [processing, setProcessing] = useState(null);
-  const [activeTab, setActiveTab] = useState('pending'); // pending, approved
+  const [activeTab, setActiveTab] = useState('pending'); // pending, approved, rejected
   const [editModal, setEditModal] = useState({ show: false, payment: null });
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
   const [fullImageModal, setFullImageModal] = useState({ show: false, url: null, userName: '', amount: '' });
@@ -32,10 +32,24 @@ const AdminSubscriptionManagement = () => {
   const [approvedTotal, setApprovedTotal] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
-  // Fetch data on mount and page change
+  // NEW: Filter states
+  const [timeFilter, setTimeFilter] = useState('all'); // today, week, month, all
+  const [planFilter, setPlanFilter] = useState('all'); // all, startup, growth, elite
+  const [durationFilter, setDurationFilter] = useState('all'); // all, monthly, quarterly, half_yearly, yearly
+
+  // Fetch data on mount and filter change
   useEffect(() => {
     fetchData();
-  }, [pendingPage, approvedPage]);
+  }, [pendingPage, approvedPage, timeFilter, planFilter, durationFilter]);
+
+  // Build filter query string
+  const buildFilterQuery = () => {
+    let query = '';
+    if (timeFilter !== 'all') query += `&time_filter=${timeFilter}`;
+    if (planFilter !== 'all') query += `&plan=${planFilter}`;
+    if (durationFilter !== 'all') query += `&duration=${durationFilter}`;
+    return query;
+  };
 
   const fetchData = async () => {
     setLoading(true);
