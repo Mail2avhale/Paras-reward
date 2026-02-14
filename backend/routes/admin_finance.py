@@ -111,6 +111,9 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             "withdrawal_count": 0,
             "withdrawal_processing_fees": 0,
             "withdrawal_admin_charges": 0,
+            "bank_withdrawal_rev_count": 0,        # NEW: Bank Withdrawal Revenue
+            "bank_withdrawal_processing_fees": 0,  # NEW
+            "bank_withdrawal_admin_charges": 0,    # NEW
             "orders_count": 0
         }
         
