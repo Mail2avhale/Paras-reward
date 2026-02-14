@@ -166,7 +166,15 @@ const BankRedeem = ({ user }) => {
     const denom = denominations.find(d => d.amount_inr === selectedAmount);
     if (!denom) return;
     
-    if ((userData?.prc_balance || 0) < denom.total_prc) {
+    const currentBalance = userData?.prc_balance || 0;
+    const maxAllowedPRC = Math.floor(currentBalance * 0.5); // 50% limit
+    
+    if (denom.total_prc > maxAllowedPRC) {
+      toast.error(`You can only redeem up to 50% of your balance (${maxAllowedPRC.toLocaleString()} PRC)`);
+      return;
+    }
+    
+    if (currentBalance < denom.total_prc) {
       toast.error(`Insufficient balance. Need ${denom.total_prc} PRC`);
       return;
     }
