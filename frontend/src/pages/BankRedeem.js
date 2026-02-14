@@ -28,7 +28,7 @@ const BankRedeem = ({ user }) => {
   
   // Form states
   const [showBankForm, setShowBankForm] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(null);
+  const [selectedAmount, setSelectedAmount] = useState(100); // Slider amount in INR
   const [expandedHistory, setExpandedHistory] = useState(null);
   
   // Bank form data
@@ -39,6 +39,37 @@ const BankRedeem = ({ user }) => {
     ifsc_code: '',
     bank_name: ''
   });
+
+  // Calculate fees based on amount (same as backend logic)
+  const calculateFees = (amountInr) => {
+    // Processing fee structure from backend
+    const feeStructure = {
+      100: 10, 500: 25, 1000: 50, 5000: 100, 10000: 200, 25000: 500
+    };
+    
+    // Find nearest fee bracket
+    let processingFee = 10; // default
+    const brackets = Object.keys(feeStructure).map(Number).sort((a, b) => a - b);
+    for (let i = brackets.length - 1; i >= 0; i--) {
+      if (amountInr >= brackets[i]) {
+        processingFee = feeStructure[brackets[i]];
+        break;
+      }
+    }
+    
+    // Admin charges: 20% of amount
+    const adminCharges = Math.floor(amountInr * 0.20);
+    const totalCharges = processingFee + adminCharges;
+    const prcRequired = (amountInr + totalCharges) * 10; // 10 PRC = ₹1
+    
+    return {
+      processingFee,
+      adminCharges,
+      totalCharges,
+      prcRequired,
+      youReceive: amountInr
+    };
+  };
 
   useEffect(() => {
     if (!user?.uid) {
