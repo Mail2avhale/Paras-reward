@@ -122,7 +122,7 @@ const AdminSubscriptionManagement = () => {
     if (!confirm('Are you sure you want to delete this subscription? This action cannot be undone.')) return;
     setProcessing(paymentId);
     try {
-      await axios.delete(`${API}/api/admin/vip-payment/${paymentId}`);
+      await axios.delete(`${API}/api/admin/vip-payments/${paymentId}`);
       toast.success('Subscription deleted');
       fetchData();
     } catch (error) {
@@ -135,12 +135,17 @@ const AdminSubscriptionManagement = () => {
   const handleEdit = async (paymentId, updates) => {
     setProcessing(paymentId);
     try {
-      await axios.put(`${API}/api/admin/vip-payment/${paymentId}`, updates);
-      toast.success('Subscription updated');
+      // Add admin_id for audit logging
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      await axios.put(`${API}/api/admin/vip-payments/${paymentId}`, {
+        ...updates,
+        admin_id: user.uid || user.id
+      });
+      toast.success('Subscription updated successfully!');
       setEditModal({ show: false, payment: null });
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update');
+      toast.error(error.response?.data?.detail || 'Failed to update subscription');
     } finally {
       setProcessing(null);
     }
