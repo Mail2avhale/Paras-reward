@@ -131,14 +131,17 @@ async def get_admin_vip_payments(
     plan: str = None,  # startup, growth, elite
     duration: str = None  # monthly, quarterly, half_yearly, yearly
 ):
-    """Get VIP payments for admin verification - OPTIMIZED with caching and filters"""
+    """Get VIP payments for admin verification - OPTIMIZED with caching, filters and retry"""
     try:
         cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}:{time_filter}:{plan}:{duration}"
         
         if cache and not nocache and not time_filter and not plan and not duration:
-            cached = await cache.get(cache_key)
-            if cached:
-                return cached
+            try:
+                cached = await cache.get(cache_key)
+                if cached:
+                    return cached
+            except:
+                pass  # Ignore cache errors
         
         query = {}
         if status:
@@ -174,7 +177,11 @@ async def get_admin_vip_payments(
             query["plan_type"] = duration
         
         skip = (page - 1) * limit
-        total = await db.vip_payments.count_documents(query)
+        
+        # Use retry for count operation
+        total = await db_operation_with_retry(
+            lambda: db.vip_payments.count_documents(query)
+        )
         
         # Determine sort field and order based on status - latest first
         if status == "approved":
