@@ -15331,7 +15331,7 @@ async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, re
         
         # Get bank redeem requests if needed
         if request_type in ["all", "bank_redeem"]:
-            bank_requests = await db.bank_withdrawals.find(
+            bank_requests = await db.bank_withdrawal_requests.find(
                 {"user_id": user_id},
                 {"_id": 0}
             ).sort("created_at", -1).to_list(500)
