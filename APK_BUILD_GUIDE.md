@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://redeem-tracking.preview.emergentagent.com",
+    "url": "https://mongo-fix-deploy-1.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

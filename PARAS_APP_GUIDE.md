@@ -20,7 +20,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 - Use cashback wallet
 
 ### 2. **Admin**
-**Access:** https://redeem-tracking.preview.emergentagent.com/admin
+**Access:** https://mongo-fix-deploy-1.preview.emergentagent.com/admin
 
 **Capabilities:**
 - View platform statistics (Total users, VIP users, Orders, etc.)
@@ -29,7 +29,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 - Monitor all platform activities
 
 ### 3. **Outlet**
-**Access:** https://redeem-tracking.preview.emergentagent.com/outlet
+**Access:** https://mongo-fix-deploy-1.preview.emergentagent.com/outlet
 
 **Capabilities:**
 - Verify customer secret codes
@@ -41,7 +41,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 ## 🚀 Getting Started
 
 ### Step 1: Create Account
-1. Visit: https://redeem-tracking.preview.emergentagent.com
+1. Visit: https://mongo-fix-deploy-1.preview.emergentagent.com
 2. Click "Get Started"
 3. Enter your email and name
 4. Click "Sign In with Google"
@@ -155,7 +155,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
    - Sign up normally with email/name
 
 2. **Go to Setup Page:**
-   - Visit: https://redeem-tracking.preview.emergentagent.com/setup
+   - Visit: https://mongo-fix-deploy-1.preview.emergentagent.com/setup
 
 3. **Promote User:**
    - Enter user's email
@@ -212,10 +212,10 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 
 ## 📱 Key URLs
 
-- **Home:** https://redeem-tracking.preview.emergentagent.com
-- **Setup (Promote Users):** https://redeem-tracking.preview.emergentagent.com/setup
-- **Admin Dashboard:** https://redeem-tracking.preview.emergentagent.com/admin
-- **Outlet Panel:** https://redeem-tracking.preview.emergentagent.com/outlet
+- **Home:** https://mongo-fix-deploy-1.preview.emergentagent.com
+- **Setup (Promote Users):** https://mongo-fix-deploy-1.preview.emergentagent.com/setup
+- **Admin Dashboard:** https://mongo-fix-deploy-1.preview.emergentagent.com/admin
+- **Outlet Panel:** https://mongo-fix-deploy-1.preview.emergentagent.com/outlet
 
 ---
 
