@@ -216,7 +216,27 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         revenue_details["withdrawal_processing_fees"] = round(withdrawal_processing_fees, 2)
         revenue_details["withdrawal_admin_charges"] = round(withdrawal_admin_charges, 2)
         
-        # 6. Delivery Charges from Orders
+        # 6. Bank Withdrawal Fees (PRC to Bank) - NEW
+        # Processing fee + 20% admin charge from bank_withdrawal_requests
+        bank_withdrawals = await db.bank_withdrawal_requests.find({
+            "status": "approved",
+            "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0, "amount_inr": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
+        
+        bank_withdrawal_rev_count = len(bank_withdrawals)
+        bank_withdrawal_processing_fees = sum(bw.get("processing_fee_inr", 0) for bw in bank_withdrawals)
+        bank_withdrawal_admin_charges = sum(bw.get("admin_charge_inr", 0) for bw in bank_withdrawals)
+        
+        revenue["processing_fees"] += bank_withdrawal_processing_fees
+        revenue["admin_charges"] += bank_withdrawal_admin_charges
+        revenue_details["bank_withdrawal_rev_count"] = bank_withdrawal_rev_count
+        revenue_details["bank_withdrawal_processing_fees"] = round(bank_withdrawal_processing_fees, 2)
+        revenue_details["bank_withdrawal_admin_charges"] = round(bank_withdrawal_admin_charges, 2)
+        
+        # 7. Delivery Charges from Orders
         orders = await db.orders.find({
             "status": "delivered",
             "$or": [
