@@ -868,7 +868,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 data-testid="redeem-to-cash-btn"
               >
                 <Building2 className="w-5 h-5" />
-                Redeem to Cash
+                Redeem To Bank
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             </div>

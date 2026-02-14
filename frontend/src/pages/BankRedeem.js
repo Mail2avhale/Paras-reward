@@ -190,13 +190,9 @@ const BankRedeem = ({ user }) => {
     }
     
     const currentBalance = userData?.prc_balance || 0;
-    const maxAllowedPRC = Math.floor(currentBalance * 0.5); // 50% limit
     const fees = calculateFees(selectedAmount);
     
-    if (fees.prcRequired > maxAllowedPRC) {
-      toast.error(`You can only redeem up to 50% of your balance (${maxAllowedPRC.toLocaleString()} PRC)`);
-      return;
-    }
+    // User can redeem up to 100% of balance - just check if they have enough
     
     if (currentBalance < fees.prcRequired) {
       toast.error(`Insufficient balance. Need ${fees.prcRequired.toLocaleString()} PRC`);
