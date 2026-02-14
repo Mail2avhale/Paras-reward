@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Hand, Zap, Trophy, ArrowLeft, Star, Target, Crown, Flame, Award, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+import smartToast from '@/utils/smartToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
