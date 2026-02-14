@@ -108,18 +108,27 @@ const BankRedeem = ({ user }) => {
       toast.error('Account holder name is required');
       return;
     }
-    if (!validateBankAccount(bankForm.account_number).isValid) {
-      toast.error('Invalid account number (8-18 digits required)');
+    
+    // Account number validation (9-18 digits)
+    const accNum = bankForm.account_number.replace(/\D/g, '');
+    if (accNum.length < 9 || accNum.length > 18) {
+      toast.error('Account number must be 9-18 digits');
       return;
     }
-    if (bankForm.account_number !== bankForm.confirm_account_number) {
+    
+    if (accNum !== bankForm.confirm_account_number) {
       toast.error('Account numbers do not match');
       return;
     }
-    if (!validateIFSC(bankForm.ifsc_code).isValid) {
-      toast.error('Invalid IFSC code');
+    
+    // IFSC validation (4 letters + 0 + 6 alphanumeric)
+    const ifsc = bankForm.ifsc_code.toUpperCase();
+    const ifscPattern = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscPattern.test(ifsc)) {
+      toast.error('Invalid IFSC format. Must be: 4 letters + 0 + 6 characters (e.g., SBIN0001234)');
       return;
     }
+    
     if (!bankForm.bank_name.trim()) {
       toast.error('Bank name is required');
       return;
@@ -129,8 +138,8 @@ const BankRedeem = ({ user }) => {
     try {
       await axios.post(`${API}/api/bank-details/${user.uid}`, {
         account_holder_name: bankForm.account_holder_name.trim(),
-        account_number: bankForm.account_number,
-        ifsc_code: bankForm.ifsc_code.toUpperCase(),
+        account_number: accNum,
+        ifsc_code: ifsc,
         bank_name: bankForm.bank_name.trim()
       });
       
