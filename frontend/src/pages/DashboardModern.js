@@ -859,7 +859,14 @@ const DashboardModern = ({ user, onLogout }) => {
               </div>
               
               {/* CTA Button */}
-              <button className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/bank-redeem');
+                }}
+                className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
+                data-testid="redeem-to-cash-btn"
+              >
                 <Building2 className="w-5 h-5" />
                 Redeem to Cash
                 <ArrowUpRight className="w-4 h-4" />
