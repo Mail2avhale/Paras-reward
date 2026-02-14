@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Coins, Play, Clock, Star, Crown, ArrowLeft, Zap, Gift, TrendingUp, CheckCircle, Pause, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import smartToast from '@/utils/smartToast';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
