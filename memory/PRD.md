@@ -43,9 +43,22 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
-### Recently Completed (Feb 14, 2026 - Session 4)
+### Recently Completed (Feb 14, 2026 - Session 5)
 
-- [x] **Bank Account Redeem Feature (NEW)**
+- [x] **Bank Withdrawal P&L Integration (NEW)**
+  - Approved bank withdrawals now appear in Profit & Loss report
+  - **Revenue side:** Processing fees + 20% Admin charges from bank withdrawals
+    - Fields: `bank_withdrawal_rev_count`, `bank_withdrawal_processing_fees`, `bank_withdrawal_admin_charges`
+  - **Expense side:** Amount transferred to user's bank account
+    - Fields: `bank_withdrawal_payouts`, `bank_withdrawal_count`, `bank_withdrawal_total_inr`, `bank_withdrawal_total_prc`
+  - **Insights:** "🏦 Bank Withdrawals: X approved, Fees: ₹Y, Payout: ₹Z"
+  - Backend: `/app/backend/routes/admin_finance.py` (P&L endpoint updated)
+  - Frontend: `/app/frontend/src/pages/AdminProfitLoss.js` (Bank Withdrawal card added)
+  - Testing: 8/8 backend tests passed, 5/5 frontend features verified
+
+### Completed (Feb 14, 2026 - Session 4)
+
+- [x] **Bank Account Redeem Feature**
   - Users can save bank details: Account Holder Name, Account Number, IFSC Code, Bank Name
   - Fixed withdrawal denominations: ₹100, ₹500, ₹1,000, ₹5,000, ₹10,000, ₹25,000
   - Processing fees: 100→₹10, 500→₹25, 1000→₹50, 5000→₹100, 10000→₹200, 25000→₹500
@@ -58,7 +71,7 @@ Build a PRC (point-based reward currency) system web application where users can
   - Profile link: `/app/frontend/src/pages/ProfileAdvanced.js` (Bank Withdrawal button)
   - APIs: `/api/bank-details/{uid}`, `/api/bank-redeem/denominations`, `/api/bank-redeem/request/{uid}`
 
-- [x] **Electricity Bill Helper Dropdown (NEW)**
+- [x] **Electricity Bill Helper Dropdown**
   - Replaced text input with comprehensive dropdown for electricity providers
   - 64+ All India electricity providers organized by region
   - Regions: Northern, Western, Southern, Eastern, Union Territories
@@ -72,7 +85,7 @@ Build a PRC (point-based reward currency) system web application where users can
   - Mobile number validation (10 digits, starts with 6-9)
   - File: `/app/frontend/src/pages/BillPayments.js`
 
-### Recently Completed (Feb 13, 2026 - Session 3)
+### Completed (Feb 13, 2026 - Session 3)
 
 - [x] **EMI Pay Special Processing Charges**
   - For loan_emi requests ≤ ₹499: Processing fee = **50% of amount**
