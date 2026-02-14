@@ -206,7 +206,7 @@ const TapGameAdvanced = ({ user }) => {
       console.error('Error syncing taps:', error);
       if (error.response?.data?.detail === 'Daily tap limit reached') {
         setRemainingTaps(0);
-        toast.error(globalT('dailyLimitReached'));
+        smartToast.error(globalT('dailyLimitReached'));
       }
     }
   };
