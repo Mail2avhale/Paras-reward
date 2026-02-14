@@ -338,28 +338,45 @@ const BankRedeem = ({ user }) => {
                   )}
                   
                   <div>
-                    <Label className="text-gray-300 text-sm mb-2 block">Account Holder Name *</Label>
+                    <Label className="text-gray-300 text-sm mb-2 block">
+                      Account Holder Name *
+                      <span className="text-green-400 text-xs ml-2">(Must match your profile name)</span>
+                    </Label>
                     <Input
                       value={bankForm.account_holder_name}
-                      onChange={(e) => setBankForm({ ...bankForm, account_holder_name: e.target.value.toUpperCase() })}
-                      placeholder="As per bank records"
-                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                      readOnly
+                      className="h-12 bg-gray-900/80 border-gray-700/50 text-white rounded-xl cursor-not-allowed"
                       data-testid="bank-holder-name-input"
                     />
+                    <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Auto-filled from your profile: {userData?.name?.toUpperCase()}
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Account Number *</Label>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        Account Number *
+                        <span className="text-gray-500 text-xs ml-2">(9-18 digits)</span>
+                      </Label>
                       <Input
                         type="password"
                         value={bankForm.account_number}
-                        onChange={(e) => setBankForm({ ...bankForm, account_number: formatBankAccount(e.target.value) })}
-                        placeholder="Account number"
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 18);
+                          setBankForm({ ...bankForm, account_number: val });
+                        }}
+                        placeholder="Enter account number"
                         maxLength={18}
                         className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                         data-testid="bank-account-input"
                       />
+                      {bankForm.account_number && (
+                        <p className={`text-xs mt-1 ${bankForm.account_number.length >= 9 && bankForm.account_number.length <= 18 ? 'text-green-400' : 'text-orange-400'}`}>
+                          {bankForm.account_number.length} digits {bankForm.account_number.length >= 9 ? '✓' : '(min 9 required)'}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-gray-300 text-sm mb-2 block">Confirm Account Number *</Label>
