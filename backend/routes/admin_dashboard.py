@@ -60,7 +60,9 @@ async def get_live_stats():
 
 @router.get("/stats")
 async def get_admin_stats():
-    """Get comprehensive admin statistics - CACHED 60 sec"""
+    """Get comprehensive admin statistics - CACHED 60 sec - OPTIMIZED with parallel queries"""
+    import asyncio
+    
     cache_key = "admin:stats:comprehensive"
     
     if cache:
@@ -74,40 +76,60 @@ async def get_admin_stats():
         week_start = (now - timedelta(days=7)).isoformat()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
         
-        # User stats
-        total_users = await db.users.count_documents({})
-        new_today = await db.users.count_documents({"created_at": {"$gte": today_start}})
-        new_week = await db.users.count_documents({"created_at": {"$gte": week_start}})
-        new_month = await db.users.count_documents({"created_at": {"$gte": month_start}})
-        vip_users = await db.users.count_documents({"membership_type": "vip"})
+        # Run ALL queries in parallel for faster response
+        results = await asyncio.gather(
+            # User counts
+            db.users.count_documents({}),  # 0: total_users
+            db.users.count_documents({"created_at": {"$gte": today_start}}),  # 1: new_today
+            db.users.count_documents({"created_at": {"$gte": week_start}}),  # 2: new_week
+            db.users.count_documents({"created_at": {"$gte": month_start}}),  # 3: new_month
+            db.users.count_documents({"membership_type": "vip"}),  # 4: vip_users
+            
+            # Revenue
+            db.vip_payments.aggregate([
+                {"$match": {"status": "approved", "approved_at": {"$gte": month_start}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]).to_list(1),  # 5: month_revenue
+            
+            # Orders
+            db.orders.count_documents({}),  # 6: total_orders
+            db.orders.count_documents({"status": "pending"}),  # 7: pending_orders
+            
+            # PRC total
+            db.users.aggregate([
+                {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+            ]).to_list(1),  # 8: total_prc
+            
+            # Subscription counts
+            db.users.count_documents({
+                "$or": [
+                    {"subscription_plan": "explorer"},
+                    {"subscription_plan": None},
+                    {"subscription_plan": ""},
+                    {"subscription_plan": {"$exists": False}}
+                ]
+            }),  # 9: explorer_count
+            db.users.count_documents({"subscription_plan": "startup"}),  # 10: startup_count
+            db.users.count_documents({"subscription_plan": "growth"}),  # 11: growth_count
+            db.users.count_documents({"subscription_plan": "elite"}),  # 12: elite_count
+            
+            return_exceptions=True
+        )
         
-        # Revenue stats
-        month_revenue = await db.vip_payments.aggregate([
-            {"$match": {"status": "approved", "approved_at": {"$gte": month_start}}},
-            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-        ]).to_list(1)
-        
-        # Order stats
-        total_orders = await db.orders.count_documents({})
-        pending_orders = await db.orders.count_documents({"status": "pending"})
-        
-        # PRC stats
-        total_prc = await db.users.aggregate([
-            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
-        ]).to_list(1)
-        
-        # Subscription stats - Explorer includes users with no plan or null/empty plan
-        explorer_count = await db.users.count_documents({
-            "$or": [
-                {"subscription_plan": "explorer"},
-                {"subscription_plan": None},
-                {"subscription_plan": ""},
-                {"subscription_plan": {"$exists": False}}
-            ]
-        })
-        startup_count = await db.users.count_documents({"subscription_plan": "startup"})
-        growth_count = await db.users.count_documents({"subscription_plan": "growth"})
-        elite_count = await db.users.count_documents({"subscription_plan": "elite"})
+        # Extract results safely
+        total_users = results[0] if not isinstance(results[0], Exception) else 0
+        new_today = results[1] if not isinstance(results[1], Exception) else 0
+        new_week = results[2] if not isinstance(results[2], Exception) else 0
+        new_month = results[3] if not isinstance(results[3], Exception) else 0
+        vip_users = results[4] if not isinstance(results[4], Exception) else 0
+        month_revenue = results[5] if not isinstance(results[5], Exception) else []
+        total_orders = results[6] if not isinstance(results[6], Exception) else 0
+        pending_orders = results[7] if not isinstance(results[7], Exception) else 0
+        total_prc = results[8] if not isinstance(results[8], Exception) else []
+        explorer_count = results[9] if not isinstance(results[9], Exception) else 0
+        startup_count = results[10] if not isinstance(results[10], Exception) else 0
+        growth_count = results[11] if not isinstance(results[11], Exception) else 0
+        elite_count = results[12] if not isinstance(results[12], Exception) else 0
         
         # Calculate total PRC circulation
         total_prc_value = round(total_prc[0]["total"], 4) if total_prc else 0
