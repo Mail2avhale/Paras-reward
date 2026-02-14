@@ -1081,6 +1081,76 @@ const DashboardModern = ({ user, onLogout }) => {
         </motion.button>
       </div>
 
+      {/* ========== REDEEM TO BANK CARD ========== */}
+      {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && userData?.kyc_status === 'verified' && (
+        <div className="px-5 mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => navigate('/bank-redeem')}
+            className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
+            style={{
+              background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
+              boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
+            }}
+            data-testid="redeem-to-bank-card"
+          >
+            {/* Background decorations */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-400/20 rounded-full blur-2xl"></div>
+            
+            {/* Floating coins animation */}
+            <div className="absolute top-4 right-8 animate-bounce" style={{ animationDelay: '0s' }}>
+              <span className="text-2xl">💰</span>
+            </div>
+            <div className="absolute top-10 right-20 animate-bounce" style={{ animationDelay: '0.3s' }}>
+              <span className="text-lg">🪙</span>
+            </div>
+            
+            <div className="relative z-10">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <Banknote className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs uppercase tracking-wider">PRC Balance</p>
+                  <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()}</p>
+                </div>
+              </div>
+              
+              {/* Redeem Info */}
+              <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-emerald-200/80 text-xs">Redeem up to (100% limit)</p>
+                    <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-emerald-200/60 text-xs">Rate</p>
+                    <p className="text-emerald-300 text-sm font-medium">10 PRC = ₹1</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* CTA Button */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/bank-redeem');
+                }}
+                className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
+                data-testid="redeem-to-bank-btn"
+              >
+                <Building2 className="w-5 h-5" />
+                Redeem To Bank
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Share App FAB removed */}
 
       {/* AI Chatbot */}
