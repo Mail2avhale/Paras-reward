@@ -488,12 +488,12 @@ const Orders = ({ user, onLogout }) => {
       {/* Tabs for Request Types */}
       <div className="px-5 mb-4">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 rounded-xl p-1">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 rounded-xl p-1">
             <TabsTrigger 
               value="all" 
               className="rounded-lg text-xs data-[state=active]:bg-amber-500 data-[state=active]:text-white"
             >
-              All ({summary?.total_orders + summary?.total_bill_payments + summary?.total_vouchers || totalCount})
+              All ({(summary?.total_orders || 0) + (summary?.total_bill_payments || 0) + (summary?.total_vouchers || 0) + (summary?.total_bank_redeems || 0)})
             </TabsTrigger>
             <TabsTrigger 
               value="orders"
@@ -512,6 +512,12 @@ const Orders = ({ user, onLogout }) => {
               className="rounded-lg text-xs data-[state=active]:bg-pink-500 data-[state=active]:text-white"
             >
               Vouchers ({summary?.total_vouchers || 0})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="bank_redeem"
+              className="rounded-lg text-xs data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
+            >
+              Bank ({summary?.total_bank_redeems || 0})
             </TabsTrigger>
           </TabsList>
         </Tabs>
