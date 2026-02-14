@@ -49,7 +49,7 @@ const BankRedeem = ({ user }) => {
     // Check subscription
     const isPaidPlan = ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
     if (!isPaidPlan) {
-      toast.error('Paid subscription required for bank withdrawals');
+      toast.error('Paid subscription required for bank redeem');
       setTimeout(() => navigate('/subscription'), 1500);
       return;
     }
