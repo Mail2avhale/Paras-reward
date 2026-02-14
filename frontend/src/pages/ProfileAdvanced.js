@@ -617,7 +617,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <FileText className="w-5 h-5 text-blue-500" />
             {t.kycVerification}
             <InfoTooltip>
-              <p>KYC verification is required to redeem PRC for bill payments and withdrawals. Complete it once for lifetime access</p>
+              <p>KYC verification is required to redeem PRC for bill payments. Complete it once for lifetime access</p>
             </InfoTooltip>
           </span>
           <div className="flex items-center gap-2">
@@ -630,7 +630,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           </div>
         </button>
 
-        {/* Bank Withdrawal - Only for paid subscribers */}
+        {/* Bank Redeem - Only for paid subscribers */}
         {hasPaidPlan && (
           <button 
             onClick={() => navigate('/bank-redeem')}
@@ -639,9 +639,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           >
             <span className="flex items-center gap-3 text-white">
               <Building2 className="w-5 h-5 text-green-500" />
-              Bank Withdrawal
+              Bank Redeem
               <InfoTooltip>
-                <p>Withdraw your PRC directly to your bank account. Weekly limit: 1 request</p>
+                <p>Redeem your PRC directly to your bank account. Weekly limit: 1 request</p>
               </InfoTooltip>
             </span>
             <ChevronRight className="w-5 h-5 text-green-400" />
