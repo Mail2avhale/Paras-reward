@@ -154,7 +154,7 @@ export const blogArticles = [
       <h2>⚠️ Without VIP:</h2>
       <p>Free users can earn PRC but with limitations:</p>
       <ul>
-        <li>Cannot redeem to cash</li>
+        <li>Cannot redeem to bank</li>
         <li>Limited access to premium features</li>
         <li>PRC earning restricted (VIP membership required to accumulate PRC)</li>
       </ul>
