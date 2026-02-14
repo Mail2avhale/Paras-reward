@@ -615,6 +615,10 @@ const BankRedeem = ({ user }) => {
                             </span>
                             <span className="text-orange-400">+₹{fees.processingFee} ({fees.processingFee * 10} PRC)</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Admin Charges (20%)</span>
+                            <span className="text-orange-400">+₹{fees.adminCharges.toLocaleString()} ({(fees.adminCharges * 10).toLocaleString()} PRC)</span>
+                          </div>
                           <div className="flex justify-between pt-3 border-t border-gray-700">
                             <span className="text-amber-400 font-bold">Total PRC Deducted</span>
                             <span className="text-xl font-bold text-amber-400">{fees.prcRequired.toLocaleString()} PRC</span>
@@ -626,7 +630,7 @@ const BankRedeem = ({ user }) => {
                           {/* Fee Info */}
                           <div className="mt-2 pt-2 border-t border-gray-700/50">
                             <p className="text-xs text-gray-500 text-center">
-                              ≤₹499: 50% fee | &gt;₹499: ₹10 flat fee
+                              Processing: ≤₹499 = 50% | &gt;₹499 = ₹10 flat | Admin: 20%
                             </p>
                           </div>
                         </div>
