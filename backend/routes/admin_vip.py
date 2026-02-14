@@ -226,16 +226,21 @@ async def get_admin_vip_payments(
                     {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1,
                      "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
                      "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
-            )
-            async for user in users_cursor:
+                ).to_list(500)
+            
+            users_list = await db_operation_with_retry(fetch_users)
+            for user in users_list:
                 users_data[user.get("uid")] = user
         
-        # Batch count previous payments
-        prev_payments_pipeline = [
-            {"$match": {"user_id": {"$in": user_ids}, "status": {"$in": ["approved", "completed"]}}},
-            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
-        ]
-        prev_payments_result = await db.vip_payments.aggregate(prev_payments_pipeline).to_list(100)
+        # Batch count previous payments with retry
+        async def fetch_prev_payments():
+            prev_payments_pipeline = [
+                {"$match": {"user_id": {"$in": user_ids}, "status": {"$in": ["approved", "completed"]}}},
+                {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
+            ]
+            return await db.vip_payments.aggregate(prev_payments_pipeline).to_list(100)
+        
+        prev_payments_result = await db_operation_with_retry(fetch_prev_payments) if user_ids else []
         prev_payments_map = {r["_id"]: r["count"] for r in prev_payments_result}
         
         # Enrich payments
