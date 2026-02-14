@@ -382,37 +382,64 @@ const BankRedeem = ({ user }) => {
                       <Label className="text-gray-300 text-sm mb-2 block">Confirm Account Number *</Label>
                       <Input
                         value={bankForm.confirm_account_number}
-                        onChange={(e) => setBankForm({ ...bankForm, confirm_account_number: formatBankAccount(e.target.value) })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 18);
+                          setBankForm({ ...bankForm, confirm_account_number: val });
+                        }}
                         placeholder="Re-enter account number"
                         maxLength={18}
                         className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                         data-testid="bank-account-confirm-input"
                       />
-                      {bankForm.account_number && bankForm.confirm_account_number && bankForm.account_number !== bankForm.confirm_account_number && (
-                        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                          <XCircle className="h-3 w-3" />
-                          Account numbers do not match
-                        </p>
+                      {bankForm.account_number && bankForm.confirm_account_number && (
+                        bankForm.account_number === bankForm.confirm_account_number ? (
+                          <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Account numbers match
+                          </p>
+                        ) : (
+                          <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Account numbers do not match
+                          </p>
+                        )
                       )}
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">IFSC Code *</Label>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        IFSC Code *
+                        <span className="text-gray-500 text-xs ml-2">(4 letters + 0 + 6 chars)</span>
+                      </Label>
                       <Input
                         value={bankForm.ifsc_code}
-                        onChange={(e) => setBankForm({ ...bankForm, ifsc_code: formatIFSC(e.target.value) })}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+                          setBankForm({ ...bankForm, ifsc_code: val });
+                        }}
                         placeholder="e.g., SBIN0001234"
                         maxLength={11}
                         className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
                         data-testid="bank-ifsc-input"
                       />
-                      {bankForm.ifsc_code && validateIFSC(bankForm.ifsc_code).isValid && (
-                        <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Bank: {validateIFSC(bankForm.ifsc_code).bankCode}
-                        </p>
+                      {bankForm.ifsc_code && (
+                        validateIFSC(bankForm.ifsc_code).isValid ? (
+                          <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Valid IFSC - Bank: {validateIFSC(bankForm.ifsc_code).bankCode}
+                          </p>
+                        ) : bankForm.ifsc_code.length === 11 ? (
+                          <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Invalid IFSC format (must be: ABCD0XXXXXX)
+                          </p>
+                        ) : (
+                          <p className="text-orange-400 text-xs mt-1">
+                            {bankForm.ifsc_code.length}/11 characters
+                          </p>
+                        )
                       )}
                     </div>
                     <div>
