@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { 
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
-  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info
+  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info, Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
