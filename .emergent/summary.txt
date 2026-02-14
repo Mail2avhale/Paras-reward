@@ -1,387 +1,64 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to introduce a DIRECTOR 365 subscription plan. However, the focus shifted to implementing several high-priority features and bug fixes.
+The user's initial goal was to introduce a DIRECTOR 365 subscription plan. This has since been backlogged in favor of higher-priority features and bug fixes.
 
 The most recent requests from the user were:
-1.  **P&L Integration:** The total PRC deducted for each bank withdrawal (amount + fees + charges) must be recorded as an expense in the user's Profit & Loss report. (This was completed).
-2.  **Feature Enhancement:** Improve the Burning Concept and Tap Game for a better user experience. (This was completed).
-3.  **Bug Fix:** Resolve an issue with excessive toast notifications appearing on the screen. (This was completed).
-4.  **Bug Fix:** Fix a critical error occurring on the subscription approval page, which the user reported with a screenshot showing a MongoDB timeout. (This is the current task).
+1.  **MongoDB Timeout Fix:** Resolve a critical  on the subscription approval page. (Completed)
+2.  **Terminology Change:** Replace all instances of Withdraw with Redeem throughout the application. (Completed)
+3.  **UI/UX Refactor for Redeem Flow:** Move the Redeem to Cash functionality from the profile page to a dedicated card on the main dashboard. The profile page should only handle adding/editing bank details. (Completed)
+4.  **Business Logic Update:** Implement a rule that users can only redeem a maximum of 50% of their available PRC balance at a time. (Completed)
+5.  **Clarifications:** The user asked for and received clarifications on the weekly redeem limit and Google AdMob policies. (Completed)
+6.  **Admin Feature:** Add sorting and filtering capabilities to the admin subscription management page. (In Progress)
+7.  **Admin Feature:** The user has requested a way for admins to edit, delete, or correct a user's subscription if a mistake was made (e.g., wrong duration). (Not Started)
 
 **User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent **MUST** respond in Marathi only.
 
 **what currently exists?**
 - A full-stack application with a Flask backend and React frontend.
-- **Bank Account Redeem Feature:** A complete withdrawal system with user and admin interfaces.
-- **P&L Integration:** Bank withdrawal transactions are now fully integrated into the P&L reports, visible on the admin dashboard.
-- **Tap Game Advanced:** The tap game has been upgraded with a combo/streak system, visual effects, and a more engaging UI.
-- **PRC Burn Alert:** A component on the mining page now visually alerts non-VIP users about their expiring PRC batches, with a supporting backend API.
-- **Notification Optimization:** A  utility has been created and implemented to prevent duplicate and excessive notifications. The polling interval for server-side notifications has been increased.
+- **MongoDB Timeout Mitigation:** A retry mechanism has been implemented in  for subscription approval/rejection to handle intermittent database connection errors.
+- **Redeem Terminology:** All user-facing text for Withdraw has been globally updated to Redeem.
+- **Redeem Flow Rework:**
+    - A Redeem to Cash card is now present on the user dashboard for direct access.
+    - The profile page () has been simplified to only manage bank account details via a new  component.
+- **Redemption Business Logic:** Both frontend () and backend () enforce a 50% PRC balance limit on redemption requests.
+- **Admin Subscription Filtering (Partial):** The backend API () now accepts filter parameters. The frontend () has the UI elements and state management for these filters, but it has not been fully tested end-to-end.
 
 **Last working item**:
--   **Last item agent was working:** The agent was debugging a critical  that occurs when an admin tries to approve a subscription. The user reported this with a screenshot, and it is a blocker for a core admin workflow.
+-   **Last item agent was working:** Implementing filtering and sorting on the admin's subscription management page (). The agent added UI filter controls and updated the backend API to process the filter queries.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent. This is a recurring database stability issue. The agent should first check logs and connection settings, then potentially use the testing agent to create a reproducible test case for the subscription approval endpoint under load.
+-   **Which testing method agent to use?** frontend testing agent. The task involves significant UI and state changes on an important admin page. The agent should be used to create tests for all filter combinations to ensure the data is fetched and displayed correctly.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Subscription Approval Fails with MongoDB Timeout**
+-   **Issue 1 (P0): Complete and Verify Subscription Page Filtering**
 -   **Issue 2 (P1): Recurring Bugs on Mining Page**
 -   **Issue 3 (P2): KYC Approval UI Bug Verification**
 -   **Issue 4 (P3): Frontend Performance on Mining Page**
 -   **Issue 5 (P4): Redis Caching Setup**
 
 **Issues Detail:**
--   **Issue 1: Subscription Approval Fails with MongoDB Timeout**
-    -   **Description:** When an admin approves a user's subscription, the action fails with a . This is a critical blocker for user subscription management.
-    -   **Attempted fixes:** None yet. The agent has just identified the error.
+-   **Issue 1: Complete and Verify Subscription Page Filtering**
+    -   **Description:** The user wants to filter the subscription list by status (today approved, weekly, monthly, all time), plan type, and duration. The initial implementation is done, but requires verification.
+    -   **Attempted fixes:**
+        -   UI filter controls and state logic were added to .
+        -   The backend API in  was updated to accept , , and  query parameters.
     -   **Next debug checklist:**
-        1.  Review backend logs for more context around the timeout: ==> /var/log/supervisor/backend.err.log <==
-WARNING:  WatchFiles detected changes in 'tests/test_bank_redeem_features.py', 'tests/test_bill_payment_rejection.py', 'tests/test_user_360.py', 'tests/test_luxury_savings_split.py'. Reloading...
-INFO:     Started server process [221]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_finance.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [221]
-INFO:     Started server process [456]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_finance.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [456]
-INFO:     Started server process [539]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_finance.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [539]
-INFO:     Started server process [621]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_finance.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [621]
-INFO:     Started server process [703]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_finance.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [703]
-INFO:     Started server process [786]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [786]
-INFO:     Stopping reloader process [46]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [829] using WatchFiles
-INFO:     Started server process [831]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-WARNING:  WatchFiles detected changes in 'tests/test_pl_bank_withdrawal_integration.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [831]
-INFO:     Started server process [1794]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [46] using WatchFiles
-INFO:     Started server process [92]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/users.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [92]
-INFO:     Started server process [858]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [858]
-INFO:     Stopping reloader process [46]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [1495] using WatchFiles
-INFO:     Started server process [1497]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-WARNING:  WatchFiles detected changes in 'tests/test_tap_game_prc_expiry.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1497]
-INFO:     Started server process [2347]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [48] using WatchFiles
-
-==> /var/log/supervisor/backend.out.log <==
-INFO:     10.219.0.202:35230 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:52978 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:52978 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:52978 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:32968 - "POST /api/game/tap/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:32968 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:52978 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:52978 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.202:35230 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.202:35230 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:32968 - "POST /api/game/tap/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/auth/check-auth-type?identifier=miner%40test.com HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "POST /api/auth/login?identifier=miner%40test.com&password=147258&device_id=DEV-1771058930532-7ar840dfs&ip_address=104.198.214.223 HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42072 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42072 - "GET /api/ai/contextual-help/game?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/ai/contextual-help/game?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42072 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.202:39062 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:46860 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42078 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:42072 - "POST /api/game/tap/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:34602 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.182:41492 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:41492 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:41498 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.1.182:32816 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:53178 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.115:35810 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:53178 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.1.182:51766 - "GET /api/auth/check-auth-type?identifier=mail2avhale%40gmail.com HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/auth/login?identifier=mail2avhale%40gmail.com&password=102938&device_id=DEV-1771061291818-pv60aozw2&ip_address=152.56.4.67 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/ai/contextual-help/dashboard?use_ai=false&uid=mongo-fix-deploy-1 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/prc-rain/check/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/prc-rain/check/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/prc-rain/check/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/prc-rain/check/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/ai/contextual-help/game?use_ai=false&uid=mongo-fix-deploy-1 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:60038 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33044 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:37600 - "POST /api/game/tap/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42658 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42660 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/ai/contextual-help/profile?use_ai=false&uid=mongo-fix-deploy-1 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:56618 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:56618 - "GET /api/bank-redeem/denominations HTTP/1.1" 200 OK
-INFO:     10.219.0.115:35150 - "GET /api/auth/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42668 - "GET /api/bank-redeem/check-eligibility/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/bank-redeem/history/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42668 - "GET /api/bank-details/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42668 - "GET /api/bank-redeem/denominations HTTP/1.1" 200 OK
-INFO:     10.219.0.182:56618 - "GET /api/bank-redeem/check-eligibility/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:56618 - "GET /api/bank-details/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/auth/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:38290 - "GET /api/bank-redeem/history/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42668 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:42668 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/user/73b95483-f36b-4637-a5ee-d447300c6835 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:48196 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:48164 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:48196 - "GET /api/notifications/73b95483-f36b-4637-a5ee-d447300c6835/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/auth/check-auth-type?identifier=miner%40test.com HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "POST /api/auth/login?identifier=miner%40test.com&password=147258&device_id=DEV-1771061611712-3go1i32xf&ip_address=104.198.214.223 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36546 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36546 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36554 - "GET /api/ai/contextual-help/dashboard?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36554 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36554 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36554 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/ai/contextual-help/mining?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36554 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:48494 - "GET /api/ai/contextual-help/mining?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/notifications/USER002?limit=5 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:44024 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002/prc-expiry HTTP/1.1" 200 OK
-INFO:     10.219.0.115:48494 - "GET /api/mining/status/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/user/USER002/redemption-stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002/prc-expiry HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60958 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:48494 - "GET /api/mining/status/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:36950 - "GET /api/user/USER002/redemption-stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:45724 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.115:45724 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:45724 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.115:45724 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/auth/check-auth-type?identifier=miner%40test.com HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "POST /api/auth/login?identifier=miner%40test.com&password=147258&device_id=DEV-1771061816751-4vgvt4ovs&ip_address=104.198.214.223 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/ai/contextual-help/dashboard?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/user/USER002/dashboard HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/prc-rain/check/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/ai/contextual-help/mining?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/ai/contextual-help/mining?use_ai=false&uid=USER002 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/notifications/USER002?limit=20&unread_only=false HTTP/1.1" 200 OK
-INFO:     10.219.1.182:54716 - "GET /api/mining/status/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36312 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/user/USER002/prc-expiry HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36318 - "GET /api/user/USER002/redemption-stats HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/user/USER002/redemption-stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33304 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/user/USER002/prc-expiry HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36318 - "GET /api/mining/status/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/notifications/USER002/unread-count HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36318 - "POST /api/mining/start/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33304 - "GET /api/user/USER002/redemption-stats HTTP/1.1" 200 OK
-INFO:     10.219.1.182:36318 - "GET /api/mining/status/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.115:33290 - "GET /api/user/USER002 HTTP/1.1" 200 OK
-INFO:     10.219.0.182:45084 - "GET /api/notifications/USER002?limit=3 HTTP/1.1" 200 OK.
-        2.  Analyze the subscription approval logic (likely in a file like ) for long-running or inefficient database queries.
-        3.  Check the MongoDB connection string and parameters in . Consider increasing the  value as a temporary diagnostic step.
-        4.  This is a manifestation of the Intermittent MongoDB Timeout Errors issue. The root cause needs to be found and fixed.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical workflow for the business. Fixing it will unblock subscription management and address a major underlying stability problem.
+        1.  Log in as an admin user.
+        2.  Navigate to the  page and take a screenshot to confirm the new filter UI is rendering correctly.
+        3.  Test each filter option (status, plan, duration) individually and in combination.
+        4.  Verify that the API requests are being sent with the correct query parameters and that the displayed data updates accurately.
+        5.  Use the frontend testing agent to automate testing of these filter combinations.
+    -   **Why fix this issue and what will be achieved with the fix?** This will provide admins with a much-needed tool to efficiently manage and analyze user subscriptions.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
 -   **Issue 2: Recurring Bugs on Mining Page**
     -   **Description:** User repeatedly reports that session earnings show as - and the page does not update correctly after collecting rewards.
-    -   **Attempted fixes:** Multiple previous fixes have failed to solve this permanently.
-    -   **Next debug checklist:**
-        1.  Add extensive logging in  to trace state variables (, ).
-        2.  Investigate for race conditions between the  API call and frontend state updates.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a core feature causing significant user frustration. A permanent fix is needed.
-    -   **Status:** NOT STARTED (in this session)
+    -   **Status:** NOT STARTED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** None
 
 -   **Issue 3: KYC Approval UI Bug Verification**
     -   **Description:** A previous fix for stuck approve/reject buttons on the KYC page needs user confirmation.
@@ -402,110 +79,118 @@ INFO:     10.219.0.182:45084 - "GET /api/notifications/USER002?limit=3 HTTP/1.1"
     -   **Should Test frontend/backend/both after fix?** Backend
 
 **In progress Task List**:
--   None.
+-   **Task 1: Complete Subscription Page Filtering/Sorting**
+    -   **Where to resume:** The frontend () and backend () changes are in place. The next step is to perform end-to-end testing from the admin UI to verify functionality.
+    -   **What will be achieved with this?** Admins will be able to sort and filter subscription records as requested.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
-
 **Upcoming Tasks:**
--   **P1: Advanced PRC Burning Concepts:** The user expressed interest in more advanced PRC burning mechanisms for app sustainability. The agent presented ideas, but the user deferred the decision. This should be the next discussion point after the MongoDB timeout bug is fixed.
+-   **P0: Implement Admin Correction for Subscriptions:** The user has requested a way for admins to , , or  a subscription if a mistake was made (e.g., assigning a yearly plan instead of a monthly one). This is a critical administrative function and should be prioritized next.
+-   **P1: Advanced PRC Burning Concepts:** A deferred strategic discussion about adding more advanced PRC burning mechanisms to ensure app sustainability.
 
 **Future Tasks:**
--   **P1: Design and Implement DIRECTOR 365 Subscription Plan:** The original high-priority feature request, which is now backlogged.
+-   **P1: Design and Implement DIRECTOR 365 Subscription Plan:** The original feature request, currently backlogged.
 -   **P2: Add Force PIN Change Feature:** Prompt users with a default PIN to change it for security.
 -   **P3: Full Audit of Backend Subscription Pricing:** Ensure pricing consistency across all services.
 
 **Completed work in this session**
--   **Bank Withdrawal → P&L Integration:** Backend logic and frontend UI were created to show withdrawal transactions, fees, and admin charges in the P&L report. Tested with .
--   **Tap Game Advanced:** Implemented a new combo and streak system with visual effects and bonus multipliers to make the game more engaging.
--   **PRC Burn Alert:** Created a frontend component and backend endpoint to warn non-VIP users about their expiring PRC, complete with fire animations.
--   **Notification System Optimization:** Drastically reduced the number of notifications by implementing a  wrapper for rate-limiting/deduplication and slowing down the server notification polling rate.
+-   **MongoDB Timeout Bug Fix (RESOLVED):** Mitigated the  by adding a retry mechanism to the subscription approval/rejection endpoints in .
+-   **Withdraw to Redeem Refactor (DONE):** Performed a project-wide search and replace to update all user-facing terminology.
+-   **Dashboard & Profile UI/UX Rework (DONE):** Added a Redeem to Cash card to the dashboard and simplified the Profile page to only handle bank details.
+-   **50% Redemption Limit (DONE):** Implemented the business rule to limit redemptions to 50% of a user's PRC balance, with validation on both frontend and backend.
+-   **User Queries Resolved (DONE):** Answered user questions regarding the weekly redeem limit and Google AdMob policies.
 
 **Earlier issues found/mentioned but not fixed**
-- The recurring issues with the **Mining Page** and **MongoDB Timeouts** are the most critical outstanding problems carried over from previous sessions. The MongoDB issue has now resurfaced as a critical blocker.
+-   The recurring issues with the **Mining Page** and the need for **KYC verification** are the most critical outstanding problems carried over from previous sessions.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Intermittent MongoDB Timeout Errors.
 -   **Recurrence count:** High.
--   **Status:** IN PROGRESS. The issue just occurred again, blocking the subscription approval workflow.
+-   **Status:** RESOLVED. A mitigation (retry logic) was implemented in this session. While this resolves the immediate blocker, the root cause might still exist and should be monitored.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** React.js, TailwindCSS, Axios, Sonner (for toasts)
+-   **Frontend:** React.js, TailwindCSS, Axios, Sonner
 -   **Backend:** Python (Flask), Pydantic
 -   **Database:** MongoDB
--   **State Management:** React Hooks (, , )
+-   **Error Handling:** Implemented a Python retry wrapper/decorator to improve resilience against intermittent database errors.
 
 **key DB schema**
--   No schema changes were made in this session.
+-   No schema changes were made.
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
 -   **Created:**
-    -   : New enhanced tap game UI and logic.
-    -   : Component to display PRC expiry warnings.
-    -   : A wrapper around the  toast library to prevent duplicate notifications.
+    -   : A new reusable component to display and manage user bank details.
 -   **Updated:**
-    -   : Added logic to include bank withdrawal data in P&L reports.
-    -   : Updated UI to display the new bank withdrawal P&L data.
-    -   : Added the  endpoint.
-    -   : Replaced  route with  and configured global Sonner toast settings.
-    -   : Integrated  and refactored to use .
-    -   : Optimized notification polling logic.
+    -   : To add filtering capabilities and a retry mechanism for database operations.
+    -   : To add backend validation for the 50% redemption limit.
+    -   : To add the frontend UI and logic for filtering subscriptions.
+    -   : To include the new Redeem to Cash card.
+    -   : To remove the redeem flow and use the new  component.
+    -   : To enforce and display the 50% redemption limit.
+    -   Multiple other frontend files were updated to change the text from Withdraw to Redeem.
 
 **Areas that need refactoring**:
--   **MongoDB Connection Handling:** The recurring  strongly indicates a systemic problem. The connection logic should be reviewed and potentially refactored to be more resilient, possibly with better pooling, error handling, and retry mechanisms.
--   **Notification Systems:** Although optimized, two separate notification systems ( and a custom ) still exist. These should be consolidated into a single, unified system to simplify maintenance and prevent future conflicts.
+-   **MongoDB Connection Handling:** The retry mechanism is a good patch, but a deeper investigation into the root cause of the  is advisable for long-term stability. This could involve reviewing connection pool settings or infrastructure.
+-   **Notification Systems:** Two separate notification systems ( and a custom ) still exist. These should be consolidated into a single system to simplify maintenance.
 
 **key api endpoints**
--   : Fetches PRC batches that are about to expire for the logged-in user, used by the  component.
+-   : **UPDATED** to accept , , and  query parameters.
+-   : **UPDATED** with backend validation for the 50% PRC balance limit.
+-   : **UPDATED** to be more resilient with retry logic.
+-   : **UPDATED** to be more resilient with retry logic.
 
 **Critical Info for New Agent**
 -   You **MUST** communicate with the user in **Marathi**.
--   The absolute highest priority is fixing the **MongoDB timeout error** on the subscription approval page. It is a critical, recurring blocker.
--   Once the timeout bug is resolved, you should re-engage the user on the deferred topic of Advanced PRC Burning Concepts.
--   The recurring **Mining Page bugs** remain a high-priority issue that needs a permanent solution.
+-   The immediate task is to finish and verify the subscription filtering feature on the admin page. Log in as an admin and test the UI thoroughly.
+-   The user's next request is to add functionality for admins to **edit/delete/correct** subscriptions. This should be the next priority task after filtering is complete.
+-   The MongoDB timeout error has been mitigated with retries, but be aware that it could be a symptom of a deeper issue.
 
 **documents and test reports created in this job**
 -    (Updated)
--   
--   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports a major problem with subscription approvals, providing a screenshot of a timeout error. **Status: PENDING FIX (CURRENT TASK)**
-2.  **User:** Asks for advanced concepts for PRC burning to improve app sustainability. **Status: DEFERRED**
-3.  **User:** States they will decide on the PRC burning concepts later. **Status: DEFERRED**
-4.  **User:** Asks to deploy the application. **Status: SUPERSEDED by critical bug report.**
-5.  **User:** Reports that too many notifications are appearing on the screen. **Status: RESOLVED**
-6.  **User:** Provides choices for the Tap Game and Burning Concept enhancements. **Status: RESOLVED**
-7.  **User:** Asks for enhancements to the Burning Concept and Tap Game. **Status: RESOLVED**
-8.  **Agent:** Asks for confirmation before starting the next task. **Status: RESOLVED**
-9.  **Agent:** Asks for confirmation of the plan to fix notifications. **Status: RESOLVED**
-10. **Agent:** Proposes a plan to fix the notification issue. **Status: RESOLVED**
+1.  **User:** Requested functionality for admins to edit, delete, or correct user subscriptions. **Status: NOT STARTED**
+2.  **User:** Requested sorting and filtering on the admin subscription page. **Status: IN PROGRESS**
+3.  **User:** Asked to deploy the app but then asked a question about AdMob policy. **Status: RESOLVED (Deploy superseded)**
+4.  **User:** Clarified that their app uses Mining/Referral-based earning. **Status: RESOLVED**
+5.  **User:** Asked if the Redeem to cash feature complies with Google AdMob policy. **Status: RESOLVED**
+6.  **User:** Asked for clarification on whether the weekly limit for Redeem to Cash affects other services like mobile recharges. **Status: RESOLVED**
+7.  **User:** Sent a screenshot of a weekly limit reached message and asked why the error was occurring. **Status: RESOLVED (Explained it was expected behavior)**
+8.  **User:** Requested a new business rule to limit redemptions to 50% of the user's PRC balance. **Status: COMPLETED**
+9.  **User:** Requested a UI change to have a Redeem to cash card on the dashboard and move bank details management to the profile. **Status: COMPLETED**
+10. **User:** Requested that all instances of the word Withdraw be changed to Redeem. **Status: COMPLETED**
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Subscription Approval Workflow:** Completely blocked by the recurring MongoDB timeout error. This is a critical failure.
-    -   **Mining Page Functionality:** Core earnings and reward collection logic remain unstable and bug-prone.
+    -   **Mining Page Functionality:** Remains unstable, causing user frustration (recurring issue).
+-   **Partially Implemented:**
+    -   **Admin Subscription Filtering:** The feature is coded on both frontend and backend but has not been verified end-to-end.
 -   **Blocked:**
-    -   **Redis Caching:** Implementation is blocked by free-tier limitations. This remains a scalability risk.
+    -   **Redis Caching:** Implementation is blocked by free-tier limitations on the hosting platform.
 
 **3rd Party Integrations**
 -   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The agent used  twice to validate the P&L integration and the Tap Game/Burn Alert features. Both reports showed 100% success.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** The Mining Page functionality is a known regression point. The MongoDB timeout is a severe, recurring stability issue.
+-   **Known regressions:** The Mining Page functionality continues to be a known point of failure.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
 -   **Test User 1:**  / PIN: 
 -   **Test User 2:**  / Password: 
+-   **VIP Test User:**  / Password: 
 
 **What agent forgot to execute**
-- The agent was correctly prioritizing user requests. However, the user's request to **deploy** the application was superseded by the last-minute critical bug report. The long-standing issues from the previous handoff (Mining Page bugs, KYC verification) were not addressed as new, higher-priority tasks emerged.</analysis>
+- The agent correctly prioritized incoming user requests over finishing or deploying. The latest request to **implement edit/delete/correction for subscriptions** has been noted but not yet started. All other requests from this session were either completed or are currently in progress.</analysis>

@@ -556,7 +556,7 @@ The following systems have been deprecated and removed:
 - **Profit Wallet**: Profit wallet withdrawal (stockist-only feature)
 
 ## Deployment
-- **Preview URL**: https://mongo-fix-deploy-1.preview.emergentagent.com
+- **Preview URL**: https://admin-filter-test.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button
 
