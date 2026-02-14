@@ -43,6 +43,35 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ## What's Been Implemented (Latest: Feb 2026)
 
+### Recently Completed (Feb 14, 2026 - Session 4)
+
+- [x] **Bank Account Redeem Feature (NEW)**
+  - Users can save bank details: Account Holder Name, Account Number, IFSC Code, Bank Name
+  - Fixed withdrawal denominations: ₹100, ₹500, ₹1,000, ₹5,000, ₹10,000, ₹25,000
+  - Processing fees: 100→₹10, 500→₹25, 1000→₹50, 5000→₹100, 10000→₹200, 25000→₹500
+  - 20% admin charges on all withdrawals
+  - Weekly limit: 1 withdrawal request per week
+  - Requires: Paid subscription (startup/growth/elite) + Verified KYC
+  - Admin approval required before bank transfer
+  - Backend: `/app/backend/routes/bank_redeem.py` (new file)
+  - Frontend: `/app/frontend/src/pages/BankRedeem.js` (new file)
+  - Profile link: `/app/frontend/src/pages/ProfileAdvanced.js` (Bank Withdrawal button)
+  - APIs: `/api/bank-details/{uid}`, `/api/bank-redeem/denominations`, `/api/bank-redeem/request/{uid}`
+
+- [x] **Electricity Bill Helper Dropdown (NEW)**
+  - Replaced text input with comprehensive dropdown for electricity providers
+  - 64+ All India electricity providers organized by region
+  - Regions: Northern, Western, Southern, Eastern, Union Territories
+  - Major providers: MSEDCL (Maharashtra), BSES Delhi, Tata Power, Adani Mumbai, BESCOM, KSEB, TANGEDCO
+  - "Other" option for unlisted providers
+  - File: `/app/frontend/src/pages/BillPayments.js` (Lines 657-746)
+
+- [x] **Standardized EMI Payment Form (Verified)**
+  - EMI form has 5 standard fields: Loan Account Number, Bank/NBFC Name, IFSC Code, Borrower Name, Registered Mobile
+  - IFSC validation with bank code extraction
+  - Mobile number validation (10 digits, starts with 6-9)
+  - File: `/app/frontend/src/pages/BillPayments.js`
+
 ### Recently Completed (Feb 13, 2026 - Session 3)
 
 - [x] **EMI Pay Special Processing Charges**
