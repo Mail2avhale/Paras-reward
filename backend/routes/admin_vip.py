@@ -176,15 +176,24 @@ async def get_admin_vip_payments(
         skip = (page - 1) * limit
         total = await db.vip_payments.count_documents(query)
         
+        # Determine sort field and order based on status - latest first
+        if status == "approved":
+            sort_field = "approved_at"
+        elif status == "rejected":
+            sort_field = "rejected_at"
+        else:
+            sort_field = "submitted_at"
+        
         payments = await db.vip_payments.find(
             query, 
             {
                 "_id": 0,
                 "payment_id": 1, "user_id": 1, "subscription_plan": 1, "plan_type": 1,
                 "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
-                "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1
+                "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1,
+                "new_expiry": 1, "rejection_reason": 1
             }
-        ).sort("submitted_at", 1).skip(skip).limit(limit).to_list(limit)
+        ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
         
         if not payments:
             result = {"payments": [], "total": total, "page": page, "pages": 0}
