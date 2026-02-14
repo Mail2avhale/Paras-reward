@@ -233,9 +233,9 @@ const BankRedeem = ({ user }) => {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-green-100 to-green-200 bg-clip-text text-transparent">
-              Bank Withdrawal
+              Bank Redeem
             </h1>
-            <p className="text-gray-400 text-sm mt-0.5">Withdraw PRC to your bank account</p>
+            <p className="text-gray-400 text-sm mt-0.5">Redeem PRC to your bank account</p>
           </div>
           {/* Balance */}
           <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl">
@@ -254,7 +254,7 @@ const BankRedeem = ({ user }) => {
               <Shield className="h-6 w-6 text-orange-400" />
               <div className="flex-1">
                 <p className="text-orange-400 font-semibold">KYC Verification Required</p>
-                <p className="text-orange-300/70 text-sm">Complete KYC to enable bank withdrawals</p>
+                <p className="text-orange-300/70 text-sm">Complete KYC to enable bank redeem</p>
               </div>
               <Button
                 onClick={() => navigate('/kyc')}
