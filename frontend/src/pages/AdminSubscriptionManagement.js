@@ -18,6 +18,7 @@ const AdminSubscriptionManagement = () => {
   const [stats, setStats] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [approvedPayments, setApprovedPayments] = useState([]);
+  const [rejectedPayments, setRejectedPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [processing, setProcessing] = useState(null);
   const [activeTab, setActiveTab] = useState('pending'); // pending, approved, rejected
@@ -28,8 +29,10 @@ const AdminSubscriptionManagement = () => {
   // Pagination states
   const [pendingPage, setPendingPage] = useState(1);
   const [approvedPage, setApprovedPage] = useState(1);
+  const [rejectedPage, setRejectedPage] = useState(1);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [approvedTotal, setApprovedTotal] = useState(0);
+  const [rejectedTotal, setRejectedTotal] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
   // NEW: Filter states
@@ -40,7 +43,7 @@ const AdminSubscriptionManagement = () => {
   // Fetch data on mount and filter change
   useEffect(() => {
     fetchData();
-  }, [pendingPage, approvedPage, timeFilter, planFilter, durationFilter]);
+  }, [pendingPage, approvedPage, rejectedPage, timeFilter, planFilter, durationFilter]);
 
   // Build filter query string
   const buildFilterQuery = () => {
