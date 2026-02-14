@@ -123,10 +123,37 @@ async def save_bank_details(user_id: str, request: Request):
         if not data.get(field):
             raise HTTPException(status_code=400, detail=f"{field.replace('_', ' ').title()} is required")
     
+    # Normalize names for comparison
+    account_holder_name = data["account_holder_name"].strip().upper()
+    user_profile_name = user.get("name", "").strip().upper()
+    
+    # Validate: Account Holder Name must match Profile Name
+    # Remove extra spaces and compare
+    def normalize_name(name):
+        return " ".join(name.split())
+    
+    normalized_holder = normalize_name(account_holder_name)
+    normalized_profile = normalize_name(user_profile_name)
+    
+    if normalized_holder != normalized_profile:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Account holder name must match your profile name: '{user_profile_name}'"
+        )
+    
     # Validate IFSC format (11 characters: 4 letters + 0 + 6 alphanumeric)
     ifsc = data["ifsc_code"].upper().strip()
     if len(ifsc) != 11:
         raise HTTPException(status_code=400, detail="IFSC code must be 11 characters")
+    
+    # IFSC format: First 4 chars = Bank code (letters), 5th char = 0, Last 6 = Branch code
+    import re
+    ifsc_pattern = r'^[A-Z]{4}0[A-Z0-9]{6}$'
+    if not re.match(ifsc_pattern, ifsc):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid IFSC format. Must be: 4 letters + 0 + 6 alphanumeric (e.g., SBIN0001234)"
+        )
     
     # Validate account number (8-18 digits)
     account_number = data["account_number"].strip()
