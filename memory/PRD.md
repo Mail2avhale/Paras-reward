@@ -45,9 +45,47 @@ Build a PRC (point-based reward currency) system web application where users can
 - Financial reporting
 - PRC analytics
 
-## What's Been Implemented (Latest: Dec 2025)
+## What's Been Implemented (Latest: Feb 2026)
 
-### Recently Completed (Dec 2025 - Current Session)
+### Recently Completed (Feb 14, 2026 - Current Session)
+
+- [x] **Admin Subscription Filtering & Sorting (P0)**
+  - **Feature:** Admins can now filter subscription list by multiple criteria
+  - **Time Period Filter:** Today, This Week, This Month, All Time
+  - **Plan Filter:** All Plans, Startup, Growth, Elite
+  - **Duration Filter:** All, Monthly, Quarterly, 6 Months, Yearly
+  - **Active Filters Summary:** Shows selected filters as colored pills
+  - **Clear Filters:** One-click reset of all filters
+  - **Filter Button Styling:** Purple (time), Blue (plan), Emerald (duration)
+  - **Backend API:** Updated `/api/admin/vip-payments` with `time_filter`, `plan`, `duration` params
+  - **Files:**
+    - Backend: `/app/backend/routes/admin_vip.py` (Lines 124-188)
+    - Frontend: `/app/frontend/src/pages/AdminSubscriptionManagement.js` (Lines 36-52, 244-355)
+  - **Testing:** 100% - 18 backend tests passed, All frontend UI tests verified
+  - **Status:** COMPLETED ✅
+
+- [x] **Admin Subscription Edit/Delete/Correct (P0)**
+  - **Feature:** Admins can edit, delete, or correct user subscriptions if mistakes were made
+  - **Edit Modal:**
+    - User info header showing name, email, avatar, current plan
+    - Plan dropdown (Startup/Growth/Elite)
+    - Duration dropdown (Monthly/Quarterly/Half Yearly/Yearly)
+    - Amount input field
+    - Subscription expiry date picker
+    - Warning notice about immediate effect
+  - **Backend Updates:**
+    - PUT endpoint updates both vip_payments and users collections
+    - Logs admin corrections to activity_logs
+    - Sends notification to user about subscription update
+    - Uses retry mechanism for database operations
+  - **Delete Button:** With confirmation dialog
+  - **Files:**
+    - Backend: `/app/backend/routes/admin_vip.py` (Lines 536-615 - PUT endpoint)
+    - Frontend: `/app/frontend/src/pages/AdminSubscriptionManagement.js` (Lines 679-765 - EditSubscriptionModal)
+  - **Testing:** 100% - 14 backend tests passed, All frontend modal tests verified
+  - **Status:** COMPLETED ✅
+
+### Previously Completed (Dec 2025 - Session 4)
 
 - [x] **MongoDB Timeout Fix - Subscription Approval (P0 CRITICAL)**
   - **Issue:** Admin subscription approval was failing with `ServerSelectionTimeoutError`
