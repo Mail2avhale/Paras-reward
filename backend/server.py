@@ -15214,9 +15214,9 @@ async def get_user_orders(user_id: str):
 async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, request_type: str = "all"):
     """
     Get all redemption requests for a user with pagination.
-    Includes: orders, bill_payments, gift_vouchers, recharges
+    Includes: orders, bill_payments, gift_vouchers, bank_redeem
     
-    request_type: all, orders, bill_payment, gift_voucher
+    request_type: all, orders, bill_payment, gift_voucher, bank_redeem
     """
     try:
         all_requests = []
