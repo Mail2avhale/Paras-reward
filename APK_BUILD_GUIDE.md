@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://mining-progress.preview.emergentagent.com",
+    "url": "https://mining-fixes.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

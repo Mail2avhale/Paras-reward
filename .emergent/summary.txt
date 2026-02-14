@@ -1,80 +1,110 @@
 <analysis>**original_problem_statement:**
-The user's initial high-level goal was to introduce a DIRECTOR 365 subscription plan. The session addressed multiple user-prioritized UI/UX improvements, bug fixes, and feature enhancements.
+The user's initial goal was to introduce a DIRECTOR 365 subscription plan. The session focused on multiple UI/UX improvements, bug fixes, and feature enhancements.
 
-The current list of requests from this session included:
-1.  Implementing a service-wise breakdown in the P&L report and translating it to English.
-2.  Including user INR payouts (e.g., for bill payments) as expenses in the P&L report.
-3.  Fixing a critical UI bug on the KYC page where both Approve/Reject buttons would get stuck.
-4.  Adding a feature to the registration form to validate a referral code in real-time and display the referrer's name.
-5.  Significantly enhancing the Mining page with multiple advanced animations and a lighter color scheme.
-6.  Fixing the PIN input on the login page to auto-focus on the first digit.
-7.  Investigating and mitigating MongoDB timeout errors on the KYC verification page.
-8.  The latest request is to make the progress bar on the Mining Page reflect the real progress of the mining session.
-
-**PRODUCT REQUIREMENTS (from previous sessions, NOT STARTED):**
-*   Launch a new high-level subscription plan called DIRECTOR 365. This plan is awarded (not purchased) to users who get 365 direct paid referrals within their first year. Benefits include a lifetime free ELITE subscription, DIRECTOR CLUB status, a SPECIAL DIRECTOR BADGE, and HIGH VOLTAGE WITHDRAWAL.
+The most recent requests from the user are to implement three new special features:
+1.  **Bank Account Redeem:** Users should be able to save their bank details (Name, Account Number, IFSC, Bank Name) in their profile and request redemptions to that account. Redemptions should be in fixed denominations (100, 500, 1000, 5000, 10000, 25000) and strictly limited to one request per week.
+2.  **Electricity Bill Helper:** On the electricity bill payment page, the Biller Name field is confusing for users. The agent should provide help or a dropdown of service providers to guide the user.
+3.  **Standardized EMI Payment:** The EMI payment form should be updated to include standard input fields, based on industry best practices.
 
 **User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent **MUST** respond in Marathi only.
 
 **what currently exists?**
-The application is a full-stack platform with a Flask backend and React frontend. In this session, the agent implemented several key updates:
--   **Profit & Loss Page:** The backend P&L API () was updated to include user INR payouts as expenses and provide a service-wise revenue breakdown. The frontend was updated to display this information and was translated from Marathi to English as requested.
--   **Registration Page:** A new real-time referral validation feature has been implemented. It uses a new API endpoint () to check the code and displays the referrer's name upon successful validation or an error message otherwise.
--   **Mining Page:** The page underwent a major visual overhaul. Numerous complex, GPU-intensive animations were added (e.g., Aurora background, Orbiting Coins, Confetti), and the color scheme was changed from dark to a lighter, more pleasant theme based on user feedback.
--   **KYC Verification Page:** A recurring UI bug that caused both approve and reject buttons to enter a loading state simultaneously has been fixed by implementing a more specific component state that tracks the action type ( or ). To mitigate database timeouts, a new index on  was added to the  collection.
--   **Login/Registration UI:** The PIN input component now correctly auto-focuses on the first input field when rendered.
+The application is a full-stack platform with a Flask backend and React frontend.
+-   **Mining Page:** The page has been completely redesigned with a premium dark theme and a functional progress bar that reflects the real-time progress of the user's mining session. Several bugs related to negative earnings display and the page not refreshing after collecting rewards have been addressed, though they have been reported as recurring.
+-   **EMI Processing Fees:** A new dynamic fee structure for EMI payments has been implemented on both the backend and frontend. Requests up to ₹499 incur a 50% processing fee, while requests above ₹499 have a flat ₹10 fee.
+-   **Other features** from previous sessions include a P&L report, real-time referral validation, and various UI bug fixes.
 
 **Last working item**:
--   **Last item agent was working:** The user requested to make the progress bar on the Mining Page show the *real* progress of the current mining session, rather than just being a decorative animation.
+-   **Last item agent was working:** The agent had just received a request for three new features (Bank Account Redeem, Electricity Bill Helper, Standardized EMI Payment) and was beginning to explore the codebase to formulate a plan.
 -   **Status:** NOT STARTED
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. This will involve modifying  to calculate the progress percentage based on the session's start and end times and updating the progress bar component. The test should verify that the progress bar width accurately reflects the elapsed time.
+-   **Agent Testing Done:** N/A
+-   **Which testing method agent to use?** both. The implementation will involve backend API changes (for saving bank details, handling withdrawal requests) and significant frontend changes (new profile section, redeem page, updated bill pay forms). The testing agent should be used after implementation to verify the end-to-end flows.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Mining Page Progress Bar to Show Real Progress.**
-    -   **Description:** The progress bar on the mining page is currently decorative. It needs to be updated to reflect the actual time elapsed in the user's current mining session.
-    -   **Status:** NOT STARTED
--   **Issue 2 (P1): KYC Approval UI Bug Verification.**
-    -   **Description:** The agent implemented a fix for the approve/reject buttons getting stuck. However, this has been a recurring issue, and the latest fix has not been visually confirmed under real conditions (i.e., with pending KYC documents).
-    -   **Status:** USER VERIFICATION PENDING
--   **Issue 3 (P2): Frontend Performance on Mining Page.**
-    -   **Description:** The addition of many complex animations has likely introduced performance issues, as evidenced by a browser crash and pod restart during a screenshot attempt. The page may be resource-heavy and needs optimization.
-    -   **Status:** NOT STARTED
--   **Issue 4 (P3): Redis Caching Setup.**
-    -   **Description:** An attempt to implement Redis caching failed due to free-tier command limits. The application has reverted to a less scalable in-memory cache, which poses a performance risk.
-    -   **Status:** BLOCKED (on Upstash free-tier limits).
--   **Issue 5 (P4): Intermittent MongoDB Timeout Errors.**
-    -   **Description:** A recurring issue from previous sessions. While adding an index for the KYC page is a good mitigation, the root cause is not definitively resolved and remains a stability risk across the application.
+-   **Issue 1 (P0): Recurring Bugs on Mining Page**
+-   **Issue 2 (P1): KYC Approval UI Bug Verification**
+-   **Issue 3 (P2): Frontend Performance on Mining Page**
+-   **Issue 4 (P3): Intermittent MongoDB Timeout Errors**
+-   **Issue 5 (P4): Redis Caching Setup**
+
+**Issues Detail:**
+-   **Issue 1: Recurring Bugs on Mining Page**
+    -   **Description:** The user has repeatedly reported two issues on the Mining page:
+        1.  Session Earnings showing a negative value or a - sign.
+        2.  After clicking Collect Rewards, the page does not update correctly (progress stays at 0%, earnings counter doesn't reset properly).
+    -   **Attempted fixes:** The agent has implemented several fixes in , including ensuring  for the earnings counter, forcing a data refetch () after collection, and correcting state dependencies. Despite these fixes and successful verification by the agent via screenshots, the user reports the issues persist after deployment.
+    -   **Next debug checklist:**
+        1.  Thoroughly review the user's latest video () to understand the exact sequence of events.
+        2.  In , add extensive  statements inside the  hooks for the timer and the  function to trace the state of , , and  at every step.
+        3.  Investigate the  function again. The issue might be a race condition where the state updates from the  call conflict with the 's ongoing animation.
+        4.  Consider resetting all relevant states (, , etc.) *before* the API call in  to give the user immediate visual feedback, and then update with the authoritative server response.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a core user-facing feature and the bugs are causing significant user frustration, undermining confidence in the app's functionality. Fixing it will restore a critical part of the user experience.
     -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
+
+-   **Issue 2: KYC Approval UI Bug Verification**
+    -   **Description:** A fix was implemented for the approve/reject buttons getting stuck on the KYC page, but it has not been visually confirmed by the user under real conditions.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
+
+-   **Issue 3: Frontend Performance on Mining Page**
+    -   **Description:** The previous version of the page was resource-heavy. While the redesign removed many GPU-intensive animations, the performance of the new design has not been formally assessed.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+
+-   **Issue 4: Intermittent MongoDB Timeout Errors**
+    -   **Description:** Recurring issue from previous sessions. An index was added for the KYC page, but the root cause is not resolved and remains a stability risk.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend
+
+-   **Issue 5: Redis Caching Setup**
+    -   **Description:** Attempt to implement Redis failed due to free-tier command limits. The app uses a less scalable in-memory cache.
+    -   **Status:** BLOCKED (on Upstash free-tier limits)
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Backend
 
 **In progress Task List**:
-- None.
+-   None.
 
 **Upcoming and Future Tasks**
 
 **Upcoming Tasks:**
--   **P0: Design and Implement DIRECTOR 365 Subscription Plan:** This remains the highest-priority new feature request from the original problem statement. It should be addressed after the current UI/UX tasks are completed.
+-   **P0: Implement Bank Account Redeem Feature:**
+    -   Create backend endpoints to add/update/view user bank details.
+    -   Create a backend endpoint to handle withdrawal requests, enforcing the weekly limit.
+    -   Create a new frontend section in the user profile for managing bank details.
+    -   Create a new frontend page for redeeming PRC with fixed denominations.
+-   **P1: Implement Electricity Bill Helper:**
+    -   Research common electricity providers in the target region.
+    -   Update the Biller Name input on  to a dropdown or an autocomplete field populated with provider names.
+-   **P2: Standardize EMI Payment Inputs:**
+    -   Research standard fields required for EMI payments (e.g., Loan Account Number, Lender Name).
+    -   Update the EMI payment form in  with these standard fields.
 
 **Future Tasks:**
--   **P1: Add Force PIN Change Feature:** Prompt users who are still using the default PIN () to change it after their first login.
--   **P2: Full Audit of Backend Subscription Pricing:** A full audit is needed to ensure pricing is consistent everywhere in the backend.
+-   **Design and Implement DIRECTOR 365 Subscription Plan:** The original high-priority feature request.
+-   **Add Force PIN Change Feature:** Prompt users with the default PIN to change it.
+-   **Full Audit of Backend Subscription Pricing:** Ensure pricing consistency across the backend.
 
 **Completed work in this session**
--   **P&L Report Enhancement:** Updated backend () and frontend () to add service-wise breakdown, include user payouts as expenses, and translate UI to English.
--   **Real-time Referral Validation:** Created a new endpoint  in  and integrated it into the registration page ().
--   **Mining Page Visual Overhaul:** Implemented a lighter color theme and added multiple advanced animations (, , , etc.) in .
--   **KYC Page Button Bug Fix:** Resolved the stuck buttons issue by refining component state in .
--   **KYC Page Performance Mitigation:** Added a new DB index on  in  to address timeout errors.
--   **PIN Input Focus Fix:** Corrected the auto-focus behavior in  and .
+-   **EMI Processing Fee Logic:** Implemented dynamic fees (50% for amount < ₹499, flat ₹10 otherwise) in  and .
+-   **Mining Page Redesign:** Completely overhauled  with a premium dark theme and cleaner UI, removing the previous heavy animations.
+-   **Mining Page Bug Fixes:** Implemented multiple fixes for the progress bar, negative earnings display, and post-collection refresh issues in .
 
 **Earlier issues found/mentioned but not fixed**
-None.
+The pending issues from the previous fork (Redis caching, general performance concerns) are still outstanding.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Intermittent MongoDB Timeout Errors. This was reported again by the user for the KYC page and was mitigated by adding an index. It remains a potential risk.
+-   **Issue recurrence in previous fork:** Intermittent MongoDB Timeout Errors.
 -   **Recurrence count:** High.
 -   **Status:** IN PROGRESS.
+-   **New Recurrence in this session:** The Negative Earnings / No Refresh bug on the Mining Page. This issue has been reported by the user three times, fixed by the agent twice, but it persists. It is now a high-priority, recurring problem.
 
 **Code Architecture**
 
@@ -83,77 +113,78 @@ None.
 -   **Frontend:** React.js, TailwindCSS, Axios
 -   **Backend:** Python (Flask), Pydantic
 -   **Database:** MongoDB
--   **Caching:**  (currently configured for in-memory caching).
+-   **Caching:**  (in-memory)
 
 **key DB schema**
--   **kyc_documents:** New index added on .
+-   **users:** Contains user information, including  and  flags which determine the login flow (password vs. PIN).
+-   **bill_payment_services_settings:** Stores override settings for service charges, which can differ from the hardcoded defaults in the backend.
 
 **changes in tech stack**
 None.
 
 **All files of reference**
-*   : Heavily modified for animations and colors; needs modification for the next task.
-*   : Modified to fix the button state bug.
-*   : Updated for new P&L expense and revenue logic.
-*   : Updated to reflect new P&L data structure and translation.
-*   : New referral validation endpoint added.
-*   : Modified to implement real-time referral validation.
-*   : Modified to fix PIN input focus.
-*   : New index added for KYC documents.
+-   : File was completely rewritten for a new design and has been the focus of recurring bug fix attempts. It's a critical and sensitive file.
+-   : Modified to include the new EMI fee logic in the  endpoint.
+-   : A new function  was added here.
+-   : Modified to implement the new EMI fee calculation on the client-side.
+-   : Contains the main Flask app setup and includes the routers from the  directory.
 
 **Areas that need refactoring**:
--   **Mining Page Component ():** This file has become excessively large (over 700 lines) due to the inclusion of many animation sub-components. It should be broken down into smaller, separate component files for better maintainability and readability.
--   **Caching Strategy:** The current in-memory cache is not scalable for production. A robust solution like Redis needs to be properly configured.
--   **Route Organization:** Routes in  should be migrated to Flask Blueprints under .
+-   **Mining Page Component ():** Despite a rewrite, this component remains complex, managing state for timers, counters, and API data. It is prone to bugs and could benefit from being broken down into smaller, more manageable custom hooks and components.
+-   **Caching Strategy:** The in-memory cache is not a scalable solution and should be replaced with a robust service like Redis.
+-   **Route Organization:** Routes in  should be migrated to Flask Blueprints under  for better organization.
 
 **key api endpoints**
--   **New Endpoints:**
-    -   : Validates a referral code and returns the referrer's name.
--   **To be Modified:**
-    -   None for the immediate next task, but all service endpoints will eventually need to be reviewed for the fee structure.
+-   : Modified to incorporate the new dynamic EMI processing fee.
+-   : Provides the data for the Mining Page, including session start time and earnings.
+-   : Endpoint to collect mined rewards.
+-   : User login endpoint. Debugging this revealed issues with incorrect database names and user data setup.
 
 **Critical Info for New Agent**
--   The user's immediate priority is to make the Mining Page progress bar functional.
--   The frontend performance of the Mining Page is a significant concern due to the heavy animations added. The agent should be mindful of this and consider optimization.
--   The KYC page has been a persistent source of bugs. The fixes implemented need to be verified.
--   The agent **MUST** communicate with the user in Marathi.
+-   You **MUST** communicate with the user in **Marathi**.
+-   The user's immediate priority is the implementation of the three new features: Bank Account Redeem, Electricity Bill Helper, and Standardized EMI Inputs.
+-   **The Mining Page is highly unstable.** The user has repeatedly reported bugs with the earnings counter and page refresh even after the agent has pushed fixes. Be extremely cautious when modifying . This recurring issue is a top priority to solve permanently.
+-   **Database Name:** The correct database name is , as defined in . The previous agent wasted significant time debugging login issues because they were manually creating users in a different database (). Always let the application's registration flow create users or ensure manual creations are in the correct DB.
 
 **documents and test reports created in this job**
--   
--   
+-    (Updated)
+-    (Created by design agent)
+-   User-provided video 1: 
+-   User-provided video 2: 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Mining page progress bar should show real progress. **(PENDING)**
-2.  **User:** PIN entry should default to the first field, not the middle. **(RESOLVED)**
-3.  **User:** The background colors are too dark, make them lighter and prettier. (Provided video) **(RESOLVED)**
-4.  **User:** KYC verification is causing a lot of problems, please do something suitable. (Provided image of timeout) **(IN PROGRESS - MITIGATED)**
-5.  **User:** The P&L page should be in English only. And user requests (recharge, bill, etc.) which are paid in INR should be expenses. Am I correct? **(RESOLVED)**
-6.  **User:** The problem isn't solved. On the KYC verification page, when I click approve, both approve and reject buttons get stuck at the same time. **(RESOLVED)**
-7.  **User:** What more can you do for the Mining Page animations? (Moving gradient color suggestion) **(CONTEXT)**
-8.  **User:** When a referral code is entered in the registration form, the referrer's name should appear immediately. **(RESOLVED)**
-9.  **User:** User selected option 'd' (all of the above) for new mining page animations. **(RESOLVED)**
-10. **User:** Asking what animations can be added to the live PRC counter. **(CONTEXT)**
+1.  **User:** Requests three new features: 1. Bank Account Redeem (with weekly limits), 2. Electricity Bill Helper (for biller name), 3. Standardized EMI payment inputs. **(PENDING)**
+2.  **Agent:** Confirms successful implementation of the EMI processing fee fix with screenshots. **(RESOLVED)**
+3.  **User:** After deploying, the new EMI processing charges are not applied. Provides a screenshot showing the old flat fee. Asks for testing. **(RESOLVED)**
+4.  **Agent:** Confirms successful implementation of the backend EMI fee logic with curl tests. **(RESOLVED)**
+5.  **User:** Asks for a new condition for EMI Pay processing charges: 50% for requests <= ₹499, and a flat ₹10 for requests > ₹499. **(RESOLVED)**
+6.  **Agent:** Confirms both recurring Mining Page bugs (negative earnings, no refresh after collect) are fixed, providing screenshots as proof. **(RESOLVED by agent, but likely still an issue for user)**
+7.  **User:** Reports the - sign is still showing in earnings and the page doesn't refresh after collecting points. Provides a video. **(IN PROGRESS)**
+8.  **Agent:** Presents the redesigned Mining Page with a premium dark theme and working progress bar. **(RESOLVED)**
+9.  **User:** Is unhappy with the color combination of the Mining Page, reports the progress bar is showing - and earnings are negative. Provides a video. **(RESOLVED by redesign)**
+10. **Agent:** Finishes implementing the real-time progress bar on the Mining page. **(RESOLVED)**
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Frontend Performance:** The Mining page is unstable due to heavy animations, leading to browser/pod crashes. It requires immediate attention and optimization.
-    -   **Caching:** The application is using a non-scalable in-memory cache, which is a performance and scalability risk.
--   **Mocked:** None.
+    -   **Mining Page Functionality:** Core features of this page (earnings counter, post-collection state) are unreliable and have recurring bugs despite multiple fixes. This is a critical user-facing issue.
+-   **Blocked:**
+    -   **Redis Caching:** The setup is blocked by free-tier limitations of the caching provider.
 
 **3rd Party Integrations**
 -   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, for backend changes related to the P&L report. All tests passed.
+-   **Testing agent used after significant changes:** NO. The agent performed a major redesign and multiple bug fixes on the Mining Page and implemented the EMI feature using only self-testing (curl, screenshots). The recurring nature of the bugs suggests this was insufficient.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** The addition of heavy animations on the Mining page has introduced significant frontend instability, causing rendering issues and crashes.
+-   **Known regressions:** The Mining Page functionality is a known regression point. Fixes applied by the agent have not been permanently effective.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
--   **Test User:** A new user can be created through the registration and PIN login flow. A valid referral code exists for the  user.
+-   **Test User:**  / PIN: 
+-   **Note:** New users can be created via the registration flow. A valid referral code exists for the admin user.
 
 **What agent forgot to execute**
--   The agent did not address the frontend performance degradation after adding numerous animations, despite clear evidence of instability (pod crash).
+-   The agent did not use the  for the significant rework of the Mining page, which could have helped identify the recurring bugs in a more robust way.
 -   The original high-priority feature, **DIRECTOR 365 subscription plan**, remains unstarted.
--   The agent did not inform the user about the limitations of the current caching implementation and the failure to set up Redis.</analysis>
+-   The agent has not addressed the pending user verification for the KYC page bug fix from the previous session.</analysis>
