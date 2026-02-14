@@ -40,6 +40,47 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [filterKYC, setFilterKYC] = useState('');
   const [showDeleted, setShowDeleted] = useState(false);
   const [browseSearchTerm, setBrowseSearchTerm] = useState('');
+  
+  // Advanced Search - Auto Suggestions
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  // Debounced search for suggestions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        fetchSearchSuggestions(searchQuery.trim());
+      } else {
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch search suggestions
+  const fetchSearchSuggestions = async (query) => {
+    setSuggestionsLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/admin/users/search-suggestions?q=${encodeURIComponent(query)}&limit=10`);
+      setSearchSuggestions(response.data.suggestions || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSearchSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  // Select suggestion
+  const selectSuggestion = (suggestion) => {
+    setSearchQuery(suggestion.uid);
+    setShowSuggestions(false);
+    handleSearchByUid(suggestion.uid);
+  };
 
   // Fetch user list for browse mode
   const fetchUserList = async () => {
