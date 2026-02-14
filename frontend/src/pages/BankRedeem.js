@@ -77,13 +77,21 @@ const BankRedeem = ({ user }) => {
       setEligibility(eligRes.data);
       setHistory(historyRes.data.requests || []);
       
-      // Pre-fill bank form if details exist
+      // Pre-fill bank form - Account holder name from profile (must match)
+      const profileName = userRes.data?.name?.toUpperCase() || '';
+      
       if (bankRes.data.has_bank_details) {
         setBankForm(prev => ({
           ...prev,
-          account_holder_name: bankRes.data.bank_details.account_holder_name || '',
+          account_holder_name: bankRes.data.bank_details.account_holder_name || profileName,
           ifsc_code: bankRes.data.bank_details.ifsc_code || '',
           bank_name: bankRes.data.bank_details.bank_name || ''
+        }));
+      } else {
+        // Auto-fill account holder name from profile for new users
+        setBankForm(prev => ({
+          ...prev,
+          account_holder_name: profileName
         }));
       }
     } catch (error) {
