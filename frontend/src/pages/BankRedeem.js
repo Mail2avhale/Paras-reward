@@ -76,13 +76,13 @@ const BankRedeem = ({ user }) => {
       setEligibility(eligRes.data);
       setHistory(historyRes.data.requests || []);
       
-      // Pre-fill bank form - Account holder name from profile (must match)
+      // Pre-fill bank form - Account holder name ALWAYS from profile (must match)
       const profileName = userRes.data?.name?.toUpperCase() || '';
       
       if (bankRes.data.has_bank_details) {
         setBankForm(prev => ({
           ...prev,
-          account_holder_name: bankRes.data.bank_details.account_holder_name || profileName,
+          account_holder_name: profileName, // Always use profile name
           ifsc_code: bankRes.data.bank_details.ifsc_code || '',
           bank_name: bankRes.data.bank_details.bank_name || ''
         }));
