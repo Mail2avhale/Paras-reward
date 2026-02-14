@@ -359,8 +359,9 @@ const AdminProfitLoss = ({ user }) => {
                   {key === 'bill_payment_payouts' ? '📄 Bill Payment Payouts (INR)' :
                    key === 'gift_voucher_payouts' ? '🎁 Gift Voucher Payouts (INR)' :
                    key === 'withdrawal_payouts' ? '💸 Withdrawal Payouts (INR)' :
+                   key === 'bank_withdrawal_payouts' ? '🏦 Bank Withdrawal Payouts (INR)' :
                    key === 'luxury_claim_payouts' ? '✨ Luxury Claim Payouts (INR)' :
-                   key === 'payment_gateway_fees' ? '🏦 Payment Gateway Fees' :
+                   key === 'payment_gateway_fees' ? '🏧 Payment Gateway Fees' :
                    key === 'server_hosting' ? '🖥️ Server Hosting' :
                    key === 'sms_email_services' ? '📧 SMS/Email Services' :
                    key === 'marketing' ? '📢 Marketing' :
