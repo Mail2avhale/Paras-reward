@@ -245,7 +245,7 @@ const TapGameAdvanced = ({ user }) => {
 
   const handleTap = useCallback((e) => {
     if (remainingTaps <= 0) {
-      toast.error(globalT('dailyLimitReached'));
+      smartToast.error(globalT('dailyLimitReached'));
       return;
     }
 
