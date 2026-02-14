@@ -695,7 +695,7 @@ const BankRedeem = ({ user }) => {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">2</span>
-                  <span>Select withdrawal amount</span>
+                  <span>Select redeem amount</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">3</span>
