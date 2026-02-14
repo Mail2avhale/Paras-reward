@@ -232,7 +232,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
 
 @router.post("/vip-payment/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, request: Request):
-    """Approve VIP payment and activate membership"""
+    """Approve VIP payment and activate membership with retry logic"""
     try:
         # Handle empty body
         try:
@@ -245,7 +245,10 @@ async def approve_vip_payment(payment_id: str, request: Request):
         correct_plan = data.get("correct_plan")
         correct_duration = data.get("correct_duration")
         
-        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        # Wrap database operations with retry logic
+        payment = await db_operation_with_retry(
+            lambda: db.vip_payments.find_one({"payment_id": payment_id})
+        )
         if not payment:
             raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
         
@@ -268,7 +271,9 @@ async def approve_vip_payment(payment_id: str, request: Request):
         now = datetime.now(timezone.utc)
         duration_days = {"monthly": 30, "quarterly": 90, "half_yearly": 180, "yearly": 365}.get(plan_type, 30)
         
-        user = await db.users.find_one({"uid": user_id})
+        user = await db_operation_with_retry(
+            lambda: db.users.find_one({"uid": user_id})
+        )
         
         start_date = now
         if user:
@@ -287,61 +292,68 @@ async def approve_vip_payment(payment_id: str, request: Request):
                     start_date = now
         
         new_expiry = (start_date + timedelta(days=duration_days)).isoformat()
-        # Note: subscription_plan is already set above using correct_plan or original_plan
         
-        await db.users.update_one(
-            {"uid": user_id},
-            {"$set": {
-                "membership_type": "vip",
-                "subscription_plan": subscription_plan,
-                "subscription_expiry": new_expiry,
-                "vip_expiry": new_expiry,
-                "vip_activated_at": now.isoformat(),
-                "last_subscription_renewed": now.isoformat()
-            }}
+        await db_operation_with_retry(
+            lambda: db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "membership_type": "vip",
+                    "subscription_plan": subscription_plan,
+                    "subscription_expiry": new_expiry,
+                    "vip_expiry": new_expiry,
+                    "vip_activated_at": now.isoformat(),
+                    "last_subscription_renewed": now.isoformat()
+                }}
+            )
         )
         
         txn_number = f"SUB{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {"$set": {
-                "status": "approved",
-                "txn_number": txn_number,
-                "approved_at": now.isoformat(),
-                "approved_by": admin_id,
-                "admin_notes": notes,
-                "subscription_extended": start_date != now,
-                "new_expiry": new_expiry,
+        await db_operation_with_retry(
+            lambda: db.vip_payments.update_one(
+                {"payment_id": payment_id},
+                {"$set": {
+                    "status": "approved",
+                    "txn_number": txn_number,
+                    "approved_at": now.isoformat(),
+                    "approved_by": admin_id,
+                    "admin_notes": notes,
+                    "subscription_extended": start_date != now,
+                    "new_expiry": new_expiry,
+                    "plan_corrected": plan_corrected,
+                    "original_plan_claimed": original_plan,
+                    "original_duration_claimed": original_duration,
+                    "actual_plan_approved": subscription_plan,
+                    "actual_duration_approved": plan_type
+                }}
+            )
+        )
+        
+        await db_operation_with_retry(
+            lambda: db.company_wallets.update_one(
+                {"wallet_type": "subscription"},
+                {"$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
+                 "$set": {"last_updated": now.isoformat()}},
+                upsert=True
+            )
+        )
+        
+        await db_operation_with_retry(
+            lambda: db.activity_logs.insert_one({
+                "log_id": str(uuid.uuid4()),
+                "action": "vip_payment_approved",
+                "user_id": user_id,
+                "admin_id": admin_id,
+                "payment_id": payment_id,
+                "amount": payment.get("amount"),
+                "plan_type": plan_type,
+                "subscription_plan": subscription_plan,
                 "plan_corrected": plan_corrected,
-                "original_plan_claimed": original_plan,
-                "original_duration_claimed": original_duration,
-                "actual_plan_approved": subscription_plan,
-                "actual_duration_approved": plan_type
-            }}
+                "extended": start_date != now,
+                "new_expiry": new_expiry,
+                "timestamp": now.isoformat()
+            })
         )
-        
-        await db.company_wallets.update_one(
-            {"wallet_type": "subscription"},
-            {"$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
-             "$set": {"last_updated": now.isoformat()}},
-            upsert=True
-        )
-        
-        await db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_approved",
-            "user_id": user_id,
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "amount": payment.get("amount"),
-            "plan_type": plan_type,
-            "subscription_plan": subscription_plan,
-            "plan_corrected": plan_corrected,
-            "extended": start_date != now,
-            "new_expiry": new_expiry,
-            "timestamp": now.isoformat()
-        })
         
         if check_and_grant_referral_reward:
             try:
@@ -376,7 +388,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
         return {"success": True, "message": message, "new_expiry": new_expiry}
     except HTTPException:
         raise
+    except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
+        logging.error(f"Database timeout during subscription approval: {str(e)}")
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
     except Exception as e:
+        logging.error(f"Error in approve_vip_payment: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
