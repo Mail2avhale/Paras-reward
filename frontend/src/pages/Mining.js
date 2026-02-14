@@ -541,7 +541,7 @@ const DailyRewards = ({ user }) => {
 
   const collectRewards = async () => {
     if (sessionPRC < 0.01) {
-      toast.error('Not enough PRC to collect');
+      smartToast.error('Not enough PRC to collect');
       return;
     }
     
