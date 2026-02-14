@@ -556,6 +556,95 @@ const AdminSubscriptionManagement = () => {
       </div>
       )}
 
+      {/* Rejected Subscriptions Section */}
+      {activeTab === 'rejected' && (
+      <div className="bg-gray-900 rounded-xl border border-gray-800">
+        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <XCircle className="w-5 h-5 text-red-500" />
+            <h2 className="text-lg font-semibold text-white">
+              Rejected Subscriptions
+            </h2>
+            {rejectedTotal > 0 && (
+              <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                {rejectedTotal}
+              </span>
+            )}
+          </div>
+          
+          {/* Search */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Search rejections..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-gray-800 border-gray-700 text-white text-sm h-9"
+            />
+          </div>
+        </div>
+
+        {/* Rejected List */}
+        <div className="divide-y divide-gray-800">
+          {rejectedPayments.length === 0 ? (
+            <div className="p-8 text-center">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+              <p className="text-gray-400">No rejected subscriptions</p>
+            </div>
+          ) : (
+            rejectedPayments
+              .filter(p => 
+                !searchQuery || 
+                p.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.utr_number?.includes(searchQuery)
+              )
+              .map((payment) => (
+                <RejectedRow
+                  key={payment.payment_id}
+                  payment={payment}
+                  onView={() => setViewModal({ show: true, payment })}
+                  onDelete={() => handleDelete(payment.payment_id)}
+                  processing={processing === payment.payment_id}
+                />
+              ))
+          )}
+        </div>
+        
+        {/* Rejected Pagination */}
+        {rejectedTotal > ITEMS_PER_PAGE && (
+          <div className="p-4 border-t border-gray-800 flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Showing {((rejectedPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(rejectedPage * ITEMS_PER_PAGE, rejectedTotal)} of {rejectedTotal}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setRejectedPage(p => Math.max(1, p - 1))}
+                disabled={rejectedPage === 1}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1.5 bg-gray-800 rounded text-white text-sm">
+                {rejectedPage} / {Math.ceil(rejectedTotal / ITEMS_PER_PAGE)}
+              </span>
+              <Button
+                onClick={() => setRejectedPage(p => p + 1)}
+                disabled={rejectedPage >= Math.ceil(rejectedTotal / ITEMS_PER_PAGE)}
+                variant="outline"
+                size="sm"
+                className="border-gray-700 text-gray-300"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
       {/* Quick Stats Footer */}
       <div className="mt-6 grid grid-cols-3 gap-4">
         <QuickStat 
