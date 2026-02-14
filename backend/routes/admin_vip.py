@@ -398,13 +398,15 @@ async def approve_vip_payment(payment_id: str, request: Request):
 
 @router.post("/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
-    """Reject VIP payment"""
+    """Reject VIP payment with retry logic"""
     try:
         data = await request.json()
         admin_id = data.get("admin_id")
         reason = data.get("reason", "Payment rejected by admin")
         
-        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        payment = await db_operation_with_retry(
+            lambda: db.vip_payments.find_one({"payment_id": payment_id})
+        )
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
         
@@ -414,25 +416,29 @@ async def reject_vip_payment(payment_id: str, request: Request):
         now = datetime.now(timezone.utc)
         user_id = payment.get("user_id")
         
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {"$set": {
-                "status": "rejected",
-                "rejected_at": now.isoformat(),
-                "rejected_by": admin_id,
-                "rejection_reason": reason
-            }}
+        await db_operation_with_retry(
+            lambda: db.vip_payments.update_one(
+                {"payment_id": payment_id},
+                {"$set": {
+                    "status": "rejected",
+                    "rejected_at": now.isoformat(),
+                    "rejected_by": admin_id,
+                    "rejection_reason": reason
+                }}
+            )
         )
         
-        await db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_rejected",
-            "user_id": user_id,
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "reason": reason,
-            "timestamp": now.isoformat()
-        })
+        await db_operation_with_retry(
+            lambda: db.activity_logs.insert_one({
+                "log_id": str(uuid.uuid4()),
+                "action": "vip_payment_rejected",
+                "user_id": user_id,
+                "admin_id": admin_id,
+                "payment_id": payment_id,
+                "reason": reason,
+                "timestamp": now.isoformat()
+            })
+        )
         
         # Send notification to user about rejection
         if user_id:
@@ -455,7 +461,11 @@ async def reject_vip_payment(payment_id: str, request: Request):
         return {"success": True, "message": "Payment rejected"}
     except HTTPException:
         raise
+    except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
+        logging.error(f"Database timeout during subscription rejection: {str(e)}")
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
     except Exception as e:
+        logging.error(f"Error in reject_vip_payment: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
