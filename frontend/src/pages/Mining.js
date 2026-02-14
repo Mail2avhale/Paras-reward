@@ -529,10 +529,10 @@ const DailyRewards = ({ user }) => {
     } catch (error) {
       const detail = error.response?.data?.detail || 'Failed to start session';
       if (detail.includes('already active')) {
-        toast.info('Session already active!');
+        smartToast.info('Session already active!');
         fetchUserData();
       } else {
-        toast.error(detail);
+        smartToast.error(detail);
       }
     } finally {
       setIsStarting(false);
