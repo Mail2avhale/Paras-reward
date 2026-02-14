@@ -48,8 +48,8 @@ def get_processing_fee(amount_inr: int) -> int:
     else:
         return 10  # Flat ₹10
 
-# Admin charge percentage (removed - only processing fee now)
-ADMIN_CHARGE_PERCENT = 0
+# Admin charge percentage - 20%
+ADMIN_CHARGE_PERCENT = 20
 
 # Slider allows any amount from 100 to max
 MIN_AMOUNT = 100
@@ -57,12 +57,12 @@ MAX_AMOUNT = 25000
 
 
 def calculate_total_prc(amount_inr: int) -> dict:
-    """Calculate total PRC needed for withdrawal - EMI style fees"""
+    """Calculate total PRC needed for withdrawal - EMI style fees + 20% admin"""
     if amount_inr < MIN_AMOUNT:
         return None
     
     processing_fee = get_processing_fee(amount_inr)
-    admin_charge = 0  # No admin charge now
+    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))  # 20% admin charge
     total_inr = amount_inr + processing_fee + admin_charge
     
     # PRC rate: 10 PRC = 1 INR
