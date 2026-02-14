@@ -288,7 +288,11 @@ async def get_admin_vip_payments(
             await cache.set(cache_key, result, ttl=cache_ttl)
         
         return result
+    except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
+        logging.error(f"Database timeout in vip-payments: {str(e)}")
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please refresh the page.")
     except Exception as e:
+        logging.error(f"Error in vip-payments: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
