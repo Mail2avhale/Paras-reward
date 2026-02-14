@@ -656,15 +656,98 @@ const BillPayments = ({ user, onLogout }) => {
 
                 {currentType?.fields.includes('biller_name') && (
                   <div>
-                    <Label htmlFor="biller" className="text-gray-300 text-sm font-medium mb-2 block">Biller Name *</Label>
-                    <Input
+                    <Label htmlFor="biller" className="text-gray-300 text-sm font-medium mb-2 block">
+                      Electricity Provider *
+                      <span className="text-gray-500 text-xs ml-2">(Select your state electricity board)</span>
+                    </Label>
+                    <select
                       id="biller"
                       value={formData.biller_name}
                       onChange={(e) => setFormData({ ...formData, biller_name: e.target.value })}
-                      placeholder="Enter biller/provider name"
                       required
-                      className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
-                    />
+                      className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      data-testid="electricity-provider-select"
+                    >
+                      <option value="">-- Select Electricity Provider --</option>
+                      <optgroup label="Northern India">
+                        <option value="UPPCL - Uttar Pradesh">UPPCL - Uttar Pradesh Power Corporation Ltd</option>
+                        <option value="DHBVN - Haryana">DHBVN - Dakshin Haryana Bijli Vitran Nigam</option>
+                        <option value="UHBVN - Haryana">UHBVN - Uttar Haryana Bijli Vitran Nigam</option>
+                        <option value="PSPCL - Punjab">PSPCL - Punjab State Power Corporation Ltd</option>
+                        <option value="JVVNL - Rajasthan">JVVNL - Jaipur Vidyut Vitran Nigam Ltd</option>
+                        <option value="AVVNL - Rajasthan">AVVNL - Ajmer Vidyut Vitran Nigam Ltd</option>
+                        <option value="JdVVNL - Rajasthan">JdVVNL - Jodhpur Vidyut Vitran Nigam Ltd</option>
+                        <option value="HPSEBL - Himachal Pradesh">HPSEBL - Himachal Pradesh State Electricity Board</option>
+                        <option value="JKPDD - Jammu & Kashmir">JKPDD - Jammu & Kashmir Power Development Dept</option>
+                        <option value="BSES Delhi - Rajdhani">BSES Rajdhani Power Ltd - Delhi</option>
+                        <option value="BSES Delhi - Yamuna">BSES Yamuna Power Ltd - Delhi</option>
+                        <option value="NDPL - Tata Power Delhi">Tata Power Delhi Distribution Ltd (NDPL)</option>
+                        <option value="NDMC - Delhi">New Delhi Municipal Council (NDMC)</option>
+                        <option value="UPCL - Uttarakhand">UPCL - Uttarakhand Power Corporation Ltd</option>
+                      </optgroup>
+                      <optgroup label="Western India">
+                        <option value="MSEDCL - Maharashtra">MSEDCL - Maharashtra State Electricity Distribution Co. Ltd</option>
+                        <option value="BEST - Mumbai">BEST - Brihanmumbai Electric Supply & Transport</option>
+                        <option value="Tata Power - Mumbai">Tata Power Company Ltd - Mumbai</option>
+                        <option value="Adani Electricity - Mumbai">Adani Electricity Mumbai Ltd</option>
+                        <option value="MGVCL - Gujarat">MGVCL - Madhya Gujarat Vij Company Ltd</option>
+                        <option value="PGVCL - Gujarat">PGVCL - Paschim Gujarat Vij Company Ltd</option>
+                        <option value="UGVCL - Gujarat">UGVCL - Uttar Gujarat Vij Company Ltd</option>
+                        <option value="DGVCL - Gujarat">DGVCL - Dakshin Gujarat Vij Company Ltd</option>
+                        <option value="Torrent Power - Ahmedabad">Torrent Power Ltd - Ahmedabad</option>
+                        <option value="Torrent Power - Surat">Torrent Power Ltd - Surat</option>
+                        <option value="MPMKVVCL - Madhya Pradesh">MPMKVVCL - MP Madhya Kshetra Vidyut Vitaran Co. Ltd</option>
+                        <option value="MPPKVVCL - Madhya Pradesh">MPPKVVCL - MP Paschim Kshetra Vidyut Vitaran Co. Ltd</option>
+                        <option value="MPPOKVVCL - Madhya Pradesh">MPPOKVVCL - MP Poorv Kshetra Vidyut Vitaran Co. Ltd</option>
+                        <option value="CSPDCL - Chhattisgarh">CSPDCL - Chhattisgarh State Power Distribution Co. Ltd</option>
+                        <option value="Goa Electricity - Goa">Goa Electricity Department</option>
+                      </optgroup>
+                      <optgroup label="Southern India">
+                        <option value="TANGEDCO - Tamil Nadu">TANGEDCO - Tamil Nadu Generation & Distribution Corporation</option>
+                        <option value="BESCOM - Karnataka">BESCOM - Bangalore Electricity Supply Company Ltd</option>
+                        <option value="MESCOM - Karnataka">MESCOM - Mangalore Electricity Supply Company Ltd</option>
+                        <option value="HESCOM - Karnataka">HESCOM - Hubli Electricity Supply Company Ltd</option>
+                        <option value="GESCOM - Karnataka">GESCOM - Gulbarga Electricity Supply Company Ltd</option>
+                        <option value="CESC - Karnataka">CESC - Chamundeshwari Electricity Supply Corp Ltd</option>
+                        <option value="KSEB - Kerala">KSEB - Kerala State Electricity Board Ltd</option>
+                        <option value="APSPDCL - Andhra Pradesh">APSPDCL - AP Southern Power Distribution Co. Ltd</option>
+                        <option value="APEPDCL - Andhra Pradesh">APEPDCL - AP Eastern Power Distribution Co. Ltd</option>
+                        <option value="TSSPDCL - Telangana">TSSPDCL - Telangana Southern Power Distribution Co. Ltd</option>
+                        <option value="TSNPDCL - Telangana">TSNPDCL - Telangana Northern Power Distribution Co. Ltd</option>
+                        <option value="Electricity Dept - Puducherry">Electricity Department - Puducherry</option>
+                      </optgroup>
+                      <optgroup label="Eastern India">
+                        <option value="WBSEDCL - West Bengal">WBSEDCL - West Bengal State Electricity Distribution Co. Ltd</option>
+                        <option value="CESC - Kolkata">CESC Ltd - Kolkata</option>
+                        <option value="BSPHCL - Bihar">BSPHCL - Bihar State Power Holding Company Ltd</option>
+                        <option value="NBPDCL - Bihar">NBPDCL - North Bihar Power Distribution Co. Ltd</option>
+                        <option value="SBPDCL - Bihar">SBPDCL - South Bihar Power Distribution Co. Ltd</option>
+                        <option value="JBVNL - Jharkhand">JBVNL - Jharkhand Bijli Vitran Nigam Ltd</option>
+                        <option value="OSEB - Odisha">TPCODL/TPWODL/TPSODL/TPNODL - Odisha Discoms (Tata Power)</option>
+                        <option value="APDCL - Assam">APDCL - Assam Power Distribution Company Ltd</option>
+                        <option value="TSECL - Tripura">TSECL - Tripura State Electricity Corporation Ltd</option>
+                        <option value="MePDCL - Meghalaya">MePDCL - Meghalaya Power Distribution Corporation Ltd</option>
+                        <option value="MSPCL - Manipur">MSPCL - Manipur State Power Company Ltd</option>
+                        <option value="DoP - Nagaland">Department of Power - Nagaland</option>
+                        <option value="DoP - Mizoram">Power & Electricity Department - Mizoram</option>
+                        <option value="DoP - Arunachal">Department of Power - Arunachal Pradesh</option>
+                        <option value="DoP - Sikkim">Energy & Power Department - Sikkim</option>
+                      </optgroup>
+                      <optgroup label="Union Territories">
+                        <option value="Electricity Dept - Chandigarh">Electricity Department - Chandigarh</option>
+                        <option value="DNH Power - Dadra & Nagar Haveli">DNH Power Distribution Corporation Ltd</option>
+                        <option value="Electricity Dept - Daman & Diu">Electricity Department - Daman & Diu</option>
+                        <option value="Electricity Dept - Lakshadweep">Electricity Department - Lakshadweep</option>
+                        <option value="Electricity Dept - Andaman">Electricity Department - Andaman & Nicobar</option>
+                        <option value="Electricity Dept - Ladakh">Electricity Department - Ladakh</option>
+                      </optgroup>
+                      <optgroup label="Other">
+                        <option value="Other">Other Provider (Enter in notes)</option>
+                      </optgroup>
+                    </select>
+                    <p className="text-gray-500 text-xs mt-2">
+                      Can't find your provider? Select "Other" and mention in your request notes.
+                    </p>
                   </div>
                 )}
 
