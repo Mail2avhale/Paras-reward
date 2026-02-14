@@ -478,8 +478,13 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
             withdrawal_fee_total = revenue_details["withdrawal_processing_fees"] + revenue_details["withdrawal_admin_charges"]
             insights.append(f"💸 Withdrawals: {revenue_details['withdrawal_count']} completed, Fees: ₹{withdrawal_fee_total:,.2f}")
         
+        # Bank Withdrawal (PRC to Bank) insight - NEW
+        if revenue_details["bank_withdrawal_rev_count"] > 0:
+            bank_fee_total = revenue_details["bank_withdrawal_processing_fees"] + revenue_details["bank_withdrawal_admin_charges"]
+            insights.append(f"🏦 Bank Withdrawals: {revenue_details['bank_withdrawal_rev_count']} approved, Fees: ₹{bank_fee_total:,.2f}, Payout: ₹{expense_details['bank_withdrawal_total_inr']:,.2f}")
+        
         # User payout expenses insights
-        total_user_payouts = expenses["bill_payment_payouts"] + expenses["gift_voucher_payouts"] + expenses["withdrawal_payouts"] + expenses["luxury_claim_payouts"]
+        total_user_payouts = expenses["bill_payment_payouts"] + expenses["gift_voucher_payouts"] + expenses["withdrawal_payouts"] + expenses["luxury_claim_payouts"] + expenses["bank_withdrawal_payouts"]
         if total_user_payouts > 0:
             insights.append(f"💳 Total User Payouts (INR): ₹{total_user_payouts:,.2f}")
         
