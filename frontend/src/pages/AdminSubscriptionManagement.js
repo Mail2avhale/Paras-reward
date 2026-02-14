@@ -1210,6 +1210,89 @@ const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
   );
 };
 
+// Rejected Row Component
+const RejectedRow = ({ payment, onView, onDelete, processing }) => {
+  const planColors = {
+    startup: 'text-blue-400 bg-blue-500/10',
+    growth: 'text-emerald-400 bg-emerald-500/10',
+    elite: 'text-amber-400 bg-amber-500/10'
+  };
+
+  const planName = payment.subscription_plan || payment.plan || payment.current_plan;
+
+  return (
+    <div className="p-4 hover:bg-gray-800/50 transition-colors">
+      <div className="flex items-center justify-between">
+        {/* User Info */}
+        <div className="flex items-center gap-4 flex-1">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center text-white font-bold">
+            {payment.user_name?.charAt(0) || 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium truncate">
+              {payment.user_name || 'Unknown User'}
+            </p>
+            <p className="text-gray-500 text-sm truncate">
+              {payment.user_email || payment.user_id}
+            </p>
+          </div>
+        </div>
+
+        {/* Plan Badge */}
+        <div className="px-3">
+          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[planName] || 'text-gray-400 bg-gray-700'}`}>
+            {planName?.toUpperCase() || 'N/A'}
+          </span>
+        </div>
+
+        {/* Amount */}
+        <div className="px-4 text-right">
+          <p className="text-white font-bold">₹{payment.amount || 0}</p>
+          <p className="text-gray-500 text-xs">{payment.plan_type || payment.duration || 'monthly'}</p>
+        </div>
+
+        {/* Rejection Details */}
+        <div className="px-4 w-40">
+          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-lg">
+            Rejected
+          </span>
+          <p className="text-gray-500 text-xs mt-1 truncate" title={payment.rejection_reason}>
+            {payment.rejection_reason?.substring(0, 20) || 'No reason'}...
+          </p>
+          <p className="text-gray-600 text-xs mt-0.5">
+            {payment.rejected_at ? new Date(payment.rejected_at).toLocaleDateString() : '-'}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            onClick={onView}
+            size="sm"
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700 h-9 px-3"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={onDelete}
+            disabled={processing}
+            size="sm"
+            variant="outline"
+            className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9 px-3"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Quick Stat Component
 const QuickStat = ({ label, value }) => (
   <div className="bg-gray-900/50 rounded-lg border border-gray-800 p-3 text-center">
