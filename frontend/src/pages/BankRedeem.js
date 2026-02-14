@@ -184,8 +184,8 @@ const BankRedeem = ({ user }) => {
   };
 
   const handleRedeem = async () => {
-    if (!selectedAmount) {
-      toast.error('Please select an amount');
+    if (!selectedAmount || selectedAmount < 100) {
+      toast.error('Minimum redeem amount is ₹100');
       return;
     }
     
@@ -194,19 +194,17 @@ const BankRedeem = ({ user }) => {
       return;
     }
     
-    const denom = denominations.find(d => d.amount_inr === selectedAmount);
-    if (!denom) return;
-    
     const currentBalance = userData?.prc_balance || 0;
     const maxAllowedPRC = Math.floor(currentBalance * 0.5); // 50% limit
+    const fees = calculateFees(selectedAmount);
     
-    if (denom.total_prc > maxAllowedPRC) {
+    if (fees.prcRequired > maxAllowedPRC) {
       toast.error(`You can only redeem up to 50% of your balance (${maxAllowedPRC.toLocaleString()} PRC)`);
       return;
     }
     
-    if (currentBalance < denom.total_prc) {
-      toast.error(`Insufficient balance. Need ${denom.total_prc} PRC`);
+    if (currentBalance < fees.prcRequired) {
+      toast.error(`Insufficient balance. Need ${fees.prcRequired.toLocaleString()} PRC`);
       return;
     }
     
@@ -216,8 +214,8 @@ const BankRedeem = ({ user }) => {
         amount_inr: selectedAmount
       });
       
-      toast.success(`Redeem request submitted! ₹${selectedAmount} will be credited to your bank account after approval.`);
-      setSelectedAmount(null);
+      toast.success(`Redeem request submitted! ₹${selectedAmount.toLocaleString()} will be credited to your bank account after approval.`);
+      setSelectedAmount(100);
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to submit redeem request');
