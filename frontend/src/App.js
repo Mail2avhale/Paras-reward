@@ -90,7 +90,7 @@ if (typeof window !== 'undefined') {
   preloadCriticalPages();
 }
 
-const TapGame = lazy(() => import("@/pages/TapGame"));
+const TapGame = lazy(() => import("@/pages/TapGameAdvanced"));
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 const Marketplace = lazy(() => import("@/pages/MarketplaceNew"));
 const Orders = lazy(() => import("@/pages/Orders"));
