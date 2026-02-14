@@ -6849,7 +6849,15 @@ async def get_user_redemption_stats(uid: str):
         if gift_vouchers and gift_vouchers[0].get("total"):
             total_prc_redeemed += gift_vouchers[0]["total"]
         
-        # ========== 4. LOAN PAYMENTS (if any) ==========
+        # ========== 4. BANK REDEEM REQUESTS ==========
+        bank_redeems = await db.bank_withdrawal_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "pending", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+        ]).to_list(1)
+        if bank_redeems and bank_redeems[0].get("total"):
+            total_prc_redeemed += bank_redeems[0]["total"]
+        
+        # ========== 5. LOAN PAYMENTS (if any) ==========
         loan_payments = await db.loan_payments.aggregate([
             {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
             {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
