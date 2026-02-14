@@ -15329,6 +15329,38 @@ async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, re
                     "service_charge": req.get("service_charge_amount", 0)
                 })
         
+        # Get bank redeem requests if needed
+        if request_type in ["all", "bank_redeem"]:
+            bank_requests = await db.bank_withdrawals.find(
+                {"user_id": user_id},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(500)
+            
+            for req in bank_requests:
+                all_requests.append({
+                    "id": req.get("request_id"),
+                    "type": "bank_redeem",
+                    "type_label": "Bank Redeem",
+                    "title": f"₹{req.get('amount_inr', 0)} Bank Transfer",
+                    "description": f"To: {req.get('bank_details', {}).get('bank_name', 'Bank')}",
+                    "amount_prc": req.get("total_prc_deducted", 0),
+                    "amount_inr": req.get("amount_inr", 0),
+                    "status": req.get("status", "pending"),
+                    "created_at": req.get("created_at"),
+                    "processed_at": req.get("processed_at") or req.get("approved_at"),
+                    "icon": "building",
+                    "details": {
+                        "bank_name": req.get("bank_details", {}).get("bank_name"),
+                        "account_masked": req.get("bank_details", {}).get("account_masked"),
+                        "ifsc_code": req.get("bank_details", {}).get("ifsc_code"),
+                        "processing_fee": req.get("processing_fee_inr", 0),
+                        "admin_charge": req.get("admin_charge_inr", 0),
+                        "transaction_ref": req.get("transaction_ref")
+                    },
+                    "rejection_reason": req.get("rejection_reason"),
+                    "service_charge": req.get("processing_fee_inr", 0) + req.get("admin_charge_inr", 0)
+                })
+        
         # Sort all requests by created_at (newest first)
         all_requests.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         
