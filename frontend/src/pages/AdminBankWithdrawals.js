@@ -53,7 +53,7 @@ const AdminBankWithdrawals = ({ user }) => {
         admin_id: user.uid,
         transaction_ref: transactionRef
       });
-      toast.success('Withdrawal approved successfully!');
+      toast.success('Redeem approved successfully!');
       setTransactionRef('');
       setExpandedRequest(null);
       fetchRequests();
@@ -76,7 +76,7 @@ const AdminBankWithdrawals = ({ user }) => {
         admin_id: user.uid,
         reason: rejectReason
       });
-      toast.success('Withdrawal rejected & PRC refunded');
+      toast.success('Redeem rejected & PRC refunded');
       setRejectReason('');
       setExpandedRequest(null);
       fetchRequests();
