@@ -117,7 +117,63 @@ async def get_admin_users(
     }
 
 
-@router.get("/user-stats")
+@router.get("/users/search-suggestions")
+async def get_search_suggestions(q: str = "", limit: int = 10):
+    """
+    Advanced search suggestions - returns matching users as user types
+    Searches by: name, email, phone, uid
+    """
+    if not q or len(q) < 2:
+        return {"suggestions": []}
+    
+    # Build search query - search across multiple fields
+    search_query = {
+        "$or": [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"email": {"$regex": q, "$options": "i"}},
+            {"phone": {"$regex": q, "$options": "i"}},
+            {"mobile": {"$regex": q, "$options": "i"}},
+            {"uid": {"$regex": q, "$options": "i"}}
+        ]
+    }
+    
+    # Fetch matching users with limited fields
+    users = await db.users.find(
+        search_query,
+        {
+            "_id": 0,
+            "uid": 1,
+            "name": 1,
+            "email": 1,
+            "phone": 1,
+            "mobile": 1,
+            "subscription_plan": 1,
+            "kyc_status": 1,
+            "prc_balance": 1
+        }
+    ).limit(limit).to_list(limit)
+    
+    # Format suggestions
+    suggestions = []
+    for user in users:
+        phone = user.get("phone") or user.get("mobile") or ""
+        suggestions.append({
+            "uid": user.get("uid"),
+            "name": user.get("name", "Unknown"),
+            "email": user.get("email", ""),
+            "phone": phone,
+            "subscription_plan": user.get("subscription_plan", "free"),
+            "kyc_status": user.get("kyc_status", "pending"),
+            "prc_balance": user.get("prc_balance", 0),
+            "display_text": f"{user.get('name', 'Unknown')} ({user.get('uid', '')})",
+            "subtitle": f"{user.get('email', '')} • {phone}"
+        })
+    
+    return {
+        "suggestions": suggestions,
+        "query": q,
+        "count": len(suggestions)
+    }
 async def get_admin_user_stats():
     """Get user statistics for admin dashboard"""
     try:
