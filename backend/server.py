@@ -15378,8 +15378,9 @@ async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, re
             "total_orders": len([r for r in all_requests if r["type"] == "order"]),
             "total_bill_payments": len([r for r in all_requests if r["type"] == "bill_payment"]),
             "total_vouchers": len([r for r in all_requests if r["type"] == "gift_voucher"]),
+            "total_bank_redeems": len([r for r in all_requests if r["type"] == "bank_redeem"]),
             "pending_count": len([r for r in all_requests if r["status"] == "pending"]),
-            "completed_count": len([r for r in all_requests if r["status"] in ["completed", "delivered"]]),
+            "completed_count": len([r for r in all_requests if r["status"] in ["completed", "delivered", "approved"]]),
             "total_prc_used": sum(r.get("amount_prc", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"]),
             "total_inr_value": sum(r.get("amount_inr", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"])
         }
