@@ -78,12 +78,13 @@ const AdminLayout = ({ children, user, onLogout }) => {
   useEffect(() => {
     const fetchPendingCounts = async () => {
       try {
-        const [kycRes, subRes, billRes, giftRes, luxuryRes] = await Promise.all([
+        const [kycRes, subRes, billRes, giftRes, luxuryRes, bankRes] = await Promise.all([
           axios.get(`${API}/api/admin/kyc/pending?limit=1`).catch(() => ({ data: { total: 0 } })),
           axios.get(`${API}/api/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
           axios.get(`${API}/api/admin/bill-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
           axios.get(`${API}/api/admin/gift-vouchers?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } }))
+          axios.get(`${API}/api/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/api/admin/bank-redeem/pending-count`).catch(() => ({ data: { pending_count: 0 } }))
         ]);
         
         setPendingCounts({
@@ -91,7 +92,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
           subscriptions: subRes.data?.total || subRes.data?.payments?.length || 0,
           bills: billRes.data?.total || (Array.isArray(billRes.data) ? billRes.data.length : 0),
           gifts: giftRes.data?.total || (Array.isArray(giftRes.data) ? giftRes.data.length : 0),
-          luxury: luxuryRes.data?.total || (Array.isArray(luxuryRes.data) ? luxuryRes.data.length : 0)
+          luxury: luxuryRes.data?.total || (Array.isArray(luxuryRes.data) ? luxuryRes.data.length : 0),
+          bankWithdrawals: bankRes.data?.pending_count || 0
         });
       } catch (error) {
         console.error('Error fetching pending counts:', error);
