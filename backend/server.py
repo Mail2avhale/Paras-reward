@@ -56,6 +56,7 @@ from routes.admin_withdrawals import router as admin_withdrawals_router, set_db 
 from routes.admin_dashboard import router as admin_dashboard_router, set_db as set_admin_dashboard_db, set_cache as set_admin_dashboard_cache
 from routes.admin_products import router as admin_products_router, set_db as set_admin_products_db
 from routes.admin_misc import router as admin_misc_router, set_db as set_admin_misc_db, set_helpers as set_admin_misc_helpers
+from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_redeem_db, set_cache as set_bank_redeem_cache, set_helpers as set_bank_redeem_helpers
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
