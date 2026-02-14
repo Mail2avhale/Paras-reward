@@ -535,46 +535,100 @@ async def delete_vip_payment_alt(payment_id: str):
 
 @router.put("/vip-payments/{payment_id}")
 async def update_vip_payment(payment_id: str, request: Request):
-    """Update VIP payment/subscription details"""
+    """Update VIP payment/subscription details - Admin correction feature"""
     data = await request.json()
+    admin_id = data.get("admin_id")
     
-    payment = await db.vip_payments.find_one({"payment_id": payment_id})
+    payment = await db_operation_with_retry(
+        lambda: db.vip_payments.find_one({"payment_id": payment_id})
+    )
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
-    # Allowed updates
-    updates = {}
-    if "plan" in data:
-        updates["plan"] = data["plan"]
-    if "duration" in data:
-        updates["duration"] = data["duration"]
+    user_id = payment.get("user_id")
+    
+    # Allowed updates for payment record
+    payment_updates = {}
+    user_updates = {}
+    
+    # Plan update
+    if "plan" in data and data["plan"]:
+        new_plan = data["plan"]
+        payment_updates["subscription_plan"] = new_plan
+        payment_updates["actual_plan_approved"] = new_plan
+        user_updates["subscription_plan"] = new_plan
+    
+    # Duration update
+    if "duration" in data and data["duration"]:
+        new_duration = data["duration"]
+        payment_updates["plan_type"] = new_duration
+        payment_updates["actual_duration_approved"] = new_duration
+    
+    # Amount update
     if "amount" in data:
-        updates["amount"] = data["amount"]
-    if "expires_at" in data:
-        updates["expires_at"] = data["expires_at"]
+        payment_updates["amount"] = data["amount"]
     
-    if updates:
-        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {"$set": updates}
-        )
+    # Expiry date update - this is the key admin correction feature
+    if "expires_at" in data and data["expires_at"]:
+        new_expiry = data["expires_at"]
+        # Ensure ISO format
+        if not new_expiry.endswith('Z') and 'T' not in new_expiry:
+            new_expiry = f"{new_expiry}T23:59:59.000Z"
         
-        # Also update user subscription if plan changed
-        if "plan" in updates or "expires_at" in updates:
-            user_updates = {}
-            if "plan" in updates:
-                user_updates["subscription_plan"] = updates["plan"]
-            if "expires_at" in updates:
-                user_updates["subscription_expires_at"] = updates["expires_at"]
-            
-            if user_updates:
-                await db.users.update_one(
-                    {"uid": payment.get("user_id")},
-                    {"$set": user_updates}
-                )
+        payment_updates["new_expiry"] = new_expiry
+        user_updates["subscription_expiry"] = new_expiry
+        user_updates["vip_expiry"] = new_expiry
     
-    return {"success": True, "message": "Subscription updated"}
+    now = datetime.now(timezone.utc)
+    
+    if payment_updates:
+        payment_updates["updated_at"] = now.isoformat()
+        payment_updates["admin_corrected"] = True
+        payment_updates["corrected_by"] = admin_id
+        payment_updates["corrected_at"] = now.isoformat()
+        
+        await db_operation_with_retry(
+            lambda: db.vip_payments.update_one(
+                {"payment_id": payment_id},
+                {"$set": payment_updates}
+            )
+        )
+    
+    # Update user's subscription details
+    if user_updates and user_id:
+        user_updates["last_subscription_updated"] = now.isoformat()
+        await db_operation_with_retry(
+            lambda: db.users.update_one(
+                {"uid": user_id},
+                {"$set": user_updates}
+            )
+        )
+    
+    # Log the admin correction
+    await db_operation_with_retry(
+        lambda: db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "subscription_corrected",
+            "admin_id": admin_id,
+            "user_id": user_id,
+            "payment_id": payment_id,
+            "changes": {k: v for k, v in data.items() if k != "admin_id"},
+            "timestamp": now.isoformat()
+        })
+    )
+    
+    # Send notification to user about subscription update
+    if user_id:
+        await send_notification(
+            user_id=user_id,
+            title="📝 Subscription Updated",
+            message="Your subscription details have been updated by admin. Please check your subscription status.",
+            notif_type="subscription_updated",
+            icon="📝",
+            action_url="/subscription"
+        )
+    
+    return {"success": True, "message": "Subscription updated successfully"}
 
 
 # ========== SUBSCRIPTION MANAGEMENT ==========
