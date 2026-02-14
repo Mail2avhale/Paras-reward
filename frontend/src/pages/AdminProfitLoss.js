@@ -358,8 +358,8 @@ const AdminProfitLoss = ({ user }) => {
                 <span className="text-sm text-gray-300">
                   {key === 'bill_payment_payouts' ? '📄 Bill Payment Payouts (INR)' :
                    key === 'gift_voucher_payouts' ? '🎁 Gift Voucher Payouts (INR)' :
-                   key === 'withdrawal_payouts' ? '💸 Withdrawal Payouts (INR)' :
-                   key === 'bank_withdrawal_payouts' ? '🏦 Bank Withdrawal Payouts (INR)' :
+                   key === 'withdrawal_payouts' ? '💸 PRC Redeem Payouts (INR)' :
+                   key === 'bank_withdrawal_payouts' ? '🏦 Bank Redeem Payouts (INR)' :
                    key === 'luxury_claim_payouts' ? '✨ Luxury Claim Payouts (INR)' :
                    key === 'payment_gateway_fees' ? '🏧 Payment Gateway Fees' :
                    key === 'server_hosting' ? '🖥️ Server Hosting' :
