@@ -340,7 +340,7 @@ const BankRedeem = ({ user }) => {
                     <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl mb-4">
                       <p className="text-yellow-400 text-sm flex items-center gap-2">
                         <AlertCircle className="h-4 w-4" />
-                        Add your bank details to enable withdrawals
+                        Add your bank details to enable redeem
                       </p>
                     </div>
                   )}
