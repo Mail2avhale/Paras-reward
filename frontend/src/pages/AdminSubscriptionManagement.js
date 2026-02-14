@@ -605,6 +605,7 @@ const AdminSubscriptionManagement = () => {
                   payment={payment}
                   onView={() => setViewModal({ show: true, payment })}
                   onDelete={() => handleDelete(payment.payment_id)}
+                  onReapprove={() => handleApprove(payment.payment_id)}
                   processing={processing === payment.payment_id}
                 />
               ))
