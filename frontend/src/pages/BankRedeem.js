@@ -485,7 +485,7 @@ const BankRedeem = ({ user }) => {
               )}
             </div>
 
-            {/* Withdrawal Amount Selection */}
+            {/* Redeem Amount Selection */}
             {bankDetails && eligibility?.eligible && (
               <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
                 <div className="flex items-center gap-3 mb-5">
@@ -494,7 +494,7 @@ const BankRedeem = ({ user }) => {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Select Amount</h2>
-                    <p className="text-xs text-gray-500">Choose withdrawal amount</p>
+                    <p className="text-xs text-gray-500">Choose redeem amount</p>
                   </div>
                 </div>
 
@@ -549,7 +549,7 @@ const BankRedeem = ({ user }) => {
                       return (
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-400">Withdrawal Amount</span>
+                            <span className="text-gray-400">Redeem Amount</span>
                             <span className="text-white">₹{denom.amount_inr.toLocaleString()} ({denom.amount_prc.toLocaleString()} PRC)</span>
                           </div>
                           <div className="flex justify-between">
@@ -578,14 +578,14 @@ const BankRedeem = ({ user }) => {
                   onClick={handleWithdraw}
                   disabled={!selectedAmount || submitting}
                   className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
-                  data-testid="submit-withdrawal-btn"
+                  data-testid="submit-redeem-btn"
                 >
-                  {submitting ? 'Processing...' : `Withdraw ${selectedAmount ? '₹' + selectedAmount.toLocaleString() : ''}`}
+                  {submitting ? 'Processing...' : `Redeem ${selectedAmount ? '₹' + selectedAmount.toLocaleString() : ''}`}
                 </Button>
               </div>
             )}
 
-            {/* Withdrawal History */}
+            {/* Redeem History */}
             {history.length > 0 && (
               <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
                 <div className="flex items-center gap-3 mb-5">
@@ -593,7 +593,7 @@ const BankRedeem = ({ user }) => {
                     <Clock className="h-5 w-5 text-purple-400" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">Withdrawal History</h2>
+                    <h2 className="text-lg font-bold text-white">Redeem History</h2>
                     <p className="text-xs text-gray-500">Your previous requests</p>
                   </div>
                 </div>
