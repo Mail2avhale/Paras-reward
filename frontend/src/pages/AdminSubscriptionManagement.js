@@ -54,17 +54,32 @@ const AdminSubscriptionManagement = () => {
     return query;
   };
 
+  // Retry helper for API calls
+  const fetchWithRetry = async (url, retries = 2) => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await axios.get(url);
+      } catch (error) {
+        if (i === retries || error.response?.status !== 503) {
+          throw error;
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
       const filterQuery = buildFilterQuery();
       
-      // Fetch data with individual error handling - include rejected
+      // Fetch data with individual error handling and retry - include rejected
       const [statsRes, pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
-        axios.get(`${API}/api/admin/subscription-stats`),
-        axios.get(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
-        axios.get(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
-        axios.get(`${API}/api/admin/vip-payments?status=rejected&page=${rejectedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
+        fetchWithRetry(`${API}/api/admin/subscription-stats`),
+        fetchWithRetry(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        fetchWithRetry(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        fetchWithRetry(`${API}/api/admin/vip-payments?status=rejected&page=${rejectedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
       ]);
       
       // Handle stats - may fail on some deployments
@@ -78,12 +93,16 @@ const AdminSubscriptionManagement = () => {
       if (pendingRes.status === 'fulfilled') {
         setPendingPayments(pendingRes.value.data?.payments || []);
         setPendingTotal(pendingRes.value.data?.total || 0);
+      } else if (pendingRes.reason?.response?.status === 503) {
+        toast.error('Database busy - Please refresh');
       }
       
       // Handle approved payments
       if (approvedRes.status === 'fulfilled') {
         setApprovedPayments(approvedRes.value.data?.payments || []);
         setApprovedTotal(approvedRes.value.data?.total || 0);
+      } else if (approvedRes.reason?.response?.status === 503) {
+        toast.error('Database busy - Please refresh');
       }
       
       // Handle rejected payments
@@ -93,7 +112,7 @@ const AdminSubscriptionManagement = () => {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+      toast.error('Failed to load data - Please refresh');
     } finally {
       setLoading(false);
     }
