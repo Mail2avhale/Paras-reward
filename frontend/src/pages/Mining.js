@@ -460,7 +460,7 @@ const DailyRewards = ({ user }) => {
           if (prev <= 5) {
             setIsMining(false);
             setSessionProgress(100);
-            toast.success('Session complete! Collect your rewards.');
+            smartToast.success('Session complete! Collect your rewards.');
             clearInterval(timerRef.current);
             if (liveCounterRef.current) clearInterval(liveCounterRef.current);
             if (progressRef.current) clearInterval(progressRef.current);
