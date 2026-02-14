@@ -1211,7 +1211,7 @@ const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
 };
 
 // Rejected Row Component
-const RejectedRow = ({ payment, onView, onDelete, processing }) => {
+const RejectedRow = ({ payment, onView, onDelete, onReapprove, processing }) => {
   const planColors = {
     startup: 'text-blue-400 bg-blue-500/10',
     growth: 'text-emerald-400 bg-emerald-500/10',
