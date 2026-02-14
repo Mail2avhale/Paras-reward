@@ -559,9 +559,9 @@ const DailyRewards = ({ user }) => {
       setTimeout(() => setShowConfetti(false), 1000);
       
       if (luxurySaved > 0) {
-        toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved for Luxury Life)`);
+        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved for Luxury Life)`);
       } else {
-        toast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`);
+        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`);
       }
       
       // IMPORTANT: Immediately reset sessionPRC to 0 to avoid negative display
@@ -595,7 +595,7 @@ const DailyRewards = ({ user }) => {
     } catch (error) {
       console.error('Claim error:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to collect rewards';
-      toast.error(errorMsg);
+      smartToast.error(errorMsg);
     } finally {
       setIsCollecting(false);
     }
