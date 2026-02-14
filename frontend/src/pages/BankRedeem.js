@@ -56,17 +56,19 @@ const BankRedeem = ({ user }) => {
     }
     
     fetchAllData();
-  }, [user]);
+  }, [user?.uid, user?.subscription_plan]);
 
   const fetchAllData = async () => {
+    if (!user?.uid) return;
+    
     setLoading(true);
     try {
       const [userRes, bankRes, denomRes, eligRes, historyRes] = await Promise.all([
         axios.get(`${API}/api/auth/user/${user.uid}`),
-        axios.get(`${API}/api/bank-details/${user.uid}`),
+        axios.get(`${API}/api/bank-details/${user.uid}`).catch(() => ({ data: { has_bank_details: false } })),
         axios.get(`${API}/api/bank-redeem/denominations`),
-        axios.get(`${API}/api/bank-redeem/check-eligibility/${user.uid}`),
-        axios.get(`${API}/api/bank-redeem/history/${user.uid}`)
+        axios.get(`${API}/api/bank-redeem/check-eligibility/${user.uid}`).catch(() => ({ data: { eligible: false, reason: 'error' } })),
+        axios.get(`${API}/api/bank-redeem/history/${user.uid}`).catch(() => ({ data: { requests: [] } }))
       ]);
       
       setUserData(userRes.data);
