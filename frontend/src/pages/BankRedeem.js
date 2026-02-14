@@ -575,7 +575,7 @@ const BankRedeem = ({ user }) => {
                 )}
 
                 <Button
-                  onClick={handleWithdraw}
+                  onClick={handleRedeem}
                   disabled={!selectedAmount || submitting}
                   className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
                   data-testid="submit-redeem-btn"
