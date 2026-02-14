@@ -521,7 +521,7 @@ const DailyRewards = ({ user }) => {
         setSessionPRC(0);
         setSessionStartTime(Date.now());
         setSessionProgress(0); // Reset progress to 0
-        toast.success('Session started! Earning PRC...');
+        smartToast.success('Session started! Earning PRC...');
         
         // Refresh user data
         setTimeout(() => fetchUserData(), 500);
