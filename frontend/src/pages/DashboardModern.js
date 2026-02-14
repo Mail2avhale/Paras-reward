@@ -7,7 +7,7 @@ import {
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Gamepad2, User, Zap, Crown, Eye, EyeOff,
   ChevronRight, Sparkles, ShoppingBag, CreditCard, Info,
-  Sun, Moon, Sunrise, Sunset
+  Sun, Moon, Sunrise, Sunset, Banknote, Building2
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
