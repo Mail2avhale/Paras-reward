@@ -354,7 +354,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
       <Toaster 
         position="top-center" 
         richColors 
+        visibleToasts={2}
         toastOptions={{
+          duration: 3000,
           style: {
             marginTop: '40vh',
           },
