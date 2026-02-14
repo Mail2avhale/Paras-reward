@@ -864,11 +864,6 @@ const DashboardModern = ({ user, onLogout }) => {
                 Redeem to Cash
                 <ArrowUpRight className="w-4 h-4" />
               </button>
-              
-              {/* Bottom info */}
-              <p className="text-emerald-200/50 text-[10px] text-center mt-3">
-                Weekly limit: 1 request • Max 50% of balance • Direct to bank
-              </p>
             </div>
           </motion.div>
         </div>
