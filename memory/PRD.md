@@ -22,6 +22,10 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Dark/Light Mode Toggle
 - [ ] Customizable Dashboard (Drag & drop cards)
 - [ ] Global Search functionality
+- [ ] DIRECTOR 365 Subscription Plan (new tier)
+- [ ] Advanced PRC Burning Concepts (for app sustainability)
+- [ ] Force PIN Change Feature (for security)
+- [ ] Full Audit of Backend Subscription Pricing
 
 ## Core Requirements
 
@@ -41,9 +45,29 @@ Build a PRC (point-based reward currency) system web application where users can
 - Financial reporting
 - PRC analytics
 
-## What's Been Implemented (Latest: Feb 2026)
+## What's Been Implemented (Latest: Dec 2025)
 
-### Recently Completed (Feb 14, 2026 - Session 5)
+### Recently Completed (Dec 2025 - Current Session)
+
+- [x] **MongoDB Timeout Fix - Subscription Approval (P0 CRITICAL)**
+  - **Issue:** Admin subscription approval was failing with `ServerSelectionTimeoutError`
+  - **Root Cause:** MongoDB connection settings were too aggressive for local MongoDB
+  - **Solution:**
+    1. Optimized MongoDB connection settings in `server.py`:
+       - Reduced `serverSelectionTimeoutMS` from 120s to 30s for faster failover
+       - Reduced `maxPoolSize` from 100 to 50 for stability
+       - Added `directConnection: true` for local MongoDB
+    2. Added retry mechanism with exponential backoff in `admin_vip.py`:
+       - `db_operation_with_retry()` function for critical DB operations
+       - 3 retries with increasing delays (1s, 2s, 3s)
+       - Handles `ServerSelectionTimeoutError`, `AutoReconnect`, `NetworkTimeout`
+    3. Better error handling returns 503 for temporary DB unavailability
+  - Files modified:
+    - `/app/backend/server.py` (connection options)
+    - `/app/backend/routes/admin_vip.py` (retry logic)
+  - **Status:** FIXED & TESTED ✅
+
+### Completed (Feb 2026 - Session 5)
 
 - [x] **Tap Game Advanced - Combo System & Visual Effects (NEW)**
   - **Combo System:** Fast taps build combo multiplier
