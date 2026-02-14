@@ -867,7 +867,7 @@ const DashboardModern = ({ user, onLogout }) => {
               
               {/* Bottom info */}
               <p className="text-emerald-200/50 text-[10px] text-center mt-3">
-                Weekly limit: 1 request • Directly to your bank account
+                Weekly limit: 1 request • Max 50% of balance • Direct to bank
               </p>
             </div>
           </motion.div>
