@@ -118,7 +118,9 @@ class TestBankDetailsAPI:
             "password": TEST_PIN
         })
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # Try nested user object first, then direct uid
+            return data.get("user", {}).get("uid") or data.get("uid")
         return None
     
     def test_get_bank_details_for_user(self, user_id):
@@ -188,7 +190,9 @@ class TestBankRedeemEligibility:
             "password": TEST_PIN
         })
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # Try nested user object first, then direct uid
+            return data.get("user", {}).get("uid") or data.get("uid")
         return None
     
     def test_eligibility_endpoint_exists(self, user_id):
@@ -242,7 +246,9 @@ class TestBankWithdrawalRequest:
             "password": TEST_PIN
         })
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # Try nested user object first, then direct uid
+            return data.get("user", {}).get("uid") or data.get("uid")
         return None
     
     def test_withdrawal_validates_amount(self, user_id):
@@ -284,7 +290,9 @@ class TestBillPaymentElectricity:
             "password": TEST_PIN
         })
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # Try nested user object first, then direct uid
+            return data.get("user", {}).get("uid") or data.get("uid")
         return None
     
     def test_bill_payment_electricity_with_biller(self, user_id):
@@ -327,7 +335,9 @@ class TestEMIPaymentFormFields:
             "password": TEST_PIN
         })
         if response.status_code == 200:
-            return response.json().get("user", {}).get("uid")
+            data = response.json()
+            # Try nested user object first, then direct uid
+            return data.get("user", {}).get("uid") or data.get("uid")
         return None
     
     def test_emi_payment_standard_fields(self, user_id):
