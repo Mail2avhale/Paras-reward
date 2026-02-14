@@ -610,12 +610,10 @@ const BankRedeem = ({ user }) => {
                             <span className="text-white">₹{selectedAmount.toLocaleString()} ({(selectedAmount * 10).toLocaleString()} PRC)</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-400">Processing Fee</span>
+                            <span className="text-gray-400">
+                              Processing Fee {selectedAmount <= 499 ? '(50%)' : '(Flat)'}
+                            </span>
                             <span className="text-orange-400">+₹{fees.processingFee} ({fees.processingFee * 10} PRC)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Admin Charges (20%)</span>
-                            <span className="text-orange-400">+₹{fees.adminCharges.toLocaleString()} ({(fees.adminCharges * 10).toLocaleString()} PRC)</span>
                           </div>
                           <div className="flex justify-between pt-3 border-t border-gray-700">
                             <span className="text-amber-400 font-bold">Total PRC Deducted</span>
@@ -624,6 +622,12 @@ const BankRedeem = ({ user }) => {
                           <div className="flex justify-between text-xs">
                             <span className="text-gray-500">You will receive</span>
                             <span className="text-green-400 font-semibold">₹{selectedAmount.toLocaleString()} in your bank</span>
+                          </div>
+                          {/* Fee Info */}
+                          <div className="mt-2 pt-2 border-t border-gray-700/50">
+                            <p className="text-xs text-gray-500 text-center">
+                              ≤₹499: 50% fee | &gt;₹499: ₹10 flat fee
+                            </p>
                           </div>
                         </div>
                       );
