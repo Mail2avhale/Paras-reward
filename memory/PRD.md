@@ -49,9 +49,22 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 14, 2026 - Current Session)
 
-- [x] **Redeem to Cash - Slider UI (P0)**
+- [x] **Redeem Limit Increased to 100% (P0)**
+  - **Change:** Users can now redeem up to 100% of their PRC balance (previously 50%)
+  - **Backend:** Removed 50% limit check in `/app/backend/routes/bank_redeem.py`
+  - **Frontend:** Updated slider max value to use full balance in `BankRedeem.js`
+  - **Status:** COMPLETED ✅
+
+- [x] **"Redeem to Cash" → "Redeem To Bank" Text Update (P0)**
+  - **Global Rename:** All instances of "Redeem to Cash" changed to "Redeem To Bank"
+  - **Files Updated:**
+    - `/app/frontend/src/pages/DashboardModern.js` - Button text, card, comments, data-testid
+    - `/app/frontend/src/data/blogData.js` - Help content
+  - **Status:** COMPLETED ✅
+
+- [x] **Redeem to Bank - Slider UI (P0)**
   - **Feature:** Replaced denomination cards with a smooth slider for amount selection
-  - **Slider:** Min ₹100 to Max (50% of balance), step ₹100
+  - **Slider:** Min ₹100 to Max (100% of balance), step ₹100
   - **Quick Select Buttons:** ₹100, ₹500, ₹1000, ₹2000, ₹5000
   - **Live Fees Calculation:** Shows processing fee, admin charges, total PRC deducted
   - **Large Amount Display:** Big ₹ amount display at top
