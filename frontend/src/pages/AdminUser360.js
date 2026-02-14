@@ -732,14 +732,66 @@ const AdminUser360 = ({ user: adminUser }) => {
           <Card className="p-6 mb-6 bg-gray-900 border-gray-800">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 z-10" />
                 <Input
-                  placeholder="Search by Email, Mobile, Aadhaar, PAN, UID, or Referral Code..."
+                  placeholder="Search by Name, Email, Mobile, UID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="pl-12 bg-gray-800 border-gray-700 text-white text-lg h-12"
                 />
+                
+                {/* Search Suggestions Dropdown */}
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
+                    <div className="p-2 border-b border-gray-700 text-xs text-gray-400 flex items-center gap-2">
+                      <Users className="w-3 h-3" />
+                      {searchSuggestions.length} matching users found
+                    </div>
+                    {searchSuggestions.map((suggestion, index) => (
+                      <div
+                        key={suggestion.uid || index}
+                        className="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700/50 last:border-0 transition-colors"
+                        onClick={() => selectSuggestion(suggestion)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                              {suggestion.name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{suggestion.name}</p>
+                              <p className="text-gray-400 text-xs">{suggestion.email} • {suggestion.phone}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              suggestion.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                              suggestion.subscription_plan === 'growth' ? 'bg-purple-500/20 text-purple-400' :
+                              suggestion.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-600/20 text-gray-400'
+                            }`}>
+                              {suggestion.subscription_plan || 'free'}
+                            </span>
+                            <p className="text-gray-500 text-xs mt-1">{suggestion.uid}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Loading indicator */}
+                {suggestionsLoading && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-xl p-4 z-50">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching...
+                    </div>
+                  </div>
+                )}
               </div>
               <Button 
                 onClick={handleSearch} 
@@ -751,13 +803,13 @@ const AdminUser360 = ({ user: adminUser }) => {
               </Button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-              <span className="px-2 py-1 bg-gray-800 rounded">Email</span>
-              <span className="px-2 py-1 bg-gray-800 rounded">Mobile</span>
-              <span className="px-2 py-1 bg-gray-800 rounded">Aadhaar (last 4 digits)</span>
-              <span className="px-2 py-1 bg-gray-800 rounded">PAN</span>
-              <span className="px-2 py-1 bg-gray-800 rounded">User ID</span>
-              <span className="px-2 py-1 bg-gray-800 rounded">Referral Code</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">👤 Name</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">📧 Email</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">📱 Mobile</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">🆔 User ID</span>
+              <span className="px-2 py-1 bg-gray-800 rounded">🔗 Referral Code</span>
             </div>
+            <p className="text-xs text-amber-400 mt-2">💡 टीप: नाव टाकायला सुरुवात करा - matching users आपोआप दिसतील</p>
           </Card>
 
       {/* User Data */}
