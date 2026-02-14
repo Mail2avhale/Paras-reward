@@ -45,7 +45,32 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 14, 2026 - Session 5)
 
-- [x] **Bank Withdrawal P&L Integration (NEW)**
+- [x] **Tap Game Advanced - Combo System & Visual Effects (NEW)**
+  - **Combo System:** Fast taps build combo multiplier
+    - 5+ taps = 1.5x (NICE!), 10+ = 2x (GREAT!), 20+ = 3x (AMAZING!)
+    - 35+ taps = 4x (INCREDIBLE!), 50+ = 5x (LEGENDARY!)
+  - **Power Mode:** Activates at 20+ combo with fire effects, orange gradient background
+  - **Visual Effects:** Particle explosions, floating +PRC numbers with combo bonus
+  - **Combo Reset:** 1.5 seconds of inactivity resets combo
+  - **Streak Badges:** Shows consecutive day streak
+  - Frontend: `/app/frontend/src/pages/TapGameAdvanced.js` (new file)
+  - Route: `/game` (replaced old TapGame)
+  - Testing: 8/8 features verified
+
+- [x] **PRC Burn Alert - User Awareness System (NEW)**
+  - **For Free Users:** Shows expiring PRC batches with fire animations
+  - **FIFO Display:** First earned PRC expires first (48h validity)
+  - **Warning Levels:** Critical (<6h), Urgent (<12h), Warning
+  - **Live Countdown:** Real-time timer showing time remaining
+  - **Progress Ring:** Visual indicator of time left
+  - **Upgrade CTA:** "Go VIP" for lifetime validity
+  - **VIP Protection:** VIP users see "protected" status, no burn alert
+  - Backend API: `/api/user/{uid}/prc-expiry`
+  - Frontend: `/app/frontend/src/components/PRCBurnAlert.js` (new file)
+  - Integration: Mining page shows alert for free users only
+  - Testing: 11/11 backend tests passed
+
+- [x] **Bank Withdrawal P&L Integration**
   - Approved bank withdrawals now appear in Profit & Loss report
   - **Revenue side:** Processing fees + 20% Admin charges from bank withdrawals
     - Fields: `bank_withdrawal_rev_count`, `bank_withdrawal_processing_fees`, `bank_withdrawal_admin_charges`
