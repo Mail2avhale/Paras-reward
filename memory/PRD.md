@@ -47,7 +47,7 @@ axios.get(`${API}/endpoint`)  // Results in: https://domain.com/api/endpoint
 
 ### Environment Variables
 - **Production:** `REACT_APP_BACKEND_URL = https://parasreward.com`
-- **Preview:** `REACT_APP_BACKEND_URL = https://parasreward-staging.preview.emergentagent.com`
+- **Preview:** `REACT_APP_BACKEND_URL = https://fix-db-timeout.preview.emergentagent.com`
 
 ## Completed Features
 - User authentication (PIN + password migration)

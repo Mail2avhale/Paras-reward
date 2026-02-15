@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://parasreward-staging.preview.emergentagent.com",
+    "url": "https://fix-db-timeout.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
