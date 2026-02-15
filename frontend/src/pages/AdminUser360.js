@@ -1635,6 +1635,86 @@ const AdminUser360 = ({ user: adminUser }) => {
         </Card>
       )}
 
+      {/* Role Change Modal */}
+      {roleModal.show && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="role-change-modal">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              {/* Icon */}
+              <div className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Shield className="w-10 h-10 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-white mb-2">Change User Role</h2>
+              <p className="text-gray-400 mb-6">
+                {userData?.user?.name || 'User'} - Current Role: <span className="text-yellow-400 font-semibold capitalize">{userData?.user?.role || 'user'}</span>
+              </p>
+              
+              {/* Role Selection */}
+              <div className="space-y-3 mb-6">
+                {[
+                  { value: 'user', label: 'User', desc: 'Regular user with standard access', color: 'blue' },
+                  { value: 'manager', label: 'Manager', desc: 'Can access admin panel with limited permissions', color: 'purple' },
+                  { value: 'admin', label: 'Admin', desc: 'Full admin access to all features', color: 'red' }
+                ].map((role) => (
+                  <button
+                    key={role.value}
+                    onClick={() => setSelectedRole(role.value)}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      selectedRole === role.value 
+                        ? `border-${role.color}-500 bg-${role.color}-500/10` 
+                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`font-semibold ${selectedRole === role.value ? `text-${role.color}-400` : 'text-white'}`}>
+                          {role.label}
+                        </p>
+                        <p className="text-xs text-gray-500">{role.desc}</p>
+                      </div>
+                      {selectedRole === role.value && (
+                        <CheckCircle className={`w-6 h-6 text-${role.color}-400`} />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Warning for admin role */}
+              {selectedRole === 'admin' && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg mb-4">
+                  <p className="text-xs text-red-400 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Admin role gives full system access. Use with caution.
+                  </p>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleRoleChange}
+                  disabled={processing || selectedRole === userData?.user?.role}
+                  className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-semibold"
+                  data-testid="confirm-role-change-button"
+                >
+                  {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Shield className="w-4 h-4 mr-2" />}
+                  {processing ? 'Updating...' : 'Update Role'}
+                </Button>
+                <Button
+                  onClick={() => setRoleModal({ show: false })}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PIN Reset Modal */}
       {pinModal.show && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="pin-reset-modal">
