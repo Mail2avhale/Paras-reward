@@ -5,9 +5,23 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### Free Startup Subscription Module - REMOVED ✅ (Feb 15, 2026)
+**Problem:** User requested complete removal of "Free Startup Subscription" reward feature
+**Solution:** 
+1. Frontend: Removed reward progress tracker UI from ReferralsEnhanced.js
+2. Backend: Disabled `/api/referrals/{uid}/reward-progress` endpoint (returns 404)
+3. Backend: Disabled `check_and_grant_referral_reward` function
+**Test Results:** 100% tests passed (11/11 backend tests, frontend verified)
+
+### Invite/Referral Page Bug Fix ✅ (Feb 15, 2026)
+**Problem:** Users reported level-wise referral data not displaying
+**Root Cause:** Feature working correctly - users need to tap/click on level row to expand and see users
+**Status:** VERIFIED WORKING - Level 1 shows expandable user list with name, subscription badge, active status
+**Test Results:** All referral features verified working
+
 ### Pagination & Sorting Added ✅
-- **Admin Subscription Page**: Pagination (15 items/page), Newest first sorting
-- **Admin Bank Withdrawals Page**: Pagination (15 items/page), Newest first sorting
+- **Admin Subscription Page**: Pagination (15 items/page), FIFO (oldest first) sorting
+- **Admin Bank Withdrawals Page**: Pagination (15 items/page), FIFO (oldest first) sorting
 - Both pages reset to page 1 when filter/tab changes
 
 ## Previous Changes (December 2025)
@@ -28,7 +42,7 @@ A production-grade reward platform serving 3000+ users with subscription managem
 ### Referrals/Invite Page - VERIFIED ✅
 **Status:** Working correctly
 - Backend API `/api/referrals/{user_id}/levels` returns user data correctly
-- Frontend displays 5 levels with user details
+- Frontend displays 5 levels with user details (expandable)
 - Note: Admin users are redirected from /referrals by design
 
 ## Architecture
@@ -52,8 +66,8 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - Frontend: `/app/frontend/src/pages/AdminSubscriptionManagement.js` (SIMPLIFIED)
 
 ### Referrals
-- Backend: `/app/backend/server.py` (lines 26200-26385)
-- Frontend: `/app/frontend/src/pages/ReferralsEnhanced.js`
+- Backend: `/app/backend/server.py` (referral endpoints around line 26200)
+- Frontend: `/app/frontend/src/pages/ReferralsEnhanced.js` (Free Startup module removed)
 
 ## API Endpoints
 
@@ -67,9 +81,11 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ### Referrals
 - `GET /api/referrals/{user_id}/levels` - Get referral levels with users
+- `GET /api/referrals/{uid}/reward-progress` - DISABLED (returns 404)
 
 ## Test Credentials
 - Admin: `admin@test.com` / PIN: `123456`
+- Test User: `mail2avhale@gmail.com` / PIN: `123456`
 
 ## Upcoming Tasks
 - P1: UPI Payment Gateway Integration (Razorpay/PhonePe/Paytm)
@@ -80,3 +96,4 @@ A production-grade reward platform serving 3000+ users with subscription managem
 ## Known Behaviors
 - Admin users are redirected from `/referrals` to `/admin` (by design)
 - Subscription page refresh recommended after approval operations
+- Referral levels need to be clicked/tapped to expand and show users
