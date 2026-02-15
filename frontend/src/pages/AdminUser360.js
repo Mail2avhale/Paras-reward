@@ -169,6 +169,10 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [editModal, setEditModal] = useState({ show: false });
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '', type: 'success' });
   
+  // Role Change Modal State
+  const [roleModal, setRoleModal] = useState({ show: false });
+  const [selectedRole, setSelectedRole] = useState('user');
+  
   // Adjust Balance Modal State
   const [balanceModal, setBalanceModal] = useState({ show: false });
   const [balanceForm, setBalanceForm] = useState({
