@@ -65,7 +65,7 @@ const AdminUser360 = ({ user: adminUser }) => {
   const fetchSearchSuggestions = async (query) => {
     setSuggestionsLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/users/search-suggestions?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await axios.get(`${API}/admin/users/search-suggestions?q=${encodeURIComponent(query)}&limit=10`);
       setSearchSuggestions(response.data.suggestions || []);
       setShowSuggestions(true);
     } catch (error) {
@@ -87,7 +87,7 @@ const AdminUser360 = ({ user: adminUser }) => {
   const fetchUserList = async () => {
     setUserListLoading(true);
     try {
-      let url = `${API}/api/admin/users/all?page=${userListPage}&limit=20`;
+      let url = `${API}/admin/users/all?page=${userListPage}&limit=20`;
       if (browseSearchTerm) url += `&search=${encodeURIComponent(browseSearchTerm)}`;
       if (filterRole) url += `&role=${filterRole}`;
       if (filterMembership) url += `&membership=${filterMembership}`;
@@ -125,7 +125,7 @@ const AdminUser360 = ({ user: adminUser }) => {
   const handleSearchByUid = async (uid) => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/user-360?query=${encodeURIComponent(uid)}`);
+      const response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(uid)}`);
       setUserData(response.data);
       setAdminNotes(response.data.user?.admin_notes || '');
       toast.success('User found!');
@@ -147,7 +147,7 @@ const AdminUser360 = ({ user: adminUser }) => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/user-360?query=${encodeURIComponent(searchQuery.trim())}`);
+      const response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(searchQuery.trim())}`);
       setUserData(response.data);
       setAdminNotes(response.data.user?.admin_notes || '');
       toast.success('User found!');
@@ -269,7 +269,7 @@ const AdminUser360 = ({ user: adminUser }) => {
     
     setProcessing(true);
     try {
-      const response = await axios.post(`${API}/api/admin/user-360/action`, {
+      const response = await axios.post(`${API}/admin/user-360/action`, {
         user_id: userData.user.uid,
         action,
         admin_id: adminUser?.uid,
@@ -337,7 +337,7 @@ const AdminUser360 = ({ user: adminUser }) => {
   const refreshUserData = async () => {
     if (!userData?.user?.uid) return;
     try {
-      const response = await axios.get(`${API}/api/admin/user-360?query=${encodeURIComponent(userData.user.uid)}`);
+      const response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(userData.user.uid)}`);
       setUserData(response.data);
       setAdminNotes(response.data.user?.admin_notes || '');
     } catch (error) {
@@ -359,7 +359,7 @@ const AdminUser360 = ({ user: adminUser }) => {
     
     setProcessing(true);
     try {
-      const response = await axios.put(`${API}/api/admin/users/${userData.user.uid}/role`, {
+      const response = await axios.put(`${API}/admin/users/${userData.user.uid}/role`, {
         role: selectedRole
       });
       
@@ -454,7 +454,7 @@ const AdminUser360 = ({ user: adminUser }) => {
         ? getAutoExpiryDate() 
         : subscriptionForm.manualExpiry;
       
-      const response = await axios.post(`${API}/api/admin/user-360/action`, {
+      const response = await axios.post(`${API}/admin/user-360/action`, {
         user_id: userData.user.uid,
         action: 'update_subscription',
         admin_id: adminUser?.uid,

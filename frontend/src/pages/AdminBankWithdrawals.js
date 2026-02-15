@@ -28,7 +28,7 @@ const AdminBankWithdrawals = ({ user }) => {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/bank-redeem/requests`, {
+      const response = await axios.get(`${API}/admin/bank-redeem/requests`, {
         params: { status: statusFilter === 'all' ? null : statusFilter }
       });
       setRequests(response.data.requests || []);
@@ -49,7 +49,7 @@ const AdminBankWithdrawals = ({ user }) => {
     
     setProcessing(requestId);
     try {
-      await axios.post(`${API}/api/admin/bank-redeem/${requestId}/approve`, {
+      await axios.post(`${API}/admin/bank-redeem/${requestId}/approve`, {
         admin_id: user.uid,
         transaction_ref: transactionRef
       });
@@ -72,7 +72,7 @@ const AdminBankWithdrawals = ({ user }) => {
     
     setProcessing(requestId);
     try {
-      await axios.post(`${API}/api/admin/bank-redeem/${requestId}/reject`, {
+      await axios.post(`${API}/admin/bank-redeem/${requestId}/reject`, {
         admin_id: user.uid,
         reason: rejectReason
       });

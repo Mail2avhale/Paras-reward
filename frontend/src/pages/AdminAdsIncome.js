@@ -46,7 +46,7 @@ const AdminAdsIncome = ({ user }) => {
   const fetchEntries = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/finance/ads-income?page=${page}&limit=20`);
+      const response = await axios.get(`${API}/admin/finance/ads-income?page=${page}&limit=20`);
       setEntries(response.data.entries || []);
       setSummary(response.data.summary || []);
       setTotal(response.data.total || 0);
@@ -64,7 +64,7 @@ const AdminAdsIncome = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/api/admin/finance/ads-income`, {
+      await axios.post(`${API}/admin/finance/ads-income`, {
         ...form,
         impressions: parseInt(form.impressions) || 0,
         clicks: parseInt(form.clicks) || 0,
@@ -93,7 +93,7 @@ const AdminAdsIncome = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this entry?')) return;
     
     try {
-      await axios.delete(`${API}/api/admin/finance/ads-income/${entryId}`);
+      await axios.delete(`${API}/admin/finance/ads-income/${entryId}`);
       toast.success('Entry deleted');
       fetchEntries();
     } catch (error) {

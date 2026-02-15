@@ -53,13 +53,13 @@ const AdminAccountingDashboard = ({ user }) => {
         cashRes,
         bankRes
       ] = await Promise.all([
-        axios.get(`${API}/api/admin/accounting/master-dashboard`),
-        axios.get(`${API}/api/admin/accounting/settings`),
-        axios.get(`${API}/api/admin/accounting/conversion-rate`),
+        axios.get(`${API}/admin/accounting/master-dashboard`),
+        axios.get(`${API}/admin/accounting/settings`),
+        axios.get(`${API}/admin/accounting/conversion-rate`),
         // New ledger endpoints for Quick View
-        axios.get(`${API}/api/admin/ledger/master-summary`),
-        axios.get(`${API}/api/admin/ledger/cash`),
-        axios.get(`${API}/api/admin/ledger/bank`)
+        axios.get(`${API}/admin/ledger/master-summary`),
+        axios.get(`${API}/admin/ledger/cash`),
+        axios.get(`${API}/admin/ledger/bank`)
       ]);
       
       setDashboardData(dashboardRes.data);
@@ -84,27 +84,27 @@ const AdminAccountingDashboard = ({ user }) => {
     try {
       switch(tab) {
         case 'mint':
-          const mintRes = await axios.get(`${API}/api/admin/accounting/prc-mint-ledger?limit=50`);
+          const mintRes = await axios.get(`${API}/admin/accounting/prc-mint-ledger?limit=50`);
           setMintLedger(mintRes.data);
           break;
         case 'burn':
-          const burnRes = await axios.get(`${API}/api/admin/accounting/prc-burn-ledger?limit=50`);
+          const burnRes = await axios.get(`${API}/admin/accounting/prc-burn-ledger?limit=50`);
           setBurnLedger(burnRes.data);
           break;
         case 'liability':
-          const liabilityRes = await axios.get(`${API}/api/admin/accounting/liability-ledger?limit=50`);
+          const liabilityRes = await axios.get(`${API}/admin/accounting/liability-ledger?limit=50`);
           setLiabilityLedger(liabilityRes.data);
           break;
         case 'reserve':
-          const reserveRes = await axios.get(`${API}/api/admin/accounting/reserve-fund`);
+          const reserveRes = await axios.get(`${API}/admin/accounting/reserve-fund`);
           setReserveFund(reserveRes.data);
           break;
         case 'daily':
-          const dailyRes = await axios.get(`${API}/api/admin/accounting/daily-summary?days=30`);
+          const dailyRes = await axios.get(`${API}/admin/accounting/daily-summary?days=30`);
           setDailySummaries(dailyRes.data);
           break;
         case 'users':
-          const usersRes = await axios.get(`${API}/api/admin/accounting/user-cost-analysis?limit=50`);
+          const usersRes = await axios.get(`${API}/admin/accounting/user-cost-analysis?limit=50`);
           setUserCostAnalysis(usersRes.data);
           break;
         default:
@@ -123,7 +123,7 @@ const AdminAccountingDashboard = ({ user }) => {
   const handleGenerateDailySummary = async () => {
     setRefreshing(true);
     try {
-      await axios.post(`${API}/api/admin/accounting/daily-summary/generate`, {});
+      await axios.post(`${API}/admin/accounting/daily-summary/generate`, {});
       toast.success('Daily summary generated successfully!');
       fetchTabData('daily');
     } catch (error) {
@@ -135,7 +135,7 @@ const AdminAccountingDashboard = ({ user }) => {
 
   const handleUpdateSettings = async (newSettings) => {
     try {
-      await axios.post(`${API}/api/admin/accounting/settings`, newSettings);
+      await axios.post(`${API}/admin/accounting/settings`, newSettings);
       toast.success('Settings updated successfully!');
       setAccountingSettings({ ...accountingSettings, ...newSettings });
     } catch (error) {
@@ -147,7 +147,7 @@ const AdminAccountingDashboard = ({ user }) => {
     const amount = prompt('Enter amount to add to Reserve Fund (INR):');
     if (amount && !isNaN(amount) && parseFloat(amount) > 0) {
       try {
-        await axios.post(`${API}/api/admin/accounting/reserve-fund/add`, {
+        await axios.post(`${API}/admin/accounting/reserve-fund/add`, {
           amount: parseFloat(amount),
           reason: 'Manual addition by admin'
         });
@@ -163,7 +163,7 @@ const AdminAccountingDashboard = ({ user }) => {
   const handleBurnInactivePRC = async () => {
     if (window.confirm('This will burn PRC for all users inactive for 180+ days. Continue?')) {
       try {
-        const res = await axios.post(`${API}/api/admin/accounting/burn-inactive-prc`);
+        const res = await axios.post(`${API}/admin/accounting/burn-inactive-prc`);
         toast.success(`Burned PRC for ${res.data.result.users_affected} users (${res.data.result.total_burned} PRC)`);
         fetchAllData();
       } catch (error) {

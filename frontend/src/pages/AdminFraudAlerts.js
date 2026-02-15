@@ -42,7 +42,7 @@ const AdminFraudAlerts = ({ user }) => {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      let url = `${API}/api/admin/fraud/alerts?page=${page}&limit=20`;
+      let url = `${API}/admin/fraud/alerts?page=${page}&limit=20`;
       if (statusFilter) url += `&status=${statusFilter}`;
       
       const response = await axios.get(url);
@@ -59,7 +59,7 @@ const AdminFraudAlerts = ({ user }) => {
   const runDetection = async () => {
     try {
       setDetecting(true);
-      const response = await axios.post(`${API}/api/admin/fraud/detect`);
+      const response = await axios.post(`${API}/admin/fraud/detect`);
       toast.success(`Detection complete! ${response.data.alerts_created} new alerts created.`);
       fetchAlerts();
     } catch (error) {
@@ -76,7 +76,7 @@ const AdminFraudAlerts = ({ user }) => {
     }
     
     try {
-      await axios.put(`${API}/api/admin/fraud/alert/${selectedAlert.alert_id}`, {
+      await axios.put(`${API}/admin/fraud/alert/${selectedAlert.alert_id}`, {
         ...actionForm,
         admin_id: user.uid
       });

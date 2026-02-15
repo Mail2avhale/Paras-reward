@@ -35,7 +35,7 @@ const AdminLiquidity = ({ user }) => {
   const fetchLiquidityData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/liquidity/dashboard`);
+      const response = await axios.get(`${API}/admin/liquidity/dashboard`);
       setData(response.data);
       
       // Pre-fill reserve form
@@ -57,7 +57,7 @@ const AdminLiquidity = ({ user }) => {
 
   const handleUpdateReserves = async () => {
     try {
-      await axios.post(`${API}/api/admin/liquidity/update-reserves`, {
+      await axios.post(`${API}/admin/liquidity/update-reserves`, {
         ...reserveForm,
         bank_balance: parseFloat(reserveForm.bank_balance) || 0,
         cash_in_hand: parseFloat(reserveForm.cash_in_hand) || 0,

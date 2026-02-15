@@ -39,7 +39,7 @@ const AdminAccountsReceivable = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/accounting/receivables`, {
+      const response = await axios.get(`${API}/admin/accounting/receivables`, {
         params: { status: filter }
       });
       setData(response.data);
@@ -58,7 +58,7 @@ const AdminAccountsReceivable = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/accounting/receivables`, null, {
+      await axios.post(`${API}/admin/accounting/receivables`, null, {
         params: {
           customer_name: form.customer_name,
           customer_id: form.customer_id,
@@ -80,7 +80,7 @@ const AdminAccountsReceivable = ({ user }) => {
 
   const handleMarkPaid = async (invoiceId) => {
     try {
-      await axios.put(`${API}/api/admin/accounting/receivables/${invoiceId}/status`, null, {
+      await axios.put(`${API}/admin/accounting/receivables/${invoiceId}/status`, null, {
         params: { status: 'paid', admin_id: user.uid }
       });
       toast.success('Marked as paid!');

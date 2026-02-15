@@ -23,12 +23,12 @@ const ManagerPermissions = ({ userId, userName, onClose, onSave }) => {
       setLoading(true);
       
       // Get all available permissions
-      const permResponse = await axios.get(`${API}/api/admin/permissions/list`);
+      const permResponse = await axios.get(`${API}/admin/permissions/list`);
       setAllPermissions(permResponse.data.permissions || []);
       setDefaultPermissions(permResponse.data.default_manager || []);
       
       // Get user's current permissions
-      const userResponse = await axios.get(`${API}/api/admin/user/${userId}/permissions`);
+      const userResponse = await axios.get(`${API}/admin/user/${userId}/permissions`);
       setSelectedPermissions(userResponse.data.permissions || permResponse.data.default_manager || []);
       
     } catch (error) {
@@ -63,7 +63,7 @@ const ManagerPermissions = ({ userId, userName, onClose, onSave }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`${API}/api/admin/user/${userId}/permissions`, {
+      await axios.put(`${API}/admin/user/${userId}/permissions`, {
         permissions: selectedPermissions
       });
       toast.success('Permissions updated successfully');

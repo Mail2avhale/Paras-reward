@@ -137,7 +137,7 @@ const RegisterSimple = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/api/auth/register/simple`, {
+      const response = await axios.post(`${API}/auth/register/simple`, {
         full_name: formData.full_name.trim(),
         mobile: formData.mobile,
         email: formData.email,

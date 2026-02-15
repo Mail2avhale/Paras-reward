@@ -360,9 +360,9 @@ const DailyRewards = ({ user }) => {
     try {
       // Fetch user data, mining status, and redemption stats in parallel
       const [userResponse, miningResponse, statsResponse] = await Promise.all([
-        axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/mining/status/${user.uid}`),
-        axios.get(`${API}/api/user/${user.uid}/redemption-stats`)
+        axios.get(`${API}/user/${user.uid}`),
+        axios.get(`${API}/mining/status/${user.uid}`),
+        axios.get(`${API}/user/${user.uid}/redemption-stats`)
       ]);
       
       const data = userResponse.data;
@@ -514,7 +514,7 @@ const DailyRewards = ({ user }) => {
   const startSession = async () => {
     setIsStarting(true);
     try {
-      const response = await axios.post(`${API}/api/mining/start/${user.uid}`);
+      const response = await axios.post(`${API}/mining/start/${user.uid}`);
       if (response.data) {
         setIsMining(true);
         setSessionTimeRemaining(24 * 60 * 60); // 24 hours
@@ -548,7 +548,7 @@ const DailyRewards = ({ user }) => {
     setIsCollecting(true);
     try {
       // Claim mining rewards - uses correct endpoint with 80/20 luxury split
-      const response = await axios.post(`${API}/api/mining/claim/${user.uid}`);
+      const response = await axios.post(`${API}/mining/claim/${user.uid}`);
       
       const data = response.data;
       const claimed = data.claimed_amount || data.prc_collected || sessionPRC;

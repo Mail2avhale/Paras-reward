@@ -17,7 +17,7 @@ const SecurityInfo = ({ userId }) => {
   useEffect(() => {
     const fetchSecurityInfo = async () => {
       try {
-        const response = await axios.get(`${API}/api/user/security-info/${userId}`);
+        const response = await axios.get(`${API}/user/security-info/${userId}`);
         setSecurityInfo(response.data);
       } catch (error) {
         console.error('Error fetching security info:', error);

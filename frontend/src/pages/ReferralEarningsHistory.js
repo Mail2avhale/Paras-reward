@@ -55,7 +55,7 @@ const ReferralEarningsHistory = ({ user, onLogout }) => {
 
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/referral-earnings/${user.uid}`);
+      const response = await axios.get(`${API}/referral-earnings/${user.uid}`);
       
       const earningsData = response.data?.earnings || [];
       const summaryData = response.data?.summary || { total_earned: 0, this_month: 0, this_week: 0, today: 0 };

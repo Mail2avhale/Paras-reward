@@ -53,7 +53,7 @@ const KYCVerification = ({ user }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const response = await axios.get(`${API}/user/${user.uid}`);
       setUserData(response.data);
       
       // Pre-fill name if available
@@ -96,7 +96,7 @@ const KYCVerification = ({ user }) => {
 
     setSubmitting(true);
     try {
-      await axios.post(`${API}/api/kyc/submit/${user.uid}`, {
+      await axios.post(`${API}/kyc/submit/${user.uid}`, {
         document_type: selectedDocType,
         full_name: kycData.full_name,
         aadhaar_front_base64: kycData.aadhaar_front,

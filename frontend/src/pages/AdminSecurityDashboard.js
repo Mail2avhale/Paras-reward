@@ -34,7 +34,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/security/dashboard?admin_uid=${user.uid}`);
+      const response = await axios.get(`${API}/admin/security/dashboard?admin_uid=${user.uid}`);
       setDashboard(response.data);
     } catch (error) {
       console.error('Error fetching security dashboard:', error);
@@ -43,7 +43,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const fetchIpWhitelist = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/security/ip-whitelist?admin_uid=${user.uid}`);
+      const response = await axios.get(`${API}/admin/security/ip-whitelist?admin_uid=${user.uid}`);
       setIpWhitelist(response.data);
     } catch (error) {
       console.error('Error fetching IP whitelist:', error);
@@ -52,7 +52,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const fetchAuditLogs = useCallback(async (page = 1) => {
     try {
-      const response = await axios.get(`${API}/api/admin/security/audit-logs?admin_uid=${user.uid}&page=${page}&limit=20`);
+      const response = await axios.get(`${API}/admin/security/audit-logs?admin_uid=${user.uid}&page=${page}&limit=20`);
       setAuditLogs(response.data.logs);
       setAuditTotal(response.data.total);
       setAuditPage(page);
@@ -63,7 +63,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const fetchAlerts = useCallback(async (page = 1) => {
     try {
-      let url = `${API}/api/admin/security/alerts?admin_uid=${user.uid}&page=${page}&limit=15`;
+      let url = `${API}/admin/security/alerts?admin_uid=${user.uid}&page=${page}&limit=15`;
       if (alertFilter === 'unread') url += '&unread_only=true';
       if (alertFilter === 'critical') url += '&severity=critical';
       if (alertFilter === 'high') url += '&severity=high';
@@ -80,7 +80,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/security/alerts/unread-count?admin_uid=${user.uid}`);
+      const response = await axios.get(`${API}/admin/security/alerts/unread-count?admin_uid=${user.uid}`);
       setUnreadCount(response.data.unread_count);
       
       // Show toast for critical alerts
@@ -122,7 +122,7 @@ const AdminSecurityDashboard = ({ user }) => {
       if (markAll) params.append('mark_all', 'true');
       if (alertIds) alertIds.forEach(id => params.append('alert_ids', id));
       
-      await axios.post(`${API}/api/admin/security/alerts/mark-read?${params.toString()}`);
+      await axios.post(`${API}/admin/security/alerts/mark-read?${params.toString()}`);
       toast.success(markAll ? 'All alerts marked as read' : 'Alerts marked as read');
       fetchAlerts(alertsPage);
     } catch (error) {
@@ -160,7 +160,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const handleSaveIpWhitelist = async () => {
     try {
-      await axios.post(`${API}/api/admin/security/ip-whitelist`, null, {
+      await axios.post(`${API}/admin/security/ip-whitelist`, null, {
         params: {
           admin_uid: user.uid,
           enabled: ipWhitelist.enabled,
@@ -188,7 +188,7 @@ const AdminSecurityDashboard = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/security/lockdown`, null, {
+      await axios.post(`${API}/admin/security/lockdown`, null, {
         params: {
           admin_uid: user.uid,
           lockdown_type: type,
@@ -220,7 +220,7 @@ const AdminSecurityDashboard = ({ user }) => {
 
   const handleDeactivateLockdown = async () => {
     try {
-      await axios.post(`${API}/api/admin/security/lockdown/deactivate?admin_uid=${user.uid}`);
+      await axios.post(`${API}/admin/security/lockdown/deactivate?admin_uid=${user.uid}`);
       toast.success('Lockdown deactivated');
       fetchDashboard();
     } catch (error) {

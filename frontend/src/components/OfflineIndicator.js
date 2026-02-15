@@ -16,7 +16,7 @@ function OfflineIndicator() {
   const verifyConnectivity = useCallback(async () => {
     try {
       // Try to fetch a lightweight endpoint
-      const response = await axios.get(`${API}/api/health`, { 
+      const response = await axios.get(`${API}/health`, { 
         timeout: 5000,
         // Don't use cache for this check
         headers: { 'Cache-Control': 'no-cache' }

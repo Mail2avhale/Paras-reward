@@ -89,11 +89,11 @@ const BankRedeem = ({ user }) => {
     setLoading(true);
     try {
       const [userRes, bankRes, denomRes, eligRes, historyRes] = await Promise.all([
-        axios.get(`${API}/api/auth/user/${user.uid}`),
-        axios.get(`${API}/api/bank-details/${user.uid}`).catch(() => ({ data: { has_bank_details: false } })),
-        axios.get(`${API}/api/bank-redeem/denominations`),
-        axios.get(`${API}/api/bank-redeem/check-eligibility/${user.uid}`).catch(() => ({ data: { eligible: false, reason: 'error' } })),
-        axios.get(`${API}/api/bank-redeem/history/${user.uid}`).catch(() => ({ data: { requests: [] } }))
+        axios.get(`${API}/auth/user/${user.uid}`),
+        axios.get(`${API}/bank-details/${user.uid}`).catch(() => ({ data: { has_bank_details: false } })),
+        axios.get(`${API}/bank-redeem/denominations`),
+        axios.get(`${API}/bank-redeem/check-eligibility/${user.uid}`).catch(() => ({ data: { eligible: false, reason: 'error' } })),
+        axios.get(`${API}/bank-redeem/history/${user.uid}`).catch(() => ({ data: { requests: [] } }))
       ]);
       
       setUserData(userRes.data);
@@ -161,7 +161,7 @@ const BankRedeem = ({ user }) => {
     
     setSavingBank(true);
     try {
-      await axios.post(`${API}/api/bank-details/${user.uid}`, {
+      await axios.post(`${API}/bank-details/${user.uid}`, {
         account_holder_name: bankForm.account_holder_name.trim(),
         account_number: accNum,
         ifsc_code: ifsc,
@@ -201,7 +201,7 @@ const BankRedeem = ({ user }) => {
     
     setSubmitting(true);
     try {
-      const response = await axios.post(`${API}/api/bank-redeem/request/${user.uid}`, {
+      const response = await axios.post(`${API}/bank-redeem/request/${user.uid}`, {
         amount_inr: selectedAmount
       });
       

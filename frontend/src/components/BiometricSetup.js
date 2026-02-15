@@ -61,7 +61,7 @@ const BiometricSetup = ({ user, onClose, onSuccess }) => {
 
     try {
       // Step 1: Get registration options from server
-      const optionsResponse = await axios.post(`${API}/api/auth/biometric/register-options?user_id=${user.uid}`);
+      const optionsResponse = await axios.post(`${API}/auth/biometric/register-options?user_id=${user.uid}`);
       const options = optionsResponse.data.options;
 
       // Convert challenge and user ID to Uint8Array
@@ -102,7 +102,7 @@ const BiometricSetup = ({ user, onClose, onSuccess }) => {
         transports: credential.response.getTransports ? credential.response.getTransports() : []
       };
 
-      await axios.post(`${API}/api/auth/biometric/register`, null, {
+      await axios.post(`${API}/auth/biometric/register`, null, {
         params: {
           user_id: user.uid,
           device_name: deviceName

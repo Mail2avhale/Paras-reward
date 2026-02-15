@@ -39,8 +39,8 @@ const AdminLuxuryClaims = () => {
     try {
       setLoading(true);
       const url = filter === 'all' 
-        ? `${API}/api/admin/luxury-claims`
-        : `${API}/api/admin/luxury-claims?status=${filter}`;
+        ? `${API}/admin/luxury-claims`
+        : `${API}/admin/luxury-claims?status=${filter}`;
       
       const response = await fetch(url);
       const data = await response.json();
@@ -63,7 +63,7 @@ const AdminLuxuryClaims = () => {
     
     try {
       setProcessing(true);
-      const response = await fetch(`${API}/api/admin/luxury-claims/${claimId}/approve?admin_id=${admin.uid}`, {
+      const response = await fetch(`${API}/admin/luxury-claims/${claimId}/approve?admin_id=${admin.uid}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'Approved by admin' })
@@ -91,7 +91,7 @@ const AdminLuxuryClaims = () => {
     
     try {
       setProcessing(true);
-      const response = await fetch(`${API}/api/admin/luxury-claims/${selectedClaim.claim_id}/reject?admin_id=${admin.uid}&reason=${encodeURIComponent(rejectReason)}`, {
+      const response = await fetch(`${API}/admin/luxury-claims/${selectedClaim.claim_id}/reject?admin_id=${admin.uid}&reason=${encodeURIComponent(rejectReason)}`, {
         method: 'POST'
       });
       
@@ -116,7 +116,7 @@ const AdminLuxuryClaims = () => {
     try {
       setProcessing(true);
       const response = await fetch(
-        `${API}/api/admin/luxury-claims/force-redeem/${userId}/${productKey}?admin_id=${admin.uid}`,
+        `${API}/admin/luxury-claims/force-redeem/${userId}/${productKey}?admin_id=${admin.uid}`,
         { method: 'POST' }
       );
       

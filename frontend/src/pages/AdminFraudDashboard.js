@@ -34,7 +34,7 @@ const AdminFraudDashboard = ({ user }) => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/fraud/stats`);
+      const response = await axios.get(`${API}/admin/fraud/stats`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching fraud stats:', error);
@@ -43,7 +43,7 @@ const AdminFraudDashboard = ({ user }) => {
 
   const fetchRegistrationAttempts = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/fraud/registration-attempts?limit=50`);
+      const response = await axios.get(`${API}/admin/fraud/registration-attempts?limit=50`);
       setRegistrationAttempts(response.data.attempts || []);
     } catch (error) {
       console.error('Error fetching registration attempts:', error);
@@ -52,7 +52,7 @@ const AdminFraudDashboard = ({ user }) => {
 
   const fetchFraudLogs = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/fraud/logs?limit=50`);
+      const response = await axios.get(`${API}/admin/fraud/logs?limit=50`);
       setFraudLogs(response.data.logs || []);
     } catch (error) {
       console.error('Error fetching fraud logs:', error);
@@ -67,7 +67,7 @@ const AdminFraudDashboard = ({ user }) => {
     
     setLoadingProfile(true);
     try {
-      const response = await axios.get(`${API}/api/admin/fraud/user/${uid.trim()}`);
+      const response = await axios.get(`${API}/admin/fraud/user/${uid.trim()}`);
       setUserProfile(response.data);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'User not found');

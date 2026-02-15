@@ -37,7 +37,7 @@ const AdminCapitalManagement = ({ user }) => {
   const fetchCapitalData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/accounting/capital`);
+      const response = await axios.get(`${API}/admin/accounting/capital`);
       setCapitalData(response.data);
     } catch (error) {
       console.error('Error fetching capital data:', error);
@@ -54,7 +54,7 @@ const AdminCapitalManagement = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/accounting/capital/entry`, null, {
+      await axios.post(`${API}/admin/accounting/capital/entry`, null, {
         params: {
           entry_type: entryForm.entry_type,
           amount: parseFloat(entryForm.amount),

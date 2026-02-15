@@ -39,7 +39,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
   const fetchBurnStatistics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/burn-statistics`);
+      const response = await axios.get(`${API}/admin/burn-statistics`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching burn stats:', error);
@@ -51,7 +51,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
 
   const fetchUsersAtRisk = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/users-at-risk`);
+      const response = await axios.get(`${API}/admin/users-at-risk`);
       setAtRisk(response.data);
     } catch (error) {
       console.error('Error fetching at-risk users:', error);
@@ -65,7 +65,7 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
 
     setBurning(true);
     try {
-      const response = await axios.post(`${API}/api/admin/burn-prc-now`);
+      const response = await axios.post(`${API}/admin/burn-prc-now`);
       toast.success('Burn job completed successfully!', {
         description: `Free: ${response.data.results.free_users.users_affected} users, VIP: ${response.data.results.expired_vips.users_affected} users affected`
       });

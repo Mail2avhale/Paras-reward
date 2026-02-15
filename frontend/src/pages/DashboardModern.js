@@ -129,7 +129,7 @@ const DashboardModern = ({ user, onLogout }) => {
       
       // Try combined API first (faster - single request)
       try {
-        const combinedRes = await axios.get(`${API}/api/user/${user.uid}/dashboard`);
+        const combinedRes = await axios.get(`${API}/user/${user.uid}/dashboard`);
         
         if (combinedRes.data?.user) {
           const userData = combinedRes.data.user;
@@ -166,8 +166,8 @@ const DashboardModern = ({ user, onLogout }) => {
       
       // Fallback to individual API calls
       const [userResult, activityResult] = await Promise.allSettled([
-        axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/user/${user.uid}/recent-activity?limit=10`)
+        axios.get(`${API}/user/${user.uid}`),
+        axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`)
       ]);
       
       // Process user data
@@ -220,7 +220,7 @@ const DashboardModern = ({ user, onLogout }) => {
 
       // Check for birthday (non-blocking)
       try {
-        const birthdayResponse = await axios.get(`${API}/api/user/${user.uid}/birthday-check`);
+        const birthdayResponse = await axios.get(`${API}/user/${user.uid}/birthday-check`);
         if (birthdayResponse.data.is_birthday) {
           setBirthdayGreeting(birthdayResponse.data);
         }

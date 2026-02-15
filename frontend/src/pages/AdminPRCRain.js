@@ -48,7 +48,7 @@ const AdminPRCRain = ({ user }) => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/prc-rain/settings`);
+      const response = await axios.get(`${API}/admin/prc-rain/settings`);
       if (response.data.prc_rain_settings) {
         setSettings(prev => ({ ...prev, ...response.data.prc_rain_settings }));
       }
@@ -61,7 +61,7 @@ const AdminPRCRain = ({ user }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/prc-rain/stats`);
+      const response = await axios.get(`${API}/admin/prc-rain/stats`);
       setStats(response.data.today);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -86,7 +86,7 @@ const AdminPRCRain = ({ user }) => {
           max: Math.max(1, parseFloat(settings.prc_range?.max) || 25)
         }
       };
-      await axios.post(`${API}/api/admin/prc-rain/settings`, validatedSettings);
+      await axios.post(`${API}/admin/prc-rain/settings`, validatedSettings);
       setSettings(validatedSettings); // Update local state with validated values
       toast.success('PRC Rain settings saved!');
     } catch (error) {
@@ -101,7 +101,7 @@ const AdminPRCRain = ({ user }) => {
       return;
     }
     try {
-      await axios.post(`${API}/api/admin/prc-rain/emergency-stop`);
+      await axios.post(`${API}/admin/prc-rain/emergency-stop`);
       toast.success('Emergency Stop activated!');
       fetchSettings();
     } catch (error) {

@@ -55,7 +55,7 @@ const Messages = ({ user }) => {
   const fetchConversations = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/messages/conversations/${user.uid}`);
+      const response = await axios.get(`${API}/messages/conversations/${user.uid}`);
       setConversations(response.data.conversations || []);
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -74,7 +74,7 @@ const Messages = ({ user }) => {
     
     try {
       setIsSearching(true);
-      const response = await axios.get(`${API}/api/social/search-users?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await axios.get(`${API}/social/search-users?q=${encodeURIComponent(query)}&limit=10`);
       // Filter out current user
       const filteredUsers = (response.data.users || []).filter(u => u.uid !== user.uid);
       setSearchResults(filteredUsers);
@@ -123,7 +123,7 @@ const Messages = ({ user }) => {
 
   const fetchRecipientAndOpenChat = async (uid) => {
     try {
-      const response = await axios.get(`${API}/api/users/${uid}/public-profile`);
+      const response = await axios.get(`${API}/users/${uid}/public-profile`);
       setRecipientProfile(response.data);
       
       // Check if conversation exists
@@ -147,7 +147,7 @@ const Messages = ({ user }) => {
       setRecipientProfile(otherUser);
       
       const response = await axios.get(
-        `${API}/api/messages/conversation/${conversationId}?uid=${user.uid}`
+        `${API}/messages/conversation/${conversationId}?uid=${user.uid}`
       );
       setMessages(response.data.messages || []);
     } catch (error) {
@@ -169,7 +169,7 @@ const Messages = ({ user }) => {
 
     setSending(true);
     try {
-      const response = await axios.post(`${API}/api/messages/send`, {
+      const response = await axios.post(`${API}/messages/send`, {
         sender_uid: user.uid,
         receiver_uid: recipientId,
         text: newMessage.trim()

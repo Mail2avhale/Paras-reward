@@ -85,9 +85,9 @@ const AdminCashBankBook = ({ user }) => {
     setLoading(true);
     try {
       const [summaryRes, cashRes, bankRes] = await Promise.all([
-        axios.get(`${API}/api/admin/accounting/summary`),
-        axios.get(`${API}/api/admin/accounting/cash-book`),
-        axios.get(`${API}/api/admin/accounting/bank-book`)
+        axios.get(`${API}/admin/accounting/summary`),
+        axios.get(`${API}/admin/accounting/cash-book`),
+        axios.get(`${API}/admin/accounting/bank-book`)
       ]);
       setSummary(summaryRes.data);
       setCashBook(cashRes.data);
@@ -109,7 +109,7 @@ const AdminCashBankBook = ({ user }) => {
     
     setIsAutoSuggesting(true);
     try {
-      const response = await axios.post(`${API}/api/admin/accounting/auto-categorize`, null, {
+      const response = await axios.post(`${API}/admin/accounting/auto-categorize`, null, {
         params: { description, amount: parseFloat(amount) || 0 }
       });
       setAutoSuggestion(response.data);
@@ -178,7 +178,7 @@ const AdminCashBankBook = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/accounting/transfer`, {
+      await axios.post(`${API}/admin/accounting/transfer`, {
         from_account: transferForm.from_account,
         to_account: transferForm.to_account,
         amount: parseFloat(transferForm.amount),
@@ -201,7 +201,7 @@ const AdminCashBankBook = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/accounting/set-opening-balance`, null, {
+      await axios.post(`${API}/admin/accounting/set-opening-balance`, null, {
         params: {
           account_type: openingBalanceForm.account_type,
           amount: parseFloat(openingBalanceForm.amount),

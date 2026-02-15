@@ -329,8 +329,8 @@ const RewardsHome = () => {
     const fetchData = async () => {
       try {
         const [statsRes, contactRes] = await Promise.allSettled([
-          axios.get(`${API}/api/stats`),
-          axios.get(`${API}/api/public/contact-info`)
+          axios.get(`${API}/stats`),
+          axios.get(`${API}/public/contact-info`)
         ]);
         
         if (statsRes.status === 'fulfilled') {

@@ -94,7 +94,7 @@ const AdminBillPayments = ({ user }) => {
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/bill-payment/requests`);
+      const response = await axios.get(`${API}/admin/bill-payment/requests`);
       const allRequests = response.data.requests || response.data || [];
       setRequests(allRequests);
       calculateStats(allRequests);
@@ -275,7 +275,7 @@ const AdminBillPayments = ({ user }) => {
         payload.reject_reason = reason || rejectReason;
       }
       
-      const response = await axios.post(`${API}/api/admin/bill-payment/process`, payload);
+      const response = await axios.post(`${API}/admin/bill-payment/process`, payload);
       
       // Update local state immediately for better UX
       setRequests(prev => prev.map(r => 
@@ -345,7 +345,7 @@ const AdminBillPayments = ({ user }) => {
           payload.reject_reason = reason || rejectReason;
         }
         
-        await axios.post(`${API}/api/admin/bill-payment/process`, payload);
+        await axios.post(`${API}/admin/bill-payment/process`, payload);
         successCount++;
       } catch (error) {
         failCount++;

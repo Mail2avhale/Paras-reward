@@ -78,19 +78,19 @@ const SubscriptionPlans = ({ user }) => {
       setLoading(true);
       
       // Fetch user data
-      const userRes = await axios.get(`${API}/api/user/${user.uid}`);
+      const userRes = await axios.get(`${API}/user/${user.uid}`);
       setUserData(userRes.data);
       
       // Fetch current subscription
-      const subRes = await axios.get(`${API}/api/subscription/user/${user.uid}`);
+      const subRes = await axios.get(`${API}/subscription/user/${user.uid}`);
       setCurrentSubscription(subRes.data.subscription);
       
       // Fetch plans
-      const plansRes = await axios.get(`${API}/api/subscription/plans`);
+      const plansRes = await axios.get(`${API}/subscription/plans`);
       setPlans(plansRes.data.plans || []);
       
       // Fetch payment config
-      const configRes = await axios.get(`${API}/api/settings/public`);
+      const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
       
     } catch (error) {
@@ -132,7 +132,7 @@ const SubscriptionPlans = ({ user }) => {
     
     setUtrValidating(true);
     try {
-      const response = await axios.get(`${API}/api/utr/validate/${cleaned}`);
+      const response = await axios.get(`${API}/utr/validate/${cleaned}`);
       setUtrValidationResult(response.data);
       
       if (!response.data.valid && response.data.error === 'UTR_ALREADY_USED') {
@@ -180,7 +180,7 @@ const SubscriptionPlans = ({ user }) => {
     try {
       setSubmitting(true);
       
-      await axios.post(`${API}/api/subscription/payment/${user.uid}`, {
+      await axios.post(`${API}/subscription/payment/${user.uid}`, {
         plan: selectedPlan.id,
         duration: selectedDuration,
         amount: getPrice(),

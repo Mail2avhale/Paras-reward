@@ -50,7 +50,7 @@ const AdminAuditService = ({ user }) => {
         ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
       });
       
-      const response = await axios.get(`${API}/api/admin/audit/comprehensive?${params}`);
+      const response = await axios.get(`${API}/admin/audit/comprehensive?${params}`);
       setLogs(response.data.logs || []);
       setStats(response.data.stats);
       setSuspicious(response.data.suspicious_activities || []);
@@ -66,7 +66,7 @@ const AdminAuditService = ({ user }) => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/audit/alerts`);
+      const response = await axios.get(`${API}/admin/audit/alerts`);
       setAlerts(response.data.alerts || []);
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -75,7 +75,7 @@ const AdminAuditService = ({ user }) => {
 
   const markAlertRead = async (alertId) => {
     try {
-      await axios.post(`${API}/api/admin/audit/alerts/${alertId}/read`);
+      await axios.post(`${API}/admin/audit/alerts/${alertId}/read`);
       fetchAlerts();
       toast.success('Alert marked as read');
     } catch (error) {

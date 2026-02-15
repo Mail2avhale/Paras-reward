@@ -61,7 +61,7 @@ const AdminDeliveryPartners = ({ user }) => {
   const fetchPartners = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/delivery-partners`, {
+      const response = await axios.get(`${API}/admin/delivery-partners`, {
         params: { status: statusFilter, page: currentPage, limit: 10 }
       });
       setPartners(response.data.partners || []);
@@ -76,7 +76,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/delivery-partners/stats`);
+      const response = await axios.get(`${API}/admin/delivery-partners/stats`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -86,7 +86,7 @@ const AdminDeliveryPartners = ({ user }) => {
   const fetchPendingOrders = async () => {
     try {
       setLoadingOrders(true);
-      const response = await axios.get(`${API}/api/admin/orders`, {
+      const response = await axios.get(`${API}/admin/orders`, {
         params: { status: 'pending', limit: 50 }
       });
       // Filter orders without assigned partner
@@ -108,7 +108,7 @@ const AdminDeliveryPartners = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/api/admin/delivery-partners`, formData);
+      await axios.post(`${API}/admin/delivery-partners`, formData);
       toast.success('Delivery partner created successfully');
       setShowAddModal(false);
       resetForm();
@@ -123,7 +123,7 @@ const AdminDeliveryPartners = ({ user }) => {
     if (!selectedPartner) return;
     
     try {
-      await axios.put(`${API}/api/admin/delivery-partners/${selectedPartner.partner_id}`, formData);
+      await axios.put(`${API}/admin/delivery-partners/${selectedPartner.partner_id}`, formData);
       toast.success('Delivery partner updated successfully');
       setShowEditModal(false);
       resetForm();
@@ -137,7 +137,7 @@ const AdminDeliveryPartners = ({ user }) => {
     if (!window.confirm('Are you sure you want to deactivate this delivery partner?')) return;
     
     try {
-      await axios.delete(`${API}/api/admin/delivery-partners/${partnerId}`);
+      await axios.delete(`${API}/admin/delivery-partners/${partnerId}`);
       toast.success('Delivery partner deactivated');
       fetchPartners();
       fetchStats();
@@ -148,7 +148,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
   const handleToggleActive = async (partner) => {
     try {
-      await axios.put(`${API}/api/admin/delivery-partners/${partner.partner_id}`, {
+      await axios.put(`${API}/admin/delivery-partners/${partner.partner_id}`, {
         is_active: !partner.is_active
       });
       toast.success(`Partner ${partner.is_active ? 'deactivated' : 'activated'}`);
@@ -161,7 +161,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
   const handleToggleVerified = async (partner) => {
     try {
-      await axios.put(`${API}/api/admin/delivery-partners/${partner.partner_id}`, {
+      await axios.put(`${API}/admin/delivery-partners/${partner.partner_id}`, {
         is_verified: !partner.is_verified
       });
       toast.success(`Partner ${partner.is_verified ? 'unverified' : 'verified'}`);
@@ -173,7 +173,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
   const handleAssignPartner = async (orderId, partnerId, trackingNumber = '') => {
     try {
-      await axios.post(`${API}/api/admin/orders/${orderId}/assign-partner`, {
+      await axios.post(`${API}/admin/orders/${orderId}/assign-partner`, {
         partner_id: partnerId,
         tracking_number: trackingNumber
       });
@@ -189,7 +189,7 @@ const AdminDeliveryPartners = ({ user }) => {
 
   const handleMarkDelivered = async (orderId) => {
     try {
-      await axios.post(`${API}/api/admin/orders/${orderId}/mark-delivered`, {});
+      await axios.post(`${API}/admin/orders/${orderId}/mark-delivered`, {});
       toast.success('Order marked as delivered');
       fetchPendingOrders();
       fetchStats();

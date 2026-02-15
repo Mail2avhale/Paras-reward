@@ -60,7 +60,7 @@ const AdminFixedExpenses = ({ user }) => {
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      let url = `${API}/api/admin/finance/fixed-expenses?page=${page}&limit=20`;
+      let url = `${API}/admin/finance/fixed-expenses?page=${page}&limit=20`;
       if (selectedMonth) url += `&month=${selectedMonth}`;
       
       const response = await axios.get(url);
@@ -82,14 +82,14 @@ const AdminFixedExpenses = ({ user }) => {
     
     try {
       if (editingExpense) {
-        await axios.put(`${API}/api/admin/finance/fixed-expense/${editingExpense.expense_id}`, {
+        await axios.put(`${API}/admin/finance/fixed-expense/${editingExpense.expense_id}`, {
           ...form,
           amount: parseFloat(form.amount),
           admin_id: user.uid
         });
         toast.success('Expense updated!');
       } else {
-        await axios.post(`${API}/api/admin/finance/fixed-expense`, {
+        await axios.post(`${API}/admin/finance/fixed-expense`, {
           ...form,
           amount: parseFloat(form.amount),
           admin_id: user.uid

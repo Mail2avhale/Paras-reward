@@ -45,7 +45,7 @@ const AdminRedeemSettings = ({ user }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/settings/redemption-rules`);
+      const response = await axios.get(`${API}/admin/settings/redemption-rules`);
       const data = response.data;
       
       if (data.monthly_limit_settings) {
@@ -67,10 +67,10 @@ const AdminRedeemSettings = ({ user }) => {
       setSaving(true);
       
       // Save monthly limit settings
-      await axios.put(`${API}/api/admin/settings/redeem-limits`, monthlySettings);
+      await axios.put(`${API}/admin/settings/redeem-limits`, monthlySettings);
       
       // Save strict rules
-      await axios.put(`${API}/api/admin/settings/redemption-rules`, strictRules);
+      await axios.put(`${API}/admin/settings/redemption-rules`, strictRules);
       
       toast.success('Settings saved successfully!');
     } catch (error) {

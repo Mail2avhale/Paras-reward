@@ -26,7 +26,7 @@ const AdminPolicies = ({ user, onLogout }) => {
   const fetchPolicies = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/policies`);
+      const response = await axios.get(`${API}/admin/policies`);
       setPolicies(response.data);
     } catch (error) {
       console.error('Error fetching policies:', error);
@@ -44,7 +44,7 @@ const AdminPolicies = ({ user, onLogout }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.post(`${API}/api/admin/policies`, policies);
+      await axios.post(`${API}/admin/policies`, policies);
       toast.success('Policies saved successfully!');
     } catch (error) {
       console.error('Error saving policies:', error);

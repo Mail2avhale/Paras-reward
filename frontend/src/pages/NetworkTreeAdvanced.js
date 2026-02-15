@@ -87,7 +87,7 @@ const NetworkTreeAdvanced = ({ user }) => {
     setLoading(true);
     try {
       // Fetch tree structure
-      const treeResponse = await axios.get(`${API}/api/referrals/network-tree/${user.uid}`);
+      const treeResponse = await axios.get(`${API}/referrals/network-tree/${user.uid}`);
       setNetworkData(treeResponse.data);
       
       // Flatten tree to get all users list

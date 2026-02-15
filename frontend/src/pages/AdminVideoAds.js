@@ -38,7 +38,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
   const fetchVideoAds = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/video-ads`);
+      const response = await axios.get(`${API}/admin/video-ads`);
       setVideoAds(response.data.video_ads || []);
     } catch (error) {
       console.error('Error fetching video ads:', error);
@@ -53,10 +53,10 @@ const AdminVideoAds = ({ user, onLogout }) => {
     
     try {
       if (editingAd) {
-        await axios.put(`${API}/api/admin/video-ads/${editingAd.video_ad_id}`, formData);
+        await axios.put(`${API}/admin/video-ads/${editingAd.video_ad_id}`, formData);
         toast.success('Video ad updated successfully!');
       } else {
-        await axios.post(`${API}/api/admin/video-ads`, formData);
+        await axios.post(`${API}/admin/video-ads`, formData);
         toast.success('Video ad created successfully!');
       }
       
@@ -72,7 +72,7 @@ const AdminVideoAds = ({ user, onLogout }) => {
     if (!window.confirm('Are you sure you want to delete this video ad?')) return;
     
     try {
-      await axios.delete(`${API}/api/admin/video-ads/${videoAdId}`);
+      await axios.delete(`${API}/admin/video-ads/${videoAdId}`);
       toast.success('Video ad deleted successfully!');
       fetchVideoAds();
     } catch (error) {

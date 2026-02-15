@@ -24,7 +24,7 @@ const TopBar = ({ user, onLogout }) => {
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.uid) return;
     try {
-      const response = await axios.get(`${API}/api/notifications/${user.uid}/unread-count`);
+      const response = await axios.get(`${API}/notifications/${user.uid}/unread-count`);
       setUnreadCount(response.data.unread_count || 0);
     } catch (error) {
       console.error('Error fetching unread count:', error);

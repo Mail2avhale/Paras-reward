@@ -38,7 +38,7 @@ const AdminAccountsPayable = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/accounting/payables`, {
+      const response = await axios.get(`${API}/admin/accounting/payables`, {
         params: { status: filter }
       });
       setData(response.data);
@@ -57,7 +57,7 @@ const AdminAccountsPayable = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/admin/accounting/payables`, null, {
+      await axios.post(`${API}/admin/accounting/payables`, null, {
         params: {
           vendor_name: form.vendor_name,
           vendor_id: form.vendor_id,
@@ -79,7 +79,7 @@ const AdminAccountsPayable = ({ user }) => {
 
   const handleMarkPaid = async (billId, paymentMethod = 'cash') => {
     try {
-      await axios.put(`${API}/api/admin/accounting/payables/${billId}/status`, null, {
+      await axios.put(`${API}/admin/accounting/payables/${billId}/status`, null, {
         params: { status: 'paid', payment_method: paymentMethod, admin_id: user.uid }
       });
       toast.success('Marked as paid!');

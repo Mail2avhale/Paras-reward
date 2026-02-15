@@ -39,11 +39,11 @@ const AdminFinancialReports = ({ user }) => {
     setLoading(true);
     try {
       const [pnlRes, balanceRes, prcFlowRes] = await Promise.all([
-        axios.get(`${API}/api/admin/reports/profit-loss-statement`, {
+        axios.get(`${API}/admin/reports/profit-loss-statement`, {
           params: { month: selectedMonth, year: selectedYear }
         }),
-        axios.get(`${API}/api/admin/reports/balance-sheet`),
-        axios.get(`${API}/api/admin/reports/prc-flow`, {
+        axios.get(`${API}/admin/reports/balance-sheet`),
+        axios.get(`${API}/admin/reports/prc-flow`, {
           params: { month: selectedMonth, year: selectedYear }
         })
       ]);

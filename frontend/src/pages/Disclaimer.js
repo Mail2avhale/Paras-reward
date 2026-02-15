@@ -20,7 +20,7 @@ const Disclaimer = () => {
   useEffect(() => {
     const fetchCompanyInfo = async () => {
       try {
-        const response = await axios.get(`${API}/api/public/contact-info`);
+        const response = await axios.get(`${API}/public/contact-info`);
         if (response.data) {
           setCompanyInfo(response.data);
         }

@@ -32,7 +32,7 @@ const AdminPRCLedger = ({ user }) => {
   const fetchLedger = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/accounting/prc-ledger`, {
+      const response = await axios.get(`${API}/admin/accounting/prc-ledger`, {
         params: { page, limit: 50, filter_type: filter }
       });
       setLedgerData(response.data);
@@ -47,7 +47,7 @@ const AdminPRCLedger = ({ user }) => {
   const handleSyncToBooks = async () => {
     setSyncing(true);
     try {
-      const response = await axios.post(`${API}/api/admin/accounting/sync-prc-to-books`, null, {
+      const response = await axios.post(`${API}/admin/accounting/sync-prc-to-books`, null, {
         params: { admin_id: user.uid }
       });
       toast.success(`Synced ${response.data.transactions_processed || 0} transactions to Cash Book`);

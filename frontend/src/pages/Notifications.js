@@ -40,7 +40,7 @@ const Notifications = ({ user }) => {
       const unreadOnly = filter === 'unread';
       
       const response = await axios.get(
-        `${API}/api/notifications/${user.uid}?page=${currentPage}&limit=20&unread_only=${unreadOnly}`
+        `${API}/notifications/${user.uid}?page=${currentPage}&limit=20&unread_only=${unreadOnly}`
       );
       
       const newNotifications = response.data.notifications || [];
@@ -63,7 +63,7 @@ const Notifications = ({ user }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await axios.put(`${API}/api/notifications/${notificationId}/read`);
+      await axios.put(`${API}/notifications/${notificationId}/read`);
       setNotifications(prev => 
         prev.map(n => n.notification_id === notificationId ? { ...n, read: true } : n)
       );
@@ -74,7 +74,7 @@ const Notifications = ({ user }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.put(`${API}/api/notifications/${user.uid}/read-all`);
+      await axios.put(`${API}/notifications/${user.uid}/read-all`);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       toast.success('All notifications marked as read');
     } catch (error) {
@@ -84,7 +84,7 @@ const Notifications = ({ user }) => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await axios.delete(`${API}/api/notifications/${notificationId}`);
+      await axios.delete(`${API}/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
       toast.success('Notification deleted');
     } catch (error) {
@@ -96,7 +96,7 @@ const Notifications = ({ user }) => {
     if (!window.confirm('Are you sure you want to clear all notifications?')) return;
     
     try {
-      await axios.delete(`${API}/api/notifications/${user.uid}/clear-all`);
+      await axios.delete(`${API}/notifications/${user.uid}/clear-all`);
       setNotifications([]);
       toast.success('All notifications cleared');
     } catch (error) {

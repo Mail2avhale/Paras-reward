@@ -95,7 +95,7 @@ const BillPayments = ({ user, onLogout }) => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(`${API}/api/auth/user/${user.uid}`);
+      const response = await axios.get(`${API}/auth/user/${user.uid}`);
       setCurrentUser(response.data);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -104,7 +104,7 @@ const BillPayments = ({ user, onLogout }) => {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get(`${API}/api/bill-payment/requests/${user.uid}`);
+      const response = await axios.get(`${API}/bill-payment/requests/${user.uid}`);
       setRequests(response.data.requests || []);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -178,7 +178,7 @@ const BillPayments = ({ user, onLogout }) => {
         details[field] = formData[field];
       });
 
-      const response = await axios.post(`${API}/api/bill-payment/request`, {
+      const response = await axios.post(`${API}/bill-payment/request`, {
         user_id: user.uid,
         request_type: selectedType,
         amount_inr: parseFloat(formData.amount_inr),

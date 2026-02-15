@@ -367,7 +367,7 @@ export const usePRCExpiry = (userId, isFreeUser) => {
     
     try {
       const API = process.env.REACT_APP_BACKEND_URL;
-      const response = await fetch(`${API}/api/user/${userId}/prc-expiry`);
+      const response = await fetch(`${API}/user/${userId}/prc-expiry`);
       const data = await response.json();
       
       if (data.expiring_batches) {

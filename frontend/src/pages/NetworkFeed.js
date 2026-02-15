@@ -68,7 +68,7 @@ const NetworkFeed = ({ user }) => {
   // Silent refresh without showing loading state
   const refreshGlobalFeed = async () => {
     try {
-      const globalRes = await axios.get(`${API}/api/global/live-activity?limit=50`);
+      const globalRes = await axios.get(`${API}/global/live-activity?limit=50`);
       const globalActivities = globalRes.data.activities || [];
       setGlobalFeed(globalActivities);
       setGlobalTotal(globalRes.data.total || globalActivities.length);
@@ -81,7 +81,7 @@ const NetworkFeed = ({ user }) => {
     setLoading(true);
     try {
       // Fetch REAL global live activity (comprehensive feed)
-      const globalRes = await axios.get(`${API}/api/global/live-activity?limit=50`);
+      const globalRes = await axios.get(`${API}/global/live-activity?limit=50`);
       const globalActivities = globalRes.data.activities || [];
       setGlobalFeed(globalActivities);
       setGlobalTotal(globalRes.data.total || globalActivities.length);
@@ -90,7 +90,7 @@ const NetworkFeed = ({ user }) => {
 
       // Fetch network feed if logged in
       if (user?.uid) {
-        const networkRes = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=1`);
+        const networkRes = await axios.get(`${API}/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=1`);
         const networkActivities = networkRes.data.activities || [];
         setNetworkFeed(networkActivities);
         setNetworkTotal(networkRes.data.total || networkActivities.length);
@@ -98,7 +98,7 @@ const NetworkFeed = ({ user }) => {
         setNetworkPage(1);
 
         // Fetch suggested users
-        const suggestedRes = await axios.get(`${API}/api/social/suggested-users/${user.uid}?limit=5`);
+        const suggestedRes = await axios.get(`${API}/social/suggested-users/${user.uid}?limit=5`);
         setSuggestedUsers(suggestedRes.data.suggested_users || []);
       }
     } catch (error) {
@@ -113,7 +113,7 @@ const NetworkFeed = ({ user }) => {
     setLoadingMore(true);
     try {
       const nextPage = globalPage + 1;
-      const res = await axios.get(`${API}/api/feed/global?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
+      const res = await axios.get(`${API}/feed/global?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
       const newActivities = res.data.activities || [];
       if (newActivities.length > 0) {
         setGlobalFeed(prev => [...prev, ...newActivities]);
@@ -134,7 +134,7 @@ const NetworkFeed = ({ user }) => {
     setLoadingMore(true);
     try {
       const nextPage = networkPage + 1;
-      const res = await axios.get(`${API}/api/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
+      const res = await axios.get(`${API}/feed/network/${user.uid}?limit=${ITEMS_PER_PAGE}&page=${nextPage}`);
       const newActivities = res.data.activities || [];
       if (newActivities.length > 0) {
         setNetworkFeed(prev => [...prev, ...newActivities]);
@@ -159,7 +159,7 @@ const NetworkFeed = ({ user }) => {
 
     setSearching(true);
     try {
-      const response = await axios.get(`${API}/api/social/search-users?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await axios.get(`${API}/social/search-users?q=${encodeURIComponent(query)}&limit=10`);
       setSearchResults(response.data.users || []);
     } catch (error) {
       console.error('Search error:', error);
@@ -176,7 +176,7 @@ const NetworkFeed = ({ user }) => {
     }
 
     try {
-      await axios.post(`${API}/api/users/${targetUid}/follow`, {
+      await axios.post(`${API}/users/${targetUid}/follow`, {
         follower_uid: user.uid
       });
       toast.success('Following!');

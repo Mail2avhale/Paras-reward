@@ -54,7 +54,7 @@ const AdminCompanyWallets = ({ user }) => {
   const fetchWallets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/admin/finance/company-wallets`);
+      const response = await axios.get(`${API}/admin/finance/company-wallets`);
       setWallets(response.data.wallets || []);
       setTransactions(response.data.recent_transactions || []);
       setTotalBalance(response.data.total_balance || 0);
@@ -72,7 +72,7 @@ const AdminCompanyWallets = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/api/admin/finance/company-wallet/transfer`, {
+      await axios.post(`${API}/admin/finance/company-wallet/transfer`, {
         ...transferForm,
         amount: parseFloat(transferForm.amount),
         admin_id: user.uid
@@ -93,7 +93,7 @@ const AdminCompanyWallets = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/api/admin/finance/company-wallet/adjust`, {
+      await axios.post(`${API}/admin/finance/company-wallet/adjust`, {
         ...adjustForm,
         amount: parseFloat(adjustForm.amount),
         admin_id: user.uid

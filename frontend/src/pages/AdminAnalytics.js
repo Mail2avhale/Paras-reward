@@ -34,7 +34,7 @@ const AdminAnalytics = ({ user }) => {
   const fetchAnalytics = async (startDate = null, endDate = null, silent = false) => {
     if (!silent) setLoading(true);
     try {
-      let url = `${API}/api/admin/analytics/comprehensive`;
+      let url = `${API}/admin/analytics/comprehensive`;
       if (startDate && endDate) {
         url += `?start_date=${startDate}&end_date=${endDate}`;
       }

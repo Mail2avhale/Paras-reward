@@ -40,7 +40,7 @@ const AdminContactSettings = ({ user }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      const response = await axios.get(`${API}/admin/contact-settings`);
       setSettings(response.data);
     } catch (error) {
       console.error('Error fetching contact settings:', error);
@@ -57,7 +57,7 @@ const AdminContactSettings = ({ user }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.post(`${API}/api/admin/contact-settings/update`, settings);
+      await axios.post(`${API}/admin/contact-settings/update`, settings);
       toast.success('Contact settings saved successfully!');
     } catch (error) {
       console.error('Error saving contact settings:', error);

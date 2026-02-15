@@ -33,7 +33,7 @@ const AdminServiceCharges = ({ user }) => {
 
   const fetchConfig = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/service-charges`);
+      const response = await axios.get(`${API}/admin/service-charges`);
       setBillPaymentConfig(response.data.bill_payment);
       setGiftVoucherConfig(response.data.gift_voucher);
     } catch (error) {
@@ -46,7 +46,7 @@ const AdminServiceCharges = ({ user }) => {
     try {
       const config = serviceType === 'bill_payment' ? billPaymentConfig : giftVoucherConfig;
       
-      await axios.post(`${API}/api/admin/service-charges`, {
+      await axios.post(`${API}/admin/service-charges`, {
         service_type: serviceType,
         charge_type: config.charge_type,
         charge_percentage: parseFloat(config.charge_percentage),

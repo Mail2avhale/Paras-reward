@@ -74,7 +74,7 @@ const AdminGiftVouchers = ({ user }) => {
     try {
       setLoading(true);
       // Fetch all statuses to calculate stats correctly
-      const response = await axios.get(`${API}/api/admin/gift-voucher/requests`);
+      const response = await axios.get(`${API}/admin/gift-voucher/requests`);
       setRequests(response.data.requests || []);
       setLastRefresh(new Date());
     } catch (error) {
@@ -191,7 +191,7 @@ const AdminGiftVouchers = ({ user }) => {
     
     setProcessing(true);
     try {
-      await axios.post(`${API}/api/admin/gift-voucher/process`, {
+      await axios.post(`${API}/admin/gift-voucher/process`, {
         request_id: requestId,
         action,
         voucher_code: voucherCode,
@@ -225,7 +225,7 @@ const AdminGiftVouchers = ({ user }) => {
     
     try {
       setProcessing(true);
-      await axios.post(`${API}/api/admin/gift-voucher/process`, {
+      await axios.post(`${API}/admin/gift-voucher/process`, {
         request_id: req.request_id,
         action: 'reject',
         reject_reason: reason.trim(),

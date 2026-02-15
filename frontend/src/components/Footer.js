@@ -32,7 +32,7 @@ const Footer = () => {
 
   const fetchContactDetails = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/contact-settings`);
+      const response = await axios.get(`${API}/admin/contact-settings`);
       if (response.data) {
         const data = response.data;
         const fullAddress = [
@@ -58,7 +58,7 @@ const Footer = () => {
 
   const fetchSocialMedia = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/social-media-settings`);
+      const response = await axios.get(`${API}/admin/social-media-settings`);
       setSocialMedia(response.data);
     } catch (error) {
       console.error('Error fetching social media:', error);

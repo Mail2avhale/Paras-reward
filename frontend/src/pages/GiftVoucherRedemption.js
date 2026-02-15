@@ -50,7 +50,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(`${API}/api/auth/user/${user.uid}`);
+      const response = await axios.get(`${API}/auth/user/${user.uid}`);
       setCurrentUser(response.data);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -59,7 +59,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get(`${API}/api/gift-voucher/requests/${user.uid}`);
+      const response = await axios.get(`${API}/gift-voucher/requests/${user.uid}`);
       setRequests(response.data.requests || []);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -104,7 +104,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/api/gift-voucher/request`, {
+      await axios.post(`${API}/gift-voucher/request`, {
         user_id: user.uid,
         denomination: selectedDenomination
       });

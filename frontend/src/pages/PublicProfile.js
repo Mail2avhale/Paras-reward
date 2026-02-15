@@ -31,7 +31,7 @@ const PublicProfile = ({ user }) => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/users/${uid}/public-profile`);
+      const response = await axios.get(`${API}/users/${uid}/public-profile`);
       setProfile(response.data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -43,7 +43,7 @@ const PublicProfile = ({ user }) => {
 
   const checkFollowStatus = async () => {
     try {
-      const response = await axios.get(`${API}/api/users/${user.uid}/check-follow/${uid}`);
+      const response = await axios.get(`${API}/users/${user.uid}/check-follow/${uid}`);
       setIsFollowing(response.data.is_following);
     } catch (error) {
       console.error('Error checking follow status:', error);
@@ -60,14 +60,14 @@ const PublicProfile = ({ user }) => {
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await axios.delete(`${API}/api/users/${uid}/unfollow`, {
+        await axios.delete(`${API}/users/${uid}/unfollow`, {
           data: { follower_uid: user.uid }
         });
         setIsFollowing(false);
         toast.success('Unfollowed');
         setProfile(prev => ({ ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) }));
       } else {
-        await axios.post(`${API}/api/users/${uid}/follow`, {
+        await axios.post(`${API}/users/${uid}/follow`, {
           follower_uid: user.uid
         });
         setIsFollowing(true);

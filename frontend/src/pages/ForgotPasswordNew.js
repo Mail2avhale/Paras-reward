@@ -71,7 +71,7 @@ const ForgotPasswordNew = () => {
         }
       }
 
-      const response = await axios.post(`${API}/api/auth/password-recovery/verify`, {
+      const response = await axios.post(`${API}/auth/password-recovery/verify`, {
         email: email,
         verification_fields: verificationData
       });
@@ -104,7 +104,7 @@ const ForgotPasswordNew = () => {
         return;
       }
 
-      await axios.post(`${API}/api/auth/password-recovery/reset`, {
+      await axios.post(`${API}/auth/password-recovery/reset`, {
         email: email,
         verification_fields: verificationData,
         new_password: newPassword

@@ -79,12 +79,12 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const fetchPendingCounts = async () => {
       try {
         const [kycRes, subRes, billRes, giftRes, luxuryRes, bankRes] = await Promise.all([
-          axios.get(`${API}/api/admin/kyc/pending?limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/bill-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/gift-vouchers?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/api/admin/bank-redeem/pending-count`).catch(() => ({ data: { pending_count: 0 } }))
+          axios.get(`${API}/admin/kyc/pending?limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/admin/bill-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/admin/gift-vouchers?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
+          axios.get(`${API}/admin/bank-redeem/pending-count`).catch(() => ({ data: { pending_count: 0 } }))
         ]);
         
         setPendingCounts({
@@ -111,7 +111,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const fetchPermissions = async () => {
       if (user?.role === 'manager' && user?.uid) {
         try {
-          const response = await axios.get(`${API}/api/admin/user/${user.uid}/permissions`);
+          const response = await axios.get(`${API}/admin/user/${user.uid}/permissions`);
           setUserPermissions(response.data.permissions || []);
         } catch (error) {
           console.error('Error fetching permissions:', error);

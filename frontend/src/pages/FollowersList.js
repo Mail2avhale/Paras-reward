@@ -32,13 +32,13 @@ const FollowersList = ({ user, type = 'followers' }) => {
       setLoading(true);
       
       // Fetch profile name
-      const profileRes = await axios.get(`${API}/api/users/${uid}/public-profile`);
+      const profileRes = await axios.get(`${API}/users/${uid}/public-profile`);
       setProfileName(profileRes.data.name || 'User');
       
       // Fetch followers or following
       const endpoint = type === 'followers' 
-        ? `${API}/api/users/${uid}/followers?page=1&limit=${ITEMS_PER_PAGE}`
-        : `${API}/api/users/${uid}/following?page=1&limit=${ITEMS_PER_PAGE}`;
+        ? `${API}/users/${uid}/followers?page=1&limit=${ITEMS_PER_PAGE}`
+        : `${API}/users/${uid}/following?page=1&limit=${ITEMS_PER_PAGE}`;
       
       const response = await axios.get(endpoint);
       const data = type === 'followers' ? response.data.followers : response.data.following;
@@ -60,8 +60,8 @@ const FollowersList = ({ user, type = 'followers' }) => {
     try {
       const nextPage = page + 1;
       const endpoint = type === 'followers'
-        ? `${API}/api/users/${uid}/followers?page=${nextPage}&limit=${ITEMS_PER_PAGE}`
-        : `${API}/api/users/${uid}/following?page=${nextPage}&limit=${ITEMS_PER_PAGE}`;
+        ? `${API}/users/${uid}/followers?page=${nextPage}&limit=${ITEMS_PER_PAGE}`
+        : `${API}/users/${uid}/following?page=${nextPage}&limit=${ITEMS_PER_PAGE}`;
       
       const response = await axios.get(endpoint);
       const newData = type === 'followers' ? response.data.followers : response.data.following;
@@ -83,7 +83,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
     }
 
     try {
-      await axios.post(`${API}/api/users/${targetUid}/follow`, {
+      await axios.post(`${API}/users/${targetUid}/follow`, {
         follower_uid: user.uid
       });
       toast.success('Following!');

@@ -39,8 +39,8 @@ const AdminTrialBalance = ({ user }) => {
     setLoading(true);
     try {
       const [trialRes, chartRes] = await Promise.all([
-        axios.get(`${API}/api/admin/accounting/trial-balance`),
-        axios.get(`${API}/api/admin/accounting/chart-of-accounts`)
+        axios.get(`${API}/admin/accounting/trial-balance`),
+        axios.get(`${API}/admin/accounting/chart-of-accounts`)
       ]);
       setTrialBalance(trialRes.data);
       setChartOfAccounts(chartRes.data);

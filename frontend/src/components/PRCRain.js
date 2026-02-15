@@ -289,7 +289,7 @@ const PRCRain = ({ user, onComplete }) => {
     if (timerRef.current) clearInterval(timerRef.current);
 
     try {
-      const response = await axios.post(`${API}/api/prc-rain/end-session`, {
+      const response = await axios.post(`${API}/prc-rain/end-session`, {
         session_id: sessionRef.current,
         user_id: user.uid
       });
@@ -341,7 +341,7 @@ const PRCRain = ({ user, onComplete }) => {
     if (isActiveRef.current || !user?.uid) return;
     
     try {
-      const response = await axios.get(`${API}/api/prc-rain/check/${user.uid}`);
+      const response = await axios.get(`${API}/prc-rain/check/${user.uid}`);
       if (response.data.should_rain) {
         startRain(response.data);
       }
@@ -417,7 +417,7 @@ const PRCRain = ({ user, onComplete }) => {
     if (!sessionRef.current || tapsRemaining <= 0) return;
 
     try {
-      const response = await axios.post(`${API}/api/prc-rain/tap`, {
+      const response = await axios.post(`${API}/prc-rain/tap`, {
         session_id: sessionRef.current,
         user_id: user.uid,
         drop_color: drop.color

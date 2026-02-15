@@ -54,7 +54,7 @@ const PRCEmergencyControls = () => {
 
   const fetchSystemStatus = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/prc-economy/status`);
+      const response = await axios.get(`${API}/admin/prc-economy/status`);
       setSystemStatus(response.data);
     } catch (error) {
       console.error('Error fetching status:', error);
@@ -66,7 +66,7 @@ const PRCEmergencyControls = () => {
   const handleEmergencyStop = async () => {
     setActionLoading(true);
     try {
-      await axios.post(`${API}/api/admin/prc-economy/emergency-stop`, {
+      await axios.post(`${API}/admin/prc-economy/emergency-stop`, {
         sendNotification: burnSettings.sendNotification
       });
       toast.success('Mining stopped for all users');
@@ -82,7 +82,7 @@ const PRCEmergencyControls = () => {
   const handleResumeMining = async () => {
     setActionLoading(true);
     try {
-      await axios.post(`${API}/api/admin/prc-economy/resume-mining`, {
+      await axios.post(`${API}/admin/prc-economy/resume-mining`, {
         sendNotification: burnSettings.sendNotification
       });
       toast.success('Mining resumed for all users');
@@ -97,7 +97,7 @@ const PRCEmergencyControls = () => {
   const handlePreviewBurn = async () => {
     setActionLoading(true);
     try {
-      const response = await axios.post(`${API}/api/admin/prc-economy/burn-preview`, {
+      const response = await axios.post(`${API}/admin/prc-economy/burn-preview`, {
         method: burnSettings.method,
         flatPercentage: burnSettings.flatPercentage,
         progressiveRates: burnSettings.progressiveRates,
@@ -116,7 +116,7 @@ const PRCEmergencyControls = () => {
   const handleExecuteBurn = async () => {
     setActionLoading(true);
     try {
-      await axios.post(`${API}/api/admin/prc-economy/execute-burn`, {
+      await axios.post(`${API}/admin/prc-economy/execute-burn`, {
         method: burnSettings.method,
         flatPercentage: burnSettings.flatPercentage,
         progressiveRates: burnSettings.progressiveRates,

@@ -168,7 +168,7 @@ const TapGameAdvanced = ({ user }) => {
 
   const fetchTapStats = async () => {
     try {
-      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const response = await axios.get(`${API}/user/${user.uid}`);
       const data = response.data;
       const tapsToday = data.taps_today || 0;
       const userPlan = data.subscription_plan || 'explorer';
@@ -192,7 +192,7 @@ const TapGameAdvanced = ({ user }) => {
     if (tapsToSync <= 0) return;
     
     try {
-      const response = await axios.post(`${API}/api/game/tap/${user.uid}`, { 
+      const response = await axios.post(`${API}/game/tap/${user.uid}`, { 
         taps: tapsToSync,
         combo_multiplier: comboMultiplier
       });

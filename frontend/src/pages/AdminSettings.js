@@ -70,7 +70,7 @@ const AdminSettings = ({ user }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/social-media-settings`);
+      const response = await axios.get(`${API}/admin/social-media-settings`);
       setSocialMedia(response.data);
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -79,7 +79,7 @@ const AdminSettings = ({ user }) => {
     
     // Fetch registration status
     try {
-      const regResponse = await axios.get(`${API}/api/admin/registration-status`);
+      const regResponse = await axios.get(`${API}/admin/registration-status`);
       setRegistrationEnabled(regResponse.data.registration_enabled || false);
       setRegistrationMessage(regResponse.data.registration_message || 'New user registrations are currently closed. Please check back later.');
     } catch (error) {
@@ -88,7 +88,7 @@ const AdminSettings = ({ user }) => {
 
     // Fetch payment config
     try {
-      const paymentResponse = await axios.get(`${API}/api/admin/payment-config`);
+      const paymentResponse = await axios.get(`${API}/admin/payment-config`);
       if (paymentResponse.data) {
         setPaymentConfig({
           upi_id: paymentResponse.data.upi_id || '',
@@ -106,7 +106,7 @@ const AdminSettings = ({ user }) => {
 
     // Fetch marketplace settings
     try {
-      const marketplaceResponse = await axios.get(`${API}/api/admin/settings/marketplace`);
+      const marketplaceResponse = await axios.get(`${API}/admin/settings/marketplace`);
       if (marketplaceResponse.data) {
         setMarketplaceSettings({
           prc_to_inr_rate: marketplaceResponse.data.prc_to_inr_rate || 0.1,
@@ -121,7 +121,7 @@ const AdminSettings = ({ user }) => {
 
     // Fetch redemption charge settings
     try {
-      const redemptionResponse = await axios.get(`${API}/api/redemption/charge-settings`);
+      const redemptionResponse = await axios.get(`${API}/redemption/charge-settings`);
       if (redemptionResponse.data) {
         setRedemptionCharges({
           processing_fee_inr: redemptionResponse.data.processing_fee_inr || 10,
@@ -136,7 +136,7 @@ const AdminSettings = ({ user }) => {
   const handleSaveRedemptionCharges = async () => {
     setSavingRedemption(true);
     try {
-      await axios.post(`${API}/api/admin/redemption/charge-settings`, redemptionCharges);
+      await axios.post(`${API}/admin/redemption/charge-settings`, redemptionCharges);
       toast.success('Redemption charges updated successfully!');
     } catch (error) {
       console.error('Error saving redemption charges:', error);
@@ -153,7 +153,7 @@ const AdminSettings = ({ user }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.post(`${API}/api/admin/social-media-settings`, socialMedia);
+      await axios.post(`${API}/admin/social-media-settings`, socialMedia);
       toast.success('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -166,7 +166,7 @@ const AdminSettings = ({ user }) => {
   const handleToggleRegistration = async () => {
     setLoadingRegistration(true);
     try {
-      const response = await axios.post(`${API}/api/admin/toggle-registration`, {
+      const response = await axios.post(`${API}/admin/toggle-registration`, {
         enabled: !registrationEnabled,
         message: registrationMessage
       });
@@ -188,7 +188,7 @@ const AdminSettings = ({ user }) => {
   const handleUpdateMessage = async () => {
     setLoadingRegistration(true);
     try {
-      await axios.post(`${API}/api/admin/toggle-registration`, {
+      await axios.post(`${API}/admin/toggle-registration`, {
         enabled: registrationEnabled,
         message: registrationMessage
       });
@@ -208,7 +208,7 @@ const AdminSettings = ({ user }) => {
   const handleSavePaymentConfig = async () => {
     setSavingPayment(true);
     try {
-      await axios.post(`${API}/api/admin/payment-config`, paymentConfig);
+      await axios.post(`${API}/admin/payment-config`, paymentConfig);
       toast.success('VIP Payment settings saved successfully!');
     } catch (error) {
       console.error('Error saving payment config:', error);
@@ -225,7 +225,7 @@ const AdminSettings = ({ user }) => {
   const handleSaveMarketplaceSettings = async () => {
     setSavingMarketplace(true);
     try {
-      await axios.put(`${API}/api/admin/settings/marketplace`, marketplaceSettings);
+      await axios.put(`${API}/admin/settings/marketplace`, marketplaceSettings);
       toast.success('Marketplace settings saved successfully!');
     } catch (error) {
       console.error('Error saving marketplace settings:', error);

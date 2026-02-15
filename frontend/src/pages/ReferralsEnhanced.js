@@ -298,7 +298,7 @@ const ReferralsEnhanced = ({ user }) => {
   // Fetch live activity (recent referral achievements) - low priority
   const fetchLiveActivity = async () => {
     try {
-      const response = await axios.get(`${API}/api/referrals/live-activity`);
+      const response = await axios.get(`${API}/referrals/live-activity`);
       setLiveActivity(response.data.activities || []);
     } catch (e) {
       // Fallback to mock data if API doesn't exist yet
@@ -320,7 +320,7 @@ const ReferralsEnhanced = ({ user }) => {
         
         // Record achievement to global live activity
         try {
-          await axios.post(`${API}/api/referrals/milestone-achievement`, {
+          await axios.post(`${API}/referrals/milestone-achievement`, {
             uid: user?.uid,
             milestone_count: milestone.count,
             milestone_badge: milestone.badge,
@@ -358,8 +358,8 @@ const ReferralsEnhanced = ({ user }) => {
       // Try to fetch all data in parallel with timeout
       const [userResult, levelsResult] = await Promise.race([
         Promise.allSettled([
-          axios.get(`${API}/api/user/${user.uid}`),
-          axios.get(`${API}/api/referrals/${user.uid}/levels`)
+          axios.get(`${API}/user/${user.uid}`),
+          axios.get(`${API}/referrals/${user.uid}/levels`)
         ]),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
       ]).catch(() => [{ status: 'rejected' }, { status: 'rejected' }]);
@@ -422,7 +422,7 @@ const ReferralsEnhanced = ({ user }) => {
       }
       
       // Fetch reward progress in background (non-blocking)
-      axios.get(`${API}/api/referrals/${user.uid}/reward-progress`)
+      axios.get(`${API}/referrals/${user.uid}/reward-progress`)
         .then(res => setRewardProgress(res.data))
         .catch(() => {});
       
@@ -571,7 +571,7 @@ Download now & start earning!`;
   // Fetch network tree for visualization
   const fetchNetworkTree = async () => {
     try {
-      const response = await axios.get(`${API}/api/referrals/${user.uid}/tree`);
+      const response = await axios.get(`${API}/referrals/${user.uid}/tree`);
       // The API returns a tree object with 'tree' key containing the root node
       const treeData = response.data.tree;
       // We want to show the children of the root (the user's direct referrals and their network)
@@ -586,7 +586,7 @@ Download now & start earning!`;
   const fetchNetworkAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const response = await axios.get(`${API}/api/referrals/${user.uid}/network-analytics`);
+      const response = await axios.get(`${API}/referrals/${user.uid}/network-analytics`);
       setNetworkAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching network analytics:', error);
@@ -621,7 +621,7 @@ Download now & start earning!`;
     
     setApplyingCode(true);
     try {
-      const response = await axios.post(`${API}/api/referrals/apply`, {
+      const response = await axios.post(`${API}/referrals/apply`, {
         uid: user?.uid,
         referral_code: applyCodeInput.trim().toUpperCase()
       });

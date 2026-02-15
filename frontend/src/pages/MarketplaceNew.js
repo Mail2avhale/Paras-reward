@@ -48,9 +48,9 @@ const MarketplaceNew = ({ user, onLogout }) => {
     try {
       setLoading(true);
       const [userRes, productsRes, cartRes] = await Promise.all([
-        axios.get(`${API}/api/user/${user.uid}`),
-        axios.get(`${API}/api/products`),
-        axios.get(`${API}/api/cart/${user.uid}`).catch(() => ({ data: { items: [] } }))
+        axios.get(`${API}/user/${user.uid}`),
+        axios.get(`${API}/products`),
+        axios.get(`${API}/cart/${user.uid}`).catch(() => ({ data: { items: [] } }))
       ]);
       
       setUserData(userRes.data);
@@ -96,7 +96,7 @@ const MarketplaceNew = ({ user, onLogout }) => {
 
   const addToCart = async (product) => {
     try {
-      await axios.post(`${API}/api/cart/${user.uid}/add`, {
+      await axios.post(`${API}/cart/${user.uid}/add`, {
         product_id: product.product_id,
         quantity: 1
       });

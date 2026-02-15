@@ -29,7 +29,7 @@ const AdminFinancialRatios = ({ user }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/admin/accounting/financial-ratios`);
+      const response = await axios.get(`${API}/admin/accounting/financial-ratios`);
       setData(response.data);
     } catch (error) {
       console.error('Error fetching ratios:', error);

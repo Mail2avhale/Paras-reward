@@ -54,7 +54,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
     try {
       setLoading(true);
       const unreadOnly = filter === 'unread';
-      const res = await axios.get(`${API}/api/notifications/${user.uid}?limit=20&unread_only=${unreadOnly}`);
+      const res = await axios.get(`${API}/notifications/${user.uid}?limit=20&unread_only=${unreadOnly}`);
       const data = res.data || {};
       const notifs = data.notifications || [];
       setNotifications(notifs);
@@ -69,7 +69,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
   const markAsRead = async (notificationId, e) => {
     if (e) e.stopPropagation();
     try {
-      await axios.put(`${API}/api/notifications/${notificationId}/read`);
+      await axios.put(`${API}/notifications/${notificationId}/read`);
       setNotifications(prev => 
         prev.map(n => n.notification_id === notificationId ? { ...n, read: true } : n)
       );
@@ -81,7 +81,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
 
   const markAllAsRead = async () => {
     try {
-      await axios.put(`${API}/api/notifications/${user.uid}/read-all`);
+      await axios.put(`${API}/notifications/${user.uid}/read-all`);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -92,7 +92,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
   const deleteNotification = async (notificationId, e) => {
     if (e) e.stopPropagation();
     try {
-      await axios.delete(`${API}/api/notifications/${notificationId}`);
+      await axios.delete(`${API}/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
       // Update unread count if deleted notification was unread
       const deletedNotif = notifications.find(n => n.notification_id === notificationId);
@@ -107,7 +107,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
   const deleteSelected = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await axios.post(`${API}/api/notifications/${user.uid}/bulk-delete`, {
+      await axios.post(`${API}/notifications/${user.uid}/bulk-delete`, {
         notification_ids: selectedIds
       });
       const deletedUnread = notifications.filter(n => selectedIds.includes(n.notification_id) && !n.read).length;
@@ -123,7 +123,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
   const markSelectedAsRead = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await axios.post(`${API}/api/notifications/${user.uid}/bulk-mark-read`, {
+      await axios.post(`${API}/notifications/${user.uid}/bulk-mark-read`, {
         notification_ids: selectedIds
       });
       const markedCount = notifications.filter(n => selectedIds.includes(n.notification_id) && !n.read).length;
@@ -140,7 +140,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
 
   const clearReadNotifications = async () => {
     try {
-      await axios.delete(`${API}/api/notifications/${user.uid}/read`);
+      await axios.delete(`${API}/notifications/${user.uid}/read`);
       setNotifications(prev => prev.filter(n => !n.read));
     } catch (error) {
       console.error('Error clearing read notifications:', error);
@@ -149,7 +149,7 @@ const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose 
 
   const clearAllNotifications = async () => {
     try {
-      await axios.delete(`${API}/api/notifications/${user.uid}/clear-all`);
+      await axios.delete(`${API}/notifications/${user.uid}/clear-all`);
       setNotifications([]);
       setUnreadCount(0);
     } catch (error) {

@@ -41,7 +41,7 @@ const BankDetailsCard = ({ user }) => {
 
   const fetchBankDetails = async () => {
     try {
-      const response = await axios.get(`${API}/api/bank-details/${user.uid}`);
+      const response = await axios.get(`${API}/bank-details/${user.uid}`);
       if (response.data.bank_details) {
         setBankDetails(response.data.bank_details);
         setFormData({
@@ -77,7 +77,7 @@ const BankDetailsCard = ({ user }) => {
 
     setSaving(true);
     try {
-      await axios.post(`${API}/api/bank-details/${user.uid}`, {
+      await axios.post(`${API}/bank-details/${user.uid}`, {
         account_holder_name: formData.account_holder_name,
         account_number: formData.account_number,
         ifsc_code: formData.ifsc_code.toUpperCase(),
@@ -308,7 +308,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(`${API}/api/user/${user.uid}`);
+      const response = await axios.get(`${API}/user/${user.uid}`);
       const data = response.data;
       setUserData(data);
       setFormData({
@@ -362,7 +362,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         city: formData.district || formData.tahsil,  // Add city field
       };
       
-      await axios.put(`${API}/api/user/${user.uid}/profile`, profileData);
+      await axios.put(`${API}/user/${user.uid}/profile`, profileData);
       toast.success('Profile updated successfully!');
       setEditMode(false);
       fetchUserData();
@@ -386,7 +386,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     
     setSaving(true);
     try {
-      await axios.post(`${API}/api/user/${user.uid}/change-password`, {
+      await axios.post(`${API}/user/${user.uid}/change-password`, {
         current_password: passwordData.current,
         new_password: passwordData.new
       });
@@ -421,7 +421,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     
     setChangingPin(true);
     try {
-      await axios.post(`${API}/api/user/${user.uid}/change-pin`, {
+      await axios.post(`${API}/user/${user.uid}/change-pin`, {
         current_pin: pinData.current,
         new_pin: pinData.new
       });
@@ -438,7 +438,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const handlePrivacyToggle = async (field, value) => {
     setSavingPrivacy(true);
     try {
-      await axios.put(`${API}/api/users/${user.uid}/privacy-settings`, {
+      await axios.put(`${API}/users/${user.uid}/privacy-settings`, {
         [field]: value
       });
       
@@ -464,7 +464,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     
     setDeleting(true);
     try {
-      await axios.post(`${API}/api/user/${user.uid}/request-account-deletion`, {
+      await axios.post(`${API}/user/${user.uid}/request-account-deletion`, {
         password: deletePassword,
         reason: 'User requested deletion'
       });
@@ -491,7 +491,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         formData.append('profile_picture_url', imageData);
       }
       
-      await axios.post(`${API}/api/user/${user.uid}/upload-profile-picture`, formData, {
+      await axios.post(`${API}/user/${user.uid}/upload-profile-picture`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -533,7 +533,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       const formData = new FormData();
       formData.append('file', compressedFile, 'profile.jpg');
       
-      await axios.post(`${API}/api/user/${user.uid}/upload-profile-picture`, formData, {
+      await axios.post(`${API}/user/${user.uid}/upload-profile-picture`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       

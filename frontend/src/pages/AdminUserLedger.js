@@ -72,7 +72,7 @@ const AdminUserLedger = ({ user }) => {
       if (filters.date_from) params.append('date_from', filters.date_from);
       if (filters.date_to) params.append('date_to', filters.date_to);
       
-      const response = await axios.get(`${API}/api/admin/finance/user-ledger?${params}`);
+      const response = await axios.get(`${API}/admin/finance/user-ledger?${params}`);
       setTransactions(response.data.transactions || []);
       setSummary(response.data.summary || {});
       setTotal(response.data.total || 0);
@@ -103,7 +103,7 @@ const AdminUserLedger = ({ user }) => {
 
   const exportCSV = async () => {
     try {
-      const response = await axios.get(`${API}/api/admin/finance/export/user-ledger/all`, {
+      const response = await axios.get(`${API}/admin/finance/export/user-ledger/all`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));

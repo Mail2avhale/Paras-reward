@@ -28,8 +28,8 @@ const AdminDataBackup = ({ user }) => {
     try {
       setLoading(true);
       const [statsRes, historyRes] = await Promise.all([
-        axios.get(`${API}/api/admin/backup/stats`),
-        axios.get(`${API}/api/admin/archive/history`)
+        axios.get(`${API}/admin/backup/stats`),
+        axios.get(`${API}/admin/archive/history`)
       ]);
       setStats(statsRes.data);
       setArchiveHistory(historyRes.data.archive_logs || []);
@@ -46,7 +46,7 @@ const AdminDataBackup = ({ user }) => {
       setExporting(true);
       toast.info('Preparing backup... This may take a moment.');
       
-      const response = await axios.get(`${API}/api/admin/backup/export?data_type=${selectedExport}&format=json`);
+      const response = await axios.get(`${API}/admin/backup/export?data_type=${selectedExport}&format=json`);
       
       // Create downloadable file
       const dataStr = JSON.stringify(response.data, null, 2);
@@ -79,7 +79,7 @@ const AdminDataBackup = ({ user }) => {
       setArchiving(true);
       toast.info('Archiving old data...');
       
-      const response = await axios.post(`${API}/api/admin/archive/execute?months_old=6`);
+      const response = await axios.post(`${API}/admin/archive/execute?months_old=6`);
       
       toast.success(`Archived ${response.data.total_archived} records successfully!`);
       fetchData(); // Refresh stats

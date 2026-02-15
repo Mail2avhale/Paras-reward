@@ -43,7 +43,7 @@ const NotificationBell = ({ user }) => {
 
   const fetchUnreadCount = async () => {
     try {
-      const response = await axios.get(`${API}/api/notifications/${user.uid}/unread-count`);
+      const response = await axios.get(`${API}/notifications/${user.uid}/unread-count`);
       setUnreadCount(response.data.unread_count || 0);
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -53,7 +53,7 @@ const NotificationBell = ({ user }) => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/api/notifications/${user.uid}?limit=10`);
+      const response = await axios.get(`${API}/notifications/${user.uid}?limit=10`);
       setNotifications(response.data.notifications || []);
       setUnreadCount(response.data.unread_count || 0);
     } catch (error) {
@@ -65,7 +65,7 @@ const NotificationBell = ({ user }) => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await axios.put(`${API}/api/notifications/${notificationId}/read`);
+      await axios.put(`${API}/notifications/${notificationId}/read`);
       setNotifications(prev => 
         prev.map(n => n.notification_id === notificationId ? { ...n, read: true } : n)
       );
@@ -77,7 +77,7 @@ const NotificationBell = ({ user }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.put(`${API}/api/notifications/${user.uid}/read-all`);
+      await axios.put(`${API}/notifications/${user.uid}/read-all`);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -88,7 +88,7 @@ const NotificationBell = ({ user }) => {
   const deleteNotification = async (notificationId, e) => {
     e.stopPropagation();
     try {
-      await axios.delete(`${API}/api/notifications/${notificationId}`);
+      await axios.delete(`${API}/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);

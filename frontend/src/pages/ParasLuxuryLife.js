@@ -41,7 +41,7 @@ const ParasLuxuryLife = () => {
   const fetchSavingsData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API}/api/luxury-life/savings/${user.uid}`);
+      const response = await fetch(`${API}/luxury-life/savings/${user.uid}`);
       const data = await response.json();
       setSavingsData(data);
       
@@ -62,7 +62,7 @@ const ParasLuxuryLife = () => {
     
     try {
       setClaiming(true);
-      const response = await fetch(`${API}/api/luxury-life/claim/${user.uid}/${productKey}`, {
+      const response = await fetch(`${API}/luxury-life/claim/${user.uid}/${productKey}`, {
         method: 'POST'
       });
       const data = await response.json();

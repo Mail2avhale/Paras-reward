@@ -39,10 +39,10 @@ const AdminDashboard = ({ user }) => {
     try {
       // Single combined API call + parallel secondary calls
       const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
-        axios.get(`${API}/api/admin/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/api/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/api/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
-        axios.get(`${API}/api/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/stats`).catch(() => ({ data: {} })),
+        axios.get(`${API}/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
+        axios.get(`${API}/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
+        axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);

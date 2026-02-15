@@ -77,10 +77,10 @@ const AdminSubscriptionManagement = () => {
       
       // Fetch data with individual error handling and retry - include rejected
       const [statsRes, pendingRes, approvedRes, rejectedRes] = await Promise.allSettled([
-        fetchWithRetry(`${API}/api/admin/subscription-stats`),
-        fetchWithRetry(`${API}/api/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
-        fetchWithRetry(`${API}/api/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
-        fetchWithRetry(`${API}/api/admin/vip-payments?status=rejected&page=${rejectedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
+        fetchWithRetry(`${API}/admin/subscription-stats`),
+        fetchWithRetry(`${API}/admin/vip-payments?status=pending&page=${pendingPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        fetchWithRetry(`${API}/admin/vip-payments?status=approved&page=${approvedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`),
+        fetchWithRetry(`${API}/admin/vip-payments?status=rejected&page=${rejectedPage}&limit=${ITEMS_PER_PAGE}${filterQuery}`)
       ]);
       
       // Handle stats - may fail on some deployments
@@ -124,7 +124,7 @@ const AdminSubscriptionManagement = () => {
   const handleApprove = async (paymentId) => {
     setProcessing(paymentId);
     try {
-      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/approve`, {});
+      await axios.post(`${API}/admin/vip-payment/${paymentId}/approve`, {});
       toast.success('Payment approved!');
       fetchData();
     } catch (error) {
@@ -142,7 +142,7 @@ const AdminSubscriptionManagement = () => {
     setProcessing(paymentId);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      await axios.post(`${API}/api/admin/vip-payment/${paymentId}/reject`, {
+      await axios.post(`${API}/admin/vip-payment/${paymentId}/reject`, {
         reason: reason,
         admin_id: user.uid || user.id
       });
@@ -160,7 +160,7 @@ const AdminSubscriptionManagement = () => {
     if (!confirm('Are you sure you want to delete this subscription? This action cannot be undone.')) return;
     setProcessing(paymentId);
     try {
-      await axios.delete(`${API}/api/admin/vip-payments/${paymentId}`);
+      await axios.delete(`${API}/admin/vip-payments/${paymentId}`);
       toast.success('Subscription deleted');
       fetchData();
     } catch (error) {
@@ -175,7 +175,7 @@ const AdminSubscriptionManagement = () => {
     try {
       // Add admin_id for audit logging
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      await axios.put(`${API}/api/admin/vip-payments/${paymentId}`, {
+      await axios.put(`${API}/admin/vip-payments/${paymentId}`, {
         ...updates,
         admin_id: user.uid || user.id
       });
