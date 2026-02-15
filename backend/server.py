@@ -4420,6 +4420,17 @@ async def login(
     access_token = None
     refresh_token = None
     
+    # ========== SINGLE SESSION ENFORCEMENT ==========
+    # Generate unique session token for this login
+    session_token = str(uuid.uuid4())
+    
+    # Invalidate any existing sessions by updating user's session_token
+    # This ensures only ONE active session per user
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": {"session_token": session_token, "session_created_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
     if user.get("role") in ["admin", "sub_admin"]:
         token_data = {
             "uid": user["uid"],
