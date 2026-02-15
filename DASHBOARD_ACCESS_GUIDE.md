@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://fix-db-timeout.preview.emergentagent.com/setup
+   https://invite-debug-2.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
