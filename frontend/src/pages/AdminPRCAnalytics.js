@@ -30,7 +30,7 @@ const AdminPRCAnalytics = ({ user }) => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/prc-analytics/detailed?period=${period}`);
+      const response = await axios.get(`${API}/api/admin/prc-analytics/detailed?period=${period}`);
       setData(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);

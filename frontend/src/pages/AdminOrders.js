@@ -48,7 +48,7 @@ const AdminOrders = ({ user }) => {
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
       params.append('limit', '500');
       
-      const response = await axios.get(`${API}/admin/orders/all?${params.toString()}`);
+      const response = await axios.get(`${API}/api/admin/orders/all?${params.toString()}`);
       // API returns { orders: [], total: number, ... }
       setOrders(response.data?.orders || []);
     } catch (error) {

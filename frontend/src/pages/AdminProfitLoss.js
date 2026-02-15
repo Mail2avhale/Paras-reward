@@ -64,7 +64,7 @@ const AdminProfitLoss = ({ user }) => {
         params.append('year', selectedYear);
       }
       
-      const response = await axios.get(`${API}/admin/finance/profit-loss?${params}`);
+      const response = await axios.get(`${API}/api/admin/finance/profit-loss?${params}`);
       setData(response.data);
     } catch (error) {
       console.error('Error fetching P&L data:', error);
@@ -76,7 +76,7 @@ const AdminProfitLoss = ({ user }) => {
 
   const fetchExpenses = async () => {
     try {
-      const response = await axios.get(`${API}/admin/finance/expenses?limit=20`);
+      const response = await axios.get(`${API}/api/admin/finance/expenses?limit=20`);
       setExpenses(response.data.expenses || []);
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -85,7 +85,7 @@ const AdminProfitLoss = ({ user }) => {
 
   const fetchFixedExpenses = async () => {
     try {
-      const response = await axios.get(`${API}/admin/finance/fixed-expenses`);
+      const response = await axios.get(`${API}/api/admin/finance/fixed-expenses`);
       setFixedExpenses(response.data.expenses || []);
     } catch (error) {
       console.error('Error fetching fixed expenses:', error);
@@ -99,7 +99,7 @@ const AdminProfitLoss = ({ user }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/finance/expense`, {
+      await axios.post(`${API}/api/admin/finance/expense`, {
         ...expenseForm,
         amount: parseFloat(expenseForm.amount),
         admin_id: user?.uid
@@ -118,7 +118,7 @@ const AdminProfitLoss = ({ user }) => {
     if (!window.confirm('Delete this expense?')) return;
     
     try {
-      await axios.delete(`${API}/admin/finance/expense/${expenseId}`);
+      await axios.delete(`${API}/api/admin/finance/expense/${expenseId}`);
       toast.success('Expense deleted');
       fetchExpenses();
       fetchPLData();

@@ -32,7 +32,7 @@ const Setup = () => {
 
   const checkAdminExists = async () => {
     try {
-      const response = await axios.get(`${API}/admin/check-admin-exists`);
+      const response = await axios.get(`${API}/api/admin/check-admin-exists`);
       if (response.data.admin_exists) {
         // Admin already exists, redirect to login
         toast.info('Admin already exists. Please login.');
@@ -70,7 +70,7 @@ const Setup = () => {
       }
 
       // Create first admin
-      await axios.post(`${API}/admin/create-first-admin`, formData);
+      await axios.post(`${API}/api/admin/create-first-admin`, formData);
       
       toast.success('Admin account created successfully! Please login.');
       navigate('/login');

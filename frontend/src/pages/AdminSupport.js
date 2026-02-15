@@ -59,7 +59,7 @@ const AdminSupport = ({ user }) => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/admin/support/tickets`);
+      const response = await axios.get(`${API}/api/admin/support/tickets`);
       setTickets(response.data?.tickets || []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
@@ -112,7 +112,7 @@ const AdminSupport = ({ user }) => {
   const handleUpdateTicket = async (ticketId, updates) => {
     try {
       setProcessing(true);
-      await axios.put(`${API}/admin/support/tickets/${ticketId}`, updates);
+      await axios.put(`${API}/api/admin/support/tickets/${ticketId}`, updates);
       toast.success('Ticket updated successfully');
       fetchTickets();
       if (selectedTicket?.ticket_id === ticketId) {
