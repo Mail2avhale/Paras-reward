@@ -12,7 +12,7 @@ import asyncio
 from pymongo.errors import ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout
 
 
-async def db_operation_with_retry(operation, max_retries=3, delay=1):
+async def db_operation_with_retry(operation, max_retries=3, delay=0.5):
     """Execute database operation with retry logic for timeout errors"""
     last_error = None
     for attempt in range(max_retries):
@@ -20,10 +20,15 @@ async def db_operation_with_retry(operation, max_retries=3, delay=1):
             return await operation()
         except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
             last_error = e
-            logging.warning(f"DB operation retry {attempt + 1}/{max_retries}: {str(e)}")
+            logging.warning(f"DB operation retry {attempt + 1}/{max_retries}: {str(e)[:100]}")
             if attempt < max_retries - 1:
-                await asyncio.sleep(delay * (attempt + 1))  # Exponential backoff
-    raise last_error
+                await asyncio.sleep(delay * (attempt + 1))
+        except Exception as e:
+            # For other exceptions, don't retry
+            raise e
+    # Return None instead of raising - let caller handle gracefully
+    logging.error(f"DB operation failed after {max_retries} retries: {str(last_error)[:100]}")
+    return None
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin VIP"])
