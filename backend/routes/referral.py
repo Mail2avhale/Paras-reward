@@ -117,20 +117,46 @@ async def apply_referral(uid: str, referral_code: str):
 
 
 @router.get("/list/{uid}")
-async def get_referrals(uid: str):
-    """Get list of referrals"""
-    referrals = await db.users.find(
-        {"referred_by": uid}, 
-        {"_id": 0, "uid": 1, "name": 1, "profile_picture": 1, "last_login": 1}
-    ).to_list(200)
+async def get_referrals(uid: str, limit: int = 50, page: int = 1):
+    """Get list of referrals - OPTIMIZED with pagination"""
+    skip = (page - 1) * limit
+    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     
-    # Check if active
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
-    for ref in referrals:
-        last_login = datetime.fromisoformat(ref.get("last_login")) if isinstance(ref.get("last_login"), str) else ref.get("last_login")
-        ref["is_active"] = last_login >= yesterday if last_login else False
+    # Use aggregation to add is_active field directly
+    pipeline = [
+        {"$match": {"referred_by": uid}},
+        {"$project": {
+            "_id": 0,
+            "uid": 1,
+            "name": 1,
+            "profile_picture": 1,
+            "last_login": 1,
+            "subscription_plan": 1,
+            "is_active": {
+                "$cond": {
+                    "if": {"$gte": ["$last_login", yesterday]},
+                    "then": True,
+                    "else": False
+                }
+            }
+        }},
+        {"$sort": {"last_login": -1}},
+        {"$skip": skip},
+        {"$limit": limit}
+    ]
     
-    return {"referrals": referrals, "total": len(referrals)}
+    import asyncio
+    referrals_task = db.users.aggregate(pipeline).to_list(limit)
+    total_task = db.users.count_documents({"referred_by": uid})
+    
+    referrals, total = await asyncio.gather(referrals_task, total_task)
+    
+    return {
+        "referrals": referrals,
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
 
 
 @router.get("/stats/{uid}")
