@@ -699,6 +699,9 @@ async def login(
     
     response_data = User(**user).model_dump()
     
+    # Add session token for single-session enforcement
+    response_data["session_token"] = session_token
+    
     if not user.get("pin_migrated", False):
         response_data["needs_pin_migration"] = True
     
