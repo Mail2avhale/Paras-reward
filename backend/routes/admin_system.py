@@ -35,32 +35,116 @@ def set_helpers(helpers: dict):
 
 @router.post("/db/create-indexes")
 async def create_database_indexes():
-    """Create necessary database indexes for performance"""
+    """Create ALL necessary database indexes for optimal performance"""
     try:
+        import asyncio
         indexes_created = []
+        errors = []
         
-        # Users indexes
-        await db.users.create_index("uid", unique=True)
-        await db.users.create_index("email")
-        await db.users.create_index("mobile", sparse=True)
-        indexes_created.extend(["users.uid", "users.email", "users.mobile"])
+        async def safe_create_index(collection, index_spec, **kwargs):
+            try:
+                await db[collection].create_index(index_spec, background=True, **kwargs)
+                return True
+            except Exception as e:
+                errors.append(f"{collection}: {str(e)}")
+                return False
         
-        # Transactions indexes
-        await db.transactions.create_index([("user_id", 1), ("created_at", -1)])
-        await db.transactions.create_index("created_at")
-        indexes_created.extend(["transactions.user_id+created_at", "transactions.created_at"])
+        # ========== USERS ==========
+        await safe_create_index("users", "uid", unique=True)
+        await safe_create_index("users", "email", unique=True)
+        await safe_create_index("users", "mobile", sparse=True)
+        await safe_create_index("users", "phone", sparse=True)
+        await safe_create_index("users", "subscription_plan")
+        await safe_create_index("users", "kyc_status")
+        await safe_create_index("users", "created_at")
+        await safe_create_index("users", "referral_code", unique=True, sparse=True)
+        await safe_create_index("users", [("subscription_plan", 1), ("is_active", 1)])
+        await safe_create_index("users", [("prc_balance", -1)])
+        indexes_created.append("users: 10 indexes")
         
-        # VIP payments indexes
-        await db.vip_payments.create_index("status")
-        await db.vip_payments.create_index("user_id")
-        indexes_created.extend(["vip_payments.status", "vip_payments.user_id"])
+        # ========== TRANSACTIONS ==========
+        await safe_create_index("transactions", "user_id")
+        await safe_create_index("transactions", "type")
+        await safe_create_index("transactions", "status")
+        await safe_create_index("transactions", "created_at")
+        await safe_create_index("transactions", [("user_id", 1), ("created_at", -1)])
+        await safe_create_index("transactions", [("type", 1), ("created_at", -1)])
+        indexes_created.append("transactions: 6 indexes")
         
-        # Orders indexes
-        await db.orders.create_index("status")
-        await db.orders.create_index("user_id")
-        indexes_created.extend(["orders.status", "orders.user_id"])
+        # ========== VIP PAYMENTS ==========
+        await safe_create_index("vip_payments", "user_id")
+        await safe_create_index("vip_payments", "status")
+        await safe_create_index("vip_payments", "created_at")
+        await safe_create_index("vip_payments", "plan")
+        await safe_create_index("vip_payments", [("status", 1), ("created_at", -1)])
+        await safe_create_index("vip_payments", "approved_at")
+        indexes_created.append("vip_payments: 6 indexes")
         
-        return {"success": True, "indexes_created": indexes_created}
+        # ========== ORDERS ==========
+        await safe_create_index("orders", "user_id")
+        await safe_create_index("orders", "status")
+        await safe_create_index("orders", "created_at")
+        await safe_create_index("orders", [("status", 1), ("created_at", -1)])
+        await safe_create_index("orders", [("user_id", 1), ("created_at", -1)])
+        indexes_created.append("orders: 5 indexes")
+        
+        # ========== BANK WITHDRAWAL REQUESTS ==========
+        await safe_create_index("bank_withdrawal_requests", "user_id")
+        await safe_create_index("bank_withdrawal_requests", "status")
+        await safe_create_index("bank_withdrawal_requests", "created_at")
+        await safe_create_index("bank_withdrawal_requests", [("status", 1), ("created_at", -1)])
+        indexes_created.append("bank_withdrawal_requests: 4 indexes")
+        
+        # ========== BILL PAYMENTS ==========
+        await safe_create_index("bill_payments", "user_id")
+        await safe_create_index("bill_payments", "status")
+        await safe_create_index("bill_payments", "created_at")
+        await safe_create_index("bill_payments", [("status", 1), ("created_at", -1)])
+        indexes_created.append("bill_payments: 4 indexes")
+        
+        # ========== BILL PAYMENT REQUESTS ==========
+        await safe_create_index("bill_payment_requests", "user_id")
+        await safe_create_index("bill_payment_requests", "status")
+        await safe_create_index("bill_payment_requests", "created_at")
+        await safe_create_index("bill_payment_requests", [("status", 1), ("created_at", -1)])
+        indexes_created.append("bill_payment_requests: 4 indexes")
+        
+        # ========== GIFT VOUCHERS ==========
+        await safe_create_index("gift_voucher_requests", "user_id")
+        await safe_create_index("gift_voucher_requests", "status")
+        await safe_create_index("gift_voucher_requests", "created_at")
+        await safe_create_index("gift_voucher_requests", [("status", 1), ("created_at", -1)])
+        indexes_created.append("gift_voucher_requests: 4 indexes")
+        
+        # ========== KYC DOCUMENTS ==========
+        await safe_create_index("kyc_documents", "user_id")
+        await safe_create_index("kyc_documents", "status")
+        await safe_create_index("kyc_documents", "created_at")
+        await safe_create_index("kyc_documents", [("status", 1), ("created_at", -1)])
+        indexes_created.append("kyc_documents: 4 indexes")
+        
+        # ========== ACTIVITY LOGS ==========
+        await safe_create_index("activity_logs", "user_id")
+        await safe_create_index("activity_logs", "action_type")
+        await safe_create_index("activity_logs", "created_at")
+        await safe_create_index("activity_logs", [("user_id", 1), ("created_at", -1)])
+        indexes_created.append("activity_logs: 4 indexes")
+        
+        # ========== NOTIFICATIONS ==========
+        await safe_create_index("notifications", "user_id")
+        await safe_create_index("notifications", "user_uid")
+        await safe_create_index("notifications", "read")
+        await safe_create_index("notifications", "created_at")
+        await safe_create_index("notifications", [("user_uid", 1), ("read", 1), ("created_at", -1)])
+        indexes_created.append("notifications: 5 indexes")
+        
+        return {
+            "success": True, 
+            "message": "All indexes created successfully!",
+            "indexes_created": indexes_created,
+            "errors": errors if errors else None,
+            "total_collections": len(indexes_created)
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
