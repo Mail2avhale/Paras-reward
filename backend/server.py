@@ -6188,7 +6188,7 @@ async def claim_mining(uid: str):
 # ============ USER DASHBOARD COMBINED API ============
 
 # DISABLED - Moved to routes/users.py
-@api_router.get("/_disabled_user/{uid}/dashboard")
+@api_router.get("/user/{uid}/dashboard")
 async def get_user_dashboard_combined(uid: str):
     """
     Combined API for User Dashboard - returns ALL data in ONE call.
@@ -6198,9 +6198,10 @@ async def get_user_dashboard_combined(uid: str):
     cache_key = f"user:dashboard:{uid}"
     
     # Try cache first
-    cached = await cache.get(cache_key)
-    if cached:
-        return cached
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
     
     # Get user data (this already does all the heavy lifting)
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "password": 0})
