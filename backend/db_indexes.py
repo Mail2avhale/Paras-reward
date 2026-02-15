@@ -190,6 +190,31 @@ async def create_performance_indexes(db):
         await db.kyc_documents.create_index("submitted_at", background=True)
         print("  ✅ KYC documents indexes created")
         
+        # ============ VIP PAYMENTS COLLECTION ============
+        await db.vip_payments.create_index("payment_id", unique=True, sparse=True, background=True)
+        await db.vip_payments.create_index("user_id", background=True)
+        await db.vip_payments.create_index("status", background=True)
+        await db.vip_payments.create_index("created_at", background=True)
+        await db.vip_payments.create_index([("status", 1), ("created_at", -1)], background=True)
+        await db.vip_payments.create_index("approved_at", background=True)
+        print("  ✅ VIP payments indexes created")
+        
+        # ============ BANK WITHDRAWAL REQUESTS ============
+        await db.bank_withdrawal_requests.create_index("request_id", unique=True, background=True)
+        await db.bank_withdrawal_requests.create_index("user_id", background=True)
+        await db.bank_withdrawal_requests.create_index("status", background=True)
+        await db.bank_withdrawal_requests.create_index("created_at", background=True)
+        await db.bank_withdrawal_requests.create_index([("status", 1), ("created_at", -1)], background=True)
+        print("  ✅ Bank withdrawal requests indexes created")
+        
+        # ============ BILL PAYMENTS COLLECTION ============
+        await db.bill_payments.create_index("payment_id", unique=True, sparse=True, background=True)
+        await db.bill_payments.create_index("user_id", background=True)
+        await db.bill_payments.create_index("status", background=True)
+        await db.bill_payments.create_index("created_at", background=True)
+        await db.bill_payments.create_index([("status", 1), ("created_at", -1)], background=True)
+        print("  ✅ Bill payments indexes created")
+        
         print("✅ All database indexes created successfully!")
         print("🚀 Database is now optimized for high performance!")
         
