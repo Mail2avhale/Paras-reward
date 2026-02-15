@@ -1,6 +1,6 @@
 """
 Admin VIP Routes - VIP payments and subscription management
-Extracted from server.py for better code organization
+OPTIMIZED for 3000+ users production environment
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,27 +11,38 @@ import logging
 import asyncio
 from pymongo.errors import ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout
 
+# Import performance optimizer
+from performance_optimizer import fast_db_operation, db_circuit, RequestTimer
 
-async def db_operation_with_retry(operation, max_retries=2, delay=0.3, raise_on_failure=False):
-    """Execute database operation with retry logic for timeout errors - FAST VERSION"""
-    last_error = None
-    for attempt in range(max_retries):
-        try:
-            return await operation()
-        except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
-            last_error = e
-            logging.warning(f"DB operation retry {attempt + 1}/{max_retries}: {str(e)[:100]}")
-            if attempt < max_retries - 1:
-                await asyncio.sleep(delay)
-        except Exception as e:
-            # For other exceptions, don't retry
-            raise e
+
+async def db_operation_with_retry(operation, max_retries=1, delay=0.2, raise_on_failure=False):
+    """Execute database operation - ULTRA FAST VERSION with circuit breaker"""
+    # Use circuit breaker for protection
+    if not db_circuit._should_allow_request():
+        logging.warning("Circuit OPEN - skipping DB operation")
+        if raise_on_failure:
+            raise Exception("Database temporarily unavailable")
+        return None
     
-    # After all retries failed
-    logging.error(f"DB operation failed after {max_retries} retries: {str(last_error)[:100]}")
-    if raise_on_failure:
-        raise last_error
-    return None
+    try:
+        # Single attempt with short timeout - no long retries
+        result = await asyncio.wait_for(operation(), timeout=5.0)
+        db_circuit.record_success()
+        return result
+    except asyncio.TimeoutError:
+        db_circuit.record_failure()
+        logging.error("DB operation timed out")
+        if raise_on_failure:
+            raise Exception("Database request timed out")
+        return None
+    except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
+        db_circuit.record_failure()
+        logging.warning(f"DB connection issue: {str(e)[:50]}")
+        if raise_on_failure:
+            raise
+        return None
+    except Exception as e:
+        raise e
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin VIP"])
