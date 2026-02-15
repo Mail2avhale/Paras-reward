@@ -17,7 +17,7 @@ import {
   Plus, Minus, Edit, Lock
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminUser360 = ({ user: adminUser }) => {
   const navigate = useNavigate();

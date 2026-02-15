@@ -6,7 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, FileText, Shield, RefreshCw, Save, Loader } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminPolicies = ({ user, onLogout }) => {
   const navigate = useNavigate();

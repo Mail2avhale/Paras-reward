@@ -11,7 +11,7 @@ import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { InfoTooltip } from '@/components/InfoTooltip';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const GiftVoucherRedemption = ({ user, onLogout }) => {
   const navigate = useNavigate();

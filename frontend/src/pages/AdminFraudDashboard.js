@@ -13,7 +13,7 @@ import {
   Fingerprint, MapPin, Link2, BarChart3
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminFraudDashboard = ({ user }) => {
   const navigate = useNavigate();

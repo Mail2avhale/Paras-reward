@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import LanguageSwitcher from './LanguageSwitcher';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Footer = () => {
   const { t } = useTranslation();

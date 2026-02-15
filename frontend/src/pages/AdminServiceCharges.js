@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ArrowLeft, Settings, Percent, DollarSign, Save } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminServiceCharges = ({ user }) => {
   const navigate = useNavigate();

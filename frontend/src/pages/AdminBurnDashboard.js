@@ -9,7 +9,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminBurnDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();

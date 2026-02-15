@@ -20,7 +20,7 @@ import {
 } from '@/utils/indianValidation';
 import { InfoTooltip } from '@/components/InfoTooltip';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const BillPayments = ({ user, onLogout }) => {
   const navigate = useNavigate();

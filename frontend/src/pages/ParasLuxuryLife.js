@@ -8,7 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // HD Product Images - High Quality
 const PRODUCT_IMAGES = {

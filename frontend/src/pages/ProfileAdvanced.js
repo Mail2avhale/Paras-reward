@@ -17,7 +17,7 @@ import ShareApp from '@/components/ShareApp';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Bank Details Card Component
 const BankDetailsCard = ({ user }) => {

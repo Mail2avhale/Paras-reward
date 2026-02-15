@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import RequestTimeline, { SLABadge } from '../components/RequestTimeline';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 15;
 const AUTO_REFRESH_INTERVAL = 60000; // 60 seconds - optimized for performance
 

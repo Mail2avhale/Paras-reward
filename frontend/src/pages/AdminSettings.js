@@ -7,7 +7,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Send, MessageCircle, Save, ArrowLeft, Users, CheckCircle, XCircle, AlertCircle, Upload, Image, ShoppingCart, IndianRupee, Coins, Truck, Receipt, CreditCard, Percent } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminSettings = ({ user }) => {
   const { t } = useTranslation();

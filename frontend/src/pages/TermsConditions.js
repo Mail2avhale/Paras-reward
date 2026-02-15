@@ -8,7 +8,7 @@ import {
   Smartphone, Bell, Clock, MapPin, XCircle, Award
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TermsConditions = () => {
   const navigate = useNavigate();

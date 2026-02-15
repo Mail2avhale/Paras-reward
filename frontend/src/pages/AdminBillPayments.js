@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { LiveTimer, SpeedBadge } from '../components/BillPaymentJourney';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 10;
 
 // Service Categories Configuration

@@ -11,7 +11,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { validateIFSC } from '@/utils/indianValidation';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const BankRedeem = ({ user }) => {
   const navigate = useNavigate();

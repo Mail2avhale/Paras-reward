@@ -7,7 +7,7 @@ import {
   Laptop, Tablet
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const SecurityInfo = ({ userId }) => {
   const [securityInfo, setSecurityInfo] = useState(null);
