@@ -179,7 +179,7 @@ const AdminBankWithdrawals = ({ user }) => {
           {['pending', 'approved', 'rejected', 'all'].map(status => (
             <button
               key={status}
-              onClick={() => setStatusFilter(status)}
+              onClick={() => handleFilterChange(status)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 statusFilter === status
                   ? 'bg-green-500 text-black'
