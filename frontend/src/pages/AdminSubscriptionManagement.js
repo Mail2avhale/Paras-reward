@@ -1493,57 +1493,6 @@ const RejectedRow = ({ payment, onView, onDelete, onReapprove, processing }) => 
     </div>
   );
 };
-            {payment.rejection_reason?.substring(0, 20) || 'No reason'}...
-          </p>
-          <p className="text-gray-600 text-xs mt-0.5">
-            {payment.rejected_at ? new Date(payment.rejected_at).toLocaleDateString() : '-'}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          {/* Re-approve Button */}
-          <Button
-            onClick={onReapprove}
-            disabled={processing}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white h-9 px-3"
-          >
-            {processing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Re-approve
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={onView}
-            size="sm"
-            variant="outline"
-            className="border-gray-600 text-gray-300 hover:bg-gray-700 h-9 px-3"
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
-          <Button
-            onClick={onDelete}
-            disabled={processing}
-            size="sm"
-            variant="outline"
-            className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9 px-3"
-          >
-            {processing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Quick Stat Component
 const QuickStat = ({ label, value }) => (
