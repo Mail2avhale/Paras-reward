@@ -998,7 +998,7 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
   ];
 
   const userName = payment.user_name || 'Unknown User';
-  const selectedReason = reason === 'अन्य (Custom)' ? customReason : reason;
+  const selectedReason = reason === 'Other (Custom)' ? customReason : reason;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
