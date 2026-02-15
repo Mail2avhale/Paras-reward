@@ -167,8 +167,15 @@ async def get_referrals(uid: str, limit: int = 50, page: int = 1):
 
 @router.get("/stats/{uid}")
 async def get_referral_stats(uid: str):
-    """Get referral statistics for a user - OPTIMIZED with aggregation"""
+    """Get referral statistics for a user - OPTIMIZED with caching and parallel queries"""
     import asyncio
+    
+    # Check cache first
+    cache_key = f"referral_stats:{uid}"
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
     
     yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     
@@ -198,11 +205,17 @@ async def get_referral_stats(uid: str):
     
     active_count = active_result[0]["active"] if active_result else 0
     
-    return {
+    result = {
         "total_referrals": total_referrals,
         "active_referrals": active_count,
         "vip_referrals": vip_count
     }
+    
+    # Cache for 2 minutes
+    if cache:
+        await cache.set(cache_key, result, ttl=120)
+    
+    return result
 
 
 @router.get("/multi-level-stats/{uid}")
