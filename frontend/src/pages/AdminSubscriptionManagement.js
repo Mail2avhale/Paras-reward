@@ -1081,7 +1081,7 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
         <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
           <p className="text-amber-400 text-xs flex items-start gap-1">
             <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-            <span>User ला rejection reason सह notification पाठवला जाईल. ते app मध्ये हा message पाहू शकतील.</span>
+            <span>User will receive a notification with the rejection reason in the app.</span>
           </p>
         </div>
         
