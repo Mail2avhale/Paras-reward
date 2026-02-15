@@ -80,7 +80,7 @@ const AdminContactSubmissions = ({ user }) => {
 
   const handleUpdateStatus = async (submissionId, newStatus) => {
     try {
-      await axios.put(`${API}/admin/contact-submissions/${submissionId}`, {
+      await axios.put(`${API}/api/admin/contact-submissions/${submissionId}`, {
         status: newStatus,
         admin_notes: adminNotes
       });
@@ -97,7 +97,7 @@ const AdminContactSubmissions = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this submission?')) return;
     
     try {
-      await axios.delete(`${API}/admin/contact-submissions/${submissionId}`);
+      await axios.delete(`${API}/api/admin/contact-submissions/${submissionId}`);
       toast.success('Submission deleted');
       fetchSubmissions();
       fetchStats();
