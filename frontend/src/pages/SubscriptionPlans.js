@@ -12,7 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const SubscriptionPlans = ({ user }) => {
   const navigate = useNavigate();

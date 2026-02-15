@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Mapping of menu item IDs to permission IDs
 const MENU_TO_PERMISSION = {

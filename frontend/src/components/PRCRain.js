@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Realistic Rain Drop Component with Gain/Loss Feedback
 const RainDrop = ({ drop, onTap, disabled }) => {

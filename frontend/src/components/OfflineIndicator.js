@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { WifiOff, Wifi, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(true); // Default to online

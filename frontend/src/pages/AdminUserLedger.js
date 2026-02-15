@@ -11,7 +11,7 @@ import {
   Filter, Calendar, Wallet, TrendingUp, TrendingDown, FileText
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TRANSACTION_TYPES = [
   { value: '', label: 'All Types' },

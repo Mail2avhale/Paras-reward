@@ -13,7 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const KYCVerification = ({ user }) => {
   const navigate = useNavigate();

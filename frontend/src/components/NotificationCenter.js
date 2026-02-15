@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, Trash2, CheckCheck, Settings, Filter } from 'lucide-react';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const NotificationCenter = ({ user, className = '', isOpen: propIsOpen, onClose }) => {
   const [notifications, setNotifications] = useState([]);

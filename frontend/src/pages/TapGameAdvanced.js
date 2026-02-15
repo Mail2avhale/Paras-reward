@@ -6,7 +6,7 @@ import smartToast from '@/utils/smartToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Plan configurations
 const PLAN_CONFIG = {

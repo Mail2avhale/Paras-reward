@@ -13,7 +13,7 @@ import {
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminCashBankBook = ({ user }) => {
   const navigate = useNavigate();

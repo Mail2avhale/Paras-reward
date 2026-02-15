@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import PRCBurnAlert, { usePRCExpiry } from '@/components/PRCBurnAlert';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Animated counter component for live PRC display - ALWAYS shows positive values
 const AnimatedCounter = ({ value, decimals = 4 }) => {

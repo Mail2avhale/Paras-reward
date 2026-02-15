@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Shield, Check, X, Save, RefreshCw, Users, Lock, Unlock } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const ManagerPermissions = ({ userId, userName, onClose, onSave }) => {
   const [loading, setLoading] = useState(true);

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, CheckCheck, Trash2, X, UserPlus, MessageCircle, Award } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const NotificationBell = ({ user }) => {
   const navigate = useNavigate();

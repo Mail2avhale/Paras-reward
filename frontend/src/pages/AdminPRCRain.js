@@ -11,7 +11,7 @@ import {
   Settings, Zap, Shield, Palette, Percent
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Default colors for drops
 const DEFAULT_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];

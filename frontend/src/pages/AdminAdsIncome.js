@@ -13,7 +13,7 @@ import {
   TrendingUp, Eye, Calendar, Filter
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminAdsIncome = ({ user }) => {
   const navigate = useNavigate();
