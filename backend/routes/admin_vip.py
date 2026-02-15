@@ -368,9 +368,15 @@ async def approve_vip_payment(payment_id: str, request: Request):
         now = datetime.now(timezone.utc)
         duration_days = {"monthly": 30, "quarterly": 90, "half_yearly": 180, "yearly": 365}.get(plan_type, 30)
         
-        user = await db_operation_with_retry(
-            lambda: db.users.find_one({"uid": user_id})
-        )
+        # FAST: Direct user query
+        try:
+            user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_expiry": 1, "vip_expiry": 1})
+        except Exception:
+            user = None
+        
+        now = datetime.now(timezone.utc)
+        duration_days = {"monthly": 30, "quarterly": 90, "half_yearly": 180, "yearly": 365}.get(plan_type, 30)
+        plan_corrected = (correct_plan and correct_plan != original_plan) or (correct_duration and correct_duration != original_duration)
         
         start_date = now
         if user:
@@ -389,85 +395,82 @@ async def approve_vip_payment(payment_id: str, request: Request):
                     start_date = now
         
         new_expiry = (start_date + timedelta(days=duration_days)).isoformat()
+        txn_number = f"SUB{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
-        await db_operation_with_retry(
-            lambda: db.users.update_one(
-                {"uid": user_id},
-                {"$set": {
-                    "membership_type": "vip",
-                    "subscription_plan": subscription_plan,
-                    "subscription_expiry": new_expiry,
-                    "vip_expiry": new_expiry,
-                    "vip_activated_at": now.isoformat(),
-                    "last_subscription_renewed": now.isoformat()
-                }}
+        # FAST: Run all updates in PARALLEL using asyncio.gather
+        try:
+            await asyncio.gather(
+                # Update user subscription
+                db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "membership_type": "vip",
+                        "subscription_plan": subscription_plan,
+                        "subscription_expiry": new_expiry,
+                        "vip_expiry": new_expiry,
+                        "vip_activated_at": now.isoformat(),
+                        "last_subscription_renewed": now.isoformat()
+                    }}
+                ),
+                # Update payment status
+                db.vip_payments.update_one(
+                    {"payment_id": payment_id},
+                    {"$set": {
+                        "status": "approved",
+                        "txn_number": txn_number,
+                        "approved_at": now.isoformat(),
+                        "approved_by": admin_id,
+                        "admin_notes": notes,
+                        "subscription_extended": start_date != now,
+                        "new_expiry": new_expiry,
+                        "plan_corrected": plan_corrected,
+                        "original_plan_claimed": original_plan,
+                        "original_duration_claimed": original_duration,
+                        "actual_plan_approved": subscription_plan,
+                        "actual_duration_approved": plan_type
+                    }}
+                ),
+                # Update company wallet
+                db.company_wallets.update_one(
+                    {"wallet_type": "subscription"},
+                    {"$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
+                     "$set": {"last_updated": now.isoformat()}},
+                    upsert=True
+                )
             )
-        )
+        except Exception as e:
+            logging.error(f"Parallel update failed: {e}")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
-        txn_number = f"SUB{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
-        
-        await db_operation_with_retry(
-            lambda: db.vip_payments.update_one(
-                {"payment_id": payment_id},
-                {"$set": {
-                    "status": "approved",
-                    "txn_number": txn_number,
-                    "approved_at": now.isoformat(),
-                    "approved_by": admin_id,
-                    "admin_notes": notes,
-                    "subscription_extended": start_date != now,
-                    "new_expiry": new_expiry,
-                    "plan_corrected": plan_corrected,
-                    "original_plan_claimed": original_plan,
-                    "original_duration_claimed": original_duration,
-                    "actual_plan_approved": subscription_plan,
-                    "actual_duration_approved": plan_type
-                }}
-            )
-        )
-        
-        await db_operation_with_retry(
-            lambda: db.company_wallets.update_one(
-                {"wallet_type": "subscription"},
-                {"$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
-                 "$set": {"last_updated": now.isoformat()}},
-                upsert=True
-            )
-        )
-        
-        await db_operation_with_retry(
-            lambda: db.activity_logs.insert_one({
-                "log_id": str(uuid.uuid4()),
-                "action": "vip_payment_approved",
-                "user_id": user_id,
-                "admin_id": admin_id,
-                "payment_id": payment_id,
-                "amount": payment.get("amount"),
-                "plan_type": plan_type,
-                "subscription_plan": subscription_plan,
-                "plan_corrected": plan_corrected,
-                "extended": start_date != now,
-                "new_expiry": new_expiry,
-                "timestamp": now.isoformat()
-            })
-        )
+        # Non-critical operations - fire and forget
+        asyncio.create_task(db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "vip_payment_approved",
+            "user_id": user_id,
+            "admin_id": admin_id,
+            "payment_id": payment_id,
+            "amount": payment.get("amount"),
+            "plan_type": plan_type,
+            "subscription_plan": subscription_plan,
+            "plan_corrected": plan_corrected,
+            "extended": start_date != now,
+            "new_expiry": new_expiry,
+            "timestamp": now.isoformat()
+        }))
         
         if check_and_grant_referral_reward:
-            try:
-                await check_and_grant_referral_reward(user_id, now)
-            except Exception as e:
-                logging.error(f"Error checking referral reward: {e}")
+            asyncio.create_task(check_and_grant_referral_reward(user_id, now))
         
-        # Send notification to user
+        # Send notification - fire and forget
         plan_name = subscription_plan.upper()
-        await send_notification(
+        asyncio.create_task(send_notification(
             user_id=user_id,
             title="🎉 Subscription Activated!",
             message=f"Congratulations! Your {plan_name} subscription has been activated for {duration_days} days. Enjoy premium benefits!",
             notif_type="subscription_approved",
             icon="🎉",
             action_url="/subscription"
-        )
+        ))
         
         if start_date != now:
             remaining = (start_date - now).days
@@ -475,12 +478,10 @@ async def approve_vip_payment(payment_id: str, request: Request):
         else:
             message = f"Payment approved! {duration_days} days subscription activated"
         
+        # Clear cache in background
         if cache:
-            try:
-                await cache.delete("admin_vip_payments:pending:p1:l50")
-                await cache.delete("admin_vip_payments:all:p1:l50")
-            except Exception:
-                pass
+            asyncio.create_task(cache.delete("admin_vip_payments:pending:p1:l50"))
+            asyncio.create_task(cache.delete("admin_vip_payments:all:p1:l50"))
         
         return {"success": True, "message": message, "new_expiry": new_expiry}
     except HTTPException:
