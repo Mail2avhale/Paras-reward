@@ -1566,6 +1566,19 @@ const AdminUser360 = ({ user: adminUser }) => {
                   <Shield className="w-4 h-4 mr-2" />
                   Change Role
                 </Button>
+                {/* Show Manage Permissions only for Manager role users */}
+                {userData?.user?.role === 'manager' && (
+                  <Button
+                    onClick={() => setPermissionsModal({ show: true })}
+                    disabled={processing}
+                    variant="outline"
+                    className="h-auto py-3 border-emerald-500/50 text-emerald-400"
+                    data-testid="manage-permissions-button"
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    Manage Permissions
+                  </Button>
+                )}
                 <Button
                   onClick={() => {
                     if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
