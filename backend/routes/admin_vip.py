@@ -81,11 +81,11 @@ async def get_vip_payments(
         # Get total count
         total = await db.vip_payments.count_documents(query)
         
-        # Get payments
+        # Get payments - FIFO: oldest first (ascending order)
         payments_cursor = db.vip_payments.find(
             query,
             {"_id": 0}
-        ).sort(sort_field, -1).skip(skip).limit(limit)
+        ).sort(sort_field, 1).skip(skip).limit(limit)
         
         payments = await payments_cursor.to_list(limit)
         

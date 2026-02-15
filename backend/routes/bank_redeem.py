@@ -437,10 +437,11 @@ async def get_admin_withdrawal_requests(
     
     skip = (page - 1) * limit
     
+    # FIFO: oldest first (ascending order) - first request on top
     requests = await db.bank_withdrawal_requests.find(
         query,
         {"_id": 0}
-    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)
     
     total = await db.bank_withdrawal_requests.count_documents(query)
     
