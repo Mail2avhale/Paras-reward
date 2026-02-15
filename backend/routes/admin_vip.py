@@ -337,6 +337,16 @@ async def approve_vip_payment(payment_id: str, request: Request):
         payment = await db_operation_with_retry(
             lambda: db.vip_payments.find_one({"payment_id": payment_id})
         )
+        
+        # Check if DB operation failed (returned None due to timeout)
+        if payment is None:
+            # Try direct query without retry wrapper
+            try:
+                payment = await db.vip_payments.find_one({"payment_id": payment_id})
+            except Exception as e:
+                logging.error(f"Direct DB query failed: {e}")
+                raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
+        
         if not payment:
             raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
         
