@@ -368,7 +368,7 @@ const AdminMarketplace = ({ user }) => {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API}/admin/settings/marketplace`);
+      const response = await axios.get(`${API}/api/admin/settings/marketplace`);
       if (response.data?.prc_to_inr_rate) {
         setPrcToInrRate(response.data.prc_to_inr_rate);
       }
@@ -435,7 +435,7 @@ const AdminMarketplace = ({ user }) => {
       productData.append('created_by', user?.uid || 'admin');
       if (imageFile) productData.append('image', imageFile);
 
-      await axios.post(`${API}/admin/products`, productData, {
+      await axios.post(`${API}/api/admin/products`, productData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -473,7 +473,7 @@ const AdminMarketplace = ({ user }) => {
       productData.append('product_status', formData.product_status);
       if (imageFile) productData.append('image', imageFile);
 
-      await axios.put(`${API}/admin/products/${selectedProduct.product_id}`, productData, {
+      await axios.put(`${API}/api/admin/products/${selectedProduct.product_id}`, productData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -493,7 +493,7 @@ const AdminMarketplace = ({ user }) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     
     try {
-      await axios.delete(`${API}/admin/products/${productId}`);
+      await axios.delete(`${API}/api/admin/products/${productId}`);
       toast.success('Product deleted');
       fetchProducts();
     } catch (error) {
