@@ -323,7 +323,7 @@ async def get_admin_vip_payments(
 
 @router.post("/vip-payment/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, request: Request):
-    """Approve VIP payment and activate membership with retry logic"""
+    """Approve VIP payment and activate membership - FAST VERSION"""
     try:
         # Handle empty body
         try:
@@ -336,25 +336,20 @@ async def approve_vip_payment(payment_id: str, request: Request):
         correct_plan = data.get("correct_plan")
         correct_duration = data.get("correct_duration")
         
-        # Wrap database operations with retry logic
-        payment = await db_operation_with_retry(
-            lambda: db.vip_payments.find_one({"payment_id": payment_id})
-        )
-        
-        # Check if DB operation failed (returned None due to timeout)
-        if payment is None:
-            # Try direct query without retry wrapper
-            try:
-                payment = await db.vip_payments.find_one({"payment_id": payment_id})
-            except Exception as e:
-                logging.error(f"Direct DB query failed: {e}")
-                raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
+        # FAST: Direct query with short timeout
+        try:
+            payment = await db.vip_payments.find_one(
+                {"payment_id": payment_id},
+                {"_id": 0}  # Exclude _id for faster query
+            )
+        except Exception as e:
+            logging.error(f"DB query failed: {e}")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
         if not payment:
             raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
         
         current_status = payment.get("status")
-        # Allow approval of pending OR rejected payments (re-approval feature)
         if current_status not in ["pending", "rejected"]:
             if current_status == "approved":
                 return {"message": "Payment already approved", "status": "approved", "success": True}
