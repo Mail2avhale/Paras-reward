@@ -981,6 +981,140 @@ const EditSubscriptionModal = ({ payment, onClose, onSave, processing }) => {
   );
 };
 
+// Reject Payment Modal Component - NEW
+const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
+  const [reason, setReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  
+  // Predefined rejection reasons
+  const predefinedReasons = [
+    'चुकीचा UTR Number',
+    'Screenshot स्पष्ट नाही',
+    'Payment रक्कम जुळत नाही',
+    'Duplicate Payment',
+    'Payment verification failed',
+    'Invalid transaction details',
+    'अन्य (Custom)'
+  ];
+
+  const userName = payment.user_name || 'Unknown User';
+  const selectedReason = reason === 'अन्य (Custom)' ? customReason : reason;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-md w-full">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              Reject Payment
+            </h3>
+            <p className="text-gray-400 text-sm">User ला notification जाईल</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* User Info Header */}
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center text-white font-bold">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-white font-medium">{userName}</p>
+              <p className="text-gray-400 text-xs">{payment.user_email || payment.user_id}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <span className="px-2 py-1 bg-gray-700 text-white text-sm font-bold rounded-lg">
+                ₹{payment.amount}
+              </span>
+              <p className="text-gray-500 text-xs mt-1 capitalize">{payment.plan || 'VIP'}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Predefined Reasons */}
+          <div>
+            <label className="text-gray-400 text-sm block mb-2">
+              <AlertCircle className="w-3 h-3 inline mr-1" />
+              Rejection Reason *
+            </label>
+            <div className="space-y-2">
+              {predefinedReasons.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setReason(r)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
+                    reason === r 
+                      ? 'bg-red-500/20 border-red-500 text-red-400' 
+                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                  }`}
+                  data-testid={`reject-reason-${r.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Custom Reason Input */}
+          {reason === 'अन्य (Custom)' && (
+            <div>
+              <label className="text-gray-400 text-sm block mb-1">
+                Custom Reason
+              </label>
+              <textarea
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="Rejection साठी custom reason टाइप करा..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white resize-none h-24 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                data-testid="reject-custom-reason-input"
+              />
+            </div>
+          )}
+        </div>
+        
+        {/* Warning Notice */}
+        <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <p className="text-amber-400 text-xs flex items-start gap-1">
+            <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+            <span>User ला rejection reason सह notification पाठवला जाईल. ते app मध्ये हा message पाहू शकतील.</span>
+          </p>
+        </div>
+        
+        <div className="flex gap-3 mt-6">
+          <Button 
+            onClick={onClose}
+            variant="outline"
+            className="flex-1 border-gray-700 text-gray-300"
+            data-testid="reject-cancel-btn"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => onReject(selectedReason)}
+            disabled={processing || !selectedReason}
+            className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            data-testid="reject-confirm-btn"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 mr-2" />
+                Reject & Notify
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Simple Stat Card Component
 const StatCard = ({ icon, label, value, color, subtitle, onClick }) => {
   const colors = {
