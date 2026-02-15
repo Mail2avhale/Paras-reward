@@ -2694,13 +2694,16 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     # Combine all active users
     all_active_uids = active_by_mining | active_by_transactions
     
-    # Calculate level data
+    # Calculate level data - use subscription_plan from already fetched user data
+    # OPTIMIZED: No additional DB calls needed, subscription_plan is in paid_users_by_level
     for level, users_dict in paid_users_by_level.items():
         for user_uid, user in users_dict.items():
             if user_uid in all_active_uids:
-                # Get referral's subscription weight
-                sub_info = await get_user_subscription_info(user)
-                referral_weight = sub_info.get("referral_weight", 1.0)
+                # Get referral's subscription weight from SUBSCRIPTION_PLANS constant
+                # No DB call needed - subscription_plan is already in user data
+                sub_plan = (user.get("subscription_plan") or "explorer").lower()
+                plan_config = SUBSCRIPTION_PLANS.get(sub_plan, SUBSCRIPTION_PLANS["explorer"])
+                referral_weight = plan_config.get("referral_weight", 1.0)
                 
                 level_data[level]['count'] += 1
                 level_data[level]['weighted_count'] += referral_weight
