@@ -29,7 +29,7 @@ const ContactUs = () => {
 
   const fetchContactDetails = async () => {
     try {
-      const response = await axios.get(`${API}/public/contact-info`);
+      const response = await axios.get(`${API}/api/public/contact-info`);
       if (response.data) {
         const data = response.data;
         
@@ -57,7 +57,7 @@ const ContactUs = () => {
     }
     setSending(true);
     try {
-      await axios.post(`${API}/contact/submit`, formData);
+      await axios.post(`${API}/api/contact/submit`, formData);
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {

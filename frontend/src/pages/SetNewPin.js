@@ -58,7 +58,7 @@ const SetNewPin = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${API}/auth/set-new-pin`, {
+      await axios.post(`${API}/api/auth/set-new-pin`, {
         user_id: user.uid,
         new_pin: newPin
       });

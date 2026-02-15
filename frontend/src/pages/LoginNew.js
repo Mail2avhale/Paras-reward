@@ -93,7 +93,7 @@ const LoginNew = ({ onLogin }) => {
 
       setCheckingAuthType(true);
       try {
-        const response = await axios.get(`${API}/auth/check-auth-type`, {
+        const response = await axios.get(`${API}/api/auth/check-auth-type`, {
           params: { identifier: loginData.identifier }
         });
         
@@ -154,7 +154,7 @@ const LoginNew = ({ onLogin }) => {
       }
 
       const response = await axios.post(
-        `${API}/auth/login`,
+        `${API}/api/auth/login`,
         null,
         {
           params: {
@@ -273,7 +273,7 @@ const LoginNew = ({ onLogin }) => {
     setForgotPinLoading(true);
     try {
       // Use Email OTP API
-      const response = await axios.post(`${API}/auth/forgot-pin/send-email-otp`, {
+      const response = await axios.post(`${API}/api/auth/forgot-pin/send-email-otp`, {
         email: forgotPinEmail
       });
       
@@ -297,7 +297,7 @@ const LoginNew = ({ onLogin }) => {
     setForgotPinLoading(true);
     try {
       // Use Email OTP verification API
-      const response = await axios.post(`${API}/auth/forgot-pin/verify-email-otp`, {
+      const response = await axios.post(`${API}/api/auth/forgot-pin/verify-email-otp`, {
         email: forgotPinEmail,
         otp: forgotPinOtp
       });
@@ -331,7 +331,7 @@ const LoginNew = ({ onLogin }) => {
     setForgotPinLoading(true);
     try {
       // Use Email reset API
-      const response = await axios.post(`${API}/auth/forgot-pin/reset-by-email`, {
+      const response = await axios.post(`${API}/api/auth/forgot-pin/reset-by-email`, {
         email: forgotPinEmail,
         reset_token: forgotPinResetToken,
         new_pin: newPin
