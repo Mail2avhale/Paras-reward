@@ -281,7 +281,7 @@ async def get_admin_vip_payments(
             "pages": (total + limit - 1) // limit
         }
         
-        cache_ttl = 5 if status == "pending" else 30
+        cache_ttl = 30 if status == "pending" else 120  # Increased cache TTL
         if cache:
             await cache.set(cache_key, result, ttl=cache_ttl)
         
