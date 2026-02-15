@@ -188,6 +188,10 @@ async def get_admin_vip_payments(
             lambda: db.vip_payments.count_documents(query)
         )
         
+        # Handle DB failure gracefully
+        if total is None:
+            total = 0
+        
         # Determine sort field and order based on status - latest first
         if status == "approved":
             sort_field = "approved_at"
@@ -210,6 +214,10 @@ async def get_admin_vip_payments(
             ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
         
         payments = await db_operation_with_retry(fetch_payments)
+        
+        # Handle DB failure gracefully - return empty list instead of error
+        if payments is None:
+            payments = []
         
         if not payments:
             result = {"payments": [], "total": total, "page": page, "pages": 0}
