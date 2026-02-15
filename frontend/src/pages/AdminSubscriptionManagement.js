@@ -134,7 +134,7 @@ const AdminSubscriptionManagement = () => {
 
   const handleReject = async (paymentId, reason) => {
     if (!reason) {
-      toast.error('कृपया rejection reason भरा');
+      toast.error('Please enter rejection reason');
       return;
     }
     setProcessing(paymentId);
@@ -144,7 +144,7 @@ const AdminSubscriptionManagement = () => {
         reason: reason,
         admin_id: user.uid || user.id
       });
-      toast.success('Payment rejected - User ला notification पाठवला');
+      toast.success('Payment rejected - Notification sent to user');
       setRejectModal({ show: false, payment: null });
       fetchData();
     } catch (error) {
