@@ -69,16 +69,23 @@ async def get_admin_users(
     sort_by: str = "created_at",
     sort_order: str = "desc"
 ):
-    """Get users list with advanced filtering for admin panel"""
+    """Get users list with advanced filtering for admin panel - OPTIMIZED"""
+    import asyncio
+    
     query = {}
     
     if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"mobile": {"$regex": search, "$options": "i"}},
-            {"uid": search}
-        ]
+        search_term = search.strip()
+        # For UID exact match (faster)
+        if len(search_term) > 10 and search_term.isalnum():
+            query["uid"] = search_term
+        else:
+            query["$or"] = [
+                {"name": {"$regex": search_term, "$options": "i"}},
+                {"email": {"$regex": search_term, "$options": "i"}},
+                {"mobile": {"$regex": search_term, "$options": "i"}},
+                {"uid": search_term}
+            ]
     
     if status == "active":
         query["is_active"] = True
@@ -89,7 +96,12 @@ async def get_admin_users(
         query["is_active"] = False
     
     if membership:
-        query["membership_type"] = membership
+        query["$or"] = [
+            {"membership_type": membership},
+            {"subscription_plan": membership}
+        ] if "$or" not in query else query.get("$or")
+        if "$or" in query and search:
+            query["subscription_plan"] = membership
     
     if kyc_status:
         query["kyc_status"] = kyc_status
@@ -97,11 +109,14 @@ async def get_admin_users(
     skip = (page - 1) * limit
     sort_direction = -1 if sort_order == "desc" else 1
     
-    total = await db.users.count_documents(query)
-    users = await db.users.find(
-        query,
-        {"_id": 0, "password_hash": 0, "password": 0, "reset_token": 0}
-    ).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
+    # Projection - only needed fields
+    projection = {"_id": 0, "password_hash": 0, "password": 0, "reset_token": 0, "biometric_credentials": 0}
+    
+    # Run count and find in PARALLEL
+    count_task = db.users.count_documents(query)
+    find_task = db.users.find(query, projection).sort(sort_by, sort_direction).skip(skip).limit(limit).to_list(limit)
+    
+    total, users = await asyncio.gather(count_task, find_task)
     
     return {
         "users": users,
