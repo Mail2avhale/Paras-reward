@@ -132,14 +132,20 @@ const AdminSubscriptionManagement = () => {
     }
   };
 
-  const handleReject = async (paymentId) => {
-    if (!confirm('Reject this payment?')) return;
+  const handleReject = async (paymentId, reason) => {
+    if (!reason) {
+      toast.error('कृपया rejection reason भरा');
+      return;
+    }
     setProcessing(paymentId);
     try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
       await axios.post(`${API}/api/admin/vip-payment/${paymentId}/reject`, {
-        reason: 'Payment verification failed'
+        reason: reason,
+        admin_id: user.uid || user.id
       });
-      toast.success('Payment rejected');
+      toast.success('Payment rejected - User ला notification पाठवला');
+      setRejectModal({ show: false, payment: null });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
