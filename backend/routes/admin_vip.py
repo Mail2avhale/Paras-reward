@@ -139,17 +139,18 @@ async def get_admin_vip_payments(
     plan: str = None,  # startup, growth, elite
     duration: str = None  # monthly, quarterly, half_yearly, yearly
 ):
-    """Get VIP payments for admin verification - OPTIMIZED with caching, filters and retry"""
+    """Get VIP payments for admin verification - SUPER FAST VERSION"""
     try:
         cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}:{time_filter}:{plan}:{duration}"
         
-        if cache and not nocache and not time_filter and not plan and not duration:
+        # Try cache first
+        if cache and not nocache:
             try:
                 cached = await cache.get(cache_key)
                 if cached:
                     return cached
             except Exception:
-                pass  # Ignore cache errors
+                pass
         
         query = {}
         if status:
@@ -172,7 +173,6 @@ async def get_admin_vip_payments(
                 start_date = None
             
             if start_date:
-                # Check for both created_at and approved_at based on status
                 date_field = "approved_at" if status == "approved" else "created_at"
                 query[date_field] = {"$gte": start_date.isoformat()}
         
@@ -186,18 +186,32 @@ async def get_admin_vip_payments(
         
         skip = (page - 1) * limit
         
-        # Use retry for count operation
-        total = await db_operation_with_retry(
-            lambda: db.vip_payments.count_documents(query)
-        )
-        
-        # Handle DB failure gracefully
-        if total is None:
-            total = 0
-        
-        # Determine sort field and order based on status - latest first
+        # Determine sort field
         if status == "approved":
             sort_field = "approved_at"
+        elif status == "rejected":
+            sort_field = "rejected_at"
+        else:
+            sort_field = "submitted_at"
+        
+        # FAST: Run count and fetch in PARALLEL
+        try:
+            count_task = db.vip_payments.count_documents(query)
+            fetch_task = db.vip_payments.find(
+                query, 
+                {
+                    "_id": 0,
+                    "payment_id": 1, "user_id": 1, "subscription_plan": 1, "plan_type": 1,
+                    "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
+                    "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1,
+                    "new_expiry": 1, "rejection_reason": 1
+                }
+            ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
+            
+            total, payments = await asyncio.gather(count_task, fetch_task)
+        except Exception as e:
+            logging.error(f"DB query failed: {e}")
+            return {"payments": [], "total": 0, "page": page, "pages": 0}
         elif status == "rejected":
             sort_field = "rejected_at"
         else:
