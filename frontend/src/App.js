@@ -410,6 +410,10 @@ function App() {
   }, []); // Run once on mount
 
   const handleLogin = async (userData) => {
+    // Save session token for single-session enforcement
+    if (userData.session_token) {
+      localStorage.setItem("paras_session_token", userData.session_token);
+    }
     setUser(userData);
     localStorage.setItem("paras_user", JSON.stringify(userData));
     
@@ -417,15 +421,72 @@ function App() {
     setTimeout(() => refreshUserData(userData.uid), 100);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async (showMessage = true, reason = null) => {
+    const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
+    
+    // Clear session on server
+    if (storedUser?.uid) {
+      try {
+        await fetch(`${BACKEND_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: storedUser.uid })
+        });
+      } catch (e) {
+        console.error('Logout API error:', e);
+      }
+    }
+    
     setUser(null);
     localStorage.removeItem("paras_user");
-    toast.success("Logged out successfully");
+    localStorage.removeItem("paras_session_token");
+    
+    if (showMessage) {
+      if (reason === 'session_expired') {
+        toast.error("तुम्ही दुसऱ्या device वर login केले आहे. कृपया पुन्हा login करा.", { duration: 5000 });
+      } else {
+        toast.success("Logged out successfully");
+      }
+    }
+    
     // Redirect to home page after logout
     setTimeout(() => {
       window.location.href = '/';
     }, 500);
   };
+
+  // Session validation - check every 30 seconds
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    const validateSession = async () => {
+      const sessionToken = localStorage.getItem("paras_session_token");
+      if (!sessionToken) return;
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/auth/validate-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, session_token: sessionToken })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.valid && result.reason === 'session_expired') {
+          // Another device logged in - force logout
+          handleLogout(true, 'session_expired');
+        }
+      } catch (e) {
+        console.error('Session validation error:', e);
+      }
+    };
+    
+    // Validate immediately and then every 30 seconds
+    validateSession();
+    const interval = setInterval(validateSession, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user?.uid]);
 
   if (loading) {
     return (
