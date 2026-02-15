@@ -12,7 +12,7 @@ import asyncio
 from pymongo.errors import ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout
 
 
-async def db_operation_with_retry(operation, max_retries=3, delay=0.5):
+async def db_operation_with_retry(operation, max_retries=3, delay=0.5, raise_on_failure=False):
     """Execute database operation with retry logic for timeout errors"""
     last_error = None
     for attempt in range(max_retries):
@@ -26,8 +26,11 @@ async def db_operation_with_retry(operation, max_retries=3, delay=0.5):
         except Exception as e:
             # For other exceptions, don't retry
             raise e
-    # Return None instead of raising - let caller handle gracefully
+    
+    # After all retries failed
     logging.error(f"DB operation failed after {max_retries} retries: {str(last_error)[:100]}")
+    if raise_on_failure:
+        raise last_error
     return None
 
 # Create router
