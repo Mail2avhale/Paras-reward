@@ -121,7 +121,7 @@ async def fast_db_operation(operation: Callable, timeout_seconds: float = 5.0, f
     """
     # Check circuit breaker
     if not db_circuit._should_allow_request():
-        logging.warning(f"Circuit OPEN - fast failing request")
+        logging.warning("Circuit OPEN - fast failing request")
         if fallback is not None:
             return fallback
         raise Exception("Service temporarily unavailable - please try again")
