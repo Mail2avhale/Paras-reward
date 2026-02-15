@@ -12722,6 +12722,7 @@ async def get_all_users(
         "users": users
     }
 
+@api_router.put("/admin/users/{uid}/role")
 async def update_user_role(uid: str, request: Request):
     """Update user role (Admin only)"""
     data = await request.json()
