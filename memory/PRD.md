@@ -62,6 +62,20 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 15, 2026 - Current Session)
 
+- [x] **Manager Role & Permissions Feature (P1)** ✅ TESTED
+  - **Feature:** Admin User 360 मध्ये Manager role assign करणे आणि page permissions देणे
+  - **Changes:**
+    1. Added `@api_router.put("/admin/users/{uid}/role")` decorator to expose role change API
+    2. Added "Change Role" button in Quick Actions
+    3. Added "Manage Permissions" button (shows only for Manager role)
+    4. Integrated ManagerPermissions component for permission selection
+  - **APIs:**
+    - `PUT /api/admin/users/{uid}/role` - Change user role ✅
+    - `GET /api/admin/permissions/list` - Get all available permissions ✅
+    - `GET /api/admin/user/{uid}/permissions` - Get user's permissions ✅
+    - `PUT /api/admin/user/{uid}/permissions` - Update permissions ✅
+  - **Status:** COMPLETED ✅
+
 - [x] **Forgot PIN - Contact Admin Flow (P1)** ✅ TESTED
   - **Change:** Replaced OTP-based PIN reset with simple "Contact Admin" message
   - **New Flow:** User sees message to email `info@parasreward.com` with registered email & mobile
