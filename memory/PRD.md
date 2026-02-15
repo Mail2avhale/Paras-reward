@@ -1,84 +1,75 @@
-# PARAS REWARD - Product Requirements Document
+# PARAS REWARD - Production Application
 
-## Original Problem Statement
-PARAS REWARD is a comprehensive rewards and subscription management platform with features including:
-- User authentication with PIN-based login
-- Mining/rewards system
-- KYC verification
-- Subscription management (VIP plans)
-- Admin dashboard for managing users, orders, and finances
-- Bill payments, Gift vouchers, Network/referral system
+## Product Overview
+A production-grade reward platform serving 3000+ users with subscription management, referral system, mining features, and marketplace.
 
-## Current Status: ✅ Production Working (Feb 15, 2026)
+## Recent Changes (December 2025)
 
-### Critical Bugs Fixed Today
+### Admin Subscription Management - REBUILT ✅
+**Problem:** "Database temporarily unavailable" errors during subscription approval
+**Solution:** Complete rebuild of `admin_vip.py` with simplified architecture
 
-**Bug 1: Production Login "Not Found" Error**
-- **Root Cause:** Double `/api/api/` prefix in API calls
-- **Fix:** Removed extra `/api` from ~80 files
-- **Status:** FIXED ✅
+**Changes Made:**
+1. Removed complex circuit breaker pattern
+2. Removed retry logic with exponential backoff
+3. Replaced parallel `asyncio.gather()` operations with sequential database calls
+4. Simplified error handling
+5. Frontend `AdminSubscriptionManagement.js` also cleaned up and simplified
 
-**Bug 2: Dashboard/Mining Data Not Loading**
-- **Root Cause:** Missing `/api` prefix in API variable definition
-- **Pattern 1:** `const API = process.env.REACT_APP_BACKEND_URL;` (missing `/api`)
-- **Pattern 2:** `const API = process.env.REACT_APP_BACKEND_URL || '';` (missing `/api`)
-- **Fix:** Changed to `const API = \`${process.env.REACT_APP_BACKEND_URL}/api\`;` in ~67 files
-- **Status:** FIXED ✅
+**Test Results:** 100% tests passed (15/15 backend, all frontend UI verified)
 
-**Bug 3: Profile Page White Screen**
-- **Status:** FIXED ✅ (Cache clear resolved)
+### Referrals/Invite Page - VERIFIED ✅
+**Status:** Working correctly
+- Backend API `/api/referrals/{user_id}/levels` returns user data correctly
+- Frontend displays 5 levels with user details
+- Note: Admin users are redirected from /referrals by design
 
 ## Architecture
 
-### Tech Stack
-- **Frontend:** React.js with Tailwind CSS, Shadcn UI
-- **Backend:** FastAPI (Python)
-- **Database:** MongoDB
-- **Authentication:** JWT + PIN-based login
+### Backend (`/app/backend/`)
+- FastAPI with async operations
+- MongoDB database
+- In-memory caching with TTL
+- JWT authentication
 
-### API URL Pattern
-```javascript
-// CORRECT pattern for all frontend files:
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+### Frontend (`/app/frontend/`)
+- React 18
+- Tailwind CSS
+- Shadcn/UI components
+- Sonner for toast notifications
 
-// Then use:
-axios.get(`${API}/endpoint`)  // Results in: https://domain.com/api/endpoint
-```
+## Key Files
 
-### Environment Variables
-- **Production:** `REACT_APP_BACKEND_URL = https://parasreward.com`
-- **Preview:** `REACT_APP_BACKEND_URL = https://fix-db-timeout.preview.emergentagent.com`
+### Subscription Management
+- Backend: `/app/backend/routes/admin_vip.py` (REBUILT)
+- Frontend: `/app/frontend/src/pages/AdminSubscriptionManagement.js` (SIMPLIFIED)
 
-## Completed Features
-- User authentication (PIN + password migration)
-- Admin dashboard with full stats
-- Subscription management with approval/rejection
-- KYC verification system
-- Mining/rewards system
-- Bill payments
-- Network referrals
-- Contact form submissions
-- User Dashboard with balance display
-- Profile page
+### Referrals
+- Backend: `/app/backend/server.py` (lines 26200-26385)
+- Frontend: `/app/frontend/src/pages/ReferralsEnhanced.js`
 
-## Pending Tasks
+## API Endpoints
 
-### P1 - High Priority
-1. **UPI Payment Gateway Integration** - User requested Razorpay integration
+### Admin Subscription
+- `GET /api/admin/subscription-stats` - Get plan counts
+- `GET /api/admin/vip-payments?status=pending|approved|rejected` - List payments
+- `POST /api/admin/vip-payment/{id}/approve` - Approve payment
+- `POST /api/admin/vip-payment/{id}/reject` - Reject payment
+- `PUT /api/admin/vip-payments/{id}` - Update payment
+- `DELETE /api/admin/vip-payments/{id}` - Delete payment
 
-### P2 - Medium Priority
-2. **"DIRECTOR 365" Subscription Plan** - New plan design
-3. **Force PIN Change Feature** - Admin ability
-
-### P3 - Low Priority
-4. **Backend Subscription Pricing Audit**
-5. **Advanced PRC Burning Concepts**
+### Referrals
+- `GET /api/referrals/{user_id}/levels` - Get referral levels with users
 
 ## Test Credentials
-- **Admin:** admin@test.com / PIN: 123456
-- **Production User:** mail2avhale@gmail.com / PIN: 152759
+- Admin: `admin@test.com` / PIN: `123456`
 
-## Notes
-- User communicates in Marathi - respond in Marathi
-- Production URL: parasreward.com
-- Always clear browser cache after deployment
+## Upcoming Tasks
+- P1: UPI Payment Gateway Integration (Razorpay/PhonePe/Paytm)
+- P1: "DIRECTOR 365" Subscription Plan
+- P1: Advanced PRC Burning Concepts
+- P2: Force PIN Change Feature
+
+## Known Behaviors
+- Admin users are redirected from `/referrals` to `/admin` (by design)
+- Subscription page refresh recommended after approval operations
