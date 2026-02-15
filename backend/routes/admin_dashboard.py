@@ -175,43 +175,56 @@ async def get_admin_stats():
 
 @router.get("/dashboard-all")
 async def get_dashboard_all():
-    """Get all dashboard data in one call"""
+    """Get all dashboard data in one call - OPTIMIZED with parallel queries"""
+    import asyncio
+    
     try:
+        # Check cache first
+        cache_key = "admin:dashboard:all"
+        if cache:
+            cached = await cache.get(cache_key)
+            if cached:
+                return cached
+        
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         
-        # Counts
-        total_users = await db.users.count_documents({})
-        vip_users = await db.users.count_documents({"membership_type": "vip"})
-        pending_payments = await db.vip_payments.count_documents({"status": "pending"})
-        pending_orders = await db.orders.count_documents({"status": "pending"})
+        # Run ALL queries in PARALLEL
+        results = await asyncio.gather(
+            db.users.count_documents({}),  # total_users
+            db.users.count_documents({"membership_type": "vip"}),  # vip_users
+            db.vip_payments.count_documents({"status": "pending"}),  # pending_payments
+            db.orders.count_documents({"status": "pending"}),  # pending_orders
+            db.users.count_documents({"created_at": {"$gte": today_start}}),  # new_today
+            db.vip_payments.find(
+                {"status": "pending"},
+                {"_id": 0, "payment_id": 1, "user_id": 1, "amount": 1, "submitted_at": 1}
+            ).sort("submitted_at", -1).limit(5).to_list(5),  # recent_payments
+            db.orders.find(
+                {"status": "pending"},
+                {"_id": 0, "order_id": 1, "user_id": 1, "total_prc": 1, "created_at": 1}
+            ).sort("created_at", -1).limit(5).to_list(5),  # recent_orders
+            return_exceptions=True
+        )
         
-        # Today's new users
-        new_today = await db.users.count_documents({"created_at": {"$gte": today_start}})
-        
-        # Recent activity
-        recent_payments = await db.vip_payments.find(
-            {"status": "pending"},
-            {"_id": 0, "payment_id": 1, "user_id": 1, "amount": 1, "submitted_at": 1}
-        ).sort("submitted_at", -1).limit(5).to_list(5)
-        
-        recent_orders = await db.orders.find(
-            {"status": "pending"},
-            {"_id": 0, "order_id": 1, "user_id": 1, "total_prc": 1, "created_at": 1}
-        ).sort("created_at", -1).limit(5).to_list(5)
-        
-        return {
+        response = {
             "counts": {
-                "total_users": total_users,
-                "vip_users": vip_users,
-                "pending_payments": pending_payments,
-                "pending_orders": pending_orders,
-                "new_users_today": new_today
+                "total_users": results[0] if not isinstance(results[0], Exception) else 0,
+                "vip_users": results[1] if not isinstance(results[1], Exception) else 0,
+                "pending_payments": results[2] if not isinstance(results[2], Exception) else 0,
+                "pending_orders": results[3] if not isinstance(results[3], Exception) else 0,
+                "new_users_today": results[4] if not isinstance(results[4], Exception) else 0
             },
-            "recent_payments": recent_payments,
-            "recent_orders": recent_orders,
+            "recent_payments": results[5] if not isinstance(results[5], Exception) else [],
+            "recent_orders": results[6] if not isinstance(results[6], Exception) else [],
             "generated_at": now.isoformat()
         }
+        
+        # Cache for 30 seconds
+        if cache:
+            await cache.set(cache_key, response, ttl=30)
+        
+        return response
     except Exception as e:
         return {"error": str(e)}
 
