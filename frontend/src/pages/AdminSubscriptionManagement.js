@@ -25,6 +25,7 @@ const AdminSubscriptionManagement = () => {
   const [editModal, setEditModal] = useState({ show: false, payment: null });
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
   const [fullImageModal, setFullImageModal] = useState({ show: false, url: null, userName: '', amount: '' });
+  const [rejectModal, setRejectModal] = useState({ show: false, payment: null });
   
   // Pagination states
   const [pendingPage, setPendingPage] = useState(1);
