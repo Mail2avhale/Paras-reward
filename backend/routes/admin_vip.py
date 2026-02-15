@@ -242,8 +242,9 @@ async def get_admin_vip_payments(
                 ).to_list(500)
             
             users_list = await db_operation_with_retry(fetch_users)
-            for user in users_list:
-                users_data[user.get("uid")] = user
+            if users_list:
+                for user in users_list:
+                    users_data[user.get("uid")] = user
         
         # Batch count previous payments with retry
         async def fetch_prev_payments():
@@ -254,7 +255,7 @@ async def get_admin_vip_payments(
             return await db.vip_payments.aggregate(prev_payments_pipeline).to_list(100)
         
         prev_payments_result = await db_operation_with_retry(fetch_prev_payments) if user_ids else []
-        prev_payments_map = {r["_id"]: r["count"] for r in prev_payments_result}
+        prev_payments_map = {r["_id"]: r["count"] for r in (prev_payments_result or [])}
         
         # Enrich payments
         for payment in payments:
