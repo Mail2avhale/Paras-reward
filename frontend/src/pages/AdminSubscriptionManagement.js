@@ -1061,7 +1061,7 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
           </div>
           
           {/* Custom Reason Input */}
-          {reason === 'अन्य (Custom)' && (
+          {reason === 'Other (Custom)' && (
             <div>
               <label className="text-gray-400 text-sm block mb-1">
                 Custom Reason
@@ -1069,7 +1069,7 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
               <textarea
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="Rejection साठी custom reason टाइप करा..."
+                placeholder="Type custom rejection reason..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white resize-none h-24 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 data-testid="reject-custom-reason-input"
               />
