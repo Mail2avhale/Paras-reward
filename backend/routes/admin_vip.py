@@ -504,32 +504,19 @@ async def reject_vip_payment(payment_id: str, request: Request):
             logging.error(f"Reject update failed: {e}")
             raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
-        # Non-critical operations - fire and forget
-        asyncio.create_task(db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_rejected",
-            "user_id": user_id,
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "reason": reason,
-            "timestamp": now.isoformat()
-        }))
-        
-        # Send notification - fire and forget
-        if user_id:
-            asyncio.create_task(send_notification(
-                user_id=user_id,
-                title="❌ Payment Rejected",
-                message=f"Your subscription payment has been rejected. Reason: {reason}. Please submit a new payment with correct details.",
-                notif_type="subscription_rejected",
-                icon="❌",
-                action_url="/subscription"
-            ))
-        
-        # Clear cache in background
-        if cache:
-            asyncio.create_task(cache.delete("admin_vip_payments:pending:p1:l50"))
-            asyncio.create_task(cache.delete("admin_vip_payments:all:p1:l50"))
+        # Non-critical: Log without blocking
+        try:
+            await db.activity_logs.insert_one({
+                "log_id": str(uuid.uuid4()),
+                "action": "vip_payment_rejected",
+                "user_id": user_id,
+                "admin_id": admin_id,
+                "payment_id": payment_id,
+                "reason": reason,
+                "timestamp": now.isoformat()
+            })
+        except Exception:
+            pass
         
         return {"success": True, "message": "Payment rejected"}
     except HTTPException:
