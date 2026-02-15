@@ -20,19 +20,29 @@ const AdminBankWithdrawals = ({ user }) => {
   const [processing, setProcessing] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const ITEMS_PER_PAGE = 15;
 
   useEffect(() => {
     fetchRequests();
-  }, [statusFilter]);
+  }, [statusFilter, page]);
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API}/admin/bank-redeem/requests`, {
-        params: { status: statusFilter === 'all' ? null : statusFilter }
+        params: { 
+          status: statusFilter === 'all' ? null : statusFilter,
+          page: page,
+          limit: ITEMS_PER_PAGE
+        }
       });
       setRequests(response.data.requests || []);
       setStats(response.data.stats || {});
+      setTotal(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching requests:', error);
       toast.error('Failed to load requests');
@@ -40,6 +50,14 @@ const AdminBankWithdrawals = ({ user }) => {
       setLoading(false);
     }
   };
+
+  // Reset page when filter changes
+  const handleFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setPage(1);
+  };
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const handleApprove = async (requestId) => {
     if (!transactionRef.trim()) {
