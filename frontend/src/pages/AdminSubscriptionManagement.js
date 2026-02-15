@@ -1009,7 +1009,7 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
               <XCircle className="w-5 h-5 text-red-500" />
               Reject Payment
             </h3>
-            <p className="text-gray-400 text-sm">User ला notification जाईल</p>
+            <p className="text-gray-400 text-sm">Notification will be sent to user</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="w-5 h-5" />
