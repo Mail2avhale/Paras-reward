@@ -3,7 +3,14 @@
 ## Product Overview
 A production-grade reward platform serving 3000+ users with subscription management, referral system, mining features, and marketplace.
 
-## Recent Changes (December 2025)
+## Recent Changes (February 2026)
+
+### Pagination & Sorting Added ✅
+- **Admin Subscription Page**: Pagination (15 items/page), Newest first sorting
+- **Admin Bank Withdrawals Page**: Pagination (15 items/page), Newest first sorting
+- Both pages reset to page 1 when filter/tab changes
+
+## Previous Changes (December 2025)
 
 ### Admin Subscription Management - REBUILT ✅
 **Problem:** "Database temporarily unavailable" errors during subscription approval
