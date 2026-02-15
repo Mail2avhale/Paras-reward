@@ -13312,42 +13312,67 @@ async def get_all_users_admin(
     kyc_status: Optional[str] = None,
     show_deleted: Optional[bool] = False
 ):
-    """Admin endpoint to get all users with filters and pagination"""
+    """Admin endpoint to get all users with filters and pagination - OPTIMIZED"""
+    import asyncio
+    
     query = {}
     
     # By default, hide deactivated/deleted users unless show_deleted is True
     if not show_deleted:
         query["is_active"] = {"$ne": False}
     
-    # Search filter
+    # Search filter - OPTIMIZED: use prefix match when possible for index usage
     if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
-            {"mobile": {"$regex": search, "$options": "i"}},
-            {"uid": {"$regex": search, "$options": "i"}}
-        ]
+        search_term = search.strip()
+        # For UID exact match (faster)
+        if len(search_term) > 10 and search_term.isalnum():
+            query["uid"] = search_term
+        else:
+            # Use regex for partial search
+            query["$or"] = [
+                {"name": {"$regex": search_term, "$options": "i"}},
+                {"email": {"$regex": search_term, "$options": "i"}},
+                {"mobile": {"$regex": search_term, "$options": "i"}},
+                {"uid": {"$regex": search_term, "$options": "i"}}
+            ]
     
     # Role filter
     if role:
         query["role"] = role
     
-    # Membership filter
+    # Membership/subscription filter - check both fields
     if membership:
-        query["membership_type"] = membership
+        query["$or"] = query.get("$or", [])
+        if not query["$or"]:
+            query.pop("$or", None)
+            query["$or"] = [
+                {"membership_type": membership},
+                {"subscription_plan": membership}
+            ]
+        else:
+            # If search $or exists, use subscription_plan directly
+            query["subscription_plan"] = membership
     
     # KYC filter
     if kyc_status:
         query["kyc_status"] = kyc_status
     
     skip = (page - 1) * limit
-    users = await db.users.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
-    total = await db.users.count_documents(query)
     
-    # Remove sensitive data
-    for user in users:
-        user.pop("password_hash", None)
-        user.pop("_id", None)
+    # Projection - only fetch needed fields (CRITICAL for performance)
+    projection = {
+        "_id": 0,
+        "password_hash": 0,
+        "password": 0,
+        "reset_token": 0,
+        "biometric_credentials": 0
+    }
+    
+    # Run count and find in PARALLEL for faster response
+    count_task = db.users.count_documents(query)
+    find_task = db.users.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total, users = await asyncio.gather(count_task, find_task)
     
     return {
         "users": users,
