@@ -496,23 +496,18 @@ async def approve_vip_payment(payment_id: str, request: Request):
 
 @router.post("/vip-payment/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request):
-    """Reject VIP payment with retry logic"""
+    """Reject VIP payment - FAST VERSION"""
     try:
         data = await request.json()
         admin_id = data.get("admin_id")
         reason = data.get("reason", "Payment rejected by admin")
         
-        payment = await db_operation_with_retry(
-            lambda: db.vip_payments.find_one({"payment_id": payment_id})
-        )
-        
-        # Check if DB operation failed (returned None due to timeout)
-        if payment is None:
-            try:
-                payment = await db.vip_payments.find_one({"payment_id": payment_id})
-            except Exception as e:
-                logging.error(f"Direct DB query failed in reject: {e}")
-                raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
+        # FAST: Direct query
+        try:
+            payment = await db.vip_payments.find_one({"payment_id": payment_id}, {"_id": 0, "status": 1, "user_id": 1})
+        except Exception as e:
+            logging.error(f"DB query failed in reject: {e}")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
@@ -523,8 +518,9 @@ async def reject_vip_payment(payment_id: str, request: Request):
         now = datetime.now(timezone.utc)
         user_id = payment.get("user_id")
         
-        await db_operation_with_retry(
-            lambda: db.vip_payments.update_one(
+        # FAST: Direct update
+        try:
+            await db.vip_payments.update_one(
                 {"payment_id": payment_id},
                 {"$set": {
                     "status": "rejected",
@@ -533,37 +529,36 @@ async def reject_vip_payment(payment_id: str, request: Request):
                     "rejection_reason": reason
                 }}
             )
-        )
+        except Exception as e:
+            logging.error(f"Reject update failed: {e}")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
-        await db_operation_with_retry(
-            lambda: db.activity_logs.insert_one({
-                "log_id": str(uuid.uuid4()),
-                "action": "vip_payment_rejected",
-                "user_id": user_id,
-                "admin_id": admin_id,
-                "payment_id": payment_id,
-                "reason": reason,
-                "timestamp": now.isoformat()
-            })
-        )
+        # Non-critical operations - fire and forget
+        asyncio.create_task(db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "vip_payment_rejected",
+            "user_id": user_id,
+            "admin_id": admin_id,
+            "payment_id": payment_id,
+            "reason": reason,
+            "timestamp": now.isoformat()
+        }))
         
-        # Send notification to user about rejection
+        # Send notification - fire and forget
         if user_id:
-            await send_notification(
+            asyncio.create_task(send_notification(
                 user_id=user_id,
                 title="❌ Payment Rejected",
                 message=f"Your subscription payment has been rejected. Reason: {reason}. Please submit a new payment with correct details.",
                 notif_type="subscription_rejected",
                 icon="❌",
                 action_url="/subscription"
-            )
+            ))
         
+        # Clear cache in background
         if cache:
-            try:
-                await cache.delete("admin_vip_payments:pending:p1:l50")
-                await cache.delete("admin_vip_payments:all:p1:l50")
-            except Exception:
-                pass
+            asyncio.create_task(cache.delete("admin_vip_payments:pending:p1:l50"))
+            asyncio.create_task(cache.delete("admin_vip_payments:all:p1:l50"))
         
         return {"success": True, "message": "Payment rejected"}
     except HTTPException:
