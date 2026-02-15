@@ -448,18 +448,19 @@ mongo_url = os.environ['MONGO_URL']
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options based on environment - OPTIMIZED for stability
+# Configure connection options - SUPER OPTIMIZED for speed
 connection_options = {
-    'serverSelectionTimeoutMS': 30000,  # 30 second timeout (reduced from 120 for faster failover)
-    'connectTimeoutMS': 30000,  # 30 second connection timeout
-    'socketTimeoutMS': 30000,  # 30 second socket timeout
-    'maxPoolSize': 50,  # Reduced pool size for local MongoDB stability
-    'minPoolSize': 5,  # Keep some connections warm
-    'maxIdleTimeMS': 30000,  # Close idle connections after 30 seconds
-    'waitQueueTimeoutMS': 30000,  # Wait up to 30 seconds for connection from pool
+    'serverSelectionTimeoutMS': 5000,  # 5 second timeout - fail fast
+    'connectTimeoutMS': 5000,  # 5 second connection timeout
+    'socketTimeoutMS': 10000,  # 10 second socket timeout
+    'maxPoolSize': 100,  # Larger pool for concurrent requests
+    'minPoolSize': 20,  # Keep more connections warm
+    'maxIdleTimeMS': 60000,  # Keep idle connections for 1 minute
+    'waitQueueTimeoutMS': 5000,  # Don't wait too long for connection
     'retryWrites': True,  # Enable retryable writes
     'retryReads': True,  # Enable retryable reads
     'directConnection': not is_atlas,  # Use direct connection for local MongoDB
+    'compressors': ['zstd', 'snappy', 'zlib'],  # Enable compression for faster data transfer
 }
 
 # Add Atlas-specific options
