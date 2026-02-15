@@ -12,6 +12,11 @@ Build a PRC (point-based reward currency) system web application where users can
 - **Database**: MongoDB
 - **Authentication**: JWT-based custom auth
 
+## Pending Issues (P2)
+- [ ] **Mining Page Bugs:** Session earnings show "-", UI doesn't update after collecting rewards (Recurring issue)
+- [ ] **Pay EMI Form:** Add new fields (loan_type, due_date, emi_amount) and rename "Bank Name" to "Bank/Lender Name"
+- [ ] **KYC Approval UI Bug:** User verification pending for stuck approve/reject buttons
+
 ## Upcoming/Future Tasks (P2/P3)
 - [ ] Revenue Chart/Graph (Weekly/Monthly subscription revenue trends)
 - [ ] User Growth Chart (Daily new user signups)
@@ -21,7 +26,7 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] Admin Activity Log (Track admin actions)
 - [ ] Dark/Light Mode Toggle
 - [ ] Customizable Dashboard (Drag & drop cards)
-- [ ] Global Search functionality
+- [x] Global Search functionality ✅ (Completed - Auto suggestions in Users 360)
 - [ ] DIRECTOR 365 Subscription Plan (new tier)
 - [ ] Advanced PRC Burning Concepts (for app sustainability)
 - [ ] Force PIN Change Feature (for security)
