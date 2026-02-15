@@ -62,6 +62,16 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 15, 2026 - Current Session)
 
+- [x] **Forgot PIN - Contact Admin Flow (P1)** ✅ TESTED
+  - **Change:** Replaced OTP-based PIN reset with simple "Contact Admin" message
+  - **New Flow:** User sees message to email `info@parasreward.com` with registered email & mobile
+  - **Features:**
+    - Clear instructions on what to include in email
+    - "Send Email to Admin" button with pre-filled email template
+    - 24-48 hours response time notice
+  - **File:** `/app/frontend/src/pages/ForgotPin.js`
+  - **Status:** COMPLETED ✅
+
 - [x] **Codebase Cleanup (P0)** ✅ TESTED
   - **Issue:** Dead code and backup files were bloating the codebase
   - **Changes:**
