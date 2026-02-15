@@ -8256,9 +8256,9 @@ async def get_subscription_pricing_reference():
 
 # ========== FREE STARTUP SUBSCRIPTION REWARD FUNCTION - DISABLED ==========
 # Removed per user request
-# async def check_and_grant_referral_reward(new_paid_user_id: str, now: datetime):
-#     """DISABLED: Free Startup Subscription reward logic removed"""
-#     pass
+async def check_and_grant_referral_reward(new_paid_user_id: str, now):
+    """DISABLED: Free Startup Subscription reward logic removed"""
+    pass
 # =========================================================================
 
 async def get_referral_uids(referrer_uid: str) -> list:
