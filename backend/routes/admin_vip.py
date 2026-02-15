@@ -303,8 +303,16 @@ async def get_admin_vip_payments(
         
         return result
     except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
-        logging.error(f"Database timeout in vip-payments: {str(e)}")
-        raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please refresh the page.")
+        logging.error(f"Database timeout in vip-payments: {str(e)[:100]}")
+        # Return empty result instead of 503 error
+        return {
+            "payments": [],
+            "total": 0,
+            "page": page,
+            "pages": 0,
+            "db_error": True,
+            "message": "Database slow - please try again"
+        }
     except Exception as e:
         logging.error(f"Error in vip-payments: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
