@@ -6342,9 +6342,10 @@ async def get_user_data(uid: str):
     
     # Try to get from cache first (cache for 2 minutes)
     cache_key = f"user_data:{uid}"
-    cached_user = await cache.get(cache_key)
-    if cached_user:
-        return cached_user
+    if cache:
+        cached_user = await cache.get(cache_key)
+        if cached_user:
+            return cached_user
     
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
     if not user:
