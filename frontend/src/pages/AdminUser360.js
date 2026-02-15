@@ -174,6 +174,9 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [roleModal, setRoleModal] = useState({ show: false });
   const [selectedRole, setSelectedRole] = useState('user');
   
+  // Permissions Modal State
+  const [permissionsModal, setPermissionsModal] = useState({ show: false });
+  
   // Adjust Balance Modal State
   const [balanceModal, setBalanceModal] = useState({ show: false });
   const [balanceForm, setBalanceForm] = useState({
