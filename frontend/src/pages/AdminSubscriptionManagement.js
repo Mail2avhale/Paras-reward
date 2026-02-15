@@ -781,6 +781,16 @@ const AdminSubscriptionManagement = () => {
           processing={processing === editModal.payment.payment_id}
         />
       )}
+
+      {/* Reject Modal */}
+      {rejectModal.show && rejectModal.payment && (
+        <RejectPaymentModal
+          payment={rejectModal.payment}
+          onClose={() => setRejectModal({ show: false, payment: null })}
+          onReject={(reason) => handleReject(rejectModal.payment.payment_id, reason)}
+          processing={processing === rejectModal.payment.payment_id}
+        />
+      )}
       
       {/* Full Image Preview Modal */}
       {fullImageModal.show && fullImageModal.url && (
