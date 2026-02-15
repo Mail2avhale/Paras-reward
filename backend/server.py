@@ -602,6 +602,31 @@ async def api_health_check():
         "service": "paras-reward-api"
     }
 
+@api_router.get("/performance/status")
+async def get_performance_status():
+    """Get performance and circuit breaker status - for monitoring"""
+    try:
+        from performance_optimizer import get_circuit_status
+        circuit_status = get_circuit_status()
+    except:
+        circuit_status = {"error": "not available"}
+    
+    return {
+        "circuit_breaker": circuit_status,
+        "database_ready": db_ready,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@api_router.post("/performance/reset-circuit")
+async def reset_circuit_breaker():
+    """Reset circuit breaker - admin use only"""
+    try:
+        from performance_optimizer import reset_circuit
+        reset_circuit()
+        return {"success": True, "message": "Circuit breaker reset"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @api_router.get("/cache/stats")
 async def get_cache_stats():
     """Get cache system statistics"""
