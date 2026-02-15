@@ -212,67 +212,34 @@ async def get_admin_vip_payments(
         except Exception as e:
             logging.error(f"DB query failed: {e}")
             return {"payments": [], "total": 0, "page": page, "pages": 0}
-        elif status == "rejected":
-            sort_field = "rejected_at"
-        else:
-            sort_field = "submitted_at"
-        
-        # Use retry for find operation
-        async def fetch_payments():
-            return await db.vip_payments.find(
-                query, 
-                {
-                    "_id": 0,
-                    "payment_id": 1, "user_id": 1, "subscription_plan": 1, "plan_type": 1,
-                    "amount": 1, "utr_number": 1, "screenshot_url": 1, "date": 1, "time": 1,
-                    "status": 1, "submitted_at": 1, "approved_at": 1, "rejected_at": 1, "admin_notes": 1,
-                    "new_expiry": 1, "rejection_reason": 1
-                }
-            ).sort(sort_field, -1).skip(skip).limit(limit).to_list(limit)
-        
-        payments = await db_operation_with_retry(fetch_payments)
-        
-        # Handle DB failure gracefully - return empty list instead of error
-        if payments is None:
-            payments = []
         
         if not payments:
             result = {"payments": [], "total": total, "page": page, "pages": 0}
             if cache:
-                try:
-                    await cache.set(cache_key, result, ttl=30)
-                except Exception:
-                    pass
+                asyncio.create_task(cache.set(cache_key, result, ttl=30))
             return result
         
-        # Batch fetch user details
+        # Batch fetch user details - FAST
         user_ids = list(set(p.get("user_id") for p in payments if p.get("user_id")))
         users_data = {}
         
         if user_ids:
-            async def fetch_users():
-                return await db.users.find(
+            try:
+                users_list = await db.users.find(
                     {"uid": {"$in": user_ids}}, 
                     {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "city": 1, "state": 1,
                      "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
                      "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
                 ).to_list(500)
-            
-            users_list = await db_operation_with_retry(fetch_users)
-            if users_list:
-                for user in users_list:
-                    users_data[user.get("uid")] = user
+                
+                if users_list:
+                    for user in users_list:
+                        users_data[user.get("uid")] = user
+            except Exception:
+                pass  # Continue without user data if query fails
         
-        # Batch count previous payments with retry
-        async def fetch_prev_payments():
-            prev_payments_pipeline = [
-                {"$match": {"user_id": {"$in": user_ids}, "status": {"$in": ["approved", "completed"]}}},
-                {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
-            ]
-            return await db.vip_payments.aggregate(prev_payments_pipeline).to_list(100)
-        
-        prev_payments_result = await db_operation_with_retry(fetch_prev_payments) if user_ids else []
-        prev_payments_map = {r["_id"]: r["count"] for r in (prev_payments_result or [])}
+        # Skip previous payments count for speed - not critical info
+        prev_payments_map = {}
         
         # Enrich payments
         for payment in payments:
