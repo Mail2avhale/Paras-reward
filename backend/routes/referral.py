@@ -135,37 +135,36 @@ async def get_referrals(uid: str):
 
 @router.get("/stats/{uid}")
 async def get_referral_stats(uid: str):
-    """Get referral statistics for a user"""
-    # Total referrals
-    total_referrals = await db.users.count_documents({"referred_by": uid})
+    """Get referral statistics for a user - OPTIMIZED with aggregation"""
+    import asyncio
     
-    # Active referrals (logged in within last 24 hours)
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     
-    # Get all referrals to check activity
-    all_referrals = await db.users.find(
-        {"referred_by": uid}, 
-        {"_id": 0, "uid": 1, "last_login": 1, "membership_type": 1, "is_active": 1}
-    ).to_list(None)
+    # Run all queries in PARALLEL
+    total_task = db.users.count_documents({"referred_by": uid})
     
-    active_count = 0
-    vip_count = 0
+    # Use aggregation for active count - much faster than fetching all
+    active_pipeline = [
+        {"$match": {
+            "referred_by": uid,
+            "is_active": {"$ne": False},
+            "last_login": {"$gte": yesterday}
+        }},
+        {"$count": "active"}
+    ]
     
-    for ref in all_referrals:
-        # Check if VIP
-        if ref.get("membership_type") == "vip":
-            vip_count += 1
-        
-        # Check if active (logged in recently and account is active)
-        if ref.get("is_active", True):
-            last_login = ref.get("last_login")
-            if last_login:
-                try:
-                    last_login_dt = datetime.fromisoformat(last_login) if isinstance(last_login, str) else last_login
-                    if last_login_dt >= yesterday:
-                        active_count += 1
-                except:
-                    pass
+    vip_task = db.users.count_documents({
+        "referred_by": uid,
+        "membership_type": "vip"
+    })
+    
+    active_task = db.users.aggregate(active_pipeline).to_list(1)
+    
+    total_referrals, active_result, vip_count = await asyncio.gather(
+        total_task, active_task, vip_task
+    )
+    
+    active_count = active_result[0]["active"] if active_result else 0
     
     return {
         "total_referrals": total_referrals,
