@@ -406,6 +406,65 @@ const AdminBankWithdrawals = ({ user }) => {
               )}
             </div>
           ))}
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between p-4 bg-gray-900/50 rounded-xl border border-gray-800">
+              <p className="text-sm text-gray-400">
+                Page {page} of {totalPages} ({total} total requests)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-700"
+                >
+                  Previous
+                </Button>
+                
+                {/* Page numbers */}
+                <div className="flex gap-1">
+                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                          page === pageNum
+                            ? 'bg-green-500 text-black'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-700"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
