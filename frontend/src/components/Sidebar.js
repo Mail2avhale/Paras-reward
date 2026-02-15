@@ -62,14 +62,11 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
     { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
     { id: 'game', label: t('tapGame'), icon: Gamepad2, route: '/game' },
-    { id: 'activity', label: 'Activity', icon: TrendingUp, route: '/activity' },
     { id: 'marketplace', label: t('marketplace'), icon: ShoppingBag, route: '/marketplace' },
     { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/bill-payments' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
-    // Removed: Leaderboard for AdMob compliance
-    // Removed: Achievements for AdMob compliance
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];
 
