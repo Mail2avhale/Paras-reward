@@ -2476,7 +2476,7 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
 
 async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     """
-    Get multi-level referrals (up to 5 levels deep)
+    Get multi-level referrals (up to 5 levels deep) - OPTIMIZED with caching and limits
     Returns: {
         'level_1': [list of direct referrals],
         'level_2': [list of level 2 referrals],
@@ -2486,7 +2486,15 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     
     NOTE: referred_by can contain UID, referral_code, email, or name - we check ALL
     """
+    # OPTIMIZATION: Check cache first
+    cache_key = f"referrals:{user_id}:levels"
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     referrals_by_level = {}
+    MAX_PER_LEVEL = 100  # Limit referrals per level to prevent slowdown
     
     # Get ALL info for the root user
     root_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1})
@@ -2502,8 +2510,7 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
             values.append(user_doc["referral_code"])
         if user_doc.get("email"):
             values.append(user_doc["email"])
-        if user_doc.get("name"):
-            values.append(user_doc["name"])
+        # Removed name from search - too generic, causes slow queries
         return [v for v in values if v]  # Filter out None/empty
     
     current_level_search_values = get_search_values(root_user)
@@ -2517,11 +2524,16 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
         next_level_search_values = []
         
         try:
-            async for referred_user in db.users.find(
+            # OPTIMIZATION: Use projection to fetch only needed fields and limit results
+            cursor = db.users.find(
                 {"referred_by": {"$in": current_level_search_values}},
-                {"_id": 0}
-            ):
-                referred_users.append(referred_user)
+                {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1, 
+                 "subscription_plan": 1, "last_login": 1, "is_active": 1, "profile_picture": 1}
+            ).limit(MAX_PER_LEVEL)
+            
+            referred_users = await cursor.to_list(MAX_PER_LEVEL)
+            
+            for referred_user in referred_users:
                 # Collect search values for next level
                 next_level_search_values.extend(get_search_values(referred_user))
         except Exception as e:
@@ -2532,12 +2544,16 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
         if referred_users:
             referrals_by_level[f'level_{level}'] = referred_users
         
-        # Move to next level with deduplicated search values
-        current_level_search_values = list(set(next_level_search_values))
+        # Move to next level with deduplicated search values (limit to prevent explosion)
+        current_level_search_values = list(set(next_level_search_values))[:MAX_PER_LEVEL]
         
         # Stop if no more referrals at this level
         if not current_level_search_values:
             break
+    
+    # Cache for 5 minutes
+    if cache:
+        await cache.set(cache_key, referrals_by_level, ttl=300)
     
     return referrals_by_level
 
