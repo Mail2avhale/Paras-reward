@@ -92,28 +92,30 @@ const AdminSubscriptionManagement = () => {
       
       // Handle pending payments
       if (pendingRes.status === 'fulfilled') {
-        setPendingPayments(pendingRes.value.data?.payments || []);
-        setPendingTotal(pendingRes.value.data?.total || 0);
-      } else if (pendingRes.reason?.response?.status === 503) {
-        toast.error('Database busy - Please refresh');
+        const data = pendingRes.value.data;
+        setPendingPayments(data?.payments || []);
+        setPendingTotal(data?.total || 0);
+        if (data?.db_error) {
+          toast.info('Database slow - Showing cached data');
+        }
       }
       
       // Handle approved payments
       if (approvedRes.status === 'fulfilled') {
-        setApprovedPayments(approvedRes.value.data?.payments || []);
-        setApprovedTotal(approvedRes.value.data?.total || 0);
-      } else if (approvedRes.reason?.response?.status === 503) {
-        toast.error('Database busy - Please refresh');
+        const data = approvedRes.value.data;
+        setApprovedPayments(data?.payments || []);
+        setApprovedTotal(data?.total || 0);
       }
       
       // Handle rejected payments
       if (rejectedRes.status === 'fulfilled') {
-        setRejectedPayments(rejectedRes.value.data?.payments || []);
-        setRejectedTotal(rejectedRes.value.data?.total || 0);
+        const data = rejectedRes.value.data;
+        setRejectedPayments(data?.payments || []);
+        setRejectedTotal(data?.total || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load data - Please refresh');
+      // Don't show error toast for network issues - page will show empty state
     } finally {
       setLoading(false);
     }
