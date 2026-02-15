@@ -281,13 +281,9 @@ async def get_admin_vip_payments(
             "pages": (total + limit - 1) // limit
         }
         
-        # Cache in background - don't wait
+        cache_ttl = 5 if status == "pending" else 30
         if cache:
-            try:
-                cache_ttl = 5 if status == "pending" else 30
-                await cache.set(cache_key, result, ttl=cache_ttl)
-            except Exception:
-                pass
+            await cache.set(cache_key, result, ttl=cache_ttl)
         
         return result
     except (ServerSelectionTimeoutError, AutoReconnect, NetworkTimeout) as e:
