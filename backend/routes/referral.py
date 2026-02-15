@@ -1,6 +1,6 @@
 """
 Referral Routes - All referral-related API endpoints
-Extracted from server.py for better code organization
+OPTIMIZED for 3000+ users with caching
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -14,11 +14,17 @@ router = APIRouter(prefix="/referral", tags=["Referral"])
 
 # Database reference - will be set from main server
 db = None
+cache = None  # Cache reference
 
 def set_db(database):
     """Set the database reference"""
     global db
     db = database
+
+def set_cache(cache_instance):
+    """Set cache reference"""
+    global cache
+    cache = cache_instance
 
 # Import helper functions from server (will be set during initialization)
 get_multi_level_referrals = None
