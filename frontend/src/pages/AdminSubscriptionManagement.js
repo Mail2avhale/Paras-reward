@@ -455,7 +455,7 @@ const AdminSubscriptionManagement = () => {
                   key={payment.payment_id}
                   payment={payment}
                   onApprove={() => handleApprove(payment.payment_id)}
-                  onReject={() => handleReject(payment.payment_id)}
+                  onReject={() => setRejectModal({ show: true, payment })}
                   processing={processing === payment.payment_id}
                   type="pending"
                 />
