@@ -124,7 +124,16 @@ async def apply_referral(uid: str, referral_code: str):
 
 @router.get("/list/{uid}")
 async def get_referrals(uid: str, limit: int = 50, page: int = 1):
-    """Get list of referrals - OPTIMIZED with pagination"""
+    """Get list of referrals - OPTIMIZED with pagination and caching"""
+    import asyncio
+    
+    # Check cache first
+    cache_key = f"referral_list:{uid}:p{page}:l{limit}"
+    if cache:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
+    
     skip = (page - 1) * limit
     yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     
@@ -151,18 +160,23 @@ async def get_referrals(uid: str, limit: int = 50, page: int = 1):
         {"$limit": limit}
     ]
     
-    import asyncio
     referrals_task = db.users.aggregate(pipeline).to_list(limit)
     total_task = db.users.count_documents({"referred_by": uid})
     
     referrals, total = await asyncio.gather(referrals_task, total_task)
     
-    return {
+    result = {
         "referrals": referrals,
         "total": total,
         "page": page,
         "limit": limit
     }
+    
+    # Cache for 1 minute
+    if cache:
+        await cache.set(cache_key, result, ttl=60)
+    
+    return result
 
 
 @router.get("/stats/{uid}")
