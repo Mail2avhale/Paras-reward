@@ -3841,14 +3841,15 @@ async def calculate_mining_rate(uid: str):
     """
     # Try to get from cache first
     cache_key = f"mining_rate:{uid}"
-    cached_rate = await cache.get(cache_key)
-    if cached_rate:
-        return (
-            cached_rate.get('per_minute_rate', 0),
-            cached_rate.get('base_rate', 50),
-            cached_rate.get('total_active_referrals', 0),
-            cached_rate.get('referral_breakdown', {})
-        )
+    if cache:
+        cached_rate = await cache.get(cache_key)
+        if cached_rate:
+            return (
+                cached_rate.get('per_minute_rate', 0),
+                cached_rate.get('base_rate', 50),
+                cached_rate.get('total_active_referrals', 0),
+                cached_rate.get('referral_breakdown', {})
+            )
     
     user = await db.users.find_one({"uid": uid})
     if not user:
