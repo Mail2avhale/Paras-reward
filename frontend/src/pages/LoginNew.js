@@ -590,112 +590,51 @@ const LoginNew = ({ onLogin }) => {
         />
       )}
 
-      {/* Forgot PIN Modal */}
+      {/* Forgot PIN Modal - Contact Admin */}
       {showForgotPin && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <KeyRound className="w-8 h-8 text-purple-600" />
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <KeyRound className="w-8 h-8 text-amber-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
-                {forgotPinStep === 1 && 'Forgot PIN?'}
-                {forgotPinStep === 2 && 'Verify OTP'}
-                {forgotPinStep === 3 && 'Set New PIN'}
+                Forgot PIN?
               </h2>
               <p className="text-gray-500 text-sm mt-1">
-                {forgotPinStep === 1 && 'Enter your Email/Mobile to receive OTP'}
-                {forgotPinStep === 2 && 'Enter the OTP sent to your Email/Mobile'}
-                {forgotPinStep === 3 && 'Create a new 6-digit PIN'}
+                Contact Admin to reset your PIN
               </p>
             </div>
 
-            {/* Step 1: Enter Email */}
-            {forgotPinStep === 1 && (
-              <div className="space-y-4">
-                <Input
-                  type="email"
-                  placeholder="Enter your Email"
-                  value={forgotPinEmail}
-                  onChange={(e) => setForgotPinEmail(e.target.value)}
-                  className="w-full"
-                />
-                <Button
-                  onClick={handleForgotPinSendOtp}
-                  disabled={forgotPinLoading}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                >
-                  {forgotPinLoading ? 'Sending...' : 'Send OTP'}
-                </Button>
-                <p className="text-xs text-gray-400 text-center">
-                  Or contact Admin to reset your PIN
+            {/* Contact Admin Message */}
+            <div className="space-y-4">
+              {/* Alert Box */}
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-sm text-amber-800 text-center leading-relaxed">
+                  Please contact Admin on<br />
+                  <a href="mailto:info@parasreward.com" className="font-bold text-amber-900 hover:underline">
+                    info@parasreward.com
+                  </a>
+                  <br /><br />
+                  with your <strong>Registered Email</strong> and <strong>Mobile Number</strong> for resetting PIN.
                 </p>
               </div>
-            )}
 
-            {/* Step 2: Verify OTP */}
-            {forgotPinStep === 2 && (
-              <div className="space-y-4">
-                <Input
-                  type="text"
-                  placeholder="Enter OTP"
-                  value={forgotPinOtp}
-                  onChange={(e) => setForgotPinOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-center text-2xl tracking-widest"
-                  maxLength={6}
-                />
-                <Button
-                  onClick={handleForgotPinVerifyOtp}
-                  disabled={forgotPinLoading}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                >
-                  {forgotPinLoading ? 'Verifying...' : 'Verify OTP'}
+              {/* Send Email Button */}
+              <a 
+                href="mailto:info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
+                className="block"
+              >
+                <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Email to Admin
                 </Button>
-                <button
-                  onClick={() => setForgotPinStep(1)}
-                  className="w-full text-sm text-gray-500 hover:text-gray-700"
-                >
-                  ← Go Back
-                </button>
-              </div>
-            )}
+              </a>
 
-            {/* Step 3: Set New PIN */}
-            {forgotPinStep === 3 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">New PIN</label>
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    placeholder="••••••"
-                    value={newPin}
-                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full text-center text-2xl tracking-widest"
-                    maxLength={6}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Confirm PIN</label>
-                  <Input
-                    type="password"
-                    inputMode="numeric"
-                    placeholder="••••••"
-                    value={confirmNewPin}
-                    onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full text-center text-2xl tracking-widest"
-                    maxLength={6}
-                  />
-                </div>
-                <Button
-                  onClick={handleForgotPinReset}
-                  disabled={forgotPinLoading}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {forgotPinLoading ? 'Changing...' : 'Change PIN'}
-                </Button>
-              </div>
-            )}
+              <p className="text-xs text-gray-400 text-center">
+                Our team will respond within 24-48 hours
+              </p>
+            </div>
 
             <button
               onClick={resetForgotPin}
