@@ -643,7 +643,7 @@ The following systems have been deprecated and removed:
 - **Profit Wallet**: Profit wallet withdrawal (stockist-only feature)
 
 ## Deployment
-- **Preview URL**: https://bank-redeem-v2.preview.emergentagent.com
+- **Preview URL**: https://admin-perf-debug.preview.emergentagent.com
 - **Status**: Ready for production deployment
 - **Action**: Use Emergent "Deploy" button
 
