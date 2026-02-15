@@ -1,462 +1,78 @@
 <analysis>**original_problem_statement:**
-The user's initial requests were to finalize the Redeem functionality by increasing the limit to 100% and renaming Redeem to Cash to Redeem To Bank.
+The user's initial goal was to finalize the Redeem functionality. However, the focus quickly shifted to critical performance issues. The user reported that the admin panel was taking 1-2 minutes to load, making it unusable. Later, the user also reported that the Mining and Invite pages were extremely slow on their production environment, which has over 3000 active users.
 
-During the session, the user raised several new high-priority issues and feature requests:
-1.  **Critical Performance Issue:** The admin panel is extremely slow (1-2 minute load times), even after the user upgraded their database.
-2.  **Feature Request:** Integrate Bank Redeem requests into the My Orders page, including them in the tabs and summary calculations.
-3.  **UI Changes:** Reorder cards on the main dashboard ().
-4.  **Feature Request:** Enhance the Pay EMI form with more standard fields and rename Bank Name to Bank/Lender Name.
-5.  **Feature Request:** Implement an advanced, auto-suggest search for users in the Users 360 admin page.
+Additionally, the user requested several other features and changes:
+- Integrate Bank Redeem requests into the My Orders page.
+- Reorder cards on the main dashboard.
+- Enhance the Pay EMI form with more fields.
+- Implement an advanced, auto-suggest search for users in the Users 360 admin page.
+- Remove the Activity tab from the sidebar.
+- A full codebase cleanup of unused files and routes to improve performance.
 
 **User's preferred language**: Marathi. The user consistently communicates in Marathi. The next agent **MUST** respond in Marathi only.
 
 **what currently exists?**
-- The Redeem flow is now fully updated. The limit is 100% of the user's balance, and all text instances have been changed from Redeem to Cash to Redeem To Bank. This was verified by the testing agent.
-- Bank Redeem requests are now integrated into the My Orders page on both the backend and frontend. The backend API () aggregates these requests, and the frontend  displays them in a new Bank tab.
-- Dashboard cards (Redeem to Bank, Luxury Life) have been reordered as per the user's request in .
-- **Performance Fix Attempt:** Database indexes have been created for , , and  collections via  and a manual trigger endpoint () to address admin panel slowness.
-- A new backend endpoint () has been created to support advanced user search.
-- The Pay EMI form in  has been partially updated with new fields.
+- The application's critical performance issues have been addressed through extensive backend optimization. APIs for the Admin Panel, Mining, and Invite pages were refactored to use efficient pagination, data projections, caching, and to eliminate N+1 query problems. Load times in the test environment were reduced from minutes to sub-second levels.
+- The advanced user search feature in the Users 360 admin page is fully implemented and functional.
+- The Redeem functionality is complete (100% limit, renamed text).
+- Bank Redeem requests are successfully integrated into the My Orders page.
+- The Activity tab has been removed from the frontend sidebar.
+- An analysis of the codebase for unused files and routes has been completed, and a list of items for removal has been approved by the user.
 
 **Last working item**:
--   **Last item agent was working:** Debugging the critical performance issue where the admin panel takes 1-2 minutes to load in the user's production environment. The agent's primary hypothesis was missing database indexes, but the user provided a screenshot confirming the indexes already exist on their production database. The agent was at a dead end and was about to investigate alternative causes for the slowness.
--   **Status:** BLOCKED
+-   **Last item agent was working:** The agent was in the process of executing a user-approved codebase cleanup. This involves removing numerous unused frontend pages, backend files, and disabled API routes to reduce bloat and improve overall application performance and maintainability.
+-   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent. The agent should analyze production logs, examine query performance, and check for network latency or data transfer bottlenecks.
--   **User Testing Done:** Y (User confirmed the issue persists)
+-   **Which testing method agent to use?** both. After deleting files and routes, the agent must verify that the application remains stable. Use the backend testing agent to check for broken API endpoints and the frontend testing agent (or at least a screenshot smoke test of key pages) to ensure the UI loads correctly without errors.
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Critical Performance Issue - Admin Panel is Extremely Slow**
--   **Issue 2 (P1): Implement Advanced Search in Users 360**
+-   **Issue 1 (P0): Complete the Codebase Cleanup**
+-   **Issue 2 (P1): Finalize Pay EMI Form Fields**
 -   **Issue 3 (P2): Recurring Bugs on Mining Page**
--   **Issue 4 (P2): Finalize Pay EMI Form Fields**
--   **Issue 5 (P3): KYC Approval UI Bug Verification**
+-   **Issue 4 (P3): KYC Approval UI Bug Verification**
 
 **Issues Detail:**
--   **Issue 1: Critical Performance Issue - Admin Panel is Extremely Slow**
-    -   **Description:** Despite adding database indexes, the user's production admin panel is unusable due to extreme load times (1-2 minutes).
-    -   **Attempted fixes:** The agent identified missing indexes and created them on multiple collections (, , ). An admin endpoint () was also created to ensure they could be triggered on production. However, the user confirmed the indexes already exist in production, meaning this was not the root cause.
+-   **Issue 1: Complete the Codebase Cleanup**
+    -   **Attempted fixes:** The agent performed a comprehensive analysis of the entire codebase, identified a list of unused/dead files and routes, and received explicit user approval to delete them.
     -   **Next debug checklist:**
-        1.  Check backend logs for errors or long query times: ==> /var/log/supervisor/backend.err.log <==
-WARNING:  WatchFiles detected changes in 'tests/test_luxury_savings_split.py', 'tests/test_bill_payment_rejection.py', 'tests/test_bank_redeem_features.py', 'tests/test_user_360.py'. Reloading...
-INFO:     Started server process [206]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/bank_redeem.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [206]
-INFO:     Started server process [608]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:root:[LOGIN DEBUG] USER RATE LIMITED: test@test.com, message: ⏳ Too many attempts. Try again in 4 minutes.
-WARNING:  WatchFiles detected changes in 'tests/test_bank_redeem_100_percent.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [608]
-INFO:     Started server process [1784]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [1784]
-INFO:     Started server process [3203]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3203]
-INFO:     Started server process [3244]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3244]
-INFO:     Started server process [3305]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3305]
-INFO:     Stopping reloader process [47]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [3503] using WatchFiles
-INFO:     Started server process [3505]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [3505]
-INFO:     Started server process [4057]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [4057]
-INFO:     Started server process [4144]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [4144]
-INFO:     Stopping reloader process [3503]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [4174] using WatchFiles
-INFO:     Started server process [4176]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_users.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [4176]
-INFO:     Started server process [5127]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [5127]
-INFO:     Stopping reloader process [4174]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [5264] using WatchFiles
-INFO:     Started server process [5266]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_dashboard.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [5266]
-INFO:     Started server process [5888]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [5888]
-INFO:     Stopping reloader process [5264]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [6039] using WatchFiles
-INFO:     Started server process [6041]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [46] using WatchFiles
-INFO:     Started server process [91]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'db_indexes.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [91]
-INFO:     Started server process [484]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'routes/admin_system.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [484]
-INFO:     Started server process [650]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [650]
-INFO:     Stopping reloader process [46]
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [670] using WatchFiles
-INFO:     Started server process [672]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [46] using WatchFiles
-
-==> /var/log/supervisor/backend.out.log <==
-✅ Products indexes ready
-✅ Referral indexes ready
-✅ Transactions indexes ready
-✅ Mining indexes ready
-✅ Bill payments indexes ready
-✅ Gift vouchers indexes ready
-✅ Notifications indexes ready
-✅ Activity logs indexes ready
-✅ KYC documents indexes ready
-✅ Database indexes initialization complete
-✅ Database indexes initialized
-✅ Treasure hunts initialized
-📹 No video ads found, database ready for admin to create videos
-✅ Database initialization complete!
-⏰ Starting scheduled tasks...
-✅ Scheduled tasks started:
-   - Free user PRC burn: Every hour
-   - Expired VIP PRC burn: Daily at 2 AM
-   - Wallet reconciliation: Daily at 3 AM
-   - Daily system summary: Daily at 12:05 AM
-   - Inactive user PRC burn: Weekly Sunday at 4 AM
-   - Account hard delete: Daily at 3:30 AM
-   - Auto lockout clear: Daily at 12 PM & 12 AM
-INFO:     10.64.131.6:55672 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     10.64.133.200:57192 - "GET /api/admin/stats HTTP/1.1" 200 OK
-INFO:     10.64.133.200:48806 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.64.132.108:53730 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.64.132.108:53730 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.64.132.108:53730 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.64.133.200:45098 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.64.131.6:59986 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.64.131.6:59986 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.64.131.6:59990 - "GET /api/stats HTTP/1.1" 200 OK
-🚀 Starting database initialization...
-📦 Initializing cache system...
-⚠️ Upstash Redis connection failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500000. See https://upstash.com/docs/redis/troubleshooting/max_requests_limit for details
-📦 Falling back to in-memory cache
-✅ MongoDB connection successful (attempt 1/10)
-🔧 Creating database indexes for optimal performance...
-❌ Error creating indexes: An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }, full error: {'ok': 0.0, 'errmsg': 'An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }', 'code': 86, 'codeName': 'IndexKeySpecsConflict'}
-✅ Performance indexes created
-✅ Mobile index already exists (sparse)
-✅ Aadhaar number index already exists
-✅ PAN number index already exists
-✅ UTR number index already exists on subscriptions
-✅ UTR number index already exists on vip_subscriptions
-⚠️  VIP payments indexes: Index build failed: 2ff7e7d0-dfa0-4bce-8a7c-45b0ba44ed18: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }, full error: {'ok': 0.0, 'errmsg': 'Index build failed: 2ff7e7d0-dfa0-4bce-8a7c-45b0ba44ed18: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }', 'code': 11000, 'codeName': 'DuplicateKey', 'keyPattern': {'utr_number': 1}, 'keyValue': {'utr_number': 'TEST123456'}}
-✅ Orders indexes ready
-✅ Products indexes ready
-✅ Referral indexes ready
-✅ Transactions indexes ready
-✅ Mining indexes ready
-✅ Bill payments indexes ready
-✅ Gift vouchers indexes ready
-✅ Notifications indexes ready
-✅ Activity logs indexes ready
-✅ KYC documents indexes ready
-✅ Database indexes initialization complete
-✅ Database indexes initialized
-✅ Treasure hunts initialized
-📹 No video ads found, database ready for admin to create videos
-✅ Database initialization complete!
-⏰ Starting scheduled tasks...
-✅ Scheduled tasks started:
-   - Free user PRC burn: Every hour
-   - Expired VIP PRC burn: Daily at 2 AM
-   - Wallet reconciliation: Daily at 3 AM
-   - Daily system summary: Daily at 12:05 AM
-   - Inactive user PRC burn: Weekly Sunday at 4 AM
-   - Account hard delete: Daily at 3:30 AM
-   - Auto lockout clear: Daily at 12 PM & 12 AM
-INFO:     10.219.0.182:49328 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60228 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:60228 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.1.214:55114 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:59496 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-INFO:     10.219.0.182:39146 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.1.214:42344 - "GET /api/stats HTTP/1.1" 200 OK
-INFO:     10.219.0.115:59496 - "GET /api/public/contact-info HTTP/1.1" 200 OK
-⏰ Scheduler shut down
-🔒 Database connection closed
-🚀 Starting database initialization...
-📦 Initializing cache system...
-⚠️ Upstash Redis connection failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500000. See https://upstash.com/docs/redis/troubleshooting/max_requests_limit for details
-📦 Falling back to in-memory cache
-✅ MongoDB connection successful (attempt 1/10)
-🔧 Creating database indexes for optimal performance...
-❌ Error creating indexes: An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }, full error: {'ok': 0.0, 'errmsg': 'An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }', 'code': 86, 'codeName': 'IndexKeySpecsConflict'}
-✅ Performance indexes created
-✅ Mobile index already exists (sparse)
-✅ Aadhaar number index already exists
-✅ PAN number index already exists
-✅ UTR number index already exists on subscriptions
-✅ UTR number index already exists on vip_subscriptions
-⚠️  VIP payments indexes: Index build failed: d9746c46-4210-4145-b7bf-bef142505510: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }, full error: {'ok': 0.0, 'errmsg': 'Index build failed: d9746c46-4210-4145-b7bf-bef142505510: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }', 'code': 11000, 'codeName': 'DuplicateKey', 'keyPattern': {'utr_number': 1}, 'keyValue': {'utr_number': 'TEST123456'}}
-✅ Orders indexes ready
-✅ Products indexes ready
-✅ Referral indexes ready
-✅ Transactions indexes ready
-✅ Mining indexes ready
-✅ Bill payments indexes ready
-✅ Gift vouchers indexes ready
-✅ Notifications indexes ready
-✅ Activity logs indexes ready
-✅ KYC documents indexes ready
-✅ Database indexes initialization complete
-✅ Database indexes initialized
-✅ Treasure hunts initialized
-📹 No video ads found, database ready for admin to create videos
-✅ Database initialization complete!
-⏰ Starting scheduled tasks...
-✅ Scheduled tasks started:
-   - Free user PRC burn: Every hour
-   - Expired VIP PRC burn: Daily at 2 AM
-   - Wallet reconciliation: Daily at 3 AM
-   - Daily system summary: Daily at 12:05 AM
-   - Inactive user PRC burn: Weekly Sunday at 4 AM
-   - Account hard delete: Daily at 3:30 AM
-   - Auto lockout clear: Daily at 12 PM & 12 AM
-⏰ Scheduler shut down
-🔒 Database connection closed
-🚀 Starting database initialization...
-📦 Initializing cache system...
-⚠️ Upstash Redis connection failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500000. See https://upstash.com/docs/redis/troubleshooting/max_requests_limit for details
-📦 Falling back to in-memory cache
-✅ MongoDB connection successful (attempt 1/10)
-🔧 Creating database indexes for optimal performance...
-❌ Error creating indexes: An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }, full error: {'ok': 0.0, 'errmsg': 'An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }', 'code': 86, 'codeName': 'IndexKeySpecsConflict'}
-✅ Performance indexes created
-✅ Mobile index already exists (sparse)
-✅ Aadhaar number index already exists
-✅ PAN number index already exists
-✅ UTR number index already exists on subscriptions
-✅ UTR number index already exists on vip_subscriptions
-⚠️  VIP payments indexes: Index build failed: 004aa193-a03c-436c-98b7-6f8856c5b06c: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }, full error: {'ok': 0.0, 'errmsg': 'Index build failed: 004aa193-a03c-436c-98b7-6f8856c5b06c: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }', 'code': 11000, 'codeName': 'DuplicateKey', 'keyPattern': {'utr_number': 1}, 'keyValue': {'utr_number': 'TEST123456'}}
-✅ Orders indexes ready
-✅ Products indexes ready
-✅ Referral indexes ready
-✅ Transactions indexes ready
-✅ Mining indexes ready
-✅ Bill payments indexes ready
-✅ Gift vouchers indexes ready
-✅ Notifications indexes ready
-✅ Activity logs indexes ready
-✅ KYC documents indexes ready
-✅ Database indexes initialization complete
-✅ Database indexes initialized
-✅ Treasure hunts initialized
-📹 No video ads found, database ready for admin to create videos
-✅ Database initialization complete!
-⏰ Starting scheduled tasks...
-✅ Scheduled tasks started:
-   - Free user PRC burn: Every hour
-   - Expired VIP PRC burn: Daily at 2 AM
-   - Wallet reconciliation: Daily at 3 AM
-   - Daily system summary: Daily at 12:05 AM
-   - Inactive user PRC burn: Weekly Sunday at 4 AM
-   - Account hard delete: Daily at 3:30 AM
-   - Auto lockout clear: Daily at 12 PM & 12 AM
-⏰ Scheduler shut down
-🔒 Database connection closed
-🚀 Starting database initialization...
-📦 Initializing cache system...
-⚠️ Upstash Redis connection failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500000. See https://upstash.com/docs/redis/troubleshooting/max_requests_limit for details
-📦 Falling back to in-memory cache
-✅ MongoDB connection successful (attempt 1/10)
-🔧 Creating database indexes for optimal performance...
-❌ Error creating indexes: An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }, full error: {'ok': 0.0, 'errmsg': 'An existing index has the same name as the requested index. When index names are not specified, they are auto generated and can cause conflicts. Please refer to our documentation. Requested index: { v: 2, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", sparse: true, background: true }, existing index: { v: 2, unique: true, key: { aadhaar_number: 1 }, name: "aadhaar_number_1", partialFilterExpression: { aadhaar_number: { $exists: true, $type: "string" } } }', 'code': 86, 'codeName': 'IndexKeySpecsConflict'}
-✅ Performance indexes created
-✅ Mobile index already exists (sparse)
-✅ Aadhaar number index already exists
-✅ PAN number index already exists
-✅ UTR number index already exists on subscriptions
-✅ UTR number index already exists on vip_subscriptions
-⚠️  VIP payments indexes: Index build failed: 536e73f4-062f-4ff9-9d06-142437b5a545: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }, full error: {'ok': 0.0, 'errmsg': 'Index build failed: 536e73f4-062f-4ff9-9d06-142437b5a545: Collection test_database.vip_payments ( 263e24d6-862e-422f-b9c1-39c7ab85fd2f ) :: caused by :: E11000 duplicate key error collection: test_database.vip_payments index: utr_number_1 dup key: { utr_number: "TEST123456" }', 'code': 11000, 'codeName': 'DuplicateKey', 'keyPattern': {'utr_number': 1}, 'keyValue': {'utr_number': 'TEST123456'}}
-✅ Orders indexes ready
-✅ Products indexes ready
-✅ Referral indexes ready
-✅ Transactions indexes ready
-✅ Mining indexes ready
-✅ Bill payments indexes ready
-✅ Gift vouchers indexes ready
-✅ Notifications indexes ready
-✅ Activity logs indexes ready
-✅ KYC documents indexes ready
-✅ Database indexes initialization complete
-✅ Database indexes initialized
-✅ Treasure hunts initialized
-📹 No video ads found, database ready for admin to create videos
-✅ Database initialization complete!
-⏰ Starting scheduled tasks...
-✅ Scheduled tasks started:
-   - Free user PRC burn: Every hour
-   - Expired VIP PRC burn: Daily at 2 AM
-   - Wallet reconciliation: Daily at 3 AM
-   - Daily system summary: Daily at 12:05 AM
-   - Inactive user PRC burn: Weekly Sunday at 4 AM
-   - Account hard delete: Daily at 3:30 AM
-   - Auto lockout clear: Daily at 12 PM & 12 AM
-INFO:     10.219.0.115:41068 - "GET /api/health HTTP/1.1" 200 OK.
-        2.  Investigate the queries being run by the admin panel APIs. Even with indexes, a query might be constructed in a way that prevents the index from being used (e.g., using  on a non-indexed field, or complex aggregations).
-        3.  Check for network latency between the application server and the production database server.
-        4.  Analyze the size of the data payload being sent from the backend to the admin frontend. A massive, unpaginated data transfer could be the bottleneck.
-        5.  Review the production database configuration for connection pooling or other resource limits.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical, user-reported blocker that makes a core part of the application unusable for the admin.
+        1.  **Execute Deletions:** Systematically remove the approved files and routes using  and  commands.
+            -   **Frontend Pages to delete:** , , , , , , .
+            -   **Frontend Routes to remove:** Update  to remove the routes for the deleted pages.
+            -   **Backend Files to delete:** , .
+            -   **Backend Directory to delete:** .
+            -   **Backend Routes to remove:** Remove disabled routes () from  and .
+        2.  **Test:** Perform thorough backend and frontend testing to ensure the cleanup did not introduce regressions.
+    -   **Why fix this issue and what will be achieved with the fix?** This will reduce the application's bundle size, simplify the codebase, and remove dead code, leading to better performance and easier maintenance.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
--   **Issue 2: Implement Advanced Search in Users 360**
-    -   **Description:** The user wants an auto-suggest search feature on the Users 360 page.
-    -   **Attempted fixes:** The agent started implementation. A backend endpoint () was created in a new file (). The frontend  was modified to add state and a suggestion dropdown UI, but the logic to call the API and display results is incomplete.
-    -   **Next debug checklist:**
-        1.  Complete the  or  handler in  to fetch suggestions from the new API endpoint.
-        2.  Render the fetched suggestions in the dropdown.
-        3.  Implement the logic for when a user clicks a suggestion (e.g., populate the search box and trigger the search).
-        4.  Thoroughly test the feature.
+-   **Issue 2: Finalize Pay EMI Form Fields**
+    -   **Description:** The user requested to add standard EMI payment fields (, , ) and rename Bank Name to Bank/Lender Name. The frontend UI was partially updated, but the backend logic is missing.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both
 
 -   **Issue 3: Recurring Bugs on Mining Page**
-    -   **Description:** User repeatedly reports that session earnings show as - and the page does not update correctly after collecting rewards. This issue has been carried over from a previous session and not yet addressed.
+    -   **Description:** User repeatedly reports that session earnings show as - and the page does not update correctly after collecting rewards. While performance was optimized, this specific functionality bug has not been addressed.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend
 
--   **Issue 4: Finalize Pay EMI Form Fields**
-    -   **Description:** The user requested to add standard EMI payment fields and rename Bank Name to Bank/Lender Name.
-    -   **Attempted fixes:** Agent searched for standard fields and started editing . The UI was partially updated, but the backend validation and handling for the new fields are missing.
-    -   **Next debug checklist:**
-        1.  Update the backend service definition in  to include the new fields (, , ).
-        2.  Update the backend API that processes EMI payments to accept and validate these new fields.
-        3.  Ensure all fields are marked as required if necessary.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
-
--   **Issue 5: KYC Approval UI Bug Verification**
-    -   **Description:** A previous fix for stuck approve/reject buttons on the KYC page needs user confirmation. This was carried over and not addressed.
+-   **Issue 4: KYC Approval UI Bug Verification**
+    -   **Description:** A previous fix for stuck approve/reject buttons on the KYC page needs user confirmation. This has been pending for multiple sessions.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend
 
+**In progress Task List**:
+-   None.
+
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Advanced PRC Burning Concepts:** A deferred strategic discussion about adding more advanced PRC burning mechanisms to ensure app sustainability.
+-   **P1: Advanced PRC Burning Concepts:** A deferred strategic discussion about adding more advanced PRC burning mechanisms.
 
 **Future Tasks:**
 -   **P1: Design and Implement DIRECTOR 365 Subscription Plan.**
@@ -464,105 +80,108 @@ INFO:     10.219.0.115:41068 - "GET /api/health HTTP/1.1" 200 OK.
 -   **P3: Full Audit of Backend Subscription Pricing.**
 
 **Completed work in this session**
--   **Redeem Limit Increased to 100% (DONE):** Updated backend logic in  and frontend validation in .
--   **Redeem to Cash Renamed to Redeem To Bank (DONE):** Performed a global text replacement across all relevant frontend files.
--   **Bank Redeem in My Orders (DONE):** Modified the  backend API and  frontend to display bank redemptions in a dedicated tab.
--   **Redemption Stats Update (DONE):** Included bank redemptions in the total PRC Redeemed calculation.
--   **Dashboard Card Reordering (DONE):** Repositioned the Redeem To Bank and Luxury Life cards in .
--   **Database Indexes Created (DONE):** Added indexes to , , and  collections to attempt a performance fix.
+- **Critical Performance Fix (Admin, Mining, Invite Pages) (DONE):** Optimized numerous slow APIs across the backend using pagination, caching, projections, and fixing N+1 query patterns. Reduced load times from minutes to sub-second.
+- **Advanced Search in Users 360 (DONE):** Fully implemented the auto-suggest search feature on the admin user management page.
+- **Activity Tab Removal (DONE):** Removed the link and icon for the Activity page from the main sidebar navigation.
+- **Codebase Analysis for Cleanup (DONE):** Performed a full-codebase scan and received user approval on a list of files and routes to be deleted.
+- **Redeem Flow Finalized (DONE):** Increased limit to 100% and renamed UI text to Redeem to Bank.
+- **Bank Redeem in My Orders (DONE):** Integrated bank redemption requests into the user's order history page.
+- **Dashboard Card Reordering (DONE):** Repositioned cards on the main dashboard as requested.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Recurring Bugs on Mining Page**
-    -   **Debug checklist:** Log in as a user, navigate to the mining page, and observe the initial state. Attempt to collect rewards and check if the UI updates correctly. Inspect the browser's network tab and console for errors.
-    -   **Why to solve this issue and what will be achieved with this?** This is a core user-facing feature and its instability causes significant user frustration.
+    -   **Debug checklist:** Log in as a user, navigate to the mining page. Check the initial value of session earnings. Attempt to collect rewards and verify if the UI state updates correctly and if earnings are added to the balance. Inspect browser network tab and console for errors during these actions.
+    -   **Why to solve this issue and what will be achieved with this?** This is a core user-facing feature related to earnings; its instability causes significant user frustration and distrust.
     -   **Should Test frontend/backend/both after fix:** Frontend
     -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Admin Panel slowness.
--   **Recurrence count:** High (reported multiple times in this session).
--   **Status:** IN PROGRESS (Blocker).
+-   **Recurrence count:** High.
+-   **Status:** RESOLVED. The agent successfully identified and fixed the root causes (inefficient queries, missing pagination, N+1 problems) in this session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
+-   **Performance Tuning:** Database indexing, query optimization (pagination, projection), N+1 problem resolution, and server-side caching with TTL.
+-   **Code Refactoring:** Identification of dead/unused code for removal to improve application health.
 -   **Frontend:** React.js, TailwindCSS
--   **Backend:** Python (Flask), Pydantic
+-   **Backend:** Python (Flask)
 -   **Database:** MongoDB
--   **Performance Tuning:** Database indexing.
 
 **key DB schema**
--   **Indexes added on  collection:** , , 
--   **Indexes added on  collection:** , , 
--   **Indexes added on  collection:** 
+-   No schema changes were made. Optimizations relied on existing data structures and indexes.
+
+**changes in tech stack**
+-   None.
 
 **All files of reference**
--   **Created:**
-    -   
--   **Updated:**
+-   **Updated for Optimization/Features:**
     -   
     -   
     -   
     -   
     -   
     -   
+    -   
+    -   
+-   **To be Deleted/Modified during cleanup:**
+    -   Multiple files in 
     -   
     -   
     -   
     -   
 
 **key api endpoints**
--   : **UPDATED** to allow 100% redemption.
--   : **UPDATED** to include bank withdrawal requests.
--   : **UPDATED** to include bank redemption amounts.
--   : **UPDATED** to be more comprehensive.
--   : **NEW** endpoint for user search.
+-   **Optimized:**
+    -   
+    -   
+    -   
+    -   
+    -   
 
 **Critical Info for New Agent**
 -   You **MUST** communicate with the user in **Marathi**.
--   The absolute highest priority (P0) is to solve the **critical performance issue with the admin panel**. The user is extremely frustrated. Since indexes have been confirmed to exist on production, you must investigate other causes like inefficient queries, network latency, or large data payloads. Start by checking the backend logs.
--   After resolving the performance blocker, your next tasks are to complete the two features that are currently in progress: the Advanced Search for Users 360 and the new fields for the Pay EMI form.
--   There are still unresolved issues from previous sessions (Mining Page bugs, KYC UI verification) that should be addressed after the current priorities.
+-   Your immediate priority (P0) is to execute the codebase cleanup that was approved by the user. This involves deleting a specific list of files and routes. Be methodical and test thoroughly afterwards to ensure no regressions were introduced.
+-   The critical performance issues are considered resolved from a code perspective. The next step for the user is to deploy these changes to their production environment to confirm the fix under heavy load.
+-   After the cleanup task, pivot back to the feature pipeline. The next item is to complete the Pay EMI form by implementing the backend logic and validation for the new fields.
+-   Do not forget the older, unresolved issues like the mining page functionality bug and the KYC UI verification. They should be addressed after the current high-priority tasks.
 
 **documents and test reports created in this job**
--    (from testing the redeem flow)
--    (Updated)
+-    (Updated with completed performance tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Provided a screenshot showing that database indexes already exist on production. **Status: PENDING AGENT ACTION**
-2.  **User:** Complained that the app is very slow, taking 1-2 minutes to load data, even after a database update. **Status: IN PROGRESS**
-3.  **User:** Complained that the Admin panel is very slow, while the user panel is fast. **Status: IN PROGRESS**
-4.  **User:** Requested to add standard fields to the Pay EMI form and implement an advanced auto-suggest search in Users 360. **Status: IN PROGRESS**
-5.  **User:** Requested to move the Luxury Life card to the very end of the dashboard. **Status: COMPLETED**
-6.  **User:** Stated that Redeem to bank request is not appearing on the My order Page or in calculations. **Status: COMPLETED**
-7.  **User:** Provided a screenshot showing the Bank tab in My Orders has a count of (0) despite a pending request, indicating a bug. **Status: COMPLETED**
-8.  **User:** Requested to move the Redeem to bank card below the Services card. **Status: COMPLETED**
-9.  **User:** Asked if Bank Redeem requests will also show in My order. **Status: COMPLETED**
-10. **User:** Complained that the Admin panel is slow even after a database upgrade. **Status: IN PROGRESS**
+1.  **User:** 1. Remove कर 2. Remove कर 3. Desable route remove करा (Approve the code cleanup plan). **Status: IN PROGRESS**
+2.  **User:** Asks what pages/code can be removed to make the app faster. **Status: COMPLETED**
+3.  **User:** Requests to remove the Activity tab. **Status: COMPLETED**
+4.  **User:** Informs that hosting is managed by Emergent. **Status: ACKNOWLEDGED**
+5.  **User:** Reports the app is fast in the test environment but not in production (3000+ users) and sends a video. **Status: COMPLETED**
+6.  **User:** Reports the Mining and Invite pages are also very slow. **Status: COMPLETED**
+7.  **User:** युजरची Mining आणि invite page pan khupch slow load होतोय. (The user's Mining and Invite page is also loading very slowly). **Status: COMPLETED**
+8.  **User:** Provides summary of completed tasks to user. **Status: ACKNOWLEDGED**
+9.  **User:** Provides summary of completed tasks to user. **Status: ACKNOWLEDGED**
+10. **User:** Provides summary of completed tasks to user. **Status: ACKNOWLEDGED**
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Admin Panel Performance:** The application's admin section is functionally unusable in the user's production environment due to extreme slowness. This is a critical blocker.
+    -   None. The critical performance blocker has been resolved pending production deployment.
 -   **Partially Implemented:**
     -   **Pay EMI Form:** Frontend UI is partially updated, but backend logic and validation are missing.
-    -   **Users 360 Advanced Search:** Backend API is created, but frontend implementation is incomplete.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
 -   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (for the Redeem flow updates)
+-   **Testing agent used after significant changes:** NO (Agent self-tested performance fixes with  and screenshots).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:**
-    -   **Admin Panel Performance:** A severe regression making the admin panel unusable.
-    -   **Mining Page:** Functionality remains unstable from previous sessions.
+-   **Known regressions:** None identified in this session. The primary goal was to fix a major performance regression.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
 -   **Test User 1:**  / PIN: 
 
 **What agent forgot to execute**
--   The agent has consistently de-prioritized and failed to address the long-standing Recurring Bugs on Mining Page and the KYC Approval UI Bug Verification mentioned in the original handoff summary. These remain pending.</analysis>
+-   The agent has consistently de-prioritized and has not yet addressed the long-standing functional bug on the Mining Page (earnings showing as -, UI not updating after collection) and the KYC Approval UI Bug Verification. These issues were carried over from previous sessions and remain unresolved.</analysis>
