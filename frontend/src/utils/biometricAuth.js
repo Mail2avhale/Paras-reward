@@ -35,7 +35,7 @@ export const isBiometricEnabled = () => {
 // Check if biometric is available for this user's email
 export const checkBiometricAvailable = async (email) => {
   try {
-    const response = await axios.post(`${API}/api/auth/biometric/login-options?email=${encodeURIComponent(email)}`);
+    const response = await axios.post(`${API}/auth/biometric/login-options?email=${encodeURIComponent(email)}`);
     return response.data.options !== null;
   } catch (error) {
     return false;
@@ -46,7 +46,7 @@ export const checkBiometricAvailable = async (email) => {
 export const biometricLogin = async (email) => {
   try {
     // Step 1: Get authentication options
-    const optionsResponse = await axios.post(`${API}/api/auth/biometric/login-options?email=${encodeURIComponent(email)}`);
+    const optionsResponse = await axios.post(`${API}/auth/biometric/login-options?email=${encodeURIComponent(email)}`);
     const options = optionsResponse.data.options;
 
     // Convert challenge to Uint8Array
@@ -83,7 +83,7 @@ export const biometricLogin = async (email) => {
     };
 
     const loginResponse = await axios.post(
-      `${API}/api/auth/biometric/login?email=${encodeURIComponent(email)}`,
+      `${API}/auth/biometric/login?email=${encodeURIComponent(email)}`,
       { credential_data: credentialData }
     );
 
@@ -109,7 +109,7 @@ export const biometricLogin = async (email) => {
 // Get user's registered biometric devices
 export const getBiometricDevices = async (userId) => {
   try {
-    const response = await axios.get(`${API}/api/auth/biometric/credentials/${userId}`);
+    const response = await axios.get(`${API}/auth/biometric/credentials/${userId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching biometric devices:', error);
@@ -120,7 +120,7 @@ export const getBiometricDevices = async (userId) => {
 // Remove a biometric device
 export const removeBiometricDevice = async (credentialId, userId) => {
   try {
-    await axios.delete(`${API}/api/auth/biometric/credentials/${credentialId}?user_id=${userId}`);
+    await axios.delete(`${API}/auth/biometric/credentials/${credentialId}?user_id=${userId}`);
     return { success: true };
   } catch (error) {
     console.error('Error removing biometric device:', error);
