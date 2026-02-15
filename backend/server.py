@@ -3915,12 +3915,13 @@ async def calculate_mining_rate(uid: str):
     total_active_referrals = sum(ld.get('count', 0) for ld in active_referrals_by_level.values())
     
     # Cache the result for 5 minutes to avoid expensive recalculations
-    await cache.set(cache_key, {
-        'per_minute_rate': per_minute_rate,
-        'base_rate': base_rate,
-        'total_active_referrals': total_active_referrals,
-        'referral_breakdown': referral_breakdown
-    }, ttl=300)  # 5 minutes cache
+    if cache:
+        await cache.set(cache_key, {
+            'per_minute_rate': per_minute_rate,
+            'base_rate': base_rate,
+            'total_active_referrals': total_active_referrals,
+            'referral_breakdown': referral_breakdown
+        }, ttl=300)  # 5 minutes cache
     
     return per_minute_rate, base_rate, total_active_referrals, referral_breakdown
 
