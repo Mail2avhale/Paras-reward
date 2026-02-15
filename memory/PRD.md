@@ -17,6 +17,14 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] **Pay EMI Form:** Add new fields (loan_type, due_date, emi_amount) and rename "Bank Name" to "Bank/Lender Name"
 - [ ] **KYC Approval UI Bug:** User verification pending for stuck approve/reject buttons
 
+## Recently Completed (Feb 15, 2026)
+- [x] **Activity Tab Removed from Sidebar** ✅
+- [x] **Production Performance Optimizations** ✅
+  - Multi-level referrals: 5 min cache + 100 limit per level
+  - Mining rate calculation: Cache null checks fixed
+  - Dashboard combined API enabled
+  - N+1 query problem resolved
+
 ## Upcoming/Future Tasks (P2/P3)
 - [ ] Revenue Chart/Graph (Weekly/Monthly subscription revenue trends)
 - [ ] User Growth Chart (Daily new user signups)
