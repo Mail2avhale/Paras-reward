@@ -8049,12 +8049,12 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "timestamp": now.isoformat()
         })
         
-        # ========== REFERRAL REWARD SYSTEM ==========
-        # Check if this user's referrer qualifies for the "10 paid referrals in 7 days" reward
-        try:
-            await check_and_grant_referral_reward(user_id, now)
-        except Exception as e:
-            print(f"Error checking referral reward: {e}")
+        # ========== REFERRAL REWARD SYSTEM (DISABLED) ==========
+        # Free Startup Subscription module removed per user request
+        # try:
+        #     await check_and_grant_referral_reward(user_id, now)
+        # except Exception as e:
+        #     print(f"Error checking referral reward: {e}")
         # ==============================================
         
         # Calculate total days for message
