@@ -1732,6 +1732,23 @@ const AdminUser360 = ({ user: adminUser }) => {
         </div>
       )}
 
+      {/* Manager Permissions Modal */}
+      {permissionsModal.show && userData?.user?.role === 'manager' && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="permissions-modal">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <ManagerPermissions
+              userId={userData.user.uid}
+              userName={userData.user.name || userData.user.email}
+              onClose={() => setPermissionsModal({ show: false })}
+              onSave={() => {
+                setPermissionsModal({ show: false });
+                refreshUserData();
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* PIN Reset Modal */}
       {pinModal.show && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" data-testid="pin-reset-modal">
