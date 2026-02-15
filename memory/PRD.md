@@ -13,9 +13,9 @@ Build a PRC (point-based reward currency) system web application where users can
 - **Authentication**: JWT-based custom auth
 
 ## Pending Issues (P2)
-- [ ] **Mining Page Bugs:** Session earnings show "-", UI doesn't update after collecting rewards (Recurring issue)
-- [ ] **Pay EMI Form:** Add new fields (loan_type, due_date, emi_amount) and rename "Bank Name" to "Bank/Lender Name"
-- [ ] **KYC Approval UI Bug:** User verification pending for stuck approve/reject buttons
+- [x] **Mining Page Bugs:** Session earnings show "-", UI doesn't update after collecting rewards - ✅ VERIFIED WORKING
+- [x] **Pay EMI Form:** Add new fields (loan_type, due_date, emi_amount) - ✅ VERIFIED WORKING  
+- [x] **KYC Approval UI Bug:** Approve/reject buttons - ✅ VERIFIED WORKING
 
 ## Recently Completed (Feb 15, 2026)
 - [x] **Admin Subscription Management Improvements** ✅
