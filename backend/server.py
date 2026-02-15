@@ -610,6 +610,73 @@ async def get_cache_stats():
         "status": "connected" if stats.get("connected") else "disconnected"
     }
 
+# ==================== SESSION VALIDATION API ====================
+@api_router.post("/auth/validate-session")
+async def validate_session(request: Request):
+    """
+    Validate user session token for single-session enforcement.
+    Returns: {valid: true/false, reason: string}
+    """
+    try:
+        data = await request.json()
+        uid = data.get("uid")
+        session_token = data.get("session_token")
+        
+        if not uid or not session_token:
+            return {"valid": False, "reason": "missing_credentials"}
+        
+        # Find user and check session token
+        user = await db.users.find_one(
+            {"uid": uid},
+            {"session_token": 1, "is_banned": 1, "_id": 0}
+        )
+        
+        if not user:
+            return {"valid": False, "reason": "user_not_found"}
+        
+        if user.get("is_banned"):
+            return {"valid": False, "reason": "account_banned"}
+        
+        stored_token = user.get("session_token")
+        
+        if not stored_token:
+            return {"valid": False, "reason": "no_active_session"}
+        
+        if stored_token != session_token:
+            return {
+                "valid": False, 
+                "reason": "session_expired",
+                "message": "तुम्ही दुसऱ्या device वर login केले आहे. कृपया पुन्हा login करा."
+            }
+        
+        return {"valid": True, "reason": "session_active"}
+        
+    except Exception as e:
+        logging.error(f"Session validation error: {str(e)}")
+        return {"valid": False, "reason": "validation_error"}
+
+@api_router.post("/auth/logout")
+async def logout_user(request: Request):
+    """
+    Logout user - clear session token
+    """
+    try:
+        data = await request.json()
+        uid = data.get("uid")
+        
+        if uid:
+            # Clear session token
+            await db.users.update_one(
+                {"uid": uid},
+                {"$unset": {"session_token": "", "session_created_at": ""}}
+            )
+            return {"success": True, "message": "Logged out successfully"}
+        
+        return {"success": False, "message": "UID required"}
+    except Exception as e:
+        logging.error(f"Logout error: {str(e)}")
+        return {"success": False, "message": str(e)}
+
 
 # ==================== DATABASE OPTIMIZATION ADMIN ENDPOINTS ====================
 
