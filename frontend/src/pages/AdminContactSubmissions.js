@@ -39,7 +39,7 @@ const AdminContactSubmissions = ({ user }) => {
       const params = new URLSearchParams({ page, limit: 20 });
       if (statusFilter) params.append('status', statusFilter);
       
-      const response = await axios.get(`${API}/admin/contact-submissions?${params}`);
+      const response = await axios.get(`${API}/api/admin/contact-submissions?${params}`);
       setSubmissions(response.data.submissions || []);
       setTotalPages(response.data.total_pages || 1);
     } catch (error) {
@@ -52,7 +52,7 @@ const AdminContactSubmissions = ({ user }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API}/admin/contact-submissions/stats/summary`);
+      const response = await axios.get(`${API}/api/admin/contact-submissions/stats/summary`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -67,7 +67,7 @@ const AdminContactSubmissions = ({ user }) => {
     // Mark as read if new
     if (submission.status === 'new') {
       try {
-        await axios.put(`${API}/admin/contact-submissions/${submission.submission_id}`, {
+        await axios.put(`${API}/api/admin/contact-submissions/${submission.submission_id}`, {
           status: 'read'
         });
         fetchSubmissions();
