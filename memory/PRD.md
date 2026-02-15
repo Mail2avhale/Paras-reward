@@ -18,6 +18,21 @@ Build a PRC (point-based reward currency) system web application where users can
 - [ ] **KYC Approval UI Bug:** User verification pending for stuck approve/reject buttons
 
 ## Recently Completed (Feb 15, 2026)
+- [x] **Admin Subscription Management Improvements** ✅
+  - Rejection Modal with predefined Marathi reasons (चुकीचा UTR Number, Screenshot स्पष्ट नाही, etc.)
+  - User notification on rejection with reason
+  - Re-approve feature for rejected payments
+  - All filters (time/plan/duration) working
+  - Fast load with caching (< 1 sec)
+- [x] **Single Session Login** ✅
+  - One device login at a time
+  - Previous session auto-logout on new login
+- [x] **Admin Role & Permission Management** ✅
+  - User 360 page: Assign roles (Manager, etc.)
+  - Page permissions modal for Manager role
+- [x] **Forgot PIN Flow** ✅
+  - "Contact Admin" message displayed
+  - Email button to contact support
 - [x] **Activity Tab Removed from Sidebar** ✅
 - [x] **Production Performance Optimizations** ✅
   - Multi-level referrals: 5 min cache + 100 limit per level
