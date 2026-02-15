@@ -62,6 +62,23 @@ Build a PRC (point-based reward currency) system web application where users can
 
 ### Recently Completed (Feb 15, 2026 - Current Session)
 
+- [x] **Codebase Cleanup (P0)** ✅ TESTED
+  - **Issue:** Dead code and backup files were bloating the codebase
+  - **Changes:**
+    1. **Removed all `_disabled_*` routes from server.py** - ~150 disabled route definitions removed
+    2. **Deleted frontend backup files:**
+       - `App.js.backup_with_admin`
+       - `App.js.lightweight`
+       - `App.js.working`
+    3. **Deleted backend backup files:**
+       - `server.py.backup_before_manager_fix`
+       - `server_enhanced.py`
+       - `server_v2.py`
+       - `/admin-deploy/backend/server.py.backup_before_manager_fix`
+  - **Result:** Cleaner codebase, easier maintenance
+  - **Testing:** All APIs verified working (health, admin stats, mining, user dashboard)
+  - **Status:** COMPLETED ✅
+
 - [x] **Admin Panel Performance Optimization (P0 - CRITICAL)** ✅ TESTED
   - **Issue:** Admin panel was extremely slow (1-2 minutes load time)
   - **Root Cause:** Multiple sequential database queries without parallelization and inefficient projections
