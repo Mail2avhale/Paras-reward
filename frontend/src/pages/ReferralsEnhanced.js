@@ -126,7 +126,7 @@ const ReferralsEnhanced = ({ user }) => {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [previousTotal, setPreviousTotal] = useState(null);
-  const [rewardProgress, setRewardProgress] = useState(null);  // NEW: Reward progress tracker
+  // REMOVED: Free Startup Subscription reward progress tracker (module removed per user request)
   
   // Apply Referral Code State
   const [applyCodeInput, setApplyCodeInput] = useState('');
