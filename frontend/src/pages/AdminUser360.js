@@ -1553,6 +1553,16 @@ const AdminUser360 = ({ user: adminUser }) => {
                   Edit Details
                 </Button>
                 <Button
+                  onClick={openRoleModal}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-yellow-500/50 text-yellow-400"
+                  data-testid="change-role-button"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Change Role
+                </Button>
+                <Button
                   onClick={() => {
                     if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
                   }}
