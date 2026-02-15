@@ -423,35 +423,28 @@ async def approve_vip_payment(payment_id: str, request: Request):
             logging.error(f"Parallel update failed: {e}")
             raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again.")
         
-        # Non-critical operations - fire and forget
-        asyncio.create_task(db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_approved",
-            "user_id": user_id,
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "amount": payment.get("amount"),
-            "plan_type": plan_type,
-            "subscription_plan": subscription_plan,
-            "plan_corrected": plan_corrected,
-            "extended": start_date != now,
-            "new_expiry": new_expiry,
-            "timestamp": now.isoformat()
-        }))
+        # Non-critical: Just log activity without blocking
+        try:
+            await db.activity_logs.insert_one({
+                "log_id": str(uuid.uuid4()),
+                "action": "vip_payment_approved",
+                "user_id": user_id,
+                "admin_id": admin_id,
+                "payment_id": payment_id,
+                "amount": payment.get("amount"),
+                "plan_type": plan_type,
+                "subscription_plan": subscription_plan,
+                "plan_corrected": plan_corrected,
+                "extended": start_date != now,
+                "new_expiry": new_expiry,
+                "timestamp": now.isoformat()
+            })
+        except Exception:
+            pass  # Don't fail approval if logging fails
         
-        if check_and_grant_referral_reward:
-            asyncio.create_task(check_and_grant_referral_reward(user_id, now))
+        # Skip referral reward check for speed - can be done in background job
         
-        # Send notification - fire and forget
-        plan_name = subscription_plan.upper()
-        asyncio.create_task(send_notification(
-            user_id=user_id,
-            title="🎉 Subscription Activated!",
-            message=f"Congratulations! Your {plan_name} subscription has been activated for {duration_days} days. Enjoy premium benefits!",
-            notif_type="subscription_approved",
-            icon="🎉",
-            action_url="/subscription"
-        ))
+        # Skip notification for speed - can be done in background job
         
         if start_date != now:
             remaining = (start_date - now).days
@@ -459,10 +452,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         else:
             message = f"Payment approved! {duration_days} days subscription activated"
         
-        # Clear cache in background
-        if cache:
-            asyncio.create_task(cache.delete("admin_vip_payments:pending:p1:l50"))
-            asyncio.create_task(cache.delete("admin_vip_payments:all:p1:l50"))
+        # Skip cache clear - will expire naturally
         
         return {"success": True, "message": message, "new_expiry": new_expiry}
     except HTTPException:
