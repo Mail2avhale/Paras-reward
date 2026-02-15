@@ -575,6 +575,16 @@ async def login(
     record_login_attempt(identifier, True)
     await record_login_attempt_db(db, identifier, True, real_ip)
     
+    # ========== SINGLE SESSION ENFORCEMENT ==========
+    # Generate unique session token for this login
+    session_token = str(uuid.uuid4())
+    
+    # Invalidate any existing sessions by updating user's session_token
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": {"session_token": session_token, "session_created_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
     # Save login history
     login_history_entry = {
         "user_id": user["uid"],
