@@ -37,7 +37,7 @@ from cache_manager import cache, CacheTTL, user_cache_key, user_balance_key, adm
 from db_indexes import create_performance_indexes, get_index_stats
 
 # Import routers
-from routes.referral import router as referral_router, set_db as set_referral_db, set_helpers as set_referral_helpers
+from routes.referral import router as referral_router, set_db as set_referral_db, set_helpers as set_referral_helpers, set_cache as set_referral_cache
 from routes.auth import router as auth_router, set_db as set_auth_db, set_helpers as set_auth_helpers, set_verify_token as set_auth_verify_token
 from routes.users import router as users_router, set_db as set_users_db, set_cache as set_users_cache, set_helpers as set_users_helpers
 from routes.wallet import router as wallet_router, set_db as set_wallet_db
