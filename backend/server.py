@@ -36843,6 +36843,7 @@ async def get_luxury_settings():
 # Include referral router (refactored)
 set_referral_db(db)
 set_referral_helpers(get_multi_level_referrals, get_base_rate)
+set_referral_cache(cache)
 api_router.include_router(referral_router)
 
 # Include auth router (refactored)
