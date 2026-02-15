@@ -421,10 +421,7 @@ const ReferralsEnhanced = ({ user }) => {
         setReferralStats({ total: refCount, active: 0, vip: 0 });
       }
       
-      // Fetch reward progress in background (non-blocking)
-      axios.get(`${API}/referrals/${user.uid}/reward-progress`)
-        .then(res => setRewardProgress(res.data))
-        .catch(() => {});
+      // REMOVED: Free Startup Subscription reward-progress API call
       
     } catch (error) {
       console.error('Error fetching referral data:', error);
