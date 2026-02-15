@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import ManagerPermissions from '../components/ManagerPermissions';
 import {
   Search, User, Mail, Phone, MapPin, Calendar, Shield, Crown,
   Coins, TrendingUp, TrendingDown, Users, Gift, ShoppingBag,
@@ -13,7 +14,7 @@ import {
   ChevronRight, ArrowLeft, Copy, ExternalLink, Ban, Play, Pause,
   Wallet, Receipt, BadgeCheck, AlertCircle, Info, Star, Zap,
   BarChart3, PieChart, Network, History, Settings, Send, Key,
-  Plus, Minus, Edit
+  Plus, Minus, Edit, Lock
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || '';
