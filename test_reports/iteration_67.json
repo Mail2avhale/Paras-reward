@@ -1,0 +1,47 @@
+{
+  "summary": "Referrals Page Testing - User list by level feature verified. Backend API (13/13 tests passed) returns correct data including user names, active/inactive status, and subscription plan badges. Frontend displays Earning Levels correctly with counts. Admin users are redirected away from /referrals page by design.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_referrals_levels.py",
+    "/app/test_reports/pytest/referrals_levels_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "✅ Backend API /api/referrals/{user_id}/levels returns all 5 levels with user details",
+    "✅ Each level includes: count, active_count, users array, bonus_percent",
+    "✅ User objects contain: uid, name, email, is_active, subscription_plan, joined_at, active_reason",
+    "✅ Admin user (8175c02a) has 5 Level 1 referrals (3 active, 2 inactive) and 1 Level 2 referral",
+    "✅ Frontend correctly displays: Total Invited, Active Users, Bonus Rate stats",
+    "✅ Earning Levels section shows all 5 levels with pyramid visualization",
+    "✅ Each level shows: icon, label, invited count, active count, inactive count, bonus percentage",
+    "✅ Frontend code handles level expansion with AnimatePresence for smooth animations",
+    "✅ User list shows: avatar, name, subscription badge (Elite/Growth/Startup), active/inactive badge",
+    "⚠️ Admin users are intentionally redirected from /referrals to /admin (by design in App.js routing)",
+    "✅ Click handler only works when totalUsers > 0 (correct behavior)",
+    "✅ Expansion content only renders when users.length > 0 (correct behavior)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_referrals_levels.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% - UI elements verified for regular users"
+  },
+  "test_credentials": {
+    "regular_user": "testregister123@test.com / PIN: 123456",
+    "admin_user": "admin@test.com / PIN: 123456 (redirected from /referrals)"
+  },
+  "seed_data_creation": "None - used existing production data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Referrals Page Testing - Iteration 67:\n\n## Backend API Tests (13/13 passed):\n1. Endpoint exists and returns 200\n2. Response structure has levels, total, total_active\n3. Each level has: level, count, active_count, users, bonus_percent\n4. Admin user has 5+ Level 1 referrals, 1+ Level 2\n5. User list contains correct structure (uid, name, is_active, subscription_plan)\n6. Active status matches active_count\n7. Subscription plans are valid (explorer/startup/growth/elite)\n8. User with no referrals returns empty levels correctly\n9. Bonus percentages present for all levels\n10. Invalid user returns 404\n11. User names correctly included\n12. Mail2avhale has 1 referral (Santosh)\n13. Stats endpoint returns correct totals\n\n## Frontend UI Tests:\n- Page loads correctly for regular users\n- Referral code displayed in orange card\n- Copy Code and WhatsApp buttons work\n- Stats section shows Total Invited, Active Users, Bonus Rate\n- All 5 Earning Levels displayed with pyramid effect\n- Each level shows: icon, label, counts (invited/active/inactive), bonus %\n- Click on level expands to show user list (when users > 0)\n- User list shows: avatar, name, subscription badge, active/inactive badge\n\n## Known Behavior:\n- Admin users (role: admin/sub_admin/manager) are redirected from /referrals to /admin\n- This is by design - admin should use admin dashboard, not user referrals page\n- Regular users can access /referrals normally\n\n## API Response Structure:\n```json\n{\n  \"levels\": [\n    {\n      \"level\": 1,\n      \"count\": 5,\n      \"active_count\": 3,\n      \"users\": [\n        {\n          \"uid\": \"...\",\n          \"name\": \"Mail2avhale\",\n          \"is_active\": true,\n          \"subscription_plan\": \"elite\"\n        }\n      ],\n      \"bonus_percent\": 10\n    }\n  ],\n  \"total\": 6,\n  \"total_active\": 3\n}\n```",
+  "rca_of_the_issue": "The reported issue that 'user list by level is not displaying' appears to be resolved. The backend API correctly returns user data in the levels response, and the frontend code properly renders the user list when a level is expanded. The original issue may have been:\n1. Testing with admin user who is redirected from /referrals page\n2. Testing with user who has 0 referrals (no users to expand)\n3. Not clicking on a level to expand it\n\nCurrent status: Feature is working correctly for regular users with referrals."
+}
