@@ -1383,6 +1383,7 @@ const ApprovedRow = ({ payment, onView, onEdit, onDelete, processing }) => {
 
 // Rejected Row Component
 const RejectedRow = ({ payment, onView, onDelete, onReapprove, processing }) => {
+  const [showFullReason, setShowFullReason] = useState(false);
   const planColors = {
     startup: 'text-blue-400 bg-blue-500/10',
     growth: 'text-emerald-400 bg-emerald-500/10',
@@ -1423,11 +1424,75 @@ const RejectedRow = ({ payment, onView, onDelete, onReapprove, processing }) => 
         </div>
 
         {/* Rejection Details */}
-        <div className="px-4 w-40">
+        <div className="px-4 w-48">
           <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-lg">
             Rejected
           </span>
-          <p className="text-gray-500 text-xs mt-1 truncate" title={payment.rejection_reason}>
+          <button 
+            onClick={() => setShowFullReason(!showFullReason)}
+            className="text-gray-400 text-xs mt-1 truncate block hover:text-white cursor-pointer text-left w-full"
+            title="Click to see full reason"
+          >
+            {payment.rejection_reason?.substring(0, 25) || 'No reason'}
+            {payment.rejection_reason?.length > 25 && '...'}
+          </button>
+          <p className="text-gray-600 text-xs mt-0.5">
+            {payment.rejected_at ? new Date(payment.rejected_at).toLocaleDateString() : '-'}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {/* Re-approve Button */}
+          <Button
+            onClick={onReapprove}
+            disabled={processing}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white h-9 px-3"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Re-approve
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={onView}
+            size="sm"
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700 h-9 px-3"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={onDelete}
+            disabled={processing}
+            size="sm"
+            variant="outline"
+            className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-9 px-3"
+          >
+            {processing ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+      
+      {/* Full Rejection Reason - Expandable */}
+      {showFullReason && payment.rejection_reason && (
+        <div className="mt-3 ml-14 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-gray-500 text-xs mb-1">Rejection Reason:</p>
+          <p className="text-red-400 text-sm">{payment.rejection_reason}</p>
+        </div>
+      )}
+    </div>
+  );
+};
             {payment.rejection_reason?.substring(0, 20) || 'No reason'}...
           </p>
           <p className="text-gray-600 text-xs mt-0.5">
