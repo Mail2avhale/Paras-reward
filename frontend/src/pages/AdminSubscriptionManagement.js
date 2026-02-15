@@ -988,13 +988,13 @@ const RejectPaymentModal = ({ payment, onClose, onReject, processing }) => {
   
   // Predefined rejection reasons
   const predefinedReasons = [
-    'चुकीचा UTR Number',
-    'Screenshot स्पष्ट नाही',
-    'Payment रक्कम जुळत नाही',
+    'Invalid UTR Number',
+    'Screenshot not clear',
+    'Amount mismatch',
     'Duplicate Payment',
     'Payment verification failed',
     'Invalid transaction details',
-    'अन्य (Custom)'
+    'Other (Custom)'
   ];
 
   const userName = payment.user_name || 'Unknown User';
