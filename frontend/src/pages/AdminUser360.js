@@ -342,6 +342,39 @@ const AdminUser360 = ({ user: adminUser }) => {
     }
   };
 
+  // Open Role Change Modal
+  const openRoleModal = () => {
+    if (!userData?.user) return;
+    setSelectedRole(userData.user.role || 'user');
+    setRoleModal({ show: true });
+  };
+
+  // Handle Role Change
+  const handleRoleChange = async () => {
+    if (!userData?.user?.uid) return;
+    
+    setProcessing(true);
+    try {
+      const response = await axios.put(`${API}/api/admin/users/${userData.user.uid}/role`, {
+        role: selectedRole
+      });
+      
+      setRoleModal({ show: false });
+      setSuccessModal({ 
+        show: true, 
+        title: 'Role Updated', 
+        message: `User role changed to ${selectedRole.toUpperCase()}`,
+        type: 'success'
+      });
+      refreshUserData();
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Failed to update role';
+      setSuccessModal({ show: true, title: 'Error', message: errorMsg, type: 'error' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // Open Balance Modal
   const openBalanceModal = () => {
     setBalanceForm({
