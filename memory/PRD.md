@@ -7,19 +7,26 @@ PARAS REWARD is a comprehensive rewards and subscription management platform wit
 - KYC verification
 - Subscription management (VIP plans)
 - Admin dashboard for managing users, orders, and finances
-- Bill payments
-- Gift vouchers
-- Network/referral system
+- Bill payments, Gift vouchers, Network/referral system
 
-## Current Status: Production Ready (After Bug Fix)
+## Current Status: ✅ Production Working (Feb 15, 2026)
 
-### Critical Bug Fixed (Feb 15, 2026)
-**Issue:** Production login failing with "Not Found" error
-**Root Cause:** Double `/api/api/` prefix in API calls
-- Frontend code defined `const API = ${BACKEND_URL}/api`
-- Then used `${API}/api/...` causing double prefix
-**Fix:** Removed extra `/api` from all API calls across ~80 files
-**Status:** FIXED and TESTED
+### Critical Bugs Fixed Today
+
+**Bug 1: Production Login "Not Found" Error**
+- **Root Cause:** Double `/api/api/` prefix in API calls
+- **Fix:** Removed extra `/api` from ~80 files
+- **Status:** FIXED ✅
+
+**Bug 2: Dashboard/Mining Data Not Loading**
+- **Root Cause:** Missing `/api` prefix in API variable definition
+- **Pattern 1:** `const API = process.env.REACT_APP_BACKEND_URL;` (missing `/api`)
+- **Pattern 2:** `const API = process.env.REACT_APP_BACKEND_URL || '';` (missing `/api`)
+- **Fix:** Changed to `const API = \`${process.env.REACT_APP_BACKEND_URL}/api\`;` in ~67 files
+- **Status:** FIXED ✅
+
+**Bug 3: Profile Page White Screen**
+- **Status:** FIXED ✅ (Cache clear resolved)
 
 ## Architecture
 
@@ -29,19 +36,18 @@ PARAS REWARD is a comprehensive rewards and subscription management platform wit
 - **Database:** MongoDB
 - **Authentication:** JWT + PIN-based login
 
-### Key Directories
+### API URL Pattern
+```javascript
+// CORRECT pattern for all frontend files:
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Then use:
+axios.get(`${API}/endpoint`)  // Results in: https://domain.com/api/endpoint
 ```
-/app
-├── backend/
-│   ├── routes/          # API endpoints
-│   ├── models/          # Data models
-│   └── server.py        # Main FastAPI app
-└── frontend/
-    └── src/
-        ├── pages/       # Page components
-        ├── components/  # Reusable components
-        └── utils/       # Utility functions
-```
+
+### Environment Variables
+- **Production:** `REACT_APP_BACKEND_URL = https://parasreward.com`
+- **Preview:** `REACT_APP_BACKEND_URL = https://parasreward-staging.preview.emergentagent.com`
 
 ## Completed Features
 - User authentication (PIN + password migration)
@@ -52,31 +58,27 @@ PARAS REWARD is a comprehensive rewards and subscription management platform wit
 - Bill payments
 - Network referrals
 - Contact form submissions
+- User Dashboard with balance display
+- Profile page
 
 ## Pending Tasks
 
 ### P1 - High Priority
-1. **UPI Payment Gateway Integration** - User requested Razorpay/PhonePe integration
-2. **"DIRECTOR 365" Subscription Plan** - New plan design needed
+1. **UPI Payment Gateway Integration** - User requested Razorpay integration
 
 ### P2 - Medium Priority
-3. **Force PIN Change Feature** - Admin ability to force users to change PIN
-4. **Backend Subscription Pricing Audit** - Full audit of pricing logic
+2. **"DIRECTOR 365" Subscription Plan** - New plan design
+3. **Force PIN Change Feature** - Admin ability
 
 ### P3 - Low Priority
-5. **Advanced PRC Burning Concepts** - Enhanced token burning mechanics
-
-## API Endpoints Reference
-- `POST /api/auth/login` - User login
-- `GET /api/auth/check-auth-type` - Check user auth type (PIN/password)
-- `PUT /api/admin/vip-payments/{id}/approve` - Approve subscription
-- `PUT /api/admin/vip-payments/{id}/reject` - Reject subscription
+4. **Backend Subscription Pricing Audit**
+5. **Advanced PRC Burning Concepts**
 
 ## Test Credentials
 - **Admin:** admin@test.com / PIN: 123456
-- **Test User:** test@test.com / PIN: 123456
+- **Production User:** mail2avhale@gmail.com / PIN: 152759
 
 ## Notes
 - User communicates in Marathi - respond in Marathi
 - Production URL: parasreward.com
-- Preview URL: parasreward-staging.preview.emergentagent.com
+- Always clear browser cache after deployment
