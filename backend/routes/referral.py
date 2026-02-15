@@ -258,7 +258,7 @@ async def get_multi_level_referral_stats(uid: str):
                     else:
                         last_login_dt = last_login
                     is_active = last_login_dt >= yesterday
-                except:
+                except Exception:
                     pass
             
             if is_active:

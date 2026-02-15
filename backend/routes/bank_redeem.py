@@ -500,7 +500,7 @@ async def approve_withdrawal(request_id: str, request: Request):
                 message=f"Your bank withdrawal of ₹{withdrawal['amount_inr']} has been approved and transferred to your bank account.",
                 notification_type="withdrawal"
             )
-        except:
+        except Exception:
             pass
     
     return {"success": True, "message": "Withdrawal approved"}
@@ -561,7 +561,7 @@ async def reject_withdrawal(request_id: str, request: Request):
                 message=f"Your withdrawal request of ₹{withdrawal['amount_inr']} was rejected. {refund_amount} PRC refunded. Reason: {reason}",
                 notification_type="withdrawal"
             )
-        except:
+        except Exception:
             pass
     
     return {"success": True, "message": "Withdrawal rejected and PRC refunded"}

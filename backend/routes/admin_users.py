@@ -544,7 +544,7 @@ async def approve_kyc(uid: str, request: Request):
     try:
         try:
             data = await request.json()
-        except:
+        except Exception:
             data = {}
         admin_id = data.get("admin_id")
         
@@ -592,7 +592,7 @@ async def reject_kyc(uid: str, request: Request):
     try:
         try:
             data = await request.json()
-        except:
+        except Exception:
             data = {}
         admin_id = data.get("admin_id")
         reason = data.get("reason", "Documents not valid")

@@ -197,7 +197,7 @@ async def update_user_subscription(uid: str, request: Request):
             current_expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
             if current_expiry_dt > now:
                 start_date = current_expiry_dt
-        except:
+        except Exception:
             pass
     
     new_expiry = (start_date + timedelta(days=duration_days)).isoformat()

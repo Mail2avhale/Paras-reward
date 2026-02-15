@@ -115,7 +115,7 @@ async def check_user_birthday(uid: str):
                     birth_date = datetime.fromisoformat(birthday.replace('Z', '+00:00'))
                 else:
                     return {"is_birthday": False, "message": None}
-            except:
+            except Exception:
                 return {"is_birthday": False, "message": None}
         else:
             birth_date = birthday
@@ -540,7 +540,7 @@ async def get_deletion_status(uid: str):
                 "can_cancel": days_remaining > 0,
                 "message": f"Account will be deleted in {days_remaining} days"
             }
-        except:
+        except Exception:
             pass
     
     return {
@@ -792,7 +792,7 @@ async def get_prc_expiry_info(uid: str):
                         "message": "VIP members have lifetime PRC validity!",
                         "protected": True
                     }
-            except:
+            except Exception:
                 pass
     
     now = datetime.now(timezone.utc)

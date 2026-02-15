@@ -160,7 +160,7 @@ async def get_index_status():
             try:
                 coll_indexes = await db[coll].index_information()
                 indexes[coll] = list(coll_indexes.keys())
-            except:
+            except Exception:
                 indexes[coll] = []
         
         return {"indexes": indexes}
@@ -302,7 +302,7 @@ async def get_system_index_stats():
             try:
                 indexes = await db[coll].index_information()
                 index_stats[coll] = len(indexes)
-            except:
+            except Exception:
                 index_stats[coll] = 0
         
         return {"collections": len(collections), "index_stats": index_stats}
@@ -353,7 +353,7 @@ async def refresh_dashboard_data(request: Request):
             # Clear dashboard-related caches
             await cache.delete("admin_dashboard")
             await cache.delete("admin_stats")
-        except:
+        except Exception:
             pass
     
     return {"success": True, "message": "Dashboard data refreshed"}

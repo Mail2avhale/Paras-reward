@@ -446,7 +446,7 @@ async def login(
             identifier = data.get("identifier") or data.get("email") or data.get("mobile")
             password = data.get("password") or data.get("pin")
             device_id = data.get("device_id") or device_id
-        except:
+        except Exception:
             pass
     
     if not identifier or not password:
@@ -623,7 +623,7 @@ async def login(
                     user["vip_expired"] = True
                     user["vip_days_expired"] = days_expired
                     user["vip_expiry_message"] = vip_expiry_message
-            except:
+            except Exception:
                 pass
     
     # Enforce PRC = 0 for free users
@@ -691,7 +691,7 @@ async def login(
         if user.get(field) and isinstance(user[field], str):
             try:
                 user[field] = datetime.fromisoformat(user[field])
-            except:
+            except Exception:
                 pass
     
     if "password_hash" in user:
@@ -880,7 +880,7 @@ async def forgot_pin_reset(request: ResetPinRequest):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="Reset token expired")
-        except:
+        except Exception:
             pass
     
     hashed_pin = hash_password(new_pin)
@@ -990,7 +990,7 @@ async def forgot_pin_verify_email_otp(request: Request):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
-        except:
+        except Exception:
             pass
     
     # Verify OTP
@@ -1057,7 +1057,7 @@ async def forgot_pin_reset_by_email(request: Request):
             expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expiry:
                 raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
-        except:
+        except Exception:
             pass
     
     # Hash and save new PIN
@@ -1534,7 +1534,7 @@ async def logout(request: Request):
                 ip_address=real_ip,
                 user_agent=request.headers.get("user-agent", "unknown")
             )
-    except:
+    except Exception:
         pass
     
     return {"message": "Logged out successfully"}

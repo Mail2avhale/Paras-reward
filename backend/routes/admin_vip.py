@@ -145,7 +145,7 @@ async def get_admin_vip_payments(
                 cached = await cache.get(cache_key)
                 if cached:
                     return cached
-            except:
+            except Exception:
                 pass  # Ignore cache errors
         
         query = {}
@@ -224,7 +224,7 @@ async def get_admin_vip_payments(
             if cache:
                 try:
                     await cache.set(cache_key, result, ttl=30)
-                except:
+                except Exception:
                     pass
             return result
         
@@ -325,7 +325,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Handle empty body
         try:
             data = await request.json()
-        except:
+        except Exception:
             data = {}
         
         admin_id = data.get("admin_id")
@@ -471,7 +471,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
             try:
                 await cache.delete("admin_vip_payments:pending:p1:l50")
                 await cache.delete("admin_vip_payments:all:p1:l50")
-            except:
+            except Exception:
                 pass
         
         return {"success": True, "message": message, "new_expiry": new_expiry}
@@ -544,7 +544,7 @@ async def reject_vip_payment(payment_id: str, request: Request):
             try:
                 await cache.delete("admin_vip_payments:pending:p1:l50")
                 await cache.delete("admin_vip_payments:all:p1:l50")
-            except:
+            except Exception:
                 pass
         
         return {"success": True, "message": "Payment rejected"}
