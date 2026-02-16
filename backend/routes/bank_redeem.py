@@ -38,6 +38,32 @@ def set_helpers(helpers: dict):
     log_transaction = helpers.get('log_transaction')
     create_notification = helpers.get('create_notification')
 
+def get_current_week_monday():
+    """Get Monday 00:00 of current week"""
+    now = datetime.now(timezone.utc)
+    days_since_monday = now.weekday()
+    monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+    next_monday = monday + timedelta(days=7)
+    return monday, next_monday
+
+async def check_loan_emi_this_week(user_id: str) -> dict:
+    """Check if user has done loan_emi this week"""
+    monday, next_monday = get_current_week_monday()
+    monday_str = monday.isoformat()
+    
+    loan_emi_request = await db.bill_payment_requests.find_one({
+        "user_id": user_id,
+        "request_type": "loan_emi",
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
+    })
+    
+    return {
+        "has_loan_emi": loan_emi_request is not None,
+        "loan_emi_request": loan_emi_request,
+        "next_monday": next_monday.isoformat()
+    }
+
 # Processing fees - EMI style
 # <= ₹499: 50% of amount
 # > ₹499: Flat ₹10
