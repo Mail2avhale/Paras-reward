@@ -7182,12 +7182,17 @@ async def get_subscription_plans():
                 "offer": offer
             })
     
-    return {
+    result = {
         "plans": plans, 
         "durations": SUBSCRIPTION_DURATIONS,
         "has_active_offer": True,
         "offer_name": "Limited Time Offer - Up to 60% OFF!"
     }
+    
+    # Cache for 10 minutes (plans don't change frequently)
+    await cache.set(cache_key, result, ttl=600)
+    
+    return result
 
 @api_router.get("/subscription/user/{uid}")
 async def get_user_subscription(uid: str):
