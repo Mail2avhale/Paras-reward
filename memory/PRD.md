@@ -13,6 +13,14 @@ A production-grade reward platform serving 3000+ users with subscription managem
 3. Stats count मध्ये backwards compatibility साठी दोन्ही status count केले
 **Test Results:** API test passed - KYC approve केल्यावर आता `kyc_status: "verified"` होतो
 
+### User 360 KYC Approval Feature ✅ (Feb 17, 2026)
+**Problem:** Admin ला User 360 page वरून direct KYC approve/reject करायचे होते
+**Solution:**
+1. Backend: `server.py` मध्ये `approve_kyc` आणि `reject_kyc` actions जोडले user-360/action endpoint मध्ये
+2. Frontend: `AdminUser360.js` मध्ये Quick Actions section मध्ये "Approve KYC" आणि "Reject KYC" buttons जोडले
+3. Conditional display: KYC verified असेल तर buttons दिसत नाहीत
+**Test Results:** API test passed - approve आणि reject दोन्ही काम करतात
+
 ### Performance Optimization ✅ (Feb 16, 2026)
 **Problem:** Production server extreme slowness
 **Solution:**
