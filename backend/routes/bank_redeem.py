@@ -341,16 +341,28 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if user.get("kyc_status") != "verified":
         raise HTTPException(status_code=400, detail="KYC verification required for withdrawals")
     
-    # Check weekly limit
-    week_start = datetime.now(timezone.utc) - timedelta(days=7)
+    # STRICT: Check if user has done loan_emi this week
+    emi_check = await check_loan_emi_this_week(user_id)
+    if emi_check["has_loan_emi"]:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Pay EMI केले आहे. पुढच्या सोमवारी ({emi_check['next_monday'][:10]}) पासून Bank Redeem करता येईल."
+        )
+    
+    # Check weekly bank redeem limit
+    monday, next_monday = get_current_week_monday()
+    monday_str = monday.isoformat()
     recent_request = await db.bank_withdrawal_requests.find_one({
         "user_id": user_id,
-        "created_at": {"$gte": week_start.isoformat()},
-        "status": {"$in": ["pending", "approved", "processing"]}
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
     })
     
     if recent_request:
-        raise HTTPException(status_code=400, detail="Weekly limit reached. One withdrawal per week allowed.")
+        raise HTTPException(
+            status_code=429, 
+            detail=f"आठवड्यात फक्त 1 Bank Redeem allowed. पुढच्या सोमवारी ({next_monday.isoformat()[:10]}) पासून पुन्हा करता येईल."
+        )
     
     # Calculate charges - EMI style
     charges = calculate_total_prc(amount_inr)
