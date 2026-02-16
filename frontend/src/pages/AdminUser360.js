@@ -1579,6 +1579,41 @@ const AdminUser360 = ({ user: adminUser }) => {
                     Manage Permissions
                   </Button>
                 )}
+                {/* KYC Approve - Show only if KYC is NOT verified */}
+                {userData?.user?.kyc_status !== 'verified' && (
+                  <Button
+                    onClick={() => {
+                      if (confirm('✅ Approve KYC for this user? They will be able to make withdrawals.')) {
+                        handleQuickAction('approve_kyc');
+                      }
+                    }}
+                    disabled={processing}
+                    variant="outline"
+                    className="h-auto py-3 border-green-500/50 text-green-400"
+                    data-testid="approve-kyc-button"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approve KYC
+                  </Button>
+                )}
+                {/* KYC Reject - Show only if KYC is pending or needs re-review */}
+                {userData?.user?.kyc_status !== 'rejected' && userData?.user?.kyc_status !== 'verified' && (
+                  <Button
+                    onClick={() => {
+                      const reason = prompt('Enter rejection reason:', 'Documents not valid or incomplete');
+                      if (reason !== null) {
+                        handleQuickAction('reject_kyc', { reason });
+                      }
+                    }}
+                    disabled={processing}
+                    variant="outline"
+                    className="h-auto py-3 border-orange-500/50 text-orange-400"
+                    data-testid="reject-kyc-button"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Reject KYC
+                  </Button>
+                )}
                 <Button
                   onClick={() => {
                     if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
