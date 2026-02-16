@@ -10590,7 +10590,7 @@ If the image is not clear or not a PAN card, set is_valid_document to false."""
                 await db.users.update_one(
                     {"uid": uid},
                     {"$set": {
-                        "kyc_status": "approved",
+                        "kyc_status": "verified",
                         "kyc_approved_at": datetime.now(timezone.utc).isoformat(),
                         "kyc_approved_by": "AI_AUTO"
                     }}
