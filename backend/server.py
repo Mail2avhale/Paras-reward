@@ -13720,6 +13720,64 @@ async def user_360_quick_action(request: Request):
         })
         
         result_message = f"Subscription updated to {plan.capitalize()} plan. Expires: {expiry_date}"
+    
+    elif action == "approve_kyc":
+        # Admin approves user KYC directly
+        current_kyc = user.get("kyc_status", "pending")
+        if current_kyc == "verified":
+            result_message = "KYC already verified"
+        else:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "kyc_status": "verified",
+                    "kyc_approved_at": now.isoformat(),
+                    "kyc_approved_by": admin_id,
+                    "updated_at": now.isoformat()
+                }}
+            )
+            # Send notification to user
+            await db.notifications.insert_one({
+                "notification_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "type": "kyc_approved",
+                "title": "✅ KYC Verified Successfully!",
+                "message": "Congratulations! Your KYC verification is complete. You can now access all features and make withdrawals.",
+                "icon": "✅",
+                "is_read": False,
+                "created_at": now.isoformat()
+            })
+            result_message = "KYC approved successfully"
+    
+    elif action == "reject_kyc":
+        # Admin rejects user KYC
+        reason = data.get("reason", "Documents not valid or incomplete")
+        current_kyc = user.get("kyc_status", "pending")
+        if current_kyc == "rejected":
+            result_message = "KYC already rejected"
+        else:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {
+                    "kyc_status": "rejected",
+                    "kyc_rejection_reason": reason,
+                    "kyc_rejected_at": now.isoformat(),
+                    "kyc_rejected_by": admin_id,
+                    "updated_at": now.isoformat()
+                }}
+            )
+            # Send notification to user
+            await db.notifications.insert_one({
+                "notification_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "type": "kyc_rejected",
+                "title": "❌ KYC Verification Failed",
+                "message": f"Your KYC verification was rejected. Reason: {reason}. Please re-submit with correct documents.",
+                "icon": "❌",
+                "is_read": False,
+                "created_at": now.isoformat()
+            })
+            result_message = f"KYC rejected. Reason: {reason}"
         
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {action}")
