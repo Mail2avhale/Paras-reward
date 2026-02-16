@@ -8792,7 +8792,13 @@ async def create_product(product: ProductCreate):
 
 @api_router.get("/products")
 async def get_products(page: int = 1, limit: int = 20):
-    """Get active products with pagination (public endpoint)"""
+    """Get active products with pagination (public endpoint) - CACHED 5 min"""
+    # Check cache first
+    cache_key = f"products_page_{page}_limit_{limit}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     # Calculate skip value for pagination
     skip = (page - 1) * limit
     
