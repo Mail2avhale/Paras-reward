@@ -274,7 +274,7 @@ async def check_withdrawal_eligibility(user_id: str):
         return {
             "eligible": False,
             "reason": "emi_done_this_week",
-            "message": f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Pay EMI केले आहे. पुढच्या सोमवारी ({emi_check['next_monday'][:10]}) पासून Bank Redeem करता येईल."
+            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
         }
     
     # Check for existing bank withdrawal request this week
@@ -290,7 +290,7 @@ async def check_withdrawal_eligibility(user_id: str):
         return {
             "eligible": False,
             "reason": "weekly_limit",
-            "message": f"आठवड्यात फक्त 1 Bank Redeem allowed. पुढच्या सोमवारी ({next_monday.isoformat()[:10]}) पासून पुन्हा करता येईल.",
+            "message": f"Weekly limit: Only 1 Bank Redeem allowed per week. Try again from Monday ({next_monday.isoformat()[:10]}).",
             "next_eligible_date": next_monday.isoformat(),
             "existing_request": {
                 "request_id": recent_request.get("request_id"),
@@ -346,7 +346,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if emi_check["has_loan_emi"]:
         raise HTTPException(
             status_code=429, 
-            detail=f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Pay EMI केले आहे. पुढच्या सोमवारी ({emi_check['next_monday'][:10]}) पासून Bank Redeem करता येईल."
+            detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
         )
     
     # Check weekly bank redeem limit
@@ -361,7 +361,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if recent_request:
         raise HTTPException(
             status_code=429, 
-            detail=f"आठवड्यात फक्त 1 Bank Redeem allowed. पुढच्या सोमवारी ({next_monday.isoformat()[:10]}) पासून पुन्हा करता येईल."
+            detail=f"Weekly limit: Only 1 Bank Redeem allowed per week. Try again from Monday ({next_monday.isoformat()[:10]})."
         )
     
     # Calculate charges - EMI style

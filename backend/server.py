@@ -21931,12 +21931,12 @@ async def create_bill_payment_request(request: Request):
             if emi_bank_check["has_bank_redeem"]:
                 raise HTTPException(
                     status_code=429, 
-                    detail=f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Bank Redeem केले आहे. पुढच्या सोमवारी ({emi_bank_check['next_monday'][:10]}) पासून Pay EMI करता येईल."
+                    detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Bank Redeem this week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
                 )
             elif emi_bank_check["has_loan_emi"]:
                 raise HTTPException(
                     status_code=429, 
-                    detail=f"आठवड्यात फक्त 1 Pay EMI allowed. पुढच्या सोमवारी ({emi_bank_check['next_monday'][:10]}) पासून पुन्हा करता येईल."
+                    detail=f"Weekly limit: Only 1 Pay EMI allowed per week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
                 )
     # =========================================================
     
