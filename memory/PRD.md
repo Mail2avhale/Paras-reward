@@ -5,6 +5,21 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### KYC Status Bug Fix ✅ (Feb 17, 2026)
+**Problem:** `admin_users.py` मध्ये KYC approve केल्यावर `kyc_status: "approved"` set होत होते, पण withdrawal मध्ये `kyc_status: "verified"` check होत होते. याचा अर्थ admin ने user page वरून KYC approve केले तरी withdrawal काम करत नव्हते.
+**Solution:** 
+1. `/app/backend/routes/admin_users.py` मध्ये `"approved"` → `"verified"` बदलले
+2. AI KYC verify मध्ये पण `"verified"` status set केले (`server.py`)
+3. Stats count मध्ये backwards compatibility साठी दोन्ही status count केले
+**Test Results:** API test passed - KYC approve केल्यावर आता `kyc_status: "verified"` होतो
+
+### Performance Optimization ✅ (Feb 16, 2026)
+**Problem:** Production server extreme slowness
+**Solution:**
+1. Added caching to `/api/stats`, `/api/leaderboard`, `/api/subscription/plans`, `/api/products`, `/api/settings/public`
+2. Added MongoDB indexes for `total_mined`, `is_active`, `subscription_plan`, `membership_type`
+**Status:** User verified - Performance improved
+
 ### Free Startup Subscription Module - REMOVED ✅ (Feb 15, 2026)
 **Problem:** User requested complete removal of "Free Startup Subscription" reward feature
 **Solution:** 
