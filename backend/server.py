@@ -10181,7 +10181,13 @@ async def get_all_transactions_admin(
 # ========== LEADERBOARD ROUTES ==========
 @api_router.get("/leaderboard", response_model=List[LeaderboardEntry])
 async def get_leaderboard():
-    """Get leaderboard"""
+    """Get leaderboard - CACHED 2 min"""
+    # Check cache first
+    cache_key = "leaderboard_top100"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     users = await db.users.find(
         {"is_active": True},
         {"_id": 0, "uid": 1, "name": 1, "profile_picture": 1, "total_mined": 1, "membership_type": 1}
@@ -10197,6 +10203,9 @@ async def get_leaderboard():
             rank=idx,
             is_vip=user.get("membership_type") == "vip"
         ))
+    
+    # Cache for 2 minutes (leaderboard updates aren't critical real-time)
+    await cache.set(cache_key, [l.dict() for l in leaderboard], ttl=120)
     
     return leaderboard
 
