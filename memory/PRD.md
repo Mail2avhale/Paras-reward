@@ -108,10 +108,11 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - Test User: `mail2avhale@gmail.com` / PIN: `123456`
 
 ## Upcoming Tasks
-- P1: UPI Payment Gateway Integration (Razorpay/PhonePe/Paytm)
+- P1: UPI Payment Gateway Integration (Razorpay)
 - P1: "DIRECTOR 365" Subscription Plan
 - P1: Advanced PRC Burning Concepts
 - P2: Force PIN Change Feature
+- P3: KYC Images migrate MongoDB → S3 (reduce database bloat)
 
 ## Known Behaviors
 - Admin users are redirected from `/referrals` to `/admin` (by design)
