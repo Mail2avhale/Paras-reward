@@ -189,6 +189,8 @@ async def get_search_suggestions(q: str = "", limit: int = 10):
         "query": q,
         "count": len(suggestions)
     }
+
+@router.get("/users/stats")
 async def get_admin_user_stats():
     """Get user statistics for admin dashboard"""
     try:
