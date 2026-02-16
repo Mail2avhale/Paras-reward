@@ -21924,6 +21924,22 @@ async def create_bill_payment_request(request: Request):
         raise HTTPException(status_code=403, detail=redeem_check["reason"])
     # ===================================
     
+    # ===== STRICT: EMI OR BANK REDEEM - ONLY ONE PER WEEK =====
+    if request_type == "loan_emi":
+        emi_bank_check = await check_weekly_emi_or_bank_redeem(user_id)
+        if not emi_bank_check["can_do_loan_emi"]:
+            if emi_bank_check["has_bank_redeem"]:
+                raise HTTPException(
+                    status_code=429, 
+                    detail=f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Bank Redeem केले आहे. पुढच्या सोमवारी ({emi_bank_check['next_monday'][:10]}) पासून Pay EMI करता येईल."
+                )
+            elif emi_bank_check["has_loan_emi"]:
+                raise HTTPException(
+                    status_code=429, 
+                    detail=f"आठवड्यात फक्त 1 Pay EMI allowed. पुढच्या सोमवारी ({emi_bank_check['next_monday'][:10]}) पासून पुन्हा करता येईल."
+                )
+    # =========================================================
+    
     # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
     weekly_check = await check_weekly_service_limit(user, request_type)
     if not weekly_check["allowed"]:
