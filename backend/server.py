@@ -7530,7 +7530,13 @@ async def get_database_stats():
 
 @api_router.get("/settings/public")
 async def get_public_settings():
-    """Get public settings (payment UPI, company info, etc.)"""
+    """Get public settings (payment UPI, company info, etc.) - CACHED 10 min"""
+    # Check cache first
+    cache_key = "public_settings"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     settings = await db.settings.find_one({}, {"_id": 0})
     payment_config = await db.payment_config.find_one({}, {"_id": 0})
     
@@ -7556,7 +7562,7 @@ async def get_public_settings():
     if not payment_upi and settings:
         payment_upi = settings.get("payment_upi_id", "paras@upi")
     
-    return {
+    result = {
         "payment_upi_id": payment_upi or "paras@upi",
         "qr_code_url": qr_code_url,
         "bank_details": bank_details,
@@ -7565,6 +7571,11 @@ async def get_public_settings():
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
     }
+    
+    # Cache for 10 minutes (settings rarely change)
+    await cache.set(cache_key, result, ttl=600)
+    
+    return result
 
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
 
