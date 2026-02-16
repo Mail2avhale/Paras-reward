@@ -201,9 +201,9 @@ async def get_admin_user_stats():
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         new_today = await db.users.count_documents({"created_at": {"$gte": today_start}})
         
-        # KYC stats
+        # KYC stats - count both "verified" and "approved" for backwards compatibility
         kyc_pending = await db.users.count_documents({"kyc_status": "pending"})
-        kyc_approved = await db.users.count_documents({"kyc_status": "approved"})
+        kyc_verified = await db.users.count_documents({"kyc_status": {"$in": ["verified", "approved"]}})
         kyc_rejected = await db.users.count_documents({"kyc_status": "rejected"})
         
         # Subscription breakdown
