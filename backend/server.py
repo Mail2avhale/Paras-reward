@@ -1764,6 +1764,45 @@ def get_current_week_bounds():
     next_monday = monday + timedelta(days=7)
     return monday, sunday, next_monday
 
+async def check_weekly_emi_or_bank_redeem(user_id: str) -> dict:
+    """
+    STRICT RULE: User can do ONLY ONE of these per week:
+    - Pay EMI (loan_emi)
+    - Redeem to Bank (bank withdrawal)
+    
+    If either is done, the other is blocked for that week.
+    """
+    monday, sunday, next_monday = get_current_week_bounds()
+    monday_str = monday.isoformat()
+    
+    # Check for loan_emi this week
+    loan_emi_request = await db.bill_payment_requests.find_one({
+        "user_id": user_id,
+        "request_type": "loan_emi",
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
+    })
+    
+    # Check for bank withdrawal this week
+    bank_redeem_request = await db.bank_withdrawal_requests.find_one({
+        "user_id": user_id,
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
+    })
+    
+    has_loan_emi = loan_emi_request is not None
+    has_bank_redeem = bank_redeem_request is not None
+    
+    return {
+        "has_loan_emi": has_loan_emi,
+        "has_bank_redeem": has_bank_redeem,
+        "loan_emi_request": loan_emi_request,
+        "bank_redeem_request": bank_redeem_request,
+        "next_monday": next_monday.isoformat(),
+        "can_do_loan_emi": not has_bank_redeem and not has_loan_emi,
+        "can_do_bank_redeem": not has_loan_emi and not has_bank_redeem
+    }
+
 async def get_weekly_service_usage(user_id: str, service_type: str) -> dict:
     """Get user's redemption count for a specific service this week (Mon-Sun)"""
     monday, sunday, next_monday = get_current_week_bounds()
