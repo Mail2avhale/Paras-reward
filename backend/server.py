@@ -1596,7 +1596,7 @@ SUBSCRIPTION_PLANS = {
     "explorer": {
         "name": "Explorer",
         "multiplier": 1.0,
-        "referral_weight": 1.0,
+        "referral_weight": 0,  # FREE users give NO referral bonus
         "tap_limit": 100,
         "prc_per_tap": 0.1,
         "daily_max_prc": 10,
