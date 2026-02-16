@@ -10201,7 +10201,7 @@ async def get_all_transactions_admin(
     }
 
 # ========== LEADERBOARD ROUTES ==========
-@api_router.get("/leaderboard", response_model=List[LeaderboardEntry])
+@api_router.get("/leaderboard")
 async def get_leaderboard():
     """Get leaderboard - CACHED 2 min"""
     # Check cache first
@@ -10217,17 +10217,17 @@ async def get_leaderboard():
     
     leaderboard = []
     for idx, user in enumerate(users, 1):
-        leaderboard.append(LeaderboardEntry(
-            uid=user["uid"],
-            name=user["name"],
-            profile_picture=user.get("profile_picture"),
-            total_prc=user.get("total_mined", 0),
-            rank=idx,
-            is_vip=user.get("membership_type") == "vip"
-        ))
+        leaderboard.append({
+            "uid": user["uid"],
+            "name": user["name"],
+            "profile_picture": user.get("profile_picture"),
+            "total_prc": user.get("total_mined", 0),
+            "rank": idx,
+            "is_vip": user.get("membership_type") == "vip"
+        })
     
     # Cache for 2 minutes (leaderboard updates aren't critical real-time)
-    await cache.set(cache_key, [l.dict() for l in leaderboard], ttl=120)
+    await cache.set(cache_key, leaderboard, ttl=120)
     
     return leaderboard
 
