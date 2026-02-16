@@ -311,7 +311,9 @@ const AdminUser360 = ({ user: adminUser }) => {
           'unblock_user': 'User Unblocked',
           'clear_lockout': 'Lockout Cleared',
           'update_user_details': 'Details Updated',
-          'save_notes': 'Notes Saved'
+          'save_notes': 'Notes Saved',
+          'approve_kyc': '✅ KYC Approved',
+          'reject_kyc': '❌ KYC Rejected'
         };
         
         const title = actionTitles[action] || 'Action Completed';
@@ -319,7 +321,7 @@ const AdminUser360 = ({ user: adminUser }) => {
           show: true, 
           title: title, 
           message: message || `${action} completed successfully`,
-          type: action === 'block_user' ? 'warning' : 'success'
+          type: action === 'block_user' || action === 'reject_kyc' ? 'warning' : 'success'
         });
       }
       
