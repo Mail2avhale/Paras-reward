@@ -86,6 +86,11 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## API Endpoints
 
+### Admin KYC Management
+- `GET /api/admin/kyc/pending` - Get pending KYC users (paginated)
+- `POST /api/admin/kyc/{uid}/approve` - Approve user KYC (sets kyc_status: "verified")
+- `POST /api/admin/kyc/{uid}/reject` - Reject user KYC
+
 ### Admin Subscription
 - `GET /api/admin/subscription-stats` - Get plan counts
 - `GET /api/admin/vip-payments?status=pending|approved|rejected` - List payments
