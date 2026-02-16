@@ -37038,14 +37038,16 @@ async def initialize_database_indexes():
     try:
         existing_indexes = await db.notifications.index_information()
         if "user_id_1" not in existing_indexes:
-            await db.notifications.create_index("user_id")
+            await db.notifications.create_index("user_uid")
         if "read_1" not in existing_indexes:
             await db.notifications.create_index("read")
         if "created_at_-1" not in existing_indexes:
             await db.notifications.create_index([("created_at", -1)])
         # Compound for unread notifications query
-        if "user_id_1_read_1_created_at_-1" not in existing_indexes:
-            await db.notifications.create_index([("user_id", 1), ("read", 1), ("created_at", -1)])
+        if "user_uid_1_read_1_created_at_-1" not in existing_indexes:
+
+            await db.notifications.create_index([("user_uid", 1), ("read", 1), ("created_at", -1)])
+
         print("✅ Notifications indexes ready")
     except Exception as e:
         print(f"⚠️  Notifications indexes: {e}")
@@ -37053,7 +37055,8 @@ async def initialize_database_indexes():
     # ==================== ACTIVITY LOGS INDEXES ====================
     try:
         existing_indexes = await db.activity_logs.index_information()
-        if "user_id_1" not in existing_indexes:
+        if "user_uid_1" not in existing_indexes:
+
             await db.activity_logs.create_index("user_id")
         if "timestamp_-1" not in existing_indexes:
             await db.activity_logs.create_index([("timestamp", -1)])
