@@ -268,20 +268,30 @@ async def check_withdrawal_eligibility(user_id: str):
             "message": "KYC verification required for bank withdrawals"
         }
     
-    # Check for existing request this week
-    week_start = datetime.now(timezone.utc) - timedelta(days=7)
+    # STRICT: Check if user has done loan_emi this week
+    emi_check = await check_loan_emi_this_week(user_id)
+    if emi_check["has_loan_emi"]:
+        return {
+            "eligible": False,
+            "reason": "emi_done_this_week",
+            "message": f"आठवड्यात फक्त एक - Pay EMI किंवा Bank Redeem. तुम्ही या आठवड्यात Pay EMI केले आहे. पुढच्या सोमवारी ({emi_check['next_monday'][:10]}) पासून Bank Redeem करता येईल."
+        }
+    
+    # Check for existing bank withdrawal request this week
+    monday, next_monday = get_current_week_monday()
+    monday_str = monday.isoformat()
     recent_request = await db.bank_withdrawal_requests.find_one({
         "user_id": user_id,
-        "created_at": {"$gte": week_start.isoformat()},
-        "status": {"$in": ["pending", "approved", "processing"]}
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
     })
     
     if recent_request:
         return {
             "eligible": False,
             "reason": "weekly_limit",
-            "message": "You can only request one withdrawal per week",
-            "next_eligible_date": (datetime.fromisoformat(recent_request["created_at"].replace('Z', '+00:00')) + timedelta(days=7)).isoformat(),
+            "message": f"आठवड्यात फक्त 1 Bank Redeem allowed. पुढच्या सोमवारी ({next_monday.isoformat()[:10]}) पासून पुन्हा करता येईल.",
+            "next_eligible_date": next_monday.isoformat(),
             "existing_request": {
                 "request_id": recent_request.get("request_id"),
                 "amount": recent_request.get("amount_inr"),
