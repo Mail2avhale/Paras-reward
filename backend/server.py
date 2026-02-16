@@ -11616,12 +11616,17 @@ async def get_public_stats():
         if order_result and order_result[0].get("total"):
             total_redeemed += order_result[0]["total"]
         
-        return {
+        stats_response = {
             "totalUsers": total_users,
             "totalPRC": round(total_prc, 2),
             "vipMembers": vip_members,
             "totalRedeemed": round(total_redeemed, 2)
         }
+        
+        # Cache for 5 minutes (300 seconds) to reduce database load
+        cache.set(cache_key, stats_response, ttl=300)
+        
+        return stats_response
     except Exception as e:
         print(f"Stats error: {e}")
         # Return zeros on error to prevent page crash
