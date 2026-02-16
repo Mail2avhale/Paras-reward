@@ -555,7 +555,7 @@ async def approve_kyc(uid: str, request: Request):
         await db.users.update_one(
             {"uid": uid},
             {"$set": {
-                "kyc_status": "approved",
+                "kyc_status": "verified",
                 "kyc_approved_at": datetime.now(timezone.utc).isoformat(),
                 "kyc_approved_by": admin_id
             }}
