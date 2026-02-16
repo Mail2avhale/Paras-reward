@@ -11666,7 +11666,7 @@ async def get_public_stats():
         }
         
         # Cache for 5 minutes (300 seconds) to reduce database load
-        cache.set(cache_key, stats_response, ttl=300)
+        await cache.set(cache_key, stats_response, ttl=300)
         
         return stats_response
     except Exception as e:
