@@ -37018,6 +37018,39 @@ async def initialize_database_indexes():
     except Exception as e:
         print(f"⚠️  Referral indexes: {e}")
     
+    # ==================== PERFORMANCE CRITICAL INDEXES ====================
+    try:
+        existing_indexes = await db.users.index_information()
+        
+        # Index for leaderboard (sort by total_mined)
+        if "total_mined_-1" not in existing_indexes:
+            await db.users.create_index([("total_mined", -1)])
+            print("✅ Created total_mined index for leaderboard")
+        
+        # Index for subscription plan queries
+        if "subscription_plan_1" not in existing_indexes:
+            await db.users.create_index("subscription_plan")
+            print("✅ Created subscription_plan index")
+        
+        # Index for active users (is_active)
+        if "is_active_1" not in existing_indexes:
+            await db.users.create_index("is_active")
+            print("✅ Created is_active index")
+        
+        # Compound index for leaderboard query (is_active + total_mined)
+        if "is_active_1_total_mined_-1" not in existing_indexes:
+            await db.users.create_index([("is_active", 1), ("total_mined", -1)])
+            print("✅ Created compound leaderboard index")
+        
+        # Index for membership type
+        if "membership_type_1" not in existing_indexes:
+            await db.users.create_index("membership_type")
+            print("✅ Created membership_type index")
+        
+        print("✅ Performance critical indexes ready")
+    except Exception as e:
+        print(f"⚠️  Performance indexes: {e}")
+    
     # ==================== TRANSACTIONS INDEXES ====================
     try:
         existing_indexes = await db.transactions.index_information()
