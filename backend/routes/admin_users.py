@@ -219,7 +219,7 @@ async def get_admin_user_stats():
             "new_today": new_today,
             "kyc": {
                 "pending": kyc_pending,
-                "approved": kyc_approved,
+                "approved": kyc_verified,
                 "rejected": kyc_rejected
             },
             "subscriptions": {s["_id"] or "none": s["count"] for s in subscription_stats}
