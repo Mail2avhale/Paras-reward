@@ -1607,7 +1607,7 @@ SUBSCRIPTION_PLANS = {
     "startup": {
         "name": "Startup",
         "multiplier": 1.5,
-        "referral_weight": 1.2,
+        "referral_weight": 0.30,
         "tap_limit": 100,
         "prc_per_tap": 0.5,
         "daily_max_prc": 50,
@@ -1618,7 +1618,7 @@ SUBSCRIPTION_PLANS = {
     "growth": {
         "name": "Growth",
         "multiplier": 2.0,
-        "referral_weight": 1.5,
+        "referral_weight": 0.55,
         "tap_limit": 100,
         "prc_per_tap": 1.0,
         "daily_max_prc": 100,
@@ -1629,7 +1629,7 @@ SUBSCRIPTION_PLANS = {
     "elite": {
         "name": "Elite",
         "multiplier": 3.0,
-        "referral_weight": 2.0,
+        "referral_weight": 1.0,
         "tap_limit": 100,
         "prc_per_tap": 2.0,
         "daily_max_prc": 200,
