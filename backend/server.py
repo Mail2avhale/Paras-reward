@@ -8829,7 +8829,7 @@ async def get_products(page: int = 1, limit: int = 20):
                     except:
                         pass
     
-    return {
+    result = {
         "products": products,
         "total": total,
         "page": page,
@@ -8837,6 +8837,11 @@ async def get_products(page: int = 1, limit: int = 20):
         "total_pages": (total + limit - 1) // limit,
         "has_more": skip + len(products) < total
     }
+    
+    # Cache for 5 minutes (products don't change frequently)
+    await cache.set(cache_key, result, ttl=300)
+    
+    return result
 
 @api_router.get("/products/{product_id}", response_model=Product)
 async def get_product(product_id: str):
