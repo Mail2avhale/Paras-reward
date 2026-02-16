@@ -11597,7 +11597,7 @@ async def get_public_stats():
     """Get public platform statistics for landing page - CACHED for performance"""
     # Check cache first (5 minute TTL for landing page stats)
     cache_key = "public_stats"
-    cached_stats = cache.get(cache_key)
+    cached_stats = await cache.get(cache_key)
     if cached_stats:
         return cached_stats
     
