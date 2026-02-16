@@ -91,6 +91,10 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - `POST /api/admin/kyc/{uid}/approve` - Approve user KYC (sets kyc_status: "verified")
 - `POST /api/admin/kyc/{uid}/reject` - Reject user KYC
 
+### Admin User 360 KYC Actions (NEW)
+- `POST /api/admin/user-360/action` with `action: "approve_kyc"` - Approve KYC from User 360 page
+- `POST /api/admin/user-360/action` with `action: "reject_kyc"` - Reject KYC from User 360 page (with reason)
+
 ### Admin Subscription
 - `GET /api/admin/subscription-stats` - Get plan counts
 - `GET /api/admin/vip-payments?status=pending|approved|rejected` - List payments
