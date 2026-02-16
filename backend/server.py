@@ -11552,7 +11552,13 @@ async def promote_user(email: str, role: str):
 # ==================== PUBLIC STATS ENDPOINT ====================
 @api_router.get("/stats")
 async def get_public_stats():
-    """Get public platform statistics for landing page"""
+    """Get public platform statistics for landing page - CACHED for performance"""
+    # Check cache first (5 minute TTL for landing page stats)
+    cache_key = "public_stats"
+    cached_stats = cache.get(cache_key)
+    if cached_stats:
+        return cached_stats
+    
     try:
         # Total registered users
         total_users = await db.users.count_documents({})
