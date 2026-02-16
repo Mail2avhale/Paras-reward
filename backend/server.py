@@ -7128,7 +7128,13 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
 
 @api_router.get("/subscription/plans")
 async def get_subscription_plans():
-    """Get all subscription plans with pricing and special offers"""
+    """Get all subscription plans with pricing and special offers - CACHED 10 min"""
+    # Check cache first
+    cache_key = "subscription_plans"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     pricing = await get_subscription_pricing()
     
     # Special Offer Prices (Limited Time)
