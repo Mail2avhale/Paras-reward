@@ -41,6 +41,8 @@ const BillPayments = ({ user, onLogout }) => {
     amount_inr: '',
     phone_number: '',
     operator: '',
+    recharge_type: '',  // prepaid or postpaid
+    circle: '',         // telecom circle
     account_number: '',
     consumer_number: '',
     card_last4: '',
@@ -61,6 +63,42 @@ const BillPayments = ({ user, onLogout }) => {
     loan_tenure: '',
     emi_amount: ''
   });
+
+  // Mobile Operators List
+  const mobileOperators = [
+    { id: 'jio', name: 'Jio' },
+    { id: 'airtel', name: 'Airtel' },
+    { id: 'vi', name: 'Vi (Vodafone Idea)' },
+    { id: 'bsnl', name: 'BSNL' },
+    { id: 'mtnl', name: 'MTNL' }
+  ];
+
+  // Telecom Circles List
+  const telecomCircles = [
+    { id: 'andhra_pradesh', name: 'Andhra Pradesh & Telangana' },
+    { id: 'assam', name: 'Assam' },
+    { id: 'bihar_jharkhand', name: 'Bihar & Jharkhand' },
+    { id: 'chennai', name: 'Chennai' },
+    { id: 'delhi', name: 'Delhi & NCR' },
+    { id: 'gujarat', name: 'Gujarat' },
+    { id: 'haryana', name: 'Haryana' },
+    { id: 'himachal_pradesh', name: 'Himachal Pradesh' },
+    { id: 'jammu_kashmir', name: 'Jammu & Kashmir' },
+    { id: 'karnataka', name: 'Karnataka' },
+    { id: 'kerala', name: 'Kerala' },
+    { id: 'kolkata', name: 'Kolkata' },
+    { id: 'madhya_pradesh', name: 'Madhya Pradesh & Chhattisgarh' },
+    { id: 'maharashtra', name: 'Maharashtra & Goa' },
+    { id: 'mumbai', name: 'Mumbai' },
+    { id: 'north_east', name: 'North East' },
+    { id: 'orissa', name: 'Odisha' },
+    { id: 'punjab', name: 'Punjab' },
+    { id: 'rajasthan', name: 'Rajasthan' },
+    { id: 'tamil_nadu', name: 'Tamil Nadu' },
+    { id: 'up_east', name: 'UP East' },
+    { id: 'up_west', name: 'UP West & Uttarakhand' },
+    { id: 'west_bengal', name: 'West Bengal' }
+  ];
 
   // Update selected type when URL param changes
   useEffect(() => {
