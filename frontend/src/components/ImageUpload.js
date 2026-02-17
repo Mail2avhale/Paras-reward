@@ -40,31 +40,58 @@ const ImageUpload = ({
 
     // Validate file size
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`Image size must be less than ${maxSize}MB`);
+      alert(`Image size must be less than ${maxSize}MB. Please select a smaller image.`);
       return;
     }
 
     setUploading(true);
 
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setPreview(base64String);
-        onChange(base64String);
-        setUploading(false);
-      };
-      reader.onerror = () => {
-        alert('Failed to read file');
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+      // Compress image before converting to base64
+      const compressedImage = await compressImage(file, 1024, 0.8); // max 1024px, 80% quality
+      setPreview(compressedImage);
+      onChange(compressedImage);
+      setUploading(false);
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image');
+      alert('Failed to upload image. Please try again or select a different image.');
       setUploading(false);
     }
+  };
+
+  // Compress image to reduce size
+  const compressImage = (file, maxWidth = 1024, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate new dimensions
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to base64 with compression
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedBase64);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.target.result;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleRemove = () => {
