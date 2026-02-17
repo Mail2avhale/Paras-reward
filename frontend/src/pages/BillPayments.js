@@ -232,6 +232,8 @@ const BillPayments = ({ user, onLogout }) => {
         amount_inr: '',
         phone_number: '',
         operator: '',
+        recharge_type: '',
+        circle: '',
         account_number: '',
         consumer_number: '',
         card_last4: '',
