@@ -130,6 +130,16 @@ const AdminBankWithdrawals = ({ user }) => {
       req.request_id?.toLowerCase().includes(query) ||
       req.bank_details?.bank_name?.toLowerCase().includes(query)
     );
+  }).sort((a, b) => {
+    // Sort approved/completed requests by processed_at (latest first)
+    if ((a.status === 'approved' || a.status === 'completed') && 
+        (b.status === 'approved' || b.status === 'completed')) {
+      return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
+    }
+    // Pending requests come first
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+    return new Date(b.created_at) - new Date(a.created_at);
   });
 
   return (
