@@ -774,20 +774,10 @@ Download now & start earning!`;
             <p className="text-2xl font-bold text-emerald-400">{referralStats.active}</p>
             <p className="text-gray-500 text-xs">Active Users</p>
           </div>
-          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 rounded-2xl p-4 text-center relative group">
+          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 rounded-2xl p-4 text-center">
             <TrendingUp className="w-6 h-6 text-amber-400 mx-auto mb-2" />
             <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus.toFixed(1)}%</p>
             <p className="text-amber-400/70 text-xs">Mining Bonus</p>
-            {/* Tooltip on hover */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
-              <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl border border-amber-500/30 whitespace-nowrap">
-                <p className="font-bold text-amber-400 mb-1">Bonus from Paid Referrals</p>
-                <p className="text-gray-400">Explorer: 0%</p>
-                <p className="text-gray-400">Startup: 30% of level %</p>
-                <p className="text-gray-400">Growth: 55% of level %</p>
-                <p className="text-gray-400">Elite: 100% of level %</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
