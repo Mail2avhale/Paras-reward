@@ -49,11 +49,11 @@ const ForgotPin = () => {
               <div>
                 <p className="text-xs text-gray-500">Email us at</p>
                 <a 
-                  href="mailto:info@parasreward.com" 
+                  href="mailto:Info@parasreward.com" 
                   className="text-purple-600 font-semibold hover:underline"
                   data-testid="admin-email-link"
                 >
-                  info@parasreward.com
+                  Info@parasreward.com
                 </a>
               </div>
             </div>
@@ -85,7 +85,7 @@ const ForgotPin = () => {
 
           {/* Send Email Button */}
           <a 
-            href="mailto:info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
+            href="mailto:Info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
             className="block"
           >
             <Button
