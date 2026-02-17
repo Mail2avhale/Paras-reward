@@ -134,19 +134,8 @@ const AdminKYC = ({ user }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [kycDocuments, statusFilter, currentPage, selectedDoc, fetchKYCDocuments, fetchStats]);
 
-  // Filter by search (client-side for current page)
-  const filteredDocs = useMemo(() => {
-    if (!searchTerm) return kycDocuments;
-    
-    const search = searchTerm.toLowerCase();
-    return kycDocuments.filter(doc =>
-      doc.user_id?.toLowerCase().includes(search) ||
-      doc.aadhaar_number?.toLowerCase().includes(search) ||
-      doc.pan_number?.toLowerCase().includes(search) ||
-      doc.user_name?.toLowerCase().includes(search) ||
-      doc.user_email?.toLowerCase().includes(search)
-    );
-  }, [kycDocuments, searchTerm]);
+  // Use kycDocuments directly as search is now server-side
+  const filteredDocs = kycDocuments;
 
   // Toggle selection
   const toggleSelect = (kycId, e) => {
