@@ -476,17 +476,37 @@ async def get_withdrawal_history(user_id: str, page: int = 1, limit: int = 10):
 async def get_admin_withdrawal_requests(
     status: str = None,
     page: int = 1,
-    limit: int = 50
+    limit: int = 50,
+    search: str = None
 ):
-    """Get all bank withdrawal requests for admin"""
+    """Get all bank withdrawal requests for admin with search"""
     query = {}
     if status:
         query["status"] = status
     
+    # If search provided, find matching user IDs first
+    if search:
+        search_users = await db.users.find({
+            "$or": [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"phone": {"$regex": search, "$options": "i"}},
+                {"mobile": {"$regex": search, "$options": "i"}}
+            ]
+        }, {"_id": 0, "uid": 1}).to_list(100)
+        user_ids_to_search = [u["uid"] for u in search_users]
+        
+        # Search by user_id or request_id or bank name
+        query["$or"] = [
+            {"user_id": {"$in": user_ids_to_search}} if user_ids_to_search else {"user_id": None},
+            {"request_id": {"$regex": search, "$options": "i"}},
+            {"bank_details.bank_name": {"$regex": search, "$options": "i"}}
+        ]
+    
     skip = (page - 1) * limit
     
     # FIFO: oldest first (ascending order) - first request on top
-    requests = await db.bank_withdrawal_requests.find(
+    requests_list = await db.bank_withdrawal_requests.find(
         query,
         {"_id": 0}
     ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)
@@ -505,7 +525,7 @@ async def get_admin_withdrawal_requests(
     stats_dict = {s["_id"]: {"count": s["count"], "total": s["total_amount"]} for s in stats}
     
     return {
-        "requests": requests,
+        "requests": requests_list,
         "total": total,
         "page": page,
         "stats": stats_dict
