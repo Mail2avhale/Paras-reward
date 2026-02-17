@@ -7850,20 +7850,42 @@ async def get_pending_payments_count():
 
 
 # DISABLED - Moved to routes/admin_*.py
-async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50):
-    """Get VIP payments for admin verification - OPTIMIZED with caching"""
+async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50, search: str = None):
+    """Get VIP payments for admin verification - OPTIMIZED with caching and search"""
     try:
-        # Build cache key
+        # Build cache key (no cache if searching)
         cache_key = f"admin_vip_payments:{status or 'all'}:p{page}:l{limit}"
         
-        # Try cache first (5 second TTL for pending, 30 seconds for others)
-        cached = await cache.get(cache_key)
-        if cached:
-            return cached
+        # Try cache first only if not searching (5 second TTL for pending, 30 seconds for others)
+        if not search:
+            cached = await cache.get(cache_key)
+            if cached:
+                return cached
         
         query = {}
         if status:
             query["status"] = status
+        
+        # If search provided, search across user data
+        user_ids_to_search = []
+        if search:
+            search_lower = search.lower()
+            # Search in users collection first
+            search_users = await db.users.find({
+                "$or": [
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"email": {"$regex": search, "$options": "i"}},
+                    {"phone": {"$regex": search, "$options": "i"}},
+                    {"mobile": {"$regex": search, "$options": "i"}}
+                ]
+            }, {"_id": 0, "uid": 1}).to_list(100)
+            user_ids_to_search = [u["uid"] for u in search_users]
+            
+            # Also search by UTR number in payments
+            query["$or"] = [
+                {"utr_number": {"$regex": search, "$options": "i"}},
+                {"user_id": {"$in": user_ids_to_search}} if user_ids_to_search else {"user_id": None}
+            ]
         
         skip = (page - 1) * limit
         
