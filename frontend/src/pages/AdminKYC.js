@@ -64,7 +64,7 @@ const AdminKYC = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, debouncedSearch]);
 
   // Fetch stats in SINGLE API call (OPTIMIZED)
   const fetchStats = useCallback(async () => {
@@ -81,9 +81,9 @@ const AdminKYC = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    fetchKYCDocuments(1, statusFilter);
+    fetchKYCDocuments(1, statusFilter, debouncedSearch);
     fetchStats();
-  }, [statusFilter, fetchKYCDocuments, fetchStats]);
+  }, [statusFilter, debouncedSearch, fetchKYCDocuments, fetchStats]);
 
   // Handle page change
   const handlePageChange = (newPage) => {
