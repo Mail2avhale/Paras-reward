@@ -8554,22 +8554,43 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
 async def get_kyc_documents(
     status: str = None,
     page: int = 1,
-    limit: int = 20
+    limit: int = 20,
+    search: str = None
 ):
-    """Get KYC documents with pagination and filtering - OPTIMIZED"""
+    """Get KYC documents with pagination, filtering and search - OPTIMIZED"""
     
-    # Build cache key
+    # Build cache key (no cache if searching)
     cache_key = f"kyc_list:{status or 'all'}:p{page}:l{limit}"
     
-    # Try cache first (30 second TTL)
-    cached = await cache.get(cache_key)
-    if cached:
-        return cached
+    # Try cache first only if not searching (30 second TTL)
+    if not search:
+        cached = await cache.get(cache_key)
+        if cached:
+            return cached
     
     # Build query
     query = {}
     if status:
         query["status"] = status
+    
+    # If search provided, find matching user IDs first
+    if search:
+        search_users = await db.users.find({
+            "$or": [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"email": {"$regex": search, "$options": "i"}},
+                {"phone": {"$regex": search, "$options": "i"}},
+                {"mobile": {"$regex": search, "$options": "i"}}
+            ]
+        }, {"_id": 0, "uid": 1}).to_list(100)
+        user_ids_to_search = [u["uid"] for u in search_users]
+        
+        # Search in KYC documents by user_id, aadhaar, pan
+        query["$or"] = [
+            {"user_id": {"$in": user_ids_to_search}} if user_ids_to_search else {"user_id": None},
+            {"aadhaar_number": {"$regex": search, "$options": "i"}},
+            {"pan_number": {"$regex": search, "$options": "i"}}
+        ]
     
     skip = (page - 1) * limit
     
