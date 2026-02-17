@@ -262,7 +262,7 @@ const AdminContactSettings = ({ user }) => {
               </label>
               <input
                 type="email"
-                placeholder="support@parasreward.com"
+                placeholder="Info@parasreward.com"
                 value={settings.email_support}
                 onChange={(e) => handleChange('email_support', e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -276,7 +276,7 @@ const AdminContactSettings = ({ user }) => {
               </label>
               <input
                 type="email"
-                placeholder="business@parasreward.com (optional)"
+                placeholder="Info@parasreward.com (optional)"
                 value={settings.email_business}
                 onChange={(e) => handleChange('email_business', e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
