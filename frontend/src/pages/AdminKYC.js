@@ -20,6 +20,7 @@ const AdminKYC = ({ user }) => {
   const [kycDocuments, setKycDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending');
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [processing, setProcessing] = useState(null); // Now stores {kyc_id, action} being processed
@@ -32,12 +33,22 @@ const AdminKYC = ({ user }) => {
   const [selectedIds, setSelectedIds] = useState(new Set()); // For bulk selection
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  // Fetch KYC documents with server-side pagination
-  const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter) => {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch KYC documents with server-side pagination and search
+  const fetchKYCDocuments = useCallback(async (page = 1, status = statusFilter, search = debouncedSearch) => {
     try {
       setLoading(true);
       const statusParam = status !== 'all' ? `&status=${status}` : '';
-      const response = await axios.get(`${API}/kyc/list?page=${page}&limit=${ITEMS_PER_PAGE}${statusParam}`);
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const response = await axios.get(`${API}/kyc/list?page=${page}&limit=${ITEMS_PER_PAGE}${statusParam}${searchParam}`);
       
       const data = response.data || {};
       const docs = data.documents || [];
