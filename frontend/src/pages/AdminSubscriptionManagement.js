@@ -127,17 +127,11 @@ const AdminSubscriptionManagement = () => {
     }
   };
 
-  const filteredPayments = payments.filter(p => 
-    !searchQuery ||
-    p.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.utr_number?.includes(searchQuery)
-  ).sort((a, b) => {
-    // Sort approved/completed requests by processed_at (latest first)
+  // Sorting for display (approved latest on top)
+  const filteredPayments = [...payments].sort((a, b) => {
     if (a.status === 'approved' && b.status === 'approved') {
       return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
     }
-    // Pending requests come first, then by created_at
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (a.status !== 'pending' && b.status === 'pending') return 1;
     return new Date(b.created_at) - new Date(a.created_at);
