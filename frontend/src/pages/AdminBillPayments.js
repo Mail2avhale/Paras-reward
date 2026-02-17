@@ -230,12 +230,26 @@ const AdminBillPayments = ({ user }) => {
       });
     }
 
-    // Sort - NEWEST FIRST by default (latest requests on top)
-    if (sortOrder === 'newest') {
-      filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    } else {
-      filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
-    }
+    // Sort - For approved/completed, sort by processed_at (latest first)
+    // For pending, sort by created_at (oldest first to process first)
+    filtered.sort((a, b) => {
+      // Approved/Completed requests: latest processed on top
+      if ((a.status === 'approved' || a.status === 'completed') && 
+          (b.status === 'approved' || b.status === 'completed')) {
+        return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
+      }
+      // Pending requests: oldest first (FIFO)
+      if (a.status === 'pending' && b.status === 'pending') {
+        return sortOrder === 'newest' 
+          ? new Date(b.created_at) - new Date(a.created_at)
+          : new Date(a.created_at) - new Date(b.created_at);
+      }
+      // Default sorting
+      if (sortOrder === 'newest') {
+        return new Date(b.created_at) - new Date(a.created_at);
+      }
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
 
     return filtered;
   }, [requests, activeCategory, statusFilter, searchTerm, dateFrom, dateTo, sortOrder]);
