@@ -848,7 +848,15 @@ const AdminBillPayments = ({ user }) => {
                       
                       <div className="flex items-center gap-4 mt-2 text-xs">
                         <span className={`${category.textColor}`}>{category.name}</span>
-                        <span className="text-gray-500">{request.details?.phone_number || request.details?.account_number || '-'}</span>
+                        <span className="text-gray-500">
+                          {request.details?.phone_number || request.details?.account_number || request.details?.consumer_number || '-'}
+                          {request.request_type === 'mobile_recharge' && request.details?.operator && (
+                            <> | {request.details.operator}</>
+                          )}
+                          {request.request_type === 'mobile_recharge' && request.details?.recharge_type && (
+                            <> ({request.details.recharge_type})</>
+                          )}
+                        </span>
                         {/* Live Timer for pending/processing requests */}
                         {(request.status === 'pending' || request.status === 'processing') ? (
                           <LiveTimer createdAt={request.created_at} status={request.status} />
