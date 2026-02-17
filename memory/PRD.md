@@ -5,6 +5,21 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### Mobile Recharge Dropdowns ✅ (Feb 17, 2026)
+**Added:**
+1. Recharge Type dropdown (Prepaid/Postpaid)
+2. Mobile Operator dropdown (Jio, Airtel, Vi, BSNL, MTNL)
+3. Telecom Circle dropdown (23 circles - Delhi NCR, Mumbai, etc.)
+**Files Modified:**
+- `frontend/src/pages/BillPayments.js` - User form with dropdowns
+- `frontend/src/pages/AdminBillPayments.js` - Admin view with better labels
+
+### Weekly EMI/Bank Redeem Rule ✅ (Feb 17, 2026)
+**STRICT Rule:** Only ONE of Pay EMI OR Bank Redeem per week
+- If Pay EMI done → Bank Redeem blocked
+- If Bank Redeem done → Pay EMI blocked
+- Resets every Monday 00:00 UTC
+
 ### KYC Status Bug Fix ✅ (Feb 17, 2026)
 **Problem:** `admin_users.py` मध्ये KYC approve केल्यावर `kyc_status: "approved"` set होत होते, पण withdrawal मध्ये `kyc_status: "verified"` check होत होते. याचा अर्थ admin ने user page वरून KYC approve केले तरी withdrawal काम करत नव्हते.
 **Solution:** 
