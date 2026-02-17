@@ -736,14 +736,74 @@ const BillPayments = ({ user, onLogout }) => {
                   </>
                 )}
 
-                {currentType?.fields.includes('operator') && (
+                {/* Mobile Recharge - Recharge Type (Prepaid/Postpaid) */}
+                {currentType?.fields.includes('recharge_type') && (
+                  <div>
+                    <Label htmlFor="recharge_type" className="text-gray-300 text-sm font-medium mb-2 block">Recharge Type *</Label>
+                    <select
+                      id="recharge_type"
+                      value={formData.recharge_type}
+                      onChange={(e) => setFormData({ ...formData, recharge_type: e.target.value })}
+                      required
+                      className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      data-testid="recharge-type-select"
+                    >
+                      <option value="">-- Select Recharge Type --</option>
+                      <option value="prepaid">📱 Prepaid</option>
+                      <option value="postpaid">📞 Postpaid</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Mobile Recharge - Operator Selection */}
+                {currentType?.fields.includes('operator') && selectedType === 'mobile_recharge' && (
+                  <div>
+                    <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Mobile Operator *</Label>
+                    <select
+                      id="operator"
+                      value={formData.operator}
+                      onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                      required
+                      className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      data-testid="operator-select"
+                    >
+                      <option value="">-- Select Operator --</option>
+                      {mobileOperators.map(op => (
+                        <option key={op.id} value={op.name}>{op.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Mobile Recharge - Circle Selection */}
+                {currentType?.fields.includes('circle') && (
+                  <div>
+                    <Label htmlFor="circle" className="text-gray-300 text-sm font-medium mb-2 block">Telecom Circle *</Label>
+                    <select
+                      id="circle"
+                      value={formData.circle}
+                      onChange={(e) => setFormData({ ...formData, circle: e.target.value })}
+                      required
+                      className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      data-testid="circle-select"
+                    >
+                      <option value="">-- Select Circle --</option>
+                      {telecomCircles.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* DTH/Other Operator - Text Input */}
+                {currentType?.fields.includes('operator') && selectedType !== 'mobile_recharge' && (
                   <div>
                     <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Operator/Provider *</Label>
                     <Input
                       id="operator"
                       value={formData.operator}
                       onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                      placeholder="e.g., Airtel, Jio, Vi"
+                      placeholder="e.g., Tata Sky, Airtel Digital TV, Dish TV"
                       required
                       className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
