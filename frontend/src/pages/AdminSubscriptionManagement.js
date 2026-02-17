@@ -25,20 +25,31 @@ const AdminSubscriptionManagement = () => {
   const [editModal, setEditModal] = useState({ show: false, payment: null });
   const [rejectModal, setRejectModal] = useState({ show: false, payment: null });
   const [imageModal, setImageModal] = useState({ show: false, url: null });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const ITEMS_PER_PAGE = 15;
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset to first page on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     fetchData();
-  }, [activeTab, page]);
+  }, [activeTab, page, debouncedSearch]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch stats and payments
+      // Fetch stats and payments with search
+      const searchParam = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
       const [statsRes, paymentsRes] = await Promise.allSettled([
         axios.get(`${API}/admin/subscription-stats`),
-        axios.get(`${API}/admin/vip-payments?status=${activeTab}&page=${page}&limit=${ITEMS_PER_PAGE}`)
+        axios.get(`${API}/admin/vip-payments?status=${activeTab}&page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`)
       ]);
 
       if (statsRes.status === 'fulfilled') {
