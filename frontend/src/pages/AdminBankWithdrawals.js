@@ -24,11 +24,21 @@ const AdminBankWithdrawals = ({ user }) => {
   // Pagination state
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const ITEMS_PER_PAGE = 15;
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchRequests();
-  }, [statusFilter, page]);
+  }, [statusFilter, page, debouncedSearch]);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -37,7 +47,8 @@ const AdminBankWithdrawals = ({ user }) => {
         params: { 
           status: statusFilter === 'all' ? null : statusFilter,
           page: page,
-          limit: ITEMS_PER_PAGE
+          limit: ITEMS_PER_PAGE,
+          search: debouncedSearch || undefined
         }
       });
       setRequests(response.data.requests || []);
