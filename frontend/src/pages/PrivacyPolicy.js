@@ -14,7 +14,7 @@ const PrivacyPolicy = () => {
   const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
     company_name: 'PARAS REWARD',
-    email: 'support@parasreward.com',
+    email: 'Info@parasreward.com',
     address: 'India'
   });
   const [activeSection, setActiveSection] = useState('');

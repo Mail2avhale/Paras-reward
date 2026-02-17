@@ -12,7 +12,7 @@ const Footer = () => {
   const [contactDetails, setContactDetails] = useState({
     address: 'PARAS REWARD\nMaharashtra, India',
     phone: '+91-XXXXXXXXXX',
-    email: 'support@parasreward.com',
+    email: 'Info@parasreward.com',
     website: 'www.parasreward.com'
   });
   const [socialMedia, setSocialMedia] = useState({
