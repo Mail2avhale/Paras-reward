@@ -1635,8 +1635,8 @@ Download now & start earning!`;
                   <p className="text-xs text-gray-500">Active Users</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus}%</p>
-                  <p className="text-xs text-gray-500">Total Bonus</p>
+                  <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus.toFixed(1)}%</p>
+                  <p className="text-xs text-gray-500">Mining Bonus</p>
                 </div>
               </div>
             </div>
