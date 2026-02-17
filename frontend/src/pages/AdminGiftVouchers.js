@@ -136,16 +136,24 @@ const AdminGiftVouchers = ({ user }) => {
       );
     }
     
-    // Sort based on sortBy option
-    if (sortBy === 'newest') {
-      filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    } else if (sortBy === 'oldest') {
-      filtered.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
-    } else if (sortBy === 'amount_high') {
-      filtered.sort((a, b) => (b.denomination || 0) - (a.denomination || 0));
-    } else if (sortBy === 'amount_low') {
-      filtered.sort((a, b) => (a.denomination || 0) - (b.denomination || 0));
-    }
+    // Sort - Approved/Completed by processed_at (latest first)
+    filtered.sort((a, b) => {
+      if ((a.status === 'approved' || a.status === 'completed') && 
+          (b.status === 'approved' || b.status === 'completed')) {
+        return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
+      }
+      // Apply user-selected sort for other statuses
+      if (sortBy === 'newest') {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      } else if (sortBy === 'oldest') {
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      } else if (sortBy === 'amount_high') {
+        return (b.denomination || 0) - (a.denomination || 0);
+      } else if (sortBy === 'amount_low') {
+        return (a.denomination || 0) - (b.denomination || 0);
+      }
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
     
     return filtered;
   }, [requests, activeTab, timeFilter, searchTerm, sortBy]);
