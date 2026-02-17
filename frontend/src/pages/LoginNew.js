@@ -612,8 +612,8 @@ const LoginNew = ({ onLogin }) => {
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-sm text-amber-800 text-center leading-relaxed">
                   Please contact Admin on<br />
-                  <a href="mailto:info@parasreward.com" className="font-bold text-amber-900 hover:underline">
-                    info@parasreward.com
+                  <a href="mailto:Info@parasreward.com" className="font-bold text-amber-900 hover:underline">
+                    Info@parasreward.com
                   </a>
                   <br /><br />
                   with your <strong>Registered Email</strong> and <strong>Mobile Number</strong> for resetting PIN.
@@ -622,7 +622,7 @@ const LoginNew = ({ onLogin }) => {
 
               {/* Send Email Button */}
               <a 
-                href="mailto:info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
+                href="mailto:Info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
                 className="block"
               >
                 <Button className="w-full bg-purple-600 hover:bg-purple-700">
