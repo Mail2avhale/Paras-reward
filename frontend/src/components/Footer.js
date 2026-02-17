@@ -46,7 +46,7 @@ const Footer = () => {
         setContactDetails({
           address: fullAddress || 'PARAS REWARD\nMaharashtra, India',
           phone: data.phone_primary || '+91-XXXXXXXXXX',
-          email: data.email_support || 'support@parasreward.com',
+          email: data.email_support || 'Info@parasreward.com',
           website: 'www.parasreward.com'
         });
       }

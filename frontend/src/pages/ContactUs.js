@@ -12,7 +12,7 @@ const ContactUs = () => {
   const [contactDetails, setContactDetails] = useState({
     address: "PARAS REWARD\nMaharashtra, India",
     phone: "+91-XXXXXXXXXX",
-    email: "support@parasreward.com",
+    email: "Info@parasreward.com",
     website: "www.parasreward.com"
   });
   const [formData, setFormData] = useState({
@@ -38,7 +38,7 @@ const ContactUs = () => {
           address: data.address || "Maharashtra, India",
           phone: data.phone || "+91-XXXXXXXXXX",
           phone_secondary: data.phone_secondary || "",
-          email: data.email || "support@parasreward.com",
+          email: data.email || "Info@parasreward.com",
           email_business: data.email_business || "",
           website: "www.parasreward.com",
           working_hours: data.working_hours || "9:00 AM - 6:00 PM (Mon-Sat)"
