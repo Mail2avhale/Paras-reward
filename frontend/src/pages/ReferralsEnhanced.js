@@ -551,11 +551,36 @@ Download now & start earning!`;
     }
   };
 
-  // Calculate total bonus from active referrals
-  const totalActiveBonus = referralLevels.reduce((sum, level) => {
-    const activeUsers = level.active_count || level.users?.filter(u => u.is_active).length || 0;
-    return sum + (activeUsers * levelConfig[level.level]?.percent || 0);
-  }, 0);
+  // Plan weights for bonus calculation (matches backend SUBSCRIPTION_PLANS)
+  const planWeights = {
+    explorer: 0,
+    free: 0,
+    startup: 0.30,
+    growth: 0.55,
+    elite: 1.0
+  };
+
+  // Calculate total bonus from active referrals with plan weights
+  const calculateActualBonus = () => {
+    let totalBonus = 0;
+    
+    referralLevels.forEach(level => {
+      const levelPercent = levelConfig[level.level]?.percent || 0;
+      const users = level.users || [];
+      
+      users.forEach(user => {
+        if (user.is_active) {
+          const plan = (user.subscription_plan || 'explorer').toLowerCase();
+          const weight = planWeights[plan] || 0;
+          totalBonus += levelPercent * weight;
+        }
+      });
+    });
+    
+    return totalBonus;
+  };
+
+  const totalActiveBonus = calculateActualBonus();
 
   // Toggle level expansion
   const toggleLevel = (level) => {
