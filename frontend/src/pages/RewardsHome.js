@@ -790,8 +790,18 @@ const RewardsHome = () => {
               </p>
               
               {/* D-U-N-S Registered Seal */}
-              <div className="flex items-center gap-4">
-                <div id="duns-seal-container" className="h-[97px] w-[114px]"></div>
+              <div className="flex items-center">
+                <iframe 
+                  id="Iframe1" 
+                  src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
+                  width="114" 
+                  height="97" 
+                  frameBorder="0" 
+                  scrolling="no" 
+                  allowTransparency="true"
+                  title="D-U-N-S Registered Seal"
+                  style={{ border: 'none' }}
+                />
               </div>
               
               <p className="text-gray-500 text-xs">
