@@ -330,7 +330,7 @@ const NetworkFeed = ({ user }) => {
         className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold relative flex-shrink-0"
       >
         {userItem.avatar ? (
-          <img src={userItem.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+          <img loading="lazy" src={userItem.avatar} alt="" className="w-full h-full rounded-full object-cover" />
         ) : (
           userItem.name?.charAt(0)?.toUpperCase() || 'U'
         )}

@@ -161,7 +161,7 @@ const FollowersList = ({ user, type = 'followers' }) => {
                   className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-bold relative"
                 >
                   {item.avatar ? (
-                    <img src={item.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                    <img loading="lazy" src={item.avatar} alt="" className="w-full h-full rounded-full object-cover" />
                   ) : (
                     item.name?.charAt(0)?.toUpperCase() || 'U'
                   )}
