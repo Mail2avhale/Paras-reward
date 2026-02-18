@@ -607,9 +607,6 @@ const EditModal = ({ payment, processing, onClose, onSave }) => {
               className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white"
             >
               <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="half_yearly">Half Yearly</option>
-              <option value="yearly">Yearly</option>
             </select>
           </div>
 
