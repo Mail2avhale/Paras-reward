@@ -132,6 +132,10 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## API Endpoints
 
+### Admin Service Toggles (NEW)
+- `GET /api/admin/service-toggles` - Get status of all 8 services
+- `POST /api/admin/service-toggles/{service_key}` - Toggle a service on/off
+
 ### Admin KYC Management
 - `GET /api/admin/kyc/pending` - Get pending KYC users (paginated)
 - `POST /api/admin/kyc/{uid}/approve` - Approve user KYC (sets kyc_status: "verified")
