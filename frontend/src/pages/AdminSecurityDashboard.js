@@ -687,8 +687,8 @@ const AdminSecurityDashboard = ({ user }) => {
                 ipWhitelist.whitelist.map((ip, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3">
                     <span className="font-mono">{ip}</span>
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveIp(ip)}>
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveIp(ip)} className="text-red-500">
+                      <Trash2 className="w-4 h-4 mr-1" /> Remove
                     </Button>
                   </div>
                 ))
