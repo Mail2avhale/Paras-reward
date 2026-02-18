@@ -365,7 +365,7 @@ def ensure_services_enabled():
     for service_key in ALL_SERVICES:
         try:
             requests.post(
-                f"{BASE_URL}/api/admin/service-toggles/{service_key}",
+                f"{LOCAL_BASE_URL}/api/admin/service-toggles/{service_key}",
                 json={"enabled": True, "admin_id": "test_cleanup"}
             )
         except:
