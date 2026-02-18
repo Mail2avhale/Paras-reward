@@ -348,9 +348,9 @@ const AdminFixedExpenses = ({ user }) => {
                     <td className="py-3">
                       <button
                         onClick={() => openEdit(expense)}
-                        className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg"
+                        className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg flex items-center gap-1"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-4 w-4" /> Edit
                       </button>
                     </td>
                   </tr>
