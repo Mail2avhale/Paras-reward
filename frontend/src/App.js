@@ -323,6 +323,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/admin/gift-vouchers" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/luxury-claims" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminLuxuryClaims user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
+            <Route path="/admin/service-toggles" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminServiceToggles user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/policies" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/kyc" element={canAccessAdmin(user) ? <AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout> : <Navigate to="/dashboard" />} />
             <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} /> {/* Legacy route redirect */}
