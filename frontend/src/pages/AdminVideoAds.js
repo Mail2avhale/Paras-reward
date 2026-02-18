@@ -252,10 +252,10 @@ const AdminVideoAds = ({ user, onLogout }) => {
                     
                     <div className="flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => openModal(ad)}>
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 mr-1" /> Edit
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(ad.video_ad_id)}>
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(ad.video_ad_id)} className="text-red-500">
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
                     </div>
                   </div>
