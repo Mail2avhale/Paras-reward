@@ -22835,6 +22835,15 @@ async def create_gift_voucher_request(request: Request):
     user_id = data.get("user_id")
     denomination = int(data.get("denomination"))
     
+    # ===== CHECK IF SERVICE IS ENABLED =====
+    service_enabled = await check_service_enabled("gift_voucher")
+    if not service_enabled:
+        raise HTTPException(
+            status_code=503, 
+            detail="Service temporarily down. Please try again later."
+        )
+    # ========================================
+    
     # Validate denomination
     valid_denominations = [10, 50, 100, 500, 1000, 5000]
     if denomination not in valid_denominations:
