@@ -8103,53 +8103,72 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Generate TXN number
         txn_number = f"SUB{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {
-                "$set": {
-                    "status": "approved",
-                    "txn_number": txn_number,
-                    "approved_at": now.isoformat(),
-                    "approved_by": admin_id,
-                    "admin_notes": notes,
-                    "subscription_extended": start_date != now,
-                    "new_expiry": new_expiry,
-                    # Fraud prevention tracking
+        try:
+            await asyncio.wait_for(
+                db.vip_payments.update_one(
+                    {"payment_id": payment_id},
+                    {
+                        "$set": {
+                            "status": "approved",
+                            "txn_number": txn_number,
+                            "approved_at": now.isoformat(),
+                            "approved_by": admin_id,
+                            "admin_notes": notes,
+                            "subscription_extended": start_date != now,
+                            "new_expiry": new_expiry,
+                            # Fraud prevention tracking
+                            "plan_corrected": plan_corrected,
+                            "original_plan_claimed": original_plan,
+                            "original_duration_claimed": original_duration,
+                            "actual_plan_approved": subscription_plan,
+                            "actual_duration_approved": plan_type
+                        }
+                    }
+                ),
+                timeout=15.0
+            )
+        except asyncio.TimeoutError:
+            # User already updated, payment update failed - log and continue
+            print(f"Timeout updating payment status for {payment_id}, but user subscription activated")
+        
+        # Credit to subscription wallet (non-critical, don't fail if timeout)
+        try:
+            await asyncio.wait_for(
+                db.company_wallets.update_one(
+                    {"wallet_type": "subscription"},
+                    {
+                        "$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
+                        "$set": {"last_updated": now.isoformat()}
+                    },
+                    upsert=True
+                ),
+                timeout=5.0
+            )
+        except:
+            pass  # Non-critical
+        
+        # Log activity (non-critical)
+        try:
+            await asyncio.wait_for(
+                db.activity_logs.insert_one({
+                    "log_id": str(uuid.uuid4()),
+                    "action": "vip_payment_approved",
+                    "user_id": user_id,
+                    "admin_id": admin_id,
+                    "payment_id": payment_id,
+                    "amount": payment.get("amount"),
+                    "plan_type": plan_type,
+                    "subscription_plan": subscription_plan,
                     "plan_corrected": plan_corrected,
-                    "original_plan_claimed": original_plan,
-                    "original_duration_claimed": original_duration,
-                    "actual_plan_approved": subscription_plan,
-                    "actual_duration_approved": plan_type
-                }
-            }
-        )
-        
-        # Credit to subscription wallet
-        await db.company_wallets.update_one(
-            {"wallet_type": "subscription"},
-            {
-                "$inc": {"balance": payment.get("amount", 0), "total_credit": payment.get("amount", 0)},
-                "$set": {"last_updated": now.isoformat()}
-            },
-            upsert=True
-        )
-        
-        # Log activity with fraud prevention details
-        await db.activity_logs.insert_one({
-            "log_id": str(uuid.uuid4()),
-            "action": "vip_payment_approved",
-            "user_id": user_id,
-            "admin_id": admin_id,
-            "payment_id": payment_id,
-            "amount": payment.get("amount"),
-            "plan_type": plan_type,
-            "subscription_plan": subscription_plan,
-            "plan_corrected": plan_corrected,
-            "original_claimed": {"plan": original_plan, "duration": original_duration},
-            "extended": start_date != now,
-            "new_expiry": new_expiry,
-            "timestamp": now.isoformat()
-        })
+                    "original_claimed": {"plan": original_plan, "duration": original_duration},
+                    "extended": start_date != now,
+                    "new_expiry": new_expiry,
+                    "timestamp": now.isoformat()
+                }),
+                timeout=5.0
+            )
+        except:
+            pass  # Non-critical
         
         # ========== REFERRAL REWARD SYSTEM (DISABLED) ==========
         # Free Startup Subscription module removed per user request
