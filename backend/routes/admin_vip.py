@@ -136,7 +136,7 @@ async def get_vip_payments(
         if user_ids:
             users_cursor = db.users.find(
                 {"uid": {"$in": user_ids}},
-                {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1}
+                {"_id": 0, "uid": 1, "name": 1, "email": 1, "phone": 1, "mobile": 1, "subscription": 1}
             )
             users_list = await users_cursor.to_list(500)
             users_map = {u["uid"]: u for u in users_list}
