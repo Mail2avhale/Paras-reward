@@ -378,7 +378,7 @@ const AdminAuditService = ({ user }) => {
                     </td>
                     <td className="py-3 px-4">
                       <Button size="sm" variant="ghost" onClick={() => setSelectedLog(log)}>
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 mr-1" /> View
                       </Button>
                     </td>
                   </tr>
