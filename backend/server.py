@@ -8947,6 +8947,94 @@ async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
             raise HTTPException(status_code=500, detail=f"Failed to verify KYC: {str(e)}")
 
 
+@api_router.post("/admin/kyc/sync-status")
+async def sync_kyc_status():
+    """
+    Admin tool to sync KYC status between kyc_documents and users collection.
+    Fixes cases where KYC was verified in kyc_documents but user.kyc_status wasn't updated.
+    """
+    try:
+        fixed_count = 0
+        errors = []
+        
+        # Find all verified KYC documents
+        verified_kycs = await db.kyc_documents.find(
+            {"status": "verified"},
+            {"_id": 0, "kyc_id": 1, "user_id": 1, "verified_at": 1}
+        ).to_list(1000)
+        
+        for kyc in verified_kycs:
+            user_id = kyc.get("user_id")
+            if not user_id:
+                continue
+            
+            # Check if user's kyc_status is not verified
+            user = await db.users.find_one(
+                {"uid": user_id, "kyc_status": {"$ne": "verified"}},
+                {"_id": 0, "uid": 1, "name": 1, "email": 1, "kyc_status": 1}
+            )
+            
+            if user:
+                # Fix the mismatch
+                result = await db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "kyc_status": "verified",
+                        "kyc_synced_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                if result.modified_count > 0:
+                    fixed_count += 1
+                    print(f"Fixed KYC status for user: {user.get('name')} ({user.get('email')})")
+        
+        # Also find rejected KYC and sync
+        rejected_kycs = await db.kyc_documents.find(
+            {"status": "rejected"},
+            {"_id": 0, "kyc_id": 1, "user_id": 1}
+        ).to_list(1000)
+        
+        for kyc in rejected_kycs:
+            user_id = kyc.get("user_id")
+            if not user_id:
+                continue
+            
+            # Check if user doesn't have rejected status and doesn't have verified KYC
+            has_verified = await db.kyc_documents.find_one({"user_id": user_id, "status": "verified"})
+            if has_verified:
+                continue  # User has another verified KYC, skip
+            
+            user = await db.users.find_one(
+                {"uid": user_id, "kyc_status": {"$nin": ["rejected", "verified"]}},
+                {"_id": 0, "uid": 1}
+            )
+            
+            if user:
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {"kyc_status": "rejected"}}
+                )
+                fixed_count += 1
+        
+        # Clear cache
+        try:
+            await cache.delete("kyc_pending_count")
+            for i in range(1, 11):
+                await cache.delete(f"kyc_list:pending:p{i}:l20")
+                await cache.delete(f"kyc_list:verified:p{i}:l20")
+        except:
+            pass
+        
+        return {
+            "success": True,
+            "message": f"KYC status sync completed. Fixed {fixed_count} users.",
+            "fixed_count": fixed_count
+        }
+        
+    except Exception as e:
+        print(f"KYC sync error: {e}")
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+
 async def send_kyc_notification(user_id: str, status: str, kyc_id: str):
     """Send KYC notification in background"""
     try:
