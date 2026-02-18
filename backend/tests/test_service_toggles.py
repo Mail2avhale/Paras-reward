@@ -273,25 +273,22 @@ class TestDisabledServiceBlocking:
         """Test disabled gift_voucher service blocks gift voucher request"""
         # First disable the service
         disable_response = requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/gift_voucher",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/gift_voucher",
             json={"enabled": False, "admin_id": "test_admin"}
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        time.sleep(1)  # Wait for toggle to propagate
-        
-        # Try to make a gift voucher request with retry
+        # Try to make a gift voucher request via localhost
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = self._try_request_with_retry(
-            f"{BASE_URL}/api/gift-voucher/request",
-            {
+        request_response = requests.post(
+            f"{LOCAL_BASE_URL}/api/gift-voucher/request",
+            json={
                 "user_id": test_user_id,
                 "denomination": 100
-            },
-            expected_status=503
+            }
         )
         
-        # Should return 503 with correct error message (may fail for other reasons first)
+        # Should return 503 with correct error message
         if request_response.status_code == 503:
             try:
                 error_detail = request_response.json().get("detail", "")
@@ -299,23 +296,23 @@ class TestDisabledServiceBlocking:
                     f"Expected English error message, got: {error_detail}"
                 print("✅ Disabled gift_voucher correctly blocks requests with 503 and English error message")
             except:
-                print(f"⚠️ Gift voucher test: Got 503 but non-JSON response")
+                print(f"⚠️ Gift voucher: Got 503 but non-JSON response")
         elif request_response.status_code == 404:
-            print("⚠️ Gift voucher test: User not found (service check happens after user lookup)")
+            # User not found - gift_voucher checks user after service check, so this shouldn't happen
+            print("⚠️ Gift voucher: User not found (unexpected - service check should happen first)")
         else:
-            # Check if it's the service down error
             try:
                 error_detail = request_response.json().get("detail", "")
                 if "Service temporarily down" in error_detail:
                     print("✅ Disabled gift_voucher correctly blocks requests with English error message")
                 else:
-                    print(f"⚠️ Gift voucher test: Got {request_response.status_code} - {error_detail}")
+                    print(f"⚠️ Gift voucher: Got {request_response.status_code} - {error_detail}")
             except:
-                print(f"⚠️ Gift voucher test: Got {request_response.status_code} - non-JSON response")
+                print(f"⚠️ Gift voucher: Got {request_response.status_code} - non-JSON response")
         
         # Re-enable the service
         requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/gift_voucher",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/gift_voucher",
             json={"enabled": True, "admin_id": "test_admin"}
         )
 
