@@ -513,10 +513,10 @@ async def clear_cache():
 
 @router.get("/subscription-pricing-reference")
 async def get_pricing_reference():
-    """Get pricing reference"""
+    """Get pricing reference (monthly only)"""
     return {
         "explorer": {"name": "Explorer", "mining_rate": 0.5, "price": 0},
-        "startup": {"name": "Startup", "mining_rate": 1.0, "prices": {"monthly": 199, "quarterly": 549, "half_yearly": 999, "yearly": 1799}},
-        "growth": {"name": "Growth", "mining_rate": 2.0, "prices": {"monthly": 499, "quarterly": 1399, "half_yearly": 2499, "yearly": 4499}},
-        "elite": {"name": "Elite", "mining_rate": 5.0, "prices": {"monthly": 1499, "quarterly": 4199, "half_yearly": 7499, "yearly": 13499}}
+        "startup": {"name": "Startup", "mining_rate": 1.0, "prices": {"monthly": 199}},
+        "growth": {"name": "Growth", "mining_rate": 2.0, "prices": {"monthly": 499}},
+        "elite": {"name": "Elite", "mining_rate": 5.0, "prices": {"monthly": 1499}}
     }
