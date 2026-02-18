@@ -780,11 +780,8 @@ const RewardsHome = () => {
                   src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
                   width="114" 
                   height="97" 
-                  frameBorder="0" 
-                  scrolling="no" 
-                  allowTransparency="true"
                   title="D-U-N-S Registered Seal"
-                  style={{ border: 'none' }}
+                  style={{ border: 'none', background: 'transparent' }}
                 />
                 {/* Fallback badge for mobile/preview */}
                 <a 
