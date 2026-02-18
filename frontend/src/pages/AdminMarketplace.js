@@ -772,7 +772,7 @@ const AdminMarketplace = ({ user }) => {
                       onClick={() => handleDeleteProduct(product.product_id)}
                       data-testid={`delete-product-${product.product_id}`}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete
                     </Button>
                   </div>
                 </div>
