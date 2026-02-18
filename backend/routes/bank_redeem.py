@@ -326,7 +326,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if not toggles.get("bank_redeem", True):
         raise HTTPException(
             status_code=503, 
-            detail="Bank Redeem service is temporarily unavailable. Please try again later."
+            detail="Service temporarily down. Please try again later."
         )
     # ===================================================
     
