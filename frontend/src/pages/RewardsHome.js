@@ -771,6 +771,12 @@ const RewardsHome = () => {
               <p className="text-gray-400 text-sm">
                 © {new Date().getFullYear()} {contactInfo.company_name || 'Paras Reward'}. {t('allRightsReserved')}
               </p>
+              
+              {/* D-U-N-S Registered Seal */}
+              <div className="flex items-center gap-4">
+                <div id="duns-seal-container" className="h-[97px] w-[114px]"></div>
+              </div>
+              
               <p className="text-gray-500 text-xs">
                 {t('termsApply')}
               </p>
