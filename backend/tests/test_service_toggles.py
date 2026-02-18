@@ -14,6 +14,8 @@ import os
 import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# For direct backend testing (bypassing Cloudflare), use localhost
+LOCAL_BASE_URL = "http://localhost:8001"
 
 # All 8 services as per PRD
 ALL_SERVICES = [
