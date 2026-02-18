@@ -1648,9 +1648,9 @@ async def get_subscription_pricing():
     settings = await db.settings.find_one({}, {"_id": 0, "subscription_pricing": 1})
     
     default_pricing = {
-        "startup": {"monthly": 299, "quarterly": 897, "half_yearly": 1495, "yearly": 2990},
-        "growth": {"monthly": 549, "quarterly": 1647, "half_yearly": 2745, "yearly": 5490},
-        "elite": {"monthly": 799, "quarterly": 2397, "half_yearly": 3995, "yearly": 7990}
+        "startup": {"monthly": 299},
+        "growth": {"monthly": 549},
+        "elite": {"monthly": 799}
     }
     
     if settings and "subscription_pricing" in settings:
