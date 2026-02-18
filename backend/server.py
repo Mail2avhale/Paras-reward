@@ -1754,6 +1754,42 @@ PARTNER_ISSUE_MESSAGES = {
     "shopping": "Our logistics partner has reached weekly dispatch capacity. Next available slot from {next_monday}."
 }
 
+# ========== SERVICE TOGGLE SETTINGS ==========
+# Default status for all services (can be overridden by admin settings in DB)
+DEFAULT_SERVICE_STATUS = {
+    "mobile_recharge": True,
+    "dish_recharge": True,
+    "electricity_bill": True,
+    "credit_card_payment": True,
+    "loan_emi": True,
+    "gift_voucher": True,
+    "shopping": True,
+    "bank_redeem": True
+}
+
+async def get_service_status(service_type: str = None) -> dict:
+    """Get current service status from database settings"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "service_toggles": 1})
+        toggles = settings.get("service_toggles", {}) if settings else {}
+        
+        # Merge with defaults
+        result = {**DEFAULT_SERVICE_STATUS}
+        for key, value in toggles.items():
+            if key in result:
+                result[key] = value
+        
+        if service_type:
+            return {"enabled": result.get(service_type, True), "service": service_type}
+        return result
+    except:
+        return DEFAULT_SERVICE_STATUS if not service_type else {"enabled": True, "service": service_type}
+
+async def check_service_enabled(service_type: str) -> bool:
+    """Check if a service is enabled"""
+    status = await get_service_status(service_type)
+    return status.get("enabled", True)
+
 def get_current_week_bounds():
     """Get Monday 00:00 and Sunday 23:59:59 of the current week"""
     now = datetime.now(timezone.utc)
