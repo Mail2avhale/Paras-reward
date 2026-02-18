@@ -199,15 +199,54 @@ const AdminSubscriptionManagement = () => {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-        <Input
-          placeholder="Search by name, email, UTR..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-gray-800 border-gray-700 text-white"
-        />
+      {/* Search & Date Filter */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        {/* Text Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Input
+            placeholder="Search by name, email, UTR..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-gray-800 border-gray-700 text-white"
+          />
+        </div>
+        
+        {/* Date From */}
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-500" />
+          <Input
+            type="date"
+            placeholder="From Date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="bg-gray-800 border-gray-700 text-white w-40"
+          />
+        </div>
+        
+        {/* Date To */}
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">to</span>
+          <Input
+            type="date"
+            placeholder="To Date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="bg-gray-800 border-gray-700 text-white w-40"
+          />
+        </div>
+        
+        {/* Clear Filters */}
+        {(dateFrom || dateTo || searchQuery) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setPage(1); }}
+            className="border-gray-700 text-gray-400 hover:text-white"
+          >
+            <X className="w-4 h-4 mr-1" /> Clear
+          </Button>
+        )}
       </div>
 
       {/* Payments List */}
