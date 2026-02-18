@@ -9035,6 +9035,68 @@ async def sync_kyc_status():
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
 
+@api_router.post("/admin/kyc/resync/{user_id}")
+async def resync_user_kyc(user_id: str):
+    """
+    Re-sync KYC status for a specific user.
+    Checks kyc_documents collection and updates user.kyc_status accordingly.
+    """
+    try:
+        # Check user exists
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "name": 1, "email": 1, "kyc_status": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get latest KYC document for this user
+        latest_kyc = await db.kyc_documents.find_one(
+            {"user_id": user_id},
+            {"_id": 0, "kyc_id": 1, "status": 1, "verified_at": 1, "submitted_at": 1}
+        )
+        
+        if not latest_kyc:
+            # No KYC document found
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"kyc_status": "not_submitted"}}
+            )
+            return {
+                "success": True,
+                "user_id": user_id,
+                "old_status": user.get("kyc_status"),
+                "new_status": "not_submitted",
+                "message": "No KYC document found. Status set to not_submitted."
+            }
+        
+        kyc_status = latest_kyc.get("status", "pending")
+        old_status = user.get("kyc_status")
+        
+        # Update user's kyc_status to match the document
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "kyc_status": kyc_status,
+                "kyc_synced_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "user_name": user.get("name"),
+            "user_email": user.get("email"),
+            "old_status": old_status,
+            "new_status": kyc_status,
+            "kyc_document_status": kyc_status,
+            "message": f"KYC status synced: {old_status} → {kyc_status}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC resync error: {e}")
+        raise HTTPException(status_code=500, detail=f"Resync failed: {str(e)}")
+
+
 async def send_kyc_notification(user_id: str, status: str, kyc_id: str):
     """Send KYC notification in background"""
     try:
