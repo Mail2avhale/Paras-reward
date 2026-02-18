@@ -499,7 +499,10 @@ async def login(
             ip_address=real_ip,
             user_identifier=identifier
         )
-        raise HTTPException(status_code=404, detail="User not registered. Please register to continue.")
+        raise HTTPException(
+            status_code=404, 
+            detail="Account not found. This email/mobile is not registered. Please Sign Up to create a new account."
+        )
     
     # Verify password - check pin_hash, password_hash (new format), and password (legacy format)
     # Priority: pin_hash > password_hash > password (legacy)
