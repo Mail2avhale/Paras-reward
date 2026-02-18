@@ -391,12 +391,44 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
               <p className="text-white font-mono text-sm truncate">{payment.utr_number || 'N/A'}</p>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-2">
-              <p className="text-gray-500 text-xs">Date</p>
+              <p className="text-gray-500 text-xs">Submit Date</p>
               <p className="text-white text-sm">
-                {payment.submitted_at ? new Date(payment.submitted_at).toLocaleDateString() : '-'}
+                {payment.submitted_at ? new Date(payment.submitted_at).toLocaleDateString() : 
+                 payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '-'}
               </p>
             </div>
           </div>
+
+          {/* Approved tab extra details - Approve Date, Expiry, Remaining Days */}
+          {tab === 'approved' && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
+                <p className="text-green-400 text-xs">Approve Date</p>
+                <p className="text-green-300 text-sm font-medium">
+                  {payment.processed_at ? new Date(payment.processed_at).toLocaleDateString() : 
+                   payment.approved_at ? new Date(payment.approved_at).toLocaleDateString() : '-'}
+                </p>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2">
+                <p className="text-blue-400 text-xs">Expiry Date</p>
+                <p className="text-blue-300 text-sm font-medium">
+                  {payment.new_expiry ? new Date(payment.new_expiry).toLocaleDateString() : 
+                   payment.expires_at ? new Date(payment.expires_at).toLocaleDateString() : '-'}
+                </p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">
+                <p className="text-amber-400 text-xs">Remaining Days</p>
+                <p className="text-amber-300 text-sm font-medium">
+                  {(() => {
+                    const expiry = payment.new_expiry || payment.expires_at;
+                    if (!expiry) return '-';
+                    const days = Math.ceil((new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24));
+                    return days > 0 ? `${days} days` : 'Expired';
+                  })()}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Rejection reason for rejected tab */}
           {tab === 'rejected' && payment.rejection_reason && (
