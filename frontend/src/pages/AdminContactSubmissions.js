@@ -374,7 +374,7 @@ const AdminContactSubmissions = ({ user }) => {
                   onClick={() => handleDelete(selectedSubmission.submission_id)}
                   className="py-3 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 border border-red-600/30"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-5 h-5" /> Delete
                 </button>
               </div>
 
