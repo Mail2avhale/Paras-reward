@@ -481,11 +481,11 @@ const SubscriptionPlans = ({ user }) => {
             const actualPrice = selectedPlan.pricing?.[key] || selectedPlan.pricing?.monthly;
             const monthlyPrice = selectedPlan.pricing?.monthly || 0;
             
-            // Calculate original price (monthly * months)
-            const months = key === 'monthly' ? 1 : key === 'quarterly' ? 3 : key === 'half_yearly' ? 6 : 12;
+            // Calculate original price (monthly only now)
+            const months = 1;
             const originalPrice = monthlyPrice * months;
             const savings = originalPrice - actualPrice;
-            const hasDiscount = key !== 'monthly' && savings > 0;
+            const hasDiscount = false;
             
             return (
               <motion.div
