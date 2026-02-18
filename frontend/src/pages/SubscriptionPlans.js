@@ -63,10 +63,7 @@ const SubscriptionPlans = ({ user }) => {
   };
 
   const durationLabels = {
-    monthly: { label: t('monthly'), days: 30 },
-    quarterly: { label: t('quarterly'), days: 90, discount: '10% off' },
-    half_yearly: { label: t('halfYearly'), days: 180, discount: '15% off' },
-    yearly: { label: t('yearly'), days: 365, discount: '25% off' }
+    monthly: { label: t('monthly'), days: 30 }
   };
 
   useEffect(() => {
