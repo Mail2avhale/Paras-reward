@@ -1640,10 +1640,7 @@ SUBSCRIPTION_PLANS = {
 }
 
 SUBSCRIPTION_DURATIONS = {
-    "monthly": 30,
-    "quarterly": 90,
-    "half_yearly": 180,
-    "yearly": 365
+    "monthly": 30
 }
 
 async def get_subscription_pricing():
