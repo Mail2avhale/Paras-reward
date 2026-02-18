@@ -7988,7 +7988,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
 
 # DISABLED - Moved to routes/admin_*.py
 async def approve_vip_payment(payment_id: str, request: Request):
-    """Approve VIP payment and activate membership with fraud prevention"""
+    """Approve VIP payment and activate membership with fraud prevention and timeout handling"""
     try:
         print(f"VIP Payment approve request: payment_id={payment_id}")
         
@@ -7998,8 +7998,15 @@ async def approve_vip_payment(payment_id: str, request: Request):
         correct_plan = data.get("correct_plan")  # NEW: Admin can specify correct plan
         correct_duration = data.get("correct_duration")  # NEW: Admin can specify correct duration
         
-        # Get payment
-        payment = await db.vip_payments.find_one({"payment_id": payment_id})
+        # Get payment with timeout
+        try:
+            payment = await asyncio.wait_for(
+                db.vip_payments.find_one({"payment_id": payment_id}),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
+        
         if not payment:
             print(f"VIP Payment not found: {payment_id}")
             raise HTTPException(status_code=404, detail=f"Payment not found: {payment_id}")
@@ -8034,8 +8041,14 @@ async def approve_vip_payment(payment_id: str, request: Request):
             "yearly": 365
         }.get(plan_type, 30)
         
-        # Get current user to check existing subscription
-        user = await db.users.find_one({"uid": user_id})
+        # Get current user to check existing subscription with timeout
+        try:
+            user = await asyncio.wait_for(
+                db.users.find_one({"uid": user_id}),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
         
         # EXTEND LOGIC: Add new days to existing subscription if not expired
         start_date = now
@@ -8065,20 +8078,26 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Get subscription plan from payment (default to startup for legacy)
         subscription_plan = payment.get("subscription_plan", "startup")
         
-        # Update user with new subscription system
-        await db.users.update_one(
-            {"uid": user_id},
-            {
-                "$set": {
-                    "membership_type": "vip",  # Legacy compatibility
-                    "subscription_plan": subscription_plan,
-                    "subscription_expiry": new_expiry,
-                    "vip_expiry": new_expiry,  # Legacy compatibility
-                    "vip_activated_at": now.isoformat(),
-                    "last_subscription_renewed": now.isoformat()
-                }
-            }
-        )
+        # Update user with new subscription system - with timeout
+        try:
+            await asyncio.wait_for(
+                db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "membership_type": "vip",  # Legacy compatibility
+                            "subscription_plan": subscription_plan,
+                            "subscription_expiry": new_expiry,
+                            "vip_expiry": new_expiry,  # Legacy compatibility
+                            "vip_activated_at": now.isoformat(),
+                            "last_subscription_renewed": now.isoformat()
+                        }
+                    }
+                ),
+                timeout=15.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout while updating user. Please try again.")
         
         # Update payment status with correction info
         # Generate TXN number
