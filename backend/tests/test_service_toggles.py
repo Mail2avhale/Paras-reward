@@ -230,22 +230,19 @@ class TestDisabledServiceBlocking:
         """Test disabled bank_redeem service blocks bank redeem request"""
         # First disable the service
         disable_response = requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/bank_redeem",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/bank_redeem",
             json={"enabled": False, "admin_id": "test_admin"}
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        time.sleep(1)  # Wait for toggle to propagate
-        
-        # Try to make a bank redeem request with retry
+        # Try to make a bank redeem request via localhost
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = self._try_request_with_retry(
-            f"{BASE_URL}/api/bank-redeem/request/{test_user_id}",
-            {"amount_inr": 500},
-            expected_status=503
+        request_response = requests.post(
+            f"{LOCAL_BASE_URL}/api/bank-redeem/request/{test_user_id}",
+            json={"amount_inr": 500}
         )
         
-        # Should return 503 with correct error message (or 404 if user doesn't exist)
+        # Should return 503 or 404 (user not found - service check happens after user lookup)
         if request_response.status_code == 503:
             error_detail = request_response.json().get("detail", "")
             assert "Service temporarily down. Please try again later." in error_detail, \
@@ -253,21 +250,22 @@ class TestDisabledServiceBlocking:
             print("✅ Disabled bank_redeem correctly blocks requests with 503 and English error message")
         elif request_response.status_code == 404:
             # User not found - service check happens after user check in bank_redeem
-            print("⚠️ Bank redeem test: User not found (service check happens after user lookup)")
+            # This is expected behavior - bank redeem checks user first
+            print("⚠️ Bank redeem: User not found (service check happens after user lookup)")
+            # Let's verify the service check would work with an existing but incomplete user
         else:
-            # Check if it's the service down error
             try:
                 error_detail = request_response.json().get("detail", "")
                 if "Service temporarily down" in error_detail:
                     print("✅ Disabled bank_redeem correctly blocks requests with English error message")
                 else:
-                    print(f"⚠️ Bank redeem test: Got {request_response.status_code} - {error_detail}")
+                    print(f"⚠️ Bank redeem: Got {request_response.status_code} - {error_detail}")
             except:
-                print(f"⚠️ Bank redeem test: Got {request_response.status_code} - non-JSON response")
+                print(f"⚠️ Bank redeem: Got {request_response.status_code} - non-JSON response")
         
         # Re-enable the service
         requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/bank_redeem",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/bank_redeem",
             json={"enabled": True, "admin_id": "test_admin"}
         )
 
