@@ -20,6 +20,10 @@ const AdminSubscriptionManagement = () => {
   const [processing, setProcessing] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Date filter
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
   // Modals
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
   const [editModal, setEditModal] = useState({ show: false, payment: null });
@@ -40,13 +44,16 @@ const AdminSubscriptionManagement = () => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, page, debouncedSearch]);
+  }, [activeTab, page, debouncedSearch, dateFrom, dateTo]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch stats and payments with search
-      const searchParam = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
+      // Fetch stats and payments with search and date filter
+      let searchParam = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
+      if (dateFrom) searchParam += `&date_from=${dateFrom}`;
+      if (dateTo) searchParam += `&date_to=${dateTo}`;
+      
       const [statsRes, paymentsRes] = await Promise.allSettled([
         axios.get(`${API}/admin/subscription-stats`),
         axios.get(`${API}/admin/vip-payments?status=${activeTab}&page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`)
