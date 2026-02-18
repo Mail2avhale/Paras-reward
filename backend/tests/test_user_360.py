@@ -8,7 +8,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cache-indexing.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://paras-admin-ops.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@paras.com"

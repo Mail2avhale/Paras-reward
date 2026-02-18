@@ -1,146 +1,175 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to fix critical performance and stability issues in their production application, primarily a recurring Database temporarily unavailable error on the Admin Subscription Management page and a broken user list on the Invite/Referral page.
+Throughout the session, the user made several requests to fix bugs, improve existing features, and add new configurations to their Paras Reward application. The key requests included:
 
-During the session, the user added the following requirements:
-1.  Add pagination and sorting to the Admin Subscription and Redeem to Bank pages.
-2.  The sorting should be First-In, First-Out (FIFO), showing the oldest requests first.
-3.  Investigate and optimize the Admin KYC page for faster loading and approval.
-4.  Remove the Free Startup Subscription module entirely.
-5.  Re-investigate and fix the level-wise user data not appearing on the referral page, which is a persistent issue.
+1.  **KYC Flow Improvements:**
+    *   Add a direct KYC approval feature to the Admin User 360 page.
+    *   Fix a bug where a user's KYC status remained pending even after admin approval, by creating a Sync Status feature for admins.
+    *   Improve the user-facing KYC upload process with better validation, image compression, and error handling.
+
+2.  **Financial Rules & Limits:**
+    *   Configure the monthly prices for subscription plans to fix the Monthly Redeem Limit calculation.
+    *   Clarify and configure the 5-level referral mining bonus system, including setting the Explorer plan's bonus contribution to zero and adjusting the weights for other paid plans. The user decided against capping the referral bonus.
+    *   Implement a strict weekly rule allowing users to perform **either** a Pay EMI transaction **or** a Bank Redeem, but not both in the same week.
+
+3.  **Admin Panel Enhancements:**
+    *   Fix slow/unresponsive search on several admin pages by implementing server-side, debounced searching.
+    *   Change the sorting on admin pages (Subscriptions, Redeem, etc.) to show the latest approved/completed requests at the top.
+    *   Add a feature for admins to temporarily enable or disable the Bill Pay and Bank Redeem services independently.
+
+4.  **UI/UX and General Fixes:**
+    *   Enhance the Mobile Recharge form with dropdowns for Prepaid/Postpaid, Operator, and Circle.
+    *   Update all instances of the contact email to the new .
+    *   Fix a subscription payment proof upload failure by adding client-side image compression.
+    *   Correct the Mining Bonus rate displayed on the Invite page to reflect the actual calculated value based on plan weights.
+    *   Fix a server timeout error that occurred during subscription payment approval.
+    *   Provide a more user-friendly error message for non-registered users attempting to log in.
 
 **User's preferred language**: Marathi. The next agent **MUST** continue the conversation in Marathi.
 
 **what currently exists?**
-- A full-stack application with a React frontend and FastAPI backend.
-- The Admin Subscription Management page has been completely rebuilt with simplified backend logic, resolving the critical database timeout errors. The complex  circuit breaker and retry logic were removed in favor of stable, sequential operations.
-- The Admin Subscription and Redeem to Bank pages now have pagination and use FIFO sorting (oldest first) as requested.
-- The Admin KYC page was analyzed and confirmed to be already optimized with caching, batch queries, and efficient UI patterns; no changes were made.
-- The backend API for the referral page () is confirmed to be returning the correct user data.
+The application is a full-stack React and FastAPI platform. During this session, numerous bugs were fixed and features were added, significantly improving stability and functionality.
+
+**Key Completed Work:**
+-   **Bug Fixes:** A critical bug causing a mismatch in KYC status ( vs. ) has been resolved. Server timeouts during subscription approval and KYC submission have been addressed by adding  timeouts.
+-   **KYC Management:** Admins can now approve/reject KYC directly from the User 360 page. A Sync Status tool was created for admins to fix any KYC status inconsistencies between user profiles and KYC documents. The user-facing KYC upload form was improved with image compression and better validation.
+-   **Financial Controls:** Subscription pricing and referral bonus weights have been configured in the database, fixing redeem limit calculations. A strict rule now prevents users from performing both a Bank Redeem and Pay EMI in the same week.
+-   **Admin Panel UX:** Search functionality on key admin pages is now instant and server-side. Sorting for approved items now correctly shows the latest on top.
+-   **General Improvements:** The mobile recharge form is more user-friendly with new dropdowns. All contact emails have been standardized. The mining bonus rate displayed to users is now accurate.
 
 **Last working item**:
--   **Last item agent was working:** The agent was acknowledging two new high-priority tasks from the user:
-    1.  Removing the Free Startup Subscription module.
-    2.  Performing a root-cause analysis of the recurring issue where level-wise data fails to display on the Invite/Referral page.
--   **Status:** NOT STARTED
+-   **Last item agent was working:** Implementing a feature for an administrator to temporarily enable or disable the Bill Pay and Bank Redeem services from the admin panel. The backend logic and API endpoints have been created, but the frontend UI is not yet built.
+-   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?**
-    -   **For Free Startup Subscription removal:** Use both the frontend and backend testing agents. The backend agent should verify that no essential logic breaks after removing the module. The frontend agent should confirm all related UI elements are gone from the user interface.
-    -   **For Invite Page Issue:** Use the frontend testing agent. The primary goal is to log in as a non-admin user (), navigate to the Invite page, and debug the React component () to understand why the data, which the API provides, is not being rendered.
+-   **Which testing method agent to use?** Both. First, use  to test the new backend endpoints () and verify that user-facing endpoints (, ) correctly block requests when a service is disabled. Then, after creating the frontend UI, use the screenshot tool to verify the new admin page and its functionality.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Invite Page Not Displaying Users by Level**
+-   **Issue 1 (P0): Complete Admin Service Toggles Feature**
 
 **Issues Detail:**
--   **Issue 1: Invite Page Not Displaying Users by Level**
-    -   **Attempted fixes:** The agent confirmed the backend API () returns the correct data. The testing agent also ran a test, but the issue persists for regular users as reported by the user with a screenshot. This strongly indicates a frontend rendering bug.
+-   **Issue 1: Complete Admin Service Toggles Feature**
+    -   **Attempted fixes:** The backend infrastructure is in place. New endpoints (, ) have been created in  to manage service status. Checks have been added to the user-facing  and  endpoints to respect these toggles.
     -   **Next debug checklist:**
-        1.  Log in as the test user:  / PIN: .
-        2.  Navigate to the referral/invite page.
-        3.  Examine the frontend file: .
-        4.  Use browser developer tools to inspect the component's state, props, and any console errors during the page load.
-        5.  Verify the logic that maps the API response data to the UI elements that are supposed to display the user list for each level.
-    -   **Why fix this issue and what will be achieved with the fix?** The referral system is a key growth feature. This bug makes the feature unusable and frustrates users.
+        1.  Create a new frontend page at .
+        2.  Add a route and a link in the admin navigation for this new page.
+        3.  On the page, fetch the initial status of the services from .
+        4.  Implement UI switches for Bill Pay Service and Bank Redeem Service.
+        5.  Connect the switches to call the  endpoint on change, passing the correct service name.
+        6.  Add user feedback (e.g., toast notifications) on successful status changes.
+        7.  Test the full flow: disable a service as admin, try to use it as a user (expect failure), re-enable it, and try again (expect success).
+    -   **Why fix this issue and what will be achieved with the fix?** It provides the admin with critical operational control to instantly disable financial services during maintenance or emergencies without needing a new deployment.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
+    -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   None.
+-   **Task 1: Admin Service Toggles for Bill Pay and Redeem to Bank**
+    -   **Where to resume:** Begin by creating the frontend component .
+    -   **What will be achieved with this?** A new admin UI page will allow for enabling/disabling key financial services.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P0: Remove Free Startup Subscription Module:** Find and delete all code related to this feature from both the frontend and backend.
--   **P1: Implement UPI Payment Gateway:** Integrate a UPI payment solution like Razorpay using the .
+-   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay) using .
 
 **Future Tasks:**
--   **P1: Design and Implement DIRECTOR 365 Subscription Plan.**
--   **P1: Advanced PRC Burning Concepts.**
--   **P2: Add Force PIN Change Feature.**
--   **P3: Full Audit of Backend Subscription Pricing.**
+-   **P1:** Design and implement the DIRECTOR 365 subscription plan.
+-   **P1:** Implement advanced PRC (point) burning concepts.
+-   **P2:** Add a Force PIN Change feature for users.
+-   **P3:** Conduct a full audit of the backend subscription pricing logic.
+-   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3) to improve database performance and scalability.
 
 **Completed work in this session**
--   **Admin Subscription Page Rebuild (DONE):** Successfully resolved the Database temporarily unavailable error by rewriting  and the corresponding frontend component to remove complexity and ensure stability. The fix was verified with a 100% pass rate from the testing agent.
--   **Admin Pages Sorting & Pagination (DONE):** Implemented pagination on the Redeem to Bank page and changed the sorting order to FIFO (oldest first) on both the Subscription and Bank Redeem pages per user request.
--   **KYC Page Optimization Check (DONE):** Investigated the KYC page and confirmed it was already well-optimized. No changes were necessary.
+-   **KYC Flow Overhaul (DONE):** Fixed the  vs.  status bug, added KYC approval to the User 360 page, and implemented a Sync Status tool for admins.
+-   **Financial Rules Configuration (DONE):** Set subscription prices and referral bonus weights in the database, and implemented the strict EMI or Redeem weekly limit.
+-   **Admin Search & Sort (DONE):** Implemented server-side debounced search and correct sorting for approved items on multiple admin pages.
+-   **Image Upload Fix (DONE):** Added client-side compression to the payment proof upload component, fixing failures for large images.
+-   **Server Timeout Fixes (DONE):** Added  to critical DB operations to prevent the server from hanging.
+-   **UI/UX Enhancements (DONE):** Improved the mobile recharge form, updated the contact email across the site, fixed the bonus rate display, and implemented better login error messages.
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
 
 **Known issue recurrence from previous fork**
--   The Invite Page Not Displaying Users by Level is a recurring issue. While the Database temporarily unavailable error was the previous major recurring problem, it has been resolved in this session.
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Root Cause Simplification:** Solved a persistent database timeout by removing complex, layered error-handling (circuit breaker, async gathers) and reverting to simple, sequential database operations.
--   **FIFO Sorting:** Implemented First-In, First-Out sorting in MongoDB queries using .
--   **State-driven UI:** Investigated and modified React components to handle pagination state and API data fetching based on tab changes and user interaction.
+-   **Feature Toggling:** Implementing a database-backed system to remotely enable/disable application features.
+-   **Server-Side Search & Debouncing:** Offloading filtering/searching from the client to the backend API to handle pagination and improve performance, combined with debouncing on the frontend to prevent excessive API calls.
+-   **Client-Side Image Compression:** Using libraries like  to reduce image size before uploading, saving bandwidth and preventing upload failures.
+-   **Async Timeout Handling:** Wrapping potentially long-running async operations (like database calls) in  to prevent requests from hanging and to provide graceful error handling.
+-   **Database Record Synchronization:** Creating an admin tool to run a batch process that finds and corrects data inconsistencies between different collections.
 
 **key DB schema**
--   No schema changes were made. Queries on  and  were modified to sort by  in ascending order.
+-   **service_status (New Collection):** Stores the enabled/disabled state of core services.
+    -   Example documents: , 
+-   **settings (Updated Documents):** The  and  configurations within the settings collection were updated with new values.
 
 **changes in tech stack**
--   The  library is no longer actively used for the subscription approval process, simplifying the stack and removing a point of failure.
+-    was added as a frontend dependency.
 
 **All files of reference**
--   : Backend for the recurring Invite Page issue.
--   : Frontend file for the recurring Invite Page issue.
--   : Core file for subscription management (now stable).
--   : Core file for bank withdrawals.
--   : Frontend for subscription management.
--   : Frontend for bank withdrawals.
+-   : Contains the new backend logic for service toggles.
+-   : The frontend page that needs to be created.
+-   : Modified for the new weekly transaction limit and service toggle check.
+-   : Modified for the new weekly transaction limit and service toggle check.
+-   : Contains the fix for the image upload issue.
+-   , , : Contain the new server-side search implementation.
 
 **Areas that need refactoring**:
--   The Free Startup Subscription feature needs to be cleanly removed from the entire codebase. This will involve identifying and deleting related routes, logic, and UI components.
+-   The practice of storing KYC documents and payment receipts as base64 strings in MongoDB is a significant scalability risk. This data should be migrated to a dedicated object storage service (like AWS S3) to reduce database load and size.
 
 **key api endpoints**
--   : **(UNDER INVESTIGATION)** API returns data, but the frontend fails to render it. This is the top priority bug.
--   : **(FIXED)**
--   : **(MODIFIED)** Sorting changed to FIFO.
--   : **(MODIFIED)** Sorting changed to FIFO.
+-   : **(NEW)** Toggles a service ( or ) on or off.
+-   : **(NEW)** Fetches the current status of all toggleable services.
+-   : **(NEW)** Triggers a batch job to fix KYC status inconsistencies.
+-   , , : **(MODIFIED)** Now accept a  query parameter to perform server-side searching.
+-   , : **(MODIFIED)** Now include checks for both the new service toggles and the strict weekly transaction limit.
 
 **Critical Info for New Agent**
 -   You **MUST** communicate with the user in **Marathi**.
--   The highest priority is fixing the **Invite/Referral page**. This is a recurring frontend rendering bug. Do not focus on the backend API, as it has been verified to work. Log in as a regular user to reproduce the issue.
--   The second priority is to completely **remove the Free Startup Subscription module**.
--   The critical Database temporarily unavailable error has been solved by simplifying the code in . Do not re-introduce complexity like circuit breakers to that file.
+-   Your immediate task is to complete the Admin Service Toggles feature. The backend is largely complete; you need to build the frontend page (), integrate it, and test the entire flow end-to-end.
+-   The application now has many important business rules configured in the database ( and  collections). Be aware of these when making changes to related features.
 
 **documents and test reports created in this job**
--   
--   
+-    (Updated)
 -   
 
 **Last 10 User Messages and any pending HUMAN messages**
--   **User:** Asks to remove the Free Startup Subscription module and fix the level-wise data display issue on the referral page. **Status: PENDING**
--   **User:** Asks to optimize the KYC page for fast loading and approval. **Status: RESOLVED**
--   **User:** Requests Oldest first (FIFO) sorting for admin pages. **Status: RESOLVED**
--   **User:** Asks to add pagination and sorting to the Subscription and Redeem to Bank pages. **Status: RESOLVED**
--   **Agent:** Confirms completion of the FIFO sorting change. **Status: RESOLVED**
--   **Agent:** Provides a final summary of completed work before the user's new requests. **Status: ACKNOWLEDGED**
--   **Agent:** Confirms pagination and sorting are working on both admin pages. **Status: RESOLVED**
+1.  **User:** Wants to temporarily enable/disable Bill Pay and Bank Redeem services. **Status: IN PROGRESS**
+2.  **User:** Reported a KYC status sync issue where admin approval didn't reflect on the user's profile. **Status: RESOLVED** (A sync tool was built).
+3.  **User:** Requested better error handling for non-registered users trying to log in. **Status: RESOLVED**.
+4.  **User:** Reported subscription approval timeouts and KYC upload failures. **Status: RESOLVED** (Tested with testing agent).
+5.  **User:** Asked to remove a tooltip from the Invite page. **Status: RESOLVED**.
+6.  **User:** Requested the Invite page to show the *actual* mining bonus rate. **Status: RESOLVED**.
+7.  **User:** Reported that users were unable to upload subscription payment proofs. **Status: RESOLVED**.
+8.  **User:** Complained about poor search functionality and requested sorting on admin pages. **Status: RESOLVED**.
+9.  **User:** Requested to update the contact email everywhere. **Status: RESOLVED**.
+10. **User:** Asked to implement a strict weekly limit between Pay EMI and Bank Redeem. **Status: RESOLVED**.
 
 **Project Health Check:**
--   **Broken:**
-    -   Invite Page Level View: A key user-facing feature is non-functional due to a frontend rendering bug.
--   **Fixed:**
-    -   Admin Subscription Approval: The critical database timeout error has been resolved.
+-   **Broken:** None. The application is stable.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
--   **pybreaker:** Installed, but its use has been removed from the critical subscription approval path.
--   **A UPI gateway (e.g., Razorpay) has been requested by the user but not yet implemented.**
+-   **Redis (Upstash):** Used for caching.
+-   **browser-image-compression:** A new frontend library added for client-side image compression.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (Used to successfully verify the Admin Subscription page rebuild).
+-   **Testing agent used after significant changes:** YES. Used to validate fixes for KYC and subscription approval timeouts. 21/21 tests passed successfully.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** None from this session.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
--   **Production Test User:**  / PIN:  (Use this user to test the broken Invite page).
+-   **Production Test User:**  / PIN: 
 
 **What agent forgot to execute**
--   The previous agent correctly diagnosed the Invite Page issue as a probable frontend problem but did not proceed to debug the React component itself. They marked the feature as Working based on a successful API response and an admin-view test, which was an incomplete verification and led to the user reporting the same issue again.</analysis>
+-   The agent did not forget any tasks but was in the middle of implementing the Admin Service Toggles feature when the session ended. The work needs to be completed.</analysis>
