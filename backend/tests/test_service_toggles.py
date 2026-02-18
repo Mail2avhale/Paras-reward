@@ -117,39 +117,29 @@ import time
 
 class TestDisabledServiceBlocking:
     """Test that disabled services correctly block requests with error message"""
-
-    def _try_request_with_retry(self, url, json_data, expected_status, max_retries=3):
-        """Helper to make request with retries for Cloudflare 520 errors"""
-        for i in range(max_retries):
-            response = requests.post(url, json=json_data, timeout=30)
-            if response.status_code != 520:
-                return response
-            print(f"Got 520 Cloudflare error, retrying... ({i+1}/{max_retries})")
-            time.sleep(2)
-        return response
-
+    
+    # Use localhost for these tests to bypass Cloudflare issues
+    # The API logic is the same whether accessed via Cloudflare or directly
+    
     def test_disabled_mobile_recharge_blocks_request(self):
         """Test disabled mobile_recharge service blocks bill payment request"""
         # First disable the service
         disable_response = requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/mobile_recharge",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/mobile_recharge",
             json={"enabled": False, "admin_id": "test_admin"}
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        time.sleep(1)  # Wait for toggle to propagate
-        
-        # Try to make a bill payment request with retry for Cloudflare errors
+        # Try to make a bill payment request via localhost (bypasses Cloudflare)
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = self._try_request_with_retry(
-            f"{BASE_URL}/api/bill-payment/request",
-            {
+        request_response = requests.post(
+            f"{LOCAL_BASE_URL}/api/bill-payment/request",
+            json={
                 "user_id": test_user_id,
                 "request_type": "mobile_recharge",
                 "amount_inr": 100,
                 "details": {"phone_number": "9876543210", "operator": "Jio"}
-            },
-            expected_status=503
+            }
         )
         
         # Should return 503 with correct error message
@@ -160,7 +150,7 @@ class TestDisabledServiceBlocking:
         
         # Re-enable the service
         requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/mobile_recharge",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/mobile_recharge",
             json={"enabled": True, "admin_id": "test_admin"}
         )
         
