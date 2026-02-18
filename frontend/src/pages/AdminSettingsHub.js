@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
-  ChevronRight, ArrowLeft, Sparkles, Receipt, Building2
+  ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft
 } from 'lucide-react';
 
 // Lazy load AdminSettings for embedded usage
