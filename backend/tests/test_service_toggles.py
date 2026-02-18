@@ -160,24 +160,21 @@ class TestDisabledServiceBlocking:
         """Test disabled dish_recharge (DTH) service blocks bill payment request"""
         # First disable the service
         disable_response = requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/dish_recharge",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/dish_recharge",
             json={"enabled": False, "admin_id": "test_admin"}
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        time.sleep(1)  # Wait for toggle to propagate
-        
-        # Try to make a bill payment request with retry
+        # Try to make a bill payment request via localhost
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = self._try_request_with_retry(
-            f"{BASE_URL}/api/bill-payment/request",
-            {
+        request_response = requests.post(
+            f"{LOCAL_BASE_URL}/api/bill-payment/request",
+            json={
                 "user_id": test_user_id,
                 "request_type": "dish_recharge",
                 "amount_inr": 200,
                 "details": {"subscriber_id": "123456789", "operator": "Tata Sky"}
-            },
-            expected_status=503
+            }
         )
         
         # Should return 503 with correct error message
@@ -188,7 +185,7 @@ class TestDisabledServiceBlocking:
         
         # Re-enable the service
         requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/dish_recharge",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/dish_recharge",
             json={"enabled": True, "admin_id": "test_admin"}
         )
         
