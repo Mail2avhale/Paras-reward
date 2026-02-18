@@ -565,7 +565,7 @@ const AdminProfitLoss = ({ user }) => {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-400" onClick={() => handleDeleteExpense(exp.expense_id)}>
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-1" /> Delete
                       </Button>
                     </td>
                   </tr>
