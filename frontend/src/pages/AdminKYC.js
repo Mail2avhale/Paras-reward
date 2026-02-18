@@ -32,6 +32,36 @@ const AdminKYC = ({ user }) => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [selectedIds, setSelectedIds] = useState(new Set()); // For bulk selection
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  // Sync all KYC statuses
+  const syncAllKYCStatus = async () => {
+    if (!confirm('This will sync KYC status for all users. Continue?')) return;
+    
+    setSyncing(true);
+    try {
+      const response = await axios.post(`${API}/admin/kyc/sync-status`);
+      toast.success(`✅ ${response.data.message}`);
+      // Refresh data
+      fetchKYCDocuments(1, statusFilter, debouncedSearch);
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Re-sync individual user KYC
+  const resyncUserKYC = async (userId) => {
+    try {
+      const response = await axios.post(`${API}/admin/kyc/resync/${userId}`);
+      toast.success(`✅ ${response.data.message}`);
+      fetchKYCDocuments(currentPage, statusFilter, debouncedSearch);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Resync failed');
+    }
+  };
 
   // Debounce search
   useEffect(() => {
