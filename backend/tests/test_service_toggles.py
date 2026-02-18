@@ -325,14 +325,14 @@ class TestToggleAllServices:
         for service_key in ALL_SERVICES:
             # Disable
             disable_response = requests.post(
-                f"{BASE_URL}/api/admin/service-toggles/{service_key}",
+                f"{LOCAL_BASE_URL}/api/admin/service-toggles/{service_key}",
                 json={"enabled": False, "admin_id": "test_admin"}
             )
             assert disable_response.status_code == 200, f"Failed to disable {service_key}"
             assert disable_response.json().get("enabled") == False
         
         # Verify all disabled
-        check_response = requests.get(f"{BASE_URL}/api/admin/service-toggles")
+        check_response = requests.get(f"{LOCAL_BASE_URL}/api/admin/service-toggles")
         services = check_response.json()["services"]
         for service_key in ALL_SERVICES:
             assert services[service_key]["enabled"] == False, f"{service_key} should be disabled"
@@ -342,14 +342,14 @@ class TestToggleAllServices:
         # Re-enable all
         for service_key in ALL_SERVICES:
             enable_response = requests.post(
-                f"{BASE_URL}/api/admin/service-toggles/{service_key}",
+                f"{LOCAL_BASE_URL}/api/admin/service-toggles/{service_key}",
                 json={"enabled": True, "admin_id": "test_admin"}
             )
             assert enable_response.status_code == 200, f"Failed to enable {service_key}"
             assert enable_response.json().get("enabled") == True
         
         # Verify all enabled
-        check_response = requests.get(f"{BASE_URL}/api/admin/service-toggles")
+        check_response = requests.get(f"{LOCAL_BASE_URL}/api/admin/service-toggles")
         services = check_response.json()["services"]
         for service_key in ALL_SERVICES:
             assert services[service_key]["enabled"] == True, f"{service_key} should be enabled"
