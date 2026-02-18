@@ -8529,35 +8529,61 @@ async def delete_vip_payment(payment_id: str, request: Request):
 # ========== KYC ROUTES ==========
 @api_router.post("/kyc/submit/{uid}", response_model=KYCDocument)
 async def submit_kyc(uid: str, kyc_data: KYCSubmit):
-    """Submit KYC documents"""
+    """Submit KYC documents with improved error handling"""
     
-    # Check if Aadhaar number is unique
-    if kyc_data.aadhaar_number:
-        aadhaar_clean = kyc_data.aadhaar_number.replace(" ", "").strip()
-        if not await check_unique_fields("aadhaar_number", aadhaar_clean, exclude_uid=uid):
-            owner = await get_duplicate_field_owner("aadhaar_number", aadhaar_clean)
-            owner_hint = ""
-            if owner:
-                masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
-                owner_hint = f" (already registered with {masked_email})"
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Aadhaar number आधीच नोंदणीकृत आहे{owner_hint}. कृपया योग्य Aadhaar number वापरा."
-            )
-        kyc_data.aadhaar_number = aadhaar_clean
-    
-    # Check if PAN number is unique
-    if kyc_data.pan_number:
-        pan_clean = kyc_data.pan_number.replace(" ", "").strip().upper()
-        if not await check_unique_fields("pan_number", pan_clean, exclude_uid=uid):
-            owner = await get_duplicate_field_owner("pan_number", pan_clean)
-            owner_hint = ""
-            if owner:
-                masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
-                owner_hint = f" (already registered with {masked_email})"
-            raise HTTPException(
-                status_code=400, 
-                detail=f"PAN number आधीच नोंदणीकृत आहे{owner_hint}. कृपया योग्य PAN number वापरा."
+    try:
+        # Check if Aadhaar number is unique
+        if kyc_data.aadhaar_number:
+            aadhaar_clean = kyc_data.aadhaar_number.replace(" ", "").strip()
+            if len(aadhaar_clean) != 12 or not aadhaar_clean.isdigit():
+                raise HTTPException(status_code=400, detail="Invalid Aadhaar number. Must be 12 digits.")
+            
+            try:
+                is_unique = await asyncio.wait_for(
+                    check_unique_fields("aadhaar_number", aadhaar_clean, exclude_uid=uid),
+                    timeout=10.0
+                )
+                if not is_unique:
+                    owner = await asyncio.wait_for(
+                        get_duplicate_field_owner("aadhaar_number", aadhaar_clean),
+                        timeout=5.0
+                    )
+                    owner_hint = ""
+                    if owner:
+                        masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
+                        owner_hint = f" (already registered with {masked_email})"
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Aadhaar number already registered{owner_hint}. Please use correct Aadhaar number."
+                    )
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
+            kyc_data.aadhaar_number = aadhaar_clean
+        
+        # Check if PAN number is unique
+        if kyc_data.pan_number:
+            pan_clean = kyc_data.pan_number.replace(" ", "").strip().upper()
+            if len(pan_clean) != 10:
+                raise HTTPException(status_code=400, detail="Invalid PAN number. Must be 10 characters.")
+            
+            try:
+                is_unique = await asyncio.wait_for(
+                    check_unique_fields("pan_number", pan_clean, exclude_uid=uid),
+                    timeout=10.0
+                )
+                if not is_unique:
+                    owner = await asyncio.wait_for(
+                        get_duplicate_field_owner("pan_number", pan_clean),
+                        timeout=5.0
+                    )
+                    owner_hint = ""
+                    if owner:
+                        masked_email = owner.get("email", "")[:3] + "***" if owner.get("email") else ""
+                        owner_hint = f" (already registered with {masked_email})"
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"PAN number already registered{owner_hint}. Please use correct PAN number."
+                    )
             )
         kyc_data.pan_number = pan_clean
     
