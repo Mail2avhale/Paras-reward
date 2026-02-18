@@ -22316,6 +22316,22 @@ async def create_bill_payment_request(request: Request):
     if request_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid request type. Must be one of: {', '.join(valid_types)}")
     
+    # ===== CHECK IF SERVICE IS ENABLED =====
+    service_enabled = await check_service_enabled(request_type)
+    if not service_enabled:
+        service_names = {
+            "mobile_recharge": "Mobile Recharge",
+            "dish_recharge": "DTH/Dish Recharge", 
+            "electricity_bill": "Electricity Bill",
+            "credit_card_payment": "Credit Card Payment",
+            "loan_emi": "Pay EMI"
+        }
+        raise HTTPException(
+            status_code=503, 
+            detail=f"{service_names.get(request_type, request_type)} service is temporarily unavailable. Please try again later."
+        )
+    # ========================================
+    
     if amount_inr <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
     
