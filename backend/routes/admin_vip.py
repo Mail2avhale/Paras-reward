@@ -141,16 +141,21 @@ async def get_vip_payments(
             users_list = await users_cursor.to_list(500)
             users_map = {u["uid"]: u for u in users_list}
         
-        # Enrich payments with user info
+        # Enrich payments with user info and subscription expiry
         for payment in payments:
             user_id = payment.get("user_id")
             user = users_map.get(user_id, {})
             
-            payment["user_name"] = user.get("name", "Unknown")
-            payment["user_email"] = user.get("email", "")
-            payment["user_phone"] = user.get("phone") or user.get("mobile", "")
+            payment["user_name"] = user.get("name") or payment.get("user_name") or "Unknown"
+            payment["user_email"] = user.get("email") or payment.get("user_email") or ""
+            payment["user_phone"] = user.get("phone") or user.get("mobile") or payment.get("user_phone") or ""
             payment["plan"] = payment.get("subscription_plan", "")
             payment["duration"] = payment.get("plan_type", "monthly")
+            
+            # If new_expiry not set but it's approved, get user's subscription expiry
+            if status == "approved" and not payment.get("new_expiry"):
+                user_sub = user.get("subscription", {})
+                payment["new_expiry"] = user_sub.get("expires_at") or user_sub.get("end_date")
         
         return {
             "payments": payments,
