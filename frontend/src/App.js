@@ -156,6 +156,7 @@ const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/p
 const AdminBankWithdrawals = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBankWithdrawals"));
 const AdminGiftVouchers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
 const AdminServiceCharges = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
+const AdminServiceToggles = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
 const AdminPolicies = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
 const AdminUserLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
 const AdminPRCRain = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCRain"));
