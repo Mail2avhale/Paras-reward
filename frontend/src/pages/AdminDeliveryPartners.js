@@ -491,7 +491,7 @@ const AdminDeliveryPartners = ({ user }) => {
                         onClick={() => openEditModal(partner)}
                         className="text-blue-400 hover:text-blue-300"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 mr-1" /> Edit
                       </Button>
                       <Button
                         size="sm"
@@ -499,7 +499,7 @@ const AdminDeliveryPartners = ({ user }) => {
                         onClick={() => handleDeletePartner(partner.partner_id)}
                         className="text-red-400 hover:text-red-300"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete
                       </Button>
                     </div>
                   </div>
