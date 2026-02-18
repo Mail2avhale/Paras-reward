@@ -144,7 +144,7 @@ async def get_pending_count():
 
 @router.post("/vip-payment/{payment_id}/approve")
 async def approve_payment(payment_id: str, request: Request):
-    """Approve VIP payment - Simple sequential operations"""
+    """Approve VIP payment - with timeout handling"""
     try:
         # Parse request body
         try:
@@ -157,11 +157,17 @@ async def approve_payment(payment_id: str, request: Request):
         correct_duration = data.get("correct_duration")
         notes = data.get("notes", "")
         
-        # Step 1: Find payment
-        payment = await db.vip_payments.find_one(
-            {"payment_id": payment_id},
-            {"_id": 0}
-        )
+        # Step 1: Find payment with timeout
+        try:
+            payment = await asyncio.wait_for(
+                db.vip_payments.find_one(
+                    {"payment_id": payment_id},
+                    {"_id": 0}
+                ),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
         
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
@@ -187,8 +193,14 @@ async def approve_payment(payment_id: str, request: Request):
             "yearly": 365
         }.get(duration, 30)
         
-        # Check current user expiry
-        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_expiry": 1})
+        # Check current user expiry with timeout
+        try:
+            user = await asyncio.wait_for(
+                db.users.find_one({"uid": user_id}, {"_id": 0, "subscription_expiry": 1}),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            user = None  # Continue without extension
         
         start_date = now
         if user:
@@ -206,18 +218,25 @@ async def approve_payment(payment_id: str, request: Request):
         
         new_expiry = (start_date + timedelta(days=duration_days)).isoformat()
         
-        # Step 2: Update payment status
-        await db.vip_payments.update_one(
-            {"payment_id": payment_id},
-            {"$set": {
-                "status": "approved",
-                "approved_at": now.isoformat(),
-                "approved_by": admin_id,
-                "admin_notes": notes,
-                "new_expiry": new_expiry,
-                "actual_plan_approved": plan,
-                "actual_duration_approved": duration
-            }}
+        # Step 2: Update payment status with timeout
+        try:
+            await asyncio.wait_for(
+                db.vip_payments.update_one(
+                    {"payment_id": payment_id},
+                    {"$set": {
+                        "status": "approved",
+                        "approved_at": now.isoformat(),
+                        "approved_by": admin_id,
+                        "admin_notes": notes,
+                        "new_expiry": new_expiry,
+                        "actual_plan_approved": plan,
+                        "actual_duration_approved": duration
+                    }}
+                ),
+                timeout=15.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout while updating payment. Please retry.")
         )
         
         # Step 3: Update user subscription
