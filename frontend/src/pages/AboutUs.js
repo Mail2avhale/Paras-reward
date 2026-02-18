@@ -168,6 +168,51 @@ const AboutUs = () => {
           </Link>
         </div>
       </div>
+
+      {/* D-U-N-S Registered Seal Section */}
+      <div className="px-5 pb-8">
+        <div className="bg-gradient-to-r from-teal-900/30 to-cyan-900/30 rounded-2xl p-5 border border-teal-500/30">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-teal-400" />
+                Verified Business
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Paras Reward Technologies Private Limited is a D-U-N-S® Registered company, 
+                verified by Dun & Bradstreet - the global leader in business data and analytics.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Production iframe - works on registered domain */}
+              <iframe 
+                id="duns-seal-about" 
+                src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
+                width="114" 
+                height="97" 
+                title="D-U-N-S Registered Seal"
+                style={{ border: 'none', background: 'transparent' }}
+              />
+              {/* Fallback badge */}
+              <a 
+                href="https://www.dnb.com/duns-number.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 border border-teal-500/40 rounded-xl hover:border-teal-400/60 transition-all"
+                title="D-U-N-S Registered - Verified by Dun & Bradstreet"
+              >
+                <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-teal-400">D-U-N-S®</p>
+                  <p className="text-xs text-gray-400">Registered</p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
