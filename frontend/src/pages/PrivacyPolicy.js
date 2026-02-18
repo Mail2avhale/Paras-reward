@@ -13,7 +13,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
   const [companyInfo, setCompanyInfo] = useState({
-    company_name: 'PARAS REWARD',
+    company_name: 'Paras Reward Technologies Private Limited',
     email: 'Info@parasreward.com',
     address: 'India'
   });
