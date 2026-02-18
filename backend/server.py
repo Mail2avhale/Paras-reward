@@ -11853,6 +11853,102 @@ async def update_session_activity(uid: str, token_id: str):
     )
     return {"message": "Activity updated"}
 
+# ========== SERVICE TOGGLE MANAGEMENT ==========
+@api_router.get("/admin/service-toggles")
+async def get_all_service_toggles():
+    """Get status of all services (enabled/disabled)"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "service_toggles": 1})
+        toggles = settings.get("service_toggles", {}) if settings else {}
+        
+        # Merge with defaults
+        result = {}
+        service_names = {
+            "mobile_recharge": "Mobile Recharge",
+            "dish_recharge": "DTH/Dish Recharge",
+            "electricity_bill": "Electricity Bill",
+            "credit_card_payment": "Credit Card Payment",
+            "loan_emi": "Pay EMI",
+            "gift_voucher": "Gift Voucher",
+            "shopping": "Shopping",
+            "bank_redeem": "Redeem to Bank"
+        }
+        
+        for key, name in service_names.items():
+            result[key] = {
+                "name": name,
+                "enabled": toggles.get(key, True),
+                "key": key
+            }
+        
+        return {"services": result, "updated_at": settings.get("service_toggles_updated_at") if settings else None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/service-toggles/{service_key}")
+async def toggle_service(service_key: str, request: Request):
+    """Enable or disable a specific service"""
+    try:
+        data = await request.json()
+        enabled = data.get("enabled", True)
+        admin_id = data.get("admin_id", "")
+        
+        valid_services = ["mobile_recharge", "dish_recharge", "electricity_bill", 
+                         "credit_card_payment", "loan_emi", "gift_voucher", "shopping", "bank_redeem"]
+        
+        if service_key not in valid_services:
+            raise HTTPException(status_code=400, detail=f"Invalid service: {service_key}")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Update settings
+        await db.settings.update_one(
+            {},
+            {
+                "$set": {
+                    f"service_toggles.{service_key}": enabled,
+                    "service_toggles_updated_at": now,
+                    f"service_toggles_history.{service_key}": {
+                        "enabled": enabled,
+                        "changed_at": now,
+                        "changed_by": admin_id
+                    }
+                }
+            },
+            upsert=True
+        )
+        
+        # Log the action
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "service_toggle",
+            "service": service_key,
+            "enabled": enabled,
+            "admin_id": admin_id,
+            "timestamp": now
+        })
+        
+        status_text = "enabled" if enabled else "disabled"
+        return {
+            "success": True,
+            "service": service_key,
+            "enabled": enabled,
+            "message": f"Service '{service_key}' has been {status_text}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/services/status")
+async def get_public_service_status():
+    """Public API - Get current status of all services for users"""
+    try:
+        status = await get_service_status()
+        return {"services": status}
+    except Exception as e:
+        return {"services": DEFAULT_SERVICE_STATUS}
+
 # ========== SECURITY ALERTS API ==========
 # DISABLED - Moved to routes/admin.py
 async def get_security_alerts(
