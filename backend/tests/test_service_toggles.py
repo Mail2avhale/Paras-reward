@@ -111,8 +111,20 @@ class TestServiceTogglesAPI:
         print("✅ Invalid service toggle correctly returns 400 error")
 
 
+import time
+
 class TestDisabledServiceBlocking:
     """Test that disabled services correctly block requests with error message"""
+
+    def _try_request_with_retry(self, url, json_data, expected_status, max_retries=3):
+        """Helper to make request with retries for Cloudflare 520 errors"""
+        for i in range(max_retries):
+            response = requests.post(url, json=json_data, timeout=30)
+            if response.status_code != 520:
+                return response
+            print(f"Got 520 Cloudflare error, retrying... ({i+1}/{max_retries})")
+            time.sleep(2)
+        return response
 
     def test_disabled_mobile_recharge_blocks_request(self):
         """Test disabled mobile_recharge service blocks bill payment request"""
@@ -123,16 +135,19 @@ class TestDisabledServiceBlocking:
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        # Try to make a bill payment request
+        time.sleep(1)  # Wait for toggle to propagate
+        
+        # Try to make a bill payment request with retry for Cloudflare errors
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = requests.post(
+        request_response = self._try_request_with_retry(
             f"{BASE_URL}/api/bill-payment/request",
-            json={
+            {
                 "user_id": test_user_id,
                 "request_type": "mobile_recharge",
                 "amount_inr": 100,
                 "details": {"phone_number": "9876543210", "operator": "Jio"}
-            }
+            },
+            expected_status=503
         )
         
         # Should return 503 with correct error message
