@@ -96,23 +96,50 @@ const KYCVerification = ({ user }) => {
 
     setSubmitting(true);
     try {
-      await axios.post(`${API}/kyc/submit/${user.uid}`, {
-        document_type: selectedDocType,
-        full_name: kycData.full_name,
-        aadhaar_front_base64: kycData.aadhaar_front,
-        aadhaar_back_base64: kycData.aadhaar_back,
-        aadhaar_number: kycData.aadhaar_number,
-        pan_front_base64: kycData.pan_front,
-        pan_number: kycData.pan_number
-      });
-      
-      toast.success('✅ KYC Documents Submitted Successfully!\n\nYour verification will be completed within 1-3 business days. You will receive a notification once approved.', {
-        duration: 6000,
-      });
-      navigate('/profile');
+      // Retry logic for timeout errors
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await axios.post(`${API}/kyc/submit/${user.uid}`, {
+            document_type: selectedDocType,
+            full_name: kycData.full_name,
+            aadhaar_front_base64: kycData.aadhaar_front,
+            aadhaar_back_base64: kycData.aadhaar_back,
+            aadhaar_number: kycData.aadhaar_number,
+            pan_front_base64: kycData.pan_front,
+            pan_number: kycData.pan_number
+          }, {
+            timeout: 30000 // 30 second timeout
+          });
+          
+          toast.success('✅ KYC Documents Submitted Successfully!\n\nYour verification will be completed within 1-3 business days. You will receive a notification once approved.', {
+            duration: 6000,
+          });
+          navigate('/profile');
+          return; // Success, exit
+          
+        } catch (err) {
+          lastError = err;
+          // Only retry on timeout or network errors
+          if (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.response?.status === 504) {
+            if (attempt < 3) {
+              toast.info(`Upload slow, retrying... (${attempt}/3)`);
+              await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
+              continue;
+            }
+          }
+          throw err; // Non-timeout error, don't retry
+        }
+      }
+      throw lastError;
       
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to submit KYC');
+      console.error('KYC submit error:', error);
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.response?.status === 504) {
+        toast.error('Upload failed due to slow connection. Please try again with smaller images or better internet.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to submit KYC. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
