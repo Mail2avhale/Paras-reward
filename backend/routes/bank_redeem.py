@@ -320,6 +320,16 @@ async def create_withdrawal_request(user_id: str, request: Request):
     data = await request.json()
     amount_inr = data.get("amount_inr")
     
+    # ===== CHECK IF BANK REDEEM SERVICE IS ENABLED =====
+    settings = await db.settings.find_one({}, {"_id": 0, "service_toggles": 1})
+    toggles = settings.get("service_toggles", {}) if settings else {}
+    if not toggles.get("bank_redeem", True):
+        raise HTTPException(
+            status_code=503, 
+            detail="Bank Redeem service is temporarily unavailable. Please try again later."
+        )
+    # ===================================================
+    
     # Validate amount - slider allows any amount from MIN to MAX
     if not amount_inr or amount_inr < MIN_AMOUNT:
         raise HTTPException(
