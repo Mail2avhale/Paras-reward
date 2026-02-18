@@ -62,7 +62,7 @@ const AdminServiceToggles = ({ user }) => {
   const toggleService = async (serviceKey, currentStatus) => {
     setToggling(serviceKey);
     try {
-      const response = await axios.post(`${API}/admin/service-toggles/${serviceKey}`, {
+      const response = await axios.post(`${API}/api/admin/service-toggles/${serviceKey}`, {
         enabled: !currentStatus,
         admin_id: user?.uid
       });
