@@ -700,7 +700,7 @@ const AdminKYC = ({ user }) => {
                   )}
                   
                   <Button size="sm" variant="ghost" className="text-gray-400">
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4 mr-1" /> View
                   </Button>
                 </div>
               </div>
