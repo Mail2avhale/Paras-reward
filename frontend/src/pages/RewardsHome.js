@@ -348,23 +348,6 @@ const RewardsHome = () => {
     fetchData();
   }, []);
 
-  // Load D-U-N-S Registered Seal script
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://dunsregistered.dnb.com';
-    script.type = 'text/javascript';
-    script.async = true;
-    document.body.appendChild(script);
-    
-    return () => {
-      // Cleanup on unmount
-      const existingScript = document.querySelector('script[src="https://dunsregistered.dnb.com"]');
-      if (existingScript) {
-        document.body.removeChild(existingScript);
-      }
-    };
-  }, []);
-
   const features = [
     {
       icon: Coins,
