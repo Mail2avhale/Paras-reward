@@ -195,24 +195,21 @@ class TestDisabledServiceBlocking:
         """Test disabled loan_emi service blocks bill payment request"""
         # First disable the service
         disable_response = requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/loan_emi",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/loan_emi",
             json={"enabled": False, "admin_id": "test_admin"}
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        time.sleep(1)  # Wait for toggle to propagate
-        
-        # Try to make a bill payment request with retry
+        # Try to make a bill payment request via localhost
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = self._try_request_with_retry(
-            f"{BASE_URL}/api/bill-payment/request",
-            {
+        request_response = requests.post(
+            f"{LOCAL_BASE_URL}/api/bill-payment/request",
+            json={
                 "user_id": test_user_id,
                 "request_type": "loan_emi",
                 "amount_inr": 5000,
                 "details": {"loan_account": "LOAN123456", "bank": "HDFC"}
-            },
-            expected_status=503
+            }
         )
         
         # Should return 503 with correct error message
@@ -223,7 +220,7 @@ class TestDisabledServiceBlocking:
         
         # Re-enable the service
         requests.post(
-            f"{BASE_URL}/api/admin/service-toggles/loan_emi",
+            f"{LOCAL_BASE_URL}/api/admin/service-toggles/loan_emi",
             json={"enabled": True, "admin_id": "test_admin"}
         )
         
