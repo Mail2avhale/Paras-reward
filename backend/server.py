@@ -8584,35 +8584,75 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
                         status_code=400, 
                         detail=f"PAN number already registered{owner_hint}. Please use correct PAN number."
                     )
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
+            kyc_data.pan_number = pan_clean
+        
+        # Validate base64 images
+        if kyc_data.aadhaar_front_base64:
+            if not kyc_data.aadhaar_front_base64.startswith('data:image'):
+                raise HTTPException(status_code=400, detail="Invalid Aadhaar front image format")
+        if kyc_data.aadhaar_back_base64:
+            if not kyc_data.aadhaar_back_base64.startswith('data:image'):
+                raise HTTPException(status_code=400, detail="Invalid Aadhaar back image format")
+        if kyc_data.pan_front_base64:
+            if not kyc_data.pan_front_base64.startswith('data:image'):
+                raise HTTPException(status_code=400, detail="Invalid PAN image format")
+        
+        kyc_doc = KYCDocument(
+            user_id=uid,
+            aadhaar_front=kyc_data.aadhaar_front_base64,
+            aadhaar_back=kyc_data.aadhaar_back_base64,
+            aadhaar_number=kyc_data.aadhaar_number,
+            pan_front=kyc_data.pan_front_base64,
+            pan_number=kyc_data.pan_number
+        )
+        
+        doc = kyc_doc.model_dump()
+        doc['submitted_at'] = doc['submitted_at'].isoformat()
+        
+        # Insert with timeout
+        try:
+            await asyncio.wait_for(
+                db.kyc_documents.insert_one(doc),
+                timeout=15.0
             )
-        kyc_data.pan_number = pan_clean
-    
-    kyc_doc = KYCDocument(
-        user_id=uid,
-        aadhaar_front=kyc_data.aadhaar_front_base64,
-        aadhaar_back=kyc_data.aadhaar_back_base64,
-        aadhaar_number=kyc_data.aadhaar_number,
-        pan_front=kyc_data.pan_front_base64,
-        pan_number=kyc_data.pan_number
-    )
-    
-    doc = kyc_doc.model_dump()
-    doc['submitted_at'] = doc['submitted_at'].isoformat()
-    await db.kyc_documents.insert_one(doc)
-    
-    # Update user KYC status and save verified numbers
-    update_fields = {"kyc_status": "pending"}
-    if kyc_data.aadhaar_number:
-        update_fields["aadhaar_number"] = kyc_data.aadhaar_number
-    if kyc_data.pan_number:
-        update_fields["pan_number"] = kyc_data.pan_number
-    
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": update_fields}
-    )
-    
-    return kyc_doc
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Database timeout while saving KYC. Please try again.")
+        
+        # Update user KYC status and save verified numbers
+        update_fields = {"kyc_status": "pending"}
+        if kyc_data.aadhaar_number:
+            update_fields["aadhaar_number"] = kyc_data.aadhaar_number
+        if kyc_data.pan_number:
+            update_fields["pan_number"] = kyc_data.pan_number
+        
+        try:
+            await asyncio.wait_for(
+                db.users.update_one(
+                    {"uid": uid},
+                    {"$set": update_fields}
+                ),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            # KYC saved but user status update failed - not critical
+            print(f"Timeout updating user KYC status for {uid}")
+        
+        # Clear KYC cache
+        try:
+            await cache.delete(f"kyc_list:pending:p1:l20")
+            await cache.delete(f"kyc_list:all:p1:l20")
+        except:
+            pass
+        
+        return kyc_doc
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC submit error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit KYC: {str(e)}")
 
 @api_router.get("/kyc/list")
 async def get_kyc_documents(
