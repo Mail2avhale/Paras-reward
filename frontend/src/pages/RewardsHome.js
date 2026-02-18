@@ -773,34 +773,34 @@ const RewardsHome = () => {
               </p>
               
               {/* D-U-N-S Registered Seal */}
-              <div className="flex items-center">
-                {/* Production iframe - will work on registered domain */}
-                <div className="hidden md:block">
-                  <iframe 
-                    id="Iframe1" 
-                    src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
-                    width="114" 
-                    height="97" 
-                    frameBorder="0" 
-                    scrolling="no" 
-                    allowTransparency="true"
-                    title="D-U-N-S Registered Seal"
-                    style={{ border: 'none' }}
-                  />
-                </div>
-                {/* Fallback static seal with link */}
+              <div className="flex items-center gap-3">
+                {/* Production iframe - will work on registered domain (parasreward.com) */}
+                <iframe 
+                  id="duns-seal-iframe" 
+                  src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
+                  width="114" 
+                  height="97" 
+                  frameBorder="0" 
+                  scrolling="no" 
+                  allowTransparency="true"
+                  title="D-U-N-S Registered Seal"
+                  style={{ border: 'none' }}
+                />
+                {/* Fallback badge for mobile/preview */}
                 <a 
                   href="https://www.dnb.com/duns-number.html" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="block md:hidden hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 border border-teal-500/30 rounded-lg hover:border-teal-400/50 transition-all"
                   title="D-U-N-S Registered - Verified by Dun & Bradstreet"
                 >
-                  <img 
-                    src="https://www.dnb.com/content/dam/english/image-library/Modernization/illustrations/DUNS-Registered-workspace.png" 
-                    alt="D-U-N-S Registered Seal" 
-                    className="h-16 w-auto"
-                  />
+                  <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-teal-400">D-U-N-S®</p>
+                    <p className="text-[10px] text-gray-400">Registered</p>
+                  </div>
                 </a>
               </div>
               
