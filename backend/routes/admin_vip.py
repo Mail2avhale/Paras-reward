@@ -237,19 +237,25 @@ async def approve_payment(payment_id: str, request: Request):
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout while updating payment. Please retry.")
-        )
         
-        # Step 3: Update user subscription
-        await db.users.update_one(
-            {"uid": user_id},
-            {"$set": {
-                "membership_type": "vip",
-                "subscription_plan": plan,
-                "subscription_expiry": new_expiry,
-                "vip_expiry": new_expiry,
-                "vip_activated_at": now.isoformat()
-            }}
-        )
+        # Step 3: Update user subscription with timeout
+        try:
+            await asyncio.wait_for(
+                db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "membership_type": "vip",
+                        "subscription_plan": plan,
+                        "subscription_expiry": new_expiry,
+                        "vip_expiry": new_expiry,
+                        "vip_activated_at": now.isoformat()
+                    }}
+                ),
+                timeout=15.0
+            )
+        except asyncio.TimeoutError:
+            # Payment already approved, user update failed
+            raise HTTPException(status_code=504, detail="Subscription activated but user update timed out. Please check user status.")
         
         # Step 4: Update company wallet (optional - don't fail if error)
         try:
