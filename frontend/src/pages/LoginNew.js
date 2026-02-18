@@ -220,9 +220,41 @@ const LoginNew = ({ onLogin }) => {
     } catch (error) {
       console.error('Login error:', error);
       const errorMsg = error.response?.data?.detail || 'Login failed. Please try again.';
+      const statusCode = error.response?.status;
       
-      // Always show error in center for PIN errors
-      if (errorMsg.toLowerCase().includes('pin') || errorMsg.toLowerCase().includes('wrong') || errorMsg.toLowerCase().includes('attempts') || errorMsg.toLowerCase().includes('locked')) {
+      // Handle non-registered user (404)
+      if (statusCode === 404 || errorMsg.toLowerCase().includes('not registered')) {
+        setAnimatedFeedback({
+          message: `❌ Account Not Found\n\n📧 "${loginData.identifier}" is not registered.\n\n👉 Please Sign Up to create an account.`,
+          type: 'error',
+          duration: 5000
+        });
+        // Show signup prompt after 3 seconds
+        setTimeout(() => {
+          toast('Would you like to create an account?', {
+            duration: 6000,
+            action: {
+              label: 'Sign Up',
+              onClick: () => navigate('/register')
+            }
+          });
+        }, 2000);
+        return;
+      }
+      
+      // Handle rate limit / lockout (429)
+      if (statusCode === 429) {
+        setAnimatedFeedback({
+          message: `🔒 Account Locked\n\n${errorMsg}`,
+          type: 'error',
+          duration: 8000
+        });
+        setPinError(errorMsg);
+        return;
+      }
+      
+      // Handle PIN/password errors
+      if (errorMsg.toLowerCase().includes('pin') || errorMsg.toLowerCase().includes('wrong') || errorMsg.toLowerCase().includes('attempts') || errorMsg.toLowerCase().includes('locked') || errorMsg.toLowerCase().includes('invalid')) {
         setPinError(errorMsg);
         // Clear PIN on error so user can re-enter
         setLoginData(prev => ({ ...prev, pin: '' }));
