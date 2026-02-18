@@ -99,6 +99,16 @@ const settingsCategories = [
     color: 'from-indigo-500 to-purple-500',
     bgColor: 'bg-indigo-500/10',
     borderColor: 'border-indigo-500/30'
+  },
+  { 
+    id: 'service-toggles', 
+    label: 'Service On/Off', 
+    icon: ToggleLeft, 
+    description: 'Enable or disable services like Mobile Recharge, DTH, EMI, Gift Cards, Bank Redeem',
+    path: '/admin/service-toggles',
+    color: 'from-rose-500 to-red-500',
+    bgColor: 'bg-rose-500/10',
+    borderColor: 'border-rose-500/30'
   }
 ];
 
