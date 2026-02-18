@@ -5,6 +5,29 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### Admin Service Toggles Feature ✅ (Feb 18, 2026)
+**Feature:** Admin can enable/disable services temporarily
+**Services Available:**
+1. Mobile Recharge - on/off
+2. DTH/Dish Recharge - on/off  
+3. Electricity Bill - on/off
+4. Credit Card Payment - on/off
+5. Pay EMI - on/off
+6. Gift Voucher - on/off
+7. Shopping - on/off
+8. Redeem to Bank - on/off
+
+**Error Message (English):** "Service temporarily down. Please try again later."
+
+**Files Modified:**
+- `backend/server.py` - Service toggle endpoints & service check in bill-payment
+- `backend/routes/bank_redeem.py` - Service check for bank redeem
+- `frontend/src/pages/AdminServiceToggles.js` - Admin UI page
+- `frontend/src/pages/AdminSettingsHub.js` - Added "Service On/Off" link
+- `frontend/src/App.js` - Route for /admin/service-toggles
+
+**Test Results:** 100% passed (10/10 backend, all frontend verified)
+
 ### Mobile Recharge Dropdowns ✅ (Feb 17, 2026)
 **Added:**
 1. Recharge Type dropdown (Prepaid/Postpaid)
