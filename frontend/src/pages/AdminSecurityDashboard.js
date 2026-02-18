@@ -422,7 +422,7 @@ const AdminSecurityDashboard = ({ user }) => {
                             size="sm"
                             onClick={() => handleMarkAlertsRead([alert.alert_id])}
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 mr-1" /> Mark Read
                           </Button>
                         )}
                       </div>
