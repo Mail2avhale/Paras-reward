@@ -224,10 +224,7 @@ async def approve_payment(payment_id: str, request: Request):
         # Calculate expiry
         now = datetime.now(timezone.utc)
         duration_days = {
-            "monthly": 30,
-            "quarterly": 90,
-            "half_yearly": 180,
-            "yearly": 365
+            "monthly": 30
         }.get(duration, 30)
         
         # Check current user expiry with timeout
