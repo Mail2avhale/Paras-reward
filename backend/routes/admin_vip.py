@@ -37,7 +37,10 @@ async def get_vip_payments(
     limit: int = 20,
     time_filter: str = None,
     plan: str = None,
-    duration: str = None
+    duration: str = None,
+    search: str = None,
+    date_from: str = None,
+    date_to: str = None
 ):
     """Get VIP payments list - Simple version"""
     try:
@@ -46,8 +49,36 @@ async def get_vip_payments(
         if status:
             query["status"] = status
         
-        # Time filter
-        if time_filter:
+        # Search filter
+        if search:
+            search_users = await db.users.find({
+                "$or": [
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"email": {"$regex": search, "$options": "i"}},
+                    {"phone": {"$regex": search, "$options": "i"}}
+                ]
+            }, {"_id": 0, "uid": 1}).to_list(100)
+            user_ids = [u["uid"] for u in search_users]
+            
+            query["$or"] = [
+                {"user_id": {"$in": user_ids}} if user_ids else {"user_id": None},
+                {"utr_number": {"$regex": search, "$options": "i"}},
+                {"user_name": {"$regex": search, "$options": "i"}},
+                {"user_email": {"$regex": search, "$options": "i"}}
+            ]
+        
+        # Date range filter
+        if date_from or date_to:
+            date_field = "approved_at" if status == "approved" else "submitted_at"
+            date_query = {}
+            if date_from:
+                date_query["$gte"] = f"{date_from}T00:00:00"
+            if date_to:
+                date_query["$lte"] = f"{date_to}T23:59:59"
+            if date_query:
+                query[date_field] = date_query
+        # Time filter (legacy - today/week/month)
+        elif time_filter:
             now = datetime.now(timezone.utc)
             if time_filter == "today":
                 start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
