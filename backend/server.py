@@ -3449,26 +3449,20 @@ async def get_vip_plan_pricing(plan_type: str = "monthly"):
         "label": "Monthly Plan"
     }
     """
-    # Default pricing for each plan type
+    # Default pricing for each plan type (monthly only)
     default_prices = {
-        "monthly": 299.0,
-        "quarterly": 897.0,
-        "half_yearly": 1794.0,
-        "yearly": 3588.0
+        "monthly": 299.0
     }
     
     settings = await db.settings.find_one({})
     if not settings or "vip_plans" not in settings:
-        # Return default plans if not in database
+        # Return default plans if not in database (monthly only)
         default_plans = {
-            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
-            "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
-            "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
-            "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
+            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"}
         }
         plan = default_plans.get(plan_type, default_plans["monthly"])
     else:
-        plan = settings["vip_plans"].get(plan_type, settings["vip_plans"]["monthly"])
+        plan = settings["vip_plans"].get(plan_type, settings["vip_plans"].get("monthly", {"price": 299.0, "duration_days": 30}))
     
     # Handle missing price field by using default
     base_price = plan.get("price", default_prices.get(plan_type, 299.0))
