@@ -774,17 +774,34 @@ const RewardsHome = () => {
               
               {/* D-U-N-S Registered Seal */}
               <div className="flex items-center">
-                <iframe 
-                  id="Iframe1" 
-                  src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
-                  width="114" 
-                  height="97" 
-                  frameBorder="0" 
-                  scrolling="no" 
-                  allowTransparency="true"
-                  title="D-U-N-S Registered Seal"
-                  style={{ border: 'none' }}
-                />
+                {/* Production iframe - will work on registered domain */}
+                <div className="hidden md:block">
+                  <iframe 
+                    id="Iframe1" 
+                    src="https://dunsregistered.dnb.com/SealAuthentication.aspx?Cid=1" 
+                    width="114" 
+                    height="97" 
+                    frameBorder="0" 
+                    scrolling="no" 
+                    allowTransparency="true"
+                    title="D-U-N-S Registered Seal"
+                    style={{ border: 'none' }}
+                  />
+                </div>
+                {/* Fallback static seal with link */}
+                <a 
+                  href="https://www.dnb.com/duns-number.html" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block md:hidden hover:opacity-80 transition-opacity"
+                  title="D-U-N-S Registered - Verified by Dun & Bradstreet"
+                >
+                  <img 
+                    src="https://www.dnb.com/content/dam/english/image-library/Modernization/illustrations/DUNS-Registered-workspace.png" 
+                    alt="D-U-N-S Registered Seal" 
+                    className="h-16 w-auto"
+                  />
+                </a>
               </div>
               
               <p className="text-gray-500 text-xs">
