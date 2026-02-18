@@ -509,13 +509,13 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
             {tab === 'approved' && (
               <>
                 <Button onClick={onView} size="sm" variant="outline" className="border-gray-600 h-9">
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4 mr-1" /> View
                 </Button>
                 <Button onClick={onEdit} size="sm" variant="outline" className="border-blue-500/50 text-blue-400 h-9">
-                  <Edit className="w-4 h-4" />
+                  <Edit className="w-4 h-4 mr-1" /> Edit
                 </Button>
                 <Button onClick={onDelete} disabled={processing} size="sm" variant="outline" className="border-red-500/50 text-red-400 h-9">
-                  {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1" /> Delete</>}
                 </Button>
               </>
             )}
@@ -525,10 +525,10 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
                   {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" /> Re-approve</>}
                 </Button>
                 <Button onClick={onView} size="sm" variant="outline" className="border-gray-600 h-9">
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4 mr-1" /> View
                 </Button>
                 <Button onClick={onDelete} disabled={processing} size="sm" variant="outline" className="border-red-500/50 text-red-400 h-9">
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete
                 </Button>
               </>
             )}
