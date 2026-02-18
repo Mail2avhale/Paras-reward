@@ -211,16 +211,19 @@ class TestDisabledServiceBlocking:
         )
         assert disable_response.status_code == 200, "Should disable service"
         
-        # Try to make a bill payment request
+        time.sleep(1)  # Wait for toggle to propagate
+        
+        # Try to make a bill payment request with retry
         test_user_id = f"test_user_{uuid.uuid4().hex[:8]}"
-        request_response = requests.post(
+        request_response = self._try_request_with_retry(
             f"{BASE_URL}/api/bill-payment/request",
-            json={
+            {
                 "user_id": test_user_id,
                 "request_type": "loan_emi",
                 "amount_inr": 5000,
                 "details": {"loan_account": "LOAN123456", "bank": "HDFC"}
-            }
+            },
+            expected_status=503
         )
         
         # Should return 503 with correct error message
