@@ -49,7 +49,7 @@ const AdminServiceToggles = ({ user }) => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/admin/service-toggles`);
+      const response = await axios.get(`${API}/api/admin/service-toggles`);
       setServices(response.data.services || {});
       setUpdatedAt(response.data.updated_at);
     } catch (error) {
