@@ -570,6 +570,18 @@ const AdminKYC = ({ user }) => {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Sync Status Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncAllKYCStatus}
+              disabled={syncing}
+              className="border-amber-500/50 text-amber-400 hover:bg-amber-500/20"
+              data-testid="sync-kyc-status-btn"
+            >
+              {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+              Sync Status
+            </Button>
             {statusFilter === 'pending' && filteredDocs.length > 0 && (
               <Button
                 variant="outline"
