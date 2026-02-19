@@ -663,7 +663,7 @@ const KYCVerification = ({ user }) => {
                     disabled={resetting}
                     className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
                   >
-                    {resetting ? 'Resetting...' : 'पुन्हा Submit करा'}
+                    {resetting ? 'Resetting...' : 'Re-submit Now'}
                   </Button>
                 )}
                 <Button
