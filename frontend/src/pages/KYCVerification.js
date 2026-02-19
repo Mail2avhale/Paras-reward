@@ -682,10 +682,16 @@ const KYCVerification = ({ user }) => {
                 )}
                 <Button
                   variant="outline"
-                  onClick={() => setShowStatusModal(false)}
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    // If status was synced/changed, reload page to show updated UI
+                    if (kycStatusInfo?.was_auto_synced || kycStatusInfo?.kyc_status === 'verified') {
+                      window.location.reload();
+                    }
+                  }}
                   className="flex-1 border-gray-600"
                 >
-                  Close
+                  {kycStatusInfo?.kyc_status === 'verified' ? 'Done' : 'Close'}
                 </Button>
               </div>
             </div>
