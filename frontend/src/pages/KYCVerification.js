@@ -229,6 +229,23 @@ const KYCVerification = ({ user }) => {
   const hasDocument = kycStatusInfo?.has_document;
   const isPendingReview = userData?.kyc_status === 'pending' && hasDocument && !isOrphaned;
 
+  // State for review status modal
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  const handleCheckStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      const response = await axios.get(`${API}/kyc/check-status/${user.uid}`);
+      setKycStatusInfo(response.data);
+      setShowStatusModal(true);
+    } catch (error) {
+      toast.error('Status check failed. Please try again.');
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
       {/* Header - with safe area padding */}
@@ -249,6 +266,31 @@ const KYCVerification = ({ user }) => {
           {getStatusBadge()}
         </div>
       </div>
+
+      {/* Review Status Button - Always show for pending users */}
+      {userData?.kyc_status === 'pending' && (
+        <div className="px-5 mb-4">
+          <Button
+            onClick={handleCheckStatus}
+            disabled={checkingStatus}
+            variant="outline"
+            className="w-full border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+            data-testid="check-status-btn"
+          >
+            {checkingStatus ? (
+              <span className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                Checking...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Review KYC Status / समस्या असल्यास तपासा
+              </span>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Status Card for Verified/Pending Review */}
       {(isVerified || isPendingReview) && (
