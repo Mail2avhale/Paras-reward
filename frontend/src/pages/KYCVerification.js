@@ -337,24 +337,33 @@ const KYCVerification = ({ user }) => {
         </div>
       )}
 
-      {/* Status Card for Verified/Pending Review */}
-      {(isVerified || isPendingReview) && (
+      {/* Status Card for Verified - Show if KYC is verified OR document is verified */}
+      {(isVerified || documentStatus === 'verified') && (
         <div className="px-5 mb-6">
-          <div className={`rounded-2xl p-5 ${isVerified ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+          <div className="rounded-2xl p-5 bg-emerald-500/10 border border-emerald-500/30">
             <div className="flex items-center gap-4">
-              {isVerified ? (
-                <CheckCircle className="w-12 h-12 text-emerald-500" />
-              ) : (
-                <Clock className="w-12 h-12 text-amber-500" />
-              )}
+              <CheckCircle className="w-12 h-12 text-emerald-500" />
               <div>
-                <p className={`font-bold text-lg ${isVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {isVerified ? 'KYC Verified!' : 'KYC Under Review'}
-                </p>
+                <p className="font-bold text-lg text-emerald-400">KYC Verified!</p>
                 <p className="text-gray-400 text-sm">
-                  {isVerified 
-                    ? 'You can now withdraw funds and access all features.'
-                    : 'Your documents are being verified. This takes 24-48 hours.'}
+                  You can now withdraw funds and access all features.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Card for Pending Review - Only if actually pending with document */}
+      {!isVerified && documentStatus !== 'verified' && isPendingReview && (
+        <div className="px-5 mb-6">
+          <div className="rounded-2xl p-5 bg-amber-500/10 border border-amber-500/30">
+            <div className="flex items-center gap-4">
+              <Clock className="w-12 h-12 text-amber-500" />
+              <div>
+                <p className="font-bold text-lg text-amber-400">KYC Under Review</p>
+                <p className="text-gray-400 text-sm">
+                  Your documents are being verified. This takes 24-48 hours.
                 </p>
               </div>
             </div>
