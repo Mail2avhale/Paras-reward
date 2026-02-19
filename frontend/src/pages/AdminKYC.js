@@ -79,7 +79,7 @@ const AdminKYC = ({ user }) => {
 
   // Fix all orphaned records
   const fixAllOrphanedRecords = async () => {
-    if (!confirm(`${orphanedUsers.length} orphaned records आढळले. सर्व fix करायचे का?`)) return;
+    if (!confirm(`${orphanedUsers.length} orphaned records found. Fix all?`)) return;
     
     setFixingOrphaned(true);
     try {
