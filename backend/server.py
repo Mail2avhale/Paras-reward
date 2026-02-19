@@ -9148,6 +9148,360 @@ async def send_kyc_notification(user_id: str, status: str, kyc_id: str):
     except Exception as e:
         print(f"KYC notification error (non-blocking): {e}")
 
+
+# ========== KYC RECOVERY & ORPHANED RECORDS ==========
+
+@api_router.get("/kyc/check-status/{uid}")
+async def check_kyc_status(uid: str):
+    """
+    Check user's KYC status and verify if documents exist.
+    Returns detailed status to help users understand their KYC state.
+    """
+    try:
+        # Get user
+        user = await db.users.find_one(
+            {"uid": uid},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "kyc_status": 1, 
+             "aadhaar_number": 1, "pan_number": 1}
+        )
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        kyc_status = user.get("kyc_status", "not_submitted")
+        
+        # Check if KYC document exists
+        kyc_doc = await db.kyc_documents.find_one(
+            {"user_id": uid},
+            {"_id": 0, "kyc_id": 1, "status": 1, "submitted_at": 1, "verified_at": 1,
+             "aadhaar_number": 1, "pan_number": 1}
+        )
+        
+        has_document = kyc_doc is not None
+        document_status = kyc_doc.get("status") if kyc_doc else None
+        
+        # Detect orphaned status (user has pending but no document)
+        is_orphaned = kyc_status == "pending" and not has_document
+        
+        # Determine if user can re-submit
+        can_resubmit = kyc_status in ["not_submitted", "rejected"] or is_orphaned
+        
+        # Build response message
+        if kyc_status == "verified" or document_status == "verified":
+            message = "Your KYC is verified. You have full access to all features."
+            can_resubmit = False
+        elif is_orphaned:
+            message = "Your previous KYC submission was not completed. Please re-submit your documents."
+        elif kyc_status == "pending" and has_document:
+            message = "Your KYC is under review. Please wait 24-48 hours for verification."
+        elif kyc_status == "rejected":
+            message = "Your KYC was rejected. Please re-submit with clear document images."
+        else:
+            message = "Please submit your KYC documents to unlock all features."
+        
+        return {
+            "success": True,
+            "user_id": uid,
+            "kyc_status": kyc_status,
+            "has_document": has_document,
+            "document_status": document_status,
+            "is_orphaned": is_orphaned,
+            "can_resubmit": can_resubmit,
+            "message": message,
+            "document_info": {
+                "submitted_at": kyc_doc.get("submitted_at") if kyc_doc else None,
+                "verified_at": kyc_doc.get("verified_at") if kyc_doc else None,
+                "aadhaar_number": kyc_doc.get("aadhaar_number") if kyc_doc else user.get("aadhaar_number"),
+                "pan_number": kyc_doc.get("pan_number") if kyc_doc else user.get("pan_number")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC check status error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to check KYC status: {str(e)}")
+
+
+@api_router.post("/kyc/reset-for-resubmit/{uid}")
+async def reset_kyc_for_resubmit(uid: str):
+    """
+    Reset user's KYC status to allow re-submission.
+    Used for orphaned records or when user wants to update documents.
+    """
+    try:
+        # Get user
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "uid": 1, "kyc_status": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        current_status = user.get("kyc_status", "not_submitted")
+        
+        # Don't allow reset if already verified
+        if current_status == "verified":
+            raise HTTPException(
+                status_code=400, 
+                detail="KYC is already verified. Contact support if you need to update documents."
+            )
+        
+        # Check for existing documents
+        existing_doc = await db.kyc_documents.find_one(
+            {"user_id": uid, "status": "pending"},
+            {"_id": 0, "kyc_id": 1}
+        )
+        
+        # If there's a pending document, reject it to allow resubmit
+        if existing_doc:
+            await db.kyc_documents.update_one(
+                {"kyc_id": existing_doc.get("kyc_id")},
+                {"$set": {
+                    "status": "superseded",
+                    "superseded_at": datetime.now(timezone.utc).isoformat(),
+                    "superseded_reason": "User requested re-submission"
+                }}
+            )
+        
+        # Reset user's KYC status
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "not_submitted",
+                "kyc_reset_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Clear KYC cache
+        try:
+            await cache.delete("kyc_stats")
+            await cache.delete("kyc_pending_count")
+        except:
+            pass
+        
+        return {
+            "success": True,
+            "message": "KYC reset successful. You can now re-submit your documents.",
+            "previous_status": current_status,
+            "new_status": "not_submitted"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC reset error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to reset KYC: {str(e)}")
+
+
+@api_router.get("/admin/kyc/orphaned-requests")
+async def get_orphaned_kyc_requests(page: int = 1, limit: int = 50):
+    """
+    Admin tool to find users with pending KYC status but no document in kyc_documents collection.
+    These are 'orphaned' records that need to be fixed.
+    """
+    try:
+        skip = (page - 1) * limit
+        
+        # Find users with pending KYC status
+        pending_users = await db.users.find(
+            {"kyc_status": "pending"},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "created_at": 1,
+             "kyc_status": 1, "aadhaar_number": 1, "pan_number": 1}
+        ).to_list(1000)  # Get all to check against documents
+        
+        orphaned_users = []
+        
+        for user in pending_users:
+            uid = user.get("uid")
+            # Check if document exists
+            doc_exists = await db.kyc_documents.find_one(
+                {"user_id": uid},
+                {"_id": 0, "kyc_id": 1}
+            )
+            
+            if not doc_exists:
+                orphaned_users.append({
+                    "uid": uid,
+                    "name": user.get("name", "Unknown"),
+                    "email": user.get("email", ""),
+                    "mobile": user.get("mobile", ""),
+                    "created_at": user.get("created_at"),
+                    "kyc_status": user.get("kyc_status"),
+                    "has_aadhaar": bool(user.get("aadhaar_number")),
+                    "has_pan": bool(user.get("pan_number")),
+                    "issue": "User has 'pending' status but no KYC document exists"
+                })
+        
+        total = len(orphaned_users)
+        paginated = orphaned_users[skip:skip + limit]
+        
+        return {
+            "success": True,
+            "orphaned_users": paginated,
+            "total": total,
+            "page": page,
+            "pages": (total + limit - 1) // limit if total > 0 else 0,
+            "message": f"Found {total} users with orphaned KYC status"
+        }
+        
+    except Exception as e:
+        print(f"Orphaned KYC search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to find orphaned records: {str(e)}")
+
+
+@api_router.post("/admin/kyc/fix-orphaned")
+async def fix_orphaned_kyc_records(request: Request):
+    """
+    Admin tool to fix orphaned KYC records.
+    Resets kyc_status to 'not_submitted' for selected users.
+    """
+    try:
+        data = await request.json()
+        user_ids = data.get("user_ids", [])
+        admin_id = data.get("admin_id")
+        
+        if not user_ids:
+            raise HTTPException(status_code=400, detail="No user IDs provided")
+        
+        fixed_count = 0
+        errors = []
+        
+        for uid in user_ids:
+            try:
+                # Verify user has orphaned status (pending but no document)
+                user = await db.users.find_one(
+                    {"uid": uid, "kyc_status": "pending"},
+                    {"_id": 0, "uid": 1, "name": 1}
+                )
+                
+                if not user:
+                    errors.append(f"{uid}: User not found or not in pending status")
+                    continue
+                
+                doc_exists = await db.kyc_documents.find_one({"user_id": uid})
+                if doc_exists:
+                    errors.append(f"{uid}: Document exists, not orphaned")
+                    continue
+                
+                # Fix the orphaned record
+                result = await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "kyc_status": "not_submitted",
+                        "kyc_fixed_at": datetime.now(timezone.utc).isoformat(),
+                        "kyc_fixed_by": admin_id,
+                        "kyc_fix_reason": "Admin fix - orphaned record"
+                    }}
+                )
+                
+                if result.modified_count > 0:
+                    fixed_count += 1
+                    
+                    # Send notification to user
+                    await create_notification(
+                        user_id=uid,
+                        title="🔄 KYC पुन्हा सबमिट करा",
+                        message="तुमची KYC request पूर्ण झाली नाही. कृपया तुमची documents पुन्हा अपलोड करा.",
+                        notification_type="kyc",
+                        icon="🔄"
+                    )
+                    
+            except Exception as e:
+                errors.append(f"{uid}: {str(e)}")
+        
+        # Clear cache
+        try:
+            await cache.delete("kyc_stats")
+            await cache.delete("kyc_pending_count")
+        except:
+            pass
+        
+        return {
+            "success": True,
+            "fixed_count": fixed_count,
+            "total_requested": len(user_ids),
+            "errors": errors if errors else None,
+            "message": f"Fixed {fixed_count} orphaned KYC records"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Fix orphaned KYC error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fix records: {str(e)}")
+
+
+@api_router.post("/admin/kyc/fix-all-orphaned")
+async def fix_all_orphaned_kyc():
+    """
+    Admin tool to automatically fix ALL orphaned KYC records.
+    Finds all users with pending status but no document and resets them.
+    """
+    try:
+        # Find all users with pending KYC status
+        pending_users = await db.users.find(
+            {"kyc_status": "pending"},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1}
+        ).to_list(1000)
+        
+        fixed_count = 0
+        fixed_users = []
+        
+        for user in pending_users:
+            uid = user.get("uid")
+            
+            # Check if document exists
+            doc_exists = await db.kyc_documents.find_one({"user_id": uid})
+            
+            if not doc_exists:
+                # Fix orphaned record
+                result = await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "kyc_status": "not_submitted",
+                        "kyc_fixed_at": datetime.now(timezone.utc).isoformat(),
+                        "kyc_fix_reason": "Auto-fix - orphaned record"
+                    }}
+                )
+                
+                if result.modified_count > 0:
+                    fixed_count += 1
+                    fixed_users.append({
+                        "uid": uid,
+                        "name": user.get("name"),
+                        "email": user.get("email")
+                    })
+                    
+                    # Notify user
+                    try:
+                        await create_notification(
+                            user_id=uid,
+                            title="🔄 KYC पुन्हा सबमिट करा",
+                            message="तुमची KYC request पूर्ण झाली नाही. कृपया तुमची documents पुन्हा अपलोड करा.",
+                            notification_type="kyc",
+                            icon="🔄"
+                        )
+                    except:
+                        pass
+        
+        # Clear cache
+        try:
+            await cache.delete("kyc_stats")
+            await cache.delete("kyc_pending_count")
+        except:
+            pass
+        
+        return {
+            "success": True,
+            "fixed_count": fixed_count,
+            "total_pending_checked": len(pending_users),
+            "fixed_users": fixed_users[:20],  # Return first 20 for reference
+            "message": f"Auto-fixed {fixed_count} orphaned KYC records"
+        }
+        
+    except Exception as e:
+        print(f"Auto-fix orphaned KYC error: {e}")
+        raise HTTPException(status_code=500, detail=f"Auto-fix failed: {str(e)}")
+
+
 # ========== MARKETPLACE ROUTES ==========
 @api_router.post("/products", response_model=Product)
 async def create_product(product: ProductCreate):
