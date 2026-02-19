@@ -39,6 +39,55 @@ const SupportTickets = () => {
     'Other'
   ];
 
+  // Quick template questions for faster ticket creation
+  const quickTemplates = {
+    'Account Issues': [
+      'Unable to login to my account',
+      'Want to change my registered email/phone',
+      'Account showing wrong balance',
+      'Need to reset my PIN'
+    ],
+    'Mining': [
+      'Mining session not starting',
+      'Daily reward not credited',
+      'Mining points calculation issue'
+    ],
+    'Marketplace': [
+      'Order not delivered',
+      'Wrong product received',
+      'Refund request for order',
+      'Product quality issue'
+    ],
+    'Wallet': [
+      'PRC balance not updating',
+      'Cashback not received',
+      'Transaction failed but amount deducted'
+    ],
+    'KYC/VIP': [
+      'KYC verification pending for long time',
+      'KYC document rejected - need help',
+      'VIP subscription not activated',
+      'VIP benefits not working'
+    ],
+    'Orders': [
+      'Bill payment failed',
+      'Recharge not received',
+      'Bank transfer pending',
+      'Gift voucher code not working'
+    ],
+    'Technical': [
+      'App crashing frequently',
+      'Pages not loading',
+      'Error message appearing',
+      'Notifications not working'
+    ],
+    'Other': [
+      'General inquiry',
+      'Feedback/Suggestion',
+      'Other issue not listed'
+    ]
+  };
+
   useEffect(() => {
     const loggedUser = JSON.parse(localStorage.getItem('paras_user') || '{}');
     if (!loggedUser.uid) {
