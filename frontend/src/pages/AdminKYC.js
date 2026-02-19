@@ -1048,6 +1048,73 @@ const AdminKYC = ({ user }) => {
           </Card>
         </div>
       )}
+
+      {/* Sync by Email Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowSyncModal(false)}>
+          <Card className="w-full max-w-md bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Zap className="w-6 h-6 text-green-500" />
+                    Sync KYC by Email
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    User चा email किंवा mobile टाकून KYC status sync करा
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowSyncModal(false)}>
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">Email / Mobile Number</label>
+                  <Input
+                    placeholder="example@email.com किंवा 9876543210"
+                    value={syncEmail}
+                    onChange={(e) => setSyncEmail(e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white"
+                    onKeyDown={(e) => e.key === 'Enter' && syncKYCByEmail()}
+                  />
+                </div>
+
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-blue-400 text-sm">
+                    <strong>हे काय करते:</strong> User चा KYC document status (verified/pending/rejected) 
+                    त्याच्या profile मध्ये sync करते. जर Admin ने approve केले पण user ला pending दिसत असेल 
+                    तर हे fix करते.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={syncKYCByEmail}
+                    disabled={syncingByEmail || !syncEmail.trim()}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {syncingByEmail ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Zap className="w-4 h-4 mr-2" />
+                    )}
+                    Sync Now
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSyncModal(false)}
+                    className="border-gray-600"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
