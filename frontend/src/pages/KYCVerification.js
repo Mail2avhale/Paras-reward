@@ -259,10 +259,6 @@ const KYCVerification = ({ user }) => {
   const hasDocument = kycStatusInfo?.has_document;
   const isPendingReview = userData?.kyc_status === 'pending' && hasDocument && !isOrphaned;
 
-  // State for review status modal - moved to top of component
-  // const [showStatusModal, setShowStatusModal] = useState(false);
-  // const [checkingStatus, setCheckingStatus] = useState(false);
-
   const handleCheckStatus = async () => {
     setCheckingStatus(true);
     try {
