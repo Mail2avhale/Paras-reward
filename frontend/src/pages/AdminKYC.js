@@ -123,6 +123,39 @@ const AdminKYC = ({ user }) => {
     }
   };
 
+  // Sync KYC by email/mobile
+  const [syncEmail, setSyncEmail] = useState('');
+  const [syncingByEmail, setSyncingByEmail] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+
+  const syncKYCByEmail = async () => {
+    if (!syncEmail.trim()) {
+      toast.error('Email किंवा Mobile number टाका');
+      return;
+    }
+    
+    setSyncingByEmail(true);
+    try {
+      const response = await axios.post(`${API}/admin/kyc/resync-by-email`, {
+        identifier: syncEmail.trim()
+      });
+      
+      const data = response.data;
+      if (data.success) {
+        toast.success(`✅ ${data.message}`, { duration: 5000 });
+        setShowSyncModal(false);
+        setSyncEmail('');
+        // Refresh data
+        fetchKYCDocuments(1, statusFilter, debouncedSearch);
+        fetchStats();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Sync failed');
+    } finally {
+      setSyncingByEmail(false);
+    }
+  };
+
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
