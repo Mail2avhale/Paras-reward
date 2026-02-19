@@ -699,6 +699,72 @@ const RewardsHome = () => {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-gray-600">
+              Everything you need to know about Paras Reward
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            {[
+              {
+                q: "What is Paras Reward?",
+                a: "Paras Reward is a platform where you can earn PRC (Paras Reward Coins) through daily activities like mining, games, and referrals. Redeem your coins for gift vouchers, bill payments, and more!"
+              },
+              {
+                q: "Is it free to join?",
+                a: "Yes! Creating an account is completely free. You can start earning PRC immediately with our Explorer plan. Upgrade to premium plans for higher earning rates."
+              },
+              {
+                q: "How do I earn PRC coins?",
+                a: "Earn PRC through: Daily Mining (automatic), Tap Games, Scratch Cards, Treasure Hunts, Watching Ads, and Referral Bonuses. Premium members earn up to 5x more!"
+              },
+              {
+                q: "What can I redeem my PRC for?",
+                a: "Redeem PRC for: Amazon/Flipkart Gift Vouchers, Mobile Recharges, DTH Recharges, Bill Payments, and Bank Transfers (for VIP members)."
+              },
+              {
+                q: "How does the referral program work?",
+                a: "Share your referral code with friends. Earn bonus PRC when they join and complete activities. Our 5-level referral system lets you earn from your network!"
+              },
+              {
+                q: "Is my data safe?",
+                a: "Absolutely! We use bank-grade encryption and follow strict privacy policies. Your data is never shared without consent. We are D-U-N-S® Registered and verified."
+              }
+            ].map((faq, index) => (
+              <details 
+                key={index}
+                className="group bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+              >
+                <summary className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <span className="font-semibold text-gray-900 pr-4">{faq.q}</span>
+                  <ChevronDown className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" />
+                </summary>
+                <div className="px-5 pb-5 text-gray-600">
+                  {faq.a}
+                </div>
+              </details>
+            ))}
+          </div>
+          
+          <div className="text-center mt-8">
+            <Link 
+              to="/faq"
+              className="inline-flex items-center gap-2 text-purple-600 font-semibold hover:text-purple-700 transition-colors"
+            >
+              View All FAQs
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
