@@ -224,8 +224,28 @@ const KYCVerification = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center">
         <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-400 mt-4">Loading KYC...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !userData) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6">
+        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <p className="text-white text-lg font-bold mb-2">Error Loading Page</p>
+        <p className="text-gray-400 text-center mb-4">{error}</p>
+        <div className="flex gap-3">
+          <Button onClick={fetchData} className="bg-amber-500 hover:bg-amber-600 text-black">
+            Try Again
+          </Button>
+          <Button onClick={() => navigate(-1)} variant="outline" className="border-gray-600">
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
@@ -237,9 +257,9 @@ const KYCVerification = ({ user }) => {
   const hasDocument = kycStatusInfo?.has_document;
   const isPendingReview = userData?.kyc_status === 'pending' && hasDocument && !isOrphaned;
 
-  // State for review status modal
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  // State for review status modal - moved to top of component
+  // const [showStatusModal, setShowStatusModal] = useState(false);
+  // const [checkingStatus, setCheckingStatus] = useState(false);
 
   const handleCheckStatus = async () => {
     setCheckingStatus(true);
