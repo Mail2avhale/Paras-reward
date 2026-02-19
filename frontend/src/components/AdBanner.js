@@ -3,13 +3,13 @@ import React, { useEffect, useRef, useState } from 'react';
 /**
  * AdMob Banner Component for PWA/TWA
  * 
- * This component displays Google AdMob banner ads in the app.
- * It uses Google AdSense for web-based ads that work in PWA/TWA.
- * 
- * For native Android TWA with AdMob, use the TWA builder settings.
+ * App ID: ca-app-pub-3833838421879550~5446772218
+ * Banner Ad Unit: ca-app-pub-3833838421879550/6993564275
  */
+const ADMOB_BANNER_AD_UNIT = '6993564275';
+
 const AdBanner = ({ 
-  adSlot,
+  adSlot = ADMOB_BANNER_AD_UNIT,
   adFormat = 'auto',
   fullWidth = true,
   className = '',
