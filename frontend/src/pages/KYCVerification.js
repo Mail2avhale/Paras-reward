@@ -638,11 +638,11 @@ const KYCVerification = ({ user }) => {
                 <div className="bg-orange-500/20 border border-orange-500/50 rounded-xl p-4">
                   <p className="text-orange-400 font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5" />
-                    समस्या आढळली!
+                    Issue Detected!
                   </p>
                   <p className="text-gray-300 text-sm mt-2">
-                    तुमचा status "Pending" दाखवत आहे पण documents सापडले नाहीत. 
-                    कृपया खालील बटण दाबून पुन्हा submit करा.
+                    Your status shows "Pending" but no documents were found. 
+                    Please click the button below to re-submit your KYC.
                   </p>
                 </div>
               )}
