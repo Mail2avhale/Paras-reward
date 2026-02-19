@@ -104,6 +104,14 @@ const FAQ = () => {
         {
           question: "How does the referral system work?",
           answer: "Share your unique referral code or link with friends. When they register using your code and become active users, you earn bonus PRC coins and increased mining rates."
+        },
+        {
+          question: "What is the 5-level referral bonus?",
+          answer: "You earn bonus from 5 levels of referrals: Level 1 (direct): 10%, Level 2: 5%, Level 3: 3%, Level 4: 2%, Level 5: 1%. Total potential bonus up to 21%!"
+        },
+        {
+          question: "When do I receive referral bonus?",
+          answer: "Referral bonus is credited when your referred user completes their daily mining session. The bonus is automatically added to your PRC balance."
         }
       ]
     },
@@ -118,6 +126,58 @@ const FAQ = () => {
         {
           question: "What is the Cashback Wallet?",
           answer: "The Cashback Wallet stores your redemption cashback (25% of product value) in INR. It has a monthly maintenance fee of ₹99 and allows Redemptions of minimum ₹10 with a ₹5 processing fee."
+        },
+        {
+          question: "How long does bank transfer take?",
+          answer: "Bank transfers are processed within 24-72 hours after approval. UPI transfers are usually instant after admin approval."
+        },
+        {
+          question: "Why was my redemption rejected?",
+          answer: "Common reasons: Invalid UPI ID, KYC not approved, insufficient balance, or weekly limit exceeded. Check the rejection reason in your transaction history."
+        }
+      ]
+    },
+    {
+      category: 'Technical Issues',
+      icon: HelpCircle,
+      questions: [
+        {
+          question: "App is not loading properly?",
+          answer: "Try these steps: 1) Clear app cache, 2) Check internet connection, 3) Update to latest version, 4) Restart the app. If issue persists, contact support."
+        },
+        {
+          question: "Mining session not starting?",
+          answer: "Ensure you have stable internet. If the issue continues, log out and log back in. Mining can only be done once every 24 hours."
+        },
+        {
+          question: "Payment proof upload failing?",
+          answer: "Image size should be under 5MB. Use JPG or PNG format. Ensure clear visibility of transaction details including UTR number."
+        },
+        {
+          question: "How to change my PIN?",
+          answer: "Go to Profile > Security Settings > Change PIN. Enter your current PIN, then set a new 6-digit PIN."
+        },
+        {
+          question: "Forgot my PIN?",
+          answer: "Click 'Forgot PIN' on login page, verify via OTP to your registered mobile/email, then set a new PIN."
+        }
+      ]
+    },
+    {
+      category: 'Account & Profile',
+      icon: Shield,
+      questions: [
+        {
+          question: "How to update my profile?",
+          answer: "Go to Profile section, tap on the field you want to edit (name, email, phone). Some fields require verification after change."
+        },
+        {
+          question: "Can I delete my account?",
+          answer: "Yes, contact support to request account deletion. Note: All PRC balance and transaction history will be permanently deleted."
+        },
+        {
+          question: "Why is my account blocked?",
+          answer: "Accounts may be blocked for: Multiple account creation, suspicious activity, policy violations, or KYC fraud. Contact support for appeal."
         }
       ]
     }
