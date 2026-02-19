@@ -9324,6 +9324,9 @@ async def check_kyc_status(uid: str):
         
     except HTTPException:
         raise
+    except asyncio.TimeoutError:
+        print(f"KYC check status timeout for user: {uid}")
+        raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
     except Exception as e:
         print(f"KYC check status error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to check KYC status: {str(e)}")
