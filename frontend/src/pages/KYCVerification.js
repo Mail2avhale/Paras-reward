@@ -351,10 +351,10 @@ const KYCVerification = ({ user }) => {
               <AlertCircle className="w-12 h-12 text-orange-500 flex-shrink-0" />
               <div className="flex-1">
                 <p className="font-bold text-lg text-orange-400">
-                  KYC पुन्हा Submit करा
+                  Re-submit KYC Documents
                 </p>
                 <p className="text-gray-400 text-sm mb-4">
-                  तुमची पूर्वीची KYC submission पूर्ण झाली नाही. कृपया तुमची documents पुन्हा upload करा.
+                  Your previous KYC submission was not completed. Please upload your documents again.
                 </p>
                 <Button
                   onClick={handleResetKYC}
@@ -368,7 +368,7 @@ const KYCVerification = ({ user }) => {
                       Resetting...
                     </span>
                   ) : (
-                    'पुन्हा Submit करा'
+                    'Re-submit Now'
                   )}
                 </Button>
               </div>
