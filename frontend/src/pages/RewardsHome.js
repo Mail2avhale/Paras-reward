@@ -718,6 +718,14 @@ const RewardsHome = () => {
                 a: "Paras Reward is a platform where you can earn PRC (Paras Reward Coins) through daily activities like mining, games, and referrals. Redeem your coins for gift vouchers, bill payments, and more!"
               },
               {
+                q: "What is PRC (Paras Reward Coin)?",
+                a: "PRC is a virtual reward point used ONLY within the Paras Reward platform. PRC is NOT cryptocurrency, NOT real money, and has NO cash value outside this platform. It cannot be traded, sold, or converted to any currency."
+              },
+              {
+                q: "What PRC is NOT?",
+                a: "PRC is NOT: ❌ Cryptocurrency or Bitcoin ❌ Real money or legal tender ❌ An investment product ❌ Tradeable on exchanges ❌ Transferable to others ❌ Convertible to cash directly. PRC is purely a loyalty reward for platform activities."
+              },
+              {
                 q: "Is it free to join?",
                 a: "Yes! Creating an account is completely free. You can start earning PRC immediately with our Explorer plan. Upgrade to premium plans for higher earning rates."
               },
@@ -727,7 +735,7 @@ const RewardsHome = () => {
               },
               {
                 q: "What can I redeem my PRC for?",
-                a: "Redeem PRC for: Amazon/Flipkart Gift Vouchers, Mobile Recharges, DTH Recharges, Bill Payments, and Bank Transfers (for VIP members)."
+                a: "Redeem PRC for: Amazon/Flipkart Gift Vouchers, Mobile Recharges, DTH Recharges, Bill Payments. VIP members can also redeem to bank (subject to limits and charges)."
               },
               {
                 q: "How does the referral program work?",
