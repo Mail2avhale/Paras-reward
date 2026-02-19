@@ -252,12 +252,15 @@ const KYCVerification = ({ user }) => {
     );
   }
 
-  const isVerified = userData?.kyc_status === 'verified';
+  // Use kycStatusInfo if available for most accurate status
+  const actualKycStatus = kycStatusInfo?.kyc_status || userData?.kyc_status;
+  const isVerified = actualKycStatus === 'verified';
   // Use kycStatusInfo for accurate detection
   const isOrphaned = kycStatusInfo?.is_orphaned;
   const canResubmit = kycStatusInfo?.can_resubmit;
   const hasDocument = kycStatusInfo?.has_document;
-  const isPendingReview = userData?.kyc_status === 'pending' && hasDocument && !isOrphaned;
+  const documentStatus = kycStatusInfo?.document_status;
+  const isPendingReview = actualKycStatus === 'pending' && hasDocument && !isOrphaned;
 
   const handleCheckStatus = async () => {
     setCheckingStatus(true);
