@@ -5,8 +5,10 @@ import React, { useEffect, useRef, useState } from 'react';
  * 
  * App ID: ca-app-pub-3833838421879550~5446772218
  * Banner Ad Unit: ca-app-pub-3833838421879550/6993564275
+ * Rewarded Ad Unit: ca-app-pub-3833838421879550/7194533380
  */
 const ADMOB_BANNER_AD_UNIT = '6993564275';
+const ADMOB_REWARDED_AD_UNIT = '7194533380';
 
 const AdBanner = ({ 
   adSlot = ADMOB_BANNER_AD_UNIT,
