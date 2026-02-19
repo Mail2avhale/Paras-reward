@@ -9256,12 +9256,16 @@ async def check_kyc_status(uid: str):
     Check user's KYC status and verify if documents exist.
     Returns detailed status to help users understand their KYC state.
     """
+    import asyncio
     try:
-        # Get user
-        user = await db.users.find_one(
-            {"uid": uid},
-            {"_id": 0, "uid": 1, "name": 1, "email": 1, "kyc_status": 1, 
-             "aadhaar_number": 1, "pan_number": 1}
+        # Get user with timeout
+        user = await asyncio.wait_for(
+            db.users.find_one(
+                {"uid": uid},
+                {"_id": 0, "uid": 1, "name": 1, "email": 1, "kyc_status": 1, 
+                 "aadhaar_number": 1, "pan_number": 1}
+            ),
+            timeout=10.0
         )
         
         if not user:
@@ -9269,11 +9273,14 @@ async def check_kyc_status(uid: str):
         
         kyc_status = user.get("kyc_status", "not_submitted")
         
-        # Check if KYC document exists
-        kyc_doc = await db.kyc_documents.find_one(
-            {"user_id": uid},
-            {"_id": 0, "kyc_id": 1, "status": 1, "submitted_at": 1, "verified_at": 1,
-             "aadhaar_number": 1, "pan_number": 1}
+        # Check if KYC document exists with timeout
+        kyc_doc = await asyncio.wait_for(
+            db.kyc_documents.find_one(
+                {"user_id": uid},
+                {"_id": 0, "kyc_id": 1, "status": 1, "submitted_at": 1, "verified_at": 1,
+                 "aadhaar_number": 1, "pan_number": 1}
+            ),
+            timeout=10.0
         )
         
         has_document = kyc_doc is not None
