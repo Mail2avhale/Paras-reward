@@ -265,10 +265,17 @@ const KYCVerification = ({ user }) => {
       const response = await axios.get(`${API}/kyc/check-status/${user.uid}`);
       setKycStatusInfo(response.data);
       
-      // If auto-synced, show success message and refresh page data
-      if (response.data.was_auto_synced) {
-        toast.success('✅ KYC Status Updated! Your profile is now verified.');
-        await fetchData(); // Refresh user data
+      // If auto-synced or status changed, update local userData immediately
+      if (response.data.was_auto_synced || response.data.kyc_status !== userData?.kyc_status) {
+        // Update userData to reflect the new status
+        setUserData(prev => ({
+          ...prev,
+          kyc_status: response.data.kyc_status
+        }));
+        
+        if (response.data.was_auto_synced) {
+          toast.success('✅ KYC Status Updated! Your profile is now verified.');
+        }
       }
       
       setShowStatusModal(true);
