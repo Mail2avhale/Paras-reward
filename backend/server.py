@@ -9124,6 +9124,105 @@ async def resync_user_kyc(user_id: str):
         raise HTTPException(status_code=500, detail=f"Resync failed: {str(e)}")
 
 
+@api_router.post("/admin/kyc/resync-by-email")
+async def resync_user_kyc_by_email(request: Request):
+    """
+    Re-sync KYC status for a user by email or mobile.
+    Useful when admin doesn't know the user ID.
+    """
+    try:
+        data = await request.json()
+        identifier = data.get("identifier", "").strip()
+        
+        if not identifier:
+            raise HTTPException(status_code=400, detail="Email or mobile required")
+        
+        # Find user by email or mobile
+        user = await db.users.find_one(
+            {
+                "$or": [
+                    {"email": {"$regex": f"^{identifier}$", "$options": "i"}},
+                    {"mobile": identifier},
+                    {"phone": identifier}
+                ]
+            },
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1}
+        )
+        
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User not found with: {identifier}")
+        
+        user_id = user.get("uid")
+        
+        # Get latest KYC document for this user
+        latest_kyc = await db.kyc_documents.find_one(
+            {"user_id": user_id},
+            {"_id": 0, "kyc_id": 1, "status": 1, "verified_at": 1, "submitted_at": 1}
+        )
+        
+        old_status = user.get("kyc_status")
+        
+        if not latest_kyc:
+            # No KYC document found
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"kyc_status": "not_submitted"}}
+            )
+            return {
+                "success": True,
+                "user_id": user_id,
+                "user_name": user.get("name"),
+                "user_email": user.get("email"),
+                "old_status": old_status,
+                "new_status": "not_submitted",
+                "has_kyc_document": False,
+                "message": f"No KYC document found for {user.get('name')}. Status set to not_submitted."
+            }
+        
+        kyc_status = latest_kyc.get("status", "pending")
+        
+        # Update user's kyc_status to match the document
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "kyc_status": kyc_status,
+                "kyc_synced_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Send notification if status changed to verified
+        if kyc_status == "verified" and old_status != "verified":
+            try:
+                await create_notification(
+                    user_id=user_id,
+                    title="✅ KYC Verified!",
+                    message="Your KYC verification is complete. You now have full access to all platform features.",
+                    notification_type="kyc",
+                    icon="✅"
+                )
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "user_name": user.get("name"),
+            "user_email": user.get("email"),
+            "old_status": old_status,
+            "new_status": kyc_status,
+            "has_kyc_document": True,
+            "kyc_document_status": kyc_status,
+            "kyc_verified_at": latest_kyc.get("verified_at"),
+            "message": f"KYC synced for {user.get('name')}: {old_status} → {kyc_status}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"KYC resync by email error: {e}")
+        raise HTTPException(status_code=500, detail=f"Resync failed: {str(e)}")
+
+
 async def send_kyc_notification(user_id: str, status: str, kyc_id: str):
     """Send KYC notification in background"""
     try:
