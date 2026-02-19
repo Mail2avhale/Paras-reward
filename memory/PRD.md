@@ -177,8 +177,15 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - `GET /api/admin/kyc/pending` - Get pending KYC users (paginated)
 - `POST /api/admin/kyc/{uid}/approve` - Approve user KYC (sets kyc_status: "verified")
 - `POST /api/admin/kyc/{uid}/reject` - Reject user KYC
+- `GET /api/admin/kyc/orphaned-requests` - Find users with orphaned KYC status (NEW)
+- `POST /api/admin/kyc/fix-orphaned` - Fix selected orphaned records (NEW)
+- `POST /api/admin/kyc/fix-all-orphaned` - Auto-fix all orphaned records (NEW)
 
-### Admin User 360 KYC Actions (NEW)
+### User KYC Endpoints (NEW)
+- `GET /api/kyc/check-status/{uid}` - Check KYC status & detect orphaned state
+- `POST /api/kyc/reset-for-resubmit/{uid}` - Reset KYC for re-submission
+
+### Admin User 360 KYC Actions
 - `POST /api/admin/user-360/action` with `action: "approve_kyc"` - Approve KYC from User 360 page
 - `POST /api/admin/user-360/action` with `action: "reject_kyc"` - Reject KYC from User 360 page (with reason)
 
