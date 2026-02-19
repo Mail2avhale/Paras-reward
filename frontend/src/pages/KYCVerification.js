@@ -48,6 +48,7 @@ const KYCVerification = ({ user }) => {
 
   const [kycStatusInfo, setKycStatusInfo] = useState(null);
   const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -56,25 +57,32 @@ const KYCVerification = ({ user }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Fetch user data and KYC status in parallel
-      const [userResponse, kycStatusResponse] = await Promise.all([
-        axios.get(`${API}/user/${user.uid}`),
-        axios.get(`${API}/kyc/check-status/${user.uid}`).catch(() => null)
-      ]);
-      
+      // Fetch user data first
+      const userResponse = await axios.get(`${API}/user/${user.uid}`, { timeout: 15000 });
       setUserData(userResponse.data);
-      
-      if (kycStatusResponse?.data) {
-        setKycStatusInfo(kycStatusResponse.data);
-      }
       
       // Pre-fill name if available
       if (userResponse.data.name) {
         setKycData(prev => ({ ...prev, full_name: userResponse.data.name }));
       }
+      
+      // Then fetch KYC status (non-blocking)
+      try {
+        const kycStatusResponse = await axios.get(`${API}/kyc/check-status/${user.uid}`, { timeout: 10000 });
+        if (kycStatusResponse?.data) {
+          setKycStatusInfo(kycStatusResponse.data);
+        }
+      } catch (kycError) {
+        console.log('KYC status check failed (non-critical):', kycError);
+        // Don't block page load if KYC status check fails
+      }
+      
     } catch (error) {
       console.error('Error fetching user:', error);
+      setError('Failed to load data. Please try again.');
+      toast.error('Failed to load KYC page. Please try again.');
     } finally {
       setLoading(false);
     }
