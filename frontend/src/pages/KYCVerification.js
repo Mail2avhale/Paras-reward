@@ -187,19 +187,21 @@ const KYCVerification = ({ user }) => {
   };
 
   const getStatusBadge = () => {
-    const status = userData?.kyc_status;
-    // Use kycStatusInfo for accurate status
-    const isOrphaned = kycStatusInfo?.is_orphaned;
-    const hasDocument = kycStatusInfo?.has_document;
+    // Use kycStatusInfo for most accurate status (includes auto-synced status)
+    const status = kycStatusInfo?.kyc_status || userData?.kyc_status;
+    const docStatus = kycStatusInfo?.document_status;
+    const isOrphanedStatus = kycStatusInfo?.is_orphaned;
+    const hasDoc = kycStatusInfo?.has_document;
     
-    if (status === 'verified') {
+    // If document is verified, show verified badge
+    if (status === 'verified' || docStatus === 'verified') {
       return (
         <div className="flex items-center gap-2 bg-emerald-500/20 px-4 py-2 rounded-full">
           <CheckCircle className="w-5 h-5 text-emerald-500" />
           <span className="text-emerald-400 font-semibold">{t.verified}</span>
         </div>
       );
-    } else if (status === 'pending' && hasDocument && !isOrphaned) {
+    } else if (status === 'pending' && hasDoc && !isOrphanedStatus) {
       return (
         <div className="flex items-center gap-2 bg-amber-500/20 px-4 py-2 rounded-full">
           <Clock className="w-5 h-5 text-amber-500" />
@@ -213,7 +215,7 @@ const KYCVerification = ({ user }) => {
           <span className="text-red-400 font-semibold">{t.rejected}</span>
         </div>
       );
-    } else if (isOrphaned) {
+    } else if (isOrphanedStatus) {
       return (
         <div className="flex items-center gap-2 bg-orange-500/20 px-4 py-2 rounded-full">
           <AlertCircle className="w-5 h-5 text-orange-500" />
