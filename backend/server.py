@@ -9289,11 +9289,26 @@ async def check_kyc_status(uid: str):
         # Detect orphaned status (user has pending but no document)
         is_orphaned = kyc_status == "pending" and not has_document
         
+        # Detect sync mismatch (document verified but profile still pending)
+        is_sync_mismatch = document_status == "verified" and kyc_status != "verified"
+        
+        # Auto-fix sync mismatch
+        if is_sync_mismatch:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "kyc_status": "verified",
+                    "kyc_auto_synced_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            kyc_status = "verified"
+            print(f"Auto-synced KYC status for user {uid}: pending -> verified")
+        
         # Determine if user can re-submit
         can_resubmit = kyc_status in ["not_submitted", "rejected"] or is_orphaned
         
         # Build response message
-        if kyc_status == "verified" or document_status == "verified":
+        if kyc_status == "verified":
             message = "Your KYC is verified. You have full access to all features."
             can_resubmit = False
         elif is_orphaned:
@@ -9312,6 +9327,7 @@ async def check_kyc_status(uid: str):
             "has_document": has_document,
             "document_status": document_status,
             "is_orphaned": is_orphaned,
+            "was_auto_synced": is_sync_mismatch,
             "can_resubmit": can_resubmit,
             "message": message,
             "document_info": {
