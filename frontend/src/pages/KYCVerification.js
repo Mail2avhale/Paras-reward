@@ -275,8 +275,42 @@ const KYCVerification = ({ user }) => {
         </div>
       )}
 
-      {/* KYC Form - Show if not verified and not pending review */}
-      {!isVerified && !isPendingReview && (
+      {/* Orphaned KYC Status - Show Re-submit Option */}
+      {isOrphaned && (
+        <div className="px-5 mb-6">
+          <div className="rounded-2xl p-5 bg-orange-500/10 border border-orange-500/30">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-12 h-12 text-orange-500 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-bold text-lg text-orange-400">
+                  KYC पुन्हा Submit करा
+                </p>
+                <p className="text-gray-400 text-sm mb-4">
+                  तुमची पूर्वीची KYC submission पूर्ण झाली नाही. कृपया तुमची documents पुन्हा upload करा.
+                </p>
+                <Button
+                  onClick={handleResetKYC}
+                  disabled={resetting}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                  data-testid="reset-kyc-btn"
+                >
+                  {resetting ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Resetting...
+                    </span>
+                  ) : (
+                    'पुन्हा Submit करा'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KYC Form - Show if not verified and not pending review (or if orphaned after reset) */}
+      {!isVerified && !isPendingReview && !isOrphaned && (
         <>
           {/* Document Type Selection */}
           <div className="px-5 mb-6">
