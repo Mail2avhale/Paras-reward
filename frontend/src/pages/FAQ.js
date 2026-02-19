@@ -16,6 +16,14 @@ const FAQ = () => {
           answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement, tap games, and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be redeemed for services like mobile recharges and bill payments through our partners."
         },
         {
+          question: "What is PRC (Paras Reward Coin)?",
+          answer: "PRC is a virtual reward point used ONLY within the Paras Reward platform. It is earned through platform activities and can be redeemed for gift vouchers, recharges, and bill payments. PRC has NO cash value and cannot be converted to real money directly."
+        },
+        {
+          question: "What PRC is NOT - Important Disclaimer",
+          answer: "PRC is NOT: ❌ Cryptocurrency or any form of digital currency ❌ Real money, cash, or legal tender ❌ An investment or financial product ❌ Tradeable on any exchange ❌ Transferable to other users ❌ Convertible to cash or bank transfer (except VIP redemption which is a reward, not conversion) ❌ A guaranteed value asset. PRC is purely a promotional loyalty reward for platform engagement."
+        },
+        {
           question: "Is there any joining fee?",
           answer: "No! Joining PARAS REWARD is completely free. You can start earning promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
         }
