@@ -91,7 +91,7 @@ const KYCVerification = ({ user }) => {
   };
 
   const handleResetKYC = async () => {
-    if (!window.confirm('तुम्ही तुमची KYC documents पुन्हा submit कराल का?')) {
+    if (!window.confirm('Do you want to re-submit your KYC documents?')) {
       return;
     }
     
