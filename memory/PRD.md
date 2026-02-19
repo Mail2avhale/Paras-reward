@@ -5,6 +5,43 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### KYC Orphaned Records Fix & Recovery Tool ✅ (Feb 19, 2026)
+**Problem:** Critical bug - 74 users had `kyc_status: "pending"` but no actual documents in `kyc_documents` collection. This caused:
+- Admin couldn't see these KYC requests
+- Users stuck in "pending" state forever
+- No way to re-submit documents
+
+**Solution:**
+1. **Backend - New Endpoints:**
+   - `GET /api/kyc/check-status/{uid}` - Detailed status check for users (detects orphaned status)
+   - `POST /api/kyc/reset-for-resubmit/{uid}` - Allows users to reset and re-submit
+   - `GET /api/admin/kyc/orphaned-requests` - Admin tool to find orphaned records
+   - `POST /api/admin/kyc/fix-orphaned` - Fix selected orphaned records
+   - `POST /api/admin/kyc/fix-all-orphaned` - Auto-fix all orphaned records
+
+2. **Frontend - User KYC Page (`KYCVerification.js`):**
+   - Added detection for orphaned status
+   - Shows orange "Re-submit" badge for affected users
+   - Shows reset button with Marathi message
+   - After reset, user can re-submit documents
+
+3. **Frontend - Admin KYC Page (`AdminKYC.js`):**
+   - Added "Find Orphaned" button (orange)
+   - Modal shows list of affected users
+   - "Fix All" button to auto-reset all orphaned records
+   - Individual "Fix" button per user
+
+**Test Results:**
+- API Test: ✅ Found 74 orphaned records
+- API Test: ✅ Fixed all 74 records in one click
+- API Test: ✅ After fix, 0 orphaned records remaining
+- User notification sent to all fixed users (Marathi)
+
+**Files Modified:**
+- `backend/server.py` - Added 5 new endpoints for KYC recovery
+- `frontend/src/pages/KYCVerification.js` - User-facing status check & re-submit
+- `frontend/src/pages/AdminKYC.js` - Admin tool for finding/fixing orphaned records
+
 ### Admin Service Toggles Feature ✅ (Feb 18, 2026)
 **Feature:** Admin can enable/disable services temporarily
 **Services Available:**
