@@ -1,97 +1,98 @@
 <analysis>**original_problem_statement:**
-Throughout the session, the user made several requests to fix bugs, improve existing features, and add new configurations to their Paras Reward application. The key requests included:
+Throughout this session, the user focused on enhancing the Paras Reward application's administrative controls, user interface, performance, and support systems, culminating in the discovery of a critical bug.
 
-1.  **KYC Flow Improvements:**
-    *   Add a direct KYC approval feature to the Admin User 360 page.
-    *   Fix a bug where a user's KYC status remained pending even after admin approval, by creating a Sync Status feature for admins.
-    *   Improve the user-facing KYC upload process with better validation, image compression, and error handling.
+**Key Features & Fixes Requested:**
+1.  **Admin Controls:**
+    *   Implement on/off toggles for all key services (Mobile Recharge, DTH, EMI, etc.) from the admin panel with a custom Services temporarily down message.
+    *   On the Admin Subscription Management page, fix missing data fields (Approve/Expiry Date, Name, UTR) and add a date-range search filter.
 
-2.  **Financial Rules & Limits:**
-    *   Configure the monthly prices for subscription plans to fix the Monthly Redeem Limit calculation.
-    *   Clarify and configure the 5-level referral mining bonus system, including setting the Explorer plan's bonus contribution to zero and adjusting the weights for other paid plans. The user decided against capping the referral bonus.
-    *   Implement a strict weekly rule allowing users to perform **either** a Pay EMI transaction **or** a Bank Redeem, but not both in the same week.
+2.  **UI/UX Improvements:**
+    *   Fix an issue where buttons on admin pages only showed icons without text labels.
+    *   Add the official D-U-N-S® Registered Seal to the Home page and the About Us page for credibility.
+    *   Update the footer copyright notice to display the full company name: Paras Reward Technologies Private Limited.
+    *   Remove all non-monthly subscription plans (Quarterly, Half-Yearly, Yearly) from the entire application (frontend and backend).
 
-3.  **Admin Panel Enhancements:**
-    *   Fix slow/unresponsive search on several admin pages by implementing server-side, debounced searching.
-    *   Change the sorting on admin pages (Subscriptions, Redeem, etc.) to show the latest approved/completed requests at the top.
-    *   Add a feature for admins to temporarily enable or disable the Bill Pay and Bank Redeem services independently.
+3.  **Content & Support System:**
+    *   Enhance the in-app support by creating a comprehensive FAQ, improving the chatbot with auto-answers, and adding quick-reply templates to the support ticket system.
+    *   Add a dedicated FAQ section to the home page.
+    *   Add a detailed explanation and disclaimer in the FAQ about what the platform's PRC coin is and, more importantly, what it is not.
 
-4.  **UI/UX and General Fixes:**
-    *   Enhance the Mobile Recharge form with dropdowns for Prepaid/Postpaid, Operator, and Circle.
-    *   Update all instances of the contact email to the new .
-    *   Fix a subscription payment proof upload failure by adding client-side image compression.
-    *   Correct the Mining Bonus rate displayed on the Invite page to reflect the actual calculated value based on plan weights.
-    *   Fix a server timeout error that occurred during subscription payment approval.
-    *   Provide a more user-friendly error message for non-registered users attempting to log in.
+4.  **Performance & Compliance:**
+    *   Conduct a full audit of the application for information accuracy, compliance with Google Policies (including AdMob), and readiness for app store launching.
+    *   Optimize the app's performance and reduce its bundle size by removing unused packages and implementing lazy loading for images.
+
+5.  **Bug Fixes:**
+    *   Resolve a white screen error on the live site, which was traced back to deprecated iframe attributes used for the D-U-N-S seal.
+    *   **CRITICAL:** Investigate why KYC documents submitted by users are not appearing in the admin panel, even after running the existing KYC Syncing tool.
 
 **User's preferred language**: Marathi. The next agent **MUST** continue the conversation in Marathi.
 
 **what currently exists?**
-The application is a full-stack React and FastAPI platform. During this session, numerous bugs were fixed and features were added, significantly improving stability and functionality.
-
-**Key Completed Work:**
--   **Bug Fixes:** A critical bug causing a mismatch in KYC status ( vs. ) has been resolved. Server timeouts during subscription approval and KYC submission have been addressed by adding  timeouts.
--   **KYC Management:** Admins can now approve/reject KYC directly from the User 360 page. A Sync Status tool was created for admins to fix any KYC status inconsistencies between user profiles and KYC documents. The user-facing KYC upload form was improved with image compression and better validation.
--   **Financial Controls:** Subscription pricing and referral bonus weights have been configured in the database, fixing redeem limit calculations. A strict rule now prevents users from performing both a Bank Redeem and Pay EMI in the same week.
--   **Admin Panel UX:** Search functionality on key admin pages is now instant and server-side. Sorting for approved items now correctly shows the latest on top.
--   **General Improvements:** The mobile recharge form is more user-friendly with new dropdowns. All contact emails have been standardized. The mining bonus rate displayed to users is now accurate.
+The application is a full-stack React/FastAPI rewards platform. In this session, numerous features and fixes were completed, including the implementation of admin service toggles, significant UI corrections on admin pages, removal of obsolete subscription plans, and major performance optimizations. The support system was also overhauled with an expanded FAQ and improved chatbot/ticket functionalities. However, a critical bug in the KYC submission process was discovered at the end of the session.
 
 **Last working item**:
--   **Last item agent was working:** Implementing a feature for an administrator to temporarily enable or disable the Bill Pay and Bank Redeem services from the admin panel. The backend logic and API endpoints have been created, but the frontend UI is not yet built.
+-   **Last item agent was working:** Investigating and planning a fix for a critical bug where users' KYC submissions are not being saved to the database. The agent diagnosed that many users have a  in their profile, but no corresponding document exists in the  collection, making it impossible for admins to review the request.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Both. First, use  to test the new backend endpoints () and verify that user-facing endpoints (, ) correctly block requests when a service is disabled. Then, after creating the frontend UI, use the screenshot tool to verify the new admin page and its functionality.
+-   **Which testing method agent to use?** both.
+    1.  **Backend:** Use the backend testing agent to verify the new endpoints for identifying and fixing orphaned KYC records.
+    2.  **Frontend:** After building the UI, use the screenshot tool to manually verify that the new admin tool lists the correct users and that the reset status functionality works as expected.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Complete Admin Service Toggles Feature**
+-   **Issue 1 (P0): Fix Critical KYC Submission Data Loss**
 
 **Issues Detail:**
--   **Issue 1: Complete Admin Service Toggles Feature**
-    -   **Attempted fixes:** The backend infrastructure is in place. New endpoints (, ) have been created in  to manage service status. Checks have been added to the user-facing  and  endpoints to respect these toggles.
+-   **Issue 1: Fix Critical KYC Submission Data Loss**
+    -   **Attempted fixes:** Investigation via  confirmed a data inconsistency. The agent found that 49 users have a  KYC status but no associated document in the  collection. The existing admin sync tool is ineffective for this scenario.
     -   **Next debug checklist:**
-        1.  Create a new frontend page at .
-        2.  Add a route and a link in the admin navigation for this new page.
-        3.  On the page, fetch the initial status of the services from .
-        4.  Implement UI switches for Bill Pay Service and Bank Redeem Service.
-        5.  Connect the switches to call the  endpoint on change, passing the correct service name.
-        6.  Add user feedback (e.g., toast notifications) on successful status changes.
-        7.  Test the full flow: disable a service as admin, try to use it as a user (expect failure), re-enable it, and try again (expect success).
-    -   **Why fix this issue and what will be achieved with the fix?** It provides the admin with critical operational control to instantly disable financial services during maintenance or emergencies without needing a new deployment.
+        1.  **Backend:**
+            *   In  or a similar admin route file, create a new endpoint (e.g., ) to find and return users with  but no matching  in the  collection.
+            *   Create a second endpoint (e.g., ) that accepts a list of user IDs and resets their  to .
+        2.  **Frontend:**
+            *   Create a new admin tool/page (e.g., ) or enhance an existing one.
+            *   This UI should call the new GET endpoint to display the list of affected users.
+            *   Provide a UI element (e.g., a Reset Status button) to call the new POST endpoint to fix the selected users. This allows admins to clean the inconsistent data and ask users to resubmit.
+        3.  **Root Cause Analysis:** Add detailed logging to the KYC submission endpoint ( in ) to trace why documents are sometimes not saved, preventing future occurrences.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical business-blocking issue. Users cannot get verified, which prevents them from using core features, leading to high user frustration and support load. The fix will unblock these users and provide a tool to manage future data inconsistencies.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   **Task 1: Admin Service Toggles for Bill Pay and Redeem to Bank**
-    -   **Where to resume:** Begin by creating the frontend component .
-    -   **What will be achieved with this?** A new admin UI page will allow for enabling/disabling key financial services.
+-   **Task 1: Build Admin Tool for Orphaned KYC Requests**
+    -   **Where to resume:** Start by implementing the two new backend endpoints for finding and resetting orphaned KYC requests.
+    -   **What will be achieved with this?** A functional tool for administrators to resolve the data inconsistency for users stuck in a pending KYC state without a submitted document.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay) using .
+-   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment, DMT). The user has received recommendations and needs to make a choice before implementation via .
+-   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay) for smoother payments, using .
 
 **Future Tasks:**
 -   **P1:** Design and implement the DIRECTOR 365 subscription plan.
--   **P1:** Implement advanced PRC (point) burning concepts.
+-   **P2:** Implement advanced PRC (point) burning concepts.
 -   **P2:** Add a Force PIN Change feature for users.
--   **P3:** Conduct a full audit of the backend subscription pricing logic.
--   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3) to improve database performance and scalability.
+-   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3) to improve performance and scalability.
+-   **P3:** Implement solutions for Back-office process automation and Call-center agent support.
 
 **Completed work in this session**
--   **KYC Flow Overhaul (DONE):** Fixed the  vs.  status bug, added KYC approval to the User 360 page, and implemented a Sync Status tool for admins.
--   **Financial Rules Configuration (DONE):** Set subscription prices and referral bonus weights in the database, and implemented the strict EMI or Redeem weekly limit.
--   **Admin Search & Sort (DONE):** Implemented server-side debounced search and correct sorting for approved items on multiple admin pages.
--   **Image Upload Fix (DONE):** Added client-side compression to the payment proof upload component, fixing failures for large images.
--   **Server Timeout Fixes (DONE):** Added  to critical DB operations to prevent the server from hanging.
--   **UI/UX Enhancements (DONE):** Improved the mobile recharge form, updated the contact email across the site, fixed the bonus rate display, and implemented better login error messages.
+-   **Admin Service Toggles (DONE):** Admins can now enable/disable 8 different financial services from a dedicated UI.
+-   **Admin Subscription UI Overhaul (DONE):** Fixed the Approved tab in subscription management to show all relevant data (Approve/Expiry Date, UTR, etc.) and added a date-range search filter.
+-   **Admin Button Text Fix (DONE):** Added text labels to all admin page buttons that were only showing icons.
+-   **D-U-N-S® Seal Integration (DONE):** Added the Dun & Bradstreet verification seal to the footer on the Home page and in a dedicated section on the About Us page.
+-   **Subscription Plan Simplification (DONE):** Removed all quarterly, half-yearly, and yearly plan options, leaving only monthly subscriptions.
+-   **Performance Optimization (DONE):** Audited the app, removed unused dependencies (, ), deleted unused UI components, and added lazy loading to images, resulting in smaller bundle sizes and faster loads.
+-   **Support System Enhancement (DONE):** Significantly expanded the FAQ, added it to the homepage, and improved the chatbot and support ticket UIs.
+-   **White Screen Bug Fix (DONE):** Resolved a critical rendering error on the live site caused by deprecated iframe attributes.
+-   **Footer Update (DONE):** Updated the copyright notice across the site to use the full legal company name.
 
 **Earlier issues found/mentioned but not fixed**
--   None.
+-   None. The critical KYC issue is the most recent discovery and is being actively addressed.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -100,76 +101,72 @@ The application is a full-stack React and FastAPI platform. During this session,
 
 
 **Key Technical Concepts**
--   **Feature Toggling:** Implementing a database-backed system to remotely enable/disable application features.
--   **Server-Side Search & Debouncing:** Offloading filtering/searching from the client to the backend API to handle pagination and improve performance, combined with debouncing on the frontend to prevent excessive API calls.
--   **Client-Side Image Compression:** Using libraries like  to reduce image size before uploading, saving bandwidth and preventing upload failures.
--   **Async Timeout Handling:** Wrapping potentially long-running async operations (like database calls) in  to prevent requests from hanging and to provide graceful error handling.
--   **Database Record Synchronization:** Creating an admin tool to run a batch process that finds and corrects data inconsistencies between different collections.
+-   **Database Anomaly Detection:** Identifying inconsistencies between related collections ( and ) to diagnose a critical bug.
+-   **Admin Diagnostic Tools:** The current task involves building a specific tool for admins to view and correct data integrity issues.
+-   **Performance Optimization:** Bundle size analysis using , removing unused dependencies, code-splitting, and asset lazy loading.
+-   **Third-Party Script Integration:** Integrating external scripts and iframes (like the D-U-N-S seal) and debugging cross-origin/React compatibility issues.
 
 **key DB schema**
--   **service_status (New Collection):** Stores the enabled/disabled state of core services.
-    -   Example documents: , 
--   **settings (Updated Documents):** The  and  configurations within the settings collection were updated with new values.
+-   **users:** Contains  ('pending', 'approved', 'rejected', 'not_submitted'), which is out of sync for some users.
+-   **kyc_documents:** This collection is missing documents for users who are stuck with a 'pending' status, which is the core of the current issue.
 
 **changes in tech stack**
--    was added as a frontend dependency.
+-   **Removed:** , .
 
 **All files of reference**
--   : Contains the new backend logic for service toggles.
--   : The frontend page that needs to be created.
--   : Modified for the new weekly transaction limit and service toggle check.
--   : Modified for the new weekly transaction limit and service toggle check.
--   : Contains the fix for the image upload issue.
--   , , : Contain the new server-side search implementation.
+-   : The file where KYC uploads are handled and needs logging/investigation.
+-   : The likely place to add the new admin endpoints for the fix.
+-   : A recently fixed admin page that can serve as a template for good admin UI.
+-   : The most heavily modified frontend page in this session.
+-   : The page where the new admin tool could be integrated.
 
 **Areas that need refactoring**:
--   The practice of storing KYC documents and payment receipts as base64 strings in MongoDB is a significant scalability risk. This data should be migrated to a dedicated object storage service (like AWS S3) to reduce database load and size.
+-   The recommendation from the previous fork to migrate images (KYC, receipts) from MongoDB base64 strings to a dedicated file storage service (like S3) is still highly relevant and crucial for future scalability.
 
 **key api endpoints**
--   : **(NEW)** Toggles a service ( or ) on or off.
--   : **(NEW)** Fetches the current status of all toggleable services.
--   : **(NEW)** Triggers a batch job to fix KYC status inconsistencies.
--   , , : **(MODIFIED)** Now accept a  query parameter to perform server-side searching.
--   , : **(MODIFIED)** Now include checks for both the new service toggles and the strict weekly transaction limit.
+-   : **(MODIFIED)** Supports  and  query params.
+-   : **(NEEDS INVESTIGATION)** The endpoint likely responsible for the data loss issue.
+-   **New Endpoints to be created:**
+    -   
+    -   
 
 **Critical Info for New Agent**
 -   You **MUST** communicate with the user in **Marathi**.
--   Your immediate task is to complete the Admin Service Toggles feature. The backend is largely complete; you need to build the frontend page (), integrate it, and test the entire flow end-to-end.
--   The application now has many important business rules configured in the database ( and  collections). Be aware of these when making changes to related features.
+-   The absolute top priority is fixing the critical KYC submission bug. The problem has been diagnosed as a data inconsistency. Your first task is to build the backend endpoints and frontend tool for an admin to fix the currently affected users. After that, you must investigate the root cause in  to prevent it from happening again.
 
 **documents and test reports created in this job**
--    (Updated)
--   
+-    (from testing the service toggles feature)
+-    (Updated with completed tasks)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Wants to temporarily enable/disable Bill Pay and Bank Redeem services. **Status: IN PROGRESS**
-2.  **User:** Reported a KYC status sync issue where admin approval didn't reflect on the user's profile. **Status: RESOLVED** (A sync tool was built).
-3.  **User:** Requested better error handling for non-registered users trying to log in. **Status: RESOLVED**.
-4.  **User:** Reported subscription approval timeouts and KYC upload failures. **Status: RESOLVED** (Tested with testing agent).
-5.  **User:** Asked to remove a tooltip from the Invite page. **Status: RESOLVED**.
-6.  **User:** Requested the Invite page to show the *actual* mining bonus rate. **Status: RESOLVED**.
-7.  **User:** Reported that users were unable to upload subscription payment proofs. **Status: RESOLVED**.
-8.  **User:** Complained about poor search functionality and requested sorting on admin pages. **Status: RESOLVED**.
-9.  **User:** Requested to update the contact email everywhere. **Status: RESOLVED**.
-10. **User:** Asked to implement a strict weekly limit between Pay EMI and Bank Redeem. **Status: RESOLVED**.
+1.  **User:** Reports a critical issue where submitted KYC requests are not visible to admins. **Status: IN PROGRESS**
+2.  **User:** Requests more detail and a disclaimer about PRC in the FAQ. **Status: RESOLVED**
+3.  **User:** Asks to add the FAQ section to the home page. **Status: RESOLVED**
+4.  **User:** Wants to improve the in-app chatbot, support ticket system, and create a full FAQ. **Status: RESOLVED**
+5.  **User:** Asks for solution recommendations for back-office, call center, and chatbot updates. **Status: RESOLVED (Recommendations provided)**
+6.  **User:** Asks for API provider recommendations for bill payments. **Status: RESOLVED (Recommendations provided)**
+7.  **User:** Requests a comprehensive audit and performance optimization of the entire app. **Status: RESOLVED**
+8.  **User:** Asks to remove all subscription plans except for monthly. **Status: RESOLVED**
+9.  **User:** Asks to add the D-U-N-S seal to the About Us page. **Status: RESOLVED**
+10. **User:** Reports that the live site is showing a white page after deployment. **Status: RESOLVED**
 
 **Project Health Check:**
--   **Broken:** None. The application is stable.
+-   **Broken:** The user KYC submission workflow is critically broken due to a data loss/inconsistency bug. This is a P0 blocker for user verification.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Redis (Upstash):** Used for caching.
--   **browser-image-compression:** A new frontend library added for client-side image compression.
+-   **Redis (Upstash):** For caching.
+-   **Dun & Bradstreet:** D-U-N-S® Registered Seal (via iframe and static image/link).
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used to validate fixes for KYC and subscription approval timeouts. 21/21 tests passed successfully.
+-   **Testing agent used after significant changes:** YES (For the Admin Service Toggles feature).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** None.
+-   **Test files created:** None.
+-   **Known regressions:** The KYC submission failure is a severe regression/newly discovered critical bug.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
 -   **Production Test User:**  / PIN: 
 
 **What agent forgot to execute**
--   The agent did not forget any tasks but was in the middle of implementing the Admin Service Toggles feature when the session ended. The work needs to be completed.</analysis>
+-   The agent was in the process of resolving the critical KYC bug. The plan is laid out, but the implementation and root cause analysis are pending. No other requested tasks were forgotten.</analysis>

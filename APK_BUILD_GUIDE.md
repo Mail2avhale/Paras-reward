@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://paras-admin-ops.preview.emergentagent.com",
+    "url": "https://kyc-recovery.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
