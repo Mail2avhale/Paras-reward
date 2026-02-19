@@ -188,9 +188,15 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
       setMessages([{
         type: 'bot',
-        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras Assistant, your AI-powered helper. How can I assist you today?\n\n🎤 *Tip: Click the mic button to speak your question!*\n\n⚠️ *Disclaimer: I provide general information only. This is not financial advice.*`,
+        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras Assistant. How can I help you?\n\n🎤 *Tip: Click the mic to speak!*`,
         timestamp: new Date(),
-        suggestions: getAISuggestions(userStats, user?.name)
+        suggestions: getAISuggestions(userStats, user?.name),
+        quickFAQ: [
+          { q: 'How to earn PRC?', icon: '💰' },
+          { q: 'How to redeem rewards?', icon: '🎁' },
+          { q: 'KYC verification process?', icon: '📋' },
+          { q: 'Contact support', icon: '📞' }
+        ]
       }]);
     }
   }, [isOpen, user?.name, messages.length, userStats]);
