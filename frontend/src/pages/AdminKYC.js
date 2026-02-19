@@ -663,6 +663,17 @@ const AdminKYC = ({ user }) => {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Sync by Email Button - NEW */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSyncModal(true)}
+              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+              data-testid="sync-by-email-btn"
+            >
+              <Zap className="w-4 h-4 mr-1" />
+              Sync by Email
+            </Button>
             {/* Find Orphaned Records Button */}
             <Button
               variant="outline"
@@ -684,7 +695,7 @@ const AdminKYC = ({ user }) => {
               data-testid="sync-kyc-status-btn"
             >
               {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-              Sync Status
+              Sync All
             </Button>
             {statusFilter === 'pending' && filteredDocs.length > 0 && (
               <Button
