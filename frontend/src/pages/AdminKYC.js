@@ -33,6 +33,9 @@ const AdminKYC = ({ user }) => {
   const [selectedIds, setSelectedIds] = useState(new Set()); // For bulk selection
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [orphanedUsers, setOrphanedUsers] = useState([]);
+  const [showOrphanedModal, setShowOrphanedModal] = useState(false);
+  const [fixingOrphaned, setFixingOrphaned] = useState(false);
 
   // Sync all KYC statuses
   const syncAllKYCStatus = async () => {
@@ -60,6 +63,63 @@ const AdminKYC = ({ user }) => {
       fetchKYCDocuments(currentPage, statusFilter, debouncedSearch);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Resync failed');
+    }
+  };
+
+  // Fetch orphaned KYC records
+  const fetchOrphanedRecords = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/kyc/orphaned-requests`);
+      setOrphanedUsers(response.data.orphaned_users || []);
+      setShowOrphanedModal(true);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to fetch orphaned records');
+    }
+  };
+
+  // Fix all orphaned records
+  const fixAllOrphanedRecords = async () => {
+    if (!confirm(`${orphanedUsers.length} orphaned records आढळले. सर्व fix करायचे का?`)) return;
+    
+    setFixingOrphaned(true);
+    try {
+      const response = await axios.post(`${API}/admin/kyc/fix-all-orphaned`);
+      toast.success(`✅ ${response.data.message}`);
+      setShowOrphanedModal(false);
+      setOrphanedUsers([]);
+      // Refresh data
+      fetchKYCDocuments(1, statusFilter, debouncedSearch);
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to fix orphaned records');
+    } finally {
+      setFixingOrphaned(false);
+    }
+  };
+
+  // Fix selected orphaned records
+  const fixSelectedOrphaned = async (userIds) => {
+    if (!userIds.length) {
+      toast.error('No users selected');
+      return;
+    }
+    
+    setFixingOrphaned(true);
+    try {
+      const response = await axios.post(`${API}/admin/kyc/fix-orphaned`, {
+        user_ids: userIds,
+        admin_id: user?.uid
+      });
+      toast.success(`✅ ${response.data.message}`);
+      // Refresh orphaned list
+      fetchOrphanedRecords();
+      // Refresh main data
+      fetchKYCDocuments(1, statusFilter, debouncedSearch);
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to fix records');
+    } finally {
+      setFixingOrphaned(false);
     }
   };
 
