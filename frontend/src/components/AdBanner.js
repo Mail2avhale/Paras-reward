@@ -65,7 +65,7 @@ const AdBanner = ({
           width: fullWidth ? '100%' : 'auto',
           minHeight: '50px'
         }}
-        data-ad-client="ca-pub-3556805218952480"
+        data-ad-client="ca-pub-3833838421879550"
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive={fullWidth ? 'true' : 'false'}
