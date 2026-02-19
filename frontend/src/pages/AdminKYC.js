@@ -1061,7 +1061,7 @@ const AdminKYC = ({ user }) => {
                     Sync KYC by Email
                   </h2>
                   <p className="text-gray-400 text-sm mt-1">
-                    User चा email किंवा mobile टाकून KYC status sync करा
+                    Enter user's email or mobile to sync their KYC status
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setShowSyncModal(false)}>
@@ -1073,7 +1073,7 @@ const AdminKYC = ({ user }) => {
                 <div>
                   <label className="text-sm text-gray-400 mb-1 block">Email / Mobile Number</label>
                   <Input
-                    placeholder="example@email.com किंवा 9876543210"
+                    placeholder="example@email.com or 9876543210"
                     value={syncEmail}
                     onChange={(e) => setSyncEmail(e.target.value)}
                     className="bg-gray-800 border-gray-700 text-white"
