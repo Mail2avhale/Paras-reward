@@ -9507,8 +9507,8 @@ async def fix_orphaned_kyc_records(request: Request):
                     # Send notification to user
                     await create_notification(
                         user_id=uid,
-                        title="🔄 KYC पुन्हा सबमिट करा",
-                        message="तुमची KYC request पूर्ण झाली नाही. कृपया तुमची documents पुन्हा अपलोड करा.",
+                        title="🔄 Re-submit KYC",
+                        message="Your KYC request was not completed. Please upload your documents again.",
                         notification_type="kyc",
                         icon="🔄"
                     )
