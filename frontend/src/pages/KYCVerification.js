@@ -559,6 +559,99 @@ const KYCVerification = ({ user }) => {
           </div>
         </>
       )}
+
+      {/* Status Check Modal */}
+      {showStatusModal && kycStatusInfo && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowStatusModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Shield className="w-6 h-6 text-blue-500" />
+              KYC Status Details
+            </h3>
+
+            <div className="space-y-4">
+              {/* Current Status */}
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-gray-400 text-sm mb-1">Profile Status:</p>
+                <p className={`font-bold text-lg ${
+                  kycStatusInfo.kyc_status === 'verified' ? 'text-green-400' :
+                  kycStatusInfo.kyc_status === 'pending' ? 'text-amber-400' :
+                  kycStatusInfo.kyc_status === 'rejected' ? 'text-red-400' :
+                  'text-gray-400'
+                }`}>
+                  {kycStatusInfo.kyc_status?.toUpperCase() || 'NOT SUBMITTED'}
+                </p>
+              </div>
+
+              {/* Document Status */}
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-gray-400 text-sm mb-1">Document Status:</p>
+                {kycStatusInfo.has_document ? (
+                  <p className={`font-bold text-lg ${
+                    kycStatusInfo.document_status === 'verified' ? 'text-green-400' :
+                    kycStatusInfo.document_status === 'pending' ? 'text-amber-400' :
+                    'text-red-400'
+                  }`}>
+                    {kycStatusInfo.document_status?.toUpperCase() || 'UNKNOWN'}
+                  </p>
+                ) : (
+                  <p className="font-bold text-lg text-red-400">NO DOCUMENT FOUND</p>
+                )}
+              </div>
+
+              {/* Issue Detection */}
+              {kycStatusInfo.is_orphaned && (
+                <div className="bg-orange-500/20 border border-orange-500/50 rounded-xl p-4">
+                  <p className="text-orange-400 font-bold flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    समस्या आढळली!
+                  </p>
+                  <p className="text-gray-300 text-sm mt-2">
+                    तुमचा status "Pending" दाखवत आहे पण documents सापडले नाहीत. 
+                    कृपया खालील बटण दाबून पुन्हा submit करा.
+                  </p>
+                </div>
+              )}
+
+              {/* Message */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <p className="text-blue-300 text-sm">{kycStatusInfo.message}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 mt-4">
+                {kycStatusInfo.can_resubmit && (
+                  <Button
+                    onClick={async () => {
+                      setShowStatusModal(false);
+                      await handleResetKYC();
+                    }}
+                    disabled={resetting}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    {resetting ? 'Resetting...' : 'पुन्हा Submit करा'}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setShowStatusModal(false)}
+                  className="flex-1 border-gray-600"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
