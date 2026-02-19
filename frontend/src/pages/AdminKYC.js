@@ -630,6 +630,17 @@ const AdminKYC = ({ user }) => {
             />
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Find Orphaned Records Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchOrphanedRecords}
+              className="border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
+              data-testid="find-orphaned-btn"
+            >
+              <AlertCircle className="w-4 h-4 mr-1" />
+              Find Orphaned
+            </Button>
             {/* Sync Status Button */}
             <Button
               variant="outline"
