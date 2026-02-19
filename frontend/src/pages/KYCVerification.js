@@ -46,6 +46,9 @@ const KYCVerification = ({ user }) => {
     rejected: language === 'mr' ? 'नाकारले' : language === 'hi' ? 'अस्वीकृत' : 'Rejected',
   };
 
+  const [kycStatusInfo, setKycStatusInfo] = useState(null);
+  const [resetting, setResetting] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -53,17 +56,45 @@ const KYCVerification = ({ user }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/user/${user.uid}`);
-      setUserData(response.data);
+      
+      // Fetch user data and KYC status in parallel
+      const [userResponse, kycStatusResponse] = await Promise.all([
+        axios.get(`${API}/user/${user.uid}`),
+        axios.get(`${API}/kyc/check-status/${user.uid}`).catch(() => null)
+      ]);
+      
+      setUserData(userResponse.data);
+      
+      if (kycStatusResponse?.data) {
+        setKycStatusInfo(kycStatusResponse.data);
+      }
       
       // Pre-fill name if available
-      if (response.data.name) {
-        setKycData(prev => ({ ...prev, full_name: response.data.name }));
+      if (userResponse.data.name) {
+        setKycData(prev => ({ ...prev, full_name: userResponse.data.name }));
       }
     } catch (error) {
       console.error('Error fetching user:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetKYC = async () => {
+    if (!window.confirm('तुम्ही तुमची KYC documents पुन्हा submit कराल का?')) {
+      return;
+    }
+    
+    setResetting(true);
+    try {
+      await axios.post(`${API}/kyc/reset-for-resubmit/${user.uid}`);
+      toast.success('KYC reset झाले! आता तुम्ही नवीन documents submit करू शकता.');
+      // Refresh data
+      await fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Reset failed. Please try again.');
+    } finally {
+      setResetting(false);
     }
   };
 
