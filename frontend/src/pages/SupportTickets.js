@@ -400,6 +400,25 @@ const SupportTickets = () => {
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     required
                   />
+                  
+                  {/* Quick Templates */}
+                  {quickTemplates[formData.category] && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Quick select:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {quickTemplates[formData.category].map((template, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, subject: template })}
+                            className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors"
+                          >
+                            {template}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
