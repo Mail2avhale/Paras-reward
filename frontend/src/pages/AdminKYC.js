@@ -1083,9 +1083,9 @@ const AdminKYC = ({ user }) => {
 
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                   <p className="text-blue-400 text-sm">
-                    <strong>हे काय करते:</strong> User चा KYC document status (verified/pending/rejected) 
-                    त्याच्या profile मध्ये sync करते. जर Admin ने approve केले पण user ला pending दिसत असेल 
-                    तर हे fix करते.
+                    <strong>What this does:</strong> Syncs the user's KYC document status (verified/pending/rejected) 
+                    with their profile. If Admin approved but user still sees "pending", 
+                    this will fix it.
                   </p>
                 </div>
 
