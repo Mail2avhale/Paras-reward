@@ -49,6 +49,8 @@ const KYCVerification = ({ user }) => {
   const [kycStatusInfo, setKycStatusInfo] = useState(null);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
     fetchData();
