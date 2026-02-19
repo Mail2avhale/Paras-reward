@@ -910,6 +910,100 @@ const AdminKYC = ({ user }) => {
           </Card>
         </div>
       )}
+
+      {/* Orphaned Records Modal */}
+      {showOrphanedModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowOrphanedModal(false)}>
+          <Card className="w-full max-w-3xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <AlertCircle className="w-6 h-6 text-orange-500" />
+                    Orphaned KYC Records
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Users with 'pending' status but no KYC document submitted
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowOrphanedModal(false)}>
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {orphanedUsers.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                  <p className="text-green-400 font-medium text-lg">सर्व ठीक आहे!</p>
+                  <p className="text-gray-400">No orphaned KYC records found.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Summary */}
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4">
+                    <p className="text-orange-400 font-medium">
+                      {orphanedUsers.length} orphaned records found
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      या users ची KYC status 'pending' आहे पण documents submit झाले नाहीत. 
+                      Fix केल्यावर users पुन्हा documents submit करू शकतील.
+                    </p>
+                  </div>
+
+                  {/* User List */}
+                  <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
+                    {orphanedUsers.map((u) => (
+                      <div key={u.uid} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                            <User className="w-5 h-5 text-gray-400" />
+                          </div>
+                          <div>
+                            <p className="text-white font-medium">{u.name}</p>
+                            <p className="text-gray-400 text-sm">{u.email || u.mobile}</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => fixSelectedOrphaned([u.uid])}
+                          disabled={fixingOrphaned}
+                          className="border-orange-500/50 text-orange-400"
+                        >
+                          Fix
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={fixAllOrphanedRecords}
+                      disabled={fixingOrphaned}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    >
+                      {fixingOrphaned ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Zap className="w-4 h-4 mr-2" />
+                      )}
+                      Fix All ({orphanedUsers.length})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowOrphanedModal(false)}
+                      className="border-gray-600"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
