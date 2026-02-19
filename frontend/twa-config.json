@@ -53,7 +53,7 @@
   "admob": {
     "app_id": "ca-app-pub-3833838421879550~5446772218",
     "banner_ad_unit_id": "ca-app-pub-3833838421879550/6993564275",
-    "interstitial_ad_unit_id": "ca-app-pub-3833838421879550/XXXXXXXXXX"
+    "rewarded_ad_unit_id": "ca-app-pub-3833838421879550/7194533380"
   },
 
   "signing_mode": "release",
