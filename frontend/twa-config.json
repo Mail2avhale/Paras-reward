@@ -1,0 +1,62 @@
+{
+  "name": "PARAS REWARD",
+  "short_name": "PARAS REWARD",
+  "description": "India's Next-Generation Trusted Reward Platform",
+  "start_url": "https://parasreward.com/dashboard?utm_source=twa",
+  "display": "standalone",
+  "theme_color": "#030712",
+  "background_color": "#030712",
+  "orientation": "portrait",
+  
+  "app": {
+    "package_id": "com.parasreward.app",
+    "version_name": "1.0.0",
+    "version_code": 1,
+    "signing_key_path": "./keystore/paras-reward.keystore",
+    "signing_key_alias": "paras-reward"
+  },
+  
+  "icons": {
+    "icon_192": "https://parasreward.com/icons/icon-192x192.png",
+    "icon_512": "https://parasreward.com/icons/icon-512x512.png",
+    "maskable_icon_192": "https://parasreward.com/icons/maskable-icon-192x192.png",
+    "maskable_icon_512": "https://parasreward.com/icons/maskable-icon-512x512.png"
+  },
+  
+  "splash_screen": {
+    "fade_out_duration": 300,
+    "background_color": "#030712",
+    "image_type": "icon"
+  },
+  
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard",
+      "icons": [{ "src": "https://parasreward.com/icons/icon-192x192.png" }]
+    },
+    {
+      "name": "Daily Rewards",
+      "short_name": "Rewards",
+      "url": "/daily-rewards",
+      "icons": [{ "src": "https://parasreward.com/icons/icon-192x192.png" }]
+    }
+  ],
+
+  "features": {
+    "location_delegation": false,
+    "playBilling": false,
+    "notifications": true
+  },
+
+  "admob": {
+    "app_id": "ca-app-pub-3556805218952480~XXXXXXXXXX",
+    "banner_ad_unit_id": "ca-app-pub-3556805218952480/XXXXXXXXXX",
+    "interstitial_ad_unit_id": "ca-app-pub-3556805218952480/XXXXXXXXXX"
+  },
+
+  "signing_mode": "release",
+  
+  "fallback_type": "customtabs"
+}
