@@ -27,7 +27,7 @@ const AdBanner = ({
     // Load AdSense script if not already loaded
     if (!window.adsbygoogle && !testMode) {
       const script = document.createElement('script');
-      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3556805218952480';
+      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3833838421879550';
       script.async = true;
       script.crossOrigin = 'anonymous';
       script.onerror = () => setAdError(true);
