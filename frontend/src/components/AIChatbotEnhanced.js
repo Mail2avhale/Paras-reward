@@ -654,6 +654,28 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                       </div>
                     )}
                     
+                    {/* Quick FAQ Buttons */}
+                    {msg.quickFAQ && msg.quickFAQ.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-gray-500 mb-2 ml-1">Quick Questions:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {msg.quickFAQ.map((faq, i) => (
+                            <motion.button
+                              key={i}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.05 }}
+                              onClick={() => sendMessage(faq.q)}
+                              className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all flex items-center gap-1"
+                            >
+                              <span>{faq.icon}</span>
+                              <span>{faq.q}</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <p className={`text-[10px] mt-1 ml-1 ${msg.type === 'user' ? 'text-right text-purple-300' : 'text-gray-400'}`}>
                       {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </p>
