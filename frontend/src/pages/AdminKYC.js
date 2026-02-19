@@ -978,7 +978,7 @@ const AdminKYC = ({ user }) => {
               {orphanedUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-                  <p className="text-green-400 font-medium text-lg">सर्व ठीक आहे!</p>
+                  <p className="text-green-400 font-medium text-lg">All Good!</p>
                   <p className="text-gray-400">No orphaned KYC records found.</p>
                 </div>
               ) : (
@@ -989,8 +989,8 @@ const AdminKYC = ({ user }) => {
                       {orphanedUsers.length} orphaned records found
                     </p>
                     <p className="text-gray-400 text-sm">
-                      या users ची KYC status 'pending' आहे पण documents submit झाले नाहीत. 
-                      Fix केल्यावर users पुन्हा documents submit करू शकतील.
+                      These users have 'pending' KYC status but no documents were submitted. 
+                      After fixing, users can re-submit their documents.
                     </p>
                   </div>
 
