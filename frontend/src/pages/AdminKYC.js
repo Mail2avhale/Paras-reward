@@ -130,7 +130,7 @@ const AdminKYC = ({ user }) => {
 
   const syncKYCByEmail = async () => {
     if (!syncEmail.trim()) {
-      toast.error('Email किंवा Mobile number टाका');
+      toast.error('Please enter email or mobile number');
       return;
     }
     
