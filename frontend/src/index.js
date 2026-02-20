@@ -28,10 +28,16 @@ if ('serviceWorker' in navigator) {
               // New service worker available
               console.log('New service worker available');
               
-              // Optionally show update prompt to user
-              if (confirm('New version available! Reload to update?')) {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
+              // Only show update prompt once per session
+              const lastPromptTime = sessionStorage.getItem('sw_update_prompt_time');
+              const now = Date.now();
+              
+              // Only show prompt if not shown in this session (or more than 1 hour ago)
+              if (!lastPromptTime || (now - parseInt(lastPromptTime)) > 3600000) {
+                sessionStorage.setItem('sw_update_prompt_time', now.toString());
+                
+                // Show non-blocking notification instead of confirm
+                console.log('New version available - will update on next reload');
               }
             }
           });
