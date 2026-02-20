@@ -14397,6 +14397,343 @@ async def get_user_360_view(query: str):
     }
 
 
+@api_router.get("/admin/user/{uid}/diagnose")
+async def admin_diagnose_user(uid: str):
+    """
+    Auto-diagnose all issues for a user.
+    Checks: KYC, Subscription, PRC balance, Mining, Profile completeness, etc.
+    Returns list of issues found with severity and suggested fixes.
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    issues = []
+    auto_fixed = []
+    
+    # ========== 1. KYC ISSUES ==========
+    kyc_status = user.get("kyc_status", "not_submitted")
+    kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+    
+    # Check for orphaned KYC (pending but no document)
+    if kyc_status == "pending" and not kyc_doc:
+        issues.append({
+            "category": "KYC",
+            "severity": "high",
+            "issue": "Orphaned KYC Status",
+            "description": "User has 'pending' status but no KYC document exists",
+            "can_auto_fix": True,
+            "fix_action": "reset_kyc"
+        })
+    
+    # Check for sync mismatch (document verified but profile pending)
+    if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+        issues.append({
+            "category": "KYC",
+            "severity": "high",
+            "issue": "KYC Sync Mismatch",
+            "description": f"Document is 'verified' but profile shows '{kyc_status}'",
+            "can_auto_fix": True,
+            "fix_action": "sync_kyc"
+        })
+        # Auto-fix this
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"kyc_status": "verified"}}
+        )
+        auto_fixed.append("KYC status synced to 'verified'")
+    
+    # KYC not submitted for paid user
+    membership_type = user.get("membership_type", "free")
+    if membership_type != "free" and kyc_status == "not_submitted":
+        issues.append({
+            "category": "KYC",
+            "severity": "medium",
+            "issue": "Paid User Without KYC",
+            "description": f"User has {membership_type} subscription but hasn't submitted KYC",
+            "can_auto_fix": False,
+            "fix_action": "notify_user"
+        })
+    
+    # ========== 2. SUBSCRIPTION ISSUES ==========
+    subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+    
+    # Check for expired subscription
+    if subscription_expiry:
+        try:
+            expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            if expiry_date < datetime.now(timezone.utc):
+                if membership_type != "free":
+                    issues.append({
+                        "category": "Subscription",
+                        "severity": "high",
+                        "issue": "Expired Subscription Not Reset",
+                        "description": f"Subscription expired on {subscription_expiry[:10]} but membership_type is still '{membership_type}'",
+                        "can_auto_fix": True,
+                        "fix_action": "reset_subscription"
+                    })
+                    # Auto-fix
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
+                    )
+                    auto_fixed.append("Expired subscription reset to free")
+        except:
+            pass
+    
+    # Check subscription payment sync
+    latest_payment = await db.vip_payments.find_one(
+        {"$or": [{"user_uid": uid}, {"user_id": uid}], "status": "approved"},
+        sort=[("approved_at", -1)]
+    )
+    if latest_payment and membership_type == "free":
+        issues.append({
+            "category": "Subscription",
+            "severity": "high",
+            "issue": "Approved Payment Not Synced",
+            "description": f"Payment approved but user is still 'free'. Plan: {latest_payment.get('plan')}",
+            "can_auto_fix": True,
+            "fix_action": "sync_subscription"
+        })
+    
+    # ========== 3. PRC BALANCE ISSUES ==========
+    prc_balance = user.get("prc_balance", 0)
+    
+    # Calculate expected balance from transactions
+    total_credits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    total_debits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]).to_list(1)
+    
+    credits = total_credits[0]["total"] if total_credits else 0
+    debits = total_debits[0]["total"] if total_debits else 0
+    expected_balance = round(credits - debits, 2)
+    
+    # Check for significant mismatch (more than 1 PRC difference)
+    balance_diff = abs(prc_balance - expected_balance)
+    if balance_diff > 1:
+        issues.append({
+            "category": "PRC Balance",
+            "severity": "medium" if balance_diff < 100 else "high",
+            "issue": "Balance Mismatch",
+            "description": f"Current: {prc_balance} PRC, Expected: {expected_balance} PRC (Diff: {balance_diff})",
+            "can_auto_fix": False,
+            "fix_action": "manual_review"
+        })
+    
+    # Paid user with 0 balance (potential bug victim)
+    if membership_type != "free" and prc_balance == 0 and credits > 100:
+        issues.append({
+            "category": "PRC Balance",
+            "severity": "critical",
+            "issue": "Paid User Zero Balance Bug",
+            "description": f"Paid user ({membership_type}) has 0 PRC but earned {credits} PRC. May be affected by balance reset bug.",
+            "can_auto_fix": False,
+            "fix_action": "restore_balance",
+            "suggested_balance": expected_balance
+        })
+    
+    # ========== 4. MINING ISSUES ==========
+    mining_active = user.get("mining_active")
+    mining_start = user.get("mining_start_time")
+    
+    # Stuck mining session (started more than 8 hours ago)
+    if mining_start:
+        try:
+            start_time = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+            hours_mining = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
+            if hours_mining > 8:
+                issues.append({
+                    "category": "Mining",
+                    "severity": "low",
+                    "issue": "Long Mining Session",
+                    "description": f"Mining session running for {hours_mining:.1f} hours",
+                    "can_auto_fix": False,
+                    "fix_action": "claim_mining"
+                })
+        except:
+            pass
+    
+    # ========== 5. PROFILE ISSUES ==========
+    if not user.get("name"):
+        issues.append({
+            "category": "Profile",
+            "severity": "low",
+            "issue": "Missing Name",
+            "description": "User has not set their name",
+            "can_auto_fix": False,
+            "fix_action": "notify_user"
+        })
+    
+    if not user.get("mobile") and not user.get("email"):
+        issues.append({
+            "category": "Profile",
+            "severity": "medium",
+            "issue": "No Contact Info",
+            "description": "User has no email or mobile number",
+            "can_auto_fix": False,
+            "fix_action": "manual_review"
+        })
+    
+    # Bank details missing for user who has redeemed
+    redemptions = await db.transactions.find_one({"user_id": uid, "type": {"$in": ["redeem", "withdrawal", "bank_transfer"]}})
+    bank_details = user.get("bank_details") or await db.bank_details.find_one({"user_id": uid})
+    if redemptions and not bank_details:
+        issues.append({
+            "category": "Profile",
+            "severity": "medium",
+            "issue": "Missing Bank Details",
+            "description": "User has redemption history but no bank details saved",
+            "can_auto_fix": False,
+            "fix_action": "notify_user"
+        })
+    
+    # ========== 6. REFERRAL ISSUES ==========
+    referral_code = user.get("referral_code")
+    if not referral_code:
+        issues.append({
+            "category": "Referral",
+            "severity": "low",
+            "issue": "Missing Referral Code",
+            "description": "User doesn't have a referral code",
+            "can_auto_fix": True,
+            "fix_action": "generate_referral_code"
+        })
+    
+    # ========== SUMMARY ==========
+    critical_count = len([i for i in issues if i["severity"] == "critical"])
+    high_count = len([i for i in issues if i["severity"] == "high"])
+    medium_count = len([i for i in issues if i["severity"] == "medium"])
+    low_count = len([i for i in issues if i["severity"] == "low"])
+    
+    health_score = 100 - (critical_count * 30) - (high_count * 15) - (medium_count * 5) - (low_count * 2)
+    health_score = max(0, min(100, health_score))
+    
+    return {
+        "success": True,
+        "user_id": uid,
+        "user_name": user.get("name", "Unknown"),
+        "health_score": health_score,
+        "total_issues": len(issues),
+        "summary": {
+            "critical": critical_count,
+            "high": high_count,
+            "medium": medium_count,
+            "low": low_count
+        },
+        "issues": sorted(issues, key=lambda x: {"critical": 0, "high": 1, "medium": 2, "low": 3}[x["severity"]]),
+        "auto_fixed": auto_fixed,
+        "diagnosis_time": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@api_router.post("/admin/user/{uid}/fix-issue")
+async def admin_fix_user_issue(uid: str, request: Request):
+    """
+    Fix a specific issue for a user.
+    """
+    data = await request.json()
+    fix_action = data.get("fix_action")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    result_message = ""
+    
+    if fix_action == "reset_kyc":
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"kyc_status": "not_submitted"}}
+        )
+        result_message = "KYC status reset to 'not_submitted'. User can now re-submit."
+    
+    elif fix_action == "sync_kyc":
+        kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+        if kyc_doc:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"kyc_status": kyc_doc.get("status", "pending")}}
+            )
+            result_message = f"KYC status synced to '{kyc_doc.get('status')}'"
+        else:
+            result_message = "No KYC document found"
+    
+    elif fix_action == "reset_subscription":
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "membership_type": "free",
+                "subscription_plan": "explorer",
+                "subscription_expiry": None,
+                "vip_expiry": None
+            }}
+        )
+        result_message = "Subscription reset to free/explorer"
+    
+    elif fix_action == "sync_subscription":
+        latest_payment = await db.vip_payments.find_one(
+            {"$or": [{"user_uid": uid}, {"user_id": uid}], "status": "approved"},
+            sort=[("approved_at", -1)]
+        )
+        if latest_payment:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "membership_type": latest_payment.get("plan", "vip"),
+                    "subscription_plan": latest_payment.get("plan", "vip"),
+                    "subscription_expiry": latest_payment.get("expiry"),
+                    "vip_expiry": latest_payment.get("expiry")
+                }}
+            )
+            result_message = f"Subscription synced to {latest_payment.get('plan')}"
+        else:
+            result_message = "No approved payment found"
+    
+    elif fix_action == "restore_balance":
+        suggested_balance = data.get("suggested_balance", 0)
+        if suggested_balance > 0:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"prc_balance": suggested_balance}}
+            )
+            # Log this action
+            await db.transactions.insert_one({
+                "user_id": uid,
+                "type": "admin_restore",
+                "amount": suggested_balance,
+                "description": "Balance restored by admin via diagnostics",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            result_message = f"Balance restored to {suggested_balance} PRC"
+        else:
+            result_message = "No balance to restore"
+    
+    elif fix_action == "generate_referral_code":
+        import uuid
+        new_code = user.get("name", "USER")[:4].upper() + str(uuid.uuid4())[:4].upper()
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"referral_code": new_code}}
+        )
+        result_message = f"Referral code generated: {new_code}"
+    
+    else:
+        result_message = f"Unknown fix action: {fix_action}"
+    
+    return {
+        "success": True,
+        "message": result_message,
+        "fix_action": fix_action
+    }
+
+
 @api_router.post("/admin/user-360/action")
 async def user_360_quick_action(request: Request):
     """
