@@ -3509,10 +3509,10 @@ async def check_vip_service_access(uid: str, service_name: str = "service") -> D
     membership_type = user.get("membership_type", "free")
     
     # Free users cannot access these services
-    if membership_type != "vip":
+    if membership_type == "free":
         return {
             "allowed": False, 
-            "reason": f"VIP membership required to use {service_name}. Please upgrade to VIP.",
+            "reason": f"Paid subscription required to use {service_name}. Please subscribe.",
             "requires_vip": True,
             "is_expired": False
         }
