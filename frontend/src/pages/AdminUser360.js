@@ -186,6 +186,9 @@ const AdminUser360 = ({ user: adminUser }) => {
     notes: ''
   });
   
+  // Diagnose Modal State
+  const [diagnoseModal, setDiagnoseModal] = useState({ show: false, loading: false, data: null });
+  
   // Subscription Management Modal State
   const [subscriptionModal, setSubscriptionModal] = useState({ show: false });
   const [subscriptionTab, setSubscriptionTab] = useState('update'); // 'update' or 'history'
