@@ -4569,9 +4569,14 @@ async def login(
             except:
                 pass
     
-    # Note: Removed old code that wiped PRC for non-VIP users
-    # All paid subscription users (elite, pro, vip, etc.) can have PRC balance
-    # This was causing a critical bug where Elite users lost their PRC on login
+    # Enforce PRC = 0 for FREE users only (paid subscribers can have PRC)
+    # membership_type: "free" = not paid, anything else (elite, pro, vip) = paid subscriber
+    if user.get("membership_type") == "free" and user.get("prc_balance", 0) > 0:
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {"prc_balance": 0}}
+        )
+        user["prc_balance"] = 0
     
     # Generate JWT tokens for admin users
     token_id = str(uuid.uuid4())
