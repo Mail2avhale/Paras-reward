@@ -16462,7 +16462,7 @@ async def get_marketplace_products(user_id: str):
         raise HTTPException(status_code=403, detail=access_check["reason"])
     
     now = datetime.now(timezone.utc)
-    is_vip = user.get("membership_type") == "vip"
+    is_vip = is_paid_subscriber(user)  # Use helper function
     user_state = user.get("state")
     
     # Build query
