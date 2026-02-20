@@ -1,172 +1,177 @@
 <analysis>**original_problem_statement:**
-Throughout this session, the user focused on enhancing the Paras Reward application's administrative controls, user interface, performance, and support systems, culminating in the discovery of a critical bug.
+The primary goal for the user is to finalize their Paras Reward application for a Google Play Store launch. This involved resolving several critical production bugs, enhancing admin capabilities, and preparing the application for packaging.
 
-**Key Features & Fixes Requested:**
-1.  **Admin Controls:**
-    *   Implement on/off toggles for all key services (Mobile Recharge, DTH, EMI, etc.) from the admin panel with a custom Services temporarily down message.
-    *   On the Admin Subscription Management page, fix missing data fields (Approve/Expiry Date, Name, UTR) and add a date-range search filter.
+**Key Features & Fixes Worked On:**
+1.  **Critical Bug Fixes (Production):**
+    *   **PRC Balance Reset (P0):** The most critical issue was that paid users (e.g., Elite subscribers) were having their PRC (in-app currency) balance reset to zero upon login. This was a recurring problem throughout the session.
+    *   **KYC Sync Issues:** Multiple users were stuck with a Pending KYC status even after admin approval, or were unable to resubmit their KYC. This involved data inconsistencies between the  and  collections.
+    *   **Subscription Deletion:** An admin feature to delete user subscriptions was not working on the deployed application.
+    *   **White Screen Bug:** Users experienced a white screen when navigating to the KYC page.
 
-2.  **UI/UX Improvements:**
-    *   Fix an issue where buttons on admin pages only showed icons without text labels.
-    *   Add the official D-U-N-S® Registered Seal to the Home page and the About Us page for credibility.
-    *   Update the footer copyright notice to display the full company name: Paras Reward Technologies Private Limited.
-    *   Remove all non-monthly subscription plans (Quarterly, Half-Yearly, Yearly) from the entire application (frontend and backend).
+2.  **Admin Tooling Enhancements:**
+    *   **Auto-Diagnose Tool:** The user requested an Auto Diagnose button in the User 360 view to automatically detect and provide fixes for common user-specific problems (like KYC sync errors or incorrect membership types).
+    *   **Subscription Management:** Added functionality for admins to delete a user's individual subscription plans or all of them at once.
+    *   **Manager Permissions:** Fixed a bug preventing managers from seeing the Redeem to Bank page.
 
-3.  **Content & Support System:**
-    *   Enhance the in-app support by creating a comprehensive FAQ, improving the chatbot with auto-answers, and adding quick-reply templates to the support ticket system.
-    *   Add a dedicated FAQ section to the home page.
-    *   Add a detailed explanation and disclaimer in the FAQ about what the platform's PRC coin is and, more importantly, what it is not.
+3.  **Play Store Launch Preparation:**
+    *   **AAB File Generation:** The user wants to generate an AAB file to publish the app.
+    *   **AdMob Integration:** Integrate Google AdMob for monetization, including setting up App, Banner, and Rewarded Ad units.
+    *   **PWA Optimization:** Improve the application's PWA score by adding a robust service worker and a comprehensive  to ensure compatibility with packaging tools like PWABuilder.
 
-4.  **Performance & Compliance:**
-    *   Conduct a full audit of the application for information accuracy, compliance with Google Policies (including AdMob), and readiness for app store launching.
-    *   Optimize the app's performance and reduce its bundle size by removing unused packages and implementing lazy loading for images.
-
-5.  **Bug Fixes:**
-    *   Resolve a white screen error on the live site, which was traced back to deprecated iframe attributes used for the D-U-N-S seal.
-    *   **CRITICAL:** Investigate why KYC documents submitted by users are not appearing in the admin panel, even after running the existing KYC Syncing tool.
-
-**User's preferred language**: Marathi. The next agent **MUST** continue the conversation in Marathi.
+**User's preferred language**: English. The agent started in Marathi but the user requested to switch to English. The next agent **MUST** continue the conversation in English.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI rewards platform. In this session, numerous features and fixes were completed, including the implementation of admin service toggles, significant UI corrections on admin pages, removal of obsolete subscription plans, and major performance optimizations. The support system was also overhauled with an expanded FAQ and improved chatbot/ticket functionalities. However, a critical bug in the KYC submission process was discovered at the end of the session.
+The application is a full-stack React/FastAPI rewards platform. During this session, the agent addressed multiple critical bugs and implemented several new admin features. A fix for the PRC balance reset bug was developed, and an Auto Diagnose tool was created to help admins identify and resolve data inconsistencies. The application was also prepared for AAB generation by adding a service worker, updating the manifest, and integrating AdMob keys. However, the most critical bug (PRC balance reset) is reportedly still occurring on the production environment even after deploying the fix, suggesting a deeper data issue.
 
 **Last working item**:
--   **Last item agent was working:** Investigating and planning a fix for a critical bug where users' KYC submissions are not being saved to the database. The agent diagnosed that many users have a  in their profile, but no corresponding document exists in the  collection, making it impossible for admins to review the request.
+-   **Last item agent was working:** The agent was actively debugging the persistent P0 bug where Elite users' PRC balances are reset to zero upon login, even after a fix was deployed. The agent theorized the root cause is incorrect data in the production database (e.g., a paid user having ). The agent was enhancing the Auto Diagnose tool in the admin panel to detect and fix this data mismatch. The user confirmed the diagnosis works but reported the Fix button was missing, which the agent then added. The user then asked to make the diagnosis tool more advanced.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** both.
-    1.  **Backend:** Use the backend testing agent to verify the new endpoints for identifying and fixing orphaned KYC records.
-    2.  **Frontend:** After building the UI, use the screenshot tool to manually verify that the new admin tool lists the correct users and that the reset status functionality works as expected.
--   **User Testing Done:** N
+-   **Agent Testing Done:** Y (for individual components, but the production issue persists)
+-   **Which testing method agent to use?** both. The backend API for diagnosing and fixing issues needs to be tested with . The frontend Auto Diagnose tool in the User 360 page needs to be verified with the  after logging in as an admin.
+-   **User Testing Done:** N (User has tested on production and confirmed the bug is still present)
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): Fix Critical KYC Submission Data Loss**
+-   **Issue 1 (P0): CRITICAL - Paid Users' PRC Balance Resets to Zero on Production**
+-   **Issue 2 (P1): Subscription Deletion Fails on Production**
 
 **Issues Detail:**
--   **Issue 1: Fix Critical KYC Submission Data Loss**
-    -   **Attempted fixes:** Investigation via  confirmed a data inconsistency. The agent found that 49 users have a  KYC status but no associated document in the  collection. The existing admin sync tool is ineffective for this scenario.
+-   **Issue 1: CRITICAL - Paid Users' PRC Balance Resets to Zero on Production**
+    -   **Attempted fixes:**
+        1.  The agent found and fixed the initial code bug in : a check was incorrectly resetting the PRC balance for all non-vip members, including other paid tiers like elite.
+        2.  When the user reported the issue persisted after deployment, the agent concluded it must be a data issue where paid users have an incorrect  in the database.
+        3.  The agent created an Auto Diagnose tool for admins to detect this mismatch and added an API () and a Fix button to correct the data.
     -   **Next debug checklist:**
-        1.  **Backend:**
-            *   In  or a similar admin route file, create a new endpoint (e.g., ) to find and return users with  but no matching  in the  collection.
-            *   Create a second endpoint (e.g., ) that accepts a list of user IDs and resets their  to .
-        2.  **Frontend:**
-            *   Create a new admin tool/page (e.g., ) or enhance an existing one.
-            *   This UI should call the new GET endpoint to display the list of affected users.
-            *   Provide a UI element (e.g., a Reset Status button) to call the new POST endpoint to fix the selected users. This allows admins to clean the inconsistent data and ask users to resubmit.
-        3.  **Root Cause Analysis:** Add detailed logging to the KYC submission endpoint ( in ) to trace why documents are sometimes not saved, preventing future occurrences.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical business-blocking issue. Users cannot get verified, which prevents them from using core features, leading to high user frustration and support load. The fix will unblock these users and provide a tool to manage future data inconsistencies.
+        1.  Confirm with the user if the latest deployment includes the Auto Diagnose tool with the Fix button.
+        2.  Instruct the user to use the Fix button on an affected user and verify if it solves the problem for them after they log out and log back in.
+        3.  Implement a plan to **restore the lost PRC** for all affected users. This was not yet done. A new admin tool or a bulk script might be required.
+        4.  Continue enhancing the Auto Diagnose tool as requested by the user.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a business-critical bug that destroys user trust and makes the app's reward system pointless. Fixing it is essential for user retention and monetization.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
+-   **Issue 2: Subscription Deletion Fails on Production**
+    -   **Attempted fixes:** The user reported that the delete feature showed a success message but didn't work. The agent identified the bug: the delete API was targeting the wrong MongoDB collection ( instead of  or ). A fix was implemented to query all relevant collections.
+    -   **Next debug checklist:** The fix has been coded but not yet verified by the user on production. The user needs to deploy the latest changes and test the delete functionality again from the User 360 page.
+    -   **Why fix this issue and what will be achieved with the fix?** Provides admins with necessary data management capabilities.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on other issue:** None
+
 **In progress Task List**:
--   **Task 1: Build Admin Tool for Orphaned KYC Requests**
-    -   **Where to resume:** Start by implementing the two new backend endpoints for finding and resetting orphaned KYC requests.
-    -   **What will be achieved with this?** A functional tool for administrators to resolve the data inconsistency for users stuck in a pending KYC state without a submitted document.
+-   **Task 1: Enhance the Auto Diagnose Admin Tool (P0)**
+    -   **Where to resume:** The user asked to make the tool more advanced. The agent should add more diagnostic checks, such as verifying KYC document existence against status, checking for duplicate subscriptions, and validating transaction history.
+    -   **What will be achieved with this?** A powerful internal tool for the admin to quickly identify and resolve a wide range of common user-specific issues, reducing support load.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** None
+    -   **Blocked on something:** Blocked on resolving the core PRC balance reset bug first.
+
+-   **Task 2: Finalize AAB Generation for Play Store (P1)**
+    -   **Where to resume:** The agent has already created a service worker and updated the manifest. The user needs to deploy these changes and then use  to package the AAB file. The agent should guide the user through this final step.
+    -   **What will be achieved with this?** A production-ready Android App Bundle that can be uploaded to the Google Play Store.
+    -   **Status:** BLOCKED (waiting on user to deploy PWA improvements).
+    -   **Should Test frontend/backend/both after fix?** Frontend (using PWABuilder).
+    -   **Blocked on something:** User deployment.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment, DMT). The user has received recommendations and needs to make a choice before implementation via .
--   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay) for smoother payments, using .
+-   **P1: Restore Lost PRC for Affected Users:** Create a script or an admin tool to calculate and restore the PRC points that were incorrectly wiped from paid users' accounts.
+-   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment).
+-   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay).
 
 **Future Tasks:**
--   **P1:** Design and implement the DIRECTOR 365 subscription plan.
--   **P2:** Implement advanced PRC (point) burning concepts.
+-   **P2:** Design and implement the DIRECTOR 365 subscription plan.
+-   **P2:** Implement advanced PRC burning concepts.
 -   **P2:** Add a Force PIN Change feature for users.
--   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3) to improve performance and scalability.
--   **P3:** Implement solutions for Back-office process automation and Call-center agent support.
+-   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3).
 
 **Completed work in this session**
--   **Admin Service Toggles (DONE):** Admins can now enable/disable 8 different financial services from a dedicated UI.
--   **Admin Subscription UI Overhaul (DONE):** Fixed the Approved tab in subscription management to show all relevant data (Approve/Expiry Date, UTR, etc.) and added a date-range search filter.
--   **Admin Button Text Fix (DONE):** Added text labels to all admin page buttons that were only showing icons.
--   **D-U-N-S® Seal Integration (DONE):** Added the Dun & Bradstreet verification seal to the footer on the Home page and in a dedicated section on the About Us page.
--   **Subscription Plan Simplification (DONE):** Removed all quarterly, half-yearly, and yearly plan options, leaving only monthly subscriptions.
--   **Performance Optimization (DONE):** Audited the app, removed unused dependencies (, ), deleted unused UI components, and added lazy loading to images, resulting in smaller bundle sizes and faster loads.
--   **Support System Enhancement (DONE):** Significantly expanded the FAQ, added it to the homepage, and improved the chatbot and support ticket UIs.
--   **White Screen Bug Fix (DONE):** Resolved a critical rendering error on the live site caused by deprecated iframe attributes.
--   **Footer Update (DONE):** Updated the copyright notice across the site to use the full legal company name.
-
-**Earlier issues found/mentioned but not fixed**
--   None. The critical KYC issue is the most recent discovery and is being actively addressed.
-
-**Known issue recurrence from previous fork**
--   None.
+-   **Critical Bug Fix (PRC Reset):** Implemented a fix for the code logic that was incorrectly resetting PRC balances for paid users.
+-   **KYC Sync Tools:** Created backend endpoints and frontend UI for both admins and users to fix various KYC data sync issues.
+-   **Admin Subscription Management:** Added a feature for admins to delete user subscriptions from the User 360 page.
+-   **Auto Diagnose Tool:** Built the first version of a powerful admin tool to detect data inconsistencies.
+-   **AdMob Integration:** Successfully integrated the user's AdMob App ID, Banner Ad Unit ID, and Rewarded Ad Unit ID into the frontend.
+-   **PWA Enhancements:** Created a new service worker () and a comprehensive  to prepare the app for AAB packaging.
+-   **UI/UX Fixes:** Fixed manager permissions, removed an annoying update available prompt, and corrected a misleading validity message for Elite users.
+-   **Localization:** Converted all Marathi text on the KYC pages to English as per user request.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Database Anomaly Detection:** Identifying inconsistencies between related collections ( and ) to diagnose a critical bug.
--   **Admin Diagnostic Tools:** The current task involves building a specific tool for admins to view and correct data integrity issues.
--   **Performance Optimization:** Bundle size analysis using , removing unused dependencies, code-splitting, and asset lazy loading.
--   **Third-Party Script Integration:** Integrating external scripts and iframes (like the D-U-N-S seal) and debugging cross-origin/React compatibility issues.
+-   **Production Debugging:** Analyzing user-provided videos and reports to diagnose bugs (PRC reset, KYC sync) occurring in the live environment.
+-   **Data vs. Code Bugs:** Differentiating between bugs caused by faulty application logic and those caused by inconsistent or incorrect data in the production database.
+-   **Admin Diagnostic Tooling:** Building proactive tools (Auto Diagnose) for admins to find and fix data integrity issues without needing developer intervention.
+-   **PWA to AAB Conversion:** Preparing a React web app for the Google Play Store by implementing a service worker, a rich manifest, and using external tools like PWABuilder.
+-   **AdMob Integration:** Implementing Google AdMob (App, Banner, Rewarded ads) in a React application.
 
 **key DB schema**
--   **users:** Contains  ('pending', 'approved', 'rejected', 'not_submitted'), which is out of sync for some users.
--   **kyc_documents:** This collection is missing documents for users who are stuck with a 'pending' status, which is the core of the current issue.
-
-**changes in tech stack**
--   **Removed:** , .
+-   **users:** Contains , , , and . Inconsistencies in these fields were the root cause of the most critical bugs.
+-   **kyc_documents:** Stores KYC files. Had sync issues with the  collection.
+-   **subscriptions, vip_subscriptions, vip_payments:** Multiple collections storing subscription data, which caused a bug in the delete feature. Consolidating this is recommended.
 
 **All files of reference**
--   : The file where KYC uploads are handled and needs logging/investigation.
--   : The likely place to add the new admin endpoints for the fix.
--   : A recently fixed admin page that can serve as a template for good admin UI.
--   : The most heavily modified frontend page in this session.
--   : The page where the new admin tool could be integrated.
+-   
+-   
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   The recommendation from the previous fork to migrate images (KYC, receipts) from MongoDB base64 strings to a dedicated file storage service (like S3) is still highly relevant and crucial for future scalability.
+-   The data model for subscriptions is scattered across three collections (, , ). This should be unified into a single collection to prevent future bugs like the one that broke the delete functionality.
+-   The logic to determine if a user is a paid subscriber () was inconsistent. Although patched in critical areas, a single, reliable helper function like  should be created and used globally to avoid similar bugs in the future.
 
 **key api endpoints**
--   : **(MODIFIED)** Supports  and  query params.
--   : **(NEEDS INVESTIGATION)** The endpoint likely responsible for the data loss issue.
--   **New Endpoints to be created:**
-    -   
-    -   
+-   : Runs a series of checks on a user's account.
+-   : Applies a specific fix based on diagnosis.
+-   : A script to fix incorrect  for all users.
+-   : Deletes a specific subscription record.
+-   : Deletes all subscription records for a user.
+-   : Allows a user to check their definitive KYC status, which also triggers an auto-sync fix on the backend.
 
 **Critical Info for New Agent**
--   You **MUST** communicate with the user in **Marathi**.
--   The absolute top priority is fixing the critical KYC submission bug. The problem has been diagnosed as a data inconsistency. Your first task is to build the backend endpoints and frontend tool for an admin to fix the currently affected users. After that, you must investigate the root cause in  to prevent it from happening again.
+-   You **MUST** communicate in **English**.
+-   **The absolute top priority is the PRC balance reset bug.** The user reports it's still happening on production after deployment. Your first step should be to guide the user to test the Auto Diagnose and Fix functionality on a single affected user. If that works, you must devise a plan to **restore the lost PRC** for all affected users, as this has not been done yet.
+-   Do not get sidetracked. The user is trying to launch their app, and the PRC bug is a showstopper. Solve it completely before moving to other tasks.
 
 **documents and test reports created in this job**
--    (from testing the service toggles feature)
--    (Updated with completed tasks)
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports a critical issue where submitted KYC requests are not visible to admins. **Status: IN PROGRESS**
-2.  **User:** Requests more detail and a disclaimer about PRC in the FAQ. **Status: RESOLVED**
-3.  **User:** Asks to add the FAQ section to the home page. **Status: RESOLVED**
-4.  **User:** Wants to improve the in-app chatbot, support ticket system, and create a full FAQ. **Status: RESOLVED**
-5.  **User:** Asks for solution recommendations for back-office, call center, and chatbot updates. **Status: RESOLVED (Recommendations provided)**
-6.  **User:** Asks for API provider recommendations for bill payments. **Status: RESOLVED (Recommendations provided)**
-7.  **User:** Requests a comprehensive audit and performance optimization of the entire app. **Status: RESOLVED**
-8.  **User:** Asks to remove all subscription plans except for monthly. **Status: RESOLVED**
-9.  **User:** Asks to add the D-U-N-S seal to the About Us page. **Status: RESOLVED**
-10. **User:** Reports that the live site is showing a white page after deployment. **Status: RESOLVED**
+1.  **User:** Reports the critical P0 bug where an Elite user's PRC balance resets to zero after login on the production app. **Status: IN PROGRESS (HIGHEST PRIORITY)**
+2.  **User:** Asks if the Auto Diagnose tool can be made more advanced. **Status: IN PROGRESS**
+3.  **User:** Provides a screenshot of the new diagnosis tool, confirming it detects the problem but is missing the Fix button. **Status: RESOLVED (Agent added the button)**
+4.  **User:** Asks how to update the  via the admin panel. **Status: RESOLVED (Agent implemented this in the diagnose tool)**
+5.  **User:** Reports the PRC reset bug is still happening after deploying the first fix. **Status: IN PROGRESS**
+6.  **User:** Reported the subscription delete feature isn't working on production. **Status: USER VERIFICATION PENDING**
+7.  **User:** Reported that PRC balance was becoming zero for many users. **Status: IN PROGRESS**
+8.  **User:** Reported that managers couldn't see the Redeem to Bank page. **Status: RESOLVED**
+9.  **User:** Reported UI issues on production (validity message, update prompt). **Status: RESOLVED**
+10. **User:** Provided an updated  file. **Status: RESOLVED**
 
 **Project Health Check:**
--   **Broken:** The user KYC submission workflow is critically broken due to a data loss/inconsistency bug. This is a P0 blocker for user verification.
+-   **Broken:**
+    -   The core PRC balance system is **critically broken** on the production environment. Paid users are losing their currency, making the app's main reward loop non-functional.
+    -   The admin's Delete Subscription feature is reportedly failing on production.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Redis (Upstash):** For caching.
--   **Dun & Bradstreet:** D-U-N-S® Registered Seal (via iframe and static image/link).
+-   **Redis (Upstash):** Used for caching.
+-   **Dun & Bradstreet:** D-U-N-S® Registered Seal.
+-   **Google AdMob:** Fully integrated with the user's Publisher ID, App ID, Banner Ad, and Rewarded Ad Unit IDs.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (For the Admin Service Toggles feature).
--   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Testing agent used after significant changes:** YES.
 -   **Test files created:** None.
--   **Known regressions:** The KYC submission failure is a severe regression/newly discovered critical bug.
+-   **Known regressions:** The PRC balance reset bug is a severe, active regression on production.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
 -   **Production Test User:**  / PIN: 
+-   **User with KYC issue from video:** 
 
 **What agent forgot to execute**
--   The agent was in the process of resolving the critical KYC bug. The plan is laid out, but the implementation and root cause analysis are pending. No other requested tasks were forgotten.</analysis>
+-   The agent developed fixes for the PRC balance reset bug but did not create a mechanism to **restore the lost PRC** for users who were already affected. This is a critical missing step for user satisfaction. The agent should have proposed a bulk-restoration script or a tool for this.</analysis>

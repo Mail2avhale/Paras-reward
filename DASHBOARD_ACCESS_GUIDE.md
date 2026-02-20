@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://kyc-recovery.preview.emergentagent.com/setup
+   https://elite-rewards-app.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
