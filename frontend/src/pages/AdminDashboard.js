@@ -406,27 +406,26 @@ const AdminDashboard = ({ user }) => {
               View All <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
-            {pendingKYC.length === 0 ? (
-              <div className="text-center py-4">
-                <CheckCircle className="w-8 h-8 text-emerald-500/50 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">All KYC verified!</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pendingKYC.slice(0, 3).map((kyc) => (
-                  <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                        <UserCheck className="w-4 h-4 text-cyan-400" />
-                      </div>
-                      <span className="text-white text-sm">{kyc.user_name || 'Unknown'}</span>
+          {pendingKYC.length === 0 ? (
+            <div className="text-center py-4">
+              <CheckCircle className="w-8 h-8 text-emerald-500/50 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">All KYC verified!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pendingKYC.slice(0, 3).map((kyc) => (
+                <div key={kyc.document_id || kyc._id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                      <UserCheck className="w-4 h-4 text-cyan-400" />
                     </div>
-                    <span className="text-gray-500 text-xs px-2 py-1 bg-gray-800 rounded-full">{kyc.document_type || 'Document'}</span>
+                    <span className="text-white text-sm">{kyc.user_name || 'Unknown'}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <span className="text-gray-500 text-xs px-2 py-1 bg-gray-800 rounded-full">{kyc.document_type || 'Document'}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>
