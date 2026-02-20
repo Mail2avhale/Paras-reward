@@ -139,7 +139,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
-    { id: 'delivery-partners', label: 'Delivery Partners', icon: Truck, path: '/admin/delivery-partners' },
+    // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
