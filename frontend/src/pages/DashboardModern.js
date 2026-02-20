@@ -1047,7 +1047,9 @@ const DashboardModern = ({ user, onLogout }) => {
       </div>
 
       {/* ========== REDEEM TO BANK CARD ========== */}
-      {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && userData?.kyc_status === 'verified' && (
+      {/* ========== REDEEM TO BANK CARD (for KYC verified paid users) ========== */}
+      {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && 
+       (userData?.kyc_status === 'verified' || userData?.kyc_status === 'approved' || user?.kyc_status === 'verified' || user?.kyc_status === 'approved') && (
         <div className="px-5 mb-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
