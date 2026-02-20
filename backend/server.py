@@ -4572,16 +4572,32 @@ async def login(
     # Enforce PRC = 0 for FREE users only (paid subscribers can have PRC)
     # A user is FREE only if BOTH:
     # 1. membership_type is "free" (not "vip" which is set for all paid plans)
-    # 2. subscription_plan is "explorer" or not set
+    # 2. subscription_plan is "explorer" or not set (not startup/growth/elite)
     user_membership = user.get("membership_type", "free")
     user_plan = user.get("subscription_plan", "explorer")
     
-    # User is FREE only if membership is "free" - subscription_plan alone doesn't determine this
-    # Elite, Startup, Growth plans all have membership_type = "vip"
-    is_free_user = user_membership == "free"
+    # Define paid plans - users with any of these should NOT have PRC reset
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    
+    # User is FREE only if BOTH conditions are true:
+    # 1. membership_type is "free" 
+    # 2. subscription_plan is NOT in paid_plans (handles data mismatch)
+    # This prevents PRC reset for paid users even if membership_type is incorrectly set to "free"
+    is_free_user = user_membership == "free" and user_plan not in paid_plans
     
     # DEBUG LOG
     print(f"[LOGIN PRC CHECK] User: {user.get('email')}, membership_type: {user_membership}, subscription_plan: {user_plan}, is_free: {is_free_user}, prc_balance: {user.get('prc_balance', 0)}")
+    
+    # Auto-fix membership_type if user has paid plan but membership_type is "free"
+    # This prevents the bug from recurring
+    if user_plan in paid_plans and user_membership == "free":
+        print(f"[LOGIN AUTO-FIX] Fixing membership_type for paid user: {user.get('email')}, plan: {user_plan}")
+        await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {"membership_type": "vip"}}
+        )
+        user["membership_type"] = "vip"
+        is_free_user = False  # Prevent PRC reset
     
     if is_free_user and user.get("prc_balance", 0) > 0:
         print(f"[LOGIN PRC RESET] Resetting PRC for free user: {user.get('email')}")
