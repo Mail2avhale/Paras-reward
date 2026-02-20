@@ -6637,6 +6637,10 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
     # Use helper function - subscription_plan is source of truth
     is_vip = is_paid_subscriber(user)
     
+    # Derive membership_type for backward compatibility in records
+    subscription_plan = user.get("subscription_plan", "explorer")
+    membership_type = "vip" if is_vip else "free"
+    
     # Check if mining session is active
     if not user.get("mining_start_time"):
         raise HTTPException(status_code=400, detail="No active mining session")
