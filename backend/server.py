@@ -34588,7 +34588,7 @@ async def get_user_insights(uid: str):
         
         prc_balance = user.get("prc_balance", 0)
         total_mined = user.get("total_mined", 0)
-        is_vip = user.get("membership_type") == "vip"
+        is_vip = is_paid_subscriber(user)  # Use helper function
         mining_active = user.get("mining_active", False)
         
         # Calculate today's and yesterday's earnings from mining history
