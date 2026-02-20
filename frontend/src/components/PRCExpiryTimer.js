@@ -103,10 +103,10 @@ const PRCExpiryTimer = ({ miningHistory, isFreeUser }) => {
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => window.location.href = '/marketplace'}
+              onClick={() => window.location.href = '/gift-vouchers'}
               className="flex items-center gap-2 bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-opacity-90 transition-all"
             >
-              🛒 Use Now in Marketplace
+              🎁 Use for Gift Vouchers
             </button>
             <button
               onClick={() => window.location.href = '/subscription'}
