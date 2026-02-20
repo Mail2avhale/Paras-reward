@@ -145,14 +145,36 @@ const Orders = ({ user, onLogout }) => {
     }
   };
 
-  const fetchRequests = useCallback(async (page = 1, type = 'all') => {
+  const fetchRequests = useCallback(async (page = 1, type = 'all', sort = 'date_desc') => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/user/${user.uid}/all-requests`, {
         params: { page, limit: itemsPerPage, request_type: type }
       });
       
-      setRequests(response.data.requests || []);
+      let sortedRequests = response.data.requests || [];
+      
+      // Sort on frontend based on sortBy
+      sortedRequests = [...sortedRequests].sort((a, b) => {
+        switch (sort) {
+          case 'date_desc':
+            return new Date(b.created_at) - new Date(a.created_at);
+          case 'date_asc':
+            return new Date(a.created_at) - new Date(b.created_at);
+          case 'type_asc':
+            return (a.type || '').localeCompare(b.type || '');
+          case 'type_desc':
+            return (b.type || '').localeCompare(a.type || '');
+          case 'amount_desc':
+            return (b.amount_inr || b.total_prc || 0) - (a.amount_inr || a.total_prc || 0);
+          case 'amount_asc':
+            return (a.amount_inr || a.total_prc || 0) - (b.amount_inr || b.total_prc || 0);
+          default:
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+      });
+      
+      setRequests(sortedRequests);
       setTotalPages(response.data.pagination?.total_pages || 1);
       setTotalCount(response.data.pagination?.total_count || 0);
       setSummary(response.data.summary || null);
@@ -174,9 +196,9 @@ const Orders = ({ user, onLogout }) => {
   }, [user.uid]);
 
   useEffect(() => {
-    fetchRequests(currentPage, activeTab);
+    fetchRequests(currentPage, activeTab, sortBy);
     fetchUserStats();
-  }, [currentPage, activeTab, fetchRequests, fetchUserStats]);
+  }, [currentPage, activeTab, sortBy, fetchRequests, fetchUserStats]);
 
   const handleTabChange = (value) => {
     setActiveTab(value);
