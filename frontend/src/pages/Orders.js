@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Package, Clock, CheckCircle, Truck, ShoppingBag, Trash2, AlertCircle, 
   ArrowLeft, Copy, TrendingUp, Coins, Wallet, Gift, Smartphone, Tv, Zap,
   CreditCard, Building, Flame, Droplet, Wifi, Shield, Receipt, ChevronLeft,
   ChevronRight, Filter, RefreshCw, XCircle, Loader2, Info, HelpCircle, X,
-  PiggyBank, AlertTriangle, Percent, Gamepad2, Sparkles
+  PiggyBank, AlertTriangle, Percent, Gamepad2, Sparkles, Landmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -27,6 +27,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Orders = ({ user, onLogout }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteOrderId, setDeleteOrderId] = useState(null);
@@ -34,7 +35,7 @@ const Orders = ({ user, onLogout }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [userStats, setUserStats] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all');
   const [summary, setSummary] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const itemsPerPage = 10;
