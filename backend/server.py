@@ -14832,6 +14832,211 @@ async def fix_all_membership_types():
     }
 
 
+
+@api_router.get("/admin/prc-affected-users")
+async def get_prc_affected_users():
+    """
+    Find users who may have been affected by the PRC reset bug.
+    These are users with:
+    - subscription_plan in paid plans (startup, growth, elite)
+    - prc_balance = 0
+    - But have transaction history showing they earned PRC
+    """
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    
+    # Find paid users with zero balance
+    affected_candidates = await db.users.find({
+        "subscription_plan": {"$in": paid_plans},
+        "prc_balance": 0
+    }, {"_id": 0, "uid": 1, "email": 1, "name": 1, "subscription_plan": 1, "prc_balance": 1, "membership_type": 1}).to_list(500)
+    
+    affected_users = []
+    
+    for user in affected_candidates:
+        uid = user["uid"]
+        
+        # Calculate expected balance from transactions
+        total_credits = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        
+        total_debits = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        
+        credits = total_credits[0]["total"] if total_credits else 0
+        debits = total_debits[0]["total"] if total_debits else 0
+        expected_balance = round(credits - debits, 2)
+        
+        # Only include users who actually had PRC that was lost
+        if expected_balance > 0:
+            affected_users.append({
+                "uid": uid,
+                "email": user.get("email"),
+                "name": user.get("name"),
+                "subscription_plan": user.get("subscription_plan"),
+                "membership_type": user.get("membership_type"),
+                "current_balance": 0,
+                "expected_balance": expected_balance,
+                "lost_prc": expected_balance
+            })
+    
+    return {
+        "success": True,
+        "total_affected": len(affected_users),
+        "affected_users": affected_users,
+        "message": f"Found {len(affected_users)} users who may have lost PRC due to the bug"
+    }
+
+
+@api_router.post("/admin/restore-prc/{uid}")
+async def restore_user_prc(uid: str):
+    """
+    Restore PRC for a single user based on their transaction history.
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Calculate expected balance from transactions
+    total_credits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    total_debits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]).to_list(1)
+    
+    credits = total_credits[0]["total"] if total_credits else 0
+    debits = total_debits[0]["total"] if total_debits else 0
+    expected_balance = round(credits - debits, 2)
+    
+    current_balance = user.get("prc_balance", 0)
+    
+    if expected_balance <= current_balance:
+        return {
+            "success": False,
+            "message": f"No restoration needed. Current: {current_balance} PRC, Expected: {expected_balance} PRC"
+        }
+    
+    # Restore the balance
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {"prc_balance": expected_balance}}
+    )
+    
+    # Log the restoration
+    await db.transactions.insert_one({
+        "user_id": uid,
+        "type": "admin_restore",
+        "amount": expected_balance - current_balance,
+        "balance_before": current_balance,
+        "balance_after": expected_balance,
+        "description": "PRC restored by admin - fix for balance reset bug",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "success": True,
+        "user_id": uid,
+        "email": user.get("email"),
+        "name": user.get("name"),
+        "balance_before": current_balance,
+        "balance_after": expected_balance,
+        "restored_amount": expected_balance - current_balance,
+        "message": f"Successfully restored {expected_balance - current_balance} PRC for {user.get('name', user.get('email'))}"
+    }
+
+
+@api_router.post("/admin/bulk-restore-prc")
+async def bulk_restore_prc(request: Request):
+    """
+    Bulk restore PRC for all affected users.
+    Optional: Pass specific user IDs in request body to restore only those.
+    """
+    data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    specific_uids = data.get("user_ids", [])
+    
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    
+    # Find affected users
+    query = {"subscription_plan": {"$in": paid_plans}, "prc_balance": 0}
+    if specific_uids:
+        query["uid"] = {"$in": specific_uids}
+    
+    affected_users = await db.users.find(query, {"_id": 0, "uid": 1, "email": 1, "name": 1, "prc_balance": 1}).to_list(500)
+    
+    restored_users = []
+    skipped_users = []
+    
+    for user in affected_users:
+        uid = user["uid"]
+        
+        # Calculate expected balance
+        total_credits = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        
+        total_debits = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(1)
+        
+        credits = total_credits[0]["total"] if total_credits else 0
+        debits = total_debits[0]["total"] if total_debits else 0
+        expected_balance = round(credits - debits, 2)
+        
+        current_balance = user.get("prc_balance", 0)
+        
+        if expected_balance <= current_balance or expected_balance <= 0:
+            skipped_users.append({
+                "uid": uid,
+                "email": user.get("email"),
+                "reason": "No restoration needed"
+            })
+            continue
+        
+        # Restore the balance
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": expected_balance, "membership_type": "vip"}}  # Also fix membership_type
+        )
+        
+        # Log the restoration
+        await db.transactions.insert_one({
+            "user_id": uid,
+            "type": "admin_bulk_restore",
+            "amount": expected_balance - current_balance,
+            "balance_before": current_balance,
+            "balance_after": expected_balance,
+            "description": "PRC restored by admin - bulk fix for balance reset bug",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        restored_users.append({
+            "uid": uid,
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "restored_amount": expected_balance - current_balance
+        })
+    
+    return {
+        "success": True,
+        "message": f"Restored PRC for {len(restored_users)} users",
+        "total_checked": len(affected_users),
+        "restored_count": len(restored_users),
+        "skipped_count": len(skipped_users),
+        "restored_users": restored_users[:20],  # Return first 20
+        "skipped_users": skipped_users[:10]  # Return first 10
+    }
+
+
+
 @api_router.post("/admin/user-360/action")
 async def user_360_quick_action(request: Request):
     """
