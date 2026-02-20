@@ -1660,6 +1660,32 @@ const AdminUser360 = ({ user: adminUser }) => {
                     Reject KYC
                   </Button>
                 )}
+                {/* Restore PRC - for users affected by balance reset bug */}
+                {userData?.user?.subscription_plan && ['startup', 'growth', 'elite', 'vip'].includes(userData.user.subscription_plan) && userData?.user?.prc_balance === 0 && (
+                  <Button
+                    onClick={async () => {
+                      if (confirm('🔄 Restore PRC balance from transaction history? This will calculate the expected balance and restore it.')) {
+                        setProcessing(true);
+                        try {
+                          const response = await axios.post(`${API}/admin/restore-prc/${userData.user.uid}`);
+                          toast.success(response.data.message);
+                          refreshUserData();
+                        } catch (error) {
+                          toast.error(error.response?.data?.detail || 'Failed to restore PRC');
+                        } finally {
+                          setProcessing(false);
+                        }
+                      }
+                    }}
+                    disabled={processing}
+                    variant="outline"
+                    className="h-auto py-3 border-amber-500/50 text-amber-400 col-span-2"
+                    data-testid="restore-prc-button"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    🔄 Restore Lost PRC
+                  </Button>
+                )}
                 <Button
                   onClick={() => {
                     if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
