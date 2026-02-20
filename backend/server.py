@@ -32023,6 +32023,7 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
     {"id": "subscription_payment", "label": "Subscription Payment Verification", "category": "Payments"},
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
+    {"id": "bank_withdrawals", "label": "Redeem to Bank", "category": "Payments"},
     {"id": "gift_vouchers", "label": "Gift Voucher Requests", "category": "Payments"},
     {"id": "bill_payments", "label": "Bill Payment Requests", "category": "Payments"},
     {"id": "system_settings", "label": "System Settings", "category": "Settings"},
