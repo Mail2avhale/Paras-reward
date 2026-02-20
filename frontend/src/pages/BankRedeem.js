@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Shield, Clock, CheckCircle, XCircle,
-  AlertCircle, Info, ChevronDown, ChevronUp, Wallet, BadgeCheck
+  AlertCircle, Info, ChevronDown, ChevronUp, Wallet, BadgeCheck, ChevronRight, Receipt
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
