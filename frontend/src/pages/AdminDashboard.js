@@ -395,49 +395,17 @@ const AdminDashboard = ({ user }) => {
           )}
         </Card>
 
-        {/* Delivery Partners */}
+        {/* Pending KYC Preview */}
         <Card className="p-4 bg-gray-900/50 border-gray-800">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
-              <Truck className="w-5 h-5 text-emerald-400" />
-              Delivery Partners
+              <BadgeCheck className="w-5 h-5 text-cyan-400" />
+              Pending KYC Verifications
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/delivery-partners')} className="text-emerald-400 hover:text-emerald-300">
-              Manage <ChevronRight className="w-4 h-4 ml-1" />
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-400 hover:text-cyan-300">
+              View All <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
-          
-          <div className="grid grid-cols-5 gap-2 mb-4">
-            <div className="text-center p-3 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl border border-blue-500/20">
-              <p className="text-xl font-bold text-blue-400">{deliveryStats?.total_partners || 0}</p>
-              <p className="text-[10px] text-blue-300/70">Partners</p>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/20">
-              <p className="text-xl font-bold text-emerald-400">{deliveryStats?.active_partners || 0}</p>
-              <p className="text-[10px] text-emerald-300/70">Active</p>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl border border-purple-500/20">
-              <p className="text-xl font-bold text-purple-400">{deliveryStats?.verified_partners || 0}</p>
-              <p className="text-[10px] text-purple-300/70">Verified</p>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl border border-amber-500/20">
-              <p className="text-xl font-bold text-amber-400">{deliveryStats?.pending_assignment || 0}</p>
-              <p className="text-[10px] text-amber-300/70">Pending</p>
-            </div>
-            <div className="text-center p-3 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-xl border border-cyan-500/20">
-              <p className="text-xl font-bold text-cyan-400">{deliveryStats?.out_for_delivery || 0}</p>
-              <p className="text-[10px] text-cyan-300/70">Transit</p>
-            </div>
-          </div>
-          
-          {/* Pending KYC Preview */}
-          <div className="pt-4 border-t border-gray-800">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-gray-400">Pending KYC Verifications</h4>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/kyc')} className="text-cyan-400 hover:text-cyan-300 text-xs">
-                View All
-              </Button>
-            </div>
             {pendingKYC.length === 0 ? (
               <div className="text-center py-4">
                 <CheckCircle className="w-8 h-8 text-emerald-500/50 mx-auto mb-2" />
