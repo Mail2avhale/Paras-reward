@@ -143,7 +143,7 @@ const AdminOrders = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/A
 const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
 const AdminContactSubmissions = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminContactSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
-const AdminMarketplace = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMarketplace"));
+// AdminMarketplace removed - feature deprecated
 const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
 // AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
 const AdminSettingsHub = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
