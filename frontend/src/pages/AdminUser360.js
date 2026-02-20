@@ -2480,27 +2480,68 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </div>
               </div>
             ) : (
-              <div className="p-6 max-h-64 overflow-y-auto">
-                {userData.transactions.subscriptions?.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No subscription history</p>
-                ) : (
-                  <div className="space-y-2">
-                    {userData.transactions.subscriptions?.map((sub, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div>
-                          <p className="text-white font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
-                          <p className="text-gray-400 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-gray-400 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
-                          <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                            {sub.status || 'completed'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+              <div className="p-6">
+                {/* Delete All Button */}
+                {userData.transactions.subscriptions?.length > 0 && (
+                  <div className="flex justify-end mb-4">
+                    <Button
+                      onClick={async () => {
+                        if (!confirm(`Delete ALL ${userData.transactions.subscriptions.length} subscription records? This will also reset user to Explorer plan.`)) return;
+                        try {
+                          await axios.delete(`${API}/admin/user/${userData.user.uid}/subscriptions/all`);
+                          toast.success('All subscription records deleted');
+                          fetchUserData(userData.user.uid);
+                        } catch (error) {
+                          toast.error(error.response?.data?.detail || 'Failed to delete');
+                        }
+                      }}
+                      variant="destructive"
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" /> Delete All Plans
+                    </Button>
                   </div>
                 )}
+                
+                <div className="max-h-64 overflow-y-auto">
+                  {userData.transactions.subscriptions?.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No subscription history</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {userData.transactions.subscriptions?.map((sub, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-white font-medium capitalize">{sub.plan || sub.subscription_plan}</p>
+                            <p className="text-gray-400 text-xs">{formatDate(sub.created_at || sub.start_date)}</p>
+                          </div>
+                          <div className="text-right mr-3">
+                            <p className="text-gray-400 text-sm">Expires: {formatDate(sub.expiry || sub.end_date)}</p>
+                            <span className={`px-2 py-0.5 rounded text-xs ${sub.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                              {sub.status || 'completed'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (!confirm('Delete this subscription record?')) return;
+                              try {
+                                await axios.delete(`${API}/admin/user/${userData.user.uid}/subscription/${sub.payment_id}`);
+                                toast.success('Subscription record deleted');
+                                fetchUserData(userData.user.uid);
+                              } catch (error) {
+                                toast.error(error.response?.data?.detail || 'Failed to delete');
+                              }
+                            }}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                            title="Delete this plan"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             
