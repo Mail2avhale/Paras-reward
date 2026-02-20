@@ -14479,14 +14479,14 @@ async def admin_diagnose_user(uid: str):
         )
         auto_fixed.append("KYC status synced to 'verified'")
     
-    # KYC not submitted for paid user
-    membership_type = user.get("membership_type", "free")
-    if membership_type != "free" and kyc_status == "not_submitted":
+    # KYC not submitted for paid user - use helper function
+    user_plan = get_user_plan(user)
+    if is_paid_subscriber(user) and kyc_status == "not_submitted":
         issues.append({
             "category": "KYC",
             "severity": "medium",
             "issue": "Paid User Without KYC",
-            "description": f"User has {membership_type} subscription but hasn't submitted KYC",
+            "description": f"User has {user_plan} subscription but hasn't submitted KYC",
             "can_auto_fix": False,
             "fix_action": "notify_user"
         })
