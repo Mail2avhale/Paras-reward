@@ -3951,7 +3951,8 @@ async def get_cashback_rate(user_id: str, is_top_player: bool = False):
     if not user:
         return 0.10  # Default to free user rate
     
-    is_vip = user.get("membership_type") == "vip"
+    # Use helper function - subscription_plan is source of truth
+    is_vip = is_paid_subscriber(user)
     
     if is_vip:
         return 1.0 if is_top_player else 0.50  # 100% or 50%
@@ -3962,34 +3963,36 @@ async def get_withdrawal_limit(user_id: str):
     """
     Get minimum withdrawal limit based on membership
     Free users: ₹1000
-    VIP users: ₹100
+    Paid users: ₹100
     """
     user = await db.users.find_one({"uid": user_id})
     if not user:
         return 1000
     
-    is_vip = user.get("membership_type") == "vip"
-    return 100 if is_vip else 1000
+    # Use helper function - subscription_plan is source of truth
+    return 100 if is_paid_subscriber(user) else 1000
 
 async def can_use_marketplace(user_id: str):
     """
     Check if user can use marketplace
     Free users: NO
-    VIP users: YES
+    Paid users: YES
     """
     user = await db.users.find_one({"uid": user_id})
     if not user:
         return False
     
-    return user.get("membership_type") == "vip"
+    # Use helper function - subscription_plan is source of truth
+    return is_paid_subscriber(user)
 
 async def get_delivery_charge(user, total_prc: float):
     """
     Calculate delivery charge based on user membership and PRC value
     Free users: ₹100
-    VIP users: ₹50
+    Paid users: ₹50
     """
-    is_vip = user.get("membership_type") == "vip"
+    # Use helper function - subscription_plan is source of truth
+    is_vip = is_paid_subscriber(user)
     if total_prc < 100:
         return 100
     # 10% of PRC value (or flat rate)
