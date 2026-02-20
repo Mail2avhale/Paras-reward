@@ -13876,21 +13876,48 @@ async def admin_update_user_subscription(uid: str, request: Request):
 async def admin_delete_user_subscription(uid: str, payment_id: str):
     """
     Admin endpoint to delete a specific subscription record.
+    Searches across multiple collections: vip_payments, subscriptions, vip_subscriptions
     """
     # Find user
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Delete the subscription record
+    deleted = False
+    
+    # Try deleting from vip_payments collection
     result = await db.vip_payments.delete_one({
         "$and": [
             {"$or": [{"user_uid": uid}, {"user_id": uid}]},
             {"payment_id": payment_id}
         ]
     })
+    if result.deleted_count > 0:
+        deleted = True
     
-    if result.deleted_count == 0:
+    # Try deleting from subscriptions collection
+    if not deleted:
+        result = await db.subscriptions.delete_one({
+            "$and": [
+                {"user_id": uid},
+                {"payment_id": payment_id}
+            ]
+        })
+        if result.deleted_count > 0:
+            deleted = True
+    
+    # Try deleting from vip_subscriptions collection
+    if not deleted:
+        result = await db.vip_subscriptions.delete_one({
+            "$and": [
+                {"user_id": uid},
+                {"payment_id": payment_id}
+            ]
+        })
+        if result.deleted_count > 0:
+            deleted = True
+    
+    if not deleted:
         raise HTTPException(status_code=404, detail="Subscription record not found")
     
     return {
@@ -13911,10 +13938,21 @@ async def admin_delete_all_user_subscriptions(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Delete all subscription records for this user
-    result = await db.vip_payments.delete_many({
+    total_deleted = 0
+    
+    # Delete from vip_payments
+    result1 = await db.vip_payments.delete_many({
         "$or": [{"user_uid": uid}, {"user_id": uid}]
     })
+    total_deleted += result1.deleted_count
+    
+    # Delete from subscriptions
+    result2 = await db.subscriptions.delete_many({"user_id": uid})
+    total_deleted += result2.deleted_count
+    
+    # Delete from vip_subscriptions
+    result3 = await db.vip_subscriptions.delete_many({"user_id": uid})
+    total_deleted += result3.deleted_count
     
     # Reset user's subscription to free/explorer
     await db.users.update_one(
@@ -13924,14 +13962,15 @@ async def admin_delete_all_user_subscriptions(uid: str):
             "membership_type": "free",
             "subscription_expiry": None,
             "subscription_days": 0,
+            "vip_expiry": None,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
     return {
         "success": True,
-        "message": f"Deleted {result.deleted_count} subscription records and reset user to Explorer",
-        "deleted_count": result.deleted_count
+        "message": f"Deleted {total_deleted} subscription records and reset user to Explorer",
+        "deleted_count": total_deleted
     }
 
 
