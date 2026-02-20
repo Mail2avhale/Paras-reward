@@ -211,9 +211,15 @@ const Orders = ({ user, onLogout }) => {
     }
   };
 
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    setCurrentPage(1);
+    setShowSortMenu(false);
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchRequests(currentPage, activeTab);
+    await fetchRequests(currentPage, activeTab, sortBy);
     await fetchUserStats();
     setRefreshing(false);
     toast.success('Refreshed!');
