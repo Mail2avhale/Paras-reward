@@ -14776,6 +14776,46 @@ async def admin_fix_user_issue(uid: str, request: Request):
     }
 
 
+@api_router.post("/admin/fix-membership-types")
+async def fix_all_membership_types():
+    """
+    Fix membership_type for ALL users who have paid plans but membership_type = 'free'.
+    This is a one-time fix for the PRC reset bug.
+    """
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    
+    # Find all affected users
+    affected_users = await db.users.find({
+        "subscription_plan": {"$in": paid_plans},
+        "membership_type": "free"
+    }, {"_id": 0, "uid": 1, "email": 1, "name": 1, "subscription_plan": 1}).to_list(1000)
+    
+    fixed_count = 0
+    fixed_users = []
+    
+    for user in affected_users:
+        result = await db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {"membership_type": "vip"}}
+        )
+        if result.modified_count > 0:
+            fixed_count += 1
+            fixed_users.append({
+                "uid": user["uid"],
+                "email": user.get("email"),
+                "name": user.get("name"),
+                "plan": user.get("subscription_plan")
+            })
+    
+    return {
+        "success": True,
+        "message": f"Fixed membership_type for {fixed_count} users",
+        "total_affected": len(affected_users),
+        "fixed_count": fixed_count,
+        "fixed_users": fixed_users[:20]  # Return first 20 for reference
+    }
+
+
 @api_router.post("/admin/user-360/action")
 async def user_360_quick_action(request: Request):
     """
