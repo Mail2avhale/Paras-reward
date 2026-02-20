@@ -6370,6 +6370,19 @@ async def get_user_dashboard_combined(uid: str):
         except Exception as e:
             print(f"Error calculating subscription start: {e}")
     
+    # AUTO-SYNC KYC STATUS for dashboard
+    kyc_status = user.get("kyc_status")
+    if kyc_status != "verified":
+        verified_kyc = await db.kyc_documents.find_one({
+            "user_id": uid,
+            "status": {"$in": ["verified", "approved"]}
+        })
+        if verified_kyc:
+            kyc_status = "verified"
+            await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+        else:
+            kyc_status = kyc_status or "not_submitted"
+    
     # Build response
     result = {
         "user": {
