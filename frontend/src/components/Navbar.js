@@ -190,9 +190,6 @@ const Navbar = ({ user, onLogout }) => {
                       <Link to="/referrals" className="cursor-pointer">Referrals</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/marketplace" className="cursor-pointer">Marketplace</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
                       <Link to="/leaderboard" className="cursor-pointer">Leaderboard</Link>
                     </DropdownMenuItem>
                   </>
