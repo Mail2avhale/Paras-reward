@@ -2612,6 +2612,135 @@ const AdminUser360 = ({ user: adminUser }) => {
           </div>
         </div>
       )}
+
+      {/* Auto Diagnose Modal */}
+      {diagnoseModal.show && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setDiagnoseModal({ show: false, loading: false, data: null })}>
+          <Card className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-gray-900 border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-purple-500" />
+                  Auto Diagnosis Report
+                </h2>
+                <button onClick={() => setDiagnoseModal({ show: false, loading: false, data: null })} className="text-gray-400 hover:text-white">
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              {diagnoseModal.loading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-12 h-12 animate-spin text-purple-500 mb-4" />
+                  <p className="text-gray-400">Running diagnostics...</p>
+                </div>
+              ) : diagnoseModal.data ? (
+                <>
+                  {/* Health Score */}
+                  <div className={`p-4 rounded-xl mb-6 ${
+                    diagnoseModal.data.health_score >= 80 ? 'bg-green-500/20 border border-green-500/50' :
+                    diagnoseModal.data.health_score >= 50 ? 'bg-yellow-500/20 border border-yellow-500/50' :
+                    'bg-red-500/20 border border-red-500/50'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-sm">Health Score</p>
+                        <p className={`text-3xl font-bold ${
+                          diagnoseModal.data.health_score >= 80 ? 'text-green-400' :
+                          diagnoseModal.data.health_score >= 50 ? 'text-yellow-400' :
+                          'text-red-400'
+                        }`}>
+                          {diagnoseModal.data.health_score}/100
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-400 text-sm">Issues Found</p>
+                        <p className="text-2xl font-bold text-white">{diagnoseModal.data.total_issues}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4 mt-3 text-sm">
+                      {diagnoseModal.data.summary.critical > 0 && <span className="text-red-400">🔴 {diagnoseModal.data.summary.critical} Critical</span>}
+                      {diagnoseModal.data.summary.high > 0 && <span className="text-orange-400">🟠 {diagnoseModal.data.summary.high} High</span>}
+                      {diagnoseModal.data.summary.medium > 0 && <span className="text-yellow-400">🟡 {diagnoseModal.data.summary.medium} Medium</span>}
+                      {diagnoseModal.data.summary.low > 0 && <span className="text-blue-400">🔵 {diagnoseModal.data.summary.low} Low</span>}
+                    </div>
+                  </div>
+
+                  {/* Auto-Fixed Items */}
+                  {diagnoseModal.data.auto_fixed?.length > 0 && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
+                      <p className="text-green-400 font-medium mb-2">✅ Auto-Fixed:</p>
+                      <ul className="text-sm text-gray-300 space-y-1">
+                        {diagnoseModal.data.auto_fixed.map((item, idx) => (
+                          <li key={idx}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Issues List */}
+                  {diagnoseModal.data.issues?.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                      <p className="text-green-400 font-medium text-lg">All Good!</p>
+                      <p className="text-gray-400">No issues found for this user.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {diagnoseModal.data.issues.map((issue, idx) => (
+                        <div key={idx} className={`p-4 rounded-xl border ${
+                          issue.severity === 'critical' ? 'bg-red-500/10 border-red-500/50' :
+                          issue.severity === 'high' ? 'bg-orange-500/10 border-orange-500/50' :
+                          issue.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500/50' :
+                          'bg-blue-500/10 border-blue-500/50'
+                        }`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  issue.severity === 'critical' ? 'bg-red-500/30 text-red-300' :
+                                  issue.severity === 'high' ? 'bg-orange-500/30 text-orange-300' :
+                                  issue.severity === 'medium' ? 'bg-yellow-500/30 text-yellow-300' :
+                                  'bg-blue-500/30 text-blue-300'
+                                }`}>
+                                  {issue.severity.toUpperCase()}
+                                </span>
+                                <span className="text-gray-500 text-xs">{issue.category}</span>
+                              </div>
+                              <p className="text-white font-medium">{issue.issue}</p>
+                              <p className="text-gray-400 text-sm mt-1">{issue.description}</p>
+                              {issue.suggested_balance && (
+                                <p className="text-green-400 text-sm mt-1">Suggested Balance: {issue.suggested_balance} PRC</p>
+                              )}
+                            </div>
+                            {issue.can_auto_fix && (
+                              <Button
+                                onClick={() => fixIssue(issue.fix_action, issue.suggested_balance)}
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                              >
+                                Fix
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Re-run Button */}
+                  <div className="mt-6 flex justify-center">
+                    <Button onClick={runDiagnosis} variant="outline" className="border-purple-500/50 text-purple-400">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Re-run Diagnosis
+                    </Button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </Card>
+        </div>
+      )}
         </>
       )}
     </div>
