@@ -14,7 +14,7 @@ import {
   ChevronRight, ArrowLeft, Copy, ExternalLink, Ban, Play, Pause,
   Wallet, Receipt, BadgeCheck, AlertCircle, Info, Star, Zap,
   BarChart3, PieChart, Network, History, Settings, Send, Key,
-  Plus, Minus, Edit, Lock
+  Plus, Minus, Edit, Lock, Trash2
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
