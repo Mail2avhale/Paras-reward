@@ -1007,176 +1007,25 @@ const BillPayments = ({ user, onLogout }) => {
           </div>
         </div>
 
-        {/* Request History - Premium Card */}
+        {/* Link to My Orders */}
         <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl mt-8">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center">
-                <Clock className="h-5 w-5 text-purple-400" />
+                <Receipt className="h-5 w-5 text-purple-400" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Request History</h2>
-                <p className="text-xs text-gray-500">Processing time: 3-7 days</p>
+                <p className="text-xs text-gray-500">View all your bill payment requests</p>
               </div>
             </div>
+            <button
+              onClick={() => navigate('/orders?tab=bill_payment')}
+              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all flex items-center gap-2"
+            >
+              View All <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          
-          {/* Status Filter Tabs */}
-          <div className="flex gap-2 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-            {[
-              { id: 'all', label: 'All', count: requests.length },
-              { id: 'pending', label: 'Pending', count: requests.filter(r => r.status === 'pending').length, color: 'yellow' },
-              { id: 'approved', label: 'Approved', count: requests.filter(r => r.status === 'approved' || r.status === 'processing').length, color: 'blue' },
-              { id: 'completed', label: 'Completed', count: requests.filter(r => r.status === 'completed').length, color: 'green' },
-              { id: 'rejected', label: 'Rejected', count: requests.filter(r => r.status === 'rejected').length, color: 'red' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-                  statusFilter === tab.id
-                    ? tab.color === 'yellow' ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/40'
-                    : tab.color === 'blue' ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-400 border border-blue-500/40'
-                    : tab.color === 'green' ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-500/40'
-                    : tab.color === 'red' ? 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-400 border border-red-500/40'
-                    : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/40'
-                    : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-gray-800 hover:border-gray-600'
-                }`}
-              >
-                {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                  statusFilter === tab.id ? 'bg-white/20' : 'bg-gray-700'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-          
-          {(() => {
-            const filteredRequests = statusFilter === 'all' 
-              ? requests 
-              : statusFilter === 'approved'
-              ? requests.filter(r => r.status === 'approved' || r.status === 'processing')
-              : requests.filter(r => r.status === statusFilter);
-            
-            return filteredRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <Receipt className="h-16 w-16 mx-auto text-gray-700 mb-4" />
-              <p className="text-gray-500">{statusFilter === 'all' ? 'No requests yet' : `No ${statusFilter} requests`}</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-800">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Type</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Amount</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">PRC</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRequests
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                      .map((req) => (
-                      <React.Fragment key={req.request_id}>
-                        <tr 
-                          className="border-b border-gray-800/50 hover:bg-gray-800/30 cursor-pointer"
-                          onClick={() => setExpandedRequest(expandedRequest === req.request_id ? null : req.request_id)}
-                        >
-                          <td className="py-3 px-4 text-sm text-gray-300">{getTypeLabel(req.request_type)}</td>
-                          <td className="py-3 px-4 text-sm font-medium text-white">₹{req.amount_inr}</td>
-                          <td className="py-3 px-4 text-sm text-amber-500">{req.total_prc_deducted?.toFixed(2) || '0.00'}</td>
-                          <td className="py-3 px-4">{getStatusBadge(req.status)}</td>
-                          <td className="py-3 px-4 text-sm text-gray-500">
-                            {new Date(req.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-400">
-                            {expandedRequest === req.request_id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </td>
-                        </tr>
-                        {/* Expanded Timeline Row */}
-                        {expandedRequest === req.request_id && (
-                          <tr>
-                            <td colSpan={6} className="px-4 py-3 bg-gray-800/30">
-                              {/* NEW: Request Journey Animation */}
-                              <RequestJourney
-                                status={req.status}
-                                createdAt={req.created_at}
-                                approvedAt={req.approved_at}
-                                completedAt={req.completed_at}
-                                processingTime={req.processing_time}
-                              />
-                              
-                              {/* TXN Number for completed */}
-                              {req.status === 'completed' && req.txn_number && (
-                                <div className="mt-3 text-center">
-                                  <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs">
-                                    TXN: {req.txn_number}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Show rejection reason prominently */}
-                              {req.status === 'rejected' && (req.reject_reason || req.admin_notes) && (
-                                <div className="mt-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
-                                  <p className="text-red-400 text-xs font-medium">❌ Rejection Reason:</p>
-                                  <p className="text-red-300 text-sm mt-1">{req.reject_reason || req.admin_notes}</p>
-                                </div>
-                              )}
-                              
-                              {/* Show admin notes for processing status */}
-                              {req.status === 'processing' && req.admin_notes && (
-                                <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                                  <p className="text-blue-400 text-xs">Admin Note:</p>
-                                  <p className="text-blue-300 text-sm">{req.admin_notes}</p>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Pagination */}
-              {filteredRequests.length > itemsPerPage && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800">
-                  <p className="text-sm text-gray-500">
-                    {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
-                      data-testid="bill-payments-prev-page"
-                    >
-                      Prev
-                    </button>
-                    <span className="px-3 py-1.5 bg-amber-500/20 text-amber-500 rounded-lg text-sm font-medium">
-                      {currentPage}/{Math.ceil(filteredRequests.length / itemsPerPage)}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredRequests.length / itemsPerPage), p + 1))}
-                      disabled={currentPage >= Math.ceil(filteredRequests.length / itemsPerPage)}
-                      className="px-3 py-1.5 bg-gray-800 text-gray-300 rounded-lg text-sm disabled:opacity-50"
-                      data-testid="bill-payments-next-page"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          );
-          })()}
         </div>
       </div>
     </div>
