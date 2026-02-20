@@ -13872,6 +13872,69 @@ async def admin_update_user_subscription(uid: str, request: Request):
     }
 
 
+@api_router.delete("/admin/user/{uid}/subscription/{payment_id}")
+async def admin_delete_user_subscription(uid: str, payment_id: str):
+    """
+    Admin endpoint to delete a specific subscription record.
+    """
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete the subscription record
+    result = await db.vip_payments.delete_one({
+        "$and": [
+            {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+            {"payment_id": payment_id}
+        ]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription record not found")
+    
+    return {
+        "success": True,
+        "message": "Subscription record deleted successfully",
+        "payment_id": payment_id
+    }
+
+
+@api_router.delete("/admin/user/{uid}/subscriptions/all")
+async def admin_delete_all_user_subscriptions(uid: str):
+    """
+    Admin endpoint to delete ALL subscription records for a user.
+    Also resets the user's subscription to explorer/free.
+    """
+    # Find user
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete all subscription records for this user
+    result = await db.vip_payments.delete_many({
+        "$or": [{"user_uid": uid}, {"user_id": uid}]
+    })
+    
+    # Reset user's subscription to free/explorer
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "subscription_plan": "explorer",
+            "membership_type": "free",
+            "subscription_expiry": None,
+            "subscription_days": 0,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": f"Deleted {result.deleted_count} subscription records and reset user to Explorer",
+        "deleted_count": result.deleted_count
+    }
+
+
 async def get_user_subscription_history(uid: str, page: int = 1, limit: int = 20):
     """
     Get subscription/payment history for a specific user.
