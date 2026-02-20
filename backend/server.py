@@ -14552,7 +14552,22 @@ async def admin_diagnose_user(uid: str):
             "suggested_balance": expected_balance
         })
     
-    # ========== 4. MINING ISSUES ==========
+    # ========== 4. MEMBERSHIP TYPE ISSUES ==========
+    # Check if subscription_plan doesn't match membership_type
+    subscription_plan = user.get("subscription_plan", "explorer")
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    
+    if subscription_plan in paid_plans and membership_type == "free":
+        issues.append({
+            "category": "Subscription",
+            "severity": "critical",
+            "issue": "Membership Type Mismatch",
+            "description": f"User has '{subscription_plan}' plan but membership_type is 'free'. This causes PRC to reset on login!",
+            "can_auto_fix": True,
+            "fix_action": "fix_membership_type"
+        })
+    
+    # ========== 5. MINING ISSUES ==========
     mining_active = user.get("mining_active")
     mining_start = user.get("mining_start_time")
     
