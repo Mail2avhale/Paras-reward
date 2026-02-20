@@ -169,6 +169,12 @@ const Orders = ({ user, onLogout }) => {
   const handleTabChange = (value) => {
     setActiveTab(value);
     setCurrentPage(1);
+    // Update URL with tab parameter for deep linking
+    if (value === 'all') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: value });
+    }
   };
 
   const handleRefresh = async () => {
