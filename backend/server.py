@@ -11614,10 +11614,10 @@ async def get_proactive_tips(uid: str, current_page: str = "dashboard"):
         
         # VIP page tips
         elif current_page == "vip":
-            if user.get("membership_type") != "vip":
+            if user.get("membership_type", "free") == "free":
                 tips.append({
                     "icon": "👑",
-                    "text": "VIP unlocks shopping, bill payments & exclusive rewards!",
+                    "text": "Subscribe to unlock shopping, bill payments & exclusive rewards!",
                     "priority": "high"
                 })
         
