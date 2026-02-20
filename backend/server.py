@@ -10830,8 +10830,8 @@ async def request_cashback_withdrawal(request: Request):
     
     min_withdrawal = await get_withdrawal_limit(user_id)
     if amount < min_withdrawal:
-        membership_type = user.get("membership_type", "free")
-        if membership_type == "free":
+        # Use helper function - subscription_plan is source of truth
+        if is_free_user(user):
             raise HTTPException(
                 status_code=400, 
                 detail=f"Minimum withdrawal for free users is ₹{min_withdrawal}. Upgrade to VIP for ₹100 minimum."
