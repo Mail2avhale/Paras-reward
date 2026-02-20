@@ -14547,7 +14547,7 @@ async def admin_diagnose_user(uid: str):
             "severity": "critical",
             "issue": "Paid User Zero Balance Bug",
             "description": f"Paid user ({membership_type}) has 0 PRC but earned {credits} PRC. May be affected by balance reset bug.",
-            "can_auto_fix": False,
+            "can_auto_fix": True,
             "fix_action": "restore_balance",
             "suggested_balance": expected_balance
         })
