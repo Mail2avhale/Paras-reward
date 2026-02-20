@@ -92,7 +92,7 @@ if (typeof window !== 'undefined') {
 
 const TapGame = lazy(() => import("@/pages/TapGameAdvanced"));
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
-const Marketplace = lazy(() => import("@/pages/MarketplaceNew"));
+// Marketplace removed - feature deprecated
 const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
