@@ -6597,8 +6597,8 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         raise HTTPException(status_code=404, detail="User not found")
     
     now = datetime.now(timezone.utc)
-    membership_type = user.get("membership_type", "free")
-    is_vip = membership_type == "vip"
+    # Use helper function - subscription_plan is source of truth
+    is_vip = is_paid_subscriber(user)
     
     # Check if mining session is active
     if not user.get("mining_start_time"):
