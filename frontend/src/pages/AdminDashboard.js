@@ -336,7 +336,6 @@ const AdminDashboard = ({ user }) => {
           <QuickActionCard icon={Crown} label="Subs" badge={stats?.vip_payments?.pending} color="purple" onClick={() => navigate('/admin/subscriptions')} />
           <QuickActionCard icon={BadgeCheck} label="KYC" badge={stats?.kyc?.pending} color="cyan" onClick={() => navigate('/admin/kyc')} />
           <QuickActionCard icon={ShoppingCart} label="Orders" badge={stats?.orders?.pending} color="amber" onClick={() => navigate('/admin/orders')} />
-          <QuickActionCard icon={Truck} label="Delivery" color="emerald" onClick={() => navigate('/admin/delivery-partners')} />
           <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
           <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
           <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
