@@ -14752,6 +14752,20 @@ async def admin_fix_user_issue(uid: str, request: Request):
         )
         result_message = f"Referral code generated: {new_code}"
     
+    elif fix_action == "fix_membership_type":
+        # Fix membership_type for paid plan users
+        subscription_plan = user.get("subscription_plan", "explorer")
+        paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+        
+        if subscription_plan in paid_plans:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"membership_type": "vip"}}
+            )
+            result_message = f"Fixed membership_type to 'vip' for {subscription_plan} plan user"
+        else:
+            result_message = f"User has {subscription_plan} plan - no fix needed"
+    
     else:
         result_message = f"Unknown fix action: {fix_action}"
     
