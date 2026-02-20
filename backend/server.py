@@ -532,6 +532,32 @@ async def verify_management(uid: str):
 
 # verify_stockist removed - stockist system deprecated
 
+# ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
+# Use this function EVERYWHERE instead of checking membership_type
+PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]
+
+def is_paid_subscriber(user: dict) -> bool:
+    """
+    Check if user has a paid subscription.
+    THIS IS THE SINGLE SOURCE OF TRUTH - use this instead of membership_type checks.
+    
+    Returns True if user has: startup, growth, elite, vip, or pro plan
+    Returns False if user has: explorer, free, or no plan
+    """
+    plan = user.get("subscription_plan", "explorer")
+    return plan in PAID_PLANS
+
+def is_free_user(user: dict) -> bool:
+    """
+    Check if user is on free/explorer plan.
+    Opposite of is_paid_subscriber().
+    """
+    return not is_paid_subscriber(user)
+
+def get_user_plan(user: dict) -> str:
+    """Get user's subscription plan, defaulting to 'explorer'"""
+    return user.get("subscription_plan", "explorer")
+
 def check_region_access(user: dict, target_region: str = None) -> bool:
     """Check if user has access to target region (for sub_admin)"""
     if user.get("role") == "admin":
