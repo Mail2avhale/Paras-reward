@@ -37262,13 +37262,13 @@ async def initialize_database_indexes():
     except Exception as e:
         print(f"⚠️  Video ads indexes: {e}")
     
-    # Treasure hunts indexes
-    try:
-        await db.treasure_hunts.create_index("hunt_id", unique=True)
-        await db.treasure_progress.create_index("progress_id", unique=True)
-        await db.treasure_progress.create_index("user_id")
-    except Exception as e:
-        print(f"⚠️  Treasure hunt indexes: {e}")
+    # Treasure hunts indexes - REMOVED (feature deprecated)
+    # try:
+    #     await db.treasure_hunts.create_index("hunt_id", unique=True)
+    #     await db.treasure_progress.create_index("progress_id", unique=True)
+    #     await db.treasure_progress.create_index("user_id")
+    # except Exception as e:
+    #     print(f"⚠️  Treasure hunt indexes: {e}")
     
     # Orders indexes
     try:
