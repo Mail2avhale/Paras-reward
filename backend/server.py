@@ -4570,11 +4570,15 @@ async def login(
                 pass
     
     # Enforce PRC = 0 for FREE users only (paid subscribers can have PRC)
-    # membership_type: "free" = not paid, anything else (elite, pro, vip) = paid subscriber
-    # Also check subscription_plan as backup - explorer is free tier
+    # A user is FREE only if BOTH:
+    # 1. membership_type is "free" (not "vip" which is set for all paid plans)
+    # 2. subscription_plan is "explorer" or not set
     user_membership = user.get("membership_type", "free")
     user_plan = user.get("subscription_plan", "explorer")
-    is_free_user = user_membership == "free" or user_plan == "explorer"
+    
+    # User is FREE only if membership is "free" - subscription_plan alone doesn't determine this
+    # Elite, Startup, Growth plans all have membership_type = "vip"
+    is_free_user = user_membership == "free"
     
     # DEBUG LOG
     print(f"[LOGIN PRC CHECK] User: {user.get('email')}, membership_type: {user_membership}, subscription_plan: {user_plan}, is_free: {is_free_user}, prc_balance: {user.get('prc_balance', 0)}")
