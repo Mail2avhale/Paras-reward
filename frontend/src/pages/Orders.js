@@ -38,7 +38,19 @@ const Orders = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all');
   const [summary, setSummary] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, type_asc, type_desc, amount_desc, amount_asc
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const itemsPerPage = 10;
+
+  // Sort options
+  const sortOptions = [
+    { value: 'date_desc', label: 'Latest First', icon: '📅↓' },
+    { value: 'date_asc', label: 'Oldest First', icon: '📅↑' },
+    { value: 'type_asc', label: 'Service A-Z', icon: '🔤↓' },
+    { value: 'type_desc', label: 'Service Z-A', icon: '🔤↑' },
+    { value: 'amount_desc', label: 'Amount High-Low', icon: '💰↓' },
+    { value: 'amount_asc', label: 'Amount Low-High', icon: '💰↑' },
+  ];
 
   // Icon mapping
   const iconMap = {
