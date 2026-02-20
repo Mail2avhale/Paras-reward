@@ -9923,8 +9923,8 @@ async def create_order_legacy(uid: str, order_data: OrderCreate):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # VIP = any paid subscriber (not "free")
-    if user.get("membership_type", "free") == "free":
+    # Use helper function - subscription_plan is source of truth
+    if is_free_user(user):
         raise HTTPException(status_code=403, detail="Paid subscription required")
     
     if user.get("kyc_status") != "verified":
