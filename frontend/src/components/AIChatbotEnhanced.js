@@ -55,7 +55,7 @@ const getAISuggestions = (userStats, userName) => {
       icon: '🎁',
       text: 'You have PRC to redeem for rewards!',
       action: 'View Rewards',
-      route: '/marketplace',
+      route: '/gift-vouchers',
       type: 'reward'
     });
   }
@@ -63,7 +63,7 @@ const getAISuggestions = (userStats, userName) => {
   if (userStats?.membershipType !== 'vip') {
     suggestions.push({
       icon: '👑',
-      text: 'VIP unlocks shopping, vouchers & bill payments',
+      text: 'VIP unlocks vouchers & bill payments',
       action: 'Learn More',
       route: '/subscription',
       type: 'upgrade'
