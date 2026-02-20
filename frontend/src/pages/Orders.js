@@ -552,13 +552,27 @@ const Orders = ({ user, onLogout }) => {
           <div data-testid="no-requests" className="bg-gray-900/50 rounded-2xl p-8 border border-gray-800 text-center">
             <Package className="h-16 w-16 text-gray-700 mx-auto mb-4" />
             <p className="text-gray-400 text-lg mb-2">No requests yet</p>
-            <p className="text-gray-600 text-sm mb-6">Visit the marketplace to redeem your first product!</p>
-            <button 
-              onClick={() => navigate('/marketplace')}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition-colors"
-            >
-              Browse Marketplace
-            </button>
+            <p className="text-gray-600 text-sm mb-6">Start using Bill Payments, Gift Vouchers, or Redeem to Bank to see your requests here!</p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <button 
+                onClick={() => navigate('/bill-payments')}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition-colors text-sm"
+              >
+                📱 Bill Payments
+              </button>
+              <button 
+                onClick={() => navigate('/gift-vouchers')}
+                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-medium transition-colors text-sm"
+              >
+                🎁 Gift Vouchers
+              </button>
+              <button 
+                onClick={() => navigate('/bank-redeem')}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition-colors text-sm"
+              >
+                🏦 Redeem to Bank
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
