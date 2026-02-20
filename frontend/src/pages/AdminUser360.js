@@ -1518,6 +1518,16 @@ const AdminUser360 = ({ user: adminUser }) => {
                 Quick Actions
               </h2>
               <div className="grid grid-cols-2 gap-3">
+                {/* Auto Diagnose Button - FIRST */}
+                <Button
+                  onClick={runDiagnosis}
+                  disabled={processing}
+                  className="h-auto py-3 col-span-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
+                  data-testid="diagnose-button"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  🔍 Auto Diagnose Issues
+                </Button>
                 <Button
                   onClick={() => handleQuickAction(userData.user.mining_active ? 'pause_mining' : 'resume_mining')}
                   disabled={processing}
