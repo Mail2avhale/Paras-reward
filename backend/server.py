@@ -31425,10 +31425,9 @@ async def award_daily_top_hunter_bonus(uid: str):
         inr_value = prc_spent / 10
         already_earned = top_hunter["total_cashback_earned"]
         
-        # Get user membership type
+        # Get user and check if paid subscriber using helper function
         user = await db.users.find_one({"uid": winner_uid})
-        membership_type = user.get("membership_type", "free")
-        is_vip = membership_type == "vip"
+        is_vip = is_paid_subscriber(user)
         
         # Calculate bonus: Additional amount to reach top player rate
         # Free: Give another 10% to reach 20% total
