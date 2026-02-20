@@ -3908,8 +3908,8 @@ async def get_valid_prc_balance(uid: str):
     if not user:
         return 0
     
-    # VIP users have no expiry
-    if user.get("membership_type") == "vip":
+    # Paid users have no expiry - use helper function
+    if is_paid_subscriber(user):
         return user.get("prc_balance", 0)
     
     # Free users: check transaction history for expiry
