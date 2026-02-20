@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
     { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
     { id: 'game', label: t('tapGame'), icon: Gamepad2, route: '/game' },
-    { id: 'marketplace', label: t('marketplace'), icon: ShoppingBag, route: '/marketplace' },
+    // Marketplace removed - feature deprecated
     { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/bill-payments' },
