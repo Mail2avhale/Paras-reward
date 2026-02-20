@@ -13,38 +13,42 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - Login code only checked `membership_type == "free"` to determine if PRC should be reset
 - This caused paid users to lose their entire PRC balance on every login
 
-**Solution:**
-1. **Fixed Login Logic (server.py line 4586):**
-   - Changed: `is_free_user = user_membership == "free"`
-   - To: `is_free_user = user_membership == "free" and user_plan not in paid_plans`
-   - Now checks BOTH membership_type AND subscription_plan before resetting PRC
+**Solution - Simplified Membership System:**
 
-2. **Auto-Fix During Login (server.py lines 4593-4600):**
-   - Automatically detects and fixes `membership_type` if user has paid plan but membership_type is "free"
-   - Sets `membership_type = "vip"` automatically - prevents bug from recurring
+1. **NEW: Helper Functions (Single Source of Truth)** - Lines 519-543:
+   ```python
+   PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]
+   
+   def is_paid_subscriber(user): # Returns True for paid users
+   def is_free_user(user):       # Returns True for free/explorer users
+   def get_user_plan(user):      # Returns subscription_plan
+   ```
+   - `subscription_plan` is now THE ONLY source of truth
+   - `membership_type` kept for backward compatibility but NOT used in logic
 
-3. **Enhanced Auto-Diagnose Tool (server.py lines 14555-14568):**
-   - Detects "Membership Type Mismatch" as CRITICAL issue
-   - Shows clear description: "User has 'elite' plan but membership_type is 'free'. This causes PRC to reset on login!"
-   - Provides one-click Fix button
+2. **Simplified Login Logic (line 4598):**
+   - Now uses: `user_is_free = is_free_user(user)`
+   - Auto-syncs `membership_type` for backward compatibility
 
-4. **NEW: PRC Restoration APIs:**
-   - `GET /api/admin/prc-affected-users` - Find users who lost PRC (paid plan + 0 balance + transaction history)
-   - `POST /api/admin/restore-prc/{uid}` - Restore single user's PRC from transaction history
-   - `POST /api/admin/bulk-restore-prc` - Bulk restore PRC for all affected users
+3. **Updated 28+ Critical Code Paths:**
+   - Mining rate calculation
+   - Withdrawal limits
+   - Marketplace access
+   - VIP service access
+   - Order creation
+   - PRC expiry checks
 
-5. **Frontend: Restore Lost PRC Button (AdminUser360.js lines 1663-1690):**
-   - Shows "🔄 Restore Lost PRC" button for paid users with 0 balance
-   - One-click restoration from transaction history
+4. **PRC Restoration APIs:**
+   - `GET /api/admin/prc-affected-users` - Find affected users
+   - `POST /api/admin/restore-prc/{uid}` - Restore single user
+   - `POST /api/admin/bulk-restore-prc` - Bulk restore all
 
 **Test Results:**
-- ✅ Backend: 11 tests passed (100%)
-- ✅ All 6 APIs verified working
-- ✅ USER002 PRC successfully restored from 0 to 250.2 PRC
+- ✅ Backend: All APIs verified working
+- ✅ Health check, diagnose, and user functions operational
 
 **Files Modified:**
-- `backend/server.py` - Login logic fix, auto-diagnose enhancement, 3 new restoration APIs
-- `frontend/src/pages/AdminUser360.js` - New "Restore Lost PRC" button
+- `backend/server.py` - Helper functions + 28 code path updates
 
 ---
 
