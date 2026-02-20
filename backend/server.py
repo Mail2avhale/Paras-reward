@@ -14500,12 +14500,12 @@ async def admin_diagnose_user(uid: str):
         try:
             expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
             if expiry_date < datetime.now(timezone.utc):
-                if membership_type != "free":
+                if subscription_plan not in ["explorer", "free", ""]:
                     issues.append({
                         "category": "Subscription",
                         "severity": "high",
                         "issue": "Expired Subscription Not Reset",
-                        "description": f"Subscription expired on {subscription_expiry[:10]} but membership_type is still '{membership_type}'",
+                        "description": f"Subscription expired on {subscription_expiry[:10]} but plan is still '{subscription_plan}'",
                         "can_auto_fix": True,
                         "fix_action": "reset_subscription"
                     })
@@ -14514,7 +14514,7 @@ async def admin_diagnose_user(uid: str):
                         {"uid": uid},
                         {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
                     )
-                    auto_fixed.append("Expired subscription reset to free")
+                    auto_fixed.append("Expired subscription reset to explorer")
         except:
             pass
     
@@ -14523,7 +14523,7 @@ async def admin_diagnose_user(uid: str):
         {"$or": [{"user_uid": uid}, {"user_id": uid}], "status": "approved"},
         sort=[("approved_at", -1)]
     )
-    if latest_payment and membership_type == "free":
+    if latest_payment and is_free_user(user):
         issues.append({
             "category": "Subscription",
             "severity": "high",
