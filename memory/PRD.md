@@ -5,6 +5,30 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### P0 CRITICAL BUG FIX: PRC Collect Not Working ✅ (Feb 20, 2026)
+**Problem:** Users could not collect their earned PRC. The "Collect Rewards" button showed success message but balance never updated.
+
+**Root Cause:**
+- The `claim_mining` and `collect_mining_rewards` functions in `server.py` used `membership_type` variable without defining it
+- This was a side-effect of the previous membership refactoring where `membership_type` was deprecated in favor of `subscription_plan`
+- Backend threw `NameError: name 'membership_type' is not defined`
+
+**Solution:**
+- Added `membership_type` variable derivation from `is_vip` helper function in both functions:
+  ```python
+  membership_type = "vip" if is_vip else "free"
+  ```
+
+**Files Modified:**
+- `backend/server.py` - Lines 6069-6071 (claim_mining) and 6640-6644 (collect_mining_rewards)
+
+**Test Results:**
+- ✅ `/api/mining/claim/{uid}` - Working
+- ✅ `/api/mining/collect/{uid}` - Working
+- Both endpoints now return proper `success: true` with updated balance
+
+---
+
 ### Marketplace Feature Removed ✅ (Feb 20, 2026)
 **User Request:** Complete removal of marketplace from both admin and user sides.
 
