@@ -731,7 +731,7 @@ const RewardsHome = () => {
               },
               {
                 q: "How do I earn PRC coins?",
-                a: "Earn PRC through: Daily Mining (automatic), Tap Games, Scratch Cards, Treasure Hunts, Watching Ads, and Referral Bonuses. Premium members earn up to 5x more!"
+                a: "Earn PRC through: Daily Mining (automatic), Tap Games, Daily Rewards, and Referral Bonuses. Premium members earn up to 5x more!"
               },
               {
                 q: "What can I redeem my PRC for?",
