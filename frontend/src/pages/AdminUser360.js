@@ -351,6 +351,37 @@ const AdminUser360 = ({ user: adminUser }) => {
     }
   };
 
+  // Auto Diagnose Function
+  const runDiagnosis = async () => {
+    if (!userData?.user?.uid) return;
+    setDiagnoseModal({ show: true, loading: true, data: null });
+    try {
+      const response = await axios.get(`${API}/admin/user/${userData.user.uid}/diagnose`);
+      setDiagnoseModal({ show: true, loading: false, data: response.data });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Diagnosis failed');
+      setDiagnoseModal({ show: false, loading: false, data: null });
+    }
+  };
+
+  // Fix Issue Function
+  const fixIssue = async (fixAction, suggestedBalance = 0) => {
+    if (!userData?.user?.uid) return;
+    try {
+      const response = await axios.post(`${API}/admin/user/${userData.user.uid}/fix-issue`, {
+        fix_action: fixAction,
+        suggested_balance: suggestedBalance
+      });
+      toast.success(response.data.message);
+      // Re-run diagnosis
+      runDiagnosis();
+      // Refresh user data
+      refreshUserData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fix failed');
+    }
+  };
+
   // Open Role Change Modal
   const openRoleModal = () => {
     if (!userData?.user) return;
