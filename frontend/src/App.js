@@ -250,7 +250,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />
             <Route path="/referrals/ai" element={<Navigate to="/referrals" replace />} />
             <Route path="/network" element={<Navigate to="/referrals" replace />} />
-            <Route path="/marketplace" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Marketplace user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            {/* Marketplace removed - feature deprecated */}
+            <Route path="/marketplace" element={<Navigate to="/dashboard" replace />} />
             <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Orders user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Removed: Activity page */}
