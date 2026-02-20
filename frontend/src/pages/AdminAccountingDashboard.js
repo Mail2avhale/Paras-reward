@@ -1062,8 +1062,12 @@ const AdminAccountingDashboard = ({ user }) => {
                             <div className="text-xs text-gray-500">{user.email}</div>
                           </td>
                           <td className="px-3 py-2">
-                            <span className={`px-2 py-1 rounded text-xs ${user.membership_type === 'vip' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-800'}`}>
-                              {user.membership_type}
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              ['startup', 'growth', 'elite', 'vip'].includes(user.subscription_plan) 
+                                ? 'bg-purple-500/20 text-purple-400' 
+                                : 'bg-gray-800'
+                            }`}>
+                              {user.subscription_plan || 'explorer'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-right">{formatCurrency(user.earned_inr_value)}</td>
