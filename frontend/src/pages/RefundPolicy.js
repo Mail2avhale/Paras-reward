@@ -14,7 +14,7 @@ const RefundPolicy = () => {
       policies: [
         {
           title: 'Non-Refundable Policy',
-          description: 'PRC (PARAS Reward Coins) earned through mining, tap games, treasure hunts, or scratch cards are non-refundable and non-transferable.',
+          description: 'PRC (PARAS Reward Coins) earned through mining, tap games, or other activities are non-refundable and non-transferable.',
           type: 'warning'
         },
         { text: 'Earned PRC: Points earned through platform activities cannot be refunded or exchanged for money.' },
