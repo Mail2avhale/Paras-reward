@@ -5,6 +5,49 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### P0 Critical Bug Fix: PRC Balance Reset Bug ✅ (Feb 20, 2026)
+**Problem:** Paid users (Elite, Startup, Growth) had their PRC balance reset to zero upon login.
+
+**Root Cause Analysis:**
+- Users had `subscription_plan` set to paid plan (elite/startup/growth) but `membership_type` was incorrectly set to "free"
+- Login code only checked `membership_type == "free"` to determine if PRC should be reset
+- This caused paid users to lose their entire PRC balance on every login
+
+**Solution:**
+1. **Fixed Login Logic (server.py line 4586):**
+   - Changed: `is_free_user = user_membership == "free"`
+   - To: `is_free_user = user_membership == "free" and user_plan not in paid_plans`
+   - Now checks BOTH membership_type AND subscription_plan before resetting PRC
+
+2. **Auto-Fix During Login (server.py lines 4593-4600):**
+   - Automatically detects and fixes `membership_type` if user has paid plan but membership_type is "free"
+   - Sets `membership_type = "vip"` automatically - prevents bug from recurring
+
+3. **Enhanced Auto-Diagnose Tool (server.py lines 14555-14568):**
+   - Detects "Membership Type Mismatch" as CRITICAL issue
+   - Shows clear description: "User has 'elite' plan but membership_type is 'free'. This causes PRC to reset on login!"
+   - Provides one-click Fix button
+
+4. **NEW: PRC Restoration APIs:**
+   - `GET /api/admin/prc-affected-users` - Find users who lost PRC (paid plan + 0 balance + transaction history)
+   - `POST /api/admin/restore-prc/{uid}` - Restore single user's PRC from transaction history
+   - `POST /api/admin/bulk-restore-prc` - Bulk restore PRC for all affected users
+
+5. **Frontend: Restore Lost PRC Button (AdminUser360.js lines 1663-1690):**
+   - Shows "🔄 Restore Lost PRC" button for paid users with 0 balance
+   - One-click restoration from transaction history
+
+**Test Results:**
+- ✅ Backend: 11 tests passed (100%)
+- ✅ All 6 APIs verified working
+- ✅ USER002 PRC successfully restored from 0 to 250.2 PRC
+
+**Files Modified:**
+- `backend/server.py` - Login logic fix, auto-diagnose enhancement, 3 new restoration APIs
+- `frontend/src/pages/AdminUser360.js` - New "Restore Lost PRC" button
+
+---
+
 ### KYC Orphaned Records Fix & Recovery Tool ✅ (Feb 19, 2026)
 **Problem:** Critical bug - 74 users had `kyc_status: "pending"` but no actual documents in `kyc_documents` collection. This caused:
 - Admin couldn't see these KYC requests
