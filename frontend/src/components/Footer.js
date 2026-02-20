@@ -144,7 +144,6 @@ const Footer = () => {
               <li><Link to="/faq" className="text-gray-300 hover:text-white transition-colors">{t('nav.faq')}</Link></li>
               <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors">{t('footer.contact_us')}</Link></li>
               <li><Link to="/support" className="text-gray-300 hover:text-white transition-colors">Support</Link></li>
-              <li><Link to="/marketplace" className="text-gray-300 hover:text-white transition-colors">{t('nav.marketplace')}</Link></li>
               <li><Link to="/leaderboard" className="text-gray-300 hover:text-white transition-colors">Leaderboard</Link></li>
             </ul>
           </div>
