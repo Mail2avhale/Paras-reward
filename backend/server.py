@@ -6402,7 +6402,7 @@ async def get_user_dashboard_combined(uid: str):
             "created_at": user.get("created_at"),
             "profile_image": user.get("profile_image"),
             # Profile completion fields
-            "kyc_status": user.get("kyc_status", "pending"),
+            "kyc_status": kyc_status,  # Use auto-synced value
             "city": user.get("city", ""),
             "district": user.get("district", ""),
             "state": user.get("state", "")
