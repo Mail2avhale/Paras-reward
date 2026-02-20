@@ -37519,12 +37519,12 @@ async def startup_db():
         except Exception as e:
             print(f"⚠️ Error initializing indexes (non-critical): {e}")
         
-        try:
-            # Initialize treasure hunts (creates if not exists)
-            await initialize_treasure_hunts()
-            print("✅ Treasure hunts initialized")
-        except Exception as e:
-            print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
+        # Treasure hunts initialization - REMOVED (feature deprecated)
+        # try:
+        #     await initialize_treasure_hunts()
+        #     print("✅ Treasure hunts initialized")
+        # except Exception as e:
+        #     print(f"⚠️ Error initializing treasure hunts (non-critical): {e}")
         
         try:
             # Check if video_ads collection exists, if not create sample
