@@ -6063,10 +6063,8 @@ async def claim_mining(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Both free and VIP users can mine now
-    membership_type = user.get("membership_type", "free")
-    # is_vip means any paid subscription (vip, elite, pro, etc.) - not just "vip"
-    is_vip = membership_type != "free"
+    # Use helper function - subscription_plan is source of truth
+    is_vip = is_paid_subscriber(user)
     
     # Check if mining session exists (backward compatible - treat None as True for old sessions)
     mining_active = user.get("mining_active")
