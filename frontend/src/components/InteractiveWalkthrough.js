@@ -45,23 +45,12 @@ const walkthroughSteps = [
     id: 'vip',
     title: 'Upgrade to VIP',
     subtitle: 'Unlock Premium Features',
-    description: 'VIP members get access to Marketplace, Bill Payments, Gift Vouchers, and exclusive rewards. Points never expire!',
+    description: 'VIP members get access to Bill Payments, Gift Vouchers, and exclusive rewards. Points never expire!',
     icon: Crown,
     color: 'from-yellow-500 to-amber-600',
     animation: 'vip',
     highlight: '/vip',
-    tip: '👑 VIP = Lifetime points + Shopping access!'
-  },
-  {
-    id: 'marketplace',
-    title: 'Shop with PRC Points',
-    subtitle: 'Redeem for Real Products',
-    description: 'Browse 5000+ products and redeem your PRC points for real rewards - electronics, fashion, home goods and more!',
-    icon: ShoppingBag,
-    color: 'from-pink-500 to-rose-600',
-    animation: 'shopping',
-    highlight: '/marketplace',
-    tip: '🛒 VIP members can shop with PRC points!'
+    tip: '👑 VIP = Lifetime points + Premium access!'
   },
   {
     id: 'complete',
