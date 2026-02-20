@@ -3522,20 +3522,17 @@ async def get_all_vip_plans():
 
 async def check_vip_service_access(uid: str, service_name: str = "service") -> Dict:
     """
-    Check if user can access VIP services (marketplace, gift vouchers, bill payments)
+    Check if user can access paid services (marketplace, gift vouchers, bill payments)
     Requirements:
-    1. User must be VIP member
-    2. VIP membership must not be expired
-    Expired VIP users are blocked until renewal
+    1. User must have paid subscription (startup/growth/elite)
+    2. Subscription must not be expired
     """
     user = await db.users.find_one({"uid": uid})
     if not user:
         return {"allowed": False, "reason": "User not found", "requires_vip": True}
     
-    membership_type = user.get("membership_type", "free")
-    
-    # Free users cannot access these services
-    if membership_type == "free":
+    # Use helper function - subscription_plan is source of truth
+    if is_free_user(user):
         return {
             "allowed": False, 
             "reason": f"Paid subscription required to use {service_name}. Please subscribe.",
