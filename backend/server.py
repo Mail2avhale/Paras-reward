@@ -6458,6 +6458,26 @@ async def get_user_data(uid: str):
         # Return 0 taps for a new day
         user["taps_today"] = 0
     
+    # AUTO-SYNC KYC STATUS: Check if user has verified KYC in kyc_documents but not synced
+    current_kyc_status = user.get("kyc_status")
+    if current_kyc_status != "verified":
+        # Check if there's a verified KYC document for this user
+        verified_kyc = await db.kyc_documents.find_one({
+            "user_id": uid,
+            "status": {"$in": ["verified", "approved"]}
+        })
+        if verified_kyc:
+            # Update user's kyc_status to verified
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"kyc_status": "verified"}}
+            )
+            user["kyc_status"] = "verified"
+            print(f"[AUTO-SYNC KYC] Updated kyc_status for user {uid} to verified")
+        else:
+            # Default to pending if no KYC document found
+            user["kyc_status"] = user.get("kyc_status") or "not_submitted"
+    
     # OPTIMIZED: Use aggregation pipeline to get all counts in parallel
     # This reduces 5 DB calls to 1 aggregation + 1 count
     
