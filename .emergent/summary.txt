@@ -1,177 +1,156 @@
 <analysis>**original_problem_statement:**
-The primary goal for the user is to finalize their Paras Reward application for a Google Play Store launch. This involved resolving several critical production bugs, enhancing admin capabilities, and preparing the application for packaging.
+The user's primary goal is to finalize their Paras Reward application for a Google Play Store launch. This involves resolving critical production bugs, enhancing admin capabilities, removing unused features, and preparing the application for packaging.
 
-**Key Features & Fixes Worked On:**
-1.  **Critical Bug Fixes (Production):**
-    *   **PRC Balance Reset (P0):** The most critical issue was that paid users (e.g., Elite subscribers) were having their PRC (in-app currency) balance reset to zero upon login. This was a recurring problem throughout the session.
-    *   **KYC Sync Issues:** Multiple users were stuck with a Pending KYC status even after admin approval, or were unable to resubmit their KYC. This involved data inconsistencies between the  and  collections.
-    *   **Subscription Deletion:** An admin feature to delete user subscriptions was not working on the deployed application.
-    *   **White Screen Bug:** Users experienced a white screen when navigating to the KYC page.
+Key user requests during this session included:
+1.  **Fix Critical Bugs (P0):** Resolve the persistent issue where paid users' PRC balances reset to zero upon login.
+2.  **Simplify Membership Logic:** Address the complexity and bugs arising from having two fields ( and ) to determine user status.
+3.  **Full Feature Cleanup:** Remove the Marketplace and Delivery Partners features entirely from both the user and admin sections of the application.
+4.  **Enhance My Orders Page:** Create a consolidated My Orders page to show all user requests (Bill Payments, Gift Cards, Redeem to Bank) with advanced features like sorting, pagination, and rejection reasons.
+5.  **Improve UI/UX:** Add a Redeem To Bank link to the user's main sidebar for better visibility.
+6.  **Fix Redeem to Bank Visibility:** Debug why the Redeem to Bank card was not appearing on the dashboard for some KYC-verified users.
+7.  **Remove Treasury Hunt Game:** Clean up all code, pages, and routes related to the Treasury Hunt game.
+8.  **New Production Bug:** After deployment, the user reported that the Collect PRC functionality is not working.
 
-2.  **Admin Tooling Enhancements:**
-    *   **Auto-Diagnose Tool:** The user requested an Auto Diagnose button in the User 360 view to automatically detect and provide fixes for common user-specific problems (like KYC sync errors or incorrect membership types).
-    *   **Subscription Management:** Added functionality for admins to delete a user's individual subscription plans or all of them at once.
-    *   **Manager Permissions:** Fixed a bug preventing managers from seeing the Redeem to Bank page.
-
-3.  **Play Store Launch Preparation:**
-    *   **AAB File Generation:** The user wants to generate an AAB file to publish the app.
-    *   **AdMob Integration:** Integrate Google AdMob for monetization, including setting up App, Banner, and Rewarded Ad units.
-    *   **PWA Optimization:** Improve the application's PWA score by adding a robust service worker and a comprehensive  to ensure compatibility with packaging tools like PWABuilder.
-
-**User's preferred language**: English. The agent started in Marathi but the user requested to switch to English. The next agent **MUST** continue the conversation in English.
+**User's preferred language**: The user communicates in both English and Marathi. The most recent interactions were in **Marathi**. The next agent **MUST** start the conversation in Marathi and continue in the user's preferred language.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI rewards platform. During this session, the agent addressed multiple critical bugs and implemented several new admin features. A fix for the PRC balance reset bug was developed, and an Auto Diagnose tool was created to help admins identify and resolve data inconsistencies. The application was also prepared for AAB generation by adding a service worker, updating the manifest, and integrating AdMob keys. However, the most critical bug (PRC balance reset) is reportedly still occurring on the production environment even after deploying the fix, suggesting a deeper data issue.
+The Paras Reward application is a full-stack React/FastAPI platform. During this session, the agent successfully addressed a critical PRC balance reset bug by refactoring the membership logic into centralized helper functions (, ) and implementing a PRC restoration tool for admins. Significant cleanup was performed, completely removing the Marketplace, Delivery Partners, and Treasury Hunt features. The user-facing My Orders page was significantly enhanced to be a central hub for all requests. However, after the user deployed these changes, a new critical bug has emerged: users are unable to collect their daily PRC.
 
 **Last working item**:
--   **Last item agent was working:** The agent was actively debugging the persistent P0 bug where Elite users' PRC balances are reset to zero upon login, even after a fix was deployed. The agent theorized the root cause is incorrect data in the production database (e.g., a paid user having ). The agent was enhancing the Auto Diagnose tool in the admin panel to detect and fix this data mismatch. The user confirmed the diagnosis works but reported the Fix button was missing, which the agent then added. The user then asked to make the diagnosis tool more advanced.
+-   **Last item agent was working:** Investigating a new, critical production bug reported by the user via a screen recording. The video shows that tapping the Collect PRC button on the dashboard does nothing; the balance does not update, and the button remains active. The agent was acknowledging the issue just as the session ended.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (for individual components, but the production issue persists)
--   **Which testing method agent to use?** both. The backend API for diagnosing and fixing issues needs to be tested with . The frontend Auto Diagnose tool in the User 360 page needs to be verified with the  after logging in as an admin.
--   **User Testing Done:** N (User has tested on production and confirmed the bug is still present)
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both. The agent must first investigate the backend endpoint responsible for PRC collection (likely  or similar in ) using  to check for errors. Concurrently, the frontend code in  that triggers the collection needs to be reviewed. After a fix is implemented, the  must be used to verify the functionality on the dashboard.
+-   **User Testing Done:** Y (User discovered and reported the bug from the deployed production environment).
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): CRITICAL - Paid Users' PRC Balance Resets to Zero on Production**
+-   **Issue 1 (P0): CRITICAL - PRC Collect is Not Working on Production**
 -   **Issue 2 (P1): Subscription Deletion Fails on Production**
 
 **Issues Detail:**
--   **Issue 1: CRITICAL - Paid Users' PRC Balance Resets to Zero on Production**
-    -   **Attempted fixes:**
-        1.  The agent found and fixed the initial code bug in : a check was incorrectly resetting the PRC balance for all non-vip members, including other paid tiers like elite.
-        2.  When the user reported the issue persisted after deployment, the agent concluded it must be a data issue where paid users have an incorrect  in the database.
-        3.  The agent created an Auto Diagnose tool for admins to detect this mismatch and added an API () and a Fix button to correct the data.
+-   **Issue 1: CRITICAL - PRC Collect is Not Working on Production**
+    -   **Attempted fixes:** None yet. This is a newly reported bug.
     -   **Next debug checklist:**
-        1.  Confirm with the user if the latest deployment includes the Auto Diagnose tool with the Fix button.
-        2.  Instruct the user to use the Fix button on an affected user and verify if it solves the problem for them after they log out and log back in.
-        3.  Implement a plan to **restore the lost PRC** for all affected users. This was not yet done. A new admin tool or a bulk script might be required.
-        4.  Continue enhancing the Auto Diagnose tool as requested by the user.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a business-critical bug that destroys user trust and makes the app's reward system pointless. Fixing it is essential for user retention and monetization.
+        1.  Analyze the user-provided screen recording () to understand the exact user flow and UI behavior.
+        2.  Inspect the browser's developer console in the recording for any client-side errors.
+        3.  Examine the backend code in  for the API endpoint that handles PRC collection. Look for recent changes that might have broken it, especially related to the membership logic refactor.
+        4.  Review the frontend code in  to check the  handler for the Collect PRC button and the subsequent API call.
+        5.  Use  to manually test the collection API endpoint to isolate whether the issue is in the frontend or backend.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a core feature of the app's reward loop. If users cannot collect their currency, user engagement and retention will plummet. This is a showstopper bug.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
+    -   **Is recurring issue?** N (This is a new bug).
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
 -   **Issue 2: Subscription Deletion Fails on Production**
-    -   **Attempted fixes:** The user reported that the delete feature showed a success message but didn't work. The agent identified the bug: the delete API was targeting the wrong MongoDB collection ( instead of  or ). A fix was implemented to query all relevant collections.
-    -   **Next debug checklist:** The fix has been coded but not yet verified by the user on production. The user needs to deploy the latest changes and test the delete functionality again from the User 360 page.
-    -   **Why fix this issue and what will be achieved with the fix?** Provides admins with necessary data management capabilities.
+    -   **Attempted fixes:** A fix was implemented in a previous session to target the correct MongoDB collections.
+    -   **Next debug checklist:** The fix has not been verified by the user on the production environment. The next agent should ask the user to test this admin functionality and confirm if it's resolved.
+    -   **Why fix this issue and what will be achieved with the fix?** Provides admins with necessary user data management capabilities.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Should Test frontend/backend/both after fix?** Backend (Admin action).
     -   **Blocked on other issue:** None
-
-**In progress Task List**:
--   **Task 1: Enhance the Auto Diagnose Admin Tool (P0)**
-    -   **Where to resume:** The user asked to make the tool more advanced. The agent should add more diagnostic checks, such as verifying KYC document existence against status, checking for duplicate subscriptions, and validating transaction history.
-    -   **What will be achieved with this?** A powerful internal tool for the admin to quickly identify and resolve a wide range of common user-specific issues, reducing support load.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** Blocked on resolving the core PRC balance reset bug first.
-
--   **Task 2: Finalize AAB Generation for Play Store (P1)**
-    -   **Where to resume:** The agent has already created a service worker and updated the manifest. The user needs to deploy these changes and then use  to package the AAB file. The agent should guide the user through this final step.
-    -   **What will be achieved with this?** A production-ready Android App Bundle that can be uploaded to the Google Play Store.
-    -   **Status:** BLOCKED (waiting on user to deploy PWA improvements).
-    -   **Should Test frontend/backend/both after fix?** Frontend (using PWABuilder).
-    -   **Blocked on something:** User deployment.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Restore Lost PRC for Affected Users:** Create a script or an admin tool to calculate and restore the PRC points that were incorrectly wiped from paid users' accounts.
+-   **P1: Restore Lost PRC for Affected Users:** Guide the admin on how to use the newly created Restore PRC tool on the production environment for all users affected by the previous balance reset bug.
 -   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment).
 -   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay).
+-   **P1: Finalize AAB Generation for Play Store:** Guide the user through using  to package the AAB file now that PWA enhancements are in place.
 
 **Future Tasks:**
 -   **P2:** Design and implement the DIRECTOR 365 subscription plan.
 -   **P2:** Implement advanced PRC burning concepts.
 -   **P2:** Add a Force PIN Change feature for users.
 -   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3).
+-   **P3: Refactor :** The main backend file is excessively large. It should be broken down into a proper structure with separate files for routes, models, and services.
 
 **Completed work in this session**
--   **Critical Bug Fix (PRC Reset):** Implemented a fix for the code logic that was incorrectly resetting PRC balances for paid users.
--   **KYC Sync Tools:** Created backend endpoints and frontend UI for both admins and users to fix various KYC data sync issues.
--   **Admin Subscription Management:** Added a feature for admins to delete user subscriptions from the User 360 page.
--   **Auto Diagnose Tool:** Built the first version of a powerful admin tool to detect data inconsistencies.
--   **AdMob Integration:** Successfully integrated the user's AdMob App ID, Banner Ad Unit ID, and Rewarded Ad Unit ID into the frontend.
--   **PWA Enhancements:** Created a new service worker () and a comprehensive  to prepare the app for AAB packaging.
--   **UI/UX Fixes:** Fixed manager permissions, removed an annoying update available prompt, and corrected a misleading validity message for Elite users.
--   **Localization:** Converted all Marathi text on the KYC pages to English as per user request.
+-   **PRC Balance Reset Bug (FIXED):** Resolved the critical bug causing PRC to reset on login by refactoring membership checks to use new helper functions (, ).
+-   **PRC Restoration Tool (IMPLEMENTED):** Created a backend API () and a frontend button in User 360 for admins to restore lost PRC for affected users.
+-   **Membership Logic Refactor (COMPLETED):** Greatly simplified the application's logic by standardizing on the  helper function, removing dozens of direct, error-prone checks on .
+-   **Feature Removal (Marketplace, Delivery Partners, Treasury Hunt):** Successfully performed a full cleanup, removing all frontend and backend code, routes, and UI elements associated with these unused features.
+-   **My Orders Page Overhaul (COMPLETED):** Enhanced the  page to be a unified dashboard for all user requests, adding sorting, pagination, patience messages, and URL-based filtering. Redundant history sections were removed from other pages.
+-   **UI Improvements (COMPLETED):** Added a Redeem To Bank link to the user's main sidebar () for easier access.
+-   **KYC Visibility Bug (FIXED):** Resolved an issue preventing the Redeem to Bank card from appearing by implementing a KYC status auto-sync mechanism in the backend ().
+
+**Known issue recurrence from previous fork**
+-   The critical **PRC balance reset bug** was a recurring issue that was fixed during this session by a significant refactor. However, a new, related critical bug (**PRC collection failure**) has appeared on production immediately after deployment, indicating potential fragility in the PRC logic.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Production Debugging:** Analyzing user-provided videos and reports to diagnose bugs (PRC reset, KYC sync) occurring in the live environment.
--   **Data vs. Code Bugs:** Differentiating between bugs caused by faulty application logic and those caused by inconsistent or incorrect data in the production database.
--   **Admin Diagnostic Tooling:** Building proactive tools (Auto Diagnose) for admins to find and fix data integrity issues without needing developer intervention.
--   **PWA to AAB Conversion:** Preparing a React web app for the Google Play Store by implementing a service worker, a rich manifest, and using external tools like PWABuilder.
--   **AdMob Integration:** Implementing Google AdMob (App, Banner, Rewarded ads) in a React application.
+-   **Production Debugging:** Analyzing user-provided screen recordings to diagnose critical bugs in a live environment.
+-   **Code Refactoring & Simplification:** Reducing technical debt by replacing a complex, dual-field system (, ) with a single source of truth (helper functions).
+-   **Large-Scale Feature Removal:** Systematically removing all traces of unused features from a large codebase across both frontend and backend to reduce complexity and potential bugs.
+-   **Centralized UI Components:** Consolidating related user information (all order/request types) into a single, enhanced UI component (My Orders) for better user experience.
 
 **key DB schema**
--   **users:** Contains , , , and . Inconsistencies in these fields were the root cause of the most critical bugs.
--   **kyc_documents:** Stores KYC files. Had sync issues with the  collection.
--   **subscriptions, vip_subscriptions, vip_payments:** Multiple collections storing subscription data, which caused a bug in the delete feature. Consolidating this is recommended.
+-   **users:** Contains , , and . The  field is now being phased out in favor of logic based on .  was found to be missing for some users, requiring an auto-sync mechanism.
+-   **kyc_documents:** Stores KYC files. Used as the source of truth for the KYC status auto-sync.
+-   **bill_payment_requests, gift_card_requests, bank_redeem_requests:** Separate collections for different user requests, which are all aggregated on the My Orders page.
 
 **All files of reference**
--   
--   
--   
--   
--   
+-    (Primary file for all backend logic)
+-    (Location of the failing Collect PRC button)
+-    (The newly enhanced orders page)
+-    (User navigation)
+-    (Main router)
+-    (Admin tool for user management)
 
 **Areas that need refactoring**:
--   The data model for subscriptions is scattered across three collections (, , ). This should be unified into a single collection to prevent future bugs like the one that broke the delete functionality.
--   The logic to determine if a user is a paid subscriber () was inconsistent. Although patched in critical areas, a single, reliable helper function like  should be created and used globally to avoid similar bugs in the future.
+-   **Massive  file:** This file contains over 20,000 lines of code, mixing API routes, business logic, database queries, and helper functions. It is extremely difficult to maintain and is a high-risk area for regressions. It urgently needs to be broken down into a modern web framework structure (e.g., separate directories for routes, controllers/services, models, and utils).
+-   **Consolidate Subscription Collections:** The data model for subscriptions is still scattered across , , and . This should be unified to prevent data inconsistencies.
 
 **key api endpoints**
--   : Runs a series of checks on a user's account.
--   : Applies a specific fix based on diagnosis.
--   : A script to fix incorrect  for all users.
--   : Deletes a specific subscription record.
--   : Deletes all subscription records for a user.
--   : Allows a user to check their definitive KYC status, which also triggers an auto-sync fix on the backend.
+-   : **(POTENTIALLY BROKEN)** The endpoint responsible for the daily PRC collection.
+-   : **(NEW)** Restores a user's PRC balance based on their transaction history.
+-   : Returns stats for the user dashboard; was modified to include an auto-sync for KYC status.
+-   : Returns user profile data; was modified to include an auto-sync for KYC status.
 
 **Critical Info for New Agent**
--   You **MUST** communicate in **English**.
--   **The absolute top priority is the PRC balance reset bug.** The user reports it's still happening on production after deployment. Your first step should be to guide the user to test the Auto Diagnose and Fix functionality on a single affected user. If that works, you must devise a plan to **restore the lost PRC** for all affected users, as this has not been done yet.
--   Do not get sidetracked. The user is trying to launch their app, and the PRC bug is a showstopper. Solve it completely before moving to other tasks.
+-   **Language:** Start the conversation in **Marathi**. The user's last messages were in Marathi.
+-   **Top Priority:** The absolute top priority is the new **PRC is not being collected bug (P0)**. The user has just deployed the app, and this functionality is critical for user engagement. All other tasks are secondary.
+-   **Video Evidence:** The user has provided a screen recording of the bug. You must analyze this first to understand the problem.
+-   **Massive Backend File:** Be extremely careful when editing . It is a very large and fragile file. Any changes must be surgical and well-tested. Proposing a refactor of this file should be a future task after the current critical bug is fixed.
 
 **documents and test reports created in this job**
--   
--   
+-    (From a previous fork)
+-    (From a previous fork)
+-    (Generated in this session, verifying the PRC reset fix)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports the critical P0 bug where an Elite user's PRC balance resets to zero after login on the production app. **Status: IN PROGRESS (HIGHEST PRIORITY)**
-2.  **User:** Asks if the Auto Diagnose tool can be made more advanced. **Status: IN PROGRESS**
-3.  **User:** Provides a screenshot of the new diagnosis tool, confirming it detects the problem but is missing the Fix button. **Status: RESOLVED (Agent added the button)**
-4.  **User:** Asks how to update the  via the admin panel. **Status: RESOLVED (Agent implemented this in the diagnose tool)**
-5.  **User:** Reports the PRC reset bug is still happening after deploying the first fix. **Status: IN PROGRESS**
-6.  **User:** Reported the subscription delete feature isn't working on production. **Status: USER VERIFICATION PENDING**
-7.  **User:** Reported that PRC balance was becoming zero for many users. **Status: IN PROGRESS**
-8.  **User:** Reported that managers couldn't see the Redeem to Bank page. **Status: RESOLVED**
-9.  **User:** Reported UI issues on production (validity message, update prompt). **Status: RESOLVED**
-10. **User:** Provided an updated  file. **Status: RESOLVED**
+1.  **User:** Reports PRC is not being collected after deploying the app, and provides a screen recording. **Status: IN PROGRESS (HIGHEST PRIORITY)**
+2.  **User:** Asks about subscription expiry conditions. **Status: ADDRESSED**
+3.  **User:** Asks to remove the Treasury Hunt game completely. **Status: COMPLETED**
+4.  **User:** Reports that the Redeem to Bank card is not visible for some verified users. **Status: COMPLETED**
+5.  **User:** Asks to continue with refactoring the membership complexity. **Status: COMPLETED**
+6.  **User:** Asks if the proposed refactor plan is safe and easy. **Status: ADDRESSED**
+7.  **User:** Asks if there is still complexity in the membership system. **Status: ADDRESSED**
+8.  **User:** Asks to add pagination, sorting, and latest-on-top to the My Orders page. **Status: COMPLETED**
+9.  **User:** Asks to advance the My Orders page to consolidate all requests and add patience messages. **Status: COMPLETED**
+10. **User:** Asks to remove Delivery Partners and add Redeem To Bank to the user menu. **Status: COMPLETED**
 
 **Project Health Check:**
 -   **Broken:**
-    -   The core PRC balance system is **critically broken** on the production environment. Paid users are losing their currency, making the app's main reward loop non-functional.
-    -   The admin's Delete Subscription feature is reportedly failing on production.
+    -   The core **PRC collection mechanism is critically broken** on the production environment. This is the highest priority issue.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
 -   **Redis (Upstash):** Used for caching.
 -   **Dun & Bradstreet:** D-U-N-S® Registered Seal.
--   **Google AdMob:** Fully integrated with the user's Publisher ID, App ID, Banner Ad, and Rewarded Ad Unit IDs.
+-   **Google AdMob:** Integrated with the user's Publisher ID, App ID, Banner Ad, and Rewarded Ad Unit IDs.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES.
+-   **Testing agent used after significant changes:** YES, the testing agent was used to validate the fix for the PRC balance reset bug.
+-   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** The PRC balance reset bug is a severe, active regression on production.
+-   **Known regressions:** A new critical regression has appeared on production where PRC cannot be collected.
 
 **Credentials to test flow:**
 -   **Admin User:**  / PIN: 
--   **Production Test User:**  / PIN: 
--   **User with KYC issue from video:** 
+-   **Production Test User (from previous handoff):**  / PIN: 
 
 **What agent forgot to execute**
--   The agent developed fixes for the PRC balance reset bug but did not create a mechanism to **restore the lost PRC** for users who were already affected. This is a critical missing step for user satisfaction. The agent should have proposed a bulk-restoration script or a tool for this.</analysis>
+-   The agent did not get a chance to investigate the newly reported PRC collection failure bug. The immediate next step is to start debugging this issue.</analysis>
