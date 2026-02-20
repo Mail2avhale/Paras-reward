@@ -14563,29 +14563,27 @@ async def admin_diagnose_user(uid: str):
             "fix_action": "manual_review"
         })
     
-    # Paid user with 0 balance (potential bug victim)
-    if membership_type != "free" and prc_balance == 0 and credits > 100:
+    # Paid user with 0 balance (potential bug victim) - use helper function
+    if is_paid_subscriber(user) and prc_balance == 0 and credits > 100:
         issues.append({
             "category": "PRC Balance",
             "severity": "critical",
             "issue": "Paid User Zero Balance Bug",
-            "description": f"Paid user ({membership_type}) has 0 PRC but earned {credits} PRC. May be affected by balance reset bug.",
+            "description": f"Paid user ({user_plan}) has 0 PRC but earned {credits} PRC. May be affected by balance reset bug.",
             "can_auto_fix": True,
             "fix_action": "restore_balance",
             "suggested_balance": expected_balance
         })
     
-    # ========== 4. MEMBERSHIP TYPE ISSUES ==========
-    # Check if subscription_plan doesn't match membership_type
-    subscription_plan = user.get("subscription_plan", "explorer")
-    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
-    
-    if subscription_plan in paid_plans and membership_type == "free":
+    # ========== 4. MEMBERSHIP TYPE MISMATCH (Legacy Cleanup) ==========
+    # Detect if membership_type needs sync with subscription_plan
+    membership_type = user.get("membership_type", "free")
+    if is_paid_subscriber(user) and membership_type == "free":
         issues.append({
             "category": "Subscription",
-            "severity": "critical",
-            "issue": "Membership Type Mismatch",
-            "description": f"User has '{subscription_plan}' plan but membership_type is 'free'. This causes PRC to reset on login!",
+            "severity": "medium",  # Reduced from critical since helper function now handles this
+            "issue": "Membership Type Needs Sync",
+            "description": f"User has '{user_plan}' plan but legacy membership_type is 'free'. Will auto-sync on next login.",
             "can_auto_fix": True,
             "fix_action": "fix_membership_type"
         })
