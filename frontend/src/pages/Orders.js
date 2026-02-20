@@ -532,42 +532,83 @@ const Orders = ({ user, onLogout }) => {
         </div>
       )}
 
-      {/* Tabs for Request Types */}
+      {/* Tabs and Sort Controls */}
       <div className="px-5 mb-4">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 rounded-xl p-1">
-            <TabsTrigger 
-              value="all" 
-              className="rounded-lg text-xs data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1">
+            <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 rounded-xl p-1">
+              <TabsTrigger 
+                value="all" 
+                className="rounded-lg text-xs data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+              >
+                All ({(summary?.total_orders || 0) + (summary?.total_bill_payments || 0) + (summary?.total_vouchers || 0) + (summary?.total_bank_redeems || 0)})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="orders"
+                className="rounded-lg text-xs data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+              >
+                Orders ({summary?.total_orders || 0})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="bill_payment"
+                className="rounded-lg text-xs data-[state=active]:bg-amber-500 data-[state=active]:text-white"
+              >
+                Bills ({summary?.total_bill_payments || 0})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="gift_voucher"
+                className="rounded-lg text-xs data-[state=active]:bg-pink-500 data-[state=active]:text-white"
+              >
+                Vouchers ({summary?.total_vouchers || 0})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="bank_redeem"
+                className="rounded-lg text-xs data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
+              >
+                Bank ({summary?.total_bank_redeems || 0})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/70 hover:bg-gray-700/70 rounded-xl border border-gray-700 text-sm text-gray-300 transition-colors"
+              data-testid="sort-button"
             >
-              All ({(summary?.total_orders || 0) + (summary?.total_bill_payments || 0) + (summary?.total_vouchers || 0) + (summary?.total_bank_redeems || 0)})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="orders"
-              className="rounded-lg text-xs data-[state=active]:bg-purple-500 data-[state=active]:text-white"
-            >
-              Orders ({summary?.total_orders || 0})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="bill_payment"
-              className="rounded-lg text-xs data-[state=active]:bg-amber-500 data-[state=active]:text-white"
-            >
-              Bills ({summary?.total_bill_payments || 0})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="gift_voucher"
-              className="rounded-lg text-xs data-[state=active]:bg-pink-500 data-[state=active]:text-white"
-            >
-              Vouchers ({summary?.total_vouchers || 0})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="bank_redeem"
-              className="rounded-lg text-xs data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
-            >
-              Bank ({summary?.total_bank_redeems || 0})
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Sort</span>
+              <ChevronRight className={`w-4 h-4 transition-transform ${showSortMenu ? 'rotate-90' : ''}`} />
+            </button>
+            
+            {showSortMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-xl border border-gray-700 shadow-xl z-50 overflow-hidden">
+                <div className="p-2 border-b border-gray-700">
+                  <p className="text-xs text-gray-400 font-semibold px-2">Sort By</p>
+                </div>
+                <div className="p-1">
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleSortChange(option.value)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        sortBy === option.value 
+                          ? 'bg-amber-500/20 text-amber-400' 
+                          : 'text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                      data-testid={`sort-${option.value}`}
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                      {sortBy === option.value && <CheckCircle className="w-4 h-4 ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Request Stats Bar */}
