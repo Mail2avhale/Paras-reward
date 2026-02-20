@@ -623,6 +623,44 @@ const Orders = ({ user, onLogout }) => {
                         </div>
                       )}
                       
+                      {/* Processing Time Info for Pending Requests */}
+                      {(request.status === 'pending' || request.status === 'processing' || request.status === 'approved') && (
+                        <div className="mt-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                          <div className="flex items-start gap-2">
+                            <Clock className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-amber-400 text-xs font-semibold mb-1">
+                                ⏱️ Estimated Processing Time:
+                              </p>
+                              <p className="text-amber-300 text-sm">
+                                {request.type === 'bank_redeem' 
+                                  ? '3-5 business days' 
+                                  : request.type === 'bill_payment' 
+                                    ? '1-3 business days'
+                                    : request.type === 'gift_voucher'
+                                      ? '24-48 hours'
+                                      : '3-7 business days'}
+                              </p>
+                              {/* Check if request is taking longer than expected */}
+                              {request.created_at && (() => {
+                                const daysSinceCreation = Math.floor((new Date() - new Date(request.created_at)) / (1000 * 60 * 60 * 24));
+                                const expectedDays = request.type === 'bank_redeem' ? 5 : request.type === 'bill_payment' ? 3 : request.type === 'gift_voucher' ? 2 : 7;
+                                if (daysSinceCreation >= expectedDays) {
+                                  return (
+                                    <div className="mt-2 p-2 bg-blue-500/10 rounded border border-blue-500/30">
+                                      <p className="text-blue-300 text-xs">
+                                        🙏 <strong>Thank you for your patience!</strong> Your request is taking a bit longer than usual. Our team is working on it. If you have concerns, please contact support.
+                                      </p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Voucher Code if available */}
                       {request.type === 'gift_voucher' && request.details?.voucher_code && (
                         <div className="mt-2 p-2 bg-green-500/10 rounded-lg flex items-center justify-between">
