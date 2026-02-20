@@ -5,6 +5,31 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### Marketplace Feature Removed ✅ (Feb 20, 2026)
+**User Request:** Complete removal of marketplace from both admin and user sides.
+
+**Files Deleted:**
+- `/app/frontend/src/pages/MarketplaceNew.js`
+- `/app/frontend/src/pages/AdminMarketplace.js`
+- `/app/frontend/src/components/skeletons/ProductCardSkeleton.js`
+
+**Files Updated (marketplace references removed):**
+- `App.js` - Removed imports, routes redirect to dashboard
+- `AdminLayout.js` - Removed from sidebar menu
+- `Sidebar.js` - Removed from user menu
+- `Navbar.js` - Removed from navigation
+- `Footer.js` - Removed from footer links
+- `AdminDashboard.js` - Removed quick action button
+- `AIChatbotEnhanced.js` - Updated suggestions
+- `InteractiveWalkthrough.js` - Removed marketplace step
+- `PRCExpiryTimer.js` - Changed CTA to gift vouchers
+- `AIContextualHelp.js` - Removed path mapping
+- `skeletons/index.js` - Removed ProductCardSkeleton export
+
+**Backend:** Routes kept for backward compatibility but no longer accessible via UI.
+
+---
+
 ### P0 Critical Bug Fix: PRC Balance Reset Bug ✅ (Feb 20, 2026)
 **Problem:** Paid users (Elite, Startup, Growth) had their PRC balance reset to zero upon login.
 
