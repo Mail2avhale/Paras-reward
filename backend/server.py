@@ -4571,7 +4571,16 @@ async def login(
     
     # Enforce PRC = 0 for FREE users only (paid subscribers can have PRC)
     # membership_type: "free" = not paid, anything else (elite, pro, vip) = paid subscriber
-    if user.get("membership_type") == "free" and user.get("prc_balance", 0) > 0:
+    # Also check subscription_plan as backup - explorer is free tier
+    user_membership = user.get("membership_type", "free")
+    user_plan = user.get("subscription_plan", "explorer")
+    is_free_user = user_membership == "free" or user_plan == "explorer"
+    
+    # DEBUG LOG
+    print(f"[LOGIN PRC CHECK] User: {user.get('email')}, membership_type: {user_membership}, subscription_plan: {user_plan}, is_free: {is_free_user}, prc_balance: {user.get('prc_balance', 0)}")
+    
+    if is_free_user and user.get("prc_balance", 0) > 0:
+        print(f"[LOGIN PRC RESET] Resetting PRC for free user: {user.get('email')}")
         await db.users.update_one(
             {"uid": user["uid"]},
             {"$set": {"prc_balance": 0}}
