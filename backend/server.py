@@ -6066,6 +6066,10 @@ async def claim_mining(uid: str):
     # Use helper function - subscription_plan is source of truth
     is_vip = is_paid_subscriber(user)
     
+    # Derive membership_type for backward compatibility in records
+    subscription_plan = user.get("subscription_plan", "explorer")
+    membership_type = "vip" if is_vip else "free"
+    
     # Check if mining session exists (backward compatible - treat None as True for old sessions)
     mining_active = user.get("mining_active")
     if mining_active is False or not user.get("mining_start_time"):
