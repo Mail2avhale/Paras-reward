@@ -109,8 +109,8 @@ const parseResponseForActions = (text) => {
   if (lowerText.includes('vip') || lowerText.includes('upgrade') || lowerText.includes('premium')) {
     actions.push({ label: 'View VIP Plans', route: '/subscription', icon: Crown, variant: 'success' });
   }
-  if (lowerText.includes('marketplace') || lowerText.includes('shop') || lowerText.includes('redeem') || lowerText.includes('product')) {
-    actions.push({ label: 'Browse Marketplace', route: '/marketplace', icon: ShoppingBag, variant: 'default' });
+  if (lowerText.includes('redeem') || lowerText.includes('voucher') || lowerText.includes('gift')) {
+    actions.push({ label: 'Gift Vouchers', route: '/gift-vouchers', icon: ShoppingBag, variant: 'default' });
   }
   if (lowerText.includes('kyc') || lowerText.includes('verify') || lowerText.includes('document')) {
     actions.push({ label: 'Complete KYC', route: '/kyc', icon: Target, variant: 'default' });
