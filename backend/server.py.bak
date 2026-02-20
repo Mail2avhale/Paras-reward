@@ -30065,10 +30065,1526 @@ async def get_activity_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 # ========================================
-# TREASURE HUNT GAME SYSTEM - REMOVED
-# Feature deprecated - code removed for cleanup
+# TREASURE HUNT GAME SYSTEM
 # ========================================
+
+class TreasureHuntModel(BaseModel):
+    hunt_id: str
+    title: str
+    description: str
+    difficulty: str  # easy, medium, hard
+    prc_cost: int
+    reward_prc: int
+    cashback_percentage: int = 50
+    total_clues: int
+    clue_cost: int = 5
+    treasure_locations: List[Dict]
+    time_limit_minutes: int
+    active: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class UserTreasureProgress(BaseModel):
+    progress_id: str
+    user_id: str
+    hunt_id: str
+    started_at: str
+    clues_revealed: List[int] = []
+    attempts: int = 0
+    found: bool = False
+    found_at: Optional[str] = None
+    prc_spent: int = 0
+    cashback_earned: int = 0
+    completed: bool = False
+
+class StartHuntRequest(BaseModel):
+    hunt_id: str
+
+class BuyClueRequest(BaseModel):
+    progress_id: str
+    clue_number: int
+
+class FindTreasureRequest(BaseModel):
+    progress_id: str
+    location_id: int
+
+# Initialize default treasure hunts
+async def initialize_treasure_hunts():
+    """Create default treasure hunts if they don't exist"""
+    existing = await db.treasure_hunts.find_one({"hunt_id": "hunt_001"})
+    if existing:
+        return
+    
+    default_hunts = [
+        {
+            "hunt_id": "hunt_001",
+            "title": "Beginner's Fortune",
+            "description": "Find the hidden treasure in the ancient garden. Perfect for new treasure hunters!",
+            "difficulty": "easy",
+            "prc_cost": 10,
+            "reward_prc": 50,
+            "cashback_percentage": 50,
+            "total_clues": 3,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 20, "y": 30, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
+                {"id": 2, "x": 45, "y": 60, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
+                {"id": 3, "x": 70, "y": 40, "is_treasure": True, "message": "🎉 Congratulations! You found the treasure!"},
+                {"id": 4, "x": 35, "y": 75, "is_treasure": False, "message": "Try another location!"},
+                {"id": 5, "x": 60, "y": 20, "is_treasure": False, "message": "Not here either!"},
+                {"id": 6, "x": 15, "y": 55, "is_treasure": False, "message": "Nothing here..."},
+                {"id": 7, "x": 80, "y": 25, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 8, "x": 50, "y": 85, "is_treasure": False, "message": "Empty spot!"},
+                {"id": 9, "x": 25, "y": 45, "is_treasure": False, "message": "Try again!"},
+                {"id": 10, "x": 65, "y": 70, "is_treasure": False, "message": "Not the right place!"}
+            ],
+            "clues": [
+                "The treasure lies where flowers bloom the brightest.",
+                "Look near the center of the map, slightly to the right.",
+                "The X and Y coordinates are both between 40 and 60."
+            ],
+            "time_limit_minutes": 30,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "hunt_id": "hunt_002",
+            "title": "Mystic Cave Challenge",
+            "description": "Venture deep into the mysterious caves. Are you brave enough?",
+            "difficulty": "medium",
+            "prc_cost": 25,
+            "reward_prc": 120,
+            "cashback_percentage": 50,
+            "total_clues": 4,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 15, "y": 85, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 2, "x": 80, "y": 65, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 3, "x": 50, "y": 50, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 4, "x": 30, "y": 20, "is_treasure": True, "message": "💎 Amazing! You discovered the mystic gem!"},
+                {"id": 5, "x": 65, "y": 40, "is_treasure": False, "message": "Just rocks here..."},
+                {"id": 6, "x": 40, "y": 70, "is_treasure": False, "message": "Nothing of value..."},
+                {"id": 7, "x": 25, "y": 55, "is_treasure": False, "message": "Keep looking!"},
+                {"id": 8, "x": 75, "y": 30, "is_treasure": False, "message": "Try elsewhere!"},
+                {"id": 9, "x": 55, "y": 80, "is_treasure": False, "message": "Empty cave chamber..."},
+                {"id": 10, "x": 20, "y": 45, "is_treasure": False, "message": "Dark corner..."},
+                {"id": 11, "x": 85, "y": 50, "is_treasure": False, "message": "No treasure here!"},
+                {"id": 12, "x": 45, "y": 25, "is_treasure": False, "message": "Wrong spot!"}
+            ],
+            "clues": [
+                "The treasure is hidden in the eastern section of the cave.",
+                "It's positioned high up, near the top of the map.",
+                "Look for coordinates above 60 on both axes.",
+                "The treasure X coordinate is greater than 75."
+            ],
+            "time_limit_minutes": 45,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "hunt_id": "hunt_003",
+            "title": "Dragon's Lair Expedition",
+            "description": "Only the bravest can find the dragon's hidden treasure hoard!",
+            "difficulty": "hard",
+            "prc_cost": 50,
+            "reward_prc": 300,
+            "cashback_percentage": 50,
+            "total_clues": 5,
+            "clue_cost": 5,
+            "treasure_locations": [
+                {"id": 1, "x": 10, "y": 10, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 2, "x": 90, "y": 90, "is_treasure": False, "message": "Wrong corner!"},
+                {"id": 3, "x": 55, "y": 45, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 4, "x": 30, "y": 80, "is_treasure": False, "message": "Just dragon scales..."},
+                {"id": 5, "x": 75, "y": 25, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 6, "x": 20, "y": 60, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 7, "x": 85, "y": 50, "is_treasure": True, "message": "🐉 LEGENDARY! You found the Dragon's Hoard!"},
+                {"id": 8, "x": 40, "y": 35, "is_treasure": False, "message": "Not quite..."},
+                {"id": 9, "x": 65, "y": 70, "is_treasure": False, "message": "Try again!"},
+                {"id": 10, "x": 50, "y": 15, "is_treasure": False, "message": "Almost there..."},
+                {"id": 11, "x": 15, "y": 75, "is_treasure": False, "message": "The dragon isn't here..."},
+                {"id": 12, "x": 80, "y": 35, "is_treasure": False, "message": "Empty chamber..."},
+                {"id": 13, "x": 35, "y": 50, "is_treasure": False, "message": "Nothing but bones..."},
+                {"id": 14, "x": 60, "y": 80, "is_treasure": False, "message": "Keep searching!"},
+                {"id": 15, "x": 25, "y": 25, "is_treasure": False, "message": "Wrong path!"}
+            ],
+            "clues": [
+                "The dragon guards its treasure in the heart of the lair.",
+                "Look near the center, but not exactly at 50,50.",
+                "Both coordinates are between 40 and 60.",
+                "The Y coordinate is less than the X coordinate.",
+                "The treasure is within 10 units of coordinates 55,45."
+            ],
+            "time_limit_minutes": 60,
+            "active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    
+    await db.treasure_hunts.insert_many(default_hunts)
+
+# Get all available treasure hunts
+@app.get("/api/treasure-hunts")
+async def get_treasure_hunts(uid: str):
+    """Get all available treasure hunts"""
+    try:
+        hunts = await db.treasure_hunts.find({"active": True}).to_list(length=100)
+        
+        # Remove treasure locations and clues from response (prevent cheating)
+        safe_hunts = []
+        for hunt in hunts:
+            safe_hunt = {
+                "hunt_id": hunt["hunt_id"],
+                "title": hunt["title"],
+                "description": hunt["description"],
+                "difficulty": hunt["difficulty"],
+                "prc_cost": hunt["prc_cost"],
+                "reward_prc": hunt["reward_prc"],
+                "cashback_percentage": hunt.get("cashback_percentage", 25),
+                "total_clues": hunt["total_clues"],
+                "clue_cost": hunt["clue_cost"],
+                "time_limit_minutes": hunt["time_limit_minutes"]
+            }
+            safe_hunts.append(safe_hunt)
+        
+        return {"hunts": safe_hunts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Start a treasure hunt
+@app.post("/api/treasure-hunts/start")
+async def start_treasure_hunt(request: StartHuntRequest, uid: str):
+    """Start a new treasure hunt - deducts PRC"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": request.hunt_id, "active": True})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Treasure hunt not found")
+        
+        # Check if user has enough VALID PRC (non-expired for free users)
+        is_free_user = user.get("membership_type", "free") != "vip"
+        
+        if is_free_user:
+            # Free users: check valid (non-expired) PRC
+            valid_prc = await get_valid_prc_balance(uid)
+            if valid_prc < hunt["prc_cost"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Insufficient valid PRC. You need {hunt['prc_cost']} PRC but only have {round(valid_prc, 2)} valid PRC. Your expired PRC cannot be used. Mine more PRC or upgrade to VIP for lifetime validity!"
+                )
+            user_prc = user.get("prc_balance", 0)
+        else:
+            # VIP users: all PRC is valid
+            user_prc = user.get("prc_balance", 0)
+            if user_prc < hunt["prc_cost"]:
+                raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        
+        # Check if user already has an active hunt for this
+        existing = await db.treasure_progress.find_one({
+            "user_id": uid,
+            "hunt_id": request.hunt_id,
+            "completed": False
+        })
+        if existing:
+            raise HTTPException(status_code=400, detail="You already have an active hunt for this treasure")
+        
+        # Deduct PRC
+        new_prc_balance = user_prc - hunt["prc_cost"]
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": new_prc_balance}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            user_id=uid,
+            wallet_type="prc",
+            transaction_type="order",
+            amount=hunt["prc_cost"],
+            description=f"Started treasure hunt: {hunt['title']}",
+            metadata={"hunt_id": request.hunt_id, "hunt_title": hunt["title"]},
+            related_id=request.hunt_id,
+            related_type="treasure_hunt"
+        )
+        
+        # Randomly select treasure location from available locations
+        import random
+        treasure_locations = [loc for loc in hunt["treasure_locations"] if loc.get("is_treasure", False)]
+        if treasure_locations:
+            selected_treasure = random.choice(treasure_locations)
+            treasure_location_id = selected_treasure["id"]
+        else:
+            # Fallback if no treasure marked
+            treasure_location_id = hunt["treasure_locations"][0]["id"]
+        
+        # Create progress entry
+        progress_id = f"progress_{uuid.uuid4()}"
+        progress = {
+            "progress_id": progress_id,
+            "user_id": uid,
+            "hunt_id": request.hunt_id,
+            "treasure_location_id": treasure_location_id,  # Store randomized treasure location
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "clues_revealed": [],
+            "attempts": 0,
+            "found": False,
+            "found_at": None,
+            "prc_spent": hunt["prc_cost"],
+            "cashback_earned": 0,
+            "completed": False,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=hunt["time_limit_minutes"])).isoformat()
+        }
+        
+        await db.treasure_progress.insert_one(progress)
+        
+        return {
+            "success": True,
+            "progress_id": progress_id,
+            "hunt_title": hunt["title"],
+            "prc_spent": hunt["prc_cost"],
+            "new_prc_balance": new_prc_balance,
+            "expires_at": progress["expires_at"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get user's active treasure hunts
+@app.get("/api/treasure-hunts/my-progress")
+async def get_my_treasure_progress(uid: str):
+    """Get user's active and completed treasure hunts"""
+    try:
+        progress_list = await db.treasure_progress.find({"user_id": uid}).to_list(length=100)
+        
+        enriched_progress = []
+        for progress in progress_list:
+            hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+            if hunt:
+                progress_data = {
+                    "progress_id": progress["progress_id"],
+                    "hunt_id": progress["hunt_id"],
+                    "hunt_title": hunt["title"],
+                    "difficulty": hunt["difficulty"],
+                    "started_at": progress["started_at"],
+                    "clues_revealed": progress.get("clues_revealed", []),
+                    "total_clues": hunt["total_clues"],
+                    "clue_cost": hunt["clue_cost"],
+                    "attempts": progress.get("attempts", 0),
+                    "found": progress.get("found", False),
+                    "found_at": progress.get("found_at"),
+                    "prc_spent": progress.get("prc_spent", 0),
+                    "cashback_earned": progress.get("cashback_earned", 0),
+                    "completed": progress.get("completed", False),
+                    "expires_at": progress.get("expires_at"),
+                    "reward_prc": hunt["reward_prc"]
+                }
+                enriched_progress.append(progress_data)
+        
+        return {"progress": enriched_progress}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Buy a clue
+@app.post("/api/treasure-hunts/buy-clue")
+async def buy_treasure_clue(request: BuyClueRequest, uid: str):
+    """Buy a clue for a treasure hunt - deducts PRC"""
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        progress = await db.treasure_progress.find_one({
+            "progress_id": request.progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        if progress.get("completed", False):
+            raise HTTPException(status_code=400, detail="This hunt is already completed")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Check if clue number is valid
+        if request.clue_number < 0 or request.clue_number >= hunt["total_clues"]:
+            raise HTTPException(status_code=400, detail="Invalid clue number")
+        
+        # Check if clue already revealed
+        clues_revealed = progress.get("clues_revealed", [])
+        if request.clue_number in clues_revealed:
+            raise HTTPException(status_code=400, detail="Clue already revealed")
+        
+        # Check PRC balance
+        user_prc = user.get("prc_balance", 0)
+        clue_cost = hunt["clue_cost"]
+        if user_prc < clue_cost:
+            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        
+        # Deduct PRC
+        new_prc_balance = user_prc - clue_cost
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": new_prc_balance}}
+        )
+        
+        # Log transaction
+        await log_transaction(
+            user_id=uid,
+            wallet_type="prc",
+            transaction_type="order",
+            amount=clue_cost,
+            description=f"Bought clue #{request.clue_number + 1} for {hunt['title']}",
+            metadata={"progress_id": request.progress_id, "clue_number": request.clue_number, "hunt_title": hunt['title']},
+            related_id=request.progress_id,
+            related_type="treasure_clue"
+        )
+        
+        # Update progress
+        clues_revealed.append(request.clue_number)
+        prc_spent = progress.get("prc_spent", 0) + clue_cost
+        
+        await db.treasure_progress.update_one(
+            {"progress_id": request.progress_id},
+            {
+                "$set": {
+                    "clues_revealed": clues_revealed,
+                    "prc_spent": prc_spent
+                }
+            }
+        )
+        
+        # Get the clue text
+        clue_text = hunt.get("clues", [])[request.clue_number] if request.clue_number < len(hunt.get("clues", [])) else "No clue available"
+        
+        return {
+            "success": True,
+            "clue_number": request.clue_number,
+            "clue_text": clue_text,
+            "prc_spent": clue_cost,
+            "new_prc_balance": new_prc_balance,
+            "total_clues_revealed": len(clues_revealed)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Find treasure attempt
+@app.post("/api/treasure-hunts/find-treasure")
+async def find_treasure(request: FindTreasureRequest, uid: str):
+    """Attempt to find treasure at a location"""
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": request.progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        if progress.get("completed", False):
+            raise HTTPException(status_code=400, detail="This hunt is already completed")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Find the location
+        location = None
+        for loc in hunt["treasure_locations"]:
+            if loc["id"] == request.location_id:
+                location = loc
+                break
+        
+        if not location:
+            raise HTTPException(status_code=404, detail="Location not found")
+        
+        # Increment attempts
+        attempts = progress.get("attempts", 0) + 1
+        
+        # Check if treasure found - use randomized location from progress
+        treasure_location_id = progress.get("treasure_location_id")
+        is_treasure = (request.location_id == treasure_location_id)
+        result = {
+            "found": is_treasure,
+            "message": location.get("message", ""),
+            "attempts": attempts
+        }
+        
+        if is_treasure:
+            # Calculate cashback based on membership type
+            # Free users: 10%, VIP users: 50%
+            prc_spent = progress.get("prc_spent", 0)
+            inr_value = prc_spent / 10  # Convert PRC to INR (10 PRC = 1 INR)
+            cashback_rate = await get_cashback_rate(uid, is_top_player=False)
+            cashback = round(inr_value * cashback_rate, 2)
+            cashback_percentage = int(cashback_rate * 100)
+            # Example for FREE: 100 PRC → 10 INR → 10 * 0.10 = 1.0 INR cashback
+            # Example for VIP: 100 PRC → 10 INR → 10 * 0.50 = 5.0 INR cashback
+            
+            # Award cashback to cashback wallet
+            user = await db.users.find_one({"uid": uid})
+            current_cashback = user.get("cashback_wallet_balance", 0)
+            new_cashback = current_cashback + cashback
+            
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"cashback_wallet_balance": new_cashback}}
+            )
+            
+            # Log cashback transaction (POSITIVE amount)
+            user = await db.users.find_one({"uid": uid})
+            membership_type = user.get("membership_type", "free")
+            
+            await log_transaction(
+                user_id=uid,
+                wallet_type="cashback",
+                transaction_type="cashback",
+                amount=cashback,
+                description=f"{cashback_percentage}% cashback for treasure hunt: {hunt['title']}",
+                metadata={
+                    "progress_id": request.progress_id, 
+                    "hunt_id": hunt["hunt_id"], 
+                    "prc_spent": prc_spent, 
+                    "cashback_percentage": cashback_percentage,
+                    "membership_type": membership_type,
+                    "hunt_title": hunt["title"],
+                    "attempts": attempts
+                },
+                related_id=request.progress_id,
+                related_type="treasure_cashback"
+            )
+            
+            # Update progress
+            await db.treasure_progress.update_one(
+                {"progress_id": request.progress_id},
+                {
+                    "$set": {
+                        "found": True,
+                        "found_at": datetime.now(timezone.utc).isoformat(),
+                        "attempts": attempts,
+                        "cashback_earned": cashback,
+                        "completed": True
+                    }
+                }
+            )
+            
+            result.update({
+                "cashback_earned": cashback,
+                "new_cashback_balance": new_cashback,
+                "prc_spent_total": prc_spent
+            })
+        else:
+            # Update attempts only
+            await db.treasure_progress.update_one(
+                {"progress_id": request.progress_id},
+                {"$set": {"attempts": attempts}}
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== AUTOMATIC WALLET RECONCILIATION ====================
+
+async def daily_wallet_reconciliation():
+    """
+    Daily automatic wallet reconciliation
+    Runs at 3 AM to reconcile all company wallets based on transactions
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        yesterday = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        yesterday_str = yesterday.isoformat()
+        today_str = today.isoformat()
+        
+        reconciliation_report = {
+            "reconciliation_id": str(uuid.uuid4()),
+            "date": yesterday.strftime("%Y-%m-%d"),
+            "created_at": now.isoformat(),
+            "wallets": {}
+        }
+        
+        # 1. SUBSCRIPTION WALLET - VIP Payments approved yesterday
+        vip_payments = await db.vip_payments.find({
+            "status": "approved",
+            "approved_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        vip_total = sum(p.get("amount", 0) for p in vip_payments)
+        reconciliation_report["wallets"]["subscription"] = {
+            "expected_credit": vip_total,
+            "transactions": len(vip_payments),
+            "source": "VIP Payments"
+        }
+        
+        # 2. ADS REVENUE WALLET - Ads income added yesterday
+        ads_income = await db.ads_income.find({
+            "created_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        ads_total = sum(a.get("revenue_amount", 0) for a in ads_income)
+        reconciliation_report["wallets"]["ads_revenue"] = {
+            "expected_credit": ads_total,
+            "transactions": len(ads_income),
+            "source": "Ads Income"
+        }
+        
+        # 3. REDEEM RESERVE WALLET - Redemptions processed yesterday
+        redemptions = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": yesterday_str, "$lt": today_str}
+        }).to_list(1000)
+        
+        redeem_total = sum(r.get("amount_inr", 0) for r in redemptions) + sum(b.get("amount_inr", 0) for b in bill_payments)
+        reconciliation_report["wallets"]["redeem_reserve"] = {
+            "expected_debit": redeem_total,
+            "transactions": len(redemptions) + len(bill_payments),
+            "source": "Redemptions & Bill Payments"
+        }
+        
+        # 4. Calculate net profit for the day
+        total_income = vip_total + ads_total
+        total_expense = redeem_total
+        
+        # Get fixed expenses for the month
+        current_month = now.strftime("%Y-%m")
+        fixed_expenses = await db.fixed_expenses.find({
+            "month": current_month,
+            "paid_status": "paid"
+        }).to_list(100)
+        monthly_fixed = sum(e.get("amount", 0) for e in fixed_expenses)
+        daily_fixed_expense = monthly_fixed / 30  # Approximate daily
+        
+        net_profit = total_income - total_expense - daily_fixed_expense
+        
+        reconciliation_report["summary"] = {
+            "total_income": total_income,
+            "total_expense": total_expense + daily_fixed_expense,
+            "net_profit_loss": net_profit,
+            "daily_fixed_expense": daily_fixed_expense
+        }
+        
+        # 5. Auto-transfer net profit to profit wallet if positive
+        if net_profit > 0:
+            await db.company_wallets.update_one(
+                {"wallet_type": "profit"},
+                {
+                    "$inc": {"balance": net_profit, "total_credit": net_profit},
+                    "$set": {"last_updated": now.isoformat()}
+                },
+                upsert=True
+            )
+            
+            # Log the transfer
+            await db.company_wallet_transactions.insert_one({
+                "txn_id": str(uuid.uuid4()),
+                "wallet_type": "profit",
+                "amount": net_profit,
+                "type": "credit",
+                "description": f"Daily profit reconciliation for {yesterday.strftime('%Y-%m-%d')}",
+                "timestamp": now.isoformat(),
+                "auto_reconciliation": True
+            })
+            
+            reconciliation_report["profit_transfer"] = net_profit
+        
+        # 6. Save reconciliation report (make a copy to avoid _id being added to response)
+        report_to_save = {**reconciliation_report}
+        await db.wallet_reconciliations.insert_one(report_to_save)
+        
+        logging.info(f"Wallet reconciliation complete for {yesterday.strftime('%Y-%m-%d')}: Income=₹{total_income}, Expense=₹{total_expense}, Net=₹{net_profit}")
+        
+        return reconciliation_report
+        
+    except Exception as e:
+        logging.error(f"Error in daily wallet reconciliation: {e}")
+        return {"error": str(e)}
+
+# DISABLED - Moved to routes/admin_*.py
+async def get_reconciliation_history(limit: int = 30):
+    """Get wallet reconciliation history"""
+    try:
+        reports = await db.wallet_reconciliations.find(
+            {}, {"_id": 0}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        return {"reports": reports}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DISABLED - Moved to routes/admin_*.py
+async def run_manual_reconciliation():
+    """Manually trigger wallet reconciliation"""
+    try:
+        report = await daily_wallet_reconciliation()
+        return {"success": True, "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DISABLED - Moved to routes/admin_*.py
+async def get_reconciliation_status():
+    """Get current wallet status with expected vs actual balances"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get all company wallets
+        wallets = await db.company_wallets.find({}, {"_id": 0}).to_list(10)
+        
+        # Calculate expected balances based on all transactions
+        status = []
+        
+        for wallet in wallets:
+            wallet_type = wallet.get("wallet_type")
+            actual_balance = wallet.get("balance", 0)
+            
+            # Calculate expected from transactions
+            expected_credit = 0
+            expected_debit = 0
+            
+            if wallet_type == "subscription":
+                # Sum all approved VIP payments
+                async for p in db.vip_payments.find({"status": "approved"}, {"amount": 1}):
+                    expected_credit += p.get("amount", 0)
+                    
+            elif wallet_type == "ads_revenue":
+                # Sum all ads income
+                async for a in db.ads_income.find({}, {"revenue_amount": 1}):
+                    expected_credit += a.get("revenue_amount", 0)
+            
+            # Get wallet transactions
+            async for txn in db.company_wallet_transactions.find({"wallet_type": wallet_type}):
+                if txn.get("type") == "credit":
+                    expected_credit += txn.get("amount", 0)
+                else:
+                    expected_debit += txn.get("amount", 0)
+            
+            expected_balance = expected_credit - expected_debit
+            discrepancy = actual_balance - expected_balance
+            
+            status.append({
+                "wallet_name": wallet.get("wallet_name"),
+                "wallet_type": wallet_type,
+                "actual_balance": actual_balance,
+                "expected_balance": expected_balance,
+                "discrepancy": discrepancy,
+                "is_reconciled": abs(discrepancy) < 0.01,  # Allow for floating point
+                "total_credit": expected_credit,
+                "total_debit": expected_debit
+            })
+        
+        all_reconciled = all(s["is_reconciled"] for s in status)
+        
+        return {
+            "status": status,
+            "all_reconciled": all_reconciled,
+            "checked_at": now.isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== USER WALLET LEDGER (Admin Only) ====================
+
+async def get_all_user_ledger(
+    page: int = 1, 
+    limit: int = 50, 
+    user_id: str = None,
+    wallet_type: str = None,
+    transaction_type: str = None,
+    date_from: str = None,
+    date_to: str = None
+):
+    """
+    Get comprehensive user wallet ledger for all users (Admin only)
+    This is an append-only, non-editable ledger showing all user transactions
+    """
+    try:
+        query = {}
+        
+        if user_id:
+            query["user_id"] = user_id
+        if wallet_type:
+            query["wallet_type"] = wallet_type
+        if transaction_type:
+            query["type"] = transaction_type
+        if date_from:
+            query["created_at"] = {"$gte": date_from}
+        if date_to:
+            if "created_at" in query:
+                query["created_at"]["$lte"] = date_to
+            else:
+                query["created_at"] = {"$lte": date_to}
+        
+        total = await db.transactions.count_documents(query)
+        skip = (page - 1) * limit
+        
+        transactions = await db.transactions.find(
+            query, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Enrich with user data
+        enriched = []
+        for txn in transactions:
+            user = await db.users.find_one({"uid": txn.get("user_id")}, {"_id": 0, "name": 1, "email": 1})
+            txn["user_name"] = user.get("name", "Unknown") if user else "Unknown"
+            txn["user_email"] = user.get("email", "N/A") if user else "N/A"
+            enriched.append(txn)
+        
+        # Calculate summary stats
+        summary_pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$type",
+                "total_amount": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        summary_data = await db.transactions.aggregate(summary_pipeline).to_list(50)
+        summary = {item["_id"]: {"amount": item["total_amount"], "count": item["count"]} for item in summary_data}
+        
+        return {
+            "transactions": enriched,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DISABLED - Moved to routes/admin_*.py
+async def get_user_wallet_ledger(uid: str, page: int = 1, limit: int = 50):
+    """Get complete wallet ledger for a specific user (Admin view)"""
+    try:
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "email": 1, "prc_balance": 1, "cash_wallet_balance": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        total = await db.transactions.count_documents({"user_id": uid})
+        skip = (page - 1) * limit
+        
+        transactions = await db.transactions.find(
+            {"user_id": uid}, {"_id": 0}
+        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Calculate totals
+        pipeline = [
+            {"$match": {"user_id": uid}},
+            {"$group": {
+                "_id": "$wallet_type",
+                "total_credit": {
+                    "$sum": {
+                        "$cond": [
+                            {"$in": ["$type", ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]]},
+                            "$amount", 0
+                        ]
+                    }
+                },
+                "total_debit": {
+                    "$sum": {
+                        "$cond": [
+                            {"$in": ["$type", ["order", "withdrawal", "admin_debit", "prc_burn", "bill_payment_request", "gift_voucher_request"]]},
+                            "$amount", 0
+                        ]
+                    }
+                }
+            }}
+        ]
+        wallet_stats = await db.transactions.aggregate(pipeline).to_list(10)
+        
+        return {
+            "user": user,
+            "transactions": transactions,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "wallet_stats": {s["_id"]: {"credit": s["total_credit"], "debit": s["total_debit"]} for s in wallet_stats}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== REDEEM SAFETY SETTINGS ====================
+
+# DISABLED - Moved to routes/admin_*.py
+async def get_redeem_settings():
+    """Get current redemption safety settings"""
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+        
+        # Default settings if not configured
+        default_settings = {
+            "daily_limit_per_user": 5000,  # Max INR per user per day
+            "daily_limit_global": 100000,  # Max INR total per day
+            "manual_approval_threshold": 1000,  # Auto-approve below this, manual above
+            "cool_off_period_hours": 24,  # Hours between redemptions
+            "min_kyc_status": "verified",  # KYC requirement
+            "min_vip_days": 7,  # Minimum VIP tenure for redemptions
+            "max_redemptions_per_day": 3,  # Max transactions per user per day
+            "suspicious_amount_threshold": 2000,  # Flag for review above this
+            "enabled": True
+        }
+        
+        if settings and "redeem_settings" in settings:
+            return {"settings": settings["redeem_settings"]}
+        return {"settings": default_settings}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/finance/redeem-settings")
+async def update_redeem_settings(request: Request):
+    """Update redemption safety settings (Admin only)"""
+    try:
+        data = await request.json()
+        
+        # Validate required fields
+        required_fields = ["daily_limit_per_user", "manual_approval_threshold"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Update settings
+        await db.settings.update_one(
+            {},
+            {
+                "$set": {
+                    "redeem_settings": {
+                        "daily_limit_per_user": float(data.get("daily_limit_per_user", 5000)),
+                        "daily_limit_global": float(data.get("daily_limit_global", 100000)),
+                        "manual_approval_threshold": float(data.get("manual_approval_threshold", 1000)),
+                        "cool_off_period_hours": int(data.get("cool_off_period_hours", 24)),
+                        "min_kyc_status": data.get("min_kyc_status", "verified"),
+                        "min_vip_days": int(data.get("min_vip_days", 7)),
+                        "max_redemptions_per_day": int(data.get("max_redemptions_per_day", 3)),
+                        "suspicious_amount_threshold": float(data.get("suspicious_amount_threshold", 2000)),
+                        "enabled": bool(data.get("enabled", True)),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "message": "Redeem settings updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def check_redeem_safety(user_id: str, amount_inr: float) -> Dict:
+    """
+    Check if a redemption request passes all safety rules
+    Returns: {allowed: bool, reason: str, requires_manual_approval: bool}
+    """
+    try:
+        settings = await db.settings.find_one({}, {"_id": 0, "redeem_settings": 1})
+        rs = settings.get("redeem_settings", {}) if settings else {}
+        
+        # Default values
+        daily_limit_per_user = rs.get("daily_limit_per_user", 5000)
+        daily_limit_global = rs.get("daily_limit_global", 100000)
+        manual_threshold = rs.get("manual_approval_threshold", 1000)
+        max_per_day = rs.get("max_redemptions_per_day", 3)
+        min_vip_days = rs.get("min_vip_days", 7)
+        suspicious_threshold = rs.get("suspicious_amount_threshold", 2000)
+        
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            return {"allowed": False, "reason": "User not found", "requires_manual_approval": False}
+        
+        # Check KYC
+        if user.get("kyc_status") != "verified":
+            return {"allowed": False, "reason": "KYC not verified", "requires_manual_approval": False}
+        
+        # Check VIP tenure
+        vip_expiry_str = user.get("vip_expiry")
+        if vip_expiry_str:
+            try:
+                now = datetime.now(timezone.utc)
+                # Calculate how long user has been VIP (rough estimate)
+                vip_start = now - timedelta(days=30)  # Assume monthly plan minimum
+                if user.get("membership_type") != "vip":
+                    return {"allowed": False, "reason": "VIP membership required", "requires_manual_approval": False}
+            except:
+                pass
+        
+        # Check user's daily redemption total
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        
+        user_today_redemptions = await db.gift_voucher_requests.find({
+            "user_id": user_id,
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(100)
+        
+        user_today_bills = await db.bill_payment_requests.find({
+            "user_id": user_id,
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(100)
+        
+        user_today_total = sum(r.get("denomination", 0) for r in user_today_redemptions) + \
+                          sum(b.get("amount_inr", 0) for b in user_today_bills)
+        user_today_count = len(user_today_redemptions) + len(user_today_bills)
+        
+        if user_today_count >= max_per_day:
+            return {"allowed": False, "reason": f"Daily transaction limit ({max_per_day}) reached", "requires_manual_approval": False}
+        
+        if user_today_total + amount_inr > daily_limit_per_user:
+            return {"allowed": False, "reason": f"Would exceed daily limit of ₹{daily_limit_per_user}", "requires_manual_approval": False}
+        
+        # Check global daily limit
+        global_today_redemptions = await db.gift_voucher_requests.find({
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(10000)
+        
+        global_today_bills = await db.bill_payment_requests.find({
+            "created_at": {"$gte": today_start},
+            "status": {"$ne": "rejected"}
+        }).to_list(10000)
+        
+        global_today_total = sum(r.get("denomination", 0) for r in global_today_redemptions) + \
+                            sum(b.get("amount_inr", 0) for b in global_today_bills)
+        
+        if global_today_total + amount_inr > daily_limit_global:
+            return {"allowed": False, "reason": "Global daily redemption limit reached", "requires_manual_approval": False}
+        
+        # Determine if manual approval needed
+        requires_manual = amount_inr >= manual_threshold or amount_inr >= suspicious_threshold
+        
+        return {
+            "allowed": True, 
+            "reason": "All safety checks passed",
+            "requires_manual_approval": requires_manual,
+            "auto_approve": not requires_manual
+        }
+        
+    except Exception as e:
+        logging.error(f"Error checking redeem safety: {e}")
+        return {"allowed": False, "reason": "Error checking safety rules", "requires_manual_approval": True}
+
+# ==================== P&L MONTHLY SNAPSHOTS ====================
+
+@api_router.get("/admin/finance/profit-loss/monthly")
+async def get_monthly_pl_report(year: int = None, month: int = None):
+    """Get monthly P&L report with detailed breakdown"""
+    try:
+        now = datetime.now(timezone.utc)
+        year = year or now.year
+        month = month or now.month
+        
+        month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+        if month == 12:
+            month_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            month_end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        
+        month_start_str = month_start.isoformat()
+        month_end_str = month_end.isoformat()
+        
+        # INCOME
+        # 1. VIP Subscriptions
+        vip_payments = await db.vip_payments.find({
+            "status": "approved",
+            "approved_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        vip_income = sum(p.get("amount", 0) for p in vip_payments)
+        
+        # 2. Ads Revenue
+        ads_income_entries = await db.ads_income.find({
+            "created_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(1000)
+        ads_income = sum(a.get("revenue_amount", 0) for a in ads_income_entries)
+        
+        # 3. Other Income (service charges from transactions)
+        service_charges = await db.transactions.find({
+            "type": {"$in": ["service_charge", "transaction_fee"]},
+            "created_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        service_income = sum(s.get("amount", 0) for s in service_charges)
+        
+        total_income = vip_income + ads_income + service_income
+        
+        # EXPENSES
+        # 1. Fixed Expenses
+        month_key = f"{year}-{month:02d}"
+        fixed_expenses = await db.fixed_expenses.find({
+            "month": month_key,
+            "paid_status": "paid"
+        }).to_list(100)
+        fixed_expense_total = sum(e.get("amount", 0) for e in fixed_expenses)
+        
+        # 2. Redemption Payouts (gift vouchers + bill payments)
+        gift_vouchers = await db.gift_voucher_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        gift_voucher_cost = sum(g.get("denomination", 0) for g in gift_vouchers)
+        
+        bill_payments = await db.bill_payment_requests.find({
+            "status": "completed",
+            "completed_at": {"$gte": month_start_str, "$lt": month_end_str}
+        }).to_list(10000)
+        bill_payment_cost = sum(b.get("amount_inr", 0) for b in bill_payments)
+        
+        total_expenses = fixed_expense_total + gift_voucher_cost + bill_payment_cost
+        
+        # Calculate P&L
+        gross_profit = total_income - gift_voucher_cost - bill_payment_cost
+        net_profit = total_income - total_expenses
+        profit_margin = (net_profit / total_income * 100) if total_income > 0 else 0
+        
+        report = {
+            "period": {
+                "year": year,
+                "month": month,
+                "month_name": month_start.strftime("%B"),
+                "start_date": month_start_str,
+                "end_date": month_end_str
+            },
+            "income": {
+                "vip_subscriptions": vip_income,
+                "vip_count": len(vip_payments),
+                "ads_revenue": ads_income,
+                "service_charges": service_income,
+                "total": total_income
+            },
+            "expenses": {
+                "fixed_expenses": fixed_expense_total,
+                "gift_voucher_payouts": gift_voucher_cost,
+                "gift_voucher_count": len(gift_vouchers),
+                "bill_payment_payouts": bill_payment_cost,
+                "bill_payment_count": len(bill_payments),
+                "total": total_expenses
+            },
+            "summary": {
+                "gross_profit": gross_profit,
+                "net_profit": net_profit,
+                "profit_margin_percent": round(profit_margin, 2)
+            },
+            "generated_at": now.isoformat()
+        }
+        
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/finance/profit-loss/snapshot")
+async def save_monthly_pl_snapshot(year: int, month: int):
+    """Save a monthly P&L snapshot for historical records"""
+    try:
+        # Get the report
+        report = await get_monthly_pl_report(year, month)
+        
+        # Check if snapshot already exists
+        existing = await db.pl_snapshots.find_one({
+            "period.year": year,
+            "period.month": month
+        })
+        
+        if existing:
+            # Update existing
+            await db.pl_snapshots.update_one(
+                {"period.year": year, "period.month": month},
+                {"$set": {**report, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            return {"success": True, "message": "Snapshot updated", "report": report}
+        else:
+            # Create new
+            report["snapshot_id"] = str(uuid.uuid4())
+            report["created_at"] = datetime.now(timezone.utc).isoformat()
+            await db.pl_snapshots.insert_one(report)
+            # Remove _id before returning
+            report.pop("_id", None)
+            return {"success": True, "message": "Snapshot created", "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/finance/profit-loss/snapshots")
+async def get_pl_snapshots(limit: int = 12):
+    """Get historical P&L snapshots"""
+    try:
+        snapshots = await db.pl_snapshots.find(
+            {}, {"_id": 0}
+        ).sort([("period.year", -1), ("period.month", -1)]).limit(limit).to_list(limit)
+        
+        return {"snapshots": snapshots}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get treasure hunt leaderboard
+@app.get("/api/treasure-hunts/leaderboard")
+async def get_treasure_leaderboard(uid: str):
+    """Get treasure hunt leaderboard - top hunters by treasures found"""
+    try:
+        # Aggregate user treasure hunt stats
+        pipeline = [
+            {"$match": {"found": True, "completed": True}},
+            {"$group": {
+                "_id": "$user_id",
+                "treasures_found": {"$sum": 1},
+                "total_reward": {"$sum": "$cashback_earned"},
+                "total_prc_spent": {"$sum": "$prc_spent"}
+            }},
+            {"$sort": {"treasures_found": -1, "total_reward": -1}},
+            {"$limit": 10}
+        ]
+        
+        leaderboard_data = await db.treasure_progress.aggregate(pipeline).to_list(length=10)
+        
+        # Enrich with user data
+        leaderboard = []
+        for entry in leaderboard_data:
+            user = await db.users.find_one({"uid": entry["_id"]})
+            if user:
+                leaderboard.append({
+                    "user_id": entry["_id"],
+                    "name": user.get("name", "Anonymous"),
+                    "email": user.get("email", ""),
+                    "treasures_found": entry["treasures_found"],
+                    "total_cashback_earned": entry["total_reward"],
+                    "total_prc_spent": entry["total_prc_spent"]
+                })
+        
+        return {"leaderboard": leaderboard}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get game map data for active hunt
+@app.get("/api/treasure-hunts/game-map/{progress_id}")
+async def get_game_map(progress_id: str, uid: str):
+    """Get game map data for active hunt (without revealing treasure location)"""
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Return locations without revealing which is treasure (unless already found)
+        safe_locations = []
+        for loc in hunt["treasure_locations"]:
+            safe_loc = {
+                "id": loc["id"],
+                "x": loc["x"],
+                "y": loc["y"]
+            }
+            # If treasure already found, reveal it
+            if progress.get("found", False):
+                treasure_location_id = progress.get("treasure_location_id")
+                safe_loc["is_treasure"] = (loc["id"] == treasure_location_id)
+                if safe_loc["is_treasure"]:
+                    safe_loc["message"] = loc.get("message", "")
+            safe_locations.append(safe_loc)
+        
+        # Get revealed clues
+        revealed_clues = []
+        clues_revealed = progress.get("clues_revealed", [])
+        all_clues = hunt.get("clues", [])
+        for clue_idx in clues_revealed:
+            if clue_idx < len(all_clues):
+                revealed_clues.append({
+                    "number": clue_idx + 1,
+                    "text": all_clues[clue_idx]
+                })
+        
+        return {
+            "hunt_id": hunt["hunt_id"],
+            "title": hunt["title"],
+            "description": hunt["description"],
+            "difficulty": hunt["difficulty"],
+            "locations": safe_locations,
+            "revealed_clues": revealed_clues,
+            "total_clues": hunt["total_clues"],
+            "clue_cost": hunt["clue_cost"],
+            "attempts": progress.get("attempts", 0),
+            "found": progress.get("found", False),
+            "expires_at": progress.get("expires_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Daily Top Hunter - 100% Cashback Reward
+@app.get("/api/treasure-hunts/daily-top-hunter")
+async def get_daily_top_hunter(uid: str):
+    """Get today's top treasure hunter and check if current user qualifies"""
+    try:
+        # Get today's date range
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        # Find all treasures found today
+        pipeline = [
+            {
+                "$match": {
+                    "found": True,
+                    "found_at": {
+                        "$gte": today_start.isoformat(),
+                        "$lt": today_end.isoformat()
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$user_id",
+                    "treasures_found_today": {"$sum": 1},
+                    "total_prc_spent_today": {"$sum": "$prc_spent"},
+                    "total_cashback_earned": {"$sum": "$cashback_earned"}
+                }
+            },
+            {
+                "$sort": {"treasures_found_today": -1, "total_prc_spent_today": -1}
+            },
+            {
+                "$limit": 1
+            }
+        ]
+        
+        top_hunter_data = await db.treasure_progress.aggregate(pipeline).to_list(length=1)
+        
+        if not top_hunter_data:
+            return {
+                "has_top_hunter": False,
+                "is_current_user": False,
+                "message": "No treasures found today yet!"
+            }
+        
+        top_hunter = top_hunter_data[0]
+        top_user = await db.users.find_one({"uid": top_hunter["_id"]})
+        
+        # Check if bonus already awarded today
+        bonus_awarded = await db.daily_top_hunter_rewards.find_one({
+            "date": today_start.isoformat()[:10],
+            "user_id": top_hunter["_id"]
+        })
+        
+        is_current_user = (uid == top_hunter["_id"])
+        
+        return {
+            "has_top_hunter": True,
+            "top_hunter": {
+                "user_id": top_hunter["_id"],
+                "name": top_user.get("name", "Anonymous") if top_user else "Anonymous",
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": top_hunter["total_prc_spent_today"],
+                "cashback_earned": top_hunter["total_cashback_earned"]
+            },
+            "is_current_user": is_current_user,
+            "bonus_awarded": bonus_awarded is not None,
+            "message": "🏆 Daily Top Hunter!" if is_current_user else "Keep hunting to become today's top hunter!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Award Daily Top Hunter Bonus (Admin/System call or automated)
+@app.post("/api/treasure-hunts/award-daily-bonus")
+async def award_daily_top_hunter_bonus(uid: str):
+    """Award 100% cashback bonus to today's top hunter (called at day end)"""
+    try:
+        # Get today's date range
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        # Find today's top hunter
+        pipeline = [
+            {
+                "$match": {
+                    "found": True,
+                    "found_at": {
+                        "$gte": today_start.isoformat(),
+                        "$lt": today_end.isoformat()
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$user_id",
+                    "treasures_found_today": {"$sum": 1},
+                    "total_prc_spent_today": {"$sum": "$prc_spent"},
+                    "total_cashback_earned": {"$sum": "$cashback_earned"}
+                }
+            },
+            {
+                "$sort": {"treasures_found_today": -1, "total_prc_spent_today": -1}
+            },
+            {
+                "$limit": 1
+            }
+        ]
+        
+        top_hunter_data = await db.treasure_progress.aggregate(pipeline).to_list(length=1)
+        
+        if not top_hunter_data:
+            return {"success": False, "message": "No top hunter found for today"}
+        
+        top_hunter = top_hunter_data[0]
+        winner_uid = top_hunter["_id"]
+        
+        # Check if already awarded
+        existing_reward = await db.daily_top_hunter_rewards.find_one({
+            "date": today_start.isoformat()[:10],
+            "user_id": winner_uid
+        })
+        
+        if existing_reward:
+            return {"success": False, "message": "Bonus already awarded for today"}
+        
+        # Calculate bonus based on membership
+        # Free users: Total 20% (10% already given, give another 10%)
+        # VIP users: Total 100% (50% already given, give another 50%)
+        prc_spent = top_hunter["total_prc_spent_today"]
+        inr_value = prc_spent / 10
+        already_earned = top_hunter["total_cashback_earned"]
+        
+        # Get user and check if paid subscriber using helper function
+        user = await db.users.find_one({"uid": winner_uid})
+        is_vip = is_paid_subscriber(user)
+        
+        # Calculate bonus: Additional amount to reach top player rate
+        # Free: Give another 10% to reach 20% total
+        # VIP: Give another 50% to reach 100% total
+        bonus_rate = 0.50 if is_vip else 0.10
+        bonus_cashback = round(inr_value * bonus_rate, 2)
+        
+        # Award bonus to cashback wallet
+        current_cashback = user.get("cashback_wallet_balance", 0)
+        new_cashback = current_cashback + bonus_cashback
+        
+        await db.users.update_one(
+            {"uid": winner_uid},
+            {"$set": {"cashback_wallet_balance": new_cashback}}
+        )
+        
+        # Log bonus transaction
+        total_percentage = "100%" if is_vip else "20%"
+        bonus_percentage = "50%" if is_vip else "10%"
+        
+        await log_transaction(
+            user_id=winner_uid,
+            wallet_type="cashback",
+            transaction_type="cashback",
+            amount=bonus_cashback,
+            description=f"🏆 Daily Top Hunter Bonus! {total_percentage} total cashback ({bonus_percentage} bonus)",
+            metadata={
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": prc_spent,
+                "date": today_start.isoformat()[:10],
+                "bonus_type": "daily_top_hunter",
+                "membership_type": membership_type,
+                "total_percentage": total_percentage
+            },
+            related_id=f"daily_top_{today_start.isoformat()[:10]}",
+            related_type="daily_top_hunter_bonus"
+        )
+        
+        # Record reward
+        await db.daily_top_hunter_rewards.insert_one({
+            "reward_id": f"reward_{uuid.uuid4()}",
+            "date": today_start.isoformat()[:10],
+            "user_id": winner_uid,
+            "treasures_found": top_hunter["treasures_found_today"],
+            "prc_spent": prc_spent,
+            "base_cashback": already_earned,
+            "bonus_cashback": bonus_cashback,
+            "total_cashback": already_earned + bonus_cashback,
+            "awarded_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        winner_user = await db.users.find_one({"uid": winner_uid})
+        
+        return {
+            "success": True,
+            "winner": {
+                "user_id": winner_uid,
+                "name": winner_user.get("name", "Anonymous"),
+                "treasures_found": top_hunter["treasures_found_today"],
+                "prc_spent": prc_spent,
+                "base_cashback": already_earned,
+                "bonus_cashback": bonus_cashback,
+                "total_cashback": already_earned + bonus_cashback
+            },
+            "message": f"🏆 {winner_user.get('name', 'User')} awarded 100% total cashback as Daily Top Hunter!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+    try:
+        progress = await db.treasure_progress.find_one({
+            "progress_id": progress_id,
+            "user_id": uid
+        })
+        if not progress:
+            raise HTTPException(status_code=404, detail="Progress not found")
+        
+        hunt = await db.treasure_hunts.find_one({"hunt_id": progress["hunt_id"]})
+        if not hunt:
+            raise HTTPException(status_code=404, detail="Hunt not found")
+        
+        # Return locations without revealing which is treasure (unless already found)
+        safe_locations = []
+        for loc in hunt["treasure_locations"]:
+            safe_loc = {
+                "id": loc["id"],
+                "x": loc["x"],
+                "y": loc["y"]
+            }
+            # If treasure already found, reveal it
+            if progress.get("found", False):
+                safe_loc["is_treasure"] = loc.get("is_treasure", False)
+                safe_loc["message"] = loc.get("message", "")
+            safe_locations.append(safe_loc)
+        
+        # Get revealed clues
+        revealed_clues = []
+        clues_revealed = progress.get("clues_revealed", [])
+        all_clues = hunt.get("clues", [])
+        for clue_idx in clues_revealed:
+            if clue_idx < len(all_clues):
+                revealed_clues.append({
+                    "number": clue_idx + 1,
+                    "text": all_clues[clue_idx]
+                })
+        
+        return {
+            "hunt_id": hunt["hunt_id"],
+            "title": hunt["title"],
+            "description": hunt["description"],
+            "difficulty": hunt["difficulty"],
+            "locations": safe_locations,
+            "revealed_clues": revealed_clues,
+            "total_clues": hunt["total_clues"],
+            "clue_cost": hunt["clue_cost"],
+            "attempts": progress.get("attempts", 0),
+            "found": progress.get("found", False),
+            "expires_at": progress.get("expires_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== CAPITAL & LIABILITY MANAGEMENT ====================
