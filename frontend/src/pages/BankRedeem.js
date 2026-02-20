@@ -647,87 +647,26 @@ const BankRedeem = ({ user }) => {
               </div>
             )}
 
-            {/* Redeem History */}
-            {history.length > 0 && (
-              <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-purple-400" />
+            {/* Link to My Orders for history */}
+            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-xl flex items-center justify-center">
+                    <Receipt className="h-5 w-5 text-emerald-400" />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Redeem History</h2>
-                    <p className="text-xs text-gray-500">Your previous requests</p>
+                    <p className="text-xs text-gray-500">View all your bank transfer requests</p>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  {history.map((req) => (
-                    <div
-                      key={req.request_id}
-                      className="bg-gray-800/30 rounded-2xl border border-gray-700/50 overflow-hidden"
-                    >
-                      <button
-                        onClick={() => setExpandedHistory(expandedHistory === req.request_id ? null : req.request_id)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-700/50 rounded-xl flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <div className="text-left">
-                            <p className="text-white font-semibold">₹{req.amount_inr?.toLocaleString()}</p>
-                            <p className="text-xs text-gray-500">{new Date(req.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {getStatusBadge(req.status)}
-                          {expandedHistory === req.request_id ? (
-                            <ChevronUp className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
-                          )}
-                        </div>
-                      </button>
-                      
-                      {expandedHistory === req.request_id && (
-                        <div className="px-4 pb-4 border-t border-gray-700/50 pt-3">
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Request ID</span>
-                              <span className="text-white font-mono text-xs">{req.request_id}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Bank</span>
-                              <span className="text-white">{req.bank_details?.bank_name}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Account</span>
-                              <span className="text-white">{req.bank_details?.account_masked}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">PRC Deducted</span>
-                              <span className="text-amber-400">{req.total_prc_deducted?.toLocaleString()} PRC</span>
-                            </div>
-                            {req.status === 'rejected' && req.rejection_reason && (
-                              <div className="mt-3 p-3 bg-red-500/10 rounded-xl border border-red-500/30">
-                                <p className="text-red-400 text-xs font-medium">Rejection Reason:</p>
-                                <p className="text-red-300 text-sm">{req.rejection_reason}</p>
-                              </div>
-                            )}
-                            {req.status === 'approved' && req.transaction_ref && (
-                              <div className="mt-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30">
-                                <p className="text-green-400 text-xs font-medium">Transaction Ref:</p>
-                                <p className="text-green-300 text-sm">{req.transaction_ref}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <button
+                  onClick={() => navigate('/orders?tab=bank_redeem')}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all flex items-center gap-2"
+                >
+                  View All <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Right Column - Info */}
