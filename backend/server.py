@@ -8255,7 +8255,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
                             "subscription_expiry": new_expiry,
                             "vip_expiry": new_expiry,  # Legacy compatibility
                             "vip_activated_at": now.isoformat(),
-                            "last_subscription_renewed": now.isoformat()
+                            "last_subscription_renewed": now.isoformat(),
+                            "previous_subscription_plan": previous_plan,  # Track previous plan
+                        },
+                        "$inc": {
+                            "subscription_count": 1  # Increment subscription count
                         }
                     }
                 ),
