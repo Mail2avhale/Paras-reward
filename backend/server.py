@@ -19849,20 +19849,40 @@ async def fix_negative_balances():
     }
 
 @api_router.delete("/admin/users/{uid}/delete")
-async def delete_user_admin(uid: str):
-    """Admin deactivates/deletes a user"""
+async def delete_user_admin(uid: str, permanent: bool = False):
+    """Admin deletes a user - soft delete by default, permanent if specified"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Soft delete - deactivate
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {
-            "is_active": False,
-            "deactivated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
+    # Prevent deleting admin users
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete admin users")
+    
+    user_email = user.get("email", "unknown")
+    user_name = user.get("name", "unknown")
+    
+    if permanent:
+        # PERMANENT DELETE - Remove from all collections
+        await db.users.delete_one({"uid": uid})
+        await db.transactions.delete_many({"user_id": uid})
+        await db.mining_sessions.delete_many({"user_id": uid})
+        await db.notifications.delete_many({"user_id": uid})
+        await db.kyc_documents.delete_many({"user_id": uid})
+        await db.luxury_savings.delete_many({"user_id": uid})
+        await db.activity_logs.delete_many({"user_id": uid})
+        
+        delete_type = "permanent"
+    else:
+        # Soft delete - deactivate
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "is_active": False,
+                "deactivated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        delete_type = "soft"
     
     # Log action
     await db.audit_logs.insert_one({
@@ -19871,11 +19891,15 @@ async def delete_user_admin(uid: str):
         "entity_type": "user",
         "entity_id": uid,
         "performed_by": "admin",
-        "changes": {"is_active": False},
+        "changes": {
+            "delete_type": delete_type,
+            "email": user_email,
+            "name": user_name
+        },
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    return {"message": "User deleted successfully"}
+    return {"message": f"User {delete_type}ly deleted successfully", "email": user_email}
 
 
 # ========== ADMIN ORDER MANAGEMENT ROUTES (Additional) ==========
