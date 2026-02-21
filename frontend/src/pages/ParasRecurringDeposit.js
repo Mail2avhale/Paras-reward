@@ -4,7 +4,7 @@ import {
   Wallet, TrendingUp, Clock, Calendar, ArrowLeft,
   PiggyBank, Percent, AlertTriangle, CheckCircle2,
   ChevronRight, Info, Sparkles, Building2, ArrowUpRight,
-  ArrowDownRight, History, Settings, RefreshCw
+  ArrowDownRight, History, Settings, RefreshCw, Calculator
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ const ParasRecurringDeposit = () => {
   const [showMigrateModal, setShowMigrateModal] = useState(false);
   const [luxurySavings, setLuxurySavings] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [autoMigrating, setAutoMigrating] = useState(false);
 
   // Create RD form state
   const [newRd, setNewRd] = useState({
@@ -37,11 +38,15 @@ const ParasRecurringDeposit = () => {
     initialDeposit: 0
   });
 
+  // Interest Calculator state
+  const [calcAmount, setCalcAmount] = useState(5000);
+  const [calcTenure, setCalcTenure] = useState(12);
+
   const user = JSON.parse(localStorage.getItem('paras_user') || '{}');
 
   useEffect(() => {
     fetchRdsData();
-    checkLuxurySavings();
+    checkAndAutoMigrateLuxury();
   }, []);
 
   const fetchRdsData = async () => {
@@ -60,15 +65,32 @@ const ParasRecurringDeposit = () => {
     }
   };
 
-  const checkLuxurySavings = async () => {
+  // Auto-migrate Luxury Life savings to RD
+  const checkAndAutoMigrateLuxury = async () => {
     try {
       const response = await fetch(`${API}/luxury-life/savings/${user.uid}`);
       const data = await response.json();
-      if (data.total_savings > 0 && !data.migrated_to_rd) {
+      
+      if (data.total_savings > 100 && !data.migrated_to_rd) {
+        // Auto-migrate
+        setAutoMigrating(true);
         setLuxurySavings(data);
+        
+        const migrateResponse = await fetch(`${API}/rd/migrate-from-luxury/${user.uid}`, {
+          method: 'POST'
+        });
+        
+        const migrateData = await migrateResponse.json();
+        if (migrateData.success) {
+          toast.success(`Successfully converted ₹${formatCurrency(data.total_savings)} PRC to RD!`);
+          setLuxurySavings(null);
+          fetchRdsData();
+        }
+        setAutoMigrating(false);
       }
     } catch (error) {
-      console.error('Error checking luxury savings:', error);
+      console.error('Error checking/migrating luxury savings:', error);
+      setAutoMigrating(false);
     }
   };
 
@@ -93,7 +115,7 @@ const ParasRecurringDeposit = () => {
       
       const data = await response.json();
       if (data.success) {
-        toast.success('🎉 RD created successfully!');
+        toast.success('RD created successfully!');
         setShowCreateModal(false);
         fetchRdsData();
       } else {
@@ -102,30 +124,6 @@ const ParasRecurringDeposit = () => {
     } catch (error) {
       console.error('Error creating RD:', error);
       toast.error('Failed to create RD');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleMigrateLuxury = async () => {
-    try {
-      setProcessing(true);
-      const response = await fetch(`${API}/rd/migrate-from-luxury/${user.uid}`, {
-        method: 'POST'
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('🎉 Luxury savings migrated to RD!');
-        setShowMigrateModal(false);
-        setLuxurySavings(null);
-        fetchRdsData();
-      } else {
-        toast.error(data.detail || 'Migration failed');
-      }
-    } catch (error) {
-      console.error('Error migrating:', error);
-      toast.error('Failed to migrate');
     } finally {
       setProcessing(false);
     }
@@ -182,6 +180,22 @@ const ParasRecurringDeposit = () => {
     };
   };
 
+  // Interest Calculator function
+  const calculateInterest = () => {
+    const tenure = TENURE_OPTIONS.find(t => t.months === calcTenure) || TENURE_OPTIONS[1];
+    const quarterlyRate = tenure.rate / 100 / 4;
+    const quarters = calcTenure / 3;
+    const maturity = calcAmount * Math.pow(1 + quarterlyRate, quarters);
+    const interest = maturity - calcAmount;
+    
+    return {
+      principal: calcAmount,
+      rate: tenure.rate,
+      interest: interest,
+      maturity: maturity
+    };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black flex items-center justify-center">
@@ -211,28 +225,22 @@ const ParasRecurringDeposit = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Migration Banner - Show if user has Luxury Savings */}
-        {luxurySavings && luxurySavings.total_savings > 0 && (
+        {/* Auto Migration Notification */}
+        {autoMigrating && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-2xl p-4 border border-amber-500/30"
           >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500/20 rounded-full">
-                <Sparkles className="w-5 h-5 text-amber-400" />
+            <div className="flex items-center gap-3">
+              <div className="animate-spin">
+                <RefreshCw className="w-5 h-5 text-amber-400" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-amber-400">Luxury Life → RD रूपांतरण</h3>
-                <p className="text-sm text-amber-200/80 mt-1">
-                  तुमची ₹{formatCurrency(luxurySavings.total_savings)} PRC Luxury savings RD मध्ये convert करा आणि 8.5% व्याज मिळवा!
+              <div>
+                <h3 className="font-bold text-amber-400">Converting Luxury Life Savings...</h3>
+                <p className="text-sm text-amber-200/80">
+                  Please wait while we convert your savings to RD.
                 </p>
-                <button
-                  onClick={() => setShowMigrateModal(true)}
-                  className="mt-3 px-4 py-2 bg-amber-500 text-black rounded-full text-sm font-bold"
-                >
-                  आता Convert करा →
-                </button>
               </div>
             </div>
           </motion.div>
@@ -282,6 +290,66 @@ const ParasRecurringDeposit = () => {
             <span className="px-3 py-1 bg-gray-700/50 rounded-full text-gray-400 text-xs">
               20% Auto-Deduction
             </span>
+          </div>
+        </motion.div>
+
+        {/* Interest Calculator Widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl p-5 border border-blue-500/30"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Calculator className="w-5 h-5 text-blue-400" />
+            <h3 className="font-semibold text-white">Interest Calculator</h3>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Deposit Amount (PRC)</label>
+              <input
+                type="number"
+                value={calcAmount}
+                onChange={(e) => setCalcAmount(Number(e.target.value) || 0)}
+                className="w-full p-3 bg-gray-800/70 rounded-xl text-white border border-gray-700 focus:border-blue-500 outline-none"
+                placeholder="Enter amount"
+                data-testid="calc-amount-input"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Tenure</label>
+              <select
+                value={calcTenure}
+                onChange={(e) => setCalcTenure(Number(e.target.value))}
+                className="w-full p-3 bg-gray-800/70 rounded-xl text-white border border-gray-700 focus:border-blue-500 outline-none"
+                data-testid="calc-tenure-select"
+              >
+                {TENURE_OPTIONS.map(opt => (
+                  <option key={opt.months} value={opt.months}>
+                    {opt.label} @ {opt.rate}%
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Calculator Results */}
+          <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-700">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-xs text-gray-500">Principal</p>
+                <p className="text-lg font-bold text-white">₹{formatCurrency(calculateInterest().principal)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Interest ({calculateInterest().rate}%)</p>
+                <p className="text-lg font-bold text-blue-400">+₹{formatCurrency(calculateInterest().interest)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Maturity</p>
+                <p className="text-lg font-bold text-emerald-400">₹{formatCurrency(calculateInterest().maturity)}</p>
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -407,7 +475,7 @@ const ParasRecurringDeposit = () => {
                 {rd.migrated_from_luxury && (
                   <div className="flex items-center gap-1 text-xs text-amber-400 mb-3">
                     <Sparkles className="w-3 h-3" />
-                    <span>Migrated from Luxury Life</span>
+                    <span>Converted from Luxury Life</span>
                   </div>
                 )}
                 
@@ -437,7 +505,7 @@ const ParasRecurringDeposit = () => {
                     onClick={() => handleWithdraw(rd.rd_id)}
                     className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl text-black font-bold"
                   >
-                    🎉 Claim Maturity Amount
+                    Claim Maturity Amount
                   </button>
                 )}
               </motion.div>
@@ -450,9 +518,9 @@ const ParasRecurringDeposit = () => {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-gray-400 space-y-2">
-              <p><strong className="text-white">Auto-Deduction:</strong> 20% तुमच्या mining earnings मधून RD मध्ये automatically जमा होते.</p>
-              <p><strong className="text-white">Premature Withdrawal:</strong> Maturity आधी withdraw केल्यास 3% penalty लागेल.</p>
-              <p><strong className="text-white">Interest:</strong> Quarterly compounding सह calculate होते.</p>
+              <p><strong className="text-white">Auto-Deduction:</strong> 20% of your mining earnings are automatically deposited to RD.</p>
+              <p><strong className="text-white">Premature Withdrawal:</strong> 3% penalty applies if withdrawn before maturity.</p>
+              <p><strong className="text-white">Interest:</strong> Calculated with quarterly compounding.</p>
             </div>
           </div>
         </div>
@@ -592,7 +660,7 @@ const ParasRecurringDeposit = () => {
                 </div>
                 <h3 className="text-xl font-bold text-white">Early Withdrawal</h3>
                 <p className="text-gray-400 text-sm mt-2">
-                  Maturity आधी withdraw केल्यास 3% penalty लागेल
+                  A 3% penalty will apply for early withdrawal
                 </p>
               </div>
               
@@ -606,7 +674,7 @@ const ParasRecurringDeposit = () => {
                   <span className="text-red-400">-₹{formatCurrency(selectedRd.current_value * 0.03)}</span>
                 </div>
                 <div className="border-t border-gray-700 pt-2 flex justify-between">
-                  <span className="text-white font-medium">You'll Receive</span>
+                  <span className="text-white font-medium">You&apos;ll Receive</span>
                   <span className="text-emerald-400 font-bold">
                     ₹{formatCurrency(selectedRd.current_value * 0.97)} PRC
                   </span>
@@ -627,84 +695,6 @@ const ParasRecurringDeposit = () => {
                   data-testid="confirm-withdraw-btn"
                 >
                   {processing ? 'Processing...' : 'Withdraw'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Migration Modal */}
-      <AnimatePresence>
-        {showMigrateModal && luxurySavings && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setShowMigrateModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-sm bg-gray-900 rounded-2xl p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-8 h-8 text-amber-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Luxury → RD Migration</h3>
-                <p className="text-gray-400 text-sm mt-2">
-                  तुमची Luxury Life savings 12-month RD मध्ये convert होईल
-                </p>
-              </div>
-              
-              <div className="bg-amber-500/10 rounded-xl p-4 mb-6 border border-amber-500/30 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Mobile Savings</span>
-                  <span className="text-white">₹{formatCurrency(luxurySavings.products?.find(p => p.key === 'mobile')?.current_savings || 0)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Bike Savings</span>
-                  <span className="text-white">₹{formatCurrency(luxurySavings.products?.find(p => p.key === 'bike')?.current_savings || 0)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Car Savings</span>
-                  <span className="text-white">₹{formatCurrency(luxurySavings.products?.find(p => p.key === 'car')?.current_savings || 0)}</span>
-                </div>
-                <div className="border-t border-amber-500/30 pt-2 flex justify-between">
-                  <span className="text-white font-medium">Total</span>
-                  <span className="text-amber-400 font-bold">₹{formatCurrency(luxurySavings.total_savings)} PRC</span>
-                </div>
-              </div>
-              
-              <div className="bg-emerald-500/10 rounded-xl p-4 mb-6 border border-emerald-500/30">
-                <p className="text-sm text-gray-400 mb-2">New RD Details</p>
-                <div className="space-y-1 text-sm">
-                  <p className="text-white">📅 Tenure: <strong>12 Months</strong></p>
-                  <p className="text-white">💰 Interest: <strong className="text-emerald-400">8.5% p.a.</strong></p>
-                  <p className="text-white">🎯 Expected Maturity: <strong className="text-emerald-400">
-                    ₹{formatCurrency(luxurySavings.total_savings * 1.085)}
-                  </strong></p>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowMigrateModal(false)}
-                  className="flex-1 py-3 bg-gray-800 rounded-xl text-gray-300 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleMigrateLuxury}
-                  disabled={processing}
-                  className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl text-black font-bold disabled:opacity-50"
-                  data-testid="confirm-migrate-btn"
-                >
-                  {processing ? 'Converting...' : 'Convert Now'}
                 </button>
               </div>
             </motion.div>
