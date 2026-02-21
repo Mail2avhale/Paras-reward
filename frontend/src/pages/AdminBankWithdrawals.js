@@ -44,6 +44,7 @@ const AdminBankWithdrawals = ({ user }) => {
 
   useEffect(() => {
     fetchRequests();
+    fetchRdRequests();
   }, [statusFilter, page, debouncedSearch]);
 
   const fetchRequests = async () => {
@@ -65,6 +66,23 @@ const AdminBankWithdrawals = ({ user }) => {
       toast.error('Failed to load requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRdRequests = async () => {
+    try {
+      const response = await axios.get(`${API}/rd/admin/redeem-requests`, {
+        params: { 
+          status: statusFilter === 'all' ? null : statusFilter,
+          skip: (page - 1) * ITEMS_PER_PAGE,
+          limit: ITEMS_PER_PAGE,
+          search: debouncedSearch || undefined
+        }
+      });
+      setRdRequests(response.data.requests || []);
+      setRdStats(response.data.stats || {});
+    } catch (error) {
+      console.error('Error fetching RD requests:', error);
     }
   };
 
