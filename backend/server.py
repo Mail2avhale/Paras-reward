@@ -1603,8 +1603,9 @@ SUBSCRIPTION_PLANS = {
         "is_free": False,
         "default_price": 299
     },
+    # Growth plan discontinued - kept for backward compatibility of existing users
     "growth": {
-        "name": "Growth",
+        "name": "Growth (Discontinued)",
         "multiplier": 2.0,
         "referral_weight": 0.55,
         "tap_limit": 100,
@@ -1612,7 +1613,8 @@ SUBSCRIPTION_PLANS = {
         "daily_max_prc": 100,
         "can_redeem": True,
         "is_free": False,
-        "default_price": 549
+        "default_price": 549,
+        "discontinued": True
     },
     "elite": {
         "name": "Elite",
