@@ -8186,6 +8186,148 @@ async def check_expired_subscriptions():
     }
 
 
+@api_router.get("/admin/user/{uid}/fraud-score")
+async def get_user_fraud_score(uid: str):
+    """
+    Calculate comprehensive fraud risk score for a user (0-100)
+    Higher score = Higher risk
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    score = 0
+    risk_factors = []
+    
+    # 1. Account Age (New accounts = higher risk)
+    created_at = user.get("created_at")
+    if created_at:
+        try:
+            created = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            account_age_days = (now - created).days
+            if account_age_days < 7:
+                score += 20
+                risk_factors.append(f"New account ({account_age_days} days old)")
+            elif account_age_days < 30:
+                score += 10
+                risk_factors.append(f"Account less than 30 days old")
+        except:
+            pass
+    
+    # 2. KYC Status
+    kyc_status = user.get("kyc_status")
+    if kyc_status not in ["verified", "approved"]:
+        score += 15
+        risk_factors.append("KYC not verified")
+    
+    # 3. Multiple failed login attempts
+    failed_logins = user.get("failed_login_attempts", 0)
+    if failed_logins >= 5:
+        score += 15
+        risk_factors.append(f"Multiple failed logins ({failed_logins})")
+    elif failed_logins >= 3:
+        score += 8
+        risk_factors.append(f"Recent failed logins ({failed_logins})")
+    
+    # 4. IP reputation
+    registration_ip = user.get("registration_ip")
+    if registration_ip:
+        # Check how many accounts from same IP
+        same_ip_count = await db.users.count_documents({"registration_ip": registration_ip})
+        if same_ip_count >= 5:
+            score += 20
+            risk_factors.append(f"IP has {same_ip_count} accounts")
+        elif same_ip_count >= 3:
+            score += 10
+            risk_factors.append(f"IP has multiple accounts ({same_ip_count})")
+    
+    # 5. Device fingerprint check
+    device = user.get("device_fingerprint") or user.get("device_id")
+    if device:
+        same_device_count = await db.users.count_documents({
+            "$or": [
+                {"device_fingerprint": device},
+                {"device_id": device}
+            ]
+        })
+        if same_device_count >= 3:
+            score += 20
+            risk_factors.append(f"Device linked to {same_device_count} accounts")
+    
+    # 6. Transaction velocity (last 24 hours)
+    yesterday = (now - timedelta(days=1)).isoformat()
+    
+    bill_count = await db.bill_payment_requests.count_documents({
+        "user_id": uid,
+        "created_at": {"$gte": yesterday}
+    })
+    if bill_count >= 5:
+        score += 10
+        risk_factors.append(f"High transaction velocity ({bill_count} bill payments today)")
+    
+    # 7. Large redemption amounts
+    total_redeemed = user.get("total_redeemed_inr", 0)
+    if total_redeemed > 50000:
+        score += 5
+        risk_factors.append(f"High total redemptions (₹{total_redeemed:,.0f})")
+    
+    # 8. Referral patterns
+    referral_code = user.get("referral_code")
+    if referral_code:
+        referral_count = await db.users.count_documents({"referred_by": referral_code})
+        if referral_count > 20:
+            # Check if referrals are from same IP
+            referrals_same_ip = await db.users.count_documents({
+                "referred_by": referral_code,
+                "registration_ip": registration_ip
+            })
+            if referrals_same_ip > 3:
+                score += 25
+                risk_factors.append(f"Suspicious referral pattern ({referrals_same_ip} from same IP)")
+    
+    # 9. Night activity check
+    last_login = user.get("last_login_at")
+    if last_login:
+        try:
+            login_time = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+            if login_time.hour >= 0 and login_time.hour <= 5:
+                score += 5
+                risk_factors.append("Frequent night activity (12 AM - 5 AM)")
+        except:
+            pass
+    
+    # 10. Subscription anomaly
+    plan = user.get("subscription_plan", "explorer")
+    if plan != "explorer" and account_age_days < 7 if 'account_age_days' in dir() else False:
+        score += 10
+        risk_factors.append("Premium subscription on new account")
+    
+    # Cap score at 100
+    score = min(100, score)
+    
+    # Determine risk level
+    if score >= 70:
+        risk_level = "critical"
+    elif score >= 50:
+        risk_level = "high"
+    elif score >= 30:
+        risk_level = "medium"
+    else:
+        risk_level = "low"
+    
+    return {
+        "uid": uid,
+        "email": user.get("email"),
+        "name": user.get("name"),
+        "fraud_score": score,
+        "risk_level": risk_level,
+        "risk_factors": risk_factors,
+        "recommendation": "Block user" if score >= 70 else ("Review manually" if score >= 50 else ("Monitor" if score >= 30 else "Safe")),
+        "checked_at": now.isoformat()
+    }
+
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
