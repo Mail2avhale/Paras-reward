@@ -170,6 +170,7 @@ const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "
 // AdminDeliveryPartners removed - feature deprecated
 const AdminUser360 = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
 const AdminLuxuryClaims = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
+const AdminRecurringDeposits = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
