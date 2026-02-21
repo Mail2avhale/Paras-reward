@@ -7176,7 +7176,7 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
         "type": "credit",
         "wallet_type": "prc",
         "amount": user_receives,
-        "description": f"Tap game rewards ({taps_to_add} taps)" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
+        "description": f"Tap game rewards ({taps_to_add} taps)" + (f" - {round(luxury_deduction, 2)} to RD" if luxury_deduction > 0 else ""),
         "balance_after": user.get("prc_balance", 0) + user_receives,
         "created_at": now.isoformat()
     })
