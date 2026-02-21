@@ -4608,11 +4608,18 @@ async def login(
         print(f"[LOGIN AUTO-SYNC] Syncing membership_type for: {user.get('email')}")
         await db.users.update_one({"uid": user["uid"]}, {"$set": {"membership_type": "vip"}})
     
-    # Reset PRC only for truly free users
-    if user_is_free and user.get("prc_balance", 0) > 0:
-        print(f"[LOGIN PRC RESET] Resetting PRC for free user: {user.get('email')}")
-        await db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
-        user["prc_balance"] = 0
+    # ========== PRC RESET DISABLED ==========
+    # CRITICAL FIX: DO NOT reset PRC on login anymore
+    # This was causing paid users to lose their balance due to incorrect plan detection
+    # PRC expiry/burn is handled separately by scheduled tasks, NOT on login
+    # 
+    # OLD CODE (DISABLED):
+    # if user_is_free and user.get("prc_balance", 0) > 0:
+    #     print(f"[LOGIN PRC RESET] Resetting PRC for free user: {user.get('email')}")
+    #     await db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
+    #     user["prc_balance"] = 0
+    #
+    # =========================================
     
     # Generate JWT tokens for admin users
     token_id = str(uuid.uuid4())
