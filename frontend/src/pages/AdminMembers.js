@@ -192,7 +192,7 @@ const AdminMembers = () => {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatsCard
             icon={Users}
             title="Total Members"
@@ -205,19 +205,6 @@ const AdminMembers = () => {
             value={dashboard?.summary?.active_members}
             subtitle={`${((dashboard?.summary?.active_members / dashboard?.summary?.total_members) * 100 || 0).toFixed(1)}% of total`}
             color="bg-green-600"
-          />
-          <StatsCard
-            icon={UserX}
-            title="Inactive Members"
-            value={dashboard?.summary?.inactive_members}
-            color="bg-red-600"
-          />
-          <StatsCard
-            icon={Crown}
-            title="Elite Members"
-            value={dashboard?.subscription_breakdown?.elite?.count || 0}
-            subtitle="Premium tier"
-            color="bg-amber-600"
           />
           <StatsCard
             icon={TrendingUp}
@@ -233,6 +220,60 @@ const AdminMembers = () => {
             subtitle="Next 7 days"
             color="bg-orange-600"
           />
+        </div>
+
+        {/* Subscription Plans Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-gray-700/50 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 bg-gray-600/30 text-gray-300 rounded-full text-sm font-medium">EXPLORER</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.explorer?.count || 0}</p>
+            <p className="text-gray-500 text-sm mt-1">Free members</p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-gradient-to-br from-blue-900/50 to-blue-950/50 border border-blue-700/50 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 bg-blue-600/30 text-blue-300 rounded-full text-sm font-medium">STARTUP</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.startup?.count || 0}</p>
+            <p className="text-blue-400/70 text-sm mt-1">₹299/month</p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border border-purple-700/50 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 bg-purple-600/30 text-purple-300 rounded-full text-sm font-medium">GROWTH</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.growth?.count || 0}</p>
+            <p className="text-purple-400/70 text-sm mt-1">₹549/month</p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gradient-to-br from-amber-900/50 to-amber-950/50 border border-amber-700/50 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 bg-amber-600/30 text-amber-300 rounded-full text-sm font-medium">ELITE</span>
+            </div>
+            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.elite?.count || 0}</p>
+            <p className="text-amber-400/70 text-sm mt-1">₹799/month</p>
+          </motion.div>
         </div>
 
         {/* New Joinings Summary */}
