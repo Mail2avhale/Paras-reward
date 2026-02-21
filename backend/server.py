@@ -534,7 +534,7 @@ async def verify_management(uid: str):
 
 # ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
 # Use this function EVERYWHERE instead of checking membership_type
-PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]
+PAID_PLANS = ["startup", "elite", "vip", "pro"]  # Growth plan discontinued
 
 def is_paid_subscriber(user: dict) -> bool:
     """
