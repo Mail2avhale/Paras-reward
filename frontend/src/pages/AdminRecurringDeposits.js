@@ -72,6 +72,28 @@ const AdminRecurringDeposits = ({ user }) => {
     }
   };
 
+  const bulkMigrateLuxury = async () => {
+    if (!window.confirm('This will convert ALL users\' Luxury Life savings to RD accounts. Continue?')) {
+      return;
+    }
+    
+    try {
+      toast.info('Starting bulk migration...');
+      const response = await fetch(`${API}/rd/admin/bulk-migrate-luxury`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Migrated ${data.migrated_count} users (₹${formatCurrency(data.total_migrated_amount)} PRC)`);
+        fetchRds();
+      } else {
+        toast.error(data.detail || 'Migration failed');
+      }
+    } catch (error) {
+      toast.error('Failed to migrate');
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN').format(Math.round(amount || 0));
   };
