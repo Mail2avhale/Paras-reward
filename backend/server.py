@@ -6176,7 +6176,7 @@ async def claim_mining(uid: str):
     await create_notification(
         user_id=uid,
         title="Mining Rewards Claimed! ⛏️",
-        message=f"You've claimed {round(user_receives, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC" + (f" ({round(luxury_deduction, 2)} PRC saved for Luxury Life)" if luxury_deduction > 0 else ""),
+        message=f"You've claimed {round(user_receives, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC" + (f" ({round(luxury_deduction, 2)} PRC saved for RD)" if luxury_deduction > 0 else ""),
         notification_type="mining",
         related_id=None,
         icon="⛏️"
