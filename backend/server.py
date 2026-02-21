@@ -25381,7 +25381,7 @@ async def tap_rain_drop(request: Request):
             user_id=user_id,
             transaction_type="prc_rain_gain" if prc_change > 0 else "prc_rain_loss",
             amount=abs(actual_balance_change),
-            description="PRC Rain Drop" + (f" - {round(luxury_deduction, 2)} to Luxury Life" if luxury_deduction > 0 else ""),
+            description="PRC Rain Drop" + (f" - {round(luxury_deduction, 2)} to RD" if luxury_deduction > 0 else ""),
             wallet_type="prc"
         )
     
