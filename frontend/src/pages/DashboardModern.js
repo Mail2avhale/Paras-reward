@@ -1048,8 +1048,23 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* ========== REDEEM TO BANK CARD ========== */}
       {/* ========== REDEEM TO BANK CARD (for KYC verified paid users) ========== */}
-      {['startup', 'growth', 'elite'].includes(stats.subscriptionPlan?.toLowerCase()) && 
-       (userData?.kyc_status === 'verified' || userData?.kyc_status === 'approved' || user?.kyc_status === 'verified' || user?.kyc_status === 'approved') && (
+      {/* Debug: Check console for condition values */}
+      {(() => {
+        const plan = (stats.subscriptionPlan || userData?.subscription_plan || user?.subscription_plan || '').toLowerCase();
+        const kycFromUserData = userData?.kyc_status?.toLowerCase();
+        const kycFromUser = user?.kyc_status?.toLowerCase();
+        const kycStatus = kycFromUserData || kycFromUser || '';
+        const isPaidPlan = ['startup', 'growth', 'elite'].includes(plan);
+        const isKycVerified = ['verified', 'approved'].includes(kycStatus);
+        
+        // Debug logging - remove after fixing
+        if (typeof window !== 'undefined' && !window._redeemDebugLogged) {
+          console.log('[REDEEM DEBUG] Plan:', plan, 'KYC:', kycStatus, 'isPaid:', isPaidPlan, 'isKycVerified:', isKycVerified);
+          window._redeemDebugLogged = true;
+        }
+        
+        if (isPaidPlan && isKycVerified) {
+          return (
         <div className="px-5 mb-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
