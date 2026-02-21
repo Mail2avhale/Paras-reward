@@ -207,8 +207,12 @@ const AdminBankWithdrawals = ({ user }) => {
     );
   };
 
-  // Sorting for display (approved latest on top) - search is now server-side
-  const filteredRequests = [...requests].sort((a, b) => {
+  // Current list based on request type
+  const currentRequests = requestType === 'bank' ? requests : rdRequests;
+  const currentStats = requestType === 'bank' ? stats : rdStats;
+
+  // Sorting for display (pending first, then by date)
+  const filteredRequests = [...currentRequests].sort((a, b) => {
     if ((a.status === 'approved' || a.status === 'completed') && 
         (b.status === 'approved' || b.status === 'completed')) {
       return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
@@ -225,27 +229,71 @@ const AdminBankWithdrawals = ({ user }) => {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <Building2 className="h-7 w-7 text-green-400" />
-            Bank Redeem Requests
+            Redeem Requests
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Manage PRC to Bank redeem requests</p>
+          <p className="text-gray-400 text-sm mt-1">Manage Bank Redeem & RD Redeem requests</p>
         </div>
-        <Button onClick={fetchRequests} variant="outline" className="gap-2">
+        <Button onClick={() => { fetchRequests(); fetchRdRequests(); }} variant="outline" className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
+      </div>
+
+      {/* Request Type Tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => { setRequestType('bank'); setPage(1); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+            requestType === 'bank' 
+              ? 'bg-green-500 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          Bank Redeem
+          {stats.pending?.count > 0 && (
+            <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
+              {stats.pending.count}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => { setRequestType('rd'); setPage(1); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+            requestType === 'rd' 
+              ? 'bg-emerald-500 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <PiggyBank className="w-4 h-4" />
+          RD Redeem
+          {rdStats.pending > 0 && (
+            <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
+              {rdStats.pending}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
           <p className="text-yellow-400 text-sm">Pending</p>
-          <p className="text-2xl font-bold text-white">{stats.pending?.count || 0}</p>
-          <p className="text-yellow-400/70 text-xs">₹{(stats.pending?.total || 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">
+            {requestType === 'bank' ? (stats.pending?.count || 0) : (rdStats.pending || 0)}
+          </p>
+          {requestType === 'bank' && (
+            <p className="text-yellow-400/70 text-xs">₹{(stats.pending?.total || 0).toLocaleString()}</p>
+          )}
         </div>
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
           <p className="text-green-400 text-sm">Approved</p>
-          <p className="text-2xl font-bold text-white">{stats.approved?.count || 0}</p>
-          <p className="text-green-400/70 text-xs">₹{(stats.approved?.total || 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">
+            {requestType === 'bank' ? (stats.approved?.count || 0) : (rdStats.approved || 0)}
+          </p>
+          {requestType === 'bank' && (
+            <p className="text-green-400/70 text-xs">₹{(stats.approved?.total || 0).toLocaleString()}</p>
+          )}
         </div>
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
           <p className="text-red-400 text-sm">Rejected</p>
