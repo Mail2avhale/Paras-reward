@@ -1639,7 +1639,7 @@ async def get_subscription_pricing():
     
     default_pricing = {
         "startup": {"monthly": 299},
-        "growth": {"monthly": 549},
+        # "growth": {"monthly": 549},  # Discontinued
         "elite": {"monthly": 799}
     }
     
