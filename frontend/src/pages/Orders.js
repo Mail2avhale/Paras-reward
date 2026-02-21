@@ -763,24 +763,20 @@ const Orders = ({ user, onLogout }) => {
                               <p className="text-amber-400 text-xs font-semibold mb-1">
                                 ⏱️ Estimated Processing Time:
                               </p>
-                              <p className="text-amber-300 text-sm">
-                                {request.type === 'bank_redeem' 
-                                  ? '3-5 business days' 
-                                  : request.type === 'bill_payment' 
-                                    ? '1-3 business days'
-                                    : request.type === 'gift_voucher'
-                                      ? '24-48 hours'
-                                      : '3-7 business days'}
+                              <p className={`text-sm font-medium ${getProcessingTime(request.type, request.request_type).color}`}>
+                                {getProcessingTime(request.type, request.request_type).time}
                               </p>
                               {/* Check if request is taking longer than expected */}
                               {request.created_at && (() => {
                                 const daysSinceCreation = Math.floor((new Date() - new Date(request.created_at)) / (1000 * 60 * 60 * 24));
-                                const expectedDays = request.type === 'bank_redeem' ? 5 : request.type === 'bill_payment' ? 3 : request.type === 'gift_voucher' ? 2 : 7;
+                                const expectedDays = (request.type === 'bank_redeem' || request.type === 'rd_redeem' || request.request_type === 'loan_emi') ? 7 
+                                  : (request.type === 'bill_payment' || request.type === 'gift_voucher') ? 2 
+                                  : 1;
                                 if (daysSinceCreation >= expectedDays) {
                                   return (
                                     <div className="mt-2 p-2 bg-blue-500/10 rounded border border-blue-500/30">
                                       <p className="text-blue-300 text-xs">
-                                        🙏 <strong>Thank you for your patience!</strong> Your request is taking a bit longer than usual. Our team is working on it. If you have concerns, please contact support.
+                                        🙏 <strong>Thank you for your patience!</strong> Your request is taking a bit longer than usual. Our team is working on it.
                                       </p>
                                     </div>
                                   );
