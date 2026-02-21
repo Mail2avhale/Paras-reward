@@ -659,13 +659,13 @@ const ParasRecurringDeposit = () => {
                 <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertTriangle className="w-8 h-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Early Redemption</h3>
+                <h3 className="text-xl font-bold text-white">RD Redeem Request</h3>
                 <p className="text-gray-400 text-sm mt-2">
-                  A 3% penalty will apply for early redemption
+                  3% penalty + Admin approval required
                 </p>
               </div>
               
-              <div className="bg-gray-800/50 rounded-xl p-4 mb-6 space-y-2">
+              <div className="bg-gray-800/50 rounded-xl p-4 mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Current Value</span>
                   <span className="text-white">₹{formatCurrency(selectedRd.current_value)}</span>
