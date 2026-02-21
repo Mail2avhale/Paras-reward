@@ -1697,6 +1697,34 @@ const AdminUser360 = ({ user: adminUser }) => {
                   <Ban className="w-4 h-4 mr-2" />
                   Block User
                 </Button>
+                <Button
+                  onClick={async () => {
+                    const userEmail = userData?.user?.email || 'this user';
+                    const confirmation = prompt(`⚠️ DANGER: This will permanently delete ${userEmail}.\n\nType "DELETE" to confirm:`);
+                    if (confirmation === 'DELETE') {
+                      setProcessing(true);
+                      try {
+                        await axios.delete(`${API}/admin/users/${userData.user.uid}/delete`);
+                        toast.success('User deleted successfully');
+                        setUserData(null);
+                        setSearchQuery('');
+                      } catch (error) {
+                        toast.error(error.response?.data?.detail || 'Failed to delete user');
+                      } finally {
+                        setProcessing(false);
+                      }
+                    } else if (confirmation !== null) {
+                      toast.error('Deletion cancelled - confirmation text did not match');
+                    }
+                  }}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-red-600/50 text-red-500 hover:bg-red-500/10"
+                  data-testid="delete-user-button"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete User
+                </Button>
               </div>
             </Card>
 
