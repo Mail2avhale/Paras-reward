@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://prc-collect-fix.preview.emergentagent.com/setup
+   https://admin-analytics-hub-4.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

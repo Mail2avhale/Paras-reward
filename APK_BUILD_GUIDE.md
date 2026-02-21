@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://prc-collect-fix.preview.emergentagent.com",
+    "url": "https://admin-analytics-hub-4.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
