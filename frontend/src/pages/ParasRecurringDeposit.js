@@ -489,7 +489,7 @@ const ParasRecurringDeposit = () => {
                       className="flex-1 py-2 bg-gray-800 rounded-xl text-gray-300 text-sm font-medium"
                       data-testid={`withdraw-btn-${rd.rd_id}`}
                     >
-                      Withdraw Early
+                      Redeem Early
                     </button>
                     <button
                       onClick={() => navigate(`/rd/${rd.rd_id}`)}
