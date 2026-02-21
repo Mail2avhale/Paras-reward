@@ -8285,6 +8285,13 @@ async def approve_vip_payment(payment_id: str, request: Request):
                             "admin_notes": notes,
                             "subscription_extended": start_date != now,
                             "new_expiry": new_expiry,
+                            # NEW vs RENEWAL tracking
+                            "subscription_type": subscription_type,  # "new", "renewal", "upgrade", "downgrade"
+                            "is_renewal": is_renewal,
+                            "is_upgrade": is_upgrade,
+                            "is_downgrade": is_downgrade,
+                            "previous_plan": previous_plan,
+                            "user_subscription_count": subscription_count + 1,
                             # Fraud prevention tracking
                             "plan_corrected": plan_corrected,
                             "original_plan_claimed": original_plan,
