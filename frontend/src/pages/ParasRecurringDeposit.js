@@ -682,6 +682,12 @@ const ParasRecurringDeposit = () => {
                 </div>
               </div>
               
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
+                <p className="text-blue-400 text-xs text-center">
+                  Your request will be sent to admin for approval. Amount will be credited to your bank account after approval.
+                </p>
+              </div>
+              
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowWithdrawModal(false)}
@@ -695,7 +701,7 @@ const ParasRecurringDeposit = () => {
                   className="flex-1 py-3 bg-amber-500 rounded-xl text-black font-bold disabled:opacity-50"
                   data-testid="confirm-withdraw-btn"
                 >
-                  {processing ? 'Processing...' : 'Redeem'}
+                  {processing ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </motion.div>
