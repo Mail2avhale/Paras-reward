@@ -140,7 +140,9 @@ const ParasRecurringDeposit = () => {
       
       const data = await response.json();
       if (data.success) {
-        toast.success('Redeem request submitted! Admin will review shortly.');
+        toast.success('✅ RD Redeem Request Submitted!\n\nProcessing Time: 3 to 7 days. Amount will be credited to your bank account after admin approval.', {
+          duration: 6000,
+        });
         setShowWithdrawModal(false);
         setSelectedRd(null);
         fetchRdsData();
