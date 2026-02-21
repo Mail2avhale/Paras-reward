@@ -7244,12 +7244,16 @@ async def get_subscription_plans():
     # Special Offer Prices (Limited Time)
     special_offers = {
         "startup": {"original": 500, "offer": 299, "discount": 40},
-        "growth": {"original": 1000, "offer": 549, "discount": 45},
+        # "growth": {"original": 1000, "offer": 549, "discount": 45},  # Discontinued
         "elite": {"original": 2000, "offer": 799, "discount": 60}
     }
     
     plans = []
     for plan_id, config in SUBSCRIPTION_PLANS.items():
+        # Skip discontinued plans
+        if config.get("discontinued"):
+            continue
+            
         if config["is_free"]:
             plans.append({
                 "id": plan_id,
