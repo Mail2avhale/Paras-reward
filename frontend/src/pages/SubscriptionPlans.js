@@ -278,7 +278,7 @@ const SubscriptionPlans = ({ user }) => {
               const IconComponent = planIcons[plan.id] || Star;
               const isCurrentPlan = currentSubscription?.plan === plan.id;
               const offer = specialOffers[plan.id];
-              const isPopular = plan.id === 'growth';
+              const isPopular = plan.id === 'elite';  // Elite is now the most popular
               const isBest = plan.id === 'elite';
               
               return (
