@@ -1465,34 +1465,6 @@ class DeliveryPartnerCreate(BaseModel):
     commission_type: str = "percentage"
     commission_rate: float = 10.0
 
-# Outlet model deprecated - kept for backward compatibility
-class Outlet(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    outlet_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    owner_name: str
-    email: Optional[str] = None
-    phone: str
-    state: str
-    district: str
-    taluka: str
-    village: str
-    pincode: str
-    sub_stockist_id: Optional[str] = None
-    is_active: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class OutletCreate(BaseModel):
-    name: str
-    owner_name: str
-    email: Optional[str] = None
-    phone: str
-    state: str
-    district: str
-    taluka: str
-    village: str
-    pincode: str
-
 class LeaderboardEntry(BaseModel):
     uid: str
     name: str
