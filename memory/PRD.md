@@ -5,6 +5,61 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### 🏦 Recurring Deposit (RD) System - NEW FEATURE ✅ (Feb 21, 2026)
+**User Request:** Implement a bank-like RD system with interest to replace the old "Luxury Life" feature.
+
+**Features Implemented:**
+1. **Interest Rates:** 6 Months: 7.5%, 1 Year: 8.5%, 2 Years: 9%, 3 Years: 9.25% p.a.
+2. **Auto-Deduction:** 20% of mining earnings automatically deposited to active RD
+3. **Premature Withdrawal:** 3% penalty for early withdrawal
+4. **Luxury → RD Migration:** One-click migration of existing Luxury Life savings to 12-month RD
+5. **Interest Calculation:** Quarterly compounding
+
+**Files Created:**
+- `/app/backend/routes/recurring_deposit.py` - All RD backend logic and APIs
+- `/app/frontend/src/pages/ParasRecurringDeposit.js` - User RD page
+- `/app/frontend/src/pages/AdminRecurringDeposits.js` - Admin RD management
+
+**Files Modified:**
+- `backend/server.py` - Added RD router, updated `process_luxury_savings()` to use RD if active
+- `frontend/src/App.js` - Added routes for `/recurring-deposit`, `/rd`, `/admin/recurring-deposits`
+- `frontend/src/pages/DashboardModern.js` - Added new RD banner above Luxury Life banner
+- `frontend/src/components/layouts/AdminLayout.js` - Added RD to admin sidebar
+
+**API Endpoints (NEW):**
+- `GET /api/rd/interest-rates` - Get all interest rate tiers
+- `POST /api/rd/create` - Create new RD account
+- `GET /api/rd/list/{user_id}` - List all RDs for user with summary
+- `GET /api/rd/details/{rd_id}` - Get detailed RD info
+- `POST /api/rd/deposit/{rd_id}` - Add deposit to RD
+- `POST /api/rd/withdraw/{rd_id}` - Withdraw (with 3% penalty if premature)
+- `POST /api/rd/migrate-from-luxury/{user_id}` - Migrate Luxury Life → RD
+- `POST /api/rd/toggle-auto-deduction/{rd_id}` - Enable/disable auto-deduction
+- `GET /api/rd/admin/all` - Admin: View all RDs with stats
+- `POST /api/rd/admin/process-daily-interest` - Admin: Daily cron job
+- `POST /api/rd/admin/check-matured` - Admin: Check matured RDs
+
+**Database Schema (NEW Collection: `recurring_deposits`):**
+```javascript
+{
+  "rd_id": "RD-2026-XXXXXX",
+  "user_id": "uid",
+  "monthly_deposit": 1000,
+  "tenure_months": 12,  // 6, 12, 24, or 36
+  "interest_rate": 8.5,
+  "total_deposited": 5000,
+  "interest_earned": 212,
+  "expected_maturity_amount": 13020,
+  "status": "active",  // active, matured, withdrawn, closed
+  "migrated_from_luxury": false,
+  "auto_deduction_enabled": true
+}
+```
+
+**Test Results:** ✅ 100% tests passed (23 backend, all frontend verified)
+
+---
+
 ### P0 CRITICAL BUG FIX: PRC Collect Not Working ✅ (Feb 20, 2026)
 **Problem:** Users could not collect their earned PRC. The "Collect Rewards" button showed success message but balance never updated.
 
