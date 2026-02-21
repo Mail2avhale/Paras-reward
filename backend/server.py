@@ -7215,7 +7215,7 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     if luxury_deduction > 0:
         response["luxury_savings"] = {
             "deducted": round(luxury_deduction, 2),
-            "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for Luxury Life! 🏆"
+            "message": f"₹{round(luxury_deduction/10, 2)} auto-saved for RD! 🏦"
         }
     
     return response
