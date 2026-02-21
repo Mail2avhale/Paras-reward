@@ -140,16 +140,16 @@ const ParasRecurringDeposit = () => {
       
       const data = await response.json();
       if (data.success) {
-        toast.success(data.message);
+        toast.success('Redeem request submitted! Admin will review shortly.');
         setShowWithdrawModal(false);
         setSelectedRd(null);
         fetchRdsData();
       } else {
-        toast.error(data.detail || 'Withdrawal failed');
+        toast.error(data.detail || 'Request failed');
       }
     } catch (error) {
-      console.error('Error withdrawing:', error);
-      toast.error('Failed to withdraw');
+      console.error('Error submitting request:', error);
+      toast.error('Failed to submit request');
     } finally {
       setProcessing(false);
     }
