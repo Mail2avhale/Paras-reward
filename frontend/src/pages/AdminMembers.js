@@ -458,7 +458,7 @@ const AdminMembers = () => {
                 className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
               >
                 <option value="">All Plans</option>
-                <option value="explorer">Explorer (Free)</option>
+                <option value="explorer">Explorer</option>
                 <option value="startup">Startup</option>
                 <option value="growth">Growth</option>
                 <option value="elite">Elite</option>
