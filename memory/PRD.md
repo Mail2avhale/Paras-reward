@@ -354,7 +354,8 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Test Credentials
 - Admin: `admin@test.com` / PIN: `123456`
-- Test User: `mail2avhale@gmail.com` / PIN: `123456`
+- Test User: `mail2avhale@gmail.com` / PIN: `152759`
+- Test User with RD: `elite-test-user-123` (RD: RD-2026-C5201C)
 
 ## Upcoming Tasks
 - P0: Verify PRC collection bug is resolved on production (critical user verification pending)
