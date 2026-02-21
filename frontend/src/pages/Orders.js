@@ -130,6 +130,35 @@ const Orders = ({ user, onLogout }) => {
     }
   };
 
+  // Get processing time based on request type
+  const getProcessingTime = (type, subType) => {
+    // Subscription/Renewal - 24 hours
+    if (type === 'subscription' || type === 'vip_payment') {
+      return { time: '24 hours', color: 'text-green-400' };
+    }
+    
+    // Bill Payment (except EMI) - 48 hours
+    if (type === 'bill_payment') {
+      if (subType === 'loan_emi') {
+        return { time: '3 to 7 days', color: 'text-amber-400' };
+      }
+      return { time: '48 hours', color: 'text-blue-400' };
+    }
+    
+    // Gift Cards - 48 hours
+    if (type === 'gift_voucher') {
+      return { time: '48 hours', color: 'text-blue-400' };
+    }
+    
+    // EMI, Bank Redeem, RD Redeem - 3 to 7 days
+    if (type === 'bank_redeem' || type === 'rd_redeem' || type === 'loan_emi') {
+      return { time: '3 to 7 days', color: 'text-amber-400' };
+    }
+    
+    // Default
+    return { time: '3-7 days', color: 'text-gray-400' };
+  };
+
   const getTypeColor = (type) => {
     switch (type) {
       case 'order':
