@@ -108,7 +108,9 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         user_id: user.uid,
         denomination: selectedDenomination
       });
-      toast.success('Voucher redemption request submitted!');
+      toast.success('✅ Voucher Request Submitted!\n\nProcessing Time: 48 hours. You will receive your gift voucher code after approval.', {
+        duration: 6000,
+      });
       setSelectedDenomination(null);
       fetchUserData();
       fetchRequests();
