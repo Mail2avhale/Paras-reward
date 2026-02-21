@@ -222,6 +222,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/kyc': 'kyc',
     '/admin/users': 'users',
     '/admin/user-360': 'users',
+    '/admin/members': 'users',
     '/admin/orders': 'orders',
     // marketplace removed
     '/admin/support': 'support',
