@@ -8081,6 +8081,111 @@ async def downgrade_subscription(uid: str, request: Request):
         "new_plan": "explorer"
     }
 
+
+@api_router.post("/admin/check-expired-subscriptions")
+async def check_expired_subscriptions():
+    """
+    Admin: Check and auto-downgrade expired subscriptions
+    Should be run daily via cron/scheduler
+    """
+    now = datetime.now(timezone.utc)
+    
+    expired_users = []
+    downgraded_count = 0
+    grace_period_users = []
+    
+    # Find all paid users
+    async for user in db.users.find({
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+        "subscription_expiry": {"$exists": True}
+    }):
+        expiry_str = user.get("subscription_expiry")
+        if not expiry_str:
+            continue
+        
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            
+            if expiry < now:
+                days_expired = (now - expiry).days
+                uid = user.get("uid")
+                plan = user.get("subscription_plan")
+                
+                # Grace period: 3 days after expiry
+                if days_expired <= 3:
+                    grace_period_users.append({
+                        "uid": uid,
+                        "email": user.get("email"),
+                        "plan": plan,
+                        "days_expired": days_expired,
+                        "grace_days_left": 3 - days_expired
+                    })
+                    
+                    # Send grace period notification
+                    await db.notifications.insert_one({
+                        "notification_id": str(uuid.uuid4()),
+                        "user_id": uid,
+                        "title": f"🔴 {plan.capitalize()} Expired - Grace Period Active",
+                        "message": f"Your subscription expired {days_expired} day(s) ago. You have {3 - days_expired} day(s) left in grace period. Renew NOW to avoid losing benefits!",
+                        "notification_type": "subscription_expired",
+                        "read": False,
+                        "created_at": now.isoformat()
+                    })
+                else:
+                    # Grace period over - Auto downgrade
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {
+                            "subscription_plan": "explorer",
+                            "previous_subscription_plan": plan,
+                            "subscription_expired_at": expiry_str,
+                            "downgraded_at": now.isoformat(),
+                            "downgrade_reason": "auto_expired"
+                        }}
+                    )
+                    
+                    # Create notification
+                    await db.notifications.insert_one({
+                        "notification_id": str(uuid.uuid4()),
+                        "user_id": uid,
+                        "title": f"⬇️ Downgraded to Explorer",
+                        "message": f"Your {plan.capitalize()} subscription has expired. You've been moved to Explorer (Free) plan. Upgrade anytime to restore benefits!",
+                        "notification_type": "subscription_downgraded",
+                        "read": False,
+                        "created_at": now.isoformat()
+                    })
+                    
+                    # Log activity
+                    await log_activity(
+                        user_id=uid,
+                        action_type="auto_downgrade",
+                        description=f"Auto-downgraded from {plan} to explorer after grace period",
+                        metadata={"old_plan": plan, "days_expired": days_expired}
+                    )
+                    
+                    downgraded_count += 1
+                    expired_users.append({
+                        "uid": uid,
+                        "email": user.get("email"),
+                        "old_plan": plan,
+                        "days_expired": days_expired
+                    })
+                    
+        except Exception as e:
+            print(f"[AUTO-DOWNGRADE] Error processing user {user.get('uid')}: {e}")
+    
+    return {
+        "success": True,
+        "checked_at": now.isoformat(),
+        "downgraded_count": downgraded_count,
+        "downgraded_users": expired_users,
+        "grace_period_users": grace_period_users,
+        "grace_period_count": len(grace_period_users)
+    }
+
+
 # ========== VIP MEMBERSHIP ROUTES ==========
 @api_router.post("/membership/payment/{uid}", response_model=VIPPayment)
 async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
