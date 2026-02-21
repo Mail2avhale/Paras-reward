@@ -1136,6 +1136,43 @@ const DashboardModern = ({ user, onLogout }) => {
         return null;
       })()}
 
+      {/* ========== RECURRING DEPOSIT BANNER ========== */}
+      <div className="px-5 mb-4">
+        <motion.button 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => navigate('/recurring-deposit')}
+          className="w-full relative overflow-hidden rounded-2xl border border-emerald-500/40 hover:border-emerald-500/60 transition-all"
+          data-testid="rd-banner"
+        >
+          {/* Emerald Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/60 via-teal-800/40 to-green-900/60" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptNiA2djZoNnYtNmgtNnptLTYgNmg2djZoLTZ2LTZ6bTYgMGg2djZoLTZ2LTZ6bS0xMi0xMmg2djZoLTZ2LTZ6bTYgMGg2djZoLTZ2LTZ6bS02IDZoNnY2aC02di02em02IDBoNnY2aC02di02eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+          
+          <div className="relative z-10 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 via-teal-300 to-green-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <Building2 className="w-7 h-7 text-emerald-900" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-200 text-base">RECURRING DEPOSIT</h3>
+                  <span className="px-2 py-0.5 bg-emerald-500/30 rounded text-[8px] text-emerald-300 font-bold">NEW</span>
+                </div>
+                <p className="text-emerald-200/70 text-xs italic mt-0.5">&ldquo;Earn up to 9.25% Interest&rdquo;</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-gray-400">💰 20% Auto-Save</span>
+                  <span className="text-[10px] text-gray-400">📈 Compound Interest</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <ChevronRight className="w-6 h-6 text-emerald-400" />
+            </div>
+          </div>
+        </motion.button>
+      </div>
+
       {/* ========== LUXURY LIFE BANNER ========== */}
       <div className="px-5 mb-4">
         <motion.button 
@@ -1156,7 +1193,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="text-left">
                 <div className="flex items-center gap-2">
                   <h3 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-200 text-base">LUXURY LIFE</h3>
-                  <span className="px-2 py-0.5 bg-amber-500/30 rounded text-[8px] text-amber-300 font-bold">20% AUTO-SAVE</span>
+                  <span className="px-2 py-0.5 bg-gray-700/50 rounded text-[8px] text-gray-400 font-bold">LEGACY</span>
                 </div>
                 <p className="text-amber-200/70 text-xs italic mt-0.5">&ldquo;Smart Saving. Live Better.&rdquo;</p>
                 <div className="flex items-center gap-2 mt-1">
