@@ -952,3 +952,165 @@ async def admin_check_matured_rds():
     except Exception as e:
         logging.error(f"Error checking matured RDs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/admin/bulk-migrate-luxury")
+async def admin_bulk_migrate_luxury():
+    """
+    Admin: Bulk migrate ALL users' Luxury Life savings to RD
+    This is a one-time operation to convert all existing Luxury savings
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find all luxury savings records that haven't been migrated
+        luxury_records = await db.luxury_savings.find({
+            "$or": [
+                {"migrated_to_rd": {"$exists": False}},
+                {"migrated_to_rd": False}
+            ],
+            "total_savings": {"$gt": 100}  # Only migrate if > 100 PRC
+        }).to_list(10000)
+        
+        migrated_count = 0
+        skipped_count = 0
+        errors = []
+        total_migrated_amount = 0
+        
+        for luxury in luxury_records:
+            try:
+                user_id = luxury["user_id"]
+                
+                # Get user
+                user = await db.users.find_one({"uid": user_id})
+                if not user:
+                    skipped_count += 1
+                    continue
+                
+                # Check if user already has active RD from migration
+                existing_rd = await db.recurring_deposits.find_one({
+                    "user_id": user_id,
+                    "migrated_from_luxury": True
+                })
+                if existing_rd:
+                    skipped_count += 1
+                    continue
+                
+                # Calculate total luxury savings
+                mobile_savings = luxury.get("mobile_savings", 0) or 0
+                bike_savings = luxury.get("bike_savings", 0) or 0
+                car_savings = luxury.get("car_savings", 0) or 0
+                total_luxury = mobile_savings + bike_savings + car_savings
+                
+                if total_luxury < 100:
+                    skipped_count += 1
+                    continue
+                
+                # Create RD
+                tenure_months = 12
+                interest_rate = RD_INTEREST_RATES[tenure_months]
+                maturity_date = now + timedelta(days=tenure_months * 30)
+                
+                # Calculate expected maturity
+                maturity_calc = calculate_maturity_amount(total_luxury, interest_rate, tenure_months)
+                
+                rd_id = generate_rd_id()
+                rd_record = {
+                    "rd_id": rd_id,
+                    "user_id": user_id,
+                    "user_name": user.get("name", "Unknown"),
+                    "monthly_deposit": 0,
+                    "tenure_months": tenure_months,
+                    "interest_rate": interest_rate,
+                    "total_deposited": total_luxury,
+                    "interest_earned": 0,
+                    "expected_maturity_amount": maturity_calc["maturity_amount"],
+                    "start_date": now.isoformat(),
+                    "maturity_date": maturity_date.isoformat(),
+                    "next_deposit_date": None,
+                    "last_interest_calc_date": now.isoformat(),
+                    "status": "active",
+                    "deposits_made": 1,
+                    "deposits_remaining": 0,
+                    "migrated_from_luxury": True,
+                    "luxury_migration_amount": total_luxury,
+                    "luxury_migration_breakdown": {
+                        "mobile_savings": mobile_savings,
+                        "bike_savings": bike_savings,
+                        "car_savings": car_savings
+                    },
+                    "auto_deduction_enabled": True,
+                    "auto_deduction_percent": RD_AUTO_DEDUCTION_PERCENT,
+                    "deposit_history": [{
+                        "date": now.isoformat(),
+                        "amount": total_luxury,
+                        "source": "bulk_luxury_migration",
+                        "balance_after": total_luxury
+                    }],
+                    "created_at": now.isoformat(),
+                    "updated_at": now.isoformat()
+                }
+                
+                await db.recurring_deposits.insert_one(rd_record)
+                
+                # Mark luxury savings as migrated
+                await db.luxury_savings.update_one(
+                    {"user_id": user_id},
+                    {
+                        "$set": {
+                            "migrated_to_rd": True,
+                            "rd_migration_id": rd_id,
+                            "migration_date": now.isoformat(),
+                            "mobile_savings": 0,
+                            "bike_savings": 0,
+                            "car_savings": 0,
+                            "total_savings": 0,
+                            "updated_at": now.isoformat()
+                        }
+                    }
+                )
+                
+                # Update user
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "has_active_rd": True,
+                            "luxury_migrated_to_rd": True,
+                            "luxury_savings": 0,
+                            "updated_at": now.isoformat()
+                        },
+                        "$inc": {"rd_count": 1}
+                    }
+                )
+                
+                # Create notification
+                await db.notifications.insert_one({
+                    "user_id": user_id,
+                    "title": "Luxury Life Savings Converted to RD!",
+                    "message": f"Your {total_luxury:,.0f} PRC Luxury savings have been converted to a 12-month RD at {interest_rate}% p.a. interest!",
+                    "type": "rd_migration",
+                    "related_id": rd_id,
+                    "read": False,
+                    "created_at": now.isoformat()
+                })
+                
+                migrated_count += 1
+                total_migrated_amount += total_luxury
+                
+            except Exception as e:
+                errors.append({"user_id": luxury.get("user_id"), "error": str(e)})
+        
+        return {
+            "success": True,
+            "message": f"Bulk migration complete: {migrated_count} users migrated, {skipped_count} skipped",
+            "migrated_count": migrated_count,
+            "skipped_count": skipped_count,
+            "total_migrated_amount": total_migrated_amount,
+            "errors": errors[:10] if errors else []  # Return first 10 errors
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in bulk luxury migration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
