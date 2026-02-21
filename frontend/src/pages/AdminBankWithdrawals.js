@@ -140,6 +140,57 @@ const AdminBankWithdrawals = ({ user }) => {
     }
   };
 
+  // RD Redeem handlers
+  const handleRdApprove = async (requestId) => {
+    if (!transactionRef.trim()) {
+      toast.error('Please enter transaction reference number');
+      return;
+    }
+    
+    setProcessing(requestId);
+    try {
+      await axios.post(`${API}/rd/admin/redeem-requests/${requestId}/approve`, null, {
+        params: {
+          admin_id: user.uid,
+          transaction_ref: transactionRef
+        }
+      });
+      toast.success('RD Redeem approved successfully!');
+      setTransactionRef('');
+      setExpandedRequest(null);
+      fetchRdRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleRdReject = async (requestId) => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter rejection reason');
+      return;
+    }
+    
+    setProcessing(requestId);
+    try {
+      await axios.post(`${API}/rd/admin/redeem-requests/${requestId}/reject`, null, {
+        params: {
+          admin_id: user.uid,
+          reason: rejectReason
+        }
+      });
+      toast.success('RD Redeem rejected');
+      setRejectReason('');
+      setExpandedRequest(null);
+      fetchRdRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const config = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock },
