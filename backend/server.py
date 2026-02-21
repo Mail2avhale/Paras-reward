@@ -36416,16 +36416,105 @@ LUXURY_PRODUCTS = {
     }
 }
 
+async def process_rd_auto_deposit(user_id: str, prc_earned: float):
+    """
+    Process RD auto-deposit - deduct 20% from earned PRC and add to active RD
+    This replaces the old Luxury Life system
+    """
+    try:
+        # Calculate 20% deduction
+        rd_deduction = prc_earned * 0.20  # 20%
+        
+        if rd_deduction < 0.01:
+            return None
+        
+        # Find user's active RD with auto-deduction enabled
+        active_rd = await db.recurring_deposits.find_one({
+            "user_id": user_id,
+            "status": "active",
+            "auto_deduction_enabled": True
+        })
+        
+        if not active_rd:
+            # No active RD, return None (no deduction)
+            return None
+        
+        now = datetime.now(timezone.utc)
+        new_total = active_rd["total_deposited"] + rd_deduction
+        
+        # Update RD
+        await db.recurring_deposits.update_one(
+            {"rd_id": active_rd["rd_id"]},
+            {
+                "$set": {
+                    "total_deposited": new_total,
+                    "updated_at": now.isoformat()
+                },
+                "$push": {
+                    "deposit_history": {
+                        "date": now.isoformat(),
+                        "amount": rd_deduction,
+                        "source": "auto_deduction",
+                        "balance_after": new_total
+                    }
+                }
+            }
+        )
+        
+        # Recalculate expected maturity
+        from routes.recurring_deposit import calculate_maturity_amount
+        maturity_calc = calculate_maturity_amount(
+            new_total, 
+            active_rd["interest_rate"], 
+            active_rd["tenure_months"]
+        )
+        
+        await db.recurring_deposits.update_one(
+            {"rd_id": active_rd["rd_id"]},
+            {"$set": {"expected_maturity_amount": maturity_calc["maturity_amount"]}}
+        )
+        
+        return {
+            "total_saved": rd_deduction,
+            "rd_id": active_rd["rd_id"],
+            "new_balance": new_total,
+            "expected_maturity": maturity_calc["maturity_amount"]
+        }
+        
+    except Exception as e:
+        logging.error(f"Error processing RD auto-deposit: {e}")
+        return None
+
+
 async def process_luxury_savings(user_id: str, prc_earned: float):
     """
     Process luxury savings - deduct 20% from earned PRC for ALL users (free and paid)
     4% -> Mobile, 6% -> Bike, 10% -> Car
+    
+    NOTE: This function now checks if user has migrated to RD system.
+    If migrated, it deposits to RD instead of Luxury Life.
     """
     try:
         # Get user
         user = await db.users.find_one({"uid": user_id})
         if not user:
             return None
+        
+        # Check if user has migrated to RD system
+        if user.get("luxury_migrated_to_rd", False):
+            # Use new RD system instead
+            return await process_rd_auto_deposit(user_id, prc_earned)
+        
+        # Check if user has active RD (prefer RD over Luxury Life)
+        active_rd = await db.recurring_deposits.find_one({
+            "user_id": user_id,
+            "status": "active",
+            "auto_deduction_enabled": True
+        })
+        
+        if active_rd:
+            # User has active RD, use RD system
+            return await process_rd_auto_deposit(user_id, prc_earned)
         
         # Luxury Life is for ALL users (free and paid)
         # No plan restriction anymore
