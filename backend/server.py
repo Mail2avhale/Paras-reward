@@ -25425,7 +25425,7 @@ async def tap_rain_drop(request: Request):
     }
     
     if luxury_deduction > 0:
-        response["luxury_message"] = f"₹{round(luxury_deduction/10, 2)} saved for Luxury Life! 🏆"
+        response["luxury_message"] = f"₹{round(luxury_deduction/10, 2)} saved for RD! 🏦"
     
     return response
 
