@@ -9079,6 +9079,7 @@ async def verify_kyc(kyc_id: str, action: VIPPaymentAction):
 
 
 @api_router.post("/admin/kyc/sync-status")
+@api_router.post("/admin/sync-kyc-status")
 async def sync_kyc_status():
     """
     Admin tool to sync KYC status between kyc_documents and users collection.
