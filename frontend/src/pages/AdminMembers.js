@@ -488,7 +488,6 @@ const AdminMembers = () => {
                 <option value="">All Plans</option>
                 <option value="explorer">Explorer</option>
                 <option value="startup">Startup</option>
-                <option value="growth">Growth</option>
                 <option value="elite">Elite</option>
               </select>
               
