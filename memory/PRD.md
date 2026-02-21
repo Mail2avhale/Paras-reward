@@ -8,12 +8,20 @@ A production-grade reward platform serving 3000+ users with subscription managem
 ### 🏦 Recurring Deposit (RD) System - NEW FEATURE ✅ (Feb 21, 2026)
 **User Request:** Implement a bank-like RD system with interest to replace the old "Luxury Life" feature.
 
+**Latest Updates:**
+- ✅ All text converted to English (removed Marathi)
+- ✅ Luxury Life banner removed from Dashboard
+- ✅ Interest Calculator widget added to RD page
+- ✅ Auto-migration: All existing Luxury savings converted to RD
+- ✅ Bulk migration API for admin
+
 **Features Implemented:**
 1. **Interest Rates:** 6 Months: 7.5%, 1 Year: 8.5%, 2 Years: 9%, 3 Years: 9.25% p.a.
 2. **Auto-Deduction:** 20% of mining earnings automatically deposited to active RD
 3. **Premature Withdrawal:** 3% penalty for early withdrawal
-4. **Luxury → RD Migration:** One-click migration of existing Luxury Life savings to 12-month RD
-5. **Interest Calculation:** Quarterly compounding
+4. **Luxury → RD Migration:** Automatic conversion when user visits RD page
+5. **Interest Calculator:** Real-time calculator widget on RD page
+6. **Bulk Admin Migration:** One-click convert all users' Luxury savings
 
 **Files Created:**
 - `/app/backend/routes/recurring_deposit.py` - All RD backend logic and APIs
