@@ -8184,6 +8184,37 @@ async def approve_vip_payment(payment_id: str, request: Request):
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
         
+        # ========== DETERMINE IF NEW SUBSCRIPTION OR RENEWAL ==========
+        is_renewal = False
+        is_upgrade = False
+        is_downgrade = False
+        previous_plan = None
+        subscription_count = 0
+        
+        if user:
+            previous_plan = user.get("subscription_plan")
+            subscription_count = user.get("subscription_count", 0)
+            
+            # Check if user ever had a paid subscription before
+            if previous_plan and previous_plan in ["startup", "growth", "elite"]:
+                is_renewal = True
+                
+                # Check if upgrading or downgrading
+                plan_hierarchy = {"explorer": 0, "startup": 1, "growth": 2, "elite": 3}
+                old_level = plan_hierarchy.get(previous_plan, 0)
+                new_level = plan_hierarchy.get(subscription_plan, 0)
+                
+                if new_level > old_level:
+                    is_upgrade = True
+                    is_renewal = False  # Upgrade is different from renewal
+                elif new_level < old_level:
+                    is_downgrade = True
+            else:
+                # First time subscriber
+                is_renewal = False
+        
+        subscription_type = "renewal" if is_renewal else ("upgrade" if is_upgrade else ("downgrade" if is_downgrade else "new"))
+        
         # EXTEND LOGIC: Add new days to existing subscription if not expired
         start_date = now
         if user:
