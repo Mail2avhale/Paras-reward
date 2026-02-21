@@ -6122,8 +6122,18 @@ async def claim_mining(uid: str):
     print(f"[LUXURY DEBUG] User receives: {user_receives} (80% of {mined_amount})")
     
     # Update user balance (free and VIP users)
-    new_balance = user.get("prc_balance", 0) + user_receives
-    new_total_mined = user.get("total_mined", 0) + mined_amount  # Total mined tracks full amount
+    # SAFETY: Handle None/null prc_balance explicitly
+    current_balance = user.get("prc_balance") or 0
+    if current_balance is None or not isinstance(current_balance, (int, float)):
+        current_balance = 0
+    current_total_mined = user.get("total_mined") or 0
+    if current_total_mined is None or not isinstance(current_total_mined, (int, float)):
+        current_total_mined = 0
+    
+    new_balance = current_balance + user_receives
+    new_total_mined = current_total_mined + mined_amount  # Total mined tracks full amount
+    
+    print(f"[CLAIM DEBUG] User {uid}: current_balance={current_balance}, user_receives={user_receives}, new_balance={new_balance}")
     
     # Calculate expiry date (2 days for free users, never for VIP)
     expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
