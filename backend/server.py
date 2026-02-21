@@ -36418,21 +36418,20 @@ LUXURY_PRODUCTS = {
 
 async def process_rd_auto_deposit(user_id: str, prc_earned: float):
     """
-    Process RD auto-deposit - deduct 20% from earned PRC and add to active RD
-    This replaces the old Luxury Life system
+    Process RD auto-deposit - COMPULSORY 20% deduction from earned PRC
+    This is MANDATORY - no option to disable
     """
     try:
-        # Calculate 20% deduction
-        rd_deduction = prc_earned * 0.20  # 20%
+        # Calculate 20% deduction - COMPULSORY
+        rd_deduction = prc_earned * 0.20  # 20% FORCED
         
         if rd_deduction < 0.01:
             return None
         
-        # Find user's active RD with auto-deduction enabled
+        # Find user's active RD (auto-deduction is always enabled - COMPULSORY)
         active_rd = await db.recurring_deposits.find_one({
             "user_id": user_id,
-            "status": "active",
-            "auto_deduction_enabled": True
+            "status": "active"
         })
         
         if not active_rd:
