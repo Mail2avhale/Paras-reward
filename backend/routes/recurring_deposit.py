@@ -733,42 +733,12 @@ async def get_interest_rates():
         ],
         "min_deposit": RD_MIN_DEPOSIT,
         "premature_penalty": RD_PREMATURE_PENALTY,
-        "auto_deduction_percent": RD_AUTO_DEDUCTION_PERCENT
+        "compulsory_deduction_percent": RD_AUTO_DEDUCTION_PERCENT,  # COMPULSORY - no toggle
+        "info": "20% deduction is compulsory for all earnings"
     }
 
 
-@router.post("/toggle-auto-deduction/{rd_id}")
-async def toggle_auto_deduction(rd_id: str, user_id: str, enabled: bool):
-    """Enable/disable auto-deduction for an RD"""
-    try:
-        rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
-        if not rd:
-            raise HTTPException(status_code=404, detail="RD not found")
-        
-        if rd["user_id"] != user_id:
-            raise HTTPException(status_code=403, detail="Unauthorized")
-        
-        await db.recurring_deposits.update_one(
-            {"rd_id": rd_id},
-            {
-                "$set": {
-                    "auto_deduction_enabled": enabled,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-            }
-        )
-        
-        return {
-            "success": True,
-            "message": f"Auto-deduction {'enabled' if enabled else 'disabled'} for RD",
-            "auto_deduction_enabled": enabled
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Error toggling auto-deduction: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Toggle API removed - 20% deduction is now COMPULSORY
 
 
 # ==================== ADMIN ENDPOINTS ====================
