@@ -287,8 +287,8 @@ const ParasRecurringDeposit = () => {
             <span className="px-3 py-1 bg-emerald-500/20 rounded-full text-emerald-400 text-xs">
               {rdsData?.summary?.active_rds || 0} Active RDs
             </span>
-            <span className="px-3 py-1 bg-gray-700/50 rounded-full text-gray-400 text-xs">
-              20% Auto-Deduction
+            <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-400 text-xs">
+              20% Compulsory Savings
             </span>
           </div>
         </motion.div>
