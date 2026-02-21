@@ -7838,54 +7838,116 @@ async def get_public_settings():
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
 
 async def send_renewal_notifications():
-    """Send renewal notifications to users whose subscription is expiring within 7 days"""
+    """
+    Send renewal notifications to users whose subscription is expiring
+    Sends at: 15 days, 7 days, 3 days, 1 day before expiry
+    """
     now = datetime.now(timezone.utc)
-    expiry_threshold = now + timedelta(days=7)
     
-    # Find users with expiring subscriptions
-    expiring_users = []
-    async for user in db.users.find({
-        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
-        "subscription_expiry": {"$exists": True}
-    }):
-        expiry_str = user.get("subscription_expiry")
-        if expiry_str:
+    # Define notification triggers
+    notification_triggers = [
+        {"days": 15, "urgency": "low", "emoji": "📅"},
+        {"days": 7, "urgency": "medium", "emoji": "⚠️"},
+        {"days": 3, "urgency": "high", "emoji": "🔔"},
+        {"days": 1, "urgency": "critical", "emoji": "🚨"},
+    ]
+    
+    notifications_sent = 0
+    notified_users = []
+    
+    for trigger in notification_triggers:
+        days = trigger["days"]
+        target_date = now + timedelta(days=days)
+        # Check users expiring on this specific day (±12 hours window)
+        window_start = target_date - timedelta(hours=12)
+        window_end = target_date + timedelta(hours=12)
+        
+        async for user in db.users.find({
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+            "subscription_expiry": {"$exists": True}
+        }):
+            expiry_str = user.get("subscription_expiry")
+            if not expiry_str:
+                continue
+                
             try:
                 expiry = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
                 if expiry.tzinfo is None:
                     expiry = expiry.replace(tzinfo=timezone.utc)
                 
-                # Check if expiring within 7 days
-                if now < expiry <= expiry_threshold:
-                    days_left = (expiry - now).days
-                    expiring_users.append({
-                        "uid": user.get("uid"),
+                # Check if expiry falls in this trigger window
+                if window_start <= expiry <= window_end:
+                    uid = user.get("uid")
+                    days_left = max(1, (expiry - now).days)
+                    
+                    # Check if notification already sent today for this trigger
+                    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                    existing = await db.notifications.find_one({
+                        "user_id": uid,
+                        "notification_type": "subscription_expiry",
+                        "created_at": {"$gte": today_start.isoformat()},
+                        "data.days_trigger": days
+                    })
+                    
+                    if existing:
+                        continue  # Already notified today
+                    
+                    # Create notification
+                    plan_name = user.get("subscription_plan", "").capitalize()
+                    
+                    if days == 1:
+                        title = f"{trigger['emoji']} LAST DAY! {plan_name} expires tomorrow"
+                        message = f"Your {plan_name} plan expires TOMORROW! Renew now to keep your benefits."
+                    elif days == 3:
+                        title = f"{trigger['emoji']} {plan_name} expiring in 3 days"
+                        message = f"Don't lose your {plan_name} benefits! Only 3 days left to renew."
+                    elif days == 7:
+                        title = f"{trigger['emoji']} {plan_name} expiring in 1 week"
+                        message = f"Your {plan_name} subscription expires in 7 days. Plan your renewal!"
+                    else:
+                        title = f"{trigger['emoji']} {plan_name} renewal reminder"
+                        message = f"Your {plan_name} plan will expire in {days_left} days ({expiry_str[:10]})."
+                    
+                    await db.notifications.insert_one({
+                        "notification_id": str(uuid.uuid4()),
+                        "user_id": uid,
+                        "title": title,
+                        "message": message,
+                        "notification_type": "subscription_expiry",
+                        "data": {
+                            "days_trigger": days,
+                            "plan": user.get("subscription_plan"),
+                            "expiry_date": expiry_str
+                        },
+                        "read": False,
+                        "created_at": now.isoformat()
+                    })
+                    
+                    notifications_sent += 1
+                    notified_users.append({
+                        "uid": uid,
                         "email": user.get("email"),
                         "plan": user.get("subscription_plan"),
                         "days_left": days_left,
-                        "expiry_date": expiry_str
+                        "urgency": trigger["urgency"]
                     })
-            except:
-                pass
-    
-    # Create notifications for each expiring user
-    notifications_sent = 0
-    for u in expiring_users:
-        # Create in-app notification
-        await create_notification(
-            user_id=u["uid"],
-            title=f"Subscription Expiring in {u['days_left']} days!",
-            message=f"Your {u['plan'].capitalize()} subscription will expire on {u['expiry_date'][:10]}. Renew now to continue enjoying premium benefits!",
-            notification_type="subscription"
-        )
-        notifications_sent += 1
+                    
+            except Exception as e:
+                print(f"[RENEWAL NOTIFY] Error for user {user.get('uid')}: {e}")
+                continue
     
     return {
         "success": True,
-        "expiring_users": len(expiring_users),
         "notifications_sent": notifications_sent,
-        "users": expiring_users
+        "users": notified_users
     }
+
+
+@api_router.post("/admin/trigger-renewal-notifications")
+async def trigger_renewal_notifications():
+    """Admin: Manually trigger renewal notification check"""
+    result = await send_renewal_notifications()
+    return result
 
 @api_router.get("/subscription/expiring")
 async def get_expiring_subscriptions():
