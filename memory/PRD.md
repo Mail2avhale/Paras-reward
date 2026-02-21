@@ -357,11 +357,17 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - Test User: `mail2avhale@gmail.com` / PIN: `123456`
 
 ## Upcoming Tasks
+- P0: Verify PRC collection bug is resolved on production (critical user verification pending)
+- P1: Guide admin on running daily cron jobs (`/api/rd/admin/process-daily-interest`, `/api/rd/admin/check-matured`)
+- P1: Utility Payments API Integration (Mobile recharge, DTH, Bill payment)
 - P1: UPI Payment Gateway Integration (Razorpay)
 - P1: "DIRECTOR 365" Subscription Plan
 - P1: Advanced PRC Burning Concepts
+- P2: Email/Mobile OTP verification on signup
 - P2: Force PIN Change Feature
+- P2: AAB Generation for Play Store (pwabuilder.com)
 - P3: KYC Images migrate MongoDB → S3 (reduce database bloat)
+- P3: Refactor server.py into proper route/service/model structure
 
 ## Known Behaviors
 - Admin users are redirected from `/referrals` to `/admin` (by design)
