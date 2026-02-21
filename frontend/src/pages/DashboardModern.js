@@ -1131,7 +1131,10 @@ const DashboardModern = ({ user, onLogout }) => {
             </div>
           </motion.div>
         </div>
-      )}
+          );
+        }
+        return null;
+      })()}
 
       {/* ========== LUXURY LIFE BANNER ========== */}
       <div className="px-5 mb-4">
