@@ -11288,34 +11288,6 @@ async def get_leaderboard():
     
     return leaderboard
 
-# ========== OUTLET ROUTES ==========
-@api_router.post("/outlets", response_model=Outlet)
-async def create_outlet(outlet: OutletCreate):
-    """Create outlet (Admin)"""
-    new_outlet = Outlet(**outlet.model_dump())
-    doc = new_outlet.model_dump()
-    doc['created_at'] = doc['created_at'].isoformat()
-    await db.outlets.insert_one(doc)
-    return new_outlet
-
-@api_router.get("/outlets", response_model=List[Outlet])
-async def get_outlets():
-    """Get all outlets"""
-    outlets = await db.outlets.find({}, {"_id": 0}).to_list(1000)
-    for outlet in outlets:
-        if isinstance(outlet.get('created_at'), str):
-            outlet['created_at'] = datetime.fromisoformat(outlet['created_at'])
-    return outlets
-
-@api_router.post("/outlets/{outlet_id}/activate")
-async def activate_outlet(outlet_id: str):
-    """Activate outlet (Admin)"""
-    await db.outlets.update_one(
-        {"outlet_id": outlet_id},
-        {"$set": {"is_active": True}}
-    )
-    return {"message": "Outlet activated"}
-
 # ========== AI CHATBOT & KYC AUTO-VERIFICATION ==========
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
