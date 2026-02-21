@@ -20503,51 +20503,6 @@ async def update_ticket(ticket_id: str, request: Request, uid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ========== PHASE 3: STOCKIST MANAGEMENT ==========
-
-# DEPRECATED - Stockist system removed
-# @api_router.get("/manager/stockists")
-async def get_manager_stockists(
-    uid: str,
-    role: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 50
-):
-    """Get stockists list (Manager access)"""
-    if not await verify_management(uid):
-        raise HTTPException(status_code=403, detail="Manager access required")
-    
-    try:
-        query = {"role": {"$in": ["master_stockist", "sub_stockist", "outlet"]}}
-        
-        if role:
-            query["role"] = role
-        
-        total = await db.users.count_documents(query)
-        stockists = await db.users.find(query).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
-        
-        for stockist in stockists:
-            stockist.pop("_id", None)
-            stockist.pop("password", None)
-            
-            # Get performance metrics
-            orders_count = await db.orders.count_documents({"assigned_stockist": stockist.get("uid")})
-            delivered_count = await db.orders.count_documents({
-                "assigned_stockist": stockist.get("uid"),
-                "status": "delivered"
-            })
-            
-            stockist["orders_count"] = orders_count
-            stockist["delivered_count"] = delivered_count
-            stockist["fulfillment_rate"] = round((delivered_count / orders_count * 100) if orders_count > 0 else 0, 2)
-        
-        return {
-            "stockists": stockists,
-            "total": total
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # ========== VIP MEMBERSHIP APPROVAL ==========
 
 @api_router.get("/manager/vip-requests")
