@@ -732,7 +732,6 @@ async def logout_user(request: Request):
 
 # ==================== DATABASE OPTIMIZATION ADMIN ENDPOINTS ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def create_all_indexes():
     """
     Admin endpoint to manually trigger index creation on production database.
@@ -749,7 +748,6 @@ async def create_all_indexes():
         raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_index_status():
     """Get status of all database indexes for monitoring"""
     try:
@@ -781,24 +779,20 @@ async def get_index_status():
 
 
 # Browser-friendly GET versions of admin APIs
-# DISABLED - Moved to routes/admin_*.py
 @api_router.get("/admin/clear-all-lockouts")
 async def clear_all_lockouts_get():
     """GET version of clear-all-lockouts for easy browser access"""
     return await clear_all_login_lockouts()
 
-# DISABLED - Moved to routes/admin_*.py
 async def force_fix_get(identifier: str):
     """GET version of force-fix-user for easy browser access"""
     return await force_fix_user(identifier)
 
-# DISABLED - Moved to routes/admin_*.py
 async def migrate_to_pin_get(identifier: str):
     """GET version of migrate-user-to-pin for easy browser access"""
     return await migrate_user_to_pin(identifier)
 
 
-# DISABLED - Moved to routes/admin_*.py
 @api_router.post("/admin/clear-all-lockouts")
 async def clear_all_login_lockouts():
     """
@@ -840,7 +834,6 @@ async def clear_all_login_lockouts():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def diagnose_user_login(identifier: str):
     """
     Diagnose why a specific user cannot login.
@@ -963,7 +956,6 @@ async def diagnose_user_login(identifier: str):
     return diagnosis
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def force_fix_user(identifier: str):
     """
     Force fix a user's account - clears ALL possible blocking conditions.
@@ -1033,7 +1025,6 @@ async def force_fix_user(identifier: str):
     }
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     """
     Migrate a user from password to PIN system.
@@ -1091,7 +1082,6 @@ async def migrate_user_to_pin(identifier: str, new_pin: str = None):
     }
 
 
-# DISABLED - Moved to routes/admin.py
 async def clear_admin_cache():
     """
     Clear all admin dashboard caches to force fresh data load.
@@ -4127,7 +4117,6 @@ async def update_mined_coins(uid: str):
     return 0
 
 # ========== BIRTHDAY CHECK ==========
-# DISABLED - Moved to routes/users.py
 async def check_user_birthday(uid: str):
     """
     Check if today is the user's birthday
@@ -4186,8 +4175,6 @@ async def check_user_birthday(uid: str):
 # 
 # Original routes below are disabled by renaming decorator path to avoid conflicts
 
-# DISABLED - Moved to routes/auth.py
-# @api_router.post("/auth/register/simple")
 async def register_user(request: Request):
     """Enhanced user registration with fraud detection"""
     # Check if registration is enabled
@@ -4320,7 +4307,6 @@ async def register_user(request: Request):
         "risk_level": fraud_check.get('risk_level', 'low')
     }
 
-# DISABLED - Moved to routes/auth.py
 async def check_auth_type(identifier: str):
     """Check if user should use PIN or Password login"""
     normalized_identifier = identifier.lower().strip()
@@ -4344,7 +4330,6 @@ async def check_auth_type(identifier: str):
     else:
         return {"auth_type": "password", "user_exists": True, "needs_migration": True}
 
-# DISABLED - Moved to routes/auth.py
 async def set_new_pin(request: Request):
     """Set new PIN for existing users (migration from password to PIN)"""
     try:
@@ -4401,7 +4386,6 @@ async def set_new_pin(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/auth.py
 async def login(
     request: Request,
     identifier: str,
@@ -4729,7 +4713,6 @@ async def login(
     
     return response_data
 
-# DISABLED - Moved to routes/auth.py
 async def forgot_password(email: str):
     """Request password reset"""
     user = await db.users.find_one({"email": email})
@@ -4772,7 +4755,6 @@ class ResetPinRequest(BaseModel):
     new_pin: str
     reset_token: str
 
-# DISABLED - Moved to routes/auth.py
 async def forgot_pin_check_mobile(request: ForgotPinRequest):
     """Check if mobile number exists and return widget ID for OTP"""
     mobile = request.mobile.strip()
@@ -4827,7 +4809,6 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
         "mobile": mobile[-4:]  # Return last 4 digits for display
     }
 
-# DISABLED - Moved to routes/auth.py
 async def forgot_pin_verify_otp(request: VerifyOTPRequest):
     """Verify OTP and generate reset token"""
     import httpx
@@ -4895,7 +4876,6 @@ async def forgot_pin_verify_otp(request: VerifyOTPRequest):
         "mobile": mobile[-4:]  # Last 4 digits for display
     }
 
-# DISABLED - Moved to routes/auth.py
 async def forgot_pin_reset(request: ResetPinRequest):
     """Reset PIN after OTP verification"""
     mobile = request.mobile.strip().replace("+", "")
@@ -4974,7 +4954,6 @@ async def forgot_pin_reset(request: ResetPinRequest):
 
 # ========== BIOMETRIC AUTHENTICATION ROUTES ==========
 
-# DISABLED - Moved to routes/auth.py
 async def get_biometric_register_options(user_id: str):
     """Get WebAuthn registration options for biometric setup"""
     from webauthn import generate_registration_options
@@ -5044,7 +5023,6 @@ async def get_biometric_register_options(user_id: str):
         }
     }
 
-# DISABLED - Moved to routes/auth.py
 async def register_biometric_credential(
     user_id: str,
     device_name: str,
@@ -5136,7 +5114,6 @@ async def register_biometric_credential(
         print(f"Biometric registration error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to register biometric: {str(e)}")
 
-# DISABLED - Moved to routes/auth.py
 async def get_biometric_login_options(email: str):
     """Get WebAuthn authentication options for biometric login"""
     from webauthn import generate_authentication_options
@@ -5185,7 +5162,6 @@ async def get_biometric_login_options(email: str):
         }
     }
 
-# DISABLED - Moved to routes/auth.py
 async def biometric_login(
     email: str,
     credential_data: Dict
@@ -5286,7 +5262,6 @@ async def biometric_login(
         print(f"Biometric authentication error: {str(e)}")
         raise HTTPException(status_code=401, detail="Biometric authentication failed")
 
-# DISABLED - Moved to routes/auth.py
 async def get_user_biometric_credentials(user_id: str):
     """Get list of registered biometric credentials for a user"""
     credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
@@ -5302,7 +5277,6 @@ async def get_user_biometric_credentials(user_id: str):
         "max_devices": 5
     }
 
-# DISABLED - Moved to routes/auth.py
 async def delete_biometric_credential(credential_id: str, user_id: str):
     """Delete a biometric credential"""
     result = await db.biometric_credentials.delete_one({
@@ -5326,7 +5300,6 @@ async def delete_biometric_credential(credential_id: str, user_id: str):
 # ========== USER PROFILE ROUTES ==========
 
 
-# DISABLED - Moved to routes/users.py
 async def get_user(uid: str):
     """Get user data by UID"""
     user = await db.users.find_one({"uid": uid})
@@ -5340,7 +5313,6 @@ async def get_user(uid: str):
     
     return user
 
-# DISABLED - Moved to routes/users.py
 async def get_user_children(uid: str):
     """Get children (subordinates) of a user"""
     try:
@@ -5364,7 +5336,6 @@ async def get_user_children(uid: str):
         print(f"Error fetching children: {str(e)}")
         return {"children": [], "count": 0}
 
-# DISABLED - Moved to routes/users.py
 async def update_profile(uid: str, request: Request):
     """Update user profile"""
     user = await db.users.find_one({"uid": uid})
@@ -5435,7 +5406,6 @@ async def update_profile(uid: str, request: Request):
     
     return {"message": "Profile updated successfully"}
 
-# DISABLED - Moved to routes/users.py
 async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
     """Upload profile picture (stores as base64)"""
     user = await db.users.find_one({"uid": uid})
@@ -5471,7 +5441,6 @@ async def upload_profile_picture(uid: str, file: UploadFile = File(...)):
         "profile_picture": image_data_url[:100] + "..."  # Return truncated preview
     }
 
-# DISABLED - Moved to routes/users.py
 async def delete_profile_picture(uid: str):
     """Delete profile picture"""
     user = await db.users.find_one({"uid": uid})
@@ -5488,7 +5457,6 @@ async def delete_profile_picture(uid: str):
     
     return {"message": "Profile picture deleted successfully"}
 
-# DISABLED - Moved to routes/users.py
 async def complete_profile(uid: str, request: Request):
     """Complete user profile with all additional fields"""
     user = await db.users.find_one({"uid": uid})
@@ -5572,7 +5540,6 @@ async def complete_profile(uid: str, request: Request):
     
     return {"message": "Profile completed successfully", "profile_complete": True}
 
-# DISABLED - Moved to routes/users.py
 async def change_password(uid: str, request: Request):
     """Change user password"""
     user = await db.users.find_one({"uid": uid})
@@ -5611,7 +5578,6 @@ async def change_password(uid: str, request: Request):
 
 # ========== PASSWORD RESET ROUTES ==========
 
-# DISABLED - Moved to routes/auth.py
 async def reset_password_request(email: str):
     """Request password reset"""
     user = await db.users.find_one({"email": email})
@@ -5641,7 +5607,6 @@ async def reset_password_request(email: str):
         "note": "In production, this would be sent via email"
     }
 
-# DISABLED - Moved to routes/auth.py
 async def reset_password(reset_token: str, new_password: str):
     """Reset password using token"""
     user = await db.users.find_one({"reset_token": reset_token})
@@ -5669,7 +5634,6 @@ async def reset_password(reset_token: str, new_password: str):
     
     return {"message": "Password reset successful"}
 
-# DISABLED - Moved to routes/auth.py
 async def change_password(uid: str, old_password: str, new_password: str):
     """Change password for logged in user"""
     user = await db.users.find_one({"uid": uid})
@@ -5692,7 +5656,6 @@ async def change_password(uid: str, old_password: str, new_password: str):
 
 # ========== ACCOUNT DELETION ROUTES ==========
 
-# DISABLED - Moved to routes/users.py
 async def request_account_deletion(uid: str, request: Request):
     """
     Request account deletion with soft delete.
@@ -5778,7 +5741,6 @@ async def request_account_deletion(uid: str, request: Request):
         "warning": "Your account will be permanently deleted after 30 days. You can cancel this within 30 days by logging in."
     }
 
-# DISABLED - Moved to routes/users.py
 async def cancel_account_deletion(uid: str, request: Request):
     """
     Cancel account deletion request within 30-day grace period.
@@ -5839,7 +5801,6 @@ async def cancel_account_deletion(uid: str, request: Request):
         "note": "Your account has been restored. Note: Forfeited PRC and cashback cannot be recovered."
     }
 
-# DISABLED - Moved to routes/users.py
 async def get_deletion_status(uid: str):
     """Get account deletion status"""
     user = await db.users.find_one({"uid": uid}, {"_id": 0})
@@ -5875,7 +5836,6 @@ async def get_deletion_status(uid: str):
         "message": "Account is scheduled for permanent deletion"
     }
 
-# DISABLED - Moved to routes/auth.py
 async def get_user(uid: str):
     """Get user details"""
     user = await db.users.find_one({"uid": uid})
@@ -6284,7 +6244,6 @@ async def claim_mining(uid: str):
 
 # ============ USER DASHBOARD COMBINED API ============
 
-# DISABLED - Moved to routes/users.py
 @api_router.get("/user/{uid}/dashboard")
 async def get_user_dashboard_combined(uid: str):
     """
@@ -6755,7 +6714,6 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         "expires_at": expiry_date
     }
 
-# DISABLED - Moved to routes/users.py
 async def get_user_today_stats(uid: str):
     """Get today's PRC earned and spent for a user"""
     try:
@@ -6818,7 +6776,6 @@ async def get_user_today_stats(uid: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# DISABLED - Moved to routes/users.py
 async def get_user_redeemed_stats(uid: str):
     """Get total PRC redeemed and its rupee value for a user"""
     try:
@@ -7510,7 +7467,6 @@ async def submit_subscription_payment(uid: str, request: Request):
         "message": "Payment submitted for verification"
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def update_subscription_pricing(request: Request):
     """Admin: Update subscription pricing"""
     data = await request.json()
@@ -7544,7 +7500,6 @@ async def update_subscription_pricing(request: Request):
     
     return {"success": True, "pricing": pricing}
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_subscription_stats():
     """Get subscription statistics using fast aggregation queries"""
     try:
@@ -7754,7 +7709,6 @@ async def get_subscription_analytics(period: str = "month"):
         print(f"Error in subscription analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_admin_subscription_pricing():
     """Admin: Get current subscription pricing"""
     pricing = await get_subscription_pricing()
@@ -7765,7 +7719,6 @@ async def run_explorer_burn_job():
     result = await burn_expired_prc_for_explorer_users()
     return {"success": True, "result": result}
 
-# DISABLED - Moved to routes/admin_*.py
 async def cleanup_database(request: Request):
     """
     Admin: Clean up test data from database
@@ -7838,7 +7791,6 @@ async def cleanup_database(request: Request):
         logging.error(f"Database cleanup error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_database_stats():
     """Get database statistics"""
     stats = {
@@ -8128,7 +8080,6 @@ async def submit_vip_payment(uid: str, payment: VIPPaymentCreate):
 
 # ==================== ADMIN VIP PAYMENT VERIFICATION ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_pending_payments_count():
     """Super fast endpoint to get just the pending payments count"""
     try:
@@ -8144,7 +8095,6 @@ async def get_pending_payments_count():
         return {"count": 0, "error": str(e)}
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int = 50, search: str = None):
     """Get VIP payments for admin verification - OPTIMIZED with caching and search"""
     try:
@@ -8281,7 +8231,6 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention and timeout handling"""
     try:
@@ -8559,7 +8508,6 @@ def is_paid_subscriber(user: dict) -> bool:
     return False
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def migrate_vip_users_to_subscription(request: Request):
     """
     Migrate legacy VIP users to new subscription system.
@@ -8636,7 +8584,6 @@ async def migrate_vip_users_to_subscription(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_vip_migration_status():
     """Get current migration status - how many users are on old vs new system"""
     
@@ -8680,7 +8627,6 @@ async def get_vip_migration_status():
     }
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_subscription_pricing_reference():
     """Get pricing reference for admin to verify payments and detect fraud"""
     # Get pricing from settings or use defaults
@@ -8727,7 +8673,6 @@ async def get_referral_uids(referrer_uid: str) -> list:
     ).to_list(None)
     return [r["uid"] for r in referrals]
 
-# DISABLED - Moved to routes/admin_*.py
 async def reject_vip_payment(payment_id: str, request: Request):
     """Reject VIP payment"""
     try:
@@ -8790,7 +8735,6 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def delete_vip_payment(payment_id: str, request: Request):
     """Delete VIP payment (for mistakenly approved payments)"""
     try:
@@ -10357,7 +10301,6 @@ async def cancel_order(order_id: str):
 
 
 # ========== WALLET ROUTES ==========
-# DISABLED - Moved to routes/wallet.py
 async def get_wallet(uid: str):
     """Get wallet balance and status"""
     user = await db.users.find_one({"uid": uid})
@@ -10374,7 +10317,6 @@ async def get_wallet(uid: str):
 
 # ========== DELIVERY PARTNER MANAGEMENT ==========
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_delivery_partners(status: str = "all", page: int = 1, limit: int = 20):
     """Get all delivery partners with optional filtering"""
     query = {}
@@ -10405,7 +10347,6 @@ async def get_delivery_partners(status: str = "all", page: int = 1, limit: int =
         "pages": (total + limit - 1) // limit
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_delivery_partner_stats():
     """Get delivery partner statistics"""
     total_partners = await db.delivery_partners.count_documents({})
@@ -10427,7 +10368,6 @@ async def get_delivery_partner_stats():
         "out_for_delivery": out_for_delivery
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_delivery_partner(partner_id: str):
     """Get single delivery partner details"""
     partner = await db.delivery_partners.find_one({"partner_id": partner_id})
@@ -10453,7 +10393,6 @@ async def get_delivery_partner(partner_id: str):
         "recent_orders": recent_orders
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def create_delivery_partner(partner: DeliveryPartnerCreate):
     """Create a new delivery partner"""
     partner_data = DeliveryPartner(
@@ -10482,7 +10421,6 @@ async def create_delivery_partner(partner: DeliveryPartnerCreate):
         "partner": partner_dict
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def update_delivery_partner(partner_id: str, request: Request):
     """Update delivery partner details"""
     data = await request.json()
@@ -10509,7 +10447,6 @@ async def update_delivery_partner(partner_id: str, request: Request):
     
     return {"message": "Delivery partner updated successfully"}
 
-# DISABLED - Moved to routes/admin_*.py
 async def delete_delivery_partner(partner_id: str):
     """Delete a delivery partner (soft delete - set inactive)"""
     partner = await db.delivery_partners.find_one({"partner_id": partner_id})
@@ -10536,7 +10473,6 @@ async def delete_delivery_partner(partner_id: str):
     
     return {"message": "Delivery partner deactivated successfully"}
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_available_partners_for_state(state: str):
     """Get delivery partners available for a specific state"""
     partners = await db.delivery_partners.find({
@@ -10552,7 +10488,6 @@ async def get_available_partners_for_state(state: str):
     
     return {"partners": partners}
 
-# DISABLED - Moved to routes/admin_*.py
 async def assign_delivery_partner(order_id: str, request: Request):
     """Assign a delivery partner to an order"""
     data = await request.json()
@@ -10619,7 +10554,6 @@ async def assign_delivery_partner(order_id: str, request: Request):
         "tracking_number": tracking_number
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def mark_order_delivered_by_partner(order_id: str, request: Request):
     """Mark order as delivered by delivery partner"""
     data = await request.json()
@@ -11198,7 +11132,6 @@ async def request_profit_withdrawal(request: Request):
     """DEPRECATED: Profit wallet withdrawal was for stockists/outlets - system removed"""
     raise HTTPException(status_code=410, detail="Profit wallet withdrawal system has been discontinued")
 
-# DISABLED - Moved to routes/wallet.py
 async def get_user_withdrawals(uid: str):
     """Get user's withdrawal history"""
     cashback_withdrawals = await db.cashback_withdrawals.find(
@@ -11217,7 +11150,6 @@ async def get_user_withdrawals(uid: str):
     }
 
 
-# DISABLED - Moved to routes/wallet.py
 async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int = 1, limit: int = 10):
     """Get user's comprehensive wallet transaction history with pagination (default 10 per page)"""
     query = {"user_id": uid}
@@ -11253,7 +11185,6 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
         "has_prev": page > 1
     }
 
-# DISABLED - Moved to routes/wallet.py
 async def get_detailed_transaction_history(
     uid: str, 
     wallet_type: str = None,
@@ -12358,7 +12289,6 @@ async def ai_scan_and_update_profile(
 
 # ========== ADMIN SECURITY ENDPOINTS ==========
 
-# DISABLED - Moved to routes/auth.py
 async def refresh_access_token(refresh_token: str):
     """Refresh access token using refresh token"""
     payload = verify_token(refresh_token, token_type="refresh")
@@ -12395,7 +12325,6 @@ async def refresh_access_token(refresh_token: str):
         "expires_in": JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
-# DISABLED - Moved to routes/auth.py
 async def logout_all_sessions(uid: str, admin_uid: str):
     """Logout from all sessions (admin only)"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12417,7 +12346,6 @@ async def logout_all_sessions(uid: str, admin_uid: str):
     
     return {"message": f"Logged out {result.modified_count} sessions"}
 
-# DISABLED - Moved to routes/admin.py
 async def get_user_sessions(uid: str, admin_uid: str):
     """Get all active sessions for a user"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12435,7 +12363,6 @@ async def get_user_sessions(uid: str, admin_uid: str):
         "active_count": len([s for s in sessions if s.get("is_active")])
     }
 
-# DISABLED - Moved to routes/admin.py
 async def get_admin_audit_logs(
     admin_uid: str,
     page: int = 1,
@@ -12474,7 +12401,6 @@ async def get_admin_audit_logs(
         "pages": (total + limit - 1) // limit
     }
 
-# DISABLED - Moved to routes/admin.py
 async def get_ip_whitelist(admin_uid: str):
     """Get IP whitelist settings"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12489,7 +12415,6 @@ async def get_ip_whitelist(admin_uid: str):
         "updated_at": None
     }
 
-# DISABLED - Moved to routes/admin.py
 async def update_ip_whitelist(
     admin_uid: str,
     enabled: bool,
@@ -12536,7 +12461,6 @@ async def update_ip_whitelist(
     
     return {"message": "IP whitelist updated", "valid_ips": len(valid_ips)}
 
-# DISABLED - Moved to routes/admin.py
 async def get_lockdown_status_api(admin_uid: str):
     """Get current system lockdown status"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12546,7 +12470,6 @@ async def get_lockdown_status_api(admin_uid: str):
     status = await get_lockdown_status()
     return status
 
-# DISABLED - Moved to routes/admin.py
 async def deactivate_lockdown(request: Request, admin_uid: str):
     """Deactivate system lockdown"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12577,7 +12500,6 @@ async def deactivate_lockdown(request: Request, admin_uid: str):
     
     return {"message": "System lockdown deactivated"}
 
-# DISABLED - Moved to routes/admin.py
 async def get_security_dashboard(admin_uid: str):
     """Get comprehensive security dashboard"""
     admin = await db.users.find_one({"uid": admin_uid})
@@ -12729,7 +12651,6 @@ async def get_public_service_status():
         return {"services": DEFAULT_SERVICE_STATUS}
 
 # ========== SECURITY ALERTS API ==========
-# DISABLED - Moved to routes/admin.py
 async def get_security_alerts(
     admin_uid: str,
     page: int = 1,
@@ -13227,7 +13148,6 @@ async def get_admin_dashboard_all():
 
 # ============ SYSTEM PERFORMANCE APIs ============
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_cache_statistics():
     """Get cache system statistics"""
     stats = await cache.get_stats()
@@ -13236,7 +13156,6 @@ async def get_cache_statistics():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_index_statistics():
     """Get database index statistics"""
     stats = await get_index_stats(db)
@@ -13245,7 +13164,6 @@ async def get_index_statistics():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def clear_system_cache(key_pattern: str = None):
     """Clear cache - optionally by pattern"""
     if key_pattern:
@@ -13256,7 +13174,6 @@ async def clear_system_cache(key_pattern: str = None):
         return {"message": "All cache cleared"}
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def dashboard_diagnostic():
     """
     DIAGNOSTIC: Check database data and help debug production issues.
@@ -13315,7 +13232,6 @@ async def dashboard_diagnostic():
         return {"status": "error", "message": str(e)}
 
 
-# DISABLED - Moved to routes/admin_*.py
 async def refresh_dashboard_data():
     """
     Force refresh all dashboard data by clearing cache and returning fresh stats.
@@ -13570,7 +13486,6 @@ async def get_orders_chart():
         logging.error(f"Orders chart error: {e}")
         return {"data": [], "error": str(e)}
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_subscriptions_chart():
     """Get subscription distribution and recent purchases - PRODUCTION FIX"""
     from datetime import timedelta
@@ -13827,7 +13742,6 @@ async def get_user_fraud_profile(uid: str):
 
 # ========== ADMIN USER MANAGEMENT ROUTES ==========
 
-# DISABLED - Moved to routes/admin_*.py
 async def check_admin_exists():
     """Check if any admin user exists in the system"""
     admin = await db.users.find_one({"role": "admin"})
@@ -18071,7 +17985,6 @@ async def get_all_orders_admin(
         "orders": orders
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_order_details_admin(order_id: str):
     """Get detailed order information (Admin)"""
     order = await db.orders.find_one({"order_id": order_id})
@@ -18142,7 +18055,6 @@ async def assign_order_to_outlet(order_id: str, request: Request):
 
 # ========== FINANCIAL REPORTS & ANALYTICS ==========
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_revenue_report(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
@@ -18674,7 +18586,6 @@ async def get_withdrawal_patterns(days: int = 30):
         "data": list(date_map.values())
     }
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_analytics_overview():
     """Get comprehensive analytics overview"""
     from datetime import timedelta
@@ -18986,7 +18897,6 @@ class PasswordRecoveryResetRequest(BaseModel):
     verification_fields: Dict[str, str]
     new_password: str
 
-# DISABLED - Moved to routes/auth.py
 async def verify_recovery_fields(request: PasswordRecoveryVerifyRequest):
     """Verify user identity using profile fields (2-field verification)"""
     email = request.email.lower()
@@ -19023,7 +18933,6 @@ async def verify_recovery_fields(request: PasswordRecoveryVerifyRequest):
         "uid": user.get("uid", "")
     }
 
-# DISABLED - Moved to routes/auth.py
 async def reset_password_with_verification(request: PasswordRecoveryResetRequest):
     """Reset password after successful verification"""
     email = request.email.lower()
@@ -19923,7 +19832,6 @@ async def check_duplicate_data():
     
     return duplicates
 
-# DISABLED - Moved to routes/admin_*.py
 async def adjust_user_balance(uid: str, request: BalanceAdjustRequest):
     """Admin adjusts user balance (PRC, cashback, profit)"""
     user = await db.users.find_one({"uid": uid})
@@ -22085,7 +21993,6 @@ async def mark_alert_read(alert_id: str):
 
 # ==================== 2. PROFIT & LOSS + EXPENSE MANAGEMENT ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_profit_loss_statement(period: str = "month", year: int = None, month: int = None):
     """Get comprehensive Profit & Loss statement"""
     try:
@@ -22298,7 +22205,6 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         logging.error(f"Error in P&L statement: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def add_expense(request: Request):
     """Add a new expense entry"""
     try:
@@ -22338,7 +22244,6 @@ async def add_expense(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_expenses(
     page: int = 1,
     limit: int = 20,
@@ -22380,7 +22285,6 @@ async def get_expenses(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def update_expense(expense_id: str, request: Request):
     """Update an expense entry"""
     try:
@@ -22414,7 +22318,6 @@ async def update_expense(expense_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def delete_expense(expense_id: str, admin_id: str = None):
     """Delete an expense entry"""
     try:
@@ -22460,7 +22363,6 @@ async def add_other_income(request: Request):
 
 # ==================== COMPANY MASTER WALLETS ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_company_wallets():
     """Get all company master wallets"""
     try:
@@ -22505,7 +22407,6 @@ async def get_company_wallets():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def transfer_company_wallet(request: Request):
     """Transfer amount between company wallets"""
     try:
@@ -22556,7 +22457,6 @@ async def transfer_company_wallet(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def adjust_company_wallet(request: Request):
     """Manual credit/debit to company wallet"""
     try:
@@ -22604,7 +22504,6 @@ async def adjust_company_wallet(request: Request):
 
 # ==================== ADS INCOME MODULE ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_ads_income(page: int = 1, limit: int = 20):
     """Get ads income entries"""
     try:
@@ -22636,7 +22535,6 @@ async def get_ads_income(page: int = 1, limit: int = 20):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def add_ads_income(request: Request):
     """Add ads income entry (manual)"""
     try:
@@ -22671,7 +22569,6 @@ async def add_ads_income(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def delete_ads_income(entry_id: str):
     """Delete ads income entry"""
     try:
@@ -22694,7 +22591,6 @@ async def delete_ads_income(entry_id: str):
 
 # ==================== FIXED EXPENSES MODULE ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
     """Get fixed monthly expenses"""
     try:
@@ -22727,7 +22623,6 @@ async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def add_fixed_expense(request: Request):
     """Add fixed expense entry"""
     try:
@@ -22753,7 +22648,6 @@ async def add_fixed_expense(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def update_fixed_expense(expense_id: str, request: Request):
     """Update fixed expense"""
     try:
@@ -22779,7 +22673,6 @@ async def update_fixed_expense(expense_id: str, request: Request):
 
 # ==================== FRAUD DETECTION & RISK CONTROL ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_fraud_alerts(page: int = 1, limit: int = 20, status: str = None):
     """Get fraud alerts"""
     try:
@@ -23022,7 +22915,6 @@ async def unfreeze_user_wallet(uid: str, request: Request):
 
 # ==================== EXPORT & REPORTING ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def export_profit_loss(year: int = None, month: int = None, format: str = "csv"):
     """Export P&L statement as CSV"""
     try:
@@ -23089,7 +22981,6 @@ async def export_profit_loss(year: int = None, month: int = None, format: str = 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def export_user_ledger(uid: str, format: str = "csv"):
     """Export user transaction ledger as CSV"""
     try:
@@ -23124,7 +23015,6 @@ async def export_user_ledger(uid: str, format: str = "csv"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def export_company_wallets(format: str = "csv"):
     """Export company wallet statements as CSV"""
     try:
@@ -23164,7 +23054,6 @@ async def export_company_wallets(format: str = "csv"):
 
 # ==================== MONTHLY P&L SNAPSHOT ====================
 
-# DISABLED - Moved to routes/admin_*.py
 async def create_monthly_pl_snapshot():
     """Create monthly P&L snapshot for historical records"""
     try:
@@ -23247,7 +23136,6 @@ async def create_monthly_pl_snapshot():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_pl_snapshots(limit: int = 12):
     """Get historical P&L snapshots"""
     try:
@@ -24809,7 +24697,6 @@ async def submit_contact_form(request: Request):
     
     return {"success": True, "message": "Thank you for your message! We'll get back to you soon."}
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_contact_submissions(
     status: Optional[str] = None,
     page: int = 1,
@@ -24860,7 +24747,6 @@ async def update_contact_submission(submission_id: str, request: Request):
     
     return {"success": True, "message": "Submission updated"}
 
-# DISABLED - Moved to routes/admin_*.py
 async def delete_contact_submission(submission_id: str):
     """Delete contact submission"""
     result = await db.contact_submissions.delete_one({"submission_id": submission_id})
@@ -31642,7 +31528,6 @@ class VideoAdRequest(BaseModel):
     end_date: Optional[str] = None
     target_roles: List[str] = ["user"]  # Can target specific user roles
 
-# DISABLED - Moved to routes/admin_*.py
 async def create_video_ad(request: VideoAdRequest):
     """Admin: Create a new video advertisement"""
     try:
@@ -34407,7 +34292,6 @@ async def set_opening_balance(account_type: str, amount: float, bank_name: str =
         logging.error(f"Error setting opening balance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# DISABLED - Moved to routes/admin_*.py
 async def get_accounting_summary():
     """Get summary of all accounts"""
     try:
