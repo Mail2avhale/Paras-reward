@@ -424,8 +424,12 @@ async def deposit_to_rd(rd_id: str, request: DepositToRDRequest):
 
 
 @router.post("/withdraw/{rd_id}")
-async def withdraw_rd(rd_id: str, request: WithdrawRDRequest):
-    """Premature withdrawal from RD (3% penalty)"""
+async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
+    """
+    Request RD Redeem - Creates a request for admin approval
+    - Weekly limit: Only 1 request per week (shared with Bank Redeem & EMI)
+    - Admin must approve before funds are released
+    """
     try:
         rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
         if not rd:
@@ -438,6 +442,68 @@ async def withdraw_rd(rd_id: str, request: WithdrawRDRequest):
             raise HTTPException(status_code=403, detail="Unauthorized")
         
         now = datetime.now(timezone.utc)
+        
+        # Check weekly limit - only 1 request per week (shared with bank redeem & EMI)
+        days_since_monday = now.weekday()
+        monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        monday_str = monday.isoformat()
+        
+        # Check for existing RD redeem request this week
+        existing_rd_request = await db.bank_redeem_requests.find_one({
+            "user_id": request.user_id,
+            "request_type": "rd_redeem",
+            "created_at": {"$gte": monday_str},
+            "status": {"$nin": ["rejected", "cancelled"]}
+        })
+        
+        if existing_rd_request:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted an RD redeem request this week. Only 1 request allowed per week."
+            )
+        
+        # Check for existing bank redeem request this week
+        existing_bank_request = await db.bank_redeem_requests.find_one({
+            "user_id": request.user_id,
+            "request_type": "bank_redeem",
+            "created_at": {"$gte": monday_str},
+            "status": {"$nin": ["rejected", "cancelled"]}
+        })
+        
+        if existing_bank_request:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted a Bank Redeem request this week. Only 1 redemption request allowed per week."
+            )
+        
+        # Check for existing EMI request this week
+        existing_emi_request = await db.bill_payment_requests.find_one({
+            "user_id": request.user_id,
+            "request_type": "loan_emi",
+            "created_at": {"$gte": monday_str},
+            "status": {"$nin": ["rejected", "cancelled"]}
+        })
+        
+        if existing_emi_request:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted a Loan EMI request this week. Only 1 redemption request allowed per week."
+            )
+        
+        # Check if user already has pending RD request for this RD
+        existing_pending = await db.bank_redeem_requests.find_one({
+            "user_id": request.user_id,
+            "rd_id": rd_id,
+            "status": "pending"
+        })
+        
+        if existing_pending:
+            raise HTTPException(
+                status_code=400, 
+                detail="You already have a pending redeem request for this RD."
+            )
+        
+        # Calculate redemption amount
         start_date = datetime.fromisoformat(rd["start_date"].replace("Z", "+00:00")) if isinstance(rd["start_date"], str) else rd["start_date"]
         maturity_date = datetime.fromisoformat(rd["maturity_date"].replace("Z", "+00:00")) if isinstance(rd["maturity_date"], str) else rd["maturity_date"]
         
@@ -455,98 +521,125 @@ async def withdraw_rd(rd_id: str, request: WithdrawRDRequest):
         
         # Apply penalty if premature
         if is_mature:
-            withdrawal_amount = current_value
+            net_amount = current_value
             penalty_amount = 0
-            status = "matured"
-            message = f"🎉 RD matured! ₹{withdrawal_amount:,.0f} PRC credited to wallet"
+            redeem_type = "maturity"
         else:
             penalty_amount = current_value * (RD_PREMATURE_PENALTY / 100)
-            withdrawal_amount = current_value - penalty_amount
-            status = "withdrawn"
-            message = f"⚠️ Premature withdrawal: ₹{withdrawal_amount:,.0f} PRC credited (₹{penalty_amount:,.0f} penalty deducted)"
+            net_amount = current_value - penalty_amount
+            redeem_type = "early"
         
-        # Update RD status
+        # Get user info
+        user = await db.users.find_one({"uid": request.user_id})
+        
+        # Create redeem request
+        request_id = f"RD_REQ_{uuid.uuid4().hex[:8].upper()}"
+        
+        redeem_request = {
+            "request_id": request_id,
+            "user_id": request.user_id,
+            "user_name": user.get("name", "Unknown"),
+            "user_mobile": user.get("mobile", ""),
+            "user_email": user.get("email", ""),
+            
+            # Request type
+            "request_type": "rd_redeem",
+            "redeem_type": redeem_type,  # "early" or "maturity"
+            
+            # RD Details
+            "rd_id": rd_id,
+            "rd_tenure": rd["tenure_months"],
+            "rd_interest_rate": rd["interest_rate"],
+            
+            # Amount details
+            "principal_amount": rd["total_deposited"],
+            "interest_earned": current_interest,
+            "penalty_amount": penalty_amount,
+            "penalty_percent": RD_PREMATURE_PENALTY if not is_mature else 0,
+            "net_amount": net_amount,
+            "is_premature": not is_mature,
+            
+            # Bank details (from user profile)
+            "bank_details": user.get("bank_details"),
+            
+            # Status
+            "status": "pending",
+            "admin_notes": None,
+            "processed_by": None,
+            "processed_at": None,
+            "transaction_ref": None,
+            
+            # Timestamps
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }
+        
+        await db.bank_redeem_requests.insert_one(redeem_request)
+        
+        # Update RD with pending request flag
         await db.recurring_deposits.update_one(
             {"rd_id": rd_id},
             {
                 "$set": {
-                    "status": status,
-                    "withdrawal_date": now.isoformat(),
-                    "withdrawal_amount": withdrawal_amount,
-                    "penalty_amount": penalty_amount,
-                    "final_interest_earned": current_interest,
-                    "is_premature": not is_mature,
-                    "withdrawal_reason": request.reason,
+                    "has_pending_redeem": True,
+                    "pending_redeem_request_id": request_id,
                     "updated_at": now.isoformat()
                 }
             }
         )
         
-        # Credit to user wallet
-        user = await db.users.find_one({"uid": request.user_id})
-        current_balance = user.get("prc_balance", 0) or 0
-        new_balance = current_balance + withdrawal_amount
-        
-        await db.users.update_one(
-            {"uid": request.user_id},
-            {
-                "$set": {
-                    "prc_balance": new_balance,
-                    "updated_at": now.isoformat()
-                },
-                "$inc": {"rd_withdrawals": 1}
-            }
-        )
-        
-        # Create transaction record
-        await db.transactions.insert_one({
-            "transaction_id": f"RD_WD_{uuid.uuid4().hex[:8].upper()}",
-            "user_id": request.user_id,
-            "type": "rd_withdrawal",
-            "amount": withdrawal_amount,
-            "rd_id": rd_id,
-            "principal": rd["total_deposited"],
-            "interest": current_interest,
-            "penalty": penalty_amount,
-            "is_premature": not is_mature,
-            "balance_after": new_balance,
-            "created_at": now.isoformat()
-        })
-        
-        # Update user's active RD flag
-        active_rds = await db.recurring_deposits.count_documents({
-            "user_id": request.user_id,
-            "status": "active"
-        })
-        
-        await db.users.update_one(
-            {"uid": request.user_id},
-            {"$set": {"has_active_rd": active_rds > 0}}
-        )
-        
         # Create notification
         await db.notifications.insert_one({
             "user_id": request.user_id,
-            "title": "💰 RD Withdrawal Complete",
-            "message": message,
-            "type": "rd_withdrawal",
-            "related_id": rd_id,
+            "title": "RD Redeem Request Submitted",
+            "message": f"Your RD redeem request for ₹{net_amount:,.0f} PRC has been submitted. Admin will review shortly.",
+            "type": "rd_redeem_request",
+            "related_id": request_id,
             "read": False,
             "created_at": now.isoformat()
         })
         
         return {
             "success": True,
-            "message": message,
-            "withdrawal_details": {
+            "message": "RD Redeem request submitted successfully! Admin will review your request.",
+            "request_id": request_id,
+            "request_details": {
                 "principal": rd["total_deposited"],
                 "interest_earned": current_interest,
                 "penalty_amount": penalty_amount,
-                "net_amount": withdrawal_amount,
-                "new_wallet_balance": new_balance,
-                "is_premature": not is_mature
+                "net_amount": net_amount,
+                "is_premature": not is_mature,
+                "status": "pending"
             }
         }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error creating RD redeem request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/redeem-requests/{user_id}")
+async def get_user_rd_redeem_requests(user_id: str):
+    """Get user's RD redeem request history"""
+    try:
+        requests = await db.bank_redeem_requests.find({
+            "user_id": user_id,
+            "request_type": "rd_redeem"
+        }).sort("created_at", -1).to_list(50)
+        
+        # Remove MongoDB _id
+        for req in requests:
+            req.pop("_id", None)
+        
+        return {
+            "success": True,
+            "requests": requests
+        }
+    except Exception as e:
+        logging.error(f"Error fetching RD redeem requests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
         
     except HTTPException:
         raise
