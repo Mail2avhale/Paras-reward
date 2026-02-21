@@ -443,12 +443,12 @@ const Orders = ({ user, onLogout }) => {
                   {userStats.deductions_breakdown?.luxury_savings > 0 && (
                     <div className="flex justify-between items-center py-1 text-gray-400 px-2">
                       <span className="flex items-center gap-2">
-                        <PiggyBank className="w-3 h-3 text-pink-500" /> Luxury Life Savings (20%)
+                        <PiggyBank className="w-3 h-3 text-emerald-500" /> RD Savings (20%)
                         <InfoTooltip>
-                          <p>20% auto-saved from mining for future Luxury Life rewards. Not lost - just saved!</p>
+                          <p>20% auto-saved from mining to your RD account. Earn up to 9.25% interest!</p>
                         </InfoTooltip>
                       </span>
-                      <span className="text-pink-400 font-mono">-{(userStats.deductions_breakdown?.luxury_savings || 0).toLocaleString()}</span>
+                      <span className="text-emerald-400 font-mono">-{(userStats.deductions_breakdown?.luxury_savings || 0).toLocaleString()}</span>
                     </div>
                   )}
                   
