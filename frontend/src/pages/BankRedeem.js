@@ -205,7 +205,9 @@ const BankRedeem = ({ user }) => {
         amount_inr: selectedAmount
       });
       
-      toast.success(`Redeem request submitted! ₹${selectedAmount.toLocaleString()} will be credited to your bank account after approval.`);
+      toast.success(`✅ Redeem Request Submitted!\n\nProcessing Time: 3 to 7 days. ₹${selectedAmount.toLocaleString()} will be credited to your bank account after admin approval.`, {
+        duration: 6000,
+      });
       setSelectedAmount(100);
       fetchAllData();
     } catch (error) {
