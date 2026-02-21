@@ -137,6 +137,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   // Regular menu items (not grouped) - Simplified and organized
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
+    { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
     { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
     // Delivery Partners removed - feature deprecated
