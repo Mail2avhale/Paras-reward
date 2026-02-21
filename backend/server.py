@@ -530,7 +530,6 @@ async def verify_management(uid: str):
     """Verify user is admin, sub_admin, or manager"""
     return await verify_role(uid, RolePermissions.MANAGEMENT_ROLES)
 
-# verify_stockist removed - stockist system deprecated
 
 # ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
 # Use this function EVERYWHERE instead of checking membership_type
@@ -1417,8 +1416,7 @@ class OrderSingleProduct(BaseModel):
     total_cash_fee: float
     secret_code: str = Field(default_factory=lambda: ''.join(secrets.choice(string.digits) for _ in range(6)))
     status: str = "pending"  # pending, verified, out_for_delivery, delivered, cancelled
-    outlet_id: Optional[str] = None  # Legacy - deprecated
-    delivery_partner_id: Optional[str] = None  # NEW - assigned delivery partner
+        delivery_partner_id: Optional[str] = None  # NEW - assigned delivery partner
     delivery_partner_name: Optional[str] = None  # Cached for quick display
     tracking_number: Optional[str] = None  # Delivery tracking number
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -3068,7 +3066,7 @@ async def get_user_lien_amount(user_id: str) -> float:
     role = user.get("role", "user")
     
     # Only stockists have lien
-    if role not in ["master_stockist", "sub_stockist", "outlet"]:
+    if role not in []:
         return 0.0
     
     # Get pending renewal fees
@@ -10001,9 +9999,7 @@ async def checkout(request: Request):
     order_dict = order.model_dump()
     order_dict["created_at"] = order_dict["created_at"].isoformat()
     order_dict["pending_delivery_lien"] = 0
-    order_dict["outlet_id"] = None  # No outlet - direct delivery
-    order_dict["assigned_outlet"] = None
-    order_dict["delivery_partner"] = "pending_assignment"  # To be assigned by admin
+            order_dict["delivery_partner"] = "pending_assignment"  # To be assigned by admin
     order_dict["delivery_method"] = "direct_delivery"
     
     # Atomic PRC deduction with balance check to prevent negative balance
@@ -13872,7 +13868,7 @@ async def update_user_role(uid: str, request: Request):
     new_role = data.get("role")
     
     # Validate role
-    valid_roles = ["user", "admin", "manager", "sub_admin", "employee", "master_stockist", "sub_stockist", "outlet"]
+    valid_roles = ["user", "admin", "manager", "sub_admin", "employee", ]
     if new_role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
     
@@ -19100,7 +19096,7 @@ async def create_security_deposit_manual(request: SecurityDepositManualEntry):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+    if user.get("role") not in []:
         raise HTTPException(status_code=400, detail="User must be a stockist")
     
     # Check if already has a deposit
@@ -19227,7 +19223,7 @@ async def create_renewal_manual(request: RenewalManualEntry):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user.get("role") not in ["master_stockist", "sub_stockist", "outlet"]:
+    if user.get("role") not in []:
         raise HTTPException(status_code=400, detail="User must be a stockist")
     
     # Calculate total with GST
@@ -20593,7 +20589,7 @@ async def create_announcement(request: Request, uid: str):
         elif data.get("target_audience") == "free":
             query["$or"] = [{"membership_type": "free"}, {"membership_type": {"$exists": False}}]
         elif data.get("target_audience") == "stockists":
-            query["role"] = {"$in": ["master_stockist", "sub_stockist", "outlet"]}
+            query["role"] = {}
         
         target_users = await db.users.find(query).to_list(length=None)
         
