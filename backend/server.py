@@ -57,6 +57,7 @@ from routes.admin_dashboard import router as admin_dashboard_router, set_db as s
 from routes.admin_products import router as admin_products_router, set_db as set_admin_products_db
 from routes.admin_misc import router as admin_misc_router, set_db as set_admin_misc_db, set_helpers as set_admin_misc_helpers
 from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_redeem_db, set_cache as set_bank_redeem_cache, set_helpers as set_bank_redeem_helpers
+from routes.recurring_deposit import router as rd_router, set_db as set_rd_db, set_cache as set_rd_cache
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -37138,6 +37139,11 @@ set_bank_redeem_db(db)
 set_bank_redeem_cache(cache)
 set_bank_redeem_helpers({'log_transaction': log_transaction, 'create_notification': create_notification})
 api_router.include_router(bank_redeem_router)
+
+# Include Recurring Deposit router (NEW - RD System replacing Luxury Life)
+set_rd_db(db)
+set_rd_cache(cache)
+api_router.include_router(rd_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
