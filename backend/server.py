@@ -6682,8 +6682,18 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         raise HTTPException(status_code=400, detail="Minimum collection is 0.01 PRC")
     
     # Update user balance
-    new_balance = user.get("prc_balance", 0) + prc_to_collect
-    new_total_mined = user.get("total_mined", 0) + prc_to_collect
+    # SAFETY: Handle None/null prc_balance explicitly
+    current_balance = user.get("prc_balance") or 0
+    if current_balance is None or not isinstance(current_balance, (int, float)):
+        current_balance = 0
+    current_total_mined = user.get("total_mined") or 0
+    if current_total_mined is None or not isinstance(current_total_mined, (int, float)):
+        current_total_mined = 0
+    
+    new_balance = current_balance + prc_to_collect
+    new_total_mined = current_total_mined + prc_to_collect
+    
+    print(f"[COLLECT DEBUG] User {uid}: current_balance={current_balance}, prc_to_collect={prc_to_collect}, new_balance={new_balance}")
     
     # Calculate expiry for free users
     expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
