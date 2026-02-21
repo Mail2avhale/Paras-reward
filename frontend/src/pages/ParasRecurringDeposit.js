@@ -694,7 +694,7 @@ const ParasRecurringDeposit = () => {
                   className="flex-1 py-3 bg-amber-500 rounded-xl text-black font-bold disabled:opacity-50"
                   data-testid="confirm-withdraw-btn"
                 >
-                  {processing ? 'Processing...' : 'Withdraw'}
+                  {processing ? 'Processing...' : 'Redeem'}
                 </button>
               </div>
             </motion.div>
