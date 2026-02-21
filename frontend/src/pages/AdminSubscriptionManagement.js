@@ -418,9 +418,33 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
               <h3 className="text-white font-bold">{payment.user_name || 'Unknown'}</h3>
               <p className="text-gray-400 text-sm">{payment.user_email}</p>
             </div>
-            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[plan] || 'bg-gray-700 text-gray-400'}`}>
-              {plan?.toUpperCase() || 'N/A'}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${planColors[plan] || 'bg-gray-700 text-gray-400'}`}>
+                {plan?.toUpperCase() || 'N/A'}
+              </span>
+              {/* NEW vs RENEWAL Badge */}
+              {payment.subscription_type && (
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                  payment.subscription_type === 'new' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                  payment.subscription_type === 'renewal' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                  payment.subscription_type === 'upgrade' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                  payment.subscription_type === 'downgrade' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {payment.subscription_type === 'new' ? '🆕 NEW' :
+                   payment.subscription_type === 'renewal' ? '🔄 RENEWAL' :
+                   payment.subscription_type === 'upgrade' ? '⬆️ UPGRADE' :
+                   payment.subscription_type === 'downgrade' ? '⬇️ DOWNGRADE' :
+                   payment.subscription_type?.toUpperCase()}
+                </span>
+              )}
+              {/* Show subscription count */}
+              {payment.user_subscription_count > 1 && (
+                <span className="text-xs text-gray-500">
+                  #{payment.user_subscription_count} subscription
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
