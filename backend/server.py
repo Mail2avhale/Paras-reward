@@ -14207,6 +14207,334 @@ async def get_user_subscription_history(uid: str, page: int = 1, limit: int = 20
     }
 
 
+# ========== ADMIN MEMBERS DASHBOARD ==========
+
+@api_router.get("/admin/members/dashboard")
+async def get_members_dashboard(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    period: Optional[str] = "month"  # today, week, month, year, custom
+):
+    """
+    Comprehensive Members Dashboard API
+    Returns: Active/Inactive stats, New joinings, Subscription breakdown, Advanced analytics
+    """
+    import asyncio
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate date ranges based on period
+    if period == "today":
+        period_start = today_start
+    elif period == "week":
+        period_start = today_start - timedelta(days=7)
+    elif period == "month":
+        period_start = today_start - timedelta(days=30)
+    elif period == "year":
+        period_start = today_start - timedelta(days=365)
+    elif period == "custom" and date_from:
+        period_start = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+    else:
+        period_start = today_start - timedelta(days=30)
+    
+    period_end = datetime.fromisoformat(date_to.replace('Z', '+00:00')) if date_to else now
+    
+    # Base query excluding admins
+    base_query = {"role": {"$ne": "admin"}}
+    
+    # ===== 1. ACTIVE/INACTIVE MEMBERS =====
+    active_inactive_pipeline = [
+        {"$match": base_query},
+        {"$group": {
+            "_id": {"$ifNull": ["$is_active", True]},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    # ===== 2. SUBSCRIPTION PLAN BREAKDOWN =====
+    subscription_pipeline = [
+        {"$match": base_query},
+        {"$group": {
+            "_id": {"$ifNull": ["$subscription_plan", "explorer"]},
+            "count": {"$sum": 1},
+            "total_prc": {"$sum": {"$ifNull": ["$prc_balance", 0]}}
+        }}
+    ]
+    
+    # ===== 3. NEW JOININGS IN PERIOD =====
+    new_joinings_query = {
+        **base_query,
+        "created_at": {
+            "$gte": period_start.isoformat(),
+            "$lte": period_end.isoformat()
+        }
+    }
+    
+    # ===== 4. KYC STATUS BREAKDOWN =====
+    kyc_pipeline = [
+        {"$match": base_query},
+        {"$group": {
+            "_id": {"$ifNull": ["$kyc_status", "pending"]},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    # ===== 5. DAILY JOININGS FOR CHART (last 30 days) =====
+    thirty_days_ago = today_start - timedelta(days=30)
+    daily_joinings_pipeline = [
+        {"$match": {
+            **base_query,
+            "created_at": {"$gte": thirty_days_ago.isoformat()}
+        }},
+        {"$addFields": {
+            "created_date": {"$substr": ["$created_at", 0, 10]}
+        }},
+        {"$group": {
+            "_id": "$created_date",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    
+    # ===== 6. STATE-WISE DISTRIBUTION =====
+    state_pipeline = [
+        {"$match": {**base_query, "state": {"$exists": True, "$ne": None, "$ne": ""}}},
+        {"$group": {
+            "_id": "$state",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    
+    # ===== 7. EXPIRING SUBSCRIPTIONS (next 7 days) =====
+    expiring_query = {
+        **base_query,
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+        "subscription_expiry": {
+            "$gte": now.isoformat(),
+            "$lte": (now + timedelta(days=7)).isoformat()
+        }
+    }
+    
+    # ===== 8. TOP EARNERS =====
+    top_earners_pipeline = [
+        {"$match": base_query},
+        {"$sort": {"prc_balance": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "uid": 1,
+            "name": 1,
+            "email": 1,
+            "prc_balance": 1,
+            "subscription_plan": 1,
+            "total_mined": 1
+        }}
+    ]
+    
+    # ===== 9. TODAY'S STATS =====
+    today_query = {
+        **base_query,
+        "created_at": {"$gte": today_start.isoformat()}
+    }
+    
+    # ===== 10. THIS WEEK'S STATS =====
+    week_start = today_start - timedelta(days=7)
+    week_query = {
+        **base_query,
+        "created_at": {"$gte": week_start.isoformat()}
+    }
+    
+    # ===== 11. THIS MONTH'S STATS =====
+    month_start = today_start - timedelta(days=30)
+    month_query = {
+        **base_query,
+        "created_at": {"$gte": month_start.isoformat()}
+    }
+    
+    # Run all queries in parallel
+    results = await asyncio.gather(
+        db.users.aggregate(active_inactive_pipeline).to_list(10),
+        db.users.aggregate(subscription_pipeline).to_list(10),
+        db.users.count_documents(new_joinings_query),
+        db.users.aggregate(kyc_pipeline).to_list(10),
+        db.users.aggregate(daily_joinings_pipeline).to_list(31),
+        db.users.aggregate(state_pipeline).to_list(10),
+        db.users.count_documents(expiring_query),
+        db.users.aggregate(top_earners_pipeline).to_list(10),
+        db.users.count_documents(today_query),
+        db.users.count_documents(week_query),
+        db.users.count_documents(month_query),
+        db.users.count_documents(base_query),  # Total members
+        db.users.count_documents({**base_query, "is_active": True}),  # Active
+        db.users.count_documents({**base_query, "is_active": False}),  # Inactive
+        return_exceptions=True
+    )
+    
+    # Parse results
+    active_inactive_result = results[0] if not isinstance(results[0], Exception) else []
+    subscription_result = results[1] if not isinstance(results[1], Exception) else []
+    new_joinings_count = results[2] if not isinstance(results[2], Exception) else 0
+    kyc_result = results[3] if not isinstance(results[3], Exception) else []
+    daily_joinings = results[4] if not isinstance(results[4], Exception) else []
+    state_distribution = results[5] if not isinstance(results[5], Exception) else []
+    expiring_count = results[6] if not isinstance(results[6], Exception) else 0
+    top_earners = results[7] if not isinstance(results[7], Exception) else []
+    today_count = results[8] if not isinstance(results[8], Exception) else 0
+    week_count = results[9] if not isinstance(results[9], Exception) else 0
+    month_count = results[10] if not isinstance(results[10], Exception) else 0
+    total_members = results[11] if not isinstance(results[11], Exception) else 0
+    active_count = results[12] if not isinstance(results[12], Exception) else 0
+    inactive_count = results[13] if not isinstance(results[13], Exception) else 0
+    
+    # Format subscription breakdown
+    subscription_breakdown = {
+        "explorer": {"count": 0, "total_prc": 0},
+        "startup": {"count": 0, "total_prc": 0},
+        "growth": {"count": 0, "total_prc": 0},
+        "elite": {"count": 0, "total_prc": 0}
+    }
+    for item in subscription_result:
+        plan = item["_id"] or "explorer"
+        if plan in subscription_breakdown:
+            subscription_breakdown[plan] = {
+                "count": item["count"],
+                "total_prc": round(item["total_prc"], 2)
+            }
+    
+    # Format KYC breakdown
+    kyc_breakdown = {"pending": 0, "submitted": 0, "verified": 0, "rejected": 0}
+    for item in kyc_result:
+        status = item["_id"] or "pending"
+        if status in kyc_breakdown:
+            kyc_breakdown[status] = item["count"]
+        elif status == "approved":
+            kyc_breakdown["verified"] += item["count"]
+    
+    # Format state distribution
+    states = [{"state": item["_id"], "count": item["count"]} for item in state_distribution]
+    
+    # Calculate growth rate (this month vs last month)
+    last_month_start = month_start - timedelta(days=30)
+    last_month_query = {
+        **base_query,
+        "created_at": {
+            "$gte": last_month_start.isoformat(),
+            "$lt": month_start.isoformat()
+        }
+    }
+    last_month_count = await db.users.count_documents(last_month_query)
+    growth_rate = round(((month_count - last_month_count) / last_month_count * 100), 2) if last_month_count > 0 else 100
+    
+    # Calculate paid members percentage
+    paid_members = sum(subscription_breakdown[p]["count"] for p in ["startup", "growth", "elite"])
+    paid_percentage = round((paid_members / total_members * 100), 2) if total_members > 0 else 0
+    
+    return {
+        "summary": {
+            "total_members": total_members,
+            "active_members": active_count,
+            "inactive_members": inactive_count,
+            "paid_members": paid_members,
+            "free_members": subscription_breakdown["explorer"]["count"],
+            "paid_percentage": paid_percentage
+        },
+        "new_joinings": {
+            "today": today_count,
+            "this_week": week_count,
+            "this_month": month_count,
+            "selected_period": new_joinings_count,
+            "growth_rate": growth_rate
+        },
+        "subscription_breakdown": subscription_breakdown,
+        "kyc_breakdown": kyc_breakdown,
+        "daily_joinings_chart": daily_joinings,
+        "state_distribution": states,
+        "expiring_subscriptions": {
+            "next_7_days": expiring_count
+        },
+        "top_earners": top_earners,
+        "period": {
+            "type": period,
+            "from": period_start.isoformat(),
+            "to": period_end.isoformat()
+        }
+    }
+
+
+@api_router.get("/admin/members/list")
+async def get_members_list(
+    page: int = 1,
+    limit: int = 20,
+    search: Optional[str] = None,
+    subscription: Optional[str] = None,
+    kyc_status: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    sort_by: Optional[str] = "created_at",
+    sort_order: Optional[str] = "desc"
+):
+    """Get paginated members list with filters"""
+    query = {"role": {"$ne": "admin"}}
+    
+    # Search
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"mobile": {"$regex": search, "$options": "i"}},
+            {"uid": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # Filters
+    if subscription:
+        query["subscription_plan"] = subscription
+    if kyc_status:
+        query["kyc_status"] = kyc_status
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    # Date range
+    if date_from or date_to:
+        query["created_at"] = {}
+        if date_from:
+            query["created_at"]["$gte"] = date_from
+        if date_to:
+            query["created_at"]["$lte"] = date_to
+    
+    # Sorting
+    sort_direction = -1 if sort_order == "desc" else 1
+    sort_field = sort_by if sort_by in ["created_at", "prc_balance", "name", "subscription_plan"] else "created_at"
+    
+    skip = (page - 1) * limit
+    
+    # Get total and members
+    total = await db.users.count_documents(query)
+    members = await db.users.find(
+        query,
+        {
+            "_id": 0,
+            "password_hash": 0,
+            "password": 0,
+            "reset_token": 0,
+            "biometric_credentials": 0
+        }
+    ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+    
+    return {
+        "members": members,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": (total + limit - 1) // limit if total > 0 else 0
+        }
+    }
+
+
 @api_router.get("/admin/users/all")
 async def get_all_users_admin(
     page: int = 1, 
