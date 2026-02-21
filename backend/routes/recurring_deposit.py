@@ -1177,3 +1177,240 @@ async def admin_bulk_migrate_luxury():
     except Exception as e:
         logging.error(f"Error in bulk luxury migration: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== ADMIN RD REDEEM REQUEST MANAGEMENT ====================
+
+@router.get("/admin/redeem-requests")
+async def admin_get_rd_redeem_requests(
+    status: str = None, 
+    skip: int = 0, 
+    limit: int = 50,
+    search: str = None
+):
+    """Admin: Get all RD redeem requests"""
+    try:
+        query = {"request_type": "rd_redeem"}
+        if status:
+            query["status"] = status
+        if search:
+            query["$or"] = [
+                {"user_name": {"$regex": search, "$options": "i"}},
+                {"user_mobile": {"$regex": search, "$options": "i"}},
+                {"request_id": {"$regex": search, "$options": "i"}},
+                {"rd_id": {"$regex": search, "$options": "i"}}
+            ]
+        
+        requests = await db.bank_redeem_requests.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        total = await db.bank_redeem_requests.count_documents(query)
+        
+        # Remove MongoDB _id
+        for req in requests:
+            req.pop("_id", None)
+        
+        # Stats
+        pending = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "pending"})
+        approved = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "approved"})
+        rejected = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "rejected"})
+        
+        return {
+            "success": True,
+            "requests": requests,
+            "total": total,
+            "stats": {
+                "pending": pending,
+                "approved": approved,
+                "rejected": rejected
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fetching RD redeem requests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/redeem-requests/{request_id}/approve")
+async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_ref: str = None):
+    """Admin: Approve RD redeem request and process payment"""
+    try:
+        # Find the request
+        redeem_request = await db.bank_redeem_requests.find_one({
+            "request_id": request_id,
+            "request_type": "rd_redeem"
+        })
+        
+        if not redeem_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if redeem_request["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Request is already {redeem_request['status']}")
+        
+        now = datetime.now(timezone.utc)
+        user_id = redeem_request["user_id"]
+        rd_id = redeem_request["rd_id"]
+        net_amount = redeem_request["net_amount"]
+        
+        # Get the RD
+        rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
+        if not rd:
+            raise HTTPException(status_code=404, detail="RD not found")
+        
+        # Update RD status
+        await db.recurring_deposits.update_one(
+            {"rd_id": rd_id},
+            {
+                "$set": {
+                    "status": "redeemed",
+                    "redemption_date": now.isoformat(),
+                    "redemption_amount": net_amount,
+                    "penalty_amount": redeem_request["penalty_amount"],
+                    "final_interest_earned": redeem_request["interest_earned"],
+                    "is_premature": redeem_request["is_premature"],
+                    "redeemed_via_request": True,
+                    "redeem_request_id": request_id,
+                    "has_pending_redeem": False,
+                    "pending_redeem_request_id": None,
+                    "updated_at": now.isoformat()
+                }
+            }
+        )
+        
+        # Update request status
+        await db.bank_redeem_requests.update_one(
+            {"request_id": request_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "processed_by": admin_id,
+                    "processed_at": now.isoformat(),
+                    "transaction_ref": transaction_ref,
+                    "updated_at": now.isoformat()
+                }
+            }
+        )
+        
+        # Create transaction record
+        await db.transactions.insert_one({
+            "transaction_id": f"RD_REDEEM_{uuid.uuid4().hex[:8].upper()}",
+            "user_id": user_id,
+            "type": "rd_redeem_approved",
+            "amount": net_amount,
+            "rd_id": rd_id,
+            "request_id": request_id,
+            "principal": redeem_request["principal_amount"],
+            "interest": redeem_request["interest_earned"],
+            "penalty": redeem_request["penalty_amount"],
+            "is_premature": redeem_request["is_premature"],
+            "transaction_ref": transaction_ref,
+            "processed_by": admin_id,
+            "created_at": now.isoformat()
+        })
+        
+        # Update user's active RD count
+        active_rds = await db.recurring_deposits.count_documents({
+            "user_id": user_id,
+            "status": "active"
+        })
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {"has_active_rd": active_rds > 0},
+                "$inc": {"rd_redemptions": 1}
+            }
+        )
+        
+        # Create notification
+        await db.notifications.insert_one({
+            "user_id": user_id,
+            "title": "RD Redeem Approved!",
+            "message": f"Your RD redeem request for ₹{net_amount:,.0f} has been approved and will be credited to your bank account.",
+            "type": "rd_redeem_approved",
+            "related_id": request_id,
+            "read": False,
+            "created_at": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"RD redeem request approved. ₹{net_amount:,.0f} to be credited.",
+            "request_id": request_id,
+            "amount": net_amount
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error approving RD redeem: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/redeem-requests/{request_id}/reject")
+async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = None):
+    """Admin: Reject RD redeem request"""
+    try:
+        # Find the request
+        redeem_request = await db.bank_redeem_requests.find_one({
+            "request_id": request_id,
+            "request_type": "rd_redeem"
+        })
+        
+        if not redeem_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if redeem_request["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Request is already {redeem_request['status']}")
+        
+        now = datetime.now(timezone.utc)
+        user_id = redeem_request["user_id"]
+        rd_id = redeem_request["rd_id"]
+        
+        # Update request status
+        await db.bank_redeem_requests.update_one(
+            {"request_id": request_id},
+            {
+                "$set": {
+                    "status": "rejected",
+                    "rejection_reason": reason,
+                    "processed_by": admin_id,
+                    "processed_at": now.isoformat(),
+                    "updated_at": now.isoformat()
+                }
+            }
+        )
+        
+        # Clear pending flag on RD
+        await db.recurring_deposits.update_one(
+            {"rd_id": rd_id},
+            {
+                "$set": {
+                    "has_pending_redeem": False,
+                    "pending_redeem_request_id": None,
+                    "updated_at": now.isoformat()
+                }
+            }
+        )
+        
+        # Create notification
+        await db.notifications.insert_one({
+            "user_id": user_id,
+            "title": "RD Redeem Request Rejected",
+            "message": f"Your RD redeem request has been rejected. Reason: {reason or 'Not specified'}",
+            "type": "rd_redeem_rejected",
+            "related_id": request_id,
+            "read": False,
+            "created_at": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": "RD redeem request rejected",
+            "request_id": request_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error rejecting RD redeem: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
