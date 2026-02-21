@@ -7593,6 +7593,167 @@ async def get_subscription_stats():
     except Exception as e:
         return {"error": str(e)}
 
+
+@api_router.get("/admin/subscription-analytics")
+async def get_subscription_analytics(period: str = "month"):
+    """
+    Admin API: Get detailed subscription analytics
+    - New subscriptions vs Renewals
+    - Upgrades vs Downgrades
+    - Revenue breakdown
+    - User retention stats
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Calculate period start
+        if period == "today":
+            period_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == "week":
+            period_start = now - timedelta(days=7)
+        elif period == "month":
+            period_start = now - timedelta(days=30)
+        elif period == "year":
+            period_start = now - timedelta(days=365)
+        else:
+            period_start = now - timedelta(days=30)
+        
+        period_start_str = period_start.isoformat()
+        
+        # Get approved payments in this period with subscription_type breakdown
+        type_pipeline = [
+            {
+                "$match": {
+                    "status": "approved",
+                    "approved_at": {"$gte": period_start_str}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"$ifNull": ["$subscription_type", "unknown"]},
+                    "count": {"$sum": 1},
+                    "revenue": {"$sum": {"$ifNull": ["$amount", 0]}}
+                }
+            }
+        ]
+        
+        type_stats = await db.vip_payments.aggregate(type_pipeline).to_list(10)
+        
+        # Convert to dict
+        subscription_breakdown = {
+            "new": {"count": 0, "revenue": 0},
+            "renewal": {"count": 0, "revenue": 0},
+            "upgrade": {"count": 0, "revenue": 0},
+            "downgrade": {"count": 0, "revenue": 0},
+            "unknown": {"count": 0, "revenue": 0}  # Legacy payments without type
+        }
+        
+        total_subscriptions = 0
+        total_revenue = 0
+        
+        for item in type_stats:
+            sub_type = item["_id"] or "unknown"
+            if sub_type in subscription_breakdown:
+                subscription_breakdown[sub_type]["count"] = item["count"]
+                subscription_breakdown[sub_type]["revenue"] = item["revenue"]
+            else:
+                subscription_breakdown["unknown"]["count"] += item["count"]
+                subscription_breakdown["unknown"]["revenue"] += item["revenue"]
+            
+            total_subscriptions += item["count"]
+            total_revenue += item["revenue"]
+        
+        # Plan-wise breakdown
+        plan_pipeline = [
+            {
+                "$match": {
+                    "status": "approved",
+                    "approved_at": {"$gte": period_start_str}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "plan": {"$ifNull": ["$subscription_plan", "startup"]},
+                        "type": {"$ifNull": ["$subscription_type", "unknown"]}
+                    },
+                    "count": {"$sum": 1},
+                    "revenue": {"$sum": {"$ifNull": ["$amount", 0]}}
+                }
+            }
+        ]
+        
+        plan_stats = await db.vip_payments.aggregate(plan_pipeline).to_list(50)
+        
+        plan_breakdown = {}
+        for item in plan_stats:
+            plan = item["_id"]["plan"]
+            sub_type = item["_id"]["type"]
+            
+            if plan not in plan_breakdown:
+                plan_breakdown[plan] = {"new": 0, "renewal": 0, "upgrade": 0, "downgrade": 0, "total": 0, "revenue": 0}
+            
+            if sub_type in ["new", "renewal", "upgrade", "downgrade"]:
+                plan_breakdown[plan][sub_type] = item["count"]
+            plan_breakdown[plan]["total"] += item["count"]
+            plan_breakdown[plan]["revenue"] += item["revenue"]
+        
+        # First-time subscribers count (users with subscription_count = 1)
+        first_time_subscribers = await db.users.count_documents({
+            "subscription_count": 1,
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]}
+        })
+        
+        # Returning subscribers (subscription_count > 1)
+        returning_subscribers = await db.users.count_documents({
+            "subscription_count": {"$gt": 1},
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]}
+        })
+        
+        # Expiring soon (for renewal predictions)
+        expiring_7_days = await db.users.count_documents({
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+            "subscription_expiry": {
+                "$gte": now.isoformat(),
+                "$lte": (now + timedelta(days=7)).isoformat()
+            }
+        })
+        
+        expiring_30_days = await db.users.count_documents({
+            "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+            "subscription_expiry": {
+                "$gte": now.isoformat(),
+                "$lte": (now + timedelta(days=30)).isoformat()
+            }
+        })
+        
+        return {
+            "period": period,
+            "period_start": period_start_str,
+            "summary": {
+                "total_subscriptions": total_subscriptions,
+                "total_revenue": total_revenue,
+                "new_subscriptions": subscription_breakdown["new"]["count"],
+                "renewals": subscription_breakdown["renewal"]["count"],
+                "upgrades": subscription_breakdown["upgrade"]["count"],
+                "downgrades": subscription_breakdown["downgrade"]["count"]
+            },
+            "subscription_breakdown": subscription_breakdown,
+            "plan_breakdown": plan_breakdown,
+            "user_stats": {
+                "first_time_subscribers": first_time_subscribers,
+                "returning_subscribers": returning_subscribers,
+                "retention_rate": round((returning_subscribers / (first_time_subscribers + returning_subscribers) * 100), 2) if (first_time_subscribers + returning_subscribers) > 0 else 0
+            },
+            "upcoming_renewals": {
+                "expiring_7_days": expiring_7_days,
+                "expiring_30_days": expiring_30_days
+            }
+        }
+    except Exception as e:
+        print(f"Error in subscription analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # DISABLED - Moved to routes/admin_*.py
 async def get_admin_subscription_pricing():
     """Admin: Get current subscription pricing"""
