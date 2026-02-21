@@ -1700,12 +1700,12 @@ const AdminUser360 = ({ user: adminUser }) => {
                 <Button
                   onClick={async () => {
                     const userEmail = userData?.user?.email || 'this user';
-                    const confirmation = prompt(`⚠️ DANGER: This will permanently delete ${userEmail}.\n\nType "DELETE" to confirm:`);
+                    const confirmation = prompt(`⚠️ DANGER: This will permanently delete ${userEmail} and ALL their data.\n\nType "DELETE" to confirm:`);
                     if (confirmation === 'DELETE') {
                       setProcessing(true);
                       try {
-                        await axios.delete(`${API}/admin/users/${userData.user.uid}/delete`);
-                        toast.success('User deleted successfully');
+                        await axios.delete(`${API}/admin/users/${userData.user.uid}/delete?permanent=true`);
+                        toast.success('User permanently deleted');
                         setUserData(null);
                         setSearchQuery('');
                       } catch (error) {
