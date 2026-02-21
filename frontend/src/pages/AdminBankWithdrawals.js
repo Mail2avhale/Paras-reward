@@ -3,7 +3,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import {
   Building2, Clock, CheckCircle, XCircle, Search, RefreshCw,
-  ChevronDown, ChevronUp, User, Phone, Mail, CreditCard, AlertCircle
+  ChevronDown, ChevronUp, User, Phone, Mail, CreditCard, AlertCircle,
+  PiggyBank, Percent
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,13 +14,18 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const AdminBankWithdrawals = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
+  const [rdRequests, setRdRequests] = useState([]);
   const [stats, setStats] = useState({});
+  const [rdStats, setRdStats] = useState({});
   const [statusFilter, setStatusFilter] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRequest, setExpandedRequest] = useState(null);
   const [processing, setProcessing] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
+  
+  // Request type tab - 'bank' or 'rd'
+  const [requestType, setRequestType] = useState('bank');
   
   // Pagination state
   const [page, setPage] = useState(1);
