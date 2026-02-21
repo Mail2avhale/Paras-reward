@@ -223,7 +223,12 @@ const BillPayments = ({ user, onLogout }) => {
         details
       });
 
-      toast.success('✅ Bill Payment Request Submitted!\n\nProcessing Time: 48 hours. You will receive a notification once completed.', {
+      // Different processing time for different request types
+      const processingTimeMsg = selectedType === 'loan_emi' 
+        ? '✅ EMI Payment Request Submitted!\n\nProcessing Time: 3 to 7 days. Your EMI will be paid after admin approval.'
+        : '✅ Bill Payment Request Submitted!\n\nProcessing Time: 48 hours. You will receive a notification once completed.';
+      
+      toast.success(processingTimeMsg, {
         duration: 6000,
       });
 
