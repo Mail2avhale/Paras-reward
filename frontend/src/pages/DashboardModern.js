@@ -1161,7 +1161,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 <p className="text-emerald-200/70 text-xs italic mt-0.5">&ldquo;Earn up to 9.25% Interest&rdquo;</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">💰 20% Auto-Save</span>
+                  <span className="text-[10px] text-gray-400">💰 20% Compulsory Savings</span>
                   <span className="text-[10px] text-gray-400">📈 Compound Interest</span>
                 </div>
               </div>
