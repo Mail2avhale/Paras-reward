@@ -518,8 +518,8 @@ const ParasRecurringDeposit = () => {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-gray-400 space-y-2">
-              <p><strong className="text-white">Auto-Deduction:</strong> 20% of your mining earnings are automatically deposited to RD.</p>
-              <p><strong className="text-white">Premature Withdrawal:</strong> 3% penalty applies if withdrawn before maturity.</p>
+              <p><strong className="text-white">Compulsory Savings:</strong> 20% of your mining earnings are automatically deposited to RD.</p>
+              <p><strong className="text-white">Early Redemption:</strong> 3% penalty applies if redeemed before maturity.</p>
               <p><strong className="text-white">Interest:</strong> Calculated with quarterly compounding.</p>
             </div>
           </div>
