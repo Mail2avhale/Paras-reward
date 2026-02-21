@@ -223,7 +223,7 @@ const AdminMembers = () => {
         </div>
 
         {/* Subscription Plans Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -253,19 +253,6 @@ const AdminMembers = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border border-purple-700/50 rounded-2xl p-5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 bg-purple-600/30 text-purple-300 rounded-full text-sm font-medium">GROWTH</span>
-            </div>
-            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.growth?.count || 0}</p>
-            <p className="text-purple-400/70 text-sm mt-1">₹549/month</p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
             className="bg-gradient-to-br from-amber-900/50 to-amber-950/50 border border-amber-700/50 rounded-2xl p-5"
           >
             <div className="flex items-center justify-between mb-3">
