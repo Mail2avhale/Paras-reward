@@ -369,27 +369,27 @@ const Orders = ({ user, onLogout }) => {
               </div>
             </div>
             
-            {/* Luxury Life Savings Card */}
+            {/* RD Savings Card (replacing Luxury Life) */}
             {userStats.luxury_life && userStats.luxury_life.total_savings > 0 && (
-              <div className="mt-4 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-xl p-4 border border-pink-500/30">
+              <div className="mt-4 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl p-4 border border-emerald-500/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <PiggyBank className="w-5 h-5 text-pink-500" />
-                      <p className="text-white font-semibold">Luxury Life Savings</p>
+                      <PiggyBank className="w-5 h-5 text-emerald-500" />
+                      <p className="text-white font-semibold">RD Savings</p>
                       <InfoTooltip>
-                        <p className="font-semibold mb-1">Your Future Rewards!</p>
-                        <p>20% of your mining earnings are automatically saved here. These savings unlock exclusive Luxury Life rewards like premium vouchers, cashback boosts, and special offers!</p>
+                        <p className="font-semibold mb-1">Your Recurring Deposit!</p>
+                        <p>20% of your mining earnings are automatically saved in your RD account. Earn up to 9.25% interest on your savings!</p>
                       </InfoTooltip>
                     </div>
-                    <p className="text-2xl font-bold text-pink-400">{(userStats.luxury_life.total_savings || 0).toLocaleString()} PRC</p>
+                    <p className="text-2xl font-bold text-emerald-400">{(userStats.luxury_life.total_savings || 0).toLocaleString()} PRC</p>
                     <p className="text-gray-400 text-xs">≈ ₹{(userStats.luxury_life.savings_inr || 0).toFixed(2)} saved</p>
                   </div>
                   <div className="text-right">
-                    <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-1">
-                      <Sparkles className="w-6 h-6 text-pink-400" />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-1">
+                      <Sparkles className="w-6 h-6 text-emerald-400" />
                     </div>
-                    <p className="text-xs text-pink-400">20% Auto-Save</p>
+                    <p className="text-xs text-emerald-400">20% Auto-Save</p>
                   </div>
                 </div>
               </div>
