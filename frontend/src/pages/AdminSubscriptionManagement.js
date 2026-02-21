@@ -467,6 +467,17 @@ const PaymentCard = ({ payment, tab, processing, onApprove, onReject, onEdit, on
                  payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '-'}
               </p>
             </div>
+            {/* Show current plan for pending payments - helps admin know if NEW or RENEWAL */}
+            {tab === 'pending' && payment.current_plan && (
+              <div className="bg-gray-800/50 rounded-lg p-2">
+                <p className="text-gray-500 text-xs">Current Plan</p>
+                <p className={`text-sm font-medium ${
+                  payment.current_plan === 'explorer' ? 'text-gray-400' : 'text-purple-400'
+                }`}>
+                  {payment.current_plan === 'explorer' ? '🆕 New User' : `🔄 ${payment.current_plan?.toUpperCase()}`}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Approved tab extra details - Approve Date, Expiry, Remaining Days */}
