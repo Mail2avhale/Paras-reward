@@ -423,7 +423,6 @@ const SubscriptionPlans = ({ user }) => {
                     <th className="text-left py-2">{t('feature')}</th>
                     <th className="text-center py-2">Explorer</th>
                     <th className="text-center py-2">Startup</th>
-                    <th className="text-center py-2">Growth</th>
                     <th className="text-center py-2 text-amber-500">Elite</th>
                   </tr>
                 </thead>
@@ -432,21 +431,18 @@ const SubscriptionPlans = ({ user }) => {
                     <td className="py-2">{t('rewardRate')}</td>
                     <td className="text-center">1.0x</td>
                     <td className="text-center">1.5x</td>
-                    <td className="text-center">2.0x</td>
                     <td className="text-center text-amber-400">3.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('dailyTapsLimit')}</td>
                     <td className="text-center">100</td>
                     <td className="text-center">200</td>
-                    <td className="text-center">300</td>
                     <td className="text-center text-amber-400">400</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('referralWeight')}</td>
                     <td className="text-center">1.0x</td>
                     <td className="text-center">1.2x</td>
-                    <td className="text-center">1.5x</td>
                     <td className="text-center text-amber-400">2.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
@@ -454,12 +450,10 @@ const SubscriptionPlans = ({ user }) => {
                     <td className="text-center text-red-400">✗</td>
                     <td className="text-center text-emerald-400">✓</td>
                     <td className="text-center text-emerald-400">✓</td>
-                    <td className="text-center text-emerald-400">✓</td>
                   </tr>
                   <tr>
                     <td className="py-2">{t('prcExpires')}</td>
                     <td className="text-center text-red-400">2 {t('days')}</td>
-                    <td className="text-center text-emerald-400">{t('never')}</td>
                     <td className="text-center text-emerald-400">{t('never')}</td>
                     <td className="text-center text-emerald-400">{t('never')}</td>
                   </tr>
