@@ -25233,31 +25233,6 @@ async def update_withdrawal(
     await db.withdrawals.update_one({"withdrawal_id": withdrawal_id}, {"$set": update_data})
     return {"message": f"Withdrawal {action}"}
 
-# Profit Wallet Stats
-# DEPRECATED - Stockist system removed
-# @api_router.get("/v2/stockist/{stockist_id}/profit")
-async def get_stockist_profit(stockist_id: str):
-    """Get stockist profit wallet details"""
-    stockist = await db.stockists.find_one({"stockist_id": stockist_id})
-    if not stockist:
-        raise HTTPException(status_code=404, detail="Stockist not found")
-    
-    # Get commission entries
-    commissions = await db.commission_entries.find(
-        {"entity_id": stockist["user_id"]},
-        {"_id": 0}
-    ).sort("credited_at", -1).to_list(100)
-    
-    total_earned = sum(c.get("amount", 0) for c in commissions)
-    
-    return {
-        "stockist_id": stockist_id,
-        "profit_wallet": stockist.get("profit_wallet", 0),
-        "total_earned": total_earned,
-        "commissions": commissions
-    }
-
-
 # ========== REFERRAL LIVE ACTIVITY ==========
 
 @api_router.get("/referrals/live-activity")
