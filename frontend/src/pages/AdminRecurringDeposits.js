@@ -144,6 +144,13 @@ const AdminRecurringDeposits = ({ user }) => {
             Check Matured
           </button>
           <button
+            onClick={bulkMigrateLuxury}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white text-sm font-medium flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Migrate All Luxury
+          </button>
+          <button
             onClick={fetchRds}
             className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
           >
