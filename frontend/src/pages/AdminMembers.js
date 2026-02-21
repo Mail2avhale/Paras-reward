@@ -214,9 +214,9 @@ const AdminMembers = () => {
           />
           <StatsCard
             icon={Crown}
-            title="Paid Members"
-            value={dashboard?.summary?.paid_members}
-            subtitle={`${dashboard?.summary?.paid_percentage || 0}% conversion`}
+            title="Elite Members"
+            value={dashboard?.subscription_breakdown?.elite?.count || 0}
+            subtitle="Premium tier"
             color="bg-amber-600"
           />
           <StatsCard
