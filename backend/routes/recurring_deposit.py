@@ -1378,9 +1378,9 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
                     "status": "redeemed",
                     "redemption_date": now.isoformat(),
                     "redemption_amount": net_amount,
-                    "penalty_amount": redeem_request["penalty_amount"],
-                    "final_interest_earned": redeem_request["interest_earned"],
-                    "is_premature": redeem_request["is_premature"],
+                    "penalty_amount": redeem_request.get("penalty_amount", 0),
+                    "final_interest_earned": redeem_request.get("interest_earned", 0),
+                    "is_premature": redeem_request.get("is_premature", False),
                     "redeemed_via_request": True,
                     "redeem_request_id": request_id,
                     "has_pending_redeem": False,
@@ -1390,21 +1390,26 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
             }
         )
         
-        # Update request status
-        await db.bank_redeem_requests.update_one(
-            {"request_id": request_id},
-            {
-                "$set": {
-                    "status": "approved",
-                    "processed_by": admin_name,
-                    "processed_by_uid": admin_id,
-                    "approved_by_name": admin_name,
-                    "processed_at": now.isoformat(),
-                    "transaction_ref": transaction_ref,
-                    "updated_at": now.isoformat()
-                }
+        # Update request status in the correct collection
+        update_data = {
+            "$set": {
+                "status": "approved",
+                "processed_by": admin_name,
+                "processed_by_uid": admin_id,
+                "approved_by_name": admin_name,
+                "processed_at": now.isoformat(),
+                "transaction_ref": transaction_ref,
+                "updated_at": now.isoformat()
             }
-        )
+        }
+        
+        # Update in the source collection
+        if source_collection == "rd_redeem_requests":
+            await db.rd_redeem_requests.update_one({"request_id": request_id}, update_data)
+        elif source_collection == "withdrawal_requests":
+            await db.withdrawal_requests.update_one({"request_id": request_id}, update_data)
+        else:
+            await db.bank_redeem_requests.update_one({"request_id": request_id}, update_data)
         
         # Create transaction record
         await db.transactions.insert_one({
@@ -1414,10 +1419,10 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
             "amount": net_amount,
             "rd_id": rd_id,
             "request_id": request_id,
-            "principal": redeem_request["principal_amount"],
-            "interest": redeem_request["interest_earned"],
-            "penalty": redeem_request["penalty_amount"],
-            "is_premature": redeem_request["is_premature"],
+            "principal": redeem_request.get("principal_amount", 0),
+            "interest": redeem_request.get("interest_earned", 0),
+            "penalty": redeem_request.get("penalty_amount", 0),
+            "is_premature": redeem_request.get("is_premature", False),
             "transaction_ref": transaction_ref,
             "processed_by": admin_id,
             "created_at": now.isoformat()
