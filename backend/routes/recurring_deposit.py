@@ -610,7 +610,7 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         
         return {
             "success": True,
-            "message": "RD Redeem request submitted successfully! Admin will review your request.",
+            "message": "Savings Vault Redeem request submitted successfully! Admin will review your request.",
             "request_id": request_id,
             "request_details": {
                 "principal": rd["total_deposited"],
