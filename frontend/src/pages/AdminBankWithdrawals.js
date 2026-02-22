@@ -445,17 +445,33 @@ const AdminBankWithdrawals = ({ user }) => {
                           <User className="h-4 w-4" /> User Details
                         </h4>
                         <div className="bg-gray-900/50 rounded-xl p-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-500">Name</span>
-                            <span className="text-white">{req.user_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white">{req.user_name}</span>
+                              <button onClick={() => copyToClipboard(req.user_name, 'Name')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-500">Email</span>
-                            <span className="text-white">{req.user_email}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white">{req.user_email}</span>
+                              <button onClick={() => copyToClipboard(req.user_email, 'Email')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-500">Mobile</span>
-                            <span className="text-white">{req.user_mobile || 'N/A'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white">{req.user_mobile || 'N/A'}</span>
+                              {req.user_mobile && <button onClick={() => copyToClipboard(req.user_mobile, 'Mobile')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>}
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Request ID</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-amber-400 font-mono text-xs">{req.request_id}</span>
+                              <button onClick={() => copyToClipboard(req.request_id, 'Request ID')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -465,22 +481,65 @@ const AdminBankWithdrawals = ({ user }) => {
                           <CreditCard className="h-4 w-4" /> Charge Breakdown
                         </h4>
                         <div className="bg-gray-900/50 rounded-xl p-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Withdrawal Amount</span>
-                            <span className="text-white">₹{req.amount_inr?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Processing Fee</span>
-                            <span className="text-orange-400">₹{req.processing_fee_inr?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Admin Charge (20%)</span>
-                            <span className="text-orange-400">₹{req.admin_charge_inr?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between pt-2 border-t border-gray-700">
-                            <span className="text-amber-400 font-medium">Total PRC Deducted</span>
-                            <span className="text-amber-400 font-bold">{req.total_prc_deducted?.toLocaleString()} PRC</span>
-                          </div>
+                          {/* Show RD-specific details if it's an RD request */}
+                          {req.request_type === 'rd_redeem' ? (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">RD ID</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-emerald-400 font-mono">{req.rd_id}</span>
+                                  <button onClick={() => copyToClipboard(req.rd_id, 'RD ID')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                                </div>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Principal</span>
+                                <span className="text-white">₹{(req.principal_amount || 0).toLocaleString()} PRC</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Interest Earned</span>
+                                <span className="text-green-400">+₹{(req.interest_earned || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Current Value</span>
+                                <span className="text-white">₹{(req.current_value || 0).toLocaleString()} PRC</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Early Penalty ({req.penalty_percent || 3}%)</span>
+                                <span className="text-red-400">-₹{(req.penalty_amount || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Admin Charge ({req.admin_charge_percent || 20}%)</span>
+                                <span className="text-red-400">-₹{(req.admin_charge || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between pt-2 border-t border-gray-700">
+                                <span className="text-amber-400 font-medium">Net Amount (PRC)</span>
+                                <span className="text-amber-400 font-bold">₹{(req.net_amount || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-emerald-400 font-medium">Bank Transfer (INR)</span>
+                                <span className="text-emerald-400 font-bold">₹{(req.amount_inr || 0).toLocaleString()}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Withdrawal Amount</span>
+                                <span className="text-white">₹{req.amount_inr?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Processing Fee</span>
+                                <span className="text-orange-400">₹{req.processing_fee_inr?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Admin Charge (20%)</span>
+                                <span className="text-orange-400">₹{req.admin_charge_inr?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between pt-2 border-t border-gray-700">
+                                <span className="text-amber-400 font-medium">Total PRC Deducted</span>
+                                <span className="text-amber-400 font-bold">{req.total_prc_deducted?.toLocaleString()} PRC</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -492,11 +551,14 @@ const AdminBankWithdrawals = ({ user }) => {
                           <Building2 className="h-4 w-4" /> Bank Details
                         </h4>
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-400">Account Holder</span>
-                            <span className="text-white font-medium">{req.bank_details?.account_holder_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{req.bank_details?.account_holder_name}</span>
+                              <button onClick={() => copyToClipboard(req.bank_details?.account_holder_name, 'Account Holder')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-400">Account Number</span>
                             <span className="text-white font-mono">{req.bank_details?.account_number}</span>
                           </div>
