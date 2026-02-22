@@ -1433,8 +1433,8 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
         # Create notification
         await db.notifications.insert_one({
             "user_id": user_id,
-            "title": "RD Redeem Request Rejected",
-            "message": f"Your RD redeem request has been rejected. Reason: {reason or 'Not specified'}",
+            "title": "Savings Vault Redeem Request Rejected",
+            "message": f"Your Savings Vault redeem request has been rejected. Reason: {reason or 'Not specified'}",
             "type": "rd_redeem_rejected",
             "related_id": request_id,
             "read": False,
