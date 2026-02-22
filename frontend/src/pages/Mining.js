@@ -559,7 +559,7 @@ const DailyRewards = ({ user }) => {
       setTimeout(() => setShowConfetti(false), 1000);
       
       if (luxurySaved > 0) {
-        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved for RD)`, { position: 'top-center' });
+        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved to Vault)`, { position: 'top-center' });
       } else {
         smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
       }
