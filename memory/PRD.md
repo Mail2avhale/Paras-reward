@@ -5,6 +5,31 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### 🔒 Admin Tracking & Weekly Limit Bug Fix ✅ (Feb 22, 2026)
+**User Request:** 
+1. Track which admin approved/rejected each request for accountability
+2. Fix weekly redeem limit bug that was incorrectly blocking all requests
+3. Add date range filters and sorting to admin panel
+
+**Features Implemented:**
+1. **Admin Tracking:** All approve/reject actions now save:
+   - `processed_by` - Admin name
+   - `processed_by_uid` - Admin UID  
+   - `approved_by_name` / `rejected_by_name` - Clear field names
+   - `processed_at` - Timestamp
+2. **Weekly Limit Bug Fixed:** Changed from Python string comparison to MongoDB `$gte` query
+3. **Date Filters:** Both Bank Redeem and RD Redeem admin APIs support `date_from`, `date_to`, `sort_order` params
+4. **Frontend Display:** Admin panel shows "Approved By: {name}" or "Rejected By: {name}"
+
+**Files Modified:**
+- `backend/routes/bank_redeem.py` - approve_withdrawal(), reject_withdrawal() with admin tracking
+- `backend/routes/recurring_deposit.py` - admin_approve_rd_redeem(), admin_reject_rd_redeem() with admin tracking, fixed weekly limit query
+- `frontend/src/pages/AdminBankWithdrawals.js` - Displays admin names, passes date filter params
+
+**Test Results:** ✅ 100% tests passed (21 backend tests)
+
+---
+
 ### 🏦 Recurring Deposit (RD) System - NEW FEATURE ✅ (Feb 21, 2026)
 **User Request:** Implement a bank-like RD system with interest to replace the old "Luxury Life" feature.
 
