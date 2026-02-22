@@ -140,7 +140,7 @@ const ParasRecurringDeposit = () => {
       
       const data = await response.json();
       if (data.success) {
-        toast.success('✅ RD Redeem Request Submitted!\n\nProcessing Time: 3 to 7 days. Amount will be credited to your bank account after admin approval.', {
+        toast.success('✅ Savings Redeem Request Submitted!\n\nProcessing Time: 3 to 7 days. PRC amount will be credited to your bank account after admin approval.', {
           duration: 6000,
         });
         setShowWithdrawModal(false);
