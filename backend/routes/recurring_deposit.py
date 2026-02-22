@@ -449,50 +449,46 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         week_start = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
         week_start_str = week_start.isoformat()
         
-        # Check for existing RD redeem request this week - fetch all and filter
-        all_rd_requests = await db.bank_redeem_requests.find({
+        # Check for existing RD redeem request this week - use MongoDB query with date filter
+        existing_rd_request = await db.bank_redeem_requests.find_one({
             "user_id": request.user_id,
             "request_type": "rd_redeem",
+            "created_at": {"$gte": week_start_str},
             "status": {"$nin": ["rejected", "cancelled"]}
-        }).to_list(100)
+        })
         
-        for req in all_rd_requests:
-            req_created = req.get("created_at", "")
-            if req_created >= week_start_str:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="You have already submitted an RD redeem request this week. Only 1 request allowed per week."
-                )
+        if existing_rd_request:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted an RD redeem request this week. Only 1 request allowed per week."
+            )
         
-        # Check for existing bank redeem request this week
-        all_bank_requests = await db.bank_redeem_requests.find({
+        # Check for existing bank redeem request this week (bank_withdrawal_requests collection)
+        existing_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": request.user_id,
-            "request_type": "bank_redeem",
+            "created_at": {"$gte": week_start_str},
             "status": {"$nin": ["rejected", "cancelled"]}
-        }).to_list(100)
+        })
         
-        for req in all_bank_requests:
-            req_created = req.get("created_at", "")
-            if req_created >= week_start_str:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="You have already submitted a Bank Redeem request this week. Only 1 redemption request allowed per week."
-                )
+        if existing_bank_request:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted a Bank Redeem request this week. Only 1 redemption request allowed per week."
+            )
         
         # Check for existing EMI request this week
         existing_emi_request = await db.bill_payment_requests.find_one({
             "user_id": request.user_id,
             "request_type": "loan_emi",
+            "created_at": {"$gte": week_start_str},
             "status": {"$nin": ["rejected", "cancelled"]}
         })
         
         if existing_emi_request:
-            req_date = existing_emi_request.get("created_at", "")[:10]
-            if req_date >= week_start_str:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="You have already submitted a Loan EMI request this week. Only 1 redemption request allowed per week."
-                )
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already submitted a Loan EMI request this week. Only 1 redemption request allowed per week."
+            )
         
         # Check if user already has pending RD request for this RD
         existing_pending = await db.bank_redeem_requests.find_one({
