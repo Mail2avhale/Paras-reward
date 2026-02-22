@@ -17148,6 +17148,111 @@ async def update_redeem_limit_settings_admin(request: Request):
     
     return {"message": "Monthly redemption limit settings updated", "settings": monthly_redeem_settings}
 
+
+# ==================== PRC SAVINGS VAULT SETTINGS ====================
+
+@api_router.get("/admin/savings-vault/settings")
+async def get_savings_vault_settings():
+    """Get PRC Savings Vault settings including redeem toggle"""
+    settings = await db.settings.find_one({}, {"_id": 0, "savings_vault_settings": 1})
+    
+    default_settings = {
+        "redeem_enabled": True,
+        "redeem_disabled_message": "PRC Savings Vault redemption is temporarily disabled. Please try again later.",
+        "min_redeem_amount": 100,
+        "max_redeem_per_request": 50000,
+        "admin_charge_percent": 20,
+        "premature_penalty_percent": 3,
+        "updated_at": None,
+        "updated_by": None
+    }
+    
+    if settings and "savings_vault_settings" in settings:
+        return {**default_settings, **settings["savings_vault_settings"]}
+    return default_settings
+
+
+@api_router.post("/admin/savings-vault/settings")
+async def update_savings_vault_settings(request: Request):
+    """Update PRC Savings Vault settings"""
+    data = await request.json()
+    admin_id = data.get("admin_id")
+    
+    # Get admin name
+    admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1})
+    admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+    
+    now = datetime.now(timezone.utc)
+    
+    update_data = {
+        "updated_at": now.isoformat(),
+        "updated_by": admin_name,
+        "updated_by_uid": admin_id
+    }
+    
+    # Only update provided fields
+    if "redeem_enabled" in data:
+        update_data["redeem_enabled"] = data["redeem_enabled"]
+    if "redeem_disabled_message" in data:
+        update_data["redeem_disabled_message"] = data["redeem_disabled_message"]
+    if "min_redeem_amount" in data:
+        update_data["min_redeem_amount"] = data["min_redeem_amount"]
+    if "max_redeem_per_request" in data:
+        update_data["max_redeem_per_request"] = data["max_redeem_per_request"]
+    if "admin_charge_percent" in data:
+        update_data["admin_charge_percent"] = data["admin_charge_percent"]
+    if "premature_penalty_percent" in data:
+        update_data["premature_penalty_percent"] = data["premature_penalty_percent"]
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {"savings_vault_settings": update_data}},
+        upsert=True
+    )
+    
+    # Get updated settings
+    updated = await get_savings_vault_settings()
+    
+    return {
+        "success": True,
+        "message": f"Savings Vault settings updated by {admin_name}",
+        "settings": updated
+    }
+
+
+@api_router.post("/admin/savings-vault/toggle-redeem")
+async def toggle_savings_vault_redeem(request: Request):
+    """Quick toggle to enable/disable PRC Savings Vault redemption"""
+    data = await request.json()
+    admin_id = data.get("admin_id")
+    enabled = data.get("enabled", True)
+    
+    # Get admin name
+    admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1})
+    admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+    
+    now = datetime.now(timezone.utc)
+    
+    await db.settings.update_one(
+        {},
+        {"$set": {
+            "savings_vault_settings.redeem_enabled": enabled,
+            "savings_vault_settings.updated_at": now.isoformat(),
+            "savings_vault_settings.updated_by": admin_name,
+            "savings_vault_settings.updated_by_uid": admin_id
+        }},
+        upsert=True
+    )
+    
+    status = "enabled" if enabled else "disabled"
+    return {
+        "success": True,
+        "message": f"Savings Vault redemption {status} by {admin_name}",
+        "redeem_enabled": enabled
+    }
+
+
+
 async def get_user_redeem_limit_admin(uid: str):
     """Get a user's redemption limit details (Admin only - for debugging/support)"""
     user = await db.users.find_one({"uid": uid})
