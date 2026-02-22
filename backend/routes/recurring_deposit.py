@@ -1264,6 +1264,10 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
         rd_id = redeem_request["rd_id"]
         net_amount = redeem_request["net_amount"]
         
+        # Get admin details for tracking
+        admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
+        admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+        
         # Get the RD
         rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
         if not rd:
