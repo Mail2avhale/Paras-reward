@@ -486,15 +486,16 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         existing_emi_request = await db.bill_payment_requests.find_one({
             "user_id": request.user_id,
             "request_type": "loan_emi",
-            "created_at": {"$gte": monday_str},
             "status": {"$nin": ["rejected", "cancelled"]}
         })
         
         if existing_emi_request:
-            raise HTTPException(
-                status_code=400, 
-                detail="You have already submitted a Loan EMI request this week. Only 1 redemption request allowed per week."
-            )
+            req_date = existing_emi_request.get("created_at", "")[:10]
+            if req_date >= week_start_str:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="You have already submitted a Loan EMI request this week. Only 1 redemption request allowed per week."
+                )
         
         # Check if user already has pending RD request for this RD
         existing_pending = await db.bank_redeem_requests.find_one({
