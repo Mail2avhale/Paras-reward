@@ -487,12 +487,27 @@ async def get_admin_withdrawal_requests(
     status: str = None,
     page: int = 1,
     limit: int = 50,
-    search: str = None
+    search: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    sort_order: str = "desc"
 ):
-    """Get all bank withdrawal requests for admin with search"""
+    """Get all bank withdrawal requests for admin with search and date filters"""
     query = {}
     if status:
         query["status"] = status
+    
+    # Date range filtering
+    if date_from or date_to:
+        date_query = {}
+        if date_from:
+            # Convert date string (YYYY-MM-DD) to ISO format with start of day
+            date_query["$gte"] = f"{date_from}T00:00:00+00:00"
+        if date_to:
+            # Convert date string (YYYY-MM-DD) to ISO format with end of day
+            date_query["$lte"] = f"{date_to}T23:59:59+00:00"
+        if date_query:
+            query["created_at"] = date_query
     
     # If search provided, find matching user IDs first
     if search:
@@ -515,11 +530,13 @@ async def get_admin_withdrawal_requests(
     
     skip = (page - 1) * limit
     
-    # FIFO: oldest first (ascending order) - first request on top
+    # Sort order: asc = oldest first, desc = newest first
+    sort_direction = 1 if sort_order == "asc" else -1
+    
     requests_list = await db.bank_withdrawal_requests.find(
         query,
         {"_id": 0}
-    ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)
+    ).sort("created_at", sort_direction).skip(skip).limit(limit).to_list(limit)
     
     total = await db.bank_withdrawal_requests.count_documents(query)
     
