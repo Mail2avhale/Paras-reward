@@ -1441,8 +1441,6 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
                 "request_id": request_id
             })
         
-        # Determine which collection to update
-        collection_name = "bank_redeem_requests"
         if not redeem_request:
             raise HTTPException(status_code=404, detail=f"Request not found: {request_id}")
         
