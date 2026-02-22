@@ -81,7 +81,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     const fetchPendingCounts = async () => {
       try {
         const [kycRes, subRes, billRes, giftRes, luxuryRes, bankRes, rdRes] = await Promise.all([
-          axios.get(`${API}/admin/kyc/stats`).catch(() => ({ data: { stats: { pending: 0 } } })),
+          axios.get(`${API}/kyc/stats`).catch(() => ({ data: { pending: 0 } })),
           axios.get(`${API}/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
           axios.get(`${API}/admin/bill-payment/requests?status=pending`).catch(() => ({ data: { requests: [] } })),
           axios.get(`${API}/admin/gift-voucher/requests?status=pending`).catch(() => ({ data: { requests: [] } })),
@@ -91,7 +91,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         ]);
         
         setPendingCounts({
-          kyc: kycRes.data?.stats?.pending || 0,
+          kyc: kycRes.data?.pending || 0,
           subscriptions: subRes.data?.total || subRes.data?.payments?.length || 0,
           bills: billRes.data?.requests?.length || 0,
           gifts: giftRes.data?.requests?.length || giftRes.data?.stats?.pending || 0,
