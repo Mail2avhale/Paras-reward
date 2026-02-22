@@ -5,6 +5,28 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### 🏷️ "Recurring Deposit" → "PRC Savings Vault" Rename + Disclaimer ✅ (Feb 22, 2026 - Session 2)
+**User Request:**
+1. "Recurring Deposit" नाव Google Play policy साठी योग्य नाही - बदलणे
+2. User ला clarity देणे की हे PRC points आहे, real money नाही
+
+**Changes Made:**
+1. **Renamed throughout app:** "Recurring Deposit" → "PRC Savings Vault"
+2. **Added Disclaimer Banner** on savings page:
+   > "⚠️ This is a virtual PRC points savings feature. No real money deposits are accepted. PRC points have no cash value and cannot be exchanged for real currency."
+3. **Updated all notifications, toasts, and admin panel labels**
+
+**Files Modified:**
+- `frontend/src/pages/ParasRecurringDeposit.js` - Main savings page with disclaimer
+- `frontend/src/pages/Orders.js` - Order history
+- `frontend/src/pages/Mining.js` - Collection toast
+- `frontend/src/pages/AdminBankWithdrawals.js` - Admin panel
+- `frontend/src/pages/AdminRecurringDeposits.js` - Admin management
+- `frontend/src/components/layouts/AdminLayout.js` - Sidebar menu + fixed pending counts
+- `backend/routes/recurring_deposit.py` - API tags and notifications
+
+---
+
 ### 📊 Admin Performance Report & Menu Counts Fix ✅ (Feb 22, 2026 - Session 2)
 **User Request:**
 1. Menu मधील pending request numbers चुकीचे दाखवत होते - fix करणे
