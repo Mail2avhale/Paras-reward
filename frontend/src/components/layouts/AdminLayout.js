@@ -147,6 +147,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+    { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },
     { id: 'contact-submissions', label: 'Contact Inquiries', icon: Mail, path: '/admin/contact-submissions' },
   ];
