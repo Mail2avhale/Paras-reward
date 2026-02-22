@@ -1260,17 +1260,32 @@ async def admin_get_rd_redeem_requests(
 async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_ref: str = None):
     """Admin: Approve RD redeem request and process payment"""
     try:
-        # Find the request
+        # Find the request - check both possible collections
         redeem_request = await db.bank_redeem_requests.find_one({
             "request_id": request_id,
             "request_type": "rd_redeem"
         })
         
+        # Fallback: check without request_type filter (older requests might not have it)
         if not redeem_request:
-            raise HTTPException(status_code=404, detail="Request not found")
+            redeem_request = await db.bank_redeem_requests.find_one({
+                "request_id": request_id
+            })
+            # Verify it's an RD request by checking for rd_id
+            if redeem_request and not redeem_request.get("rd_id"):
+                redeem_request = None
         
-        if redeem_request["status"] != "pending":
-            raise HTTPException(status_code=400, detail=f"Request is already {redeem_request['status']}")
+        # Fallback: check rd_redeem_requests collection (if exists)
+        if not redeem_request:
+            redeem_request = await db.rd_redeem_requests.find_one({
+                "request_id": request_id
+            })
+        
+        if not redeem_request:
+            raise HTTPException(status_code=404, detail=f"Request not found: {request_id}")
+        
+        if redeem_request.get("status") != "pending":
+            raise HTTPException(status_code=400, detail=f"Request is already {redeem_request.get('status')}")
         
         now = datetime.now(timezone.utc)
         user_id = redeem_request["user_id"]
