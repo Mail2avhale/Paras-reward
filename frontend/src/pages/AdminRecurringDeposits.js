@@ -124,7 +124,7 @@ const AdminRecurringDeposits = ({ user }) => {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Building2 className="w-7 h-7 text-emerald-400" />
-            Recurring Deposits
+            PRC Savings Vault
           </h1>
           <p className="text-gray-400 text-sm mt-1">Manage all user RD accounts</p>
         </div>
