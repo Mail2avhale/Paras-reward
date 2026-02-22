@@ -67,7 +67,10 @@ const AdminBankWithdrawals = ({ user }) => {
           status: statusFilter === 'all' ? null : statusFilter,
           page: page,
           limit: ITEMS_PER_PAGE,
-          search: debouncedSearch || undefined
+          search: debouncedSearch || undefined,
+          date_from: dateFrom || undefined,
+          date_to: dateTo || undefined,
+          sort_order: sortOrder
         }
       });
       setRequests(response.data.requests || []);
@@ -88,7 +91,10 @@ const AdminBankWithdrawals = ({ user }) => {
           status: statusFilter === 'all' ? null : statusFilter,
           skip: (page - 1) * ITEMS_PER_PAGE,
           limit: ITEMS_PER_PAGE,
-          search: debouncedSearch || undefined
+          search: debouncedSearch || undefined,
+          date_from: dateFrom || undefined,
+          date_to: dateTo || undefined,
+          sort_order: sortOrder
         }
       });
       setRdRequests(response.data.requests || []);
