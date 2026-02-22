@@ -159,6 +159,60 @@ const AdminRecurringDeposits = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* Redeem Control Panel */}
+      <div className={`rounded-2xl p-5 border ${
+        vaultSettings?.redeem_enabled 
+          ? 'bg-emerald-500/10 border-emerald-500/30' 
+          : 'bg-red-500/10 border-red-500/30'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              vaultSettings?.redeem_enabled ? 'bg-emerald-500/20' : 'bg-red-500/20'
+            }`}>
+              <Shield className={`w-6 h-6 ${
+                vaultSettings?.redeem_enabled ? 'text-emerald-400' : 'text-red-400'
+              }`} />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Savings Vault Redemption</h3>
+              <p className={`text-sm ${
+                vaultSettings?.redeem_enabled ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {vaultSettings?.redeem_enabled ? '✓ Users CAN submit redeem requests' : '✕ Users CANNOT submit redeem requests'}
+              </p>
+              {vaultSettings?.updated_by && (
+                <p className="text-gray-500 text-xs mt-1">
+                  Last updated by: {vaultSettings.updated_by}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <button
+            onClick={toggleRedeemEnabled}
+            disabled={togglingRedeem}
+            className={`px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all ${
+              togglingRedeem 
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : vaultSettings?.redeem_enabled
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+            }`}
+            data-testid="toggle-redeem-btn"
+          >
+            {togglingRedeem ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : vaultSettings?.redeem_enabled ? (
+              <ToggleRight className="w-5 h-5" />
+            ) : (
+              <ToggleLeft className="w-5 h-5" />
+            )}
+            {vaultSettings?.redeem_enabled ? 'Disable Redeem' : 'Enable Redeem'}
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
