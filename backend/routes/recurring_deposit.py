@@ -1299,7 +1299,9 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
             {
                 "$set": {
                     "status": "approved",
-                    "processed_by": admin_id,
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_id,
+                    "approved_by_name": admin_name,
                     "processed_at": now.isoformat(),
                     "transaction_ref": transaction_ref,
                     "updated_at": now.isoformat()
