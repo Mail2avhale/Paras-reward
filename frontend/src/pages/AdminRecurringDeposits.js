@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Search, Filter, RefreshCw, TrendingUp,
   Users, PiggyBank, Clock, CheckCircle2, AlertTriangle,
-  ChevronDown, ChevronRight, Calendar, DollarSign
+  ChevronDown, ChevronRight, Calendar, DollarSign,
+  ToggleLeft, ToggleRight, Shield, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,10 +15,49 @@ const AdminRecurringDeposits = ({ user }) => {
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [pagination, setPagination] = useState({ skip: 0, limit: 20 });
+  const [vaultSettings, setVaultSettings] = useState(null);
+  const [togglingRedeem, setTogglingRedeem] = useState(false);
 
   useEffect(() => {
     fetchRds();
+    fetchVaultSettings();
   }, [statusFilter, pagination]);
+
+  const fetchVaultSettings = async () => {
+    try {
+      const response = await fetch(`${API}/admin/savings-vault/settings`);
+      const data = await response.json();
+      setVaultSettings(data);
+    } catch (error) {
+      console.error('Error fetching vault settings:', error);
+    }
+  };
+
+  const toggleRedeemEnabled = async () => {
+    setTogglingRedeem(true);
+    try {
+      const newState = !vaultSettings?.redeem_enabled;
+      const response = await fetch(`${API}/admin/savings-vault/toggle-redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id: user.uid,
+          enabled: newState
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(data.message);
+        setVaultSettings(prev => ({ ...prev, redeem_enabled: newState }));
+      } else {
+        toast.error(data.detail || 'Failed to toggle');
+      }
+    } catch (error) {
+      toast.error('Failed to toggle redeem status');
+    } finally {
+      setTogglingRedeem(false);
+    }
+  };
 
   const fetchRds = async () => {
     try {
