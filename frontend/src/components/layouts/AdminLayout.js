@@ -80,24 +80,37 @@ const AdminLayout = ({ children, user, onLogout }) => {
   useEffect(() => {
     const fetchPendingCounts = async () => {
       try {
-        const [kycRes, subRes, billRes, giftRes, luxuryRes, bankRes, rdRes] = await Promise.all([
-          axios.get(`${API}/kyc/stats`).catch(() => ({ data: { pending: 0 } })),
-          axios.get(`${API}/admin/vip-payments?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/admin/bill-payment/requests?status=pending`).catch(() => ({ data: { requests: [] } })),
-          axios.get(`${API}/admin/gift-voucher/requests?status=pending`).catch(() => ({ data: { requests: [] } })),
-          axios.get(`${API}/admin/luxury-claims?status=pending&limit=1`).catch(() => ({ data: { total: 0 } })),
-          axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`).catch(() => ({ data: { stats: {} } })),
-          axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`).catch(() => ({ data: { stats: {} } }))
+        // Use Promise.allSettled to handle individual API failures gracefully
+        const results = await Promise.allSettled([
+          axios.get(`${API}/kyc/stats`),
+          axios.get(`${API}/admin/vip-payments?status=pending&limit=1`),
+          axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=500`),
+          axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=500`),
+          axios.get(`${API}/admin/luxury-claims?status=pending&limit=1`),
+          axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
+          axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`)
         ]);
         
+        // Extract values safely
+        const getValue = (result, extractor, defaultVal = 0) => {
+          if (result.status === 'fulfilled') {
+            try {
+              return extractor(result.value.data) || defaultVal;
+            } catch {
+              return defaultVal;
+            }
+          }
+          return defaultVal;
+        };
+        
         setPendingCounts({
-          kyc: kycRes.data?.pending || 0,
-          subscriptions: subRes.data?.total || subRes.data?.payments?.length || 0,
-          bills: billRes.data?.requests?.length || 0,
-          gifts: giftRes.data?.requests?.length || giftRes.data?.stats?.pending || 0,
-          luxury: luxuryRes.data?.total || (Array.isArray(luxuryRes.data) ? luxuryRes.data.length : 0),
-          bankWithdrawals: bankRes.data?.stats?.pending?.count || 0,
-          rdRedeem: rdRes.data?.stats?.pending || 0
+          kyc: getValue(results[0], d => d?.pending),
+          subscriptions: getValue(results[1], d => d?.total || d?.payments?.length),
+          bills: getValue(results[2], d => d?.requests?.length || d?.total),
+          gifts: getValue(results[3], d => d?.requests?.length || d?.stats?.pending || d?.total),
+          luxury: getValue(results[4], d => d?.total || (Array.isArray(d) ? d.length : 0)),
+          bankWithdrawals: getValue(results[5], d => d?.stats?.pending?.count || d?.total),
+          rdRedeem: getValue(results[6], d => d?.stats?.pending || d?.total)
         });
       } catch (error) {
         console.error('Error fetching pending counts:', error);
