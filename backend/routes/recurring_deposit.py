@@ -1385,6 +1385,10 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
         user_id = redeem_request["user_id"]
         rd_id = redeem_request["rd_id"]
         
+        # Get admin details for tracking
+        admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
+        admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+        
         # Update request status
         await db.bank_redeem_requests.update_one(
             {"request_id": request_id},
@@ -1392,7 +1396,9 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
                 "$set": {
                     "status": "rejected",
                     "rejection_reason": reason,
-                    "processed_by": admin_id,
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_id,
+                    "rejected_by_name": admin_name,
                     "processed_at": now.isoformat(),
                     "updated_at": now.isoformat()
                 }
