@@ -440,7 +440,20 @@ const ReferralsEnhanced = ({ user }) => {
       console.error('Error fetching referral data:', error);
       // Use fallback data
       setUserData(user);
-      setReferralStats({ total: user?.referral_count || 0, active: 0, vip: 0 });
+      const fallbackCount = user?.referral_count || 0;
+      setReferralStats({ total: fallbackCount, active: 0, vip: 0 });
+      
+      // Create fallback levels in case of error too
+      if (fallbackCount > 0) {
+        const fallbackLevels = [
+          { level: 1, count: fallbackCount, active_count: 0, users: [], bonus_percent: 10 },
+          { level: 2, count: 0, active_count: 0, users: [], bonus_percent: 5 },
+          { level: 3, count: 0, active_count: 0, users: [], bonus_percent: 3 },
+          { level: 4, count: 0, active_count: 0, users: [], bonus_percent: 2 },
+          { level: 5, count: 0, active_count: 0, users: [], bonus_percent: 1 },
+        ];
+        setReferralLevels(fallbackLevels);
+      }
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
