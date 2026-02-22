@@ -320,8 +320,9 @@ const AdminBankWithdrawals = ({ user }) => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Status Filters */}
+        <div className="flex flex-wrap gap-2">
           {['pending', 'approved', 'rejected', 'all'].map(status => (
             <button
               key={status}
@@ -336,7 +337,49 @@ const AdminBankWithdrawals = ({ user }) => {
             </button>
           ))}
         </div>
-        <div className="flex-1 relative">
+        
+        {/* Date Range & Sort Filters */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+              placeholder="From"
+            />
+            <span className="text-gray-500">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+              placeholder="To"
+            />
+          </div>
+          
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+          >
+            <option value="desc">Newest First</option>
+            <option value="asc">Oldest First</option>
+          </select>
+          
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="px-3 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm"
+            >
+              Clear Dates
+            </button>
+          )}
+        </div>
+        
+        {/* Search */}
+        <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
             value={searchQuery}
