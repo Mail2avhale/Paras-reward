@@ -444,39 +444,36 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         now = datetime.now(timezone.utc)
         
         # Check weekly limit - only 1 request per week (shared with bank redeem & EMI)
+        # Calculate start of current week (Monday)
         days_since_monday = now.weekday()
-        week_start = now - timedelta(days=days_since_monday, hours=now.hour, minutes=now.minute, seconds=now.second)
-        week_start_str = week_start.strftime("%Y-%m-%d")
+        week_start = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start_str = week_start.isoformat()
         
-        logging.info(f"Checking weekly limit for user {request.user_id}, week start: {week_start_str}")
-        
-        # Check for existing RD redeem request this week
-        existing_rd_request = await db.bank_redeem_requests.find_one({
+        # Check for existing RD redeem request this week - fetch all and filter
+        all_rd_requests = await db.bank_redeem_requests.find({
             "user_id": request.user_id,
             "request_type": "rd_redeem",
-            "created_at": {"$regex": f"^{week_start_str[:7]}"},  # Same month at minimum
             "status": {"$nin": ["rejected", "cancelled"]}
-        })
+        }).to_list(100)
         
-        # More precise check - compare actual dates
-        if existing_rd_request:
-            req_date = existing_rd_request.get("created_at", "")[:10]
-            if req_date >= week_start_str:
+        for req in all_rd_requests:
+            req_created = req.get("created_at", "")
+            if req_created >= week_start_str:
                 raise HTTPException(
                     status_code=400, 
                     detail="You have already submitted an RD redeem request this week. Only 1 request allowed per week."
                 )
         
         # Check for existing bank redeem request this week
-        existing_bank_request = await db.bank_redeem_requests.find_one({
+        all_bank_requests = await db.bank_redeem_requests.find({
             "user_id": request.user_id,
             "request_type": "bank_redeem",
             "status": {"$nin": ["rejected", "cancelled"]}
-        })
+        }).to_list(100)
         
-        if existing_bank_request:
-            req_date = existing_bank_request.get("created_at", "")[:10]
-            if req_date >= week_start_str:
+        for req in all_bank_requests:
+            req_created = req.get("created_at", "")
+            if req_created >= week_start_str:
                 raise HTTPException(
                     status_code=400, 
                     detail="You have already submitted a Bank Redeem request this week. Only 1 redemption request allowed per week."
