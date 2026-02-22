@@ -431,6 +431,17 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
     - Admin must approve before funds are released
     """
     try:
+        # Check if Savings Vault redeem is enabled
+        settings = await db.settings.find_one({}, {"_id": 0, "savings_vault_settings": 1})
+        vault_settings = settings.get("savings_vault_settings", {}) if settings else {}
+        
+        if not vault_settings.get("redeem_enabled", True):
+            disabled_message = vault_settings.get(
+                "redeem_disabled_message", 
+                "PRC Savings Vault redemption is temporarily disabled. Please try again later."
+            )
+            raise HTTPException(status_code=400, detail=disabled_message)
+        
         rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
         if not rd:
             raise HTTPException(status_code=404, detail="RD not found")
