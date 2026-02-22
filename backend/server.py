@@ -28296,7 +28296,7 @@ async def get_referral_levels(user_id: str):
     total_count = sum(l["count"] for l in levels)
     total_active = sum(l["active_count"] for l in levels)
     
-    return {
+    response = {
         "levels": levels,
         "total": total_count,
         "total_active": total_active,
@@ -28308,6 +28308,11 @@ async def get_referral_levels(user_id: str):
             "stored_referral_count": user.get("referral_count", 0)
         }
     }
+    
+    # Cache for 60 seconds to improve performance
+    await cache.set(cache_key, response, ttl=60)
+    
+    return response
 
 
 @api_router.get("/referrals/{user_id}/debug-referred-by")
