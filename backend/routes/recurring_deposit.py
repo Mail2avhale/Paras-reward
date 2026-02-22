@@ -600,7 +600,7 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         # Create notification
         await db.notifications.insert_one({
             "user_id": request.user_id,
-            "title": "RD Redeem Request Submitted",
+            "title": "Savings Vault Redeem Request Submitted",
             "message": f"Your RD redeem request for ₹{net_amount:,.0f} PRC has been submitted. Admin will review shortly.",
             "type": "rd_redeem_request",
             "related_id": request_id,
