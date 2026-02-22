@@ -606,10 +606,14 @@ const AdminBankWithdrawals = ({ user }) => {
                             <span className="text-gray-500">Submitted</span>
                             <span className="text-white">{new Date(req.created_at).toLocaleString()}</span>
                           </div>
-                          {req.processed_by && (
+                          {(req.processed_by || req.approved_by_name || req.rejected_by_name) && (
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Processed By</span>
-                              <span className="text-blue-400">{req.processed_by}</span>
+                              <span className="text-gray-500">
+                                {req.status === 'approved' ? 'Approved By' : req.status === 'rejected' ? 'Rejected By' : 'Processed By'}
+                              </span>
+                              <span className="text-blue-400 font-medium">
+                                {req.approved_by_name || req.rejected_by_name || req.processed_by}
+                              </span>
                             </div>
                           )}
                           {req.processed_at && (
