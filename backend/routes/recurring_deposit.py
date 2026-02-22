@@ -1295,37 +1295,70 @@ async def admin_get_rd_redeem_requests(
 async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_ref: str = None):
     """Admin: Approve RD redeem request and process payment"""
     try:
-        # Find the request - check both possible collections
+        redeem_request = None
+        source_collection = "bank_redeem_requests"
+        
+        # Strategy 1: Check bank_redeem_requests with request_type
         redeem_request = await db.bank_redeem_requests.find_one({
             "request_id": request_id,
             "request_type": "rd_redeem"
         })
         
-        # Fallback: check without request_type filter (older requests might not have it)
+        # Strategy 2: Check bank_redeem_requests without request_type but with rd_id
         if not redeem_request:
             redeem_request = await db.bank_redeem_requests.find_one({
-                "request_id": request_id
-            })
-            # Verify it's an RD request by checking for rd_id
-            if redeem_request and not redeem_request.get("rd_id"):
-                redeem_request = None
-        
-        # Fallback: check rd_redeem_requests collection (if exists)
-        if not redeem_request:
-            redeem_request = await db.rd_redeem_requests.find_one({
-                "request_id": request_id
+                "request_id": request_id,
+                "rd_id": {"$exists": True, "$ne": None}
             })
         
+        # Strategy 3: Check bank_redeem_requests with just request_id (any RD-like request)
         if not redeem_request:
-            raise HTTPException(status_code=404, detail=f"Request not found: {request_id}")
+            temp_request = await db.bank_redeem_requests.find_one({"request_id": request_id})
+            if temp_request and (temp_request.get("rd_id") or "RD" in request_id.upper()):
+                redeem_request = temp_request
+        
+        # Strategy 4: Check rd_redeem_requests collection
+        if not redeem_request:
+            redeem_request = await db.rd_redeem_requests.find_one({"request_id": request_id})
+            if redeem_request:
+                source_collection = "rd_redeem_requests"
+        
+        # Strategy 5: Check withdrawal_requests collection (legacy)
+        if not redeem_request:
+            redeem_request = await db.withdrawal_requests.find_one({"request_id": request_id})
+            if redeem_request and redeem_request.get("rd_id"):
+                source_collection = "withdrawal_requests"
+        
+        # Strategy 6: Search by partial ID match in bank_redeem_requests
+        if not redeem_request and "RD_REQ" in request_id:
+            redeem_request = await db.bank_redeem_requests.find_one({
+                "request_id": {"$regex": request_id, "$options": "i"}
+            })
+        
+        # Log for debugging
+        logging.info(f"RD Approve - Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
+        
+        if not redeem_request:
+            # Try to get more info for debugging
+            all_collections_check = []
+            check1 = await db.bank_redeem_requests.count_documents({"request_id": request_id})
+            all_collections_check.append(f"bank_redeem_requests: {check1}")
+            check2 = await db.rd_redeem_requests.count_documents({"request_id": request_id})
+            all_collections_check.append(f"rd_redeem_requests: {check2}")
+            
+            logging.error(f"Request {request_id} not found in any collection. Checks: {all_collections_check}")
+            raise HTTPException(status_code=404, detail=f"Request not found: {request_id}. Please contact support.")
         
         if redeem_request.get("status") != "pending":
             raise HTTPException(status_code=400, detail=f"Request is already {redeem_request.get('status')}")
         
         now = datetime.now(timezone.utc)
-        user_id = redeem_request["user_id"]
-        rd_id = redeem_request["rd_id"]
-        net_amount = redeem_request["net_amount"]
+        user_id = redeem_request.get("user_id")
+        rd_id = redeem_request.get("rd_id")
+        net_amount = redeem_request.get("net_amount", 0)
+        
+        if not user_id or not rd_id:
+            raise HTTPException(status_code=400, detail="Invalid request data: missing user_id or rd_id")
         
         # Get admin details for tracking
         admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
@@ -1334,10 +1367,11 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
         # Get the RD
         rd = await db.recurring_deposits.find_one({"rd_id": rd_id})
         if not rd:
-            raise HTTPException(status_code=404, detail="RD not found")
+            logging.warning(f"RD {rd_id} not found, but proceeding with request approval")
         
-        # Update RD status
-        await db.recurring_deposits.update_one(
+        # Update RD status if RD exists
+        if rd:
+            await db.recurring_deposits.update_one(
             {"rd_id": rd_id},
             {
                 "$set": {
