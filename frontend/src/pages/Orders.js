@@ -729,6 +729,7 @@ const Orders = ({ user, onLogout }) => {
           <div className="space-y-3">
             {requests.map((request) => {
               const IconComponent = iconMap[request.icon] || Package;
+              const performanceTag = getPerformanceTag(request);
               
               return (
                 <div 
@@ -749,10 +750,18 @@ const Orders = ({ user, onLogout }) => {
                           <h3 className="text-white font-semibold text-sm line-clamp-1">{request.title}</h3>
                           <p className="text-gray-500 text-xs">{request.type_label}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)} flex items-center gap-1`}>
-                          {getStatusIcon(request.status)}
-                          {getStatusLabel(request.status)}
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)} flex items-center gap-1`}>
+                            {getStatusIcon(request.status)}
+                            {getStatusLabel(request.status)}
+                          </span>
+                          {/* Performance Tag for completed requests */}
+                          {performanceTag && (
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${performanceTag.color}`}>
+                              {performanceTag.label}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Amount Info */}
