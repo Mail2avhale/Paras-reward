@@ -412,7 +412,7 @@ const Orders = ({ user, onLogout }) => {
                       <PiggyBank className="w-5 h-5 text-emerald-500" />
                       <p className="text-white font-semibold">RD Savings</p>
                       <InfoTooltip>
-                        <p className="font-semibold mb-1">Your Recurring Deposit!</p>
+                        <p className="font-semibold mb-1">Your PRC Savings!</p>
                         <p>20% of your mining earnings are automatically saved in your RD account. Earn up to 9.25% interest on your savings!</p>
                       </InfoTooltip>
                     </div>
