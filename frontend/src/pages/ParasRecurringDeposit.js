@@ -663,23 +663,33 @@ const ParasRecurringDeposit = () => {
                 </div>
                 <h3 className="text-xl font-bold text-white">RD Redeem Request</h3>
                 <p className="text-gray-400 text-sm mt-2">
-                  3% penalty + Admin approval required
+                  Processing Time: 3 to 7 days
                 </p>
               </div>
               
               <div className="bg-gray-800/50 rounded-xl p-4 mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Current Value</span>
-                  <span className="text-white">₹{formatCurrency(selectedRd.current_value)}</span>
+                  <span className="text-white">₹{formatCurrency(selectedRd.current_value)} PRC</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Penalty (3%)</span>
+                  <span className="text-gray-400">Early Penalty (3%)</span>
                   <span className="text-red-400">-₹{formatCurrency(selectedRd.current_value * 0.03)}</span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Admin Charge (20%)</span>
+                  <span className="text-red-400">-₹{formatCurrency(selectedRd.current_value * 0.20)}</span>
+                </div>
                 <div className="border-t border-gray-700 pt-2 flex justify-between">
-                  <span className="text-white font-medium">You&apos;ll Receive</span>
+                  <span className="text-white font-medium">Net Amount (PRC)</span>
                   <span className="text-emerald-400 font-bold">
-                    ₹{formatCurrency(selectedRd.current_value * 0.97)} PRC
+                    ₹{formatCurrency(selectedRd.current_value * 0.77)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Bank Transfer (INR)</span>
+                  <span className="text-emerald-400 font-semibold">
+                    ₹{formatCurrency(selectedRd.current_value * 0.77 / 10)}
                   </span>
                 </div>
               </div>
