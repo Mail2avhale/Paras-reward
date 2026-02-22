@@ -16,7 +16,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import uuid
 import logging
 
-router = APIRouter(prefix="/rd", tags=["Recurring Deposit"])
+router = APIRouter(prefix="/rd", tags=["PRC Savings Vault"])
 
 # Module-level variables
 db = None
