@@ -1196,13 +1196,27 @@ async def admin_get_rd_redeem_requests(
     status: str = None, 
     skip: int = 0, 
     limit: int = 50,
-    search: str = None
+    search: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    sort_order: str = "desc"
 ):
-    """Admin: Get all RD redeem requests"""
+    """Admin: Get all RD redeem requests with date filters"""
     try:
         query = {"request_type": "rd_redeem"}
         if status:
             query["status"] = status
+        
+        # Date range filtering
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                date_query["$gte"] = f"{date_from}T00:00:00+00:00"
+            if date_to:
+                date_query["$lte"] = f"{date_to}T23:59:59+00:00"
+            if date_query:
+                query["created_at"] = date_query
+        
         if search:
             query["$or"] = [
                 {"user_name": {"$regex": search, "$options": "i"}},
@@ -1211,7 +1225,10 @@ async def admin_get_rd_redeem_requests(
                 {"rd_id": {"$regex": search, "$options": "i"}}
             ]
         
-        requests = await db.bank_redeem_requests.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        # Sort order: asc = oldest first, desc = newest first
+        sort_direction = 1 if sort_order == "asc" else -1
+        
+        requests = await db.bank_redeem_requests.find(query).sort("created_at", sort_direction).skip(skip).limit(limit).to_list(limit)
         total = await db.bank_redeem_requests.count_documents(query)
         
         # Remove MongoDB _id
