@@ -284,7 +284,7 @@ const AdminBankWithdrawals = ({ user }) => {
           }`}
         >
           <PiggyBank className="w-4 h-4" />
-          RD Redeem
+          Savings Vault
           {rdStats.pending > 0 && (
             <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
               {rdStats.pending}
