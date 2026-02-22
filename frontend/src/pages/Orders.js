@@ -130,6 +130,40 @@ const Orders = ({ user, onLogout }) => {
     }
   };
 
+  // Get performance tag based on completion time
+  const getPerformanceTag = (request) => {
+    if (request.status !== 'completed' && request.status !== 'approved' && request.status !== 'delivered') {
+      return null;
+    }
+    
+    const createdAt = new Date(request.created_at);
+    const completedAt = new Date(request.processed_at || request.updated_at || request.completed_at);
+    const hoursToComplete = (completedAt - createdAt) / (1000 * 60 * 60);
+    
+    // Get expected time based on type
+    let expectedHours = 72; // Default 3 days
+    if (request.type === 'subscription' || request.type === 'vip_payment') {
+      expectedHours = 24;
+    } else if (request.type === 'bill_payment' || request.type === 'gift_voucher') {
+      expectedHours = 48;
+    } else if (request.type === 'bank_redeem' || request.type === 'rd_redeem') {
+      expectedHours = 168; // 7 days
+    }
+    
+    // Lightning Fast: < 25% of expected time
+    if (hoursToComplete <= expectedHours * 0.25) {
+      return { label: '⚡ Lightning Fast', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' };
+    }
+    
+    // On Time: within expected time
+    if (hoursToComplete <= expectedHours) {
+      return { label: '✓ On Time', color: 'bg-green-500/20 text-green-400 border-green-500/30' };
+    }
+    
+    // Completed: just show completed
+    return { label: '✓ Completed', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' };
+  };
+
   // Get processing time based on request type
   const getProcessingTime = (type, subType) => {
     // Subscription/Renewal - 24 hours
