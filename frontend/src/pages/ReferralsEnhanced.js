@@ -419,6 +419,19 @@ const ReferralsEnhanced = ({ user }) => {
         }
         setPreviousTotal(refCount);
         setReferralStats({ total: refCount, active: 0, vip: 0 });
+        
+        // Create fallback levels with referral_count at level 1
+        // This ensures the UI shows something even when API fails
+        if (refCount > 0) {
+          const fallbackLevels = [
+            { level: 1, count: refCount, active_count: 0, users: [], bonus_percent: 10 },
+            { level: 2, count: 0, active_count: 0, users: [], bonus_percent: 5 },
+            { level: 3, count: 0, active_count: 0, users: [], bonus_percent: 3 },
+            { level: 4, count: 0, active_count: 0, users: [], bonus_percent: 2 },
+            { level: 5, count: 0, active_count: 0, users: [], bonus_percent: 1 },
+          ];
+          setReferralLevels(fallbackLevels);
+        }
       }
       
       // REMOVED: Free Startup Subscription reward-progress API call
