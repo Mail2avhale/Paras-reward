@@ -1471,53 +1471,81 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
 async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = None):
     """Admin: Reject RD redeem request"""
     try:
-        # Find the request - check multiple collections
+        redeem_request = None
+        source_collection = "bank_redeem_requests"
+        
+        # Strategy 1: Check bank_redeem_requests with request_type
         redeem_request = await db.bank_redeem_requests.find_one({
             "request_id": request_id,
             "request_type": "rd_redeem"
         })
         
-        # Fallback: check without request_type filter
+        # Strategy 2: Check bank_redeem_requests without request_type but with rd_id
         if not redeem_request:
             redeem_request = await db.bank_redeem_requests.find_one({
-                "request_id": request_id
-            })
-            if redeem_request and not redeem_request.get("rd_id"):
-                redeem_request = None
-        
-        # Fallback: check rd_redeem_requests collection
-        if not redeem_request:
-            redeem_request = await db.rd_redeem_requests.find_one({
-                "request_id": request_id
+                "request_id": request_id,
+                "rd_id": {"$exists": True, "$ne": None}
             })
         
+        # Strategy 3: Check bank_redeem_requests with just request_id
         if not redeem_request:
-            raise HTTPException(status_code=404, detail=f"Request not found: {request_id}")
+            temp_request = await db.bank_redeem_requests.find_one({"request_id": request_id})
+            if temp_request and (temp_request.get("rd_id") or "RD" in request_id.upper()):
+                redeem_request = temp_request
+        
+        # Strategy 4: Check rd_redeem_requests collection
+        if not redeem_request:
+            redeem_request = await db.rd_redeem_requests.find_one({"request_id": request_id})
+            if redeem_request:
+                source_collection = "rd_redeem_requests"
+        
+        # Strategy 5: Check withdrawal_requests collection
+        if not redeem_request:
+            redeem_request = await db.withdrawal_requests.find_one({"request_id": request_id})
+            if redeem_request and redeem_request.get("rd_id"):
+                source_collection = "withdrawal_requests"
+        
+        # Strategy 6: Regex search
+        if not redeem_request and "RD_REQ" in request_id:
+            redeem_request = await db.bank_redeem_requests.find_one({
+                "request_id": {"$regex": request_id, "$options": "i"}
+            })
+        
+        logging.info(f"RD Reject - Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
+        
+        if not redeem_request:
+            raise HTTPException(status_code=404, detail=f"Request not found: {request_id}. Please contact support.")
         
         if redeem_request.get("status") != "pending":
             raise HTTPException(status_code=400, detail=f"Request is already {redeem_request.get('status')}")
         
         now = datetime.now(timezone.utc)
-        user_id = redeem_request["user_id"]
-        rd_id = redeem_request["rd_id"]
+        user_id = redeem_request.get("user_id")
+        rd_id = redeem_request.get("rd_id")
         
         # Get admin details for tracking
         admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
         admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
         
-        # Update request status
-        await db.bank_redeem_requests.update_one(
-            {"request_id": request_id},
-            {
-                "$set": {
-                    "status": "rejected",
-                    "rejection_reason": reason,
-                    "processed_by": admin_name,
-                    "processed_by_uid": admin_id,
-                    "rejected_by_name": admin_name,
-                    "processed_at": now.isoformat(),
-                    "updated_at": now.isoformat()
-                }
+        # Update request status in the correct collection
+        update_data = {
+            "$set": {
+                "status": "rejected",
+                "rejection_reason": reason,
+                "processed_by": admin_name,
+                "processed_by_uid": admin_id,
+                "rejected_by_name": admin_name,
+                "processed_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            }
+        }
+        
+        if source_collection == "rd_redeem_requests":
+            await db.rd_redeem_requests.update_one({"request_id": request_id}, update_data)
+        elif source_collection == "withdrawal_requests":
+            await db.withdrawal_requests.update_one({"request_id": request_id}, update_data)
+        else:
+            await db.bank_redeem_requests.update_one({"request_id": request_id}, update_data)
             }
         )
         
