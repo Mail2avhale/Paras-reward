@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Building2, Clock, CheckCircle, XCircle, Search, RefreshCw,
   ChevronDown, ChevronUp, User, Phone, Mail, CreditCard, AlertCircle,
-  PiggyBank, Percent
+  PiggyBank, Percent, Copy, Calendar, Filter
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -27,11 +27,23 @@ const AdminBankWithdrawals = ({ user }) => {
   // Request type tab - 'bank' or 'rd'
   const [requestType, setRequestType] = useState('bank');
   
+  // Date range filters
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
+  
   // Pagination state
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const ITEMS_PER_PAGE = 15;
+
+  // Copy to clipboard helper
+  const copyToClipboard = (text, label) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast.success(`${label || 'Copied'}: ${text}`);
+  };
 
   // Debounce search
   useEffect(() => {
@@ -45,7 +57,7 @@ const AdminBankWithdrawals = ({ user }) => {
   useEffect(() => {
     fetchRequests();
     fetchRdRequests();
-  }, [statusFilter, page, debouncedSearch]);
+  }, [statusFilter, page, debouncedSearch, dateFrom, dateTo, sortOrder]);
 
   const fetchRequests = async () => {
     setLoading(true);
