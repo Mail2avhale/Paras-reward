@@ -5,7 +5,32 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 🔒 Admin Tracking & Weekly Limit Bug Fix ✅ (Feb 22, 2026)
+### 📊 Admin Performance Report & Menu Counts Fix ✅ (Feb 22, 2026 - Session 2)
+**User Request:**
+1. Menu मधील pending request numbers चुकीचे दाखवत होते - fix करणे
+2. Admin Performance Report - कोणत्या admin ने किती requests approve/reject केल्या हे दाखवणे
+
+**Features Implemented:**
+1. **Admin Performance Report Page** (`/admin/performance-report`):
+   - Admin-wise approval/rejection counts
+   - Category-wise breakdown (Bank Redeem, RD Redeem, Subscription, KYC, etc.)
+   - Date range filters (All Time, Last 7 Days, Last 30 Days, Custom)
+   - Approval rate percentage for each admin
+   - Last activity timestamp
+2. **Menu Counts Fixed:**
+   - KYC API path corrected (`/kyc/stats` instead of `/admin/kyc/stats`)
+   - Bank Withdrawals and RD Redeem counts now included in total
+   - All pending counts fetch from correct API endpoints
+
+**Files Created/Modified:**
+- NEW: `frontend/src/pages/AdminPerformanceReport.js` - Admin performance dashboard
+- NEW: `backend/server.py` - Added `/admin/performance-report` API
+- MODIFIED: `frontend/src/components/layouts/AdminLayout.js` - Fixed API paths, added menu item
+- MODIFIED: `frontend/src/App.js` - Added route for performance report
+
+---
+
+### 🔒 Admin Tracking & Weekly Limit Bug Fix ✅ (Feb 22, 2026 - Session 1)
 **User Request:** 
 1. Track which admin approved/rejected each request for accountability
 2. Fix weekly redeem limit bug that was incorrectly blocking all requests
