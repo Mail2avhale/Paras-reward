@@ -198,7 +198,7 @@ const AdminBankWithdrawals = ({ user }) => {
           reason: rejectReason
         }
       });
-      toast.success('RD Redeem rejected');
+      toast.success('Savings Vault Redeem rejected');
       setRejectReason('');
       setExpandedRequest(null);
       fetchRdRequests();
