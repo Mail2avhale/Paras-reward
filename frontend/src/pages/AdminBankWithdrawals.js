@@ -560,30 +560,64 @@ const AdminBankWithdrawals = ({ user }) => {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-400">Account Number</span>
-                            <span className="text-white font-mono">{req.bank_details?.account_number}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-mono">{req.bank_details?.account_number}</span>
+                              <button onClick={() => copyToClipboard(req.bank_details?.account_number, 'Account Number')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-400">IFSC Code</span>
-                            <span className="text-white font-mono">{req.bank_details?.ifsc_code}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-mono">{req.bank_details?.ifsc_code}</span>
+                              <button onClick={() => copyToClipboard(req.bank_details?.ifsc_code, 'IFSC Code')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-400">Bank Name</span>
-                            <span className="text-white">{req.bank_details?.bank_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white">{req.bank_details?.bank_name}</span>
+                              <button onClick={() => copyToClipboard(req.bank_details?.bank_name, 'Bank Name')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
+                          {/* Copy All Bank Details Button */}
+                          <button
+                            onClick={() => {
+                              const details = `Account: ${req.bank_details?.account_number}\nIFSC: ${req.bank_details?.ifsc_code}\nName: ${req.bank_details?.account_holder_name}\nBank: ${req.bank_details?.bank_name}\nAmount: ₹${req.amount_inr || req.net_amount}`;
+                              copyToClipboard(details, 'All Bank Details');
+                            }}
+                            className="w-full mt-2 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs font-medium flex items-center justify-center gap-2"
+                          >
+                            <Copy className="w-3 h-3" /> Copy All Details
+                          </button>
                         </div>
                       </div>
 
                       <div>
                         <h4 className="text-gray-400 text-sm mb-2">Request Info</h4>
                         <div className="bg-gray-900/50 rounded-xl p-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-500">Request ID</span>
-                            <span className="text-white font-mono text-xs">{req.request_id}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-mono text-xs">{req.request_id}</span>
+                              <button onClick={() => copyToClipboard(req.request_id, 'Request ID')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                            </div>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Submitted</span>
                             <span className="text-white">{new Date(req.created_at).toLocaleString()}</span>
                           </div>
+                          {req.processed_by && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Processed By</span>
+                              <span className="text-blue-400">{req.processed_by}</span>
+                            </div>
+                          )}
+                          {req.processed_at && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Processed At</span>
+                              <span className="text-white">{new Date(req.processed_at).toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
