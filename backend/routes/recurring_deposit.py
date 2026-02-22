@@ -519,15 +519,20 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         
         current_value = rd["total_deposited"] + current_interest
         
-        # Apply penalty if premature
+        # Apply penalty if premature (3%)
         if is_mature:
-            net_amount = current_value
             penalty_amount = 0
             redeem_type = "maturity"
         else:
-            penalty_amount = current_value * (RD_PREMATURE_PENALTY / 100)
-            net_amount = current_value - penalty_amount
+            penalty_amount = current_value * (RD_PREMATURE_PENALTY / 100)  # 3%
             redeem_type = "early"
+        
+        # Apply 20% admin charge (IMPORTANT - same as bank redeem)
+        admin_charge_percent = 20
+        admin_charge = current_value * (admin_charge_percent / 100)
+        
+        # Calculate final net amount: current_value - penalty - admin_charge
+        net_amount = current_value - penalty_amount - admin_charge
         
         # Get user info
         user = await db.users.find_one({"uid": request.user_id})
@@ -553,10 +558,14 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
             
             # Amount details
             "principal_amount": rd["total_deposited"],
-            "interest_earned": current_interest,
-            "penalty_amount": penalty_amount,
+            "interest_earned": round(current_interest, 2),
+            "current_value": round(current_value, 2),
+            "penalty_amount": round(penalty_amount, 2),
             "penalty_percent": RD_PREMATURE_PENALTY if not is_mature else 0,
-            "net_amount": net_amount,
+            "admin_charge": round(admin_charge, 2),
+            "admin_charge_percent": admin_charge_percent,
+            "net_amount": round(net_amount, 2),
+            "amount_inr": round(net_amount / 10, 2),  # PRC to INR conversion
             "is_premature": not is_mature,
             
             # Bank details (from user profile)
