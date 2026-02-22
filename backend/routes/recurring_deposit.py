@@ -1546,31 +1546,31 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
             await db.withdrawal_requests.update_one({"request_id": request_id}, update_data)
         else:
             await db.bank_redeem_requests.update_one({"request_id": request_id}, update_data)
-            }
-        )
         
         # Clear pending flag on RD
-        await db.recurring_deposits.update_one(
-            {"rd_id": rd_id},
-            {
-                "$set": {
-                    "has_pending_redeem": False,
-                    "pending_redeem_request_id": None,
-                    "updated_at": now.isoformat()
+        if rd_id:
+            await db.recurring_deposits.update_one(
+                {"rd_id": rd_id},
+                {
+                    "$set": {
+                        "has_pending_redeem": False,
+                        "pending_redeem_request_id": None,
+                        "updated_at": now.isoformat()
+                    }
                 }
-            }
-        )
+            )
         
         # Create notification
-        await db.notifications.insert_one({
-            "user_id": user_id,
-            "title": "Savings Vault Redeem Request Rejected",
-            "message": f"Your Savings Vault redeem request has been rejected. Reason: {reason or 'Not specified'}",
-            "type": "rd_redeem_rejected",
-            "related_id": request_id,
-            "read": False,
-            "created_at": now.isoformat()
-        })
+        if user_id:
+            await db.notifications.insert_one({
+                "user_id": user_id,
+                "title": "Savings Vault Redeem Request Rejected",
+                "message": f"Your Savings Vault redeem request has been rejected. Reason: {reason or 'Not specified'}",
+                "type": "rd_redeem_rejected",
+                "related_id": request_id,
+                "read": False,
+                "created_at": now.isoformat()
+            })
         
         return {
             "success": True,
