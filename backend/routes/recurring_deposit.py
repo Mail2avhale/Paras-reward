@@ -1228,17 +1228,41 @@ async def admin_get_rd_redeem_requests(
         # Sort order: asc = oldest first, desc = newest first
         sort_direction = 1 if sort_order == "asc" else -1
         
-        requests = await db.bank_redeem_requests.find(query).sort("created_at", sort_direction).skip(skip).limit(limit).to_list(limit)
-        total = await db.bank_redeem_requests.count_documents(query)
+        # Get requests from bank_redeem_requests with rd_redeem type OR with rd_id field
+        rd_query = {
+            "$or": [
+                {"request_type": "rd_redeem"},
+                {"rd_id": {"$exists": True, "$ne": None}}
+            ]
+        }
+        if status:
+            rd_query["status"] = status
+        if "created_at" in query:
+            rd_query["created_at"] = query["created_at"]
+        if "$or" in query:
+            # Combine search with rd filter
+            rd_query = {"$and": [rd_query, {"$or": query["$or"]}]}
+        
+        requests = await db.bank_redeem_requests.find(rd_query).sort("created_at", sort_direction).skip(skip).limit(limit).to_list(limit)
+        total = await db.bank_redeem_requests.count_documents(rd_query)
         
         # Remove MongoDB _id
         for req in requests:
             req.pop("_id", None)
         
-        # Stats
-        pending = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "pending"})
-        approved = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "approved"})
-        rejected = await db.bank_redeem_requests.count_documents({"request_type": "rd_redeem", "status": "rejected"})
+        # Stats - include both rd_redeem type and rd_id based requests
+        pending = await db.bank_redeem_requests.count_documents({
+            "$or": [{"request_type": "rd_redeem"}, {"rd_id": {"$exists": True, "$ne": None}}],
+            "status": "pending"
+        })
+        approved = await db.bank_redeem_requests.count_documents({
+            "$or": [{"request_type": "rd_redeem"}, {"rd_id": {"$exists": True, "$ne": None}}],
+            "status": "approved"
+        })
+        rejected = await db.bank_redeem_requests.count_documents({
+            "$or": [{"request_type": "rd_redeem"}, {"rd_id": {"$exists": True, "$ne": None}}],
+            "status": "rejected"
+        })
         
         return {
             "success": True,
