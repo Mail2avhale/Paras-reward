@@ -158,7 +158,7 @@ const AdminBankWithdrawals = ({ user }) => {
     }
   };
 
-  // RD Redeem handlers
+  // Savings Vault Redeem handlers
   const handleRdApprove = async (requestId) => {
     if (!transactionRef.trim()) {
       toast.error('Please enter transaction reference number');
