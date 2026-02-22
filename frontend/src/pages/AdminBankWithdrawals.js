@@ -672,8 +672,13 @@ const AdminBankWithdrawals = ({ user }) => {
                           {req.transaction_ref && (
                             <p className="text-green-300 text-xs mt-1">Ref: {req.transaction_ref}</p>
                           )}
+                          {(req.processed_by || req.approved_by_name) && (
+                            <p className="text-blue-400 text-xs mt-1 font-medium">
+                              Approved By: {req.approved_by_name || req.processed_by}
+                            </p>
+                          )}
                           <p className="text-gray-400 text-xs mt-1">
-                            {new Date(req.approved_at).toLocaleString()}
+                            {new Date(req.processed_at || req.approved_at).toLocaleString()}
                           </p>
                         </div>
                       )}
@@ -682,6 +687,11 @@ const AdminBankWithdrawals = ({ user }) => {
                         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
                           <p className="text-red-400 text-sm font-medium">Rejected</p>
                           <p className="text-red-300 text-xs mt-1">{req.rejection_reason}</p>
+                          {(req.processed_by || req.rejected_by_name) && (
+                            <p className="text-blue-400 text-xs mt-1 font-medium">
+                              Rejected By: {req.rejected_by_name || req.processed_by}
+                            </p>
+                          )}
                           <p className="text-gray-400 text-xs mt-1">PRC Refunded</p>
                         </div>
                       )}
