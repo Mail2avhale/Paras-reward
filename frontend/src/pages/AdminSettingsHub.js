@@ -248,6 +248,9 @@ const AdminSettingsHub = ({ user, onLogout }) => {
           })}
         </div>
 
+        {/* System Tasks - Manual Cron Triggers */}
+        <SystemTasksSection />
+
         {/* Quick Tips */}
         <div className="mt-8 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
           <div className="flex items-start gap-4">
@@ -261,10 +264,133 @@ const AdminSettingsHub = ({ user, onLogout }) => {
                 <li>• Configure subscription pricing in <span className="text-purple-400">System Settings</span></li>
                 <li>• Set withdrawal limits in <span className="text-purple-400">Redeem Safety</span></li>
                 <li>• Manage PRC distribution events in <span className="text-purple-400">PRC Rain Drop</span></li>
+                <li>• Run <span className="text-purple-400">System Tasks</span> daily for notifications & cleanup</li>
               </ul>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// System Tasks Component for Manual Cron Triggers
+const SystemTasksSection = () => {
+  const [loading, setLoading] = useState({});
+  const [lastRun, setLastRun] = useState({});
+
+  const tasks = [
+    {
+      id: 'renewal-notifications',
+      name: 'Send Renewal Notifications',
+      description: 'Notify users whose subscription is about to expire',
+      icon: Bell,
+      endpoint: '/admin/trigger-renewal-notifications',
+      color: 'amber',
+      recommended: 'Daily at 9:00 AM'
+    },
+    {
+      id: 'expired-subscriptions',
+      name: 'Check Expired Subscriptions',
+      description: 'Deactivate subscriptions that have expired',
+      icon: UserX,
+      endpoint: '/admin/check-expired-subscriptions',
+      color: 'red',
+      recommended: 'Daily at 12:00 AM'
+    }
+  ];
+
+  const runTask = async (task) => {
+    setLoading(prev => ({ ...prev, [task.id]: true }));
+    try {
+      const response = await axios.post(`${API}${task.endpoint}`);
+      toast.success(`✅ ${task.name} completed successfully!`, {
+        description: response.data?.message || 'Task executed',
+        duration: 5000
+      });
+      setLastRun(prev => ({ ...prev, [task.id]: new Date().toLocaleString() }));
+    } catch (error) {
+      console.error(`Error running ${task.name}:`, error);
+      toast.error(`❌ ${task.name} failed`, {
+        description: error.response?.data?.detail || error.message
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, [task.id]: false }));
+    }
+  };
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-blue-400" />
+        System Tasks (Manual Trigger)
+      </h2>
+      <p className="text-gray-400 text-sm mb-4">
+        Run these tasks daily to keep the system healthy. Click to run manually.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {tasks.map((task) => {
+          const Icon = task.icon;
+          const isLoading = loading[task.id];
+          const colorClasses = {
+            amber: 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20',
+            red: 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20',
+            blue: 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20'
+          };
+          
+          return (
+            <motion.div
+              key={task.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`rounded-2xl p-5 border transition-all ${colorClasses[task.color]}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-xl bg-${task.color}-500/20 flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 text-${task.color}-400`} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">{task.name}</h3>
+                    <p className="text-gray-400 text-sm mt-1">{task.description}</p>
+                    <p className="text-gray-500 text-xs mt-2">
+                      <span className="text-blue-400">Recommended:</span> {task.recommended}
+                    </p>
+                    {lastRun[task.id] && (
+                      <p className="text-green-400 text-xs mt-1">
+                        Last run: {lastRun[task.id]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => runTask(task)}
+                disabled={isLoading}
+                className={`mt-4 w-full py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+                  isLoading 
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                    : `bg-${task.color}-500 hover:bg-${task.color}-600 text-white`
+                }`}
+                data-testid={`run-${task.id}`}
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Run Now
+                  </>
+                )}
+              </button>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
