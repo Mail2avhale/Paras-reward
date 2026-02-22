@@ -173,7 +173,7 @@ const AdminBankWithdrawals = ({ user }) => {
           transaction_ref: transactionRef
         }
       });
-      toast.success('RD Redeem approved successfully!');
+      toast.success('Savings Vault Redeem approved successfully!');
       setTransactionRef('');
       setExpandedRequest(null);
       fetchRdRequests();
