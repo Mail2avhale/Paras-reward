@@ -249,7 +249,7 @@ const AdminBankWithdrawals = ({ user }) => {
             <Building2 className="h-7 w-7 text-green-400" />
             Redeem Requests
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Manage Bank Redeem & RD Redeem requests</p>
+          <p className="text-gray-400 text-sm mt-1">Manage Bank Redeem & Savings Vault requests</p>
         </div>
         <Button onClick={() => { fetchRequests(); fetchRdRequests(); }} variant="outline" className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
