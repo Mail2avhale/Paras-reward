@@ -559,12 +559,20 @@ async def approve_withdrawal(request_id: str, request: Request):
     
     now = datetime.now(timezone.utc)
     
+    # Get admin details for tracking
+    admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
+    admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+    
     await db.bank_withdrawal_requests.update_one(
         {"request_id": request_id},
         {"$set": {
             "status": "approved",
             "approved_at": now.isoformat(),
             "approved_by": admin_id,
+            "approved_by_name": admin_name,
+            "processed_by": admin_name,
+            "processed_by_uid": admin_id,
+            "processed_at": now.isoformat(),
             "transaction_ref": transaction_ref,
             "admin_notes": admin_notes
         }}
@@ -603,6 +611,10 @@ async def reject_withdrawal(request_id: str, request: Request):
     user_id = withdrawal["user_id"]
     refund_amount = withdrawal.get("total_prc_deducted", 0)
     
+    # Get admin details for tracking
+    admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
+    admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+    
     # Refund PRC
     await db.users.update_one(
         {"uid": user_id},
@@ -627,6 +639,10 @@ async def reject_withdrawal(request_id: str, request: Request):
             "status": "rejected",
             "rejected_at": now.isoformat(),
             "rejected_by": admin_id,
+            "rejected_by_name": admin_name,
+            "processed_by": admin_name,
+            "processed_by_uid": admin_id,
+            "processed_at": now.isoformat(),
             "rejection_reason": reason
         }}
     )
