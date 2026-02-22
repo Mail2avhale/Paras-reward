@@ -28123,6 +28123,12 @@ async def get_referral_levels(user_id: str):
     Uses SUPER AGGRESSIVE search - checks ALL possible referred_by formats including regex.
     user_id can be UID or email.
     """
+    # Check cache first for faster response
+    cache_key = f"referral_levels_{user_id}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+    
     now = datetime.now(timezone.utc)
     
     # Get user info - support both UID and email
