@@ -1,10 +1,15 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+import { toast } from 'sonner';
 import {
   Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
-  ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft
+  ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft,
+  Play, Bell, UserX, RefreshCw, Clock
 } from 'lucide-react';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Lazy load AdminSettings for embedded usage
 const AdminSettings = lazy(() => import('./AdminSettings'));
