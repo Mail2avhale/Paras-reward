@@ -1356,7 +1356,7 @@ async def admin_approve_rd_redeem(request_id: str, admin_id: str, transaction_re
         # Create notification
         await db.notifications.insert_one({
             "user_id": user_id,
-            "title": "RD Redeem Approved!",
+            "title": "Savings Vault Redeem Approved!",
             "message": f"Your RD redeem request for ₹{net_amount:,.0f} has been approved and will be credited to your bank account.",
             "type": "rd_redeem_approved",
             "related_id": request_id,
