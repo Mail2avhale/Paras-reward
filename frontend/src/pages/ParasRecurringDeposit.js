@@ -219,7 +219,7 @@ const ParasRecurringDeposit = () => {
           <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-gray-800/50">
             <ArrowLeft className="w-5 h-5 text-gray-300" />
           </button>
-          <h1 className="text-lg font-bold text-white">Recurring Deposit</h1>
+          <h1 className="text-lg font-bold text-white">PRC Savings Vault</h1>
           <button onClick={fetchRdsData} className="p-2 rounded-full bg-gray-800/50">
             <RefreshCw className="w-5 h-5 text-gray-300" />
           </button>
@@ -227,6 +227,14 @@ const ParasRecurringDeposit = () => {
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Disclaimer Banner */}
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
+          <p className="text-blue-300 text-xs text-center">
+            ⚠️ This is a virtual PRC points savings feature. No real money deposits are accepted. 
+            PRC points have no cash value and cannot be exchanged for real currency.
+          </p>
+        </div>
+
         {/* Auto Migration Notification */}
         {autoMigrating && (
           <motion.div
@@ -239,9 +247,9 @@ const ParasRecurringDeposit = () => {
                 <RefreshCw className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="font-bold text-amber-400">Converting Luxury Life Savings...</h3>
+                <h3 className="font-bold text-amber-400">Converting to PRC Savings Vault...</h3>
                 <p className="text-sm text-amber-200/80">
-                  Please wait while we convert your savings to RD.
+                  Please wait while we convert your savings.
                 </p>
               </div>
             </div>
@@ -256,7 +264,7 @@ const ParasRecurringDeposit = () => {
         >
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="w-6 h-6 text-emerald-400" />
-            <span className="text-emerald-400 font-semibold">PARAS RD</span>
+            <span className="text-emerald-400 font-semibold">PRC SAVINGS VAULT</span>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
