@@ -1617,7 +1617,7 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
         if not redeem_request:
             all_matching = await db.bank_redeem_requests.find_one({"request_id": request_id})
             if all_matching:
-                logging.info(f"Strategy 7: Found with exact match!")
+                logging.info("Strategy 7: Found with exact match!")
                 redeem_request = all_matching
         
         logging.info(f"=== RD REJECT RESULT === Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
