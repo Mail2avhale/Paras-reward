@@ -170,6 +170,11 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
           onContinue={() => {}}
         />
         
+        {/* AI Smart Tip */}
+        <div className="mb-4">
+          <AISmartTip pageName="gift-vouchers" variant="compact" />
+        </div>
+        
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">
           <div className="flex items-center justify-between">
             <div>
