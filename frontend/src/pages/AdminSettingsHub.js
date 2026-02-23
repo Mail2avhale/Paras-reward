@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
-  Settings, CreditCard, Cpu, Globe, Share2, Shield, Video, CloudRain,
+  Settings, CreditCard, Cpu, Globe, Share2, Shield, Video,
   ChevronRight, ArrowLeft, Sparkles, Receipt, Building2, ToggleLeft,
   Play, Bell, UserX, RefreshCw, Clock
 } from 'lucide-react';
