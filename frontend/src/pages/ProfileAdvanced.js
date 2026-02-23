@@ -790,6 +790,11 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* AI Smart Tip for Profile */}
+      <div className="px-5 mb-4">
+        <AISmartTip pageName="profile" variant="compact" />
+      </div>
+
       {/* Profile Card */}
       <div className="px-5 mb-6">
         <motion.div 
