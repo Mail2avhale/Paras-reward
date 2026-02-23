@@ -7,7 +7,30 @@ A production-grade reward platform serving 3000+ users with subscription managem
 ## Recent Changes (February 2026)
 
 ### 🤖 Smart Diagnostic AI Chatbot ✅ (Feb 23, 2026 - Latest)
-**User Request:** Enhance existing chatbot to automatically diagnose user issues by analyzing their real-time account data.
+
+**New: AI Smart Tips on Every Page** ✅
+Added intelligent, context-aware tips on all major pages:
+- **Dashboard:** Session inactive tip, KYC reminder, Upgrade prompt
+- **Referrals:** Network growth tips, Earning structure
+- **Gift Vouchers:** Brand info, Delivery time
+- **Bill Payments:** Service availability, Balance check
+- **Subscription:** Plan comparison, Mining rates
+- **Profile:** Security question reminder
+- **KYC:** Document tips, Clear photo guide
+
+**Features:**
+- Marathi/Hindi/English language support
+- User-specific tips based on:
+  - Mining session status
+  - KYC verification status
+  - Subscription plan level
+  - PRC balance
+  - Referral count
+- Three variants: Banner (dashboard), Compact (other pages), Card
+- Dismissible tips, Auto-rotate multiple tips
+- Action buttons for quick navigation
+
+**User Request:** Enhance existing chatbot with complete app knowledge.
 
 **What Changed:**
 User asks a question → Chatbot fetches user's complete data from DB → Analyzes all conditions → Gives EXACT problem + Solution
