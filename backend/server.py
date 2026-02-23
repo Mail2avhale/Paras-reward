@@ -5083,11 +5083,14 @@ async def forgot_pin_verify_document(request: Request):
     reset_token = secrets.token_urlsafe(32)
     reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
     
+    # Check if user has security question set
+    has_security_question = user.get("security_question") and user.get("security_answer")
+    
     # Update with reset token
     await db.users.update_one(
         {"email": {"$regex": f"^{email}$", "$options": "i"}},
         {"$set": {
-            "pin_reset_verify_step": 3,
+            "pin_reset_verify_step": 3 if has_security_question else 4,  # 3 = security question, 4 = set new pin
             "pin_reset_token": reset_token,
             "pin_reset_expiry": reset_expiry.isoformat(),
             "pin_reset_verify_document": doc_type
@@ -5096,7 +5099,146 @@ async def forgot_pin_verify_document(request: Request):
     
     return {
         "success": True,
-        "reset_token": reset_token
+        "reset_token": reset_token,
+        "has_security_question": has_security_question,
+        "security_question": user.get("security_question") if has_security_question else None
+    }
+
+
+# ==================== SECURITY QUESTION APIs ====================
+
+# Security Questions List
+SECURITY_QUESTIONS = [
+    "तुमच्या आईचे माहेरचे गाव कोणते?",  # What is your mother's maiden village?
+    "तुमचा पहिला मोबाईल नंबर कोणता होता?",  # What was your first mobile number?
+    "तुमच्या पहिल्या शाळेचे नाव काय?",  # What was your first school's name?
+    "तुमच्या बालपणीच्या सर्वात चांगल्या मित्राचे नाव काय?",  # What is your childhood best friend's name?
+    "तुमच्या आवडत्या शिक्षकाचे नाव काय?",  # What is your favorite teacher's name?
+]
+
+@api_router.get("/auth/security-questions")
+async def get_security_questions():
+    """Get list of available security questions"""
+    return {
+        "questions": SECURITY_QUESTIONS
+    }
+
+@api_router.post("/auth/security-question/set")
+async def set_security_question(request: Request):
+    """Set security question for a user"""
+    data = await request.json()
+    user_id = data.get("user_id", "").strip()
+    question_index = data.get("question_index")  # 0-4
+    answer = data.get("answer", "").strip()
+    
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID required")
+    
+    if question_index is None or not isinstance(question_index, int) or question_index < 0 or question_index > 4:
+        raise HTTPException(status_code=400, detail="Invalid question selection (0-4)")
+    
+    if not answer or len(answer) < 2:
+        raise HTTPException(status_code=400, detail="Answer must be at least 2 characters")
+    
+    # Find user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Hash the answer for security (case-insensitive)
+    answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    
+    # Update user
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {
+            "security_question": SECURITY_QUESTIONS[question_index],
+            "security_question_index": question_index,
+            "security_answer": answer_hash,
+            "security_question_set_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": "Security question set successfully"
+    }
+
+@api_router.get("/auth/security-question/check/{user_id}")
+async def check_security_question(user_id: str):
+    """Check if user has security question set"""
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "security_question": 1, "security_question_index": 1})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    has_question = bool(user.get("security_question"))
+    
+    return {
+        "has_security_question": has_question,
+        "security_question": user.get("security_question") if has_question else None,
+        "question_index": user.get("security_question_index")
+    }
+
+@api_router.post("/auth/forgot-pin/verify-security")
+async def forgot_pin_verify_security(request: Request):
+    """Step 3.5: Verify security question answer during PIN reset"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    answer = data.get("answer", "").strip()
+    reset_token = data.get("reset_token", "")
+    
+    if not email or not answer or not reset_token:
+        raise HTTPException(status_code=400, detail="All fields required")
+    
+    # Find user with valid reset token
+    user = await db.users.find_one({
+        "email": {"$regex": f"^{email}$", "$options": "i"},
+        "pin_reset_token": reset_token,
+        "pin_reset_verify_step": 3
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token. Please start again.")
+    
+    # Check token expiry
+    expiry_str = user.get("pin_reset_expiry", "")
+    if expiry_str:
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
+        except:
+            pass
+    
+    # Verify security answer
+    stored_answer_hash = user.get("security_answer")
+    if not stored_answer_hash:
+        raise HTTPException(status_code=400, detail="Security question not set")
+    
+    # Hash the provided answer and compare
+    answer_hash = hashlib.sha256(answer.lower().strip().encode()).hexdigest()
+    
+    if answer_hash != stored_answer_hash:
+        raise HTTPException(status_code=400, detail="Incorrect security answer")
+    
+    # Generate new reset token for final step
+    new_reset_token = secrets.token_urlsafe(32)
+    new_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    # Update to allow PIN reset
+    await db.users.update_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"$set": {
+            "pin_reset_verify_step": 4,
+            "pin_reset_token": new_reset_token,
+            "pin_reset_expiry": new_expiry.isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "reset_token": new_reset_token
     }
 
 
