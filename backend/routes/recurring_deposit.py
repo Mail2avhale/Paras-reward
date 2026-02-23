@@ -1202,6 +1202,82 @@ async def admin_bulk_migrate_luxury():
 
 # ==================== ADMIN RD REDEEM REQUEST MANAGEMENT ====================
 
+@router.get("/admin/debug-request/{request_id}")
+async def debug_rd_request(request_id: str):
+    """
+    DEBUG ENDPOINT: Find where a request is stored
+    Use this to diagnose "Request not found" errors
+    """
+    results = {
+        "request_id": request_id,
+        "found_in": None,
+        "collections_checked": []
+    }
+    
+    # Check bank_redeem_requests
+    doc1 = await db.bank_redeem_requests.find_one({"request_id": request_id})
+    results["collections_checked"].append({
+        "collection": "bank_redeem_requests",
+        "found": bool(doc1),
+        "request_type": doc1.get("request_type") if doc1 else None,
+        "rd_id": doc1.get("rd_id") if doc1 else None,
+        "status": doc1.get("status") if doc1 else None
+    })
+    if doc1:
+        results["found_in"] = "bank_redeem_requests"
+    
+    # Check rd_redeem_requests
+    doc2 = await db.rd_redeem_requests.find_one({"request_id": request_id})
+    results["collections_checked"].append({
+        "collection": "rd_redeem_requests",
+        "found": bool(doc2)
+    })
+    if doc2 and not results["found_in"]:
+        results["found_in"] = "rd_redeem_requests"
+    
+    # Check withdrawal_requests
+    doc3 = await db.withdrawal_requests.find_one({"request_id": request_id})
+    results["collections_checked"].append({
+        "collection": "withdrawal_requests",
+        "found": bool(doc3)
+    })
+    if doc3 and not results["found_in"]:
+        results["found_in"] = "withdrawal_requests"
+    
+    # Check bank_withdrawals
+    doc4 = await db.bank_withdrawals.find_one({"request_id": request_id})
+    results["collections_checked"].append({
+        "collection": "bank_withdrawals",
+        "found": bool(doc4)
+    })
+    if doc4 and not results["found_in"]:
+        results["found_in"] = "bank_withdrawals"
+    
+    # Check bank_withdrawal_requests  
+    doc5 = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+    results["collections_checked"].append({
+        "collection": "bank_withdrawal_requests",
+        "found": bool(doc5)
+    })
+    if doc5 and not results["found_in"]:
+        results["found_in"] = "bank_withdrawal_requests"
+    
+    # Try regex search
+    doc6 = await db.bank_redeem_requests.find_one({"request_id": {"$regex": request_id, "$options": "i"}})
+    results["regex_search"] = {
+        "found": bool(doc6),
+        "actual_id": doc6.get("request_id") if doc6 else None
+    }
+    
+    # Count total pending RD requests
+    pending_count = await db.bank_redeem_requests.count_documents({
+        "$or": [{"request_type": "rd_redeem"}, {"rd_id": {"$exists": True}}],
+        "status": "pending"
+    })
+    results["total_pending_rd_requests"] = pending_count
+    
+    return results
+
 @router.get("/admin/redeem-requests")
 async def admin_get_rd_redeem_requests(
     status: str = None, 
