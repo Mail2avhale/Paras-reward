@@ -20690,7 +20690,7 @@ async def get_withdrawal_patterns(days: int = 30):
 async def get_admin_performance_report(date_from: Optional[str] = None, date_to: Optional[str] = None):
     """
     Get admin performance report - which admin approved/rejected how many requests
-    Aggregates data from: bank_withdrawal_requests, bank_redeem_requests (RD), vip_payments, kyc_documents
+    OPTIMIZED: Uses aggregation instead of fetching all records
     """
     try:
         # Build date filter
@@ -20700,130 +20700,125 @@ async def get_admin_performance_report(date_from: Optional[str] = None, date_to:
         if date_to:
             date_filter["$lte"] = f"{date_to}T23:59:59+00:00"
         
-        admin_stats = {}  # admin_uid -> { name, approved, rejected, last_processed_at }
-        category_stats = {}  # category -> { approved, rejected }
+        admin_stats = {}
+        category_stats = {}
         
         # Helper to update stats
-        def update_admin_stat(admin_uid, admin_name, status, processed_at, category):
-            if not admin_uid:
-                return
-            
-            if admin_uid not in admin_stats:
-                admin_stats[admin_uid] = {
-                    "admin_uid": admin_uid,
-                    "admin_name": admin_name or "Unknown",
-                    "approved": 0,
-                    "rejected": 0,
-                    "last_processed_at": None
-                }
-            
-            if status in ["approved", "verified", "completed"]:
-                admin_stats[admin_uid]["approved"] += 1
-            elif status == "rejected":
-                admin_stats[admin_uid]["rejected"] += 1
-            
-            # Update last processed
-            if processed_at:
-                current_last = admin_stats[admin_uid]["last_processed_at"]
-                if not current_last or processed_at > current_last:
-                    admin_stats[admin_uid]["last_processed_at"] = processed_at
-            
-            # Category stats
-            if category not in category_stats:
-                category_stats[category] = {"approved": 0, "rejected": 0}
-            if status in ["approved", "verified", "completed"]:
-                category_stats[category]["approved"] += 1
-            elif status == "rejected":
-                category_stats[category]["rejected"] += 1
+        def update_from_agg(results, category, admin_field, status_field="status"):
+            for r in results:
+                admin_uid = r.get("_id")
+                if not admin_uid:
+                    continue
+                
+                approved = r.get("approved", 0)
+                rejected = r.get("rejected", 0)
+                
+                if admin_uid not in admin_stats:
+                    admin_stats[admin_uid] = {
+                        "admin_uid": admin_uid,
+                        "admin_name": "Unknown",
+                        "approved": 0,
+                        "rejected": 0
+                    }
+                
+                admin_stats[admin_uid]["approved"] += approved
+                admin_stats[admin_uid]["rejected"] += rejected
+                
+                if category not in category_stats:
+                    category_stats[category] = {"approved": 0, "rejected": 0}
+                category_stats[category]["approved"] += approved
+                category_stats[category]["rejected"] += rejected
         
-        # 1. Bank Withdrawal Requests
-        bank_query = {"status": {"$in": ["approved", "rejected"]}}
+        # 1. Bank Withdrawal Requests - Aggregated
+        bank_match = {"status": {"$in": ["approved", "rejected"]}}
         if date_filter:
-            bank_query["processed_at"] = date_filter
+            bank_match["processed_at"] = date_filter
         
-        bank_requests = await db.bank_withdrawal_requests.find(bank_query, {"_id": 0}).to_list(10000)
-        for req in bank_requests:
-            admin_uid = req.get("processed_by_uid") or req.get("approved_by") or req.get("rejected_by")
-            admin_name = req.get("approved_by_name") or req.get("rejected_by_name") or req.get("processed_by")
-            update_admin_stat(admin_uid, admin_name, req.get("status"), req.get("processed_at"), "bank_redeem")
+        bank_agg = await db.bank_withdrawal_requests.aggregate([
+            {"$match": bank_match},
+            {"$group": {
+                "_id": {"$ifNull": ["$processed_by_uid", "$approved_by"]},
+                "approved": {"$sum": {"$cond": [{"$eq": ["$status", "approved"]}, 1, 0]}},
+                "rejected": {"$sum": {"$cond": [{"$eq": ["$status", "rejected"]}, 1, 0]}}
+            }}
+        ]).to_list(100)
+        update_from_agg(bank_agg, "bank_redeem", "processed_by_uid")
         
-        # 2. RD Redeem Requests (bank_redeem_requests collection with rd_redeem type)
-        rd_query = {"request_type": "rd_redeem", "status": {"$in": ["approved", "rejected"]}}
+        # 2. VIP/Subscription Payments - Aggregated
+        vip_match = {"status": {"$in": ["approved", "rejected"]}}
         if date_filter:
-            rd_query["processed_at"] = date_filter
+            vip_match["approved_at"] = date_filter
         
-        rd_requests = await db.bank_redeem_requests.find(rd_query, {"_id": 0}).to_list(10000)
-        for req in rd_requests:
-            admin_uid = req.get("processed_by_uid")
-            admin_name = req.get("approved_by_name") or req.get("rejected_by_name") or req.get("processed_by")
-            update_admin_stat(admin_uid, admin_name, req.get("status"), req.get("processed_at"), "rd_redeem")
+        vip_agg = await db.vip_payments.aggregate([
+            {"$match": vip_match},
+            {"$group": {
+                "_id": {"$ifNull": ["$approved_by", "$rejected_by"]},
+                "approved": {"$sum": {"$cond": [{"$eq": ["$status", "approved"]}, 1, 0]}},
+                "rejected": {"$sum": {"$cond": [{"$eq": ["$status", "rejected"]}, 1, 0]}}
+            }}
+        ]).to_list(100)
+        update_from_agg(vip_agg, "subscription", "approved_by")
         
-        # 3. VIP/Subscription Payments
-        vip_query = {"status": {"$in": ["approved", "rejected"]}}
+        # 3. KYC Documents - Aggregated
+        kyc_match = {"status": {"$in": ["verified", "rejected"]}}
         if date_filter:
-            vip_query["approved_at"] = date_filter
+            kyc_match["verified_at"] = date_filter
         
-        vip_payments = await db.vip_payments.find(vip_query, {"_id": 0}).to_list(10000)
-        for payment in vip_payments:
-            admin_uid = payment.get("approved_by") or payment.get("rejected_by")
-            admin_name = None  # VIP payments don't store admin name, we'll look it up
-            processed_at = payment.get("approved_at") or payment.get("rejected_at")
-            update_admin_stat(admin_uid, admin_name, payment.get("status"), processed_at, "subscription")
+        kyc_agg = await db.kyc_documents.aggregate([
+            {"$match": kyc_match},
+            {"$group": {
+                "_id": {"$ifNull": ["$verified_by", "$rejected_by"]},
+                "approved": {"$sum": {"$cond": [{"$eq": ["$status", "verified"]}, 1, 0]}},
+                "rejected": {"$sum": {"$cond": [{"$eq": ["$status", "rejected"]}, 1, 0]}}
+            }}
+        ]).to_list(100)
+        update_from_agg(kyc_agg, "kyc", "verified_by")
         
-        # 4. KYC Documents
-        kyc_query = {"status": {"$in": ["verified", "rejected"]}}
+        # 4. Bill Payments - Aggregated
+        bill_match = {"status": {"$in": ["completed", "approved", "rejected"]}}
         if date_filter:
-            kyc_query["verified_at"] = date_filter
+            bill_match["processed_at"] = date_filter
         
-        kyc_docs = await db.kyc_documents.find(kyc_query, {"_id": 0}).to_list(10000)
-        for doc in kyc_docs:
-            admin_uid = doc.get("verified_by") or doc.get("rejected_by")
-            admin_name = None
-            processed_at = doc.get("verified_at") or doc.get("rejected_at")
-            status = "approved" if doc.get("status") == "verified" else doc.get("status")
-            update_admin_stat(admin_uid, admin_name, status, processed_at, "kyc")
+        bill_agg = await db.bill_payment_requests.aggregate([
+            {"$match": bill_match},
+            {"$group": {
+                "_id": "$processed_by_uid",
+                "approved": {"$sum": {"$cond": [{"$in": ["$status", ["completed", "approved"]]}, 1, 0]}},
+                "rejected": {"$sum": {"$cond": [{"$eq": ["$status", "rejected"]}, 1, 0]}}
+            }}
+        ]).to_list(100)
+        update_from_agg(bill_agg, "bill_payment", "processed_by_uid")
         
-        # 5. Bill Payment Requests
-        bill_query = {"status": {"$in": ["completed", "rejected"]}}
+        # 5. Gift Vouchers - Aggregated
+        gift_match = {"status": {"$in": ["completed", "approved", "rejected"]}}
         if date_filter:
-            bill_query["processed_at"] = date_filter
+            gift_match["processed_at"] = date_filter
         
-        bill_requests = await db.bill_payment_requests.find(bill_query, {"_id": 0}).to_list(10000)
-        for req in bill_requests:
-            admin_uid = req.get("processed_by_uid") or req.get("processed_by")
-            admin_name = req.get("processed_by")
-            status = "approved" if req.get("status") == "completed" else req.get("status")
-            update_admin_stat(admin_uid, admin_name, status, req.get("processed_at"), "bill_payment")
+        gift_agg = await db.gift_voucher_requests.aggregate([
+            {"$match": gift_match},
+            {"$group": {
+                "_id": "$processed_by",
+                "approved": {"$sum": {"$cond": [{"$in": ["$status", ["completed", "approved"]]}, 1, 0]}},
+                "rejected": {"$sum": {"$cond": [{"$eq": ["$status", "rejected"]}, 1, 0]}}
+            }}
+        ]).to_list(100)
+        update_from_agg(gift_agg, "gift_voucher", "processed_by")
         
-        # 6. Gift Voucher Requests
-        gift_query = {"status": {"$in": ["completed", "rejected"]}}
-        if date_filter:
-            gift_query["processed_at"] = date_filter
-        
-        gift_requests = await db.gift_voucher_requests.find(gift_query, {"_id": 0}).to_list(10000)
-        for req in gift_requests:
-            admin_uid = req.get("processed_by")
-            admin_name = None
-            status = "approved" if req.get("status") == "completed" else req.get("status")
-            update_admin_stat(admin_uid, admin_name, status, req.get("processed_at"), "gift_voucher")
-        
-        # Fetch admin names for UIDs that don't have names
-        admin_uids_without_names = [uid for uid, data in admin_stats.items() if data["admin_name"] == "Unknown" or not data["admin_name"]]
-        if admin_uids_without_names:
+        # Fetch admin names
+        admin_uids = list(admin_stats.keys())
+        if admin_uids:
             admin_users = await db.users.find(
-                {"uid": {"$in": admin_uids_without_names}},
+                {"uid": {"$in": admin_uids}},
                 {"_id": 0, "uid": 1, "name": 1}
             ).to_list(100)
-            uid_to_name = {u["uid"]: u.get("name", "Unknown") for u in admin_users}
-            for uid in admin_uids_without_names:
-                if uid in uid_to_name:
-                    admin_stats[uid]["admin_name"] = uid_to_name[uid]
+            for u in admin_users:
+                if u["uid"] in admin_stats:
+                    admin_stats[u["uid"]]["admin_name"] = u.get("name", "Unknown")
         
         # Calculate summary
         total_approved = sum(a["approved"] for a in admin_stats.values())
         total_rejected = sum(a["rejected"] for a in admin_stats.values())
         
-        # Sort admins by total processed (descending)
         sorted_admins = sorted(
             admin_stats.values(),
             key=lambda x: x["approved"] + x["rejected"],
@@ -20840,10 +20835,7 @@ async def get_admin_performance_report(date_from: Optional[str] = None, date_to:
             },
             "admins": sorted_admins,
             "by_category": category_stats,
-            "date_range": {
-                "from": date_from,
-                "to": date_to
-            }
+            "date_range": {"from": date_from, "to": date_to}
         }
         
     except Exception as e:
