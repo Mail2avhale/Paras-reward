@@ -3,6 +3,46 @@
 ## Product Overview
 A production-grade reward platform serving 3000+ users with subscription management, referral system, mining features, and marketplace.
 
+
+## Recent Changes (February 2026)
+
+### 🔐 Security Question PIN Reset Feature ✅ (Feb 23, 2026 - Latest)
+**User Request:** Add security question as additional verification step during PIN reset for enhanced security.
+
+**Features Implemented:**
+1. **Security Question Setup:**
+   - Users can set/update security question from Profile page
+   - 5 predefined questions available (English)
+   - Answers stored as SHA256 hash (case-insensitive)
+
+2. **Enhanced PIN Reset Flow:**
+   - Step 1: Email verification
+   - Step 2: Mobile verification  
+   - Step 3: Aadhaar/PAN verification
+   - Step 4: Security Question verification (if set)
+   - Step 5: Set new PIN
+   - Flow automatically skips Step 4 if user hasn't set security question
+
+3. **Backend APIs:**
+   - `GET /api/auth/security-questions` - Get list of available questions
+   - `POST /api/auth/security-question/set` - Set security question for user
+   - `GET /api/auth/security-question/check/{user_id}` - Check if user has question set
+   - `POST /api/auth/forgot-pin/verify-security` - Verify answer during PIN reset
+
+4. **Bug Fix:** Fixed `set-new-pin` API to update `pin_hash` and `password_hash` fields (not just `pin` and `password`)
+
+**Files Modified:**
+- `backend/server.py` - Added Security Question APIs, fixed PIN reset update fields
+- `frontend/src/pages/ForgotPin.js` - Added Step 4 for Security Question, dynamic step indicators
+- `frontend/src/pages/ProfileAdvanced.js` - SecurityQuestionCard component for setting question
+
+**Test Results:** ✅ Complete E2E flow tested with curl
+- New user with security question: PIN reset with 5 steps - PASSED
+- Old user without security question: PIN reset with 4 steps - PASSED
+- Login with new PIN after reset - PASSED
+
+---
+
 ## Recent Changes (February 2026)
 
 ### 🗑️ PRC Rain Drop Feature Removed ✅ (Feb 23, 2026)
