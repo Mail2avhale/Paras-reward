@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
+import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
