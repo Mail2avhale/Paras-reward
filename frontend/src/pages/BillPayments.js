@@ -19,6 +19,7 @@ import {
   validateMobile, validateIFSC, validateBankAccount
 } from '@/utils/indianValidation';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
