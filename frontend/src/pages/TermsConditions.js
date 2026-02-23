@@ -296,7 +296,7 @@ const TermsConditions = () => {
                   <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center">
                     <Ban className="h-5 w-5 text-red-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white">6. Prohibited Activities</h2>
+                  <h2 className="text-2xl font-bold text-white">7. Prohibited Activities</h2>
                 </div>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>You agree NOT to engage in any of the following prohibited activities:</p>
@@ -327,7 +327,7 @@ const TermsConditions = () => {
                   <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center">
                     <FileText className="h-5 w-5 text-indigo-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white">7. Intellectual Property</h2>
+                  <h2 className="text-2xl font-bold text-white">8. Intellectual Property</h2>
                 </div>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <p>
