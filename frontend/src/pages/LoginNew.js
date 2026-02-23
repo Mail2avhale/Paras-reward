@@ -100,6 +100,11 @@ const LoginNew = ({ onLogin }) => {
         setAuthType(response.data.auth_type);
         setIdentifierChecked(true);
         
+        // Check if user needs to set up PIN (no PIN exists yet)
+        if (response.data.needs_pin_setup) {
+          toast.info('Please set your 6-digit PIN to login', { duration: 5000 });
+        }
+        
         // Clear previous credential when switching
         setLoginData(prev => ({ ...prev, pin: '', password: '' }));
         setPinError('');
