@@ -39,11 +39,20 @@ const AdminPerformanceReport = ({ user }) => {
         params.date_to = dateTo;
       }
 
+      console.log('Fetching report with params:', params);
       const response = await axios.get(`${API}/admin/performance-report`, { params });
-      setReport(response.data);
+      console.log('Report response:', response.data);
+      
+      if (response.data && response.data.success) {
+        setReport(response.data);
+      } else {
+        // Handle case where API returns but no success flag
+        setReport(response.data || { admins: [], summary: {} });
+      }
     } catch (error) {
       console.error('Error fetching report:', error);
-      toast.error('Failed to load performance report');
+      toast.error('Failed to load performance report: ' + (error.response?.data?.detail || error.message));
+      setReport({ admins: [], summary: {}, by_category: {} });
     } finally {
       setLoading(false);
     }
