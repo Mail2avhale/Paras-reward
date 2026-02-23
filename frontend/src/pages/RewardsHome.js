@@ -492,6 +492,9 @@ const RewardsHome = () => {
         </div>
       </motion.header>
 
+      {/* SEO Meta Tags */}
+      <SEO {...SEOConfigs.home} />
+
       {/* Hero Section */}
       <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900" />
