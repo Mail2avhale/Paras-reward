@@ -255,6 +255,9 @@ const SubscriptionPlans = ({ user }) => {
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
+          {/* AI Smart Tip for Subscription */}
+          <AISmartTip pageName="subscription" variant="compact" />
+          
           {/* Limited Time Offer Banner */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
