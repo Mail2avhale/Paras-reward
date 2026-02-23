@@ -350,6 +350,9 @@ const BillPayments = ({ user, onLogout }) => {
               onContinue={() => {}}
             />
             
+            {/* AI Smart Tip for Bill Payments */}
+            <AISmartTip pageName="bill-payments" variant="compact" />
+            
             {/* Service Type Selection - Premium Cards */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl">
               <div className="flex items-center justify-between mb-5">
