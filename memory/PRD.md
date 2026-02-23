@@ -5,6 +5,45 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
+### 🗑️ PRC Rain Drop Feature Removed ✅ (Feb 23, 2026)
+**User Request:** Complete removal of PRC Rain Drop feature from entire codebase for Google Play Store compliance.
+
+**Changes Made:**
+1. **Frontend Removed:**
+   - App.js - Removed route `/admin/prc-rain`
+   - AdminLayout.js - Removed PRC Rain from settings menu
+   - RewardsHome.js - Removed PRC Rain feature card
+   - Mining.js - Removed "Rain Drop Game" text from tooltip
+   - NetworkFeed.js - Removed `prc_rain` from activity categories
+   - Orders.js - Removed rain_game earnings display
+   - AIChatbotEnhanced.js - Removed PRC Rain quick question
+
+2. **Backend Deprecated:**
+   - All PRC Rain API endpoints marked as deprecated and return disabled status
+   - Chatbot FAQ updated to remove PRC Rain information
+
+**Files Modified:**
+- `frontend/src/App.js`
+- `frontend/src/components/layouts/AdminLayout.js`
+- `frontend/src/pages/RewardsHome.js`
+- `frontend/src/pages/Mining.js`
+- `frontend/src/pages/NetworkFeed.js`
+- `frontend/src/pages/Orders.js`
+- `frontend/src/components/AIChatbotEnhanced.js`
+- `backend/server.py`
+
+---
+
+### 🐛 Admin Performance Report Fix ✅ (Feb 23, 2026)
+**Problem:** Admin Performance Report page stuck on loading due to missing `FileText` icon import.
+
+**Solution:** Added `FileText` to lucide-react imports in AdminPerformanceReport.js.
+
+**Files Modified:**
+- `frontend/src/pages/AdminPerformanceReport.js`
+
+---
+
 ### 🏷️ "Recurring Deposit" → "PRC Savings Vault" Rename + Disclaimer ✅ (Feb 22, 2026 - Session 2)
 **User Request:**
 1. "Recurring Deposit" नाव Google Play policy साठी योग्य नाही - बदलणे
