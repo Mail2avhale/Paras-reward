@@ -298,7 +298,10 @@ const ForgotPin = () => {
           <span className={step >= 1 ? 'text-purple-600 font-medium' : ''}>Email</span>
           <span className={step >= 2 ? 'text-purple-600 font-medium' : ''}>Mobile</span>
           <span className={step >= 3 ? 'text-purple-600 font-medium' : ''}>Document</span>
-          <span className={step >= 4 ? 'text-purple-600 font-medium' : ''}>New PIN</span>
+          {hasSecurityQuestion && (
+            <span className={step >= 4 ? 'text-purple-600 font-medium' : ''}>Security</span>
+          )}
+          <span className={step >= (hasSecurityQuestion ? 5 : 4) ? 'text-purple-600 font-medium' : ''}>New PIN</span>
         </div>
 
         {/* Header */}
