@@ -11,7 +11,13 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AIContextualHelp from "@/components/AIContextualHelp";
-import AdminLayout from "@/components/layouts/AdminLayout";
+
+// Check if this is a user-only build (for Play Store AAB)
+const IS_USER_BUILD = process.env.REACT_APP_BUILD_TYPE === 'user';
+
+// Only import AdminLayout if not user build
+const AdminLayout = IS_USER_BUILD ? null : lazy(() => import("@/components/layouts/AdminLayout"));
+
 // ManagerLayout removed - Manager uses AdminLayout with permission-based access
 // StockistLayout removed - stockist system deprecated
 
