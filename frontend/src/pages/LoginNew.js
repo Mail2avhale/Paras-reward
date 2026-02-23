@@ -26,27 +26,18 @@ const LoginNew = ({ onLogin }) => {
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [animatedFeedback, setAnimatedFeedback] = useState(null);
   const [pinError, setPinError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
   // Forgot PIN states
   const [showForgotPin, setShowForgotPin] = useState(false);
-  const [forgotPinStep, setForgotPinStep] = useState(1); // 1: Enter email, 2: Enter OTP, 3: Set new PIN
-  const [forgotPinEmail, setForgotPinEmail] = useState('');
-  const [forgotPinOtp, setForgotPinOtp] = useState('');
-  const [forgotPinResetToken, setForgotPinResetToken] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [confirmNewPin, setConfirmNewPin] = useState('');
-  const [forgotPinLoading, setForgotPinLoading] = useState(false);
   
-  // Auth type: 'unknown', 'pin', 'password'
-  const [authType, setAuthType] = useState('unknown');
+  // Auth type: always 'pin' now (password disabled)
+  const [authType, setAuthType] = useState('pin');
   const [identifierChecked, setIdentifierChecked] = useState(false);
   
   const [loginData, setLoginData] = useState({
     identifier: '',
     pin: '',
-    password: '',
     device_id: '',
     ip_address: ''
   });
