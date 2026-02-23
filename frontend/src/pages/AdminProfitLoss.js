@@ -13,7 +13,8 @@ import {
   Calendar, RefreshCw, FileText, PieChart as PieIcon,
   ArrowUpRight, ArrowDownRight, Receipt, CreditCard, Building,
   Smartphone, Megaphone, Users, Wallet, AlertTriangle, CheckCircle,
-  Info, ChevronRight, Loader2, Heart
+  Info, ChevronRight, Loader2, Heart, Flame, Crown, Zap, Settings,
+  BarChart3, Target, Clock
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -46,12 +47,45 @@ const AdminProfitLoss = ({ user }) => {
     description: '',
     date: new Date().toISOString().split('T')[0]
   });
+  
+  // NEW: Additional analytics state
+  const [monthComparison, setMonthComparison] = useState(null);
+  const [subscriptionRevenue, setSubscriptionRevenue] = useState(null);
+  const [prcLiability, setPrcLiability] = useState(null);
+  const [cashFlowProjection, setCashFlowProjection] = useState(null);
+  const [paidWalletSummary, setPaidWalletSummary] = useState(null);
+  const [burnSettings, setBurnSettings] = useState(null);
+  const [showBurnSettings, setShowBurnSettings] = useState(false);
 
   useEffect(() => {
     fetchPLData();
     fetchExpenses();
     fetchFixedExpenses();
+    fetchAnalyticsData();
   }, [period, selectedYear, selectedMonth]);
+  
+  const fetchAnalyticsData = async () => {
+    try {
+      const [monthComp, subRev, liability, cashFlow, walletSum, burnSet] = await Promise.all([
+        axios.get(`${API}/admin/finance/month-comparison`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/finance/subscription-revenue-details`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/finance/prc-liability`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/finance/cash-flow-projection`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/paid-users-wallet-summary`).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/finance/prc-burn-settings`).catch(() => ({ data: null }))
+      ]);
+      
+      setMonthComparison(monthComp.data);
+      setSubscriptionRevenue(subRev.data);
+      setPrcLiability(liability.data);
+      setCashFlowProjection(cashFlow.data);
+      setPaidWalletSummary(walletSum.data);
+      setBurnSettings(burnSet.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
 
   const fetchPLData = async () => {
     try {
