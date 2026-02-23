@@ -12,12 +12,12 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
   const miningActive = user?.mining_active || userStats?.mining_active;
   const referralCount = userStats?.referralCount || 0;
   
-  // Common tips for all pages
+  // Common tips for all pages - ENGLISH
   const commonTips = {
     mining_inactive: {
       icon: Clock,
-      title: 'Session बंद आहे!',
-      message: 'Mining session सुरू करा आणि PRC कमवायला सुरुवात करा. दर तासाला automatic earning!',
+      title: 'Session is OFF!',
+      message: 'Start your mining session and begin earning PRC. Automatic earning every hour!',
       action: 'Start Session',
       route: '/dashboard',
       priority: 1,
@@ -25,8 +25,8 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
     },
     kyc_pending: {
       icon: Shield,
-      title: 'KYC पूर्ण करा',
-      message: 'Bank Redeem साठी KYC आवश्यक. Aadhaar + PAN upload करा, 24-48 तासात verification.',
+      title: 'Complete KYC',
+      message: 'KYC required for Bank Redeem. Upload Aadhaar + PAN, verification in 24-48 hours.',
       action: 'Verify KYC',
       route: '/kyc',
       priority: 2,
@@ -34,8 +34,8 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
     },
     low_referrals: {
       icon: Users,
-      title: 'Referral Network वाढवा',
-      message: `5 Level deep network बनवा! Direct referral वर 10%, Level 2 वर 5%... Total 21% passive income!`,
+      title: 'Grow Your Network',
+      message: 'Build a 5-level deep network! Direct referral: 10%, Level 2: 5%... Total 21% passive income!',
       action: 'Invite Friends',
       route: '/referrals',
       priority: 3,
@@ -43,8 +43,8 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
     },
     upgrade_plan: {
       icon: TrendingUp,
-      title: 'VIP Plan घ्या',
-      message: 'VIP members ला Gift Vouchers, Bill Payments, Shopping आणि higher mining rate मिळतो!',
+      title: 'Upgrade to VIP',
+      message: 'VIP members get Gift Vouchers, Bill Payments, Shopping access and higher mining rate!',
       action: 'Upgrade Now',
       route: '/subscription',
       priority: 4,
@@ -52,8 +52,8 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
     },
     redeem_available: {
       icon: Gift,
-      title: 'Redeem करा!',
-      message: `तुमच्याकडे ${prcBalance.toFixed(0)} PRC (≈₹${(prcBalance/10).toFixed(0)}) आहेत. Gift Voucher किंवा Bill Payment करा!`,
+      title: 'Redeem Now!',
+      message: `You have ${prcBalance.toFixed(0)} PRC (≈₹${(prcBalance/10).toFixed(0)}). Redeem for Gift Vouchers or Bill Payments!`,
       action: 'Redeem Now',
       route: '/gift-vouchers',
       priority: 5,
@@ -61,13 +61,13 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
     }
   };
 
-  // Page-specific tips
+  // Page-specific tips - ENGLISH
   const pageTips = {
     dashboard: [
       {
         icon: Lightbulb,
         title: 'Daily Check-in Bonus',
-        message: 'रोज login करून Daily Bonus claim करा. Streak bonus साठी सलग दिवस login करा!',
+        message: 'Login daily and claim your Daily Bonus. Get streak bonus for consecutive days!',
         action: 'Claim Bonus',
         route: '/daily-rewards',
         color: 'amber'
@@ -77,7 +77,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Users,
         title: 'Referral Tips',
-        message: 'WhatsApp groups, Family members, Friends ला invite करा. प्रत्येक referral वर lifetime earning!',
+        message: 'Share with WhatsApp groups, Family, Friends. Earn lifetime earnings from every referral!',
         action: 'Copy Code',
         route: null,
         color: 'purple'
@@ -87,7 +87,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Gift,
         title: 'Voucher Tip',
-        message: 'Amazon, Flipkart vouchers instant मिळतात! Email वर code येतो 24-48 तासात.',
+        message: 'Amazon, Flipkart vouchers delivered instantly! Voucher code sent to email in 24-48 hours.',
         action: null,
         route: null,
         color: 'green'
@@ -97,7 +97,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Wallet,
         title: 'Bill Payment Tip',
-        message: 'Mobile Recharge, DTH, Electricity सगळे bills PRC ने pay करा आणि पैसे वाचवा!',
+        message: 'Pay Mobile Recharge, DTH, Electricity bills with PRC and save real money!',
         action: null,
         route: null,
         color: 'blue'
@@ -107,7 +107,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: TrendingUp,
         title: 'Plan Comparison',
-        message: 'Growth plan ला 0.3 PRC/hr, Professional ला 0.5 PRC/hr मिळतो. Higher plan = More earning!',
+        message: 'Growth plan: 0.3 PRC/hr, Professional: 0.5 PRC/hr. Higher plan = More earnings!',
         action: null,
         route: null,
         color: 'gradient'
@@ -117,7 +117,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Shield,
         title: 'Security Tip',
-        message: 'Security Question set करा. PIN विसरल्यास reset करणे सोपे होईल!',
+        message: 'Set up your Security Question. Makes PIN reset easier if you forget!',
         action: 'Set Question',
         route: '/profile/security',
         color: 'blue'
@@ -127,7 +127,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: AlertCircle,
         title: 'KYC Tips',
-        message: 'Clear photos घ्या, Name match करा (Aadhaar, PAN, App सगळीकडे same spelling).',
+        message: 'Take clear photos. Name must match on Aadhaar, PAN, and App (same spelling).',
         action: null,
         route: null,
         color: 'amber'
@@ -137,7 +137,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Wallet,
         title: 'Savings Tip',
-        message: 'PRC Vault मध्ये save करा, 5-10% annual interest मिळवा. Long-term savings साठी best!',
+        message: 'Save in PRC Vault, earn 5-10% annual interest. Best for long-term savings!',
         action: null,
         route: null,
         color: 'green'
@@ -147,7 +147,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: Gift,
         title: 'Shopping Tip',
-        message: 'PRC ने shopping करा - Electronics, Fashion, Home items सगळे available!',
+        message: 'Shop with PRC - Electronics, Fashion, Home items all available!',
         action: null,
         route: null,
         color: 'purple'
