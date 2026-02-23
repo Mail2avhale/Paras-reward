@@ -208,7 +208,6 @@ const PWAInstallPrompt = () => {
     </div>
   );
 };
-};
 
 // Install Button Component (for homepage)
 export const InstallAppButton = () => {
