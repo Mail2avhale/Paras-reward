@@ -131,13 +131,19 @@ const AdminPerformanceReport = ({ user }) => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400 text-sm">Loading report...</p>
         </div>
-      ) : !report ? (
+      ) : !report || (!report.admins?.length && !report.summary?.total_processed) ? (
         <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-gray-800">
           <BarChart3 className="h-16 w-16 mx-auto text-gray-700 mb-4" />
-          <p className="text-gray-500">No data available</p>
+          <p className="text-gray-500 mb-2">No admin activity found</p>
+          <p className="text-gray-600 text-sm">Try selecting "All Time" filter</p>
+          <Button onClick={fetchReport} variant="outline" className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
         </div>
       ) : (
         <>
