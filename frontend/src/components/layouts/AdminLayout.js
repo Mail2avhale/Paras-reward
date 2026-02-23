@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, Bell, Search,
   Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
-  AlertTriangle, Smartphone, Building, Crown, CloudRain, AlertOctagon, Database, Eye,
+  AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
   ShieldAlert, CheckCircle, Building2
 } from 'lucide-react';
 
