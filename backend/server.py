@@ -4283,7 +4283,7 @@ async def register_user(request: Request):
     }
 
 async def check_auth_type(identifier: str):
-    """Check if user should use PIN or Password login"""
+    """Check if user should use PIN or Password login - PIN ONLY MODE (password disabled)"""
     normalized_identifier = identifier.lower().strip()
     
     # Find user
@@ -4293,17 +4293,26 @@ async def check_auth_type(identifier: str):
             {"mobile": normalized_identifier},
             {"uid": normalized_identifier}
         ]
-    }, {"_id": 0, "pin_migrated": 1, "email": 1})
+    }, {"_id": 0, "pin_migrated": 1, "email": 1, "pin": 1})
     
     if not user:
-        # User not found - assume new user will use PIN
+        # User not found - new user will use PIN
         return {"auth_type": "pin", "user_exists": False}
     
-    # Check if user has migrated to PIN
-    if user.get("pin_migrated", False):
+    # PASSWORD DISABLED - All users use PIN now
+    # If user doesn't have a PIN set, they need to set one
+    has_pin = bool(user.get("pin"))
+    
+    if has_pin:
         return {"auth_type": "pin", "user_exists": True}
     else:
-        return {"auth_type": "password", "user_exists": True, "needs_migration": True}
+        # User exists but no PIN - needs to set PIN (migration)
+        return {
+            "auth_type": "pin", 
+            "user_exists": True, 
+            "needs_pin_setup": True,
+            "message": "Please set your 6-digit PIN to continue"
+        }
 
 async def set_new_pin(request: Request):
     """Set new PIN for existing users (migration from password to PIN)"""
