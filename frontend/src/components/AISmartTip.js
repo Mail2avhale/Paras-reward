@@ -107,7 +107,7 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
       {
         icon: TrendingUp,
         title: 'Plan Comparison',
-        message: 'Growth plan: 0.3 PRC/hr, Professional: 0.5 PRC/hr. Higher plan = More earnings!',
+        message: 'Startup: 0.5 PRC/hr, Growth: 1.0 PRC/hr, Elite: 2.0 PRC/hr. Higher plan = More earnings!',
         action: null,
         route: null,
         color: 'gradient'

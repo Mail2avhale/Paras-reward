@@ -12281,7 +12281,7 @@ Paras Reward Platform चे income sources:
    - Playable ads
 
 3. **Subscription Revenue:**
-   - Paid plans (Starter, Growth, Professional, Enterprise)
+   - Paid plans (Startup, Growth, Elite)
    - Monthly/Yearly subscriptions
 
 4. **Commission Revenue:**
@@ -12396,10 +12396,9 @@ Paras Reward Platform चे income sources:
 
 *Weekly Limits:*
 - Explorer: 2 redeems/week
-- Starter: 5 redeems/week
+- Startup: 5 redeems/week
 - Growth: 20 redeems/week
-- Professional: 50 redeems/week
-- Enterprise: Unlimited
+- Elite: 50 redeems/week
 
 **OPTION 2: Gift Vouchers**
 
