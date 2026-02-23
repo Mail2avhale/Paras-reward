@@ -12300,14 +12300,16 @@ Paras Reward Platform चे income sources:
 
 === 📊 TODAY'S RATES & USER'S RATE ===
 
+**PRC to INR Conversion: 10 PRC = ₹1 INR**
+
 **आजचे Base Mining Rates (Plan-wise):**
-| Plan | Base Rate | Per Day (24hr) | Per Month |
-|------|-----------|----------------|-----------|
-| EXPLORER | 0.10 PRC/hr | 2.4 PRC | 72 PRC |
-| STARTER | 0.20 PRC/hr | 4.8 PRC | 144 PRC |
-| GROWTH | 0.30 PRC/hr | 7.2 PRC | 216 PRC |
-| PROFESSIONAL | 0.50 PRC/hr | 12 PRC | 360 PRC |
-| ENTERPRISE | 1.00 PRC/hr | 24 PRC | 720 PRC |
+| Plan | Base Rate | Per Day (24hr) | Per Month | Monthly INR Value |
+|------|-----------|----------------|-----------|-------------------|
+| EXPLORER | 0.10 PRC/hr | 2.4 PRC | 72 PRC | ₹7.20 |
+| STARTER | 0.20 PRC/hr | 4.8 PRC | 144 PRC | ₹14.40 |
+| GROWTH | 0.30 PRC/hr | 7.2 PRC | 216 PRC | ₹21.60 |
+| PROFESSIONAL | 0.50 PRC/hr | 12 PRC | 360 PRC | ₹36 |
+| ENTERPRISE | 1.00 PRC/hr | 24 PRC | 720 PRC | ₹72 |
 
 **Rate कसा Calculate होतो:**
 - Base Rate × Active Session Hours = Daily PRC
