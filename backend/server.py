@@ -8041,6 +8041,148 @@ async def get_subscription_stats():
         return {"error": str(e)}
 
 
+@api_router.get("/admin/paid-users-wallet-summary")
+async def get_paid_users_wallet_summary():
+    """
+    Get wallet summary for PAID users only (startup, growth, elite)
+    Returns:
+    - Total PRC balance for all paid users with INR value
+    - Total PRC redeemed with INR value
+    - Breakdown by plan type
+    
+    Conversion: 10 PRC = ₹1 INR
+    """
+    try:
+        # Define paid plans
+        paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+        
+        # Get total PRC balance for paid users
+        prc_balance_pipeline = [
+            {"$match": {"subscription_plan": {"$in": paid_plans}}},
+            {"$group": {
+                "_id": "$subscription_plan",
+                "total_prc": {"$sum": "$prc_balance"},
+                "user_count": {"$sum": 1}
+            }}
+        ]
+        prc_by_plan = await db.users.aggregate(prc_balance_pipeline).to_list(10)
+        
+        # Calculate totals
+        total_prc_balance = 0
+        plan_breakdown = {}
+        total_paid_users = 0
+        
+        for item in prc_by_plan:
+            plan = item["_id"]
+            prc = item["total_prc"] or 0
+            count = item["user_count"]
+            total_prc_balance += prc
+            total_paid_users += count
+            plan_breakdown[plan] = {
+                "total_prc": round(prc, 2),
+                "inr_value": round(prc / 10, 2),
+                "user_count": count
+            }
+        
+        # Get total redeemed by paid users
+        # 1. Bank Redemptions (EMI Pay)
+        bank_redeems = await db.bank_redeems.aggregate([
+            {"$match": {"status": "approved"}},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "uid",
+                "as": "user"
+            }},
+            {"$unwind": "$user"},
+            {"$match": {"user.subscription_plan": {"$in": paid_plans}}},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+        ]).to_list(1)
+        bank_redeemed_prc = bank_redeems[0]["total"] if bank_redeems else 0
+        
+        # 2. Bill Payments
+        bill_payments = await db.bill_payments.aggregate([
+            {"$match": {"status": "approved"}},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "uid",
+                "as": "user"
+            }},
+            {"$unwind": "$user"},
+            {"$match": {"user.subscription_plan": {"$in": paid_plans}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        bill_redeemed_prc = bill_payments[0]["total"] if bill_payments else 0
+        
+        # 3. Gift Vouchers
+        vouchers = await db.gift_voucher_requests.aggregate([
+            {"$match": {"status": "approved"}},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "uid",
+                "as": "user"
+            }},
+            {"$unwind": "$user"},
+            {"$match": {"user.subscription_plan": {"$in": paid_plans}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        voucher_redeemed_prc = vouchers[0]["total"] if vouchers else 0
+        
+        # 4. Marketplace Orders
+        orders = await db.marketplace_orders.aggregate([
+            {"$match": {"status": {"$in": ["approved", "delivered", "completed"]}}},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "uid",
+                "as": "user"
+            }},
+            {"$unwind": "$user"},
+            {"$match": {"user.subscription_plan": {"$in": paid_plans}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+        ]).to_list(1)
+        orders_redeemed_prc = orders[0]["total"] if orders else 0
+        
+        # Calculate total redeemed
+        total_redeemed_prc = bank_redeemed_prc + bill_redeemed_prc + voucher_redeemed_prc + orders_redeemed_prc
+        
+        return {
+            "summary": {
+                "total_paid_users": total_paid_users,
+                "total_prc_balance": round(total_prc_balance, 2),
+                "total_prc_inr_value": round(total_prc_balance / 10, 2),
+                "total_redeemed_prc": round(total_redeemed_prc, 2),
+                "total_redeemed_inr": round(total_redeemed_prc / 10, 2)
+            },
+            "balance_by_plan": plan_breakdown,
+            "redemption_breakdown": {
+                "bank_redeem": {
+                    "prc": round(bank_redeemed_prc, 2),
+                    "inr": round(bank_redeemed_prc / 10, 2)
+                },
+                "bill_payments": {
+                    "prc": round(bill_redeemed_prc, 2),
+                    "inr": round(bill_redeemed_prc / 10, 2)
+                },
+                "gift_vouchers": {
+                    "prc": round(voucher_redeemed_prc, 2),
+                    "inr": round(voucher_redeemed_prc / 10, 2)
+                },
+                "marketplace_orders": {
+                    "prc": round(orders_redeemed_prc, 2),
+                    "inr": round(orders_redeemed_prc / 10, 2)
+                }
+            },
+            "conversion_rate": "10 PRC = ₹1 INR"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting paid users wallet summary: {e}")
+        return {"error": str(e)}
+
+
 @api_router.get("/admin/subscription-analytics")
 async def get_subscription_analytics(period: str = "month"):
     """
