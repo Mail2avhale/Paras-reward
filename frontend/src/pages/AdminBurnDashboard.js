@@ -4,10 +4,11 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { 
   Flame, Users, TrendingDown, AlertTriangle, 
-  RefreshCw, BarChart3, Clock, ArrowLeft, Zap, CheckCircle
+  RefreshCw, BarChart3, Clock, ArrowLeft, Zap, CheckCircle, Settings
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -26,6 +27,11 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
     free_users_at_risk: [],
     expired_vips_at_risk: []
   });
+  
+  // Auto Burn Settings State
+  const [burnSettings, setBurnSettings] = useState(null);
+  const [showBurnSettings, setShowBurnSettings] = useState(false);
+  const [prcLiability, setPrcLiability] = useState(null);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
