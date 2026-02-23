@@ -3386,24 +3386,33 @@ async def burn_expired_prc_for_free_users():
 
 async def burn_expired_subscription_prc():
     """
-    Burn PRC for expired subscription users - ONLY PRC mined AFTER expiry that is older than 5 days
-    Logic: When subscription expires, user can still mine but that PRC will be burned after 5 days
+    Burn PRC for EXPIRED subscription users - ONLY PRC mined AFTER expiry that is older than 5 days.
     
-    IMPORTANT: This function is DISABLED for safety.
-    Paid users were incorrectly affected.
+    Logic: When subscription expires and user doesn't renew:
+    - User can still mine but at explorer rate
+    - That PRC earned AFTER expiry will be burned after 5 days
+    - PRC earned BEFORE expiry is safe and won't be burned
+    
+    SAFETY: Only burns for users who:
+    1. HAD a paid subscription (subscription_plan = startup/growth/elite)
+    2. Subscription has EXPIRED (subscription_expiry < now)
+    3. Have NOT renewed (checked by expiry date being in past)
     """
-    logging.info("[PRC BURN] burn_expired_subscription_prc is DISABLED for safety")
-    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
-    
-    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
         
-        # Find all expired subscription users (any expiry in the past)
+        # Find users with EXPIRED subscriptions only
+        # These are users who HAD paid plan but it's now expired
         expired_subs = db.users.find({
-            "subscription_plan": {"$in": ["startup", "growth", "elite"]},
-            "subscription_expiry": {"$lt": now.isoformat()},
-            "mining_history": {"$exists": True, "$ne": []}
+            "$and": [
+                # Must have/had a paid plan
+                {"subscription_plan": {"$in": ["startup", "growth", "elite"]}},
+                # Subscription must be EXPIRED (expiry in the past)
+                {"subscription_expiry": {"$exists": True, "$ne": None, "$lt": now_iso}},
+                # Must have mining history
+                {"mining_history": {"$exists": True, "$ne": []}}
+            ]
         })
         
         burn_count = 0
@@ -3415,15 +3424,21 @@ async def burn_expired_subscription_prc():
             prc_balance = user.get("prc_balance", 0)
             sub_expiry_str = user.get("subscription_expiry")
             
-            logging.info(f"[SUB BURN DEBUG] Processing user {uid}: prc_balance={prc_balance}, mining_entries={len(mining_history)}")
-            
             if not mining_history or prc_balance <= 0 or not sub_expiry_str:
-                logging.info(f"[SUB BURN DEBUG] Skipping user {uid}: mining_history={bool(mining_history)}, prc_balance={prc_balance}, sub_expiry={bool(sub_expiry_str)}")
                 continue
             
+            # Parse subscription expiry
             try:
                 sub_expiry = datetime.fromisoformat(sub_expiry_str.replace('Z', '+00:00'))
+                if sub_expiry.tzinfo is None:
+                    sub_expiry = sub_expiry.replace(tzinfo=timezone.utc)
             except:
+                logging.warning(f"[SUB BURN] Could not parse expiry for {uid}: {sub_expiry_str}")
+                continue
+            
+            # SAFETY CHECK: Skip if subscription is still active (expiry in future)
+            if sub_expiry > now:
+                logging.info(f"[SUB BURN SKIP] {uid} subscription still active until {sub_expiry}")
                 continue
             
             # Burn ONLY PRC mined AFTER expiry AND older than 5 days
@@ -3443,6 +3458,8 @@ async def burn_expired_subscription_prc():
                 try:
                     if isinstance(timestamp_str, str):
                         mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        if mining_time.tzinfo is None:
+                            mining_time = mining_time.replace(tzinfo=timezone.utc)
                     else:
                         updated_history.append(entry)
                         continue
@@ -3455,47 +3472,43 @@ async def burn_expired_subscription_prc():
                     # Check if 5 days have passed since mining
                     burn_threshold = mining_time + timedelta(days=5)
                     if now >= burn_threshold:
-                        # Burn this PRC (mined after expiry, 5 days old)
                         burned_amount += amount
                         entry["burned"] = True
                         entry["burned_at"] = now.isoformat()
-                        entry["burn_reason"] = "mined_after_subscription_expiry_5days"
+                        entry["burn_reason"] = "EXPIRED_SUB_5DAY_BURN"
                 
                 updated_history.append(entry)
             
             if burned_amount > 0:
-                # Update mining history only (log_transaction will update balance)
-                logging.info(f"[VIP BURN DEBUG] User {uid}: burning {burned_amount}, old_balance={prc_balance}")
+                logging.info(f"[SUB BURN] User {uid}: burning {burned_amount:.2f} PRC (mined after expiry), old_balance={prc_balance}")
                 
-                # First update mining history
                 await db.users.update_one(
                     {"uid": uid},
-                    {
-                        "$set": {
-                            "mining_history": updated_history
-                        }
-                    }
+                    {"$set": {"mining_history": updated_history}}
                 )
                 
-                # Log burn transaction (this also updates balance)
                 await log_transaction(
                     user_id=uid,
                     wallet_type="prc",
                     transaction_type="prc_burn",
                     amount=burned_amount,
-                    description=f"Burned {burned_amount:.2f} PRC (mined after VIP expiry, 5 days old)",
-                    metadata={"burn_reason": "mined_after_subscription_expiry_5days", "subscription_expiry": sub_expiry_str}
+                    description=f"Burned {burned_amount:.2f} PRC (mined after subscription expiry, 5 days old)",
+                    metadata={
+                        "burn_reason": "EXPIRED_SUB_5DAY_BURN", 
+                        "subscription_expiry": sub_expiry_str,
+                        "subscription_plan": user.get("subscription_plan")
+                    }
                 )
                 
                 burn_count += 1
                 total_burned += burned_amount
         
-        logging.info(f"Expired VIP PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
+        logging.info(f"[PRC BURN] Expired subscription burn complete: {burn_count} users, {total_burned:.2f} PRC burned")
         return {"users_affected": burn_count, "total_burned": total_burned}
         
     except Exception as e:
-        logging.error(f"Error burning expired VIP PRC: {e}")
-        return {"users_affected": 0, "total_burned": 0.0}
+        logging.error(f"[PRC BURN ERROR] Expired subscription burn failed: {e}")
+        return {"users_affected": 0, "total_burned": 0.0, "error": str(e)}
 
 async def get_vip_plan_pricing(plan_type: str = "monthly"):
     """
