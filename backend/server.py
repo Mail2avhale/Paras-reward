@@ -12145,71 +12145,58 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
     """
     now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # 1. Get pending bank redeem requests
+    # ============ REDEEM REQUESTS (All Types) ============
+    
+    # 1. Bank Redeem Requests - All statuses
     pending_bank_redeems = await db.bank_redeem_requests.find({
-        "user_id": uid,
-        "status": "pending"
-    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(5)
+        "user_id": uid, "status": "pending"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(10)
     
-    # 2. Get weekly withdrawal count
+    approved_bank_redeems = await db.bank_redeem_requests.find({
+        "user_id": uid, "status": {"$in": ["approved", "completed"]}
+    }, {"_id": 0, "request_id": 1, "amount": 1, "status": 1, "created_at": 1}).sort("created_at", -1).to_list(5)
+    
+    rejected_bank_redeems = await db.bank_redeem_requests.find({
+        "user_id": uid, "status": "rejected"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "rejection_reason": 1, "created_at": 1}).sort("created_at", -1).to_list(5)
+    
+    # 2. Weekly withdrawal count
     weekly_withdrawals = await db.bank_redeem_requests.count_documents({
         "user_id": uid,
         "status": {"$in": ["approved", "completed"]},
         "created_at": {"$gte": week_start.isoformat()}
     })
     
-    # 3. Get pending PRC Savings Vault requests
+    # 3. PRC Savings Vault Requests - All statuses
     pending_rd_redeems = await db.rd_redeem_requests.find({
-        "user_id": uid,
-        "status": "pending"
-    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(5)
+        "user_id": uid, "status": "pending"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(10)
     
-    # 4. Get active RD accounts
+    approved_rd_redeems = await db.rd_redeem_requests.find({
+        "user_id": uid, "status": {"$in": ["approved", "completed"]}
+    }, {"_id": 0, "request_id": 1, "amount": 1, "status": 1, "created_at": 1}).sort("created_at", -1).to_list(5)
+    
+    rejected_rd_redeems = await db.rd_redeem_requests.find({
+        "user_id": uid, "status": "rejected"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "rejection_reason": 1, "created_at": 1}).sort("created_at", -1).to_list(5)
+    
+    # 4. Active RD accounts
     active_rds = await db.recurring_deposits.find({
-        "user_id": uid,
-        "status": "active"
-    }, {"_id": 0, "rd_id": 1, "total_deposited": 1, "interest_earned": 1}).to_list(5)
+        "user_id": uid, "status": "active"
+    }, {"_id": 0, "rd_id": 1, "total_deposited": 1, "interest_earned": 1, "maturity_date": 1}).to_list(10)
     
-    # 5. Get pending subscription payments
-    pending_subscriptions = await db.subscriptions.find({
-        "user_id": uid,
-        "status": "pending"
-    }, {"_id": 0, "payment_id": 1, "amount": 1, "created_at": 1}).to_list(3)
+    # ============ SUBSCRIPTION & PAYMENTS ============
     
-    # 6. Get KYC documents status
-    kyc_docs = await db.kyc_documents.find_one(
-        {"user_id": uid},
-        {"_id": 0, "status": 1, "rejection_reason": 1, "submitted_at": 1}
-    )
-    
-    # 7. Get referral stats
-    direct_referrals = await db.referrals.count_documents({"referrer_uid": uid, "level": 1})
-    total_referrals = await db.referrals.count_documents({"referrer_uid": uid})
-    
-    # 8. Get recent failed login attempts
-    recent_login_fails = await db.login_attempts.count_documents({
-        "identifier": {"$in": [user.get("email"), user.get("mobile"), uid]},
-        "success": False,
-        "timestamp": {"$gte": (now - timedelta(hours=24)).isoformat()}
-    })
-    
-    # 9. Get pending orders
-    pending_orders = await db.orders.find({
-        "user_id": uid,
-        "status": "pending"
-    }, {"_id": 0, "order_id": 1, "product_name": 1, "created_at": 1}).to_list(5)
-    
-    # 10. Get mining/session info
-    mining_active = user.get("mining_active", False)
-    last_mining_collect = user.get("last_mining_collect")
-    
-    # 11. Check subscription expiry
+    # 5. Subscription details
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_expiry = user.get("subscription_expiry")
+    subscription_amount = user.get("subscription_amount", 0)
+    subscription_start = user.get("subscription_start")
+    
     is_expired = False
     days_until_expiry = 0
-    
     if subscription_expiry and subscription_plan != "explorer":
         try:
             expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
@@ -12220,9 +12207,261 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
         except:
             pass
     
-    # 12. Calculate weekly limits
-    plan_limits = WEEKLY_SERVICE_LIMITS.get(subscription_plan, WEEKLY_SERVICE_LIMITS["explorer"])
-    weekly_limit = plan_limits.get("shopping", 10)
+    # 6. Pending subscription payments
+    pending_subscriptions = await db.subscriptions.find({
+        "user_id": uid, "status": "pending"
+    }, {"_id": 0, "payment_id": 1, "plan": 1, "amount": 1, "created_at": 1}).to_list(5)
+    
+    # 7. Recent subscription payments (completed)
+    completed_subscriptions = await db.subscriptions.find({
+        "user_id": uid, "status": "completed"
+    }, {"_id": 0, "plan": 1, "amount": 1, "created_at": 1}).sort("created_at", -1).to_list(3)
+    
+    # ============ BILL SERVICES ============
+    
+    # 8. Bill payment history
+    bill_payments = await db.bill_payments.find({
+        "user_id": uid
+    }, {"_id": 0, "bill_type": 1, "amount": 1, "status": 1, "created_at": 1}).sort("created_at", -1).to_list(10)
+    
+    pending_bills = [b for b in bill_payments if b.get("status") == "pending"]
+    completed_bills = [b for b in bill_payments if b.get("status") == "completed"]
+    failed_bills = [b for b in bill_payments if b.get("status") == "failed"]
+    
+    # 9. Available bill services based on plan
+    plan_limits = WEEKLY_SERVICE_LIMITS.get(subscription_plan, WEEKLY_SERVICE_LIMITS.get("explorer", {}))
+    
+    # ============ GIFT VOUCHERS ============
+    
+    # 10. Gift voucher redemptions
+    voucher_redemptions = await db.voucher_redemptions.find({
+        "user_id": uid
+    }, {"_id": 0, "voucher_type": 1, "amount": 1, "status": 1, "voucher_code": 1, "created_at": 1}).sort("created_at", -1).to_list(10)
+    
+    pending_vouchers = [v for v in voucher_redemptions if v.get("status") == "pending"]
+    completed_vouchers = [v for v in voucher_redemptions if v.get("status") == "completed"]
+    
+    # ============ KYC STATUS ============
+    
+    # 11. KYC documents status
+    kyc_docs = await db.kyc_documents.find_one(
+        {"user_id": uid},
+        {"_id": 0, "status": 1, "rejection_reason": 1, "submitted_at": 1, "aadhaar_status": 1, "pan_status": 1}
+    )
+    
+    # ============ REFERRAL NETWORK ============
+    
+    # 12. Referral stats
+    direct_referrals = await db.referrals.count_documents({"referrer_uid": uid, "level": 1})
+    total_referrals = await db.referrals.count_documents({"referrer_uid": uid})
+    
+    # Referral earnings
+    referral_earnings = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": "referral_bonus"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    total_referral_earnings = referral_earnings[0]["total"] if referral_earnings else 0
+    
+    # ============ ORDERS & SHOPPING ============
+    
+    # 13. Orders
+    pending_orders = await db.orders.find({
+        "user_id": uid, "status": "pending"
+    }, {"_id": 0, "order_id": 1, "product_name": 1, "amount": 1, "created_at": 1}).to_list(10)
+    
+    completed_orders = await db.orders.find({
+        "user_id": uid, "status": {"$in": ["completed", "delivered"]}
+    }, {"_id": 0, "order_id": 1, "product_name": 1, "amount": 1, "created_at": 1}).sort("created_at", -1).to_list(5)
+    
+    # ============ WALLET & TRANSACTIONS ============
+    
+    # 14. Recent transactions
+    recent_transactions = await db.transactions.find({
+        "user_id": uid
+    }, {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}).sort("created_at", -1).to_list(10)
+    
+    # Monthly earnings summary
+    monthly_earnings = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "type": {"$in": ["mining", "referral_bonus", "daily_bonus", "tap_game"]}, 
+                   "created_at": {"$gte": month_start.isoformat()}}},
+        {"$group": {"_id": "$type", "total": {"$sum": "$amount"}}}
+    ]).to_list(10)
+    
+    # ============ SECURITY STATUS ============
+    
+    # 15. Login attempts
+    recent_login_fails = await db.login_attempts.count_documents({
+        "identifier": {"$in": [user.get("email"), user.get("mobile"), uid]},
+        "success": False,
+        "timestamp": {"$gte": (now - timedelta(hours=24)).isoformat()}
+    })
+    
+    # ============ MINING/SESSION ============
+    
+    # 16. Mining info
+    mining_active = user.get("mining_active", False)
+    total_mined = user.get("total_mined", 0)
+    mining_rate = user.get("mining_rate", 0.1)
+    
+    # Weekly limit calculation
+    weekly_limit = plan_limits.get("bank_redeem", plan_limits.get("shopping", 2))
+    
+    # ============ BUILD DIAGNOSTIC CONTEXT ============
+    
+    diagnostic_context = f"""
+
+=== SMART DIAGNOSTIC DATA (Real-time from Database) ===
+
+**👤 User Profile:**
+- Name: {user.get('name', 'User')}
+- UID: {uid}
+- Email: {user.get('email', 'Not set')}
+- Mobile: {user.get('mobile', 'Not set')}
+- State: {user.get('state', 'Not set')}
+- Referral Code: {user.get('referral_code', 'N/A')}
+
+**💳 Subscription Details:**
+- Current Plan: {subscription_plan.upper()}
+- Plan Status: {'EXPIRED ⚠️' if is_expired else 'ACTIVE ✅'}
+- Days Until Expiry: {days_until_expiry if not is_expired and days_until_expiry > 0 else 'N/A'}
+- Subscription Amount Paid: ₹{subscription_amount}
+- Plan Start Date: {subscription_start or 'N/A'}
+
+**📋 Plan Benefits ({subscription_plan.upper()}):**
+- Weekly Bank Redeem Limit: {weekly_limit}
+- Bill Payment: {'Available ✅' if subscription_plan not in ['explorer', 'free'] else 'VIP Only ⚠️'}
+- Gift Vouchers: {'Available ✅' if subscription_plan not in ['explorer', 'free'] else 'VIP Only ⚠️'}
+- Shopping: {'Available ✅' if subscription_plan not in ['explorer', 'free'] else 'VIP Only ⚠️'}
+
+**💰 Wallet & Balance:**
+- PRC Balance: {user.get('prc_balance', 0):.2f} PRC
+- Cashback Balance: {user.get('cashback_balance', 0):.2f} PRC
+- Total Mined: {total_mined:.2f} PRC
+- Mining Rate: {mining_rate} PRC/hour
+
+**🔐 KYC Status:**
+- Overall Status: {user.get('kyc_status', 'not_submitted').upper()}
+- Document Status: {kyc_docs.get('status', 'Not submitted') if kyc_docs else 'Not submitted'}
+- Aadhaar: {kyc_docs.get('aadhaar_status', 'Not submitted') if kyc_docs else 'Not submitted'}
+- PAN: {kyc_docs.get('pan_status', 'Not submitted') if kyc_docs else 'Not submitted'}
+- Rejection Reason: {kyc_docs.get('rejection_reason', 'None') if kyc_docs else 'None'}
+
+**🏦 Bank Redeem Status:**
+- Pending Requests: {len(pending_bank_redeems)} {'⏳' if pending_bank_redeems else ''}
+- Approved/Completed (Recent): {len(approved_bank_redeems)}
+- Rejected (Recent): {len(rejected_bank_redeems)} {'❌' if rejected_bank_redeems else ''}
+- Weekly Used: {weekly_withdrawals}/{weekly_limit}
+- Weekly Limit Reached: {'YES ⚠️ Wait for next week' if weekly_withdrawals >= weekly_limit else 'NO ✅'}
+{f"- Last Rejection Reason: {rejected_bank_redeems[0].get('rejection_reason', 'Unknown')}" if rejected_bank_redeems else ''}
+
+**🏦 PRC Savings Vault:**
+- Active RD Accounts: {len(active_rds)}
+- Total Deposited: {sum(rd.get('total_deposited', 0) for rd in active_rds):.2f} PRC
+- Interest Earned: {sum(rd.get('interest_earned', 0) for rd in active_rds):.2f} PRC
+- Pending Redeem: {len(pending_rd_redeems)} {'⏳' if pending_rd_redeems else ''}
+- Approved Redeem: {len(approved_rd_redeems)}
+- Rejected Redeem: {len(rejected_rd_redeems)} {'❌' if rejected_rd_redeems else ''}
+{f"- Last RD Rejection: {rejected_rd_redeems[0].get('rejection_reason', 'Unknown')}" if rejected_rd_redeems else ''}
+
+**💳 Subscription Payments:**
+- Pending Payments: {len(pending_subscriptions)} {'⏳ Contact admin if > 48hrs' if pending_subscriptions else ''}
+- Recent Completed: {len(completed_subscriptions)}
+{f"- Pending Amount: ₹{pending_subscriptions[0].get('amount', 0)}" if pending_subscriptions else ''}
+
+**📱 Bill Services:**
+- Available: {'Mobile Recharge, DTH, Electricity, Water, Gas' if subscription_plan not in ['explorer', 'free'] else 'Upgrade to VIP for bill payments'}
+- Pending Bills: {len(pending_bills)}
+- Completed Bills: {len(completed_bills)}
+- Failed Bills: {len(failed_bills)} {'⚠️' if failed_bills else ''}
+
+**🎁 Gift Vouchers:**
+- Available Brands: {'Amazon, Flipkart, Myntra, Swiggy, Zomato' if subscription_plan not in ['explorer', 'free'] else 'Upgrade to VIP for vouchers'}
+- Pending Vouchers: {len(pending_vouchers)}
+- Redeemed Vouchers: {len(completed_vouchers)}
+{f"- Latest Voucher: {completed_vouchers[0].get('voucher_type', 'N/A')} - ₹{completed_vouchers[0].get('amount', 0)}" if completed_vouchers else ''}
+
+**🛒 Orders & Shopping:**
+- Pending Orders: {len(pending_orders)}
+- Completed Orders: {len(completed_orders)}
+{f"- Latest Order: {completed_orders[0].get('product_name', 'N/A')}" if completed_orders else ''}
+
+**👥 Referral Network:**
+- Direct Referrals (Level 1): {direct_referrals}
+- Total Network (All Levels): {total_referrals}
+- Total Referral Earnings: {total_referral_earnings:.2f} PRC
+- Referral Code: {user.get('referral_code', 'N/A')}
+
+**⛏️ Mining/Session:**
+- Session Active: {'YES ✅' if mining_active else 'NO ⚠️ Start session to earn'}
+- Mining Rate: {mining_rate} PRC/hour
+- Total Mined: {total_mined:.2f} PRC
+
+**💸 Recent Transactions (Last 10):**
+{chr(10).join([f"- {t.get('type', 'Unknown')}: {t.get('amount', 0):.2f} PRC" for t in recent_transactions[:5]]) if recent_transactions else '- No recent transactions'}
+
+**📊 This Month Earnings:**
+{chr(10).join([f"- {e.get('_id', 'Unknown')}: {e.get('total', 0):.2f} PRC" for e in monthly_earnings]) if monthly_earnings else '- No earnings this month'}
+
+**🔒 Security Status:**
+- Failed Login Attempts (24h): {recent_login_fails} {'⚠️ Multiple failures detected' if recent_login_fails > 3 else ''}
+- Account Locked: {'YES ⚠️' if user.get('locked_until') else 'NO ✅'}
+- Security Question: {'Set ✅' if user.get('security_question') else 'Not Set ⚠️'}
+- Biometric: {'Enabled ✅' if user.get('biometric_enabled') else 'Not Enabled'}
+
+**📞 Contact & Support:**
+- Email: support@parasreward.com
+- WhatsApp: +91-9999999999
+- Working Hours: Mon-Sat, 10 AM - 7 PM
+- Response Time: Within 24 hours
+
+=== DIAGNOSTIC RULES ===
+
+**Common Issues & Solutions:**
+
+1. **Bank Redeem Failed:**
+   - KYC must be 'VERIFIED' or 'APPROVED'
+   - Weekly limit: {weekly_withdrawals}/{weekly_limit}
+   - Min balance required, check PRC balance
+   - No duplicate pending requests allowed
+
+2. **PRC Savings Vault Issues:**
+   - Check active RD accounts
+   - Weekly limit applies here too
+   - KYC required for redemption
+
+3. **Subscription Payment Pending:**
+   - If pending > 48 hours, contact admin
+   - Check payment screenshot uploaded
+   - Verify transaction ID submitted
+
+4. **Bill Payment Failed:**
+   - VIP plan required for bill payments
+   - Check sufficient PRC balance
+   - Verify correct bill details entered
+
+5. **Gift Voucher Not Received:**
+   - VIP plan required
+   - Check email for voucher code
+   - Processing takes 24-48 hours
+
+6. **Referral Bonus Not Credited:**
+   - Referral must complete paid subscription
+   - Bonus credited after referral's first payment
+   - Check referral used correct code
+
+7. **Mining/Session Issues:**
+   - Session must be active to earn
+   - Check subscription not expired
+   - Restart app if session stuck
+
+8. **Login Issues:**
+   - Account locks after 5 failed attempts
+   - Use 'Forgot PIN' to reset
+   - Contact support if locked
+
+=== END DIAGNOSTIC DATA ===
+"""
+    return diagnostic_context
     
     # Build diagnostic context
     diagnostic_context = f"""
