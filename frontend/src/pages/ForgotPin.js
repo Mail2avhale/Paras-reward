@@ -260,11 +260,13 @@ const ForgotPin = () => {
       1: { icon: Mail, color: 'purple' },
       2: { icon: Phone, color: 'blue' },
       3: { icon: CreditCard, color: 'amber' },
-      4: { icon: Lock, color: 'green' }
+      4: { icon: HelpCircle, color: 'orange' },
+      5: { icon: Lock, color: 'green' }
     };
-    return icons[stepNum];
+    return icons[stepNum] || icons[5];
   };
 
+  const totalSteps = hasSecurityQuestion ? 5 : 4; // 5 steps if security question exists
   const stepInfo = getStepInfo(step);
   const StepIcon = stepInfo.icon;
 
@@ -273,7 +275,7 @@ const ForgotPin = () => {
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-6 sm:p-8">
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6">
-          {[1, 2, 3, 4].map((s) => (
+          {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
             <div key={s} className="flex items-center">
               <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all ${
                 step > s 
