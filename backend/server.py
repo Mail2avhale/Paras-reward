@@ -23086,95 +23086,61 @@ import random
 
 @api_router.get("/admin/prc-analytics")
 async def get_prc_analytics():
-    """Get platform-wide PRC statistics for admin dashboard"""
+    """Get platform-wide PRC statistics for admin dashboard - OPTIMIZED"""
     try:
-        # Get all users
-        users = await db.users.find().to_list(length=None)
+        # Use aggregation instead of fetching all users
+        balance_agg = await db.users.aggregate([
+            {"$group": {"_id": None, "total_balance": {"$sum": "$prc_balance"}, "user_count": {"$sum": 1}}}
+        ]).to_list(1)
+        total_current_balance = balance_agg[0]["total_balance"] if balance_agg else 0
         
-        # Calculate total PRC mined (sum of all user balances + spent PRC)
-        total_current_balance = sum(user.get("prc_balance", 0) for user in users)
+        # Get VIP count
+        vip_count = await db.users.count_documents({"membership_type": "vip"})
+        prc_spent_vip = vip_count * 1000
         
-        # Calculate PRC consumed from various sources
-        # 1. Marketplace orders
-        orders = await db.orders.find().to_list(length=None)
-        prc_spent_marketplace = sum(order.get("prc_amount", 0) for order in orders)
+        # Aggregated consumption - Marketplace
+        orders_agg = await db.orders.aggregate([
+            {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+        ]).to_list(1)
+        prc_spent_marketplace = orders_agg[0]["total"] if orders_agg else 0
         
-        # 2. Bill Payments
-        bill_payments = await db.bill_payment_requests.find({"status": "completed"}).to_list(length=None)
-        prc_spent_bill_payments = sum(bp.get("total_prc_deducted", 0) for bp in bill_payments)
+        # Aggregated consumption - Bill Payments  
+        bill_agg = await db.bill_payment_requests.aggregate([
+            {"$match": {"status": "completed"}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        prc_spent_bill_payments = bill_agg[0]["total"] if bill_agg else 0
         
-        # 3. Gift Vouchers
-        gift_vouchers = await db.gift_voucher_requests.find({"status": "completed"}).to_list(length=None)
-        prc_spent_gift_vouchers = sum(gv.get("total_prc_deducted", 0) for gv in gift_vouchers)
+        # Aggregated consumption - Gift Vouchers
+        gift_agg = await db.gift_voucher_requests.aggregate([
+            {"$match": {"status": "completed"}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        ]).to_list(1)
+        prc_spent_gift_vouchers = gift_agg[0]["total"] if gift_agg else 0
         
-        # 4. VIP memberships
-        vip_users = [u for u in users if u.get("membership_type") == "vip"]
-        prc_spent_vip = len(vip_users) * 1000  # Assuming 1000 PRC per VIP
-        
-        # Calculate total consumed
-        total_prc_consumed = (
-            prc_spent_marketplace + 
-            prc_spent_bill_payments + 
-            prc_spent_gift_vouchers + 
-            prc_spent_vip
-        )
-        
-        # Calculate total mined (current balance + consumed)
+        # Calculate totals
+        total_prc_consumed = prc_spent_marketplace + prc_spent_bill_payments + prc_spent_gift_vouchers + prc_spent_vip
         total_prc_mined = total_current_balance + total_prc_consumed
         
-        # Get daily statistics for last 30 days
+        # Get daily statistics for last 30 days using aggregation
         thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        thirty_days_str = thirty_days_ago.isoformat()
         
-        # Daily mining data
-        daily_mining = {}
-        mining_logs = await db.activity_logs.find({
-            "action": "mining_completed",
-            "timestamp": {"$gte": thirty_days_ago.isoformat()}
-        }).to_list(length=None)
+        # Daily mining - from transactions
+        mining_agg = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": ["mining", "tap_game"]}, "timestamp": {"$gte": thirty_days_str}}},
+            {"$addFields": {"date": {"$substr": ["$timestamp", 0, 10]}}},
+            {"$group": {"_id": "$date", "mined": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(100)
+        daily_mining = {d["_id"]: d["mined"] for d in mining_agg if d["_id"]}
         
-        for log in mining_logs:
-            date = log.get("timestamp", "")[:10]  # Get YYYY-MM-DD
-            prc_earned = log.get("details", {}).get("prc_earned", 0)
-            if date in daily_mining:
-                daily_mining[date] += prc_earned
-            else:
-                daily_mining[date] = prc_earned
-        
-        # Daily consumption data
-        daily_consumption = {}
-        
-        # From orders
-        for order in orders:
-            if order.get("created_at"):
-                date = order.get("created_at")[:10]
-                if date >= thirty_days_ago.isoformat()[:10]:
-                    prc = order.get("prc_amount", 0)
-                    if date in daily_consumption:
-                        daily_consumption[date] += prc
-                    else:
-                        daily_consumption[date] = prc
-        
-        # From bill payments
-        for bp in bill_payments:
-            if bp.get("created_at"):
-                date = bp.get("created_at")[:10]
-                if date >= thirty_days_ago.isoformat()[:10]:
-                    prc = bp.get("total_prc_deducted", 0)
-                    if date in daily_consumption:
-                        daily_consumption[date] += prc
-                    else:
-                        daily_consumption[date] = prc
-        
-        # From gift vouchers
-        for gv in gift_vouchers:
-            if gv.get("created_at"):
-                date = gv.get("created_at")[:10]
-                if date >= thirty_days_ago.isoformat()[:10]:
-                    prc = gv.get("total_prc_deducted", 0)
-                    if date in daily_consumption:
-                        daily_consumption[date] += prc
-                    else:
-                        daily_consumption[date] = prc
+        # Daily consumption - from transactions
+        consume_agg = await db.transactions.aggregate([
+            {"$match": {"type": {"$in": ["redeem", "bill_payment", "gift_voucher", "marketplace"]}, "timestamp": {"$gte": thirty_days_str}}},
+            {"$addFields": {"date": {"$substr": ["$timestamp", 0, 10]}}},
+            {"$group": {"_id": "$date", "consumed": {"$sum": {"$abs": "$amount"}}}}
+        ]).to_list(100)
+        daily_consumption = {d["_id"]: d["consumed"] for d in consume_agg if d["_id"]}
         
         # Create timeline data
         timeline_data = []
@@ -23185,17 +23151,16 @@ async def get_prc_analytics():
             date_str = current_date.isoformat()
             timeline_data.append({
                 "date": date_str,
-                "mined": daily_mining.get(date_str, 0),
-                "consumed": daily_consumption.get(date_str, 0)
+                "mined": round(daily_mining.get(date_str, 0), 2),
+                "consumed": round(daily_consumption.get(date_str, 0), 2)
             })
             current_date += timedelta(days=1)
         
-        # Breakdown of consumption
         consumption_breakdown = {
-            "marketplace": prc_spent_marketplace,
-            "bill_payments": prc_spent_bill_payments,
-            "gift_vouchers": prc_spent_gift_vouchers,
-            "vip_memberships": prc_spent_vip
+            "marketplace": round(prc_spent_marketplace, 2),
+            "bill_payments": round(prc_spent_bill_payments, 2),
+            "gift_vouchers": round(prc_spent_gift_vouchers, 2),
+            "vip_memberships": round(prc_spent_vip, 2)
         }
         
         return {
