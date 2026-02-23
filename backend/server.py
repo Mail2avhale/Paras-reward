@@ -3340,7 +3340,14 @@ async def burn_expired_subscription_prc():
     """
     Burn PRC for expired subscription users - ONLY PRC mined AFTER expiry that is older than 5 days
     Logic: When subscription expires, user can still mine but that PRC will be burned after 5 days
+    
+    IMPORTANT: This function is DISABLED for safety.
+    Paid users were incorrectly affected.
     """
+    logging.info("[PRC BURN] burn_expired_subscription_prc is DISABLED for safety")
+    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
+    
+    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
         
