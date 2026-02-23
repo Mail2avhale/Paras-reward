@@ -310,6 +310,7 @@ const ForgotPin = () => {
             step === 1 ? 'from-purple-500 to-indigo-600' :
             step === 2 ? 'from-blue-500 to-cyan-600' :
             step === 3 ? 'from-amber-500 to-orange-600' :
+            step === 4 && hasSecurityQuestion ? 'from-orange-500 to-amber-600' :
             'from-green-500 to-emerald-600'
           }`}>
             <StepIcon className="h-8 w-8 text-white" />
