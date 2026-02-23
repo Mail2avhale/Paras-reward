@@ -318,13 +318,17 @@ const ForgotPin = () => {
             {step === 1 && 'Verify Your Email'}
             {step === 2 && 'Verify Your Mobile'}
             {step === 3 && 'Verify Your Document'}
-            {step === 4 && 'Set New PIN'}
+            {step === 4 && hasSecurityQuestion && 'Security Question'}
+            {step === 4 && !hasSecurityQuestion && 'Set New PIN'}
+            {step === 5 && 'Set New PIN'}
           </h1>
           <p className="text-gray-500 text-sm">
             {step === 1 && 'Enter your registered email address'}
             {step === 2 && `Hello ${userName}! Now verify your mobile`}
             {step === 3 && 'Enter your Aadhaar or PAN number'}
-            {step === 4 && 'All verified! Create your new 6-digit PIN'}
+            {step === 4 && hasSecurityQuestion && 'Answer your security question to continue'}
+            {step === 4 && !hasSecurityQuestion && 'All verified! Create your new 6-digit PIN'}
+            {step === 5 && 'All verified! Create your new 6-digit PIN'}
           </p>
         </div>
 
