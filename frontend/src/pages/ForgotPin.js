@@ -497,8 +497,60 @@ const ForgotPin = () => {
           </form>
         )}
 
-        {/* Step 4: Set New PIN */}
-        {step === 4 && (
+        {/* Step 4: Security Question (if user has one) */}
+        {step === 4 && hasSecurityQuestion && (
+          <form onSubmit={handleVerifySecurityQuestion} className="space-y-4">
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <HelpCircle className="w-5 h-5 text-orange-600" />
+                <p className="text-sm font-medium text-orange-800">Security Question</p>
+              </div>
+              <p className="text-orange-700 font-medium">{securityQuestion}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Answer
+              </label>
+              <Input
+                type="text"
+                value={securityAnswer}
+                onChange={(e) => setSecurityAnswer(e.target.value)}
+                placeholder="Enter your answer"
+                className="w-full text-lg"
+                data-testid="security-answer-input"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Answer is case-insensitive
+              </p>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading || !securityAnswer.trim()}
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 py-6 text-lg"
+              data-testid="verify-security-btn"
+            >
+              {loading ? (
+                <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+              ) : (
+                <ArrowRight className="w-5 h-5 mr-2" />
+              )}
+              {loading ? 'Verifying...' : 'Verify Answer'}
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="w-full text-sm text-gray-500 hover:text-gray-700"
+            >
+              ← Back to Document
+            </button>
+          </form>
+        )}
+
+        {/* Step 5: Set New PIN (or Step 4 if no security question) */}
+        {step === 5 && (
           <form onSubmit={handleSetNewPin} className="space-y-4">
             <div className="p-4 bg-green-50 border border-green-200 rounded-xl mb-4">
               <p className="text-sm text-green-800 text-center flex items-center justify-center gap-2">
