@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
