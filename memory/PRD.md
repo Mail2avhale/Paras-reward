@@ -6,7 +6,40 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (December 2025)
 
-### 🧹 Code Cleanup: Non-Existent Plans Removed ✅ (Dec 2025 - Latest)
+### 🔥 PRC Burn Logic Fixed & Re-enabled ✅ (Dec 2025 - Latest)
+
+**Problem:** PRC burn jobs were disabled because they incorrectly targeted paid users, causing their balances to reset to zero.
+
+**Root Cause:** The query `{"membership_type": {"$ne": "vip"}}` was too broad and caught paid users who had `subscription_plan` but different `membership_type`.
+
+**Solution - Complete Rewrite with Triple Safety Checks:**
+
+1. **`burn_expired_prc_for_explorer_users()`** - Burns 100% PRC after 2 days inactive
+   - Query now explicitly checks:
+     - `subscription_plan` is explorer/free/null/empty
+     - `subscription_plan` NOT in startup/growth/elite/vip/pro
+     - NO `subscription_expiry` (never had subscription)
+     - NO `subscription_start` (never started subscription)
+   - Additional runtime safety checks before each burn
+
+2. **`burn_expired_prc_for_free_users()`** - Burns PRC older than 48 hours (FIFO)
+   - Same triple safety checks
+   - Only targets users with no active subscription
+
+3. **`burn_expired_subscription_prc()`** - Burns PRC mined AFTER expiry (5 days grace)
+   - Only targets users whose subscription HAS expired
+   - Only burns PRC mined AFTER the expiry date
+   - PRC earned BEFORE expiry is SAFE
+
+**New Admin APIs:**
+- `GET /api/admin/burn-prc-preview` - Preview which users would be affected WITHOUT burning
+- `POST /api/admin/burn-prc-now` - Execute burn job
+
+**Testing:** ✅ Preview API verified - No paid users in burn targets
+
+---
+
+### 🧹 Code Cleanup: Non-Existent Plans Removed ✅ (Dec 2025)
 
 **User Request:** Remove all references to non-existent subscription plans (`professional`, `enterprise`, `director365`, `Starter`) from the codebase.
 
