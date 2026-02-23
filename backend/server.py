@@ -12213,12 +12213,28 @@ PRC is the digital reward currency of Paras Reward Platform.
 
 === ⚠️ IMPORTANT DISCLAIMER - PRC काय आहे आणि काय नाही ===
 
+**🏢 COMPANY INFORMATION:**
+- Company Name: **PARAS REWARD TECHNOLOGIES PVT LTD**
+- Type: Private Limited Company (Legally Registered)
+- Registered with: Ministry of Corporate Affairs, India
+- Global Database: Registered ✅
+- Platform: Paras Reward - India's Rewards Platform
+
 **✅ PRC काय आहे (What PRC IS):**
-- PRC म्हणजे Paras Reward Coin - एक Digital Reward Currency
+- PRC = **Paras Reward Coin** - Platform ची Digital Reward Currency
+- **10 PRC = ₹1 INR** (Redemption Value)
 - Platform वर activities करून कमावता येते
 - Gift Vouchers, Bill Payments, Shopping साठी redeem करता येते
-- 1 PRC ≈ ₹1 redemption value (platform वर)
-- Legitimate reward points system
+- Legitimate reward points system backed by real revenue
+
+**💰 PRC VALUE CONVERSION:**
+| PRC | INR Value |
+|-----|-----------|
+| 10 PRC | ₹1 |
+| 100 PRC | ₹10 |
+| 500 PRC | ₹50 |
+| 1000 PRC | ₹100 |
+| 5000 PRC | ₹500 |
 
 **❌ PRC काय नाही (What PRC is NOT):**
 - PRC हे Cryptocurrency नाही (Bitcoin, Ethereum सारखे नाही)
@@ -12227,14 +12243,43 @@ PRC is the digital reward currency of Paras Reward Platform.
 - PRC हे investment scheme नाही
 - PRC guaranteed income नाही - हे reward points आहेत
 - PRC फक्त Paras Reward Platform वरच valid आहे
-- PRC cash directly नाही - redemption द्वारे value मिळते
 
-**⚖️ Legal Disclaimer:**
-- Paras Reward हे reward-based engagement platform आहे
+**📊 APP INCOME SOURCE & REVENUE MODEL:**
+Paras Reward Platform चे income sources:
+
+1. **Google AdMob Revenue:**
+   - App मध्ये दिसणाऱ्या ads वरून revenue
+   - Banner Ads, Interstitial Ads, Rewarded Ads
+   - Users ads बघतात → Company ला revenue → Users ला PRC
+
+2. **Unity Ads Revenue:**
+   - Gaming section मधील ads
+   - Rewarded video ads
+   - Playable ads
+
+3. **Subscription Revenue:**
+   - Paid plans (Starter, Growth, Professional, Enterprise)
+   - Monthly/Yearly subscriptions
+
+4. **Commission Revenue:**
+   - Bill payments commission
+   - Gift voucher commission
+   - Shopping marketplace commission
+
+**🔒 LEGAL COMPLIANCE:**
+- Company Act 2013 compliant
+- GST Registered
+- Income Tax compliant
+- RBI guidelines followed (where applicable)
+- User data protection as per IT Act
+
+**⚖️ User Agreement Disclaimer:**
+- Paras Reward हे Ad-revenue based reward platform आहे
+- Earnings depend on user activity and ad revenue
 - कोणतेही guaranteed returns नाहीत
-- Earnings depend on user activity and platform rules
 - यावर investment म्हणून अवलंबून राहू नये
-- हे financial product नाही
+- हे financial investment product नाही
+- Platform rules आणि policies बदलू शकतात
 
 === 📊 TODAY'S RATES & USER'S RATE ===
 
