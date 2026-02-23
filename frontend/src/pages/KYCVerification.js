@@ -338,6 +338,13 @@ const KYCVerification = ({ user }) => {
         </div>
       )}
 
+      {/* AI Smart Tip for KYC */}
+      {!isVerified && documentStatus !== 'verified' && (
+        <div className="px-5 mb-4">
+          <AISmartTip pageName="kyc" variant="compact" />
+        </div>
+      )}
+
       {/* Status Card for Verified - Show if KYC is verified OR document is verified */}
       {(isVerified || documentStatus === 'verified') && (
         <div className="px-5 mb-6">
