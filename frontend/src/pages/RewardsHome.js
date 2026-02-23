@@ -7,7 +7,7 @@ import {
   ChevronRight, Star, Zap, Award, CreditCard, ShoppingBag,
   FileText, Phone, Mail, MapPin, ArrowRight, CheckCircle,
   Play, Crown, Percent, Clock, Target, Sparkles, Globe, ChevronDown,
-  CloudRain, Lock
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -375,14 +375,6 @@ const RewardsHome = () => {
       title: t('billPayments'),
       description: t('billPaymentsDesc'),
       color: 'from-green-500 to-emerald-600',
-      link: '/register'
-    },
-    {
-      icon: CloudRain,
-      title: t('prcRain'),
-      description: t('prcRainDesc'),
-      color: 'from-cyan-500 to-blue-600',
-      isNew: true,
       link: '/register'
     }
   ];
