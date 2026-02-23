@@ -14,55 +14,46 @@ User asks a question → Chatbot fetches user's complete data from DB → Analyz
 
 **Features Implemented:**
 
-**1. Subscription Diagnostics:**
-- Current plan, status, expiry date
-- Plan benefits (bill payment, vouchers, shopping access)
-- Renewal reminders
+**1. Complete App Knowledge:**
+- All subscription plans with prices and benefits
+- Mining rates per plan
+- PRC Savings Vault details
+- All app features explained
 
-**2. Redeem Status (All Types):**
-- Bank Redeem: Pending, Approved, Rejected with reasons
-- PRC Savings Vault: All request statuses
-- Weekly limit tracking
-- Last rejection reasons shown
+**2. Important Disclaimers:**
+- PRC काय आहे (Digital Reward Currency)
+- PRC काय नाही (Not Cryptocurrency, Not Investment)
+- Legal disclaimer for users
 
-**3. Bill Services:**
-- Available services (Mobile, DTH, Electricity, Water, Gas)
-- Pending/Completed/Failed bills history
-- Eligibility based on plan
+**3. Today's Rates:**
+- Base mining rates per plan
+- User's current rate with comparison
+- Rate mismatch detection
 
-**4. Gift Vouchers:**
-- Available brands (Amazon, Flipkart, Myntra, Swiggy, Zomato)
-- Pending/Redeemed vouchers
-- Latest voucher details
+**4. Step-by-Step Guides:**
+- **KYC Process:** Complete Aadhaar + PAN upload steps
+- **Bank Redeem:** Requirements + Steps + Limits
+- **Gift Vouchers:** Brand selection + Redemption
+- **Bill Payments:** All services + How to pay
+- **Subscription Renewal:** Payment methods + Steps
+- **Invite Friends:** Referral code sharing + Earnings
 
-**5. Wallet & Transactions:**
-- PRC Balance, Cashback Balance
-- Recent 10 transactions
-- Monthly earnings breakdown by type
+**5. Diagnostic Features:**
+- All redeem statuses (Pending/Approved/Rejected)
+- Subscription details with expiry
+- Bill services history
+- Gift voucher redemptions
+- Wallet transactions
+- Monthly earnings breakdown
+- Contact & Support info
 
-**6. Contact & Support:**
-- Email: support@parasreward.com
-- WhatsApp: +91-9999999999
-- Working hours, response time
-
-**7. Additional Features:**
-- Orders & Shopping status
-- Referral network with earnings
-- Mining/Session status
-- Security status (login attempts, lockout)
-- KYC status with rejection reasons
-
-**Diagnostic Keywords Added:**
-- Marathi: काम नाही, समस्या, पेंडिंग, रिजेक्ट, सबस्क्रिप्शन, व्हाउचर, बिल, etc.
-- Hindi: kyun, kaise, pending, reject, subscription, voucher, bill, etc.
-- English: fail, pending, rejected, subscription, voucher, bill, contact, etc.
-
-**Test Results:** ✅ All 5 test scenarios passed
-1. Subscription status → Plan details with expiry
-2. Gift voucher query → Available brands + steps
-3. Bill payment query → Services + eligibility
-4. Contact support → Email, WhatsApp, hours
-5. Redeem status → Pending/Approved/Rejected counts
+**Test Results:** ✅ All 6 scenarios passed
+1. "PRC cryptocurrency आहे का?" → Clear disclaimer given ✓
+2. "आजचा mining rate?" → User's rate + mismatch detected ✓
+3. "KYC कशी करायची?" → Step-by-step guide ✓
+4. "Bank redeem कसे?" → KYC requirement + steps ✓
+5. "Subscription renewal?" → Payment methods + steps ✓
+6. "Friends ला invite कसे?" → Referral code + steps ✓
 
 ---
 
