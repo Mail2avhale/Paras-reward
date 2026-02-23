@@ -407,25 +407,12 @@ const RewardsHome = () => {
       ]
     },
     {
-      name: 'Growth',
-      price: '549',
-      originalPrice: '1000',
-      icon: TrendingUp,
-      color: 'from-purple-500 to-pink-600',
-      isPopular: true,
-      features: [
-        { text: '2x Point Rate', included: true },
-        { text: '100 Points/day', included: true },
-        { text: 'Priority Support', included: true },
-        { text: 'All Features', included: true }
-      ]
-    },
-    {
       name: 'Elite',
       price: '799',
       originalPrice: '2000',
       icon: Crown,
       color: 'from-amber-500 to-orange-600',
+      isPopular: true,
       features: [
         { text: '3x Point Rate', included: true },
         { text: '200 Points/day', included: true },
