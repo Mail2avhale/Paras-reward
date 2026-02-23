@@ -13,45 +13,56 @@ A production-grade reward platform serving 3000+ users with subscription managem
 User asks a question → Chatbot fetches user's complete data from DB → Analyzes all conditions → Gives EXACT problem + Solution
 
 **Features Implemented:**
-1. **Intelligent Issue Detection:**
-   - Detects diagnostic keywords in any language (Marathi, Hindi, English)
-   - Automatically switches to diagnostic mode when user asks about problems
 
-2. **Real-time Data Analysis:**
-   - Fetches user's complete account status
-   - KYC status, Bank redeem limits, Pending requests
-   - Subscription status, Mining session, Referral network
-   - Security status (failed logins, lockouts)
-   - All pending orders and payments
+**1. Subscription Diagnostics:**
+- Current plan, status, expiry date
+- Plan benefits (bill payment, vouchers, shopping access)
+- Renewal reminders
 
-3. **Diagnostic Response Format:**
-   - ❌ **Problem Found:** Exact issue with specific data
-   - ✅ **What's Working:** Positive aspects
-   - 🔧 **Solution:** Step-by-step fix
+**2. Redeem Status (All Types):**
+- Bank Redeem: Pending, Approved, Rejected with reasons
+- PRC Savings Vault: All request statuses
+- Weekly limit tracking
+- Last rejection reasons shown
 
-4. **Issues Covered:**
-   - Bank Redeem failures (KYC, weekly limits, balance)
-   - PRC Savings Vault redeem issues
-   - Subscription/Payment pending
-   - Mining session not working
-   - Referral bonus not credited
-   - Login issues (lockout, security)
-   - KYC rejection reasons
-   - Weekly limits exceeded
+**3. Bill Services:**
+- Available services (Mobile, DTH, Electricity, Water, Gas)
+- Pending/Completed/Failed bills history
+- Eligibility based on plan
 
-5. **UI Enhancements:**
-   - "Smart Diagnosis" badge on diagnostic responses
-   - Green gradient background for diagnostic messages
-   - Updated quick questions with diagnostic options
+**4. Gift Vouchers:**
+- Available brands (Amazon, Flipkart, Myntra, Swiggy, Zomato)
+- Pending/Redeemed vouchers
+- Latest voucher details
 
-**Files Modified:**
-- `backend/server.py` - Added `get_smart_diagnostic_context()` function, enhanced `/api/ai/chatbot` endpoint
-- `frontend/src/components/AIChatbotEnhanced.js` - Added diagnostic badge, updated UI
+**5. Wallet & Transactions:**
+- PRC Balance, Cashback Balance
+- Recent 10 transactions
+- Monthly earnings breakdown by type
 
-**Test Results:** ✅ Tested with curl in all 3 languages
-- Marathi: "माझी bank redeem का fail झाली?" → Perfect diagnosis with KYC status
-- Hindi: "मेरा referral bonus क्यों नहीं आया?" → Perfect diagnosis with referral data
-- English: "Why is my mining session not working?" → Perfect diagnosis with session status
+**6. Contact & Support:**
+- Email: support@parasreward.com
+- WhatsApp: +91-9999999999
+- Working hours, response time
+
+**7. Additional Features:**
+- Orders & Shopping status
+- Referral network with earnings
+- Mining/Session status
+- Security status (login attempts, lockout)
+- KYC status with rejection reasons
+
+**Diagnostic Keywords Added:**
+- Marathi: काम नाही, समस्या, पेंडिंग, रिजेक्ट, सबस्क्रिप्शन, व्हाउचर, बिल, etc.
+- Hindi: kyun, kaise, pending, reject, subscription, voucher, bill, etc.
+- English: fail, pending, rejected, subscription, voucher, bill, contact, etc.
+
+**Test Results:** ✅ All 5 test scenarios passed
+1. Subscription status → Plan details with expiry
+2. Gift voucher query → Available brands + steps
+3. Bill payment query → Services + eligibility
+4. Contact support → Email, WhatsApp, hours
+5. Redeem status → Pending/Approved/Rejected counts
 
 ---
 
