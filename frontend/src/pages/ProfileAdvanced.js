@@ -1043,6 +1043,9 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           <BankDetailsCard user={user} />
         )}
 
+        {/* Security Question - Important for PIN Reset */}
+        <SecurityQuestionCard user={user} />
+
         {/* Privacy Settings */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4">
           <div className="flex items-center gap-3 mb-4">
