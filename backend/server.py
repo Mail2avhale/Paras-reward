@@ -3794,7 +3794,10 @@ async def check_unique_fields(field_name: str, value: str, exclude_uid: Optional
 
 async def check_unique_utr(utr_number: str, exclude_id: Optional[str] = None, collection_type: str = "all"):
     """
-    Check if UTR number is unique across all payment collections
+    Check if UTR number is unique across all payment collections.
+    IMPORTANT: Only APPROVED/PENDING UTRs are considered "used".
+    REJECTED UTRs can be reused by the user.
+    
     collection_type: 'all', 'subscription', 'bill_payment', 'gift_voucher'
     """
     if not utr_number:
@@ -3818,7 +3821,12 @@ async def check_unique_utr(utr_number: str, exclude_id: Optional[str] = None, co
         collections_to_check.append(("gift_voucher_requests", "request_id"))
     
     for coll_name, id_field in collections_to_check:
-        query = {"utr_number": utr_number}
+        # Only check for APPROVED or PENDING status
+        # REJECTED UTRs should be allowed to be reused
+        query = {
+            "utr_number": utr_number,
+            "status": {"$nin": ["rejected", "cancelled", "failed"]}  # Exclude rejected/cancelled/failed
+        }
         if exclude_id:
             query[id_field] = {"$ne": exclude_id}
         
@@ -3830,33 +3838,36 @@ async def check_unique_utr(utr_number: str, exclude_id: Optional[str] = None, co
 
 
 async def get_utr_usage_info(utr_number: str):
-    """Get info about where UTR is already used"""
+    """Get info about where UTR is already used (only for non-rejected entries)"""
     if not utr_number:
         return None
     
     utr_number = utr_number.strip().upper()
     
+    # Only return info for APPROVED or PENDING (not rejected)
+    valid_statuses = {"$nin": ["rejected", "cancelled", "failed"]}
+    
     # Check vip_payments first (most common)
-    vip_pay = await db.vip_payments.find_one({"utr_number": utr_number})
+    vip_pay = await db.vip_payments.find_one({"utr_number": utr_number, "status": valid_statuses})
     if vip_pay:
         return {"type": "Subscription Payment", "id": vip_pay.get("payment_id"), "status": vip_pay.get("status")}
     
     # Check subscriptions
-    sub = await db.subscriptions.find_one({"utr_number": utr_number})
+    sub = await db.subscriptions.find_one({"utr_number": utr_number, "status": valid_statuses})
     if sub:
         return {"type": "Subscription", "id": sub.get("subscription_id"), "status": sub.get("status")}
     
-    vip_sub = await db.vip_subscriptions.find_one({"utr_number": utr_number})
+    vip_sub = await db.vip_subscriptions.find_one({"utr_number": utr_number, "status": valid_statuses})
     if vip_sub:
         return {"type": "VIP Subscription", "id": vip_sub.get("subscription_id"), "status": vip_sub.get("status")}
     
     # Check bill payments
-    bill = await db.bill_payment_requests.find_one({"utr_number": utr_number})
+    bill = await db.bill_payment_requests.find_one({"utr_number": utr_number, "status": valid_statuses})
     if bill:
         return {"type": "Bill Payment", "id": bill.get("request_id"), "status": bill.get("status")}
     
     # Check gift vouchers
-    gift = await db.gift_voucher_requests.find_one({"utr_number": utr_number})
+    gift = await db.gift_voucher_requests.find_one({"utr_number": utr_number, "status": valid_statuses})
     if gift:
         return {"type": "Gift Voucher", "id": gift.get("request_id"), "status": gift.get("status")}
     
