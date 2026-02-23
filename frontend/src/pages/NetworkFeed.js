@@ -40,7 +40,7 @@ const NetworkFeed = ({ user }) => {
     { id: 'registration', label: 'New Users', icon: '👋', types: ['registration'] },
     { id: 'subscription', label: 'Subscriptions', icon: '⭐', types: ['subscription'] },
     { id: 'referral', label: 'Referrals', icon: '🤝', types: ['referral_bonus', 'referral_reward'] },
-    { id: 'earnings', label: 'Earnings', icon: '💰', types: ['tap_game', 'prc_rain', 'mining'] },
+    { id: 'earnings', label: 'Earnings', icon: '💰', types: ['tap_game', 'mining'] },
     { id: 'redeem', label: 'Redeems', icon: '🛍️', types: ['bill_payment', 'gift_voucher', 'shopping'] },
   ];
 
@@ -207,8 +207,6 @@ const NetworkFeed = ({ user }) => {
           return <span className="text-xl">⭐</span>;
         case 'tap_game':
           return <span className="text-xl">👆</span>;
-        case 'prc_rain':
-          return <span className="text-xl">🌧️</span>;
         case 'referral_bonus':
           return <span className="text-xl">🎯</span>;
         case 'bill_payment':
@@ -238,8 +236,6 @@ const NetworkFeed = ({ user }) => {
           return 'bg-amber-500/20';
         case 'tap_game':
           return 'bg-blue-500/20';
-        case 'prc_rain':
-          return 'bg-cyan-500/20';
         case 'referral_bonus':
           return 'bg-purple-500/20';
         case 'bill_payment':
@@ -269,8 +265,6 @@ const NetworkFeed = ({ user }) => {
           return 'text-amber-400';
         case 'tap_game':
           return 'text-blue-400';
-        case 'prc_rain':
-          return 'text-cyan-400';
         case 'referral_bonus':
           return 'text-purple-400';
         case 'bill_payment':
