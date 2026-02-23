@@ -397,6 +397,157 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             </div>
           )}
         </Card>
+        
+        {/* ===== AUTO PRC BURN SETTINGS ===== */}
+        <Card className="p-6 mt-6 bg-gradient-to-r from-orange-900/30 to-red-900/30 border-orange-500/30">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-orange-400 flex items-center gap-2">
+              <Settings className="w-6 h-6" />
+              Auto PRC Burn Settings
+            </h2>
+            <Button 
+              onClick={() => setShowBurnSettings(!showBurnSettings)}
+              variant="outline" 
+              className="border-orange-500/50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {showBurnSettings ? 'Hide Settings' : 'Configure'}
+            </Button>
+          </div>
+          
+          {/* Current Settings Display */}
+          {burnSettings && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+                <p className="text-xs text-gray-400 mb-1">Status</p>
+                <p className={`text-xl font-bold ${burnSettings.auto_burn_enabled ? 'text-green-400' : 'text-red-400'}`}>
+                  {burnSettings.auto_burn_enabled ? 'ENABLED' : 'DISABLED'}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+                <p className="text-xs text-gray-400 mb-1">Daily Burn %</p>
+                <p className="text-xl font-bold text-orange-400">{burnSettings.daily_burn_percentage}%</p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+                <p className="text-xs text-gray-400 mb-1">Target Users</p>
+                <p className="text-xl font-bold text-white capitalize">{burnSettings.target_user_type}</p>
+              </div>
+              <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+                <p className="text-xs text-gray-400 mb-1">Min Balance</p>
+                <p className="text-xl font-bold text-white">{burnSettings.min_balance_to_burn} PRC</p>
+              </div>
+            </div>
+          )}
+          
+          {/* PRC Liability Info */}
+          {prcLiability && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-800/30 rounded-lg">
+              <div>
+                <p className="text-xs text-gray-400">Total PRC in Circulation</p>
+                <p className="text-lg font-bold text-purple-400">{prcLiability.total_prc_in_circulation?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">INR Liability</p>
+                <p className="text-lg font-bold text-red-400">₹{prcLiability.total_inr_liability?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Daily Mining</p>
+                <p className="text-lg font-bold text-green-400">+{prcLiability.rates_30d?.daily_mining?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Daily Burn</p>
+                <p className="text-lg font-bold text-orange-400">-{prcLiability.rates_30d?.daily_burn?.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Settings Form */}
+          {showBurnSettings && (
+            <div className="p-4 bg-gray-800/50 rounded-lg space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Daily Burn Percentage (%)</label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="10"
+                    defaultValue={burnSettings?.daily_burn_percentage || 1}
+                    className="bg-gray-700 border-gray-600"
+                    id="autoBurnPercentage"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">0.1% to 10% of available balance</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 block mb-1">Minimum Balance to Burn (PRC)</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    defaultValue={burnSettings?.min_balance_to_burn || 10}
+                    className="bg-gray-700 border-gray-600"
+                    id="autoBurnMinBalance"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Users below this won't be affected</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-400 block mb-1">Target User Type</label>
+                <select 
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  defaultValue={burnSettings?.target_user_type || 'free'}
+                  id="autoBurnTargetType"
+                >
+                  <option value="free">Free Users Only (Never paid)</option>
+                  <option value="inactive">Inactive Users (7+ days no activity)</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+                <input 
+                  type="checkbox" 
+                  id="autoBurnEnabled"
+                  defaultChecked={burnSettings?.auto_burn_enabled}
+                  className="w-5 h-5 rounded"
+                />
+                <label htmlFor="autoBurnEnabled" className="text-white font-medium">Enable Auto Burn</label>
+                <span className="text-xs text-gray-400 ml-2">(Burns configured % daily from available PRC)</span>
+              </div>
+              
+              <div className="flex gap-3 pt-4 border-t border-gray-700">
+                <Button 
+                  onClick={() => {
+                    const newSettings = {
+                      auto_burn_enabled: document.getElementById('autoBurnEnabled').checked,
+                      daily_burn_percentage: parseFloat(document.getElementById('autoBurnPercentage').value),
+                      min_balance_to_burn: parseInt(document.getElementById('autoBurnMinBalance').value),
+                      target_user_type: document.getElementById('autoBurnTargetType').value
+                    };
+                    saveBurnSettings(newSettings);
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Settings
+                </Button>
+                <Button 
+                  onClick={executeAutoBurn}
+                  disabled={burning || !burnSettings?.auto_burn_enabled}
+                  variant="outline"
+                  className="border-orange-500 text-orange-400 hover:bg-orange-500/20"
+                >
+                  <Flame className="w-4 h-4 mr-2" />
+                  {burning ? 'Burning...' : 'Execute Auto Burn Now'}
+                </Button>
+              </div>
+              
+              <div className="text-xs text-gray-500 mt-2">
+                <p>⚠️ Auto burn will deduct {burnSettings?.daily_burn_percentage || 1}% from each eligible user's PRC balance daily.</p>
+                <p>Example: User with 1000 PRC → {(1000 * (burnSettings?.daily_burn_percentage || 1) / 100).toFixed(2)} PRC burned per day</p>
+              </div>
+            </div>
+          )}
+        </Card>
 
         {/* Info Box */}
         <Card className="p-6 mt-6 bg-blue-500/10 border-blue-500/30">
@@ -405,8 +556,8 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
             <li>• <strong>Free Users:</strong> PRC burns after 48 hours (FIFO - First In First Out)</li>
             <li>• <strong>VIP Users:</strong> PRC has lifetime validity (never burns while VIP active)</li>
             <li>• <strong>Expired VIP:</strong> Marketplace blocked immediately, PRC burns after 5-day grace period</li>
-            <li>• <strong>Burn Job:</strong> Should run hourly or daily via scheduled task</li>
-            <li>• <strong>Manual Trigger:</strong> Use "Run Burn Job Now" button to execute immediately</li>
+            <li>• <strong>Auto Burn:</strong> Burns configured % from available PRC balance daily</li>
+            <li>• <strong>Manual Trigger:</strong> Use buttons above to execute immediately</li>
           </ul>
         </Card>
       </div>
