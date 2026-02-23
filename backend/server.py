@@ -5168,25 +5168,11 @@ async def set_security_question(request: Request):
 @api_router.get("/auth/security-question/check/{user_id}")
 async def check_security_question(user_id: str):
     """Check if user has security question set"""
-    logging.info(f"Checking security question for user_id: {user_id}")
-    logging.info(f"DB name: {db.name}")
+    # Find user (without projection to avoid issues)
+    user = await db.users.find_one({"uid": user_id})
     
-    # Try finding without projection first
-    user_raw = await db.users.find_one({"uid": user_id})
-    logging.info(f"User found raw: {user_raw is not None}")
-    
-    if user_raw:
-        user = {
-            "security_question": user_raw.get("security_question"),
-            "security_question_index": user_raw.get("security_question_index")
-        }
-    else:
-        # Debug: try different query
-        all_uids = await db.users.find({}, {"uid": 1, "_id": 0}).limit(5).to_list(5)
-        all_users_count = await db.users.count_documents({})
-        logging.error(f"User not found by uid: {user_id}")
-        logging.error(f"Total users: {all_users_count}, First 5 UIDs: {all_uids}")
-        raise HTTPException(status_code=404, detail=f"User not found. UID: {user_id}")
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
     has_question = bool(user.get("security_question"))
     
