@@ -365,13 +365,110 @@ const PrivacyPolicy = () => {
                 </div>
               </section>
 
+              {/* Google Play Data Safety - NEW SECTION */}
+              <section id="data-safety" data-section="data-safety" className="mb-12">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-green-400" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">9. Google Play Data Safety</h2>
+                </div>
+                <div className="text-gray-300 space-y-4 leading-relaxed">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+                    <p className="text-green-400 text-sm">
+                      <strong>Google Play Store Compliance:</strong> This section details data practices as required by Google Play's Data Safety requirements (2025).
+                    </p>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">9.1 Data Collected</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse mt-4">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="py-2 px-4 text-gray-400">Data Type</th>
+                          <th className="py-2 px-4 text-gray-400">Purpose</th>
+                          <th className="py-2 px-4 text-gray-400">Optional</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm">
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Name</td>
+                          <td className="py-2 px-4">Account creation, personalization</td>
+                          <td className="py-2 px-4">No</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Email</td>
+                          <td className="py-2 px-4">Account, notifications</td>
+                          <td className="py-2 px-4">No</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Phone Number</td>
+                          <td className="py-2 px-4">Account verification, OTP</td>
+                          <td className="py-2 px-4">No</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">KYC Documents</td>
+                          <td className="py-2 px-4">Identity verification for payments</td>
+                          <td className="py-2 px-4">Yes (for redemptions)</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Bank Details</td>
+                          <td className="py-2 px-4">Payment processing</td>
+                          <td className="py-2 px-4">Yes (for withdrawals)</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Device Info</td>
+                          <td className="py-2 px-4">App functionality, security</td>
+                          <td className="py-2 px-4">No</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Usage Data</td>
+                          <td className="py-2 px-4">Analytics, improvement</td>
+                          <td className="py-2 px-4">No</td>
+                        </tr>
+                        <tr className="border-b border-gray-800">
+                          <td className="py-2 px-4">Advertising ID</td>
+                          <td className="py-2 px-4">Ad personalization (by Google)</td>
+                          <td className="py-2 px-4">Can opt-out</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">9.2 Data Sharing</h3>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li><strong>Google AdMob:</strong> Advertising data for ad personalization</li>
+                    <li><strong>Payment Processors:</strong> Transaction details for payments</li>
+                    <li><strong>Analytics Services:</strong> Anonymized usage data</li>
+                    <li><strong>Cloud Services:</strong> Encrypted data storage</li>
+                  </ul>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">9.3 Data Security Practices</h3>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li>Data is encrypted in transit using HTTPS/TLS</li>
+                    <li>Data is encrypted at rest</li>
+                    <li>Users can request data deletion</li>
+                    <li>Data is not sold to third parties</li>
+                  </ul>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">9.4 User Control</h3>
+                  <p>You have control over your data:</p>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li><strong>Access:</strong> Request a copy of your data via Settings → Privacy</li>
+                    <li><strong>Correction:</strong> Update your information in Profile settings</li>
+                    <li><strong>Deletion:</strong> Request account deletion via Support</li>
+                    <li><strong>Ad Opt-out:</strong> Disable personalized ads in device settings</li>
+                  </ul>
+                </div>
+              </section>
+
               {/* Children's Privacy - Critical for Play Store */}
               <section id="children" data-section="children" className="mb-12">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-pink-500/20 rounded-xl flex items-center justify-center">
                     <Shield className="h-5 w-5 text-pink-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white">9. Children's Privacy</h2>
+                  <h2 className="text-2xl font-bold text-white">10. Children's Privacy</h2>
                 </div>
                 <div className="text-gray-300 space-y-4 leading-relaxed">
                   <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
