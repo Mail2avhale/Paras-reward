@@ -12060,70 +12060,179 @@ Response:
 
 === DETAILED PLATFORM INFORMATION ===
 
-**What is PRC (Paras Reward Coin)?**
-PRC is the reward currency of Paras Reward Platform. Users earn PRC through various activities and can redeem it for real rewards like gift vouchers, bill payments, and shopping.
+**🏢 ABOUT PARAS REWARD PLATFORM:**
+Paras Reward is India's No.1 Rewards Platform where users earn PRC (Paras Reward Coins) through daily activities and redeem them for real rewards - gift vouchers, bill payments, shopping, and cash!
 
-**HOW TO START EARNING PRC:**
-1. **Daily Check-in**: Login daily and claim your daily reward bonus
-2. **Session Rewards**: Start a reward session from the dashboard - earn PRC every hour while session is active
-3. **Referral Program**: Invite friends using your unique referral code
-   - Level 1 (Direct referrals): 10% bonus
-   - Level 2: 5% bonus
-   - Level 3: 3% bonus
-   - Level 4: 2% bonus
-   - Level 5: 1% bonus
-   - Total potential: Up to 21% extra earnings!
-4. **Tap Game**: Play the tap game in the "Play" section to earn bonus PRC
-5. **Complete KYC**: Verified users get access to more features and better rewards
+**💰 WHAT IS PRC (Paras Reward Coin)?**
+PRC is the digital reward currency of Paras Reward Platform. 
+- 1 PRC ≈ ₹1 value (for redemption purposes)
+- Earn through activities, redeem for real rewards
+- No expiry for VIP members
 
-**HOW TO CLAIM REWARDS:**
-1. Go to Dashboard → Your PRC balance is shown on the card
-2. For VIP members:
-   - Visit Marketplace to redeem PRC for products
-   - Visit Gift Vouchers to get Amazon, Flipkart, and other vouchers
-   - Use Bill Payments for electricity, mobile recharge, etc.
-3. PRC accumulates automatically from all your activities
+**📊 SUBSCRIPTION PLANS:**
 
-**USES OF PRC:**
-1. **Gift Vouchers** (VIP): Redeem PRC for Amazon, Flipkart, Myntra, Swiggy vouchers
-2. **Bill Payments** (VIP): Pay electricity bills, mobile recharge, DTH, water bills
-3. **Shopping** (VIP): Buy products from the marketplace
-4. **VIP Membership**: Use PRC to upgrade to VIP for enhanced benefits
+1. **EXPLORER (Free)**
+   - Basic access to app
+   - Limited earning features
+   - Weekly redeem limit: 2
+   - No bill payment or vouchers
 
-**VIP MEMBERSHIP BENEFITS:**
-- Enhanced reward earning rate (2x faster)
-- Access to Marketplace shopping
-- Gift voucher redemption
-- Bill payment services
-- Priority customer support
-- Lifetime PRC validity (Free users: limited validity)
+2. **STARTER (₹299/year)**
+   - Enhanced earning rate
+   - Weekly redeem limit: 5
+   - Access to gift vouchers
+   - Basic bill payments
 
-**HOW PARAS REWARD HELPS USERS:**
-1. **Extra Income**: Earn rewards while doing daily activities
-2. **Savings**: Use PRC for bill payments and save real money
-3. **Free Shopping**: Redeem PRC for products without spending cash
-4. **Gift Vouchers**: Get vouchers for popular platforms
-5. **Passive Income through Referrals**: Build a network and earn from 5 levels
-6. **Financial Discipline**: Track your rewards and spending
-7. **Fun & Entertainment**: Enjoy games like Tap Game
+3. **GROWTH (₹599/year)**
+   - 2x earning rate
+   - Weekly redeem limit: 20
+   - All gift vouchers (Amazon, Flipkart, etc.)
+   - All bill payments
+   - Shopping access
 
-**LIFE IMPACT:**
-1. **Reduced Monthly Expenses**: Use PRC for bills and recharges
-2. **Smart Savings**: Every PRC earned is money saved
-3. **Network Building**: Grow your referral network for passive rewards
-4. **Skill Development**: Learn about reward systems and digital platforms
-5. **Family Benefits**: Help family members save on bills and shopping
-6. **Financial Awareness**: Better understanding of rewards and budgeting
-7. **Entertainment Value**: Fun games make earning enjoyable
+4. **PROFESSIONAL (₹999/year)**
+   - 3x earning rate
+   - Weekly redeem limit: 50
+   - Priority support
+   - All features unlocked
 
-**GETTING STARTED STEPS:**
-1. Register on Paras Reward Platform
-2. Complete your profile
-3. Start a reward session from Dashboard
-4. Complete KYC verification
-5. Invite friends using your referral code
-6. Check daily for bonuses and rewards
-7. Upgrade to VIP for maximum benefits
+5. **ENTERPRISE (₹1999/year)**
+   - 5x earning rate
+   - Unlimited redeems
+   - VIP support
+   - All premium features
+
+6. **DIRECTOR 365 (Coming Soon)**
+   - Ultimate plan with maximum benefits
+
+**⛏️ HOW TO EARN PRC:**
+
+1. **Daily Check-in Bonus**
+   - Login daily and claim bonus
+   - Streak bonus for consecutive days
+
+2. **Mining Session (Most Important!)**
+   - Start session from Dashboard
+   - Earn PRC every hour while active
+   - Mining rate depends on subscription plan:
+     - Explorer: 0.1 PRC/hour
+     - Starter: 0.2 PRC/hour
+     - Growth: 0.3 PRC/hour
+     - Professional: 0.5 PRC/hour
+     - Enterprise: 1.0 PRC/hour
+
+3. **Referral Program (5 Levels)**
+   - Level 1 (Direct): 10% of referral's earnings
+   - Level 2: 5%
+   - Level 3: 3%
+   - Level 4: 2%
+   - Level 5: 1%
+   - Total: Up to 21% passive income!
+
+4. **Tap Game**
+   - Play in "Play" section
+   - Tap to earn bonus PRC
+   - Daily limits apply
+
+5. **Special Events & Bonuses**
+   - Festival bonuses
+   - Promotional rewards
+   - Achievement badges
+
+**🎁 HOW TO USE PRC (Redeem Options):**
+
+1. **Bank Redeem (EMI Pay)**
+   - Convert PRC to real money
+   - Transfer to bank account
+   - KYC required
+   - Weekly limits apply
+
+2. **Gift Vouchers**
+   - Amazon, Flipkart, Myntra, Swiggy, Zomato
+   - Instant voucher codes
+   - VIP plans only
+
+3. **Bill Payments**
+   - Mobile Recharge (all operators)
+   - DTH Recharge
+   - Electricity Bill
+   - Water Bill
+   - Gas Bill
+   - VIP plans only
+
+4. **Shopping (Marketplace)**
+   - Buy products using PRC
+   - Electronics, fashion, home items
+   - VIP plans only
+
+**🏦 PRC SAVINGS VAULT (RD - Recurring Deposit):**
+- Save PRC and earn interest
+- Interest rate: 5-10% annually
+- Lock-in period options
+- Redeem anytime after maturity
+- Great for long-term savings
+
+**🔐 KYC VERIFICATION:**
+- Required for: Bank Redeem, high-value transactions
+- Documents needed: Aadhaar + PAN
+- Verification time: 24-48 hours
+- One-time process
+
+**👥 REFERRAL SYSTEM DETAILS:**
+- Each user gets unique referral code
+- Share code with friends
+- When friend joins & earns, you earn %
+- 5-level deep network
+- Passive income potential
+
+**📱 APP FEATURES:**
+1. **Dashboard** - PRC balance, session control, quick actions
+2. **Rewards** - Daily rewards, bonuses, achievements
+3. **Tap Game** - Fun earning game
+4. **Profile** - Account settings, KYC, security
+5. **Referrals** - Network, earnings, invite friends
+6. **Marketplace** - Shopping with PRC
+7. **Bill Payments** - Utility payments
+8. **Gift Vouchers** - Brand vouchers
+9. **PRC Vault** - Savings with interest
+10. **Support** - AI Chatbot, contact admin
+
+**🔒 SECURITY FEATURES:**
+- 6-digit PIN login
+- Security Question for PIN reset
+- Biometric login (optional)
+- Session timeout
+- Login attempt limits
+- Account lock protection
+
+**📞 SUPPORT OPTIONS:**
+- AI Chatbot (24/7)
+- Email: support@parasreward.com
+- WhatsApp: +91-9999999999
+- Working Hours: Mon-Sat, 10 AM - 7 PM
+
+**🎯 FREQUENTLY ASKED QUESTIONS:**
+
+Q: PRC कसे कमवायचे?
+A: Daily login करा, session start करा, tap game खेळा, आणि friends ला invite करा.
+
+Q: Bank मध्ये पैसे कसे घ्यायचे?
+A: Bank Redeem वापरा. KYC पूर्ण असणे आवश्यक. Weekly limit आहे.
+
+Q: Gift Voucher कसे घ्यायचे?
+A: VIP plan असेल तर Gift Vouchers सेक्शन मध्ये जा, brand निवडा, amount निवडा, redeem करा.
+
+Q: Bill payment कसे करायचे?
+A: VIP plan असेल तर Bill Payments मध्ये जा, service निवडा, details भरा, pay करा.
+
+Q: Referral bonus कधी मिळतो?
+A: जेव्हा तुमचा referral paid plan घेतो आणि earn करतो, तेव्हा तुम्हाला % bonus मिळतो.
+
+Q: KYC का आवश्यक?
+A: Bank redeem आणि high-value transactions साठी government regulation प्रमाणे KYC आवश्यक.
+
+Q: Mining session म्हणजे काय?
+A: Session active असताना app background मध्ये PRC earn होतात. Dashboard वरून start करा.
 
 === END PLATFORM INFORMATION ===
 
