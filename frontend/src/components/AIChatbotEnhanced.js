@@ -387,10 +387,10 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   };
 
   const quickQuestions = [
-    { icon: '🚀', text: "PRC कसे कमवायचे?" },
-    { icon: '🎮', text: "Tap Game कसे खेळायचे?" },
-    { icon: '🎁', text: "रिवॉर्ड कसे redeem करायचे?" },
-    { icon: '💡', text: "How does Paras help me?" }
+    { icon: '🔍', text: "माझी समस्या शोधा" },
+    { icon: '💰', text: "Bank redeem का fail?" },
+    { icon: '🎮', text: "Mining not working?" },
+    { icon: '👥', text: "Referral bonus कुठे?" }
   ];
 
   const handleQuickQuestion = (question) => {
