@@ -459,22 +459,6 @@ const LoginNew = ({ onLogin }) => {
           )}
 
           {/* Remember Me & Forgot PIN Row */}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              <p className="text-xs text-amber-600 mt-2 text-center">
-                After login, you'll be asked to set a new 6-digit PIN
-              </p>
-            </div>
-          )}
-
-          {/* Remember Me & Forgot PIN/Password Row */}
           <div className="flex items-center justify-between">
             {/* Remember Me Checkbox */}
             <label className="flex items-center gap-2 cursor-pointer">
@@ -487,23 +471,20 @@ const LoginNew = ({ onLogin }) => {
               <span className="text-sm text-gray-600">Remember ID</span>
             </label>
             
-            {/* Forgot PIN/Password */}
-            {identifierChecked && authType !== 'unknown' && (
+            {/* Forgot PIN */}
+            {identifierChecked && (
               <button 
                 type="button"
-                onClick={() => {
-                  setShowForgotPin(true);
-                  setForgotPinEmail(loginData.identifier);
-                }}
+                onClick={() => setShowForgotPin(true)}
                 className="text-sm text-purple-600 hover:text-purple-700 font-medium"
               >
-                {authType === 'pin' ? 'Forgot PIN?' : 'Forgot Password?'}
+                Forgot PIN?
               </button>
             )}
           </div>
 
           {/* Biometric Login */}
-          {showBiometricOption && loginData.identifier && authType === 'pin' && (
+          {showBiometricOption && loginData.identifier && (
             <>
               <Button
                 type="button"
