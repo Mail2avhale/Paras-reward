@@ -509,16 +509,6 @@ const Orders = ({ user, onLogout }) => {
                     </div>
                   )}
                   
-                  {/* Rain Game Losses */}
-                  {userStats.deductions_breakdown?.rain_game_losses > 0 && (
-                    <div className="flex justify-between items-center py-1 text-gray-400 px-2">
-                      <span className="flex items-center gap-2">
-                        <Droplet className="w-3 h-3 text-blue-500" /> Rain Game Losses
-                      </span>
-                      <span className="text-red-400 font-mono">-{(userStats.deductions_breakdown?.rain_game_losses || 0).toLocaleString()}</span>
-                    </div>
-                  )}
-                  
                   {/* Tap Game Losses */}
                   {userStats.deductions_breakdown?.tap_game_losses > 0 && (
                     <div className="flex justify-between items-center py-1 text-gray-400 px-2">
@@ -581,11 +571,6 @@ const Orders = ({ user, onLogout }) => {
                   {userStats.earnings_breakdown.tap_game > 0 && (
                     <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs">
                       Tap Game: {userStats.earnings_breakdown.tap_game.toFixed(2)}
-                    </span>
-                  )}
-                  {userStats.earnings_breakdown.rain_game > 0 && (
-                    <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
-                      Rain Game: {userStats.earnings_breakdown.rain_game.toFixed(2)}
                     </span>
                   )}
                 </div>
