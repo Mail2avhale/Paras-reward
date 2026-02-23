@@ -54,8 +54,6 @@ const AdminProfitLoss = ({ user }) => {
   const [prcLiability, setPrcLiability] = useState(null);
   const [cashFlowProjection, setCashFlowProjection] = useState(null);
   const [paidWalletSummary, setPaidWalletSummary] = useState(null);
-  const [burnSettings, setBurnSettings] = useState(null);
-  const [showBurnSettings, setShowBurnSettings] = useState(false);
 
   useEffect(() => {
     fetchPLData();
@@ -66,13 +64,12 @@ const AdminProfitLoss = ({ user }) => {
   
   const fetchAnalyticsData = async () => {
     try {
-      const [monthComp, subRev, liability, cashFlow, walletSum, burnSet] = await Promise.all([
+      const [monthComp, subRev, liability, cashFlow, walletSum] = await Promise.all([
         axios.get(`${API}/admin/finance/month-comparison`).catch(() => ({ data: null })),
         axios.get(`${API}/admin/finance/subscription-revenue-details`).catch(() => ({ data: null })),
         axios.get(`${API}/admin/finance/prc-liability`).catch(() => ({ data: null })),
         axios.get(`${API}/admin/finance/cash-flow-projection`).catch(() => ({ data: null })),
-        axios.get(`${API}/admin/paid-users-wallet-summary`).catch(() => ({ data: null })),
-        axios.get(`${API}/admin/finance/prc-burn-settings`).catch(() => ({ data: null }))
+        axios.get(`${API}/admin/paid-users-wallet-summary`).catch(() => ({ data: null }))
       ]);
       
       setMonthComparison(monthComp.data);
@@ -80,7 +77,6 @@ const AdminProfitLoss = ({ user }) => {
       setPrcLiability(liability.data);
       setCashFlowProjection(cashFlow.data);
       setPaidWalletSummary(walletSum.data);
-      setBurnSettings(burnSet.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     }
