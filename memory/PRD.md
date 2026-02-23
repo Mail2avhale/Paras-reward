@@ -4,9 +4,32 @@
 A production-grade reward platform serving 3000+ users with subscription management, referral system, mining features, and marketplace.
 
 
+## Recent Changes (December 2025)
+
+### 🧹 Code Cleanup: Non-Existent Plans Removed ✅ (Dec 2025 - Latest)
+
+**User Request:** Remove all references to non-existent subscription plans (`professional`, `enterprise`, `director365`, `Starter`) from the codebase.
+
+**Changes Made:**
+1. **Backend (server.py):**
+   - Fixed chatbot system prompt: Subscription Revenue plans updated to "Startup, Growth, Elite"
+   - Fixed Weekly Limits: Removed "Professional" and "Enterprise" tiers, corrected to actual plans
+   - Fixed Gift Voucher requirements: Changed "Starter+" to "Startup/Growth/Elite"
+
+2. **Frontend (AISmartTip.js):**
+   - Fixed Plan Comparison message: Updated from "Professional: 0.5 PRC/hr" to correct rates
+
+**Actual Plans in System:**
+- **Explorer:** Free plan (0.10 PRC/hr)
+- **Startup:** ₹299/month (0.50 PRC/hr)
+- **Growth:** Discontinued but exists for legacy users (1.0 PRC/hr)
+- **Elite:** ₹799/month (2.0 PRC/hr)
+
+---
+
 ## Recent Changes (February 2026)
 
-### 🤖 Smart Diagnostic AI Chatbot ✅ (Feb 23, 2026 - Latest)
+### 🤖 Smart Diagnostic AI Chatbot ✅ (Feb 23, 2026)
 
 **New: AI Smart Tips on Every Page** ✅
 Added intelligent, context-aware tips on all major pages:
