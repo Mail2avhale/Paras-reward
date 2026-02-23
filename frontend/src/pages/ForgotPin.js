@@ -13,12 +13,13 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const ForgotPin = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Email, 2: Mobile, 3: Aadhaar/PAN, 4: New PIN
+  const [step, setStep] = useState(1); // 1: Email, 2: Mobile, 3: Aadhaar/PAN, 4: Security Question, 5: New PIN
   const [loading, setLoading] = useState(false);
   const [verifiedFields, setVerifiedFields] = useState({
     email: false,
     mobile: false,
-    document: false
+    document: false,
+    security: false
   });
   
   // User data
@@ -28,6 +29,11 @@ const ForgotPin = () => {
   const [documentType, setDocumentType] = useState('aadhaar'); // aadhaar or pan
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  
+  // Security Question
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [hasSecurityQuestion, setHasSecurityQuestion] = useState(false);
   
   // Verification token from backend
   const [verificationToken, setVerificationToken] = useState('');
