@@ -4936,6 +4936,256 @@ async def forgot_pin_reset(request: ResetPinRequest):
         "message": "PIN reset successfully. Please login with your new PIN."
     }
 
+
+# ========== FORGOT PIN - FIELD BASED VERIFICATION ==========
+
+@api_router.post("/auth/forgot-pin/verify-email")
+async def forgot_pin_verify_email(request: Request):
+    """Step 1: Verify email exists and return user info"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    
+    # Find user by email
+    user = await db.users.find_one({
+        "email": {"$regex": f"^{email}$", "$options": "i"}
+    }, {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not found in our records")
+    
+    # Generate verification token
+    verify_token = secrets.token_urlsafe(32)
+    
+    # Store token temporarily
+    await db.users.update_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"$set": {
+            "pin_reset_verify_token": verify_token,
+            "pin_reset_verify_email": email,
+            "pin_reset_verify_step": 1,
+            "pin_reset_verify_started": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "user_name": user.get("name", "User"),
+        "token": verify_token
+    }
+
+
+@api_router.post("/auth/forgot-pin/verify-mobile")
+async def forgot_pin_verify_mobile(request: Request):
+    """Step 2: Verify mobile number matches"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    mobile = data.get("mobile", "").strip()
+    token = data.get("token", "")
+    
+    if not email or not mobile or not token:
+        raise HTTPException(status_code=400, detail="Email, mobile and token required")
+    
+    # Normalize mobile
+    mobile_clean = mobile[-10:] if len(mobile) >= 10 else mobile
+    
+    # Find user with valid token
+    user = await db.users.find_one({
+        "email": {"$regex": f"^{email}$", "$options": "i"},
+        "pin_reset_verify_token": token
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid session. Please start again.")
+    
+    # Check mobile matches
+    user_mobile = user.get("mobile", "") or user.get("mobile_number", "")
+    user_mobile_clean = user_mobile[-10:] if len(user_mobile) >= 10 else user_mobile
+    
+    if user_mobile_clean != mobile_clean:
+        raise HTTPException(status_code=400, detail="Mobile number does not match our records")
+    
+    # Update verification step
+    await db.users.update_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"$set": {
+            "pin_reset_verify_step": 2,
+            "pin_reset_verify_mobile": mobile_clean
+        }}
+    )
+    
+    return {
+        "success": True,
+        "token": token
+    }
+
+
+@api_router.post("/auth/forgot-pin/verify-document")
+async def forgot_pin_verify_document(request: Request):
+    """Step 3: Verify Aadhaar or PAN number"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    doc_type = data.get("document_type", "").strip().lower()  # aadhaar or pan
+    doc_number = data.get("document_number", "").strip().upper().replace(" ", "")
+    token = data.get("token", "")
+    
+    if not email or not doc_type or not doc_number or not token:
+        raise HTTPException(status_code=400, detail="All fields required")
+    
+    if doc_type not in ["aadhaar", "pan"]:
+        raise HTTPException(status_code=400, detail="Invalid document type")
+    
+    # Find user with valid token at step 2
+    user = await db.users.find_one({
+        "email": {"$regex": f"^{email}$", "$options": "i"},
+        "pin_reset_verify_token": token,
+        "pin_reset_verify_step": 2
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid session. Please start again.")
+    
+    # Get user's KYC data
+    kyc = await db.kyc_documents.find_one({"user_id": user["uid"]})
+    
+    if not kyc:
+        # Try checking user document directly
+        user_aadhaar = user.get("aadhaar", "") or user.get("aadhaar_number", "")
+        user_pan = user.get("pan", "") or user.get("pan_number", "")
+        
+        if doc_type == "aadhaar":
+            # Match last 4 digits of Aadhaar
+            user_aadhaar_clean = user_aadhaar.replace(" ", "")[-4:]
+            if doc_number[-4:] != user_aadhaar_clean:
+                raise HTTPException(status_code=400, detail="Aadhaar number does not match our records")
+        else:
+            # Match PAN
+            user_pan_clean = user_pan.replace(" ", "").upper()
+            if doc_number != user_pan_clean and doc_number[-4:] != user_pan_clean[-4:]:
+                raise HTTPException(status_code=400, detail="PAN number does not match our records")
+    else:
+        # Check against KYC data
+        if doc_type == "aadhaar":
+            kyc_aadhaar = kyc.get("aadhaar_number", "") or kyc.get("aadhaar", "")
+            kyc_aadhaar_clean = kyc_aadhaar.replace(" ", "")
+            # Match last 4 digits for security
+            if doc_number[-4:] != kyc_aadhaar_clean[-4:]:
+                raise HTTPException(status_code=400, detail="Aadhaar number does not match our KYC records")
+        else:
+            kyc_pan = kyc.get("pan_number", "") or kyc.get("pan", "")
+            kyc_pan_clean = kyc_pan.replace(" ", "").upper()
+            if doc_number != kyc_pan_clean and doc_number[-4:] != kyc_pan_clean[-4:]:
+                raise HTTPException(status_code=400, detail="PAN number does not match our KYC records")
+    
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    reset_expiry = datetime.now(timezone.utc) + timedelta(minutes=15)
+    
+    # Update with reset token
+    await db.users.update_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"$set": {
+            "pin_reset_verify_step": 3,
+            "pin_reset_token": reset_token,
+            "pin_reset_expiry": reset_expiry.isoformat(),
+            "pin_reset_verify_document": doc_type
+        }}
+    )
+    
+    return {
+        "success": True,
+        "reset_token": reset_token
+    }
+
+
+@api_router.post("/auth/forgot-pin/set-new-pin")
+async def forgot_pin_set_new_pin(request: Request):
+    """Step 4: Set new PIN after all verifications"""
+    data = await request.json()
+    email = data.get("email", "").strip().lower()
+    new_pin = data.get("new_pin", "").strip()
+    reset_token = data.get("reset_token", "")
+    
+    if not email or not new_pin or not reset_token:
+        raise HTTPException(status_code=400, detail="All fields required")
+    
+    # Validate PIN format
+    if not new_pin.isdigit() or len(new_pin) != 6:
+        raise HTTPException(status_code=400, detail="PIN must be exactly 6 digits")
+    
+    # Check for weak PINs
+    if len(set(new_pin)) == 1:
+        raise HTTPException(status_code=400, detail="PIN cannot be all same digits")
+    
+    sequential = ["012345", "123456", "234567", "345678", "456789", "567890", 
+                  "987654", "876543", "765432", "654321", "543210"]
+    if new_pin in sequential:
+        raise HTTPException(status_code=400, detail="PIN cannot be sequential numbers")
+    
+    # Find user with valid reset token
+    user = await db.users.find_one({
+        "email": {"$regex": f"^{email}$", "$options": "i"},
+        "pin_reset_token": reset_token,
+        "pin_reset_verify_step": 3
+    })
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token. Please start again.")
+    
+    # Check token expiry
+    expiry_str = user.get("pin_reset_expiry", "")
+    if expiry_str:
+        try:
+            expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expiry:
+                raise HTTPException(status_code=400, detail="Reset token expired. Please start again.")
+        except:
+            pass
+    
+    # Hash new PIN and update
+    hashed_pin = hash_password(new_pin)
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "password": hashed_pin,
+                "pin": hashed_pin,  # Also set pin field
+                "pin_migrated": True,
+                "pin_updated_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$unset": {
+                "pin_reset_token": "",
+                "pin_reset_expiry": "",
+                "pin_reset_verify_token": "",
+                "pin_reset_verify_step": "",
+                "pin_reset_verify_email": "",
+                "pin_reset_verify_mobile": "",
+                "pin_reset_verify_document": "",
+                "pin_reset_verify_started": ""
+            }
+        }
+    )
+    
+    # Clear any login attempts/lockouts
+    await db.login_attempts.delete_many({
+        "$or": [
+            {"identifier": email},
+            {"identifier": user.get("uid", "")}
+        ]
+    })
+    
+    logging.info(f"PIN reset successful for user {user.get('uid')} via field verification")
+    
+    return {
+        "success": True,
+        "message": "PIN reset successfully. Please login with your new PIN."
+    }
+
+
+
 # ========== BIOMETRIC AUTHENTICATION ROUTES ==========
 
 async def get_biometric_register_options(user_id: str):
