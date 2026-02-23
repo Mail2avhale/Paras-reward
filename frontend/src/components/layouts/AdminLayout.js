@@ -26,7 +26,6 @@ const MENU_TO_PERMISSION = {
   'orders': 'orders',
   'marketplace': 'marketplace',
   'video-ads': 'video_ads',
-  'prc-rain': 'prc_rain',
   // 'stockists': 'stockist', // Removed - stockist system deprecated
   'support': 'support',
   'fraud-alerts': 'fraud',
@@ -230,7 +229,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'social-settings', label: 'Social Media', icon: Share2, path: '/admin/settings-hub?tab=social' },
         { id: 'redeem-settings', label: 'Redeem Safety', icon: Shield, path: '/admin/settings-hub?tab=redeem' },
         { id: 'video-ads', label: 'Video Ads', icon: Video, path: '/admin/settings-hub?tab=video-ads' },
-        { id: 'prc-rain', label: 'PRC Rain Drop', icon: CloudRain, path: '/admin/settings-hub?tab=prc-rain' },
       ]
     }
   };
