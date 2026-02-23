@@ -622,49 +622,44 @@ const LoginNew = ({ onLogin }) => {
         />
       )}
 
-      {/* Forgot PIN Modal - Contact Admin */}
+      {/* Forgot PIN Modal - Redirect to OTP page */}
       {showForgotPin && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <KeyRound className="w-8 h-8 text-amber-600" />
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <KeyRound className="w-8 h-8 text-purple-600" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">
                 Forgot PIN?
               </h2>
               <p className="text-gray-500 text-sm mt-1">
-                Contact Admin to reset your PIN
+                Reset your PIN using OTP verification
               </p>
             </div>
 
-            {/* Contact Admin Message */}
+            {/* OTP Reset Info */}
             <div className="space-y-4">
-              {/* Alert Box */}
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <p className="text-sm text-amber-800 text-center leading-relaxed">
-                  Please contact Admin on<br />
-                  <a href="mailto:Info@parasreward.com" className="font-bold text-amber-900 hover:underline">
-                    Info@parasreward.com
-                  </a>
-                  <br /><br />
-                  with your <strong>Registered Email</strong> and <strong>Mobile Number</strong> for resetting PIN.
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                <p className="text-sm text-purple-800 text-center leading-relaxed">
+                  You will receive an <strong>OTP</strong> on your registered mobile number to verify your identity and reset your PIN.
                 </p>
               </div>
 
-              {/* Send Email Button */}
-              <a 
-                href="mailto:Info@parasreward.com?subject=PIN Reset Request&body=Hello,%0D%0A%0D%0AI would like to request a PIN reset for my account.%0D%0A%0D%0ARegistered Email: %0D%0ARegistered Mobile: %0D%0A%0D%0AThank you."
-                className="block"
+              {/* Continue Button */}
+              <Button 
+                onClick={() => {
+                  resetForgotPin();
+                  window.location.href = '/forgot-pin';
+                }}
+                className="w-full bg-purple-600 hover:bg-purple-700"
               >
-                <Button className="w-full bg-purple-600 hover:bg-purple-700">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Email to Admin
-                </Button>
-              </a>
+                <KeyRound className="w-4 h-4 mr-2" />
+                Continue to Reset PIN
+              </Button>
 
               <p className="text-xs text-gray-400 text-center">
-                Our team will respond within 24-48 hours
+                You'll receive OTP within 30 seconds
               </p>
             </div>
 
