@@ -5169,14 +5169,19 @@ async def set_security_question(request: Request):
 async def check_security_question(user_id: str):
     """Check if user has security question set"""
     logging.info(f"Checking security question for user_id: {user_id}")
+    logging.info(f"DB name: {db.name}")
+    
+    # Try to find the user
     user = await db.users.find_one({"uid": user_id}, {"_id": 0, "security_question": 1, "security_question_index": 1})
     logging.info(f"User found: {user is not None}")
     
     if not user:
-        # Try alternative search
+        # Debug: try finding by other means
+        sample_user = await db.users.find_one({}, {"uid": 1, "email": 1, "_id": 0})
         all_users_count = await db.users.count_documents({})
-        logging.error(f"User not found by uid: {user_id}, total users in db: {all_users_count}")
-        raise HTTPException(status_code=404, detail=f"User not found. UID: {user_id}")
+        logging.error(f"User not found by uid: {user_id}")
+        logging.error(f"Total users: {all_users_count}, Sample: {sample_user}")
+        raise HTTPException(status_code=404, detail=f"User not found. UID: {user_id}, DB has {all_users_count} users")
     
     has_question = bool(user.get("security_question"))
     
