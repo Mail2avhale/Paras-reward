@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { toast } from 'sonner';
 import {
-  Users, CheckCircle, XCircle, Clock, RefreshCw, BarChart3,
-  TrendingUp, Calendar, Award, Shield, Building2, FileText
+  Users, CheckCircle, XCircle, RefreshCw, BarChart3,
+  TrendingUp, Calendar, Award, Shield
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
