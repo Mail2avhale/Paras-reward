@@ -5244,7 +5244,7 @@ async def forgot_pin_verify_security(request: Request):
 
 @api_router.post("/auth/forgot-pin/set-new-pin")
 async def forgot_pin_set_new_pin(request: Request):
-    """Step 4: Set new PIN after all verifications"""
+    """Step 4: Set new PIN after all verifications (including security question if set)"""
     data = await request.json()
     email = data.get("email", "").strip().lower()
     new_pin = data.get("new_pin", "").strip()
@@ -5266,11 +5266,11 @@ async def forgot_pin_set_new_pin(request: Request):
     if new_pin in sequential:
         raise HTTPException(status_code=400, detail="PIN cannot be sequential numbers")
     
-    # Find user with valid reset token
+    # Find user with valid reset token (step 4 = ready for PIN reset)
     user = await db.users.find_one({
         "email": {"$regex": f"^{email}$", "$options": "i"},
         "pin_reset_token": reset_token,
-        "pin_reset_verify_step": 3
+        "pin_reset_verify_step": 4
     })
     
     if not user:
