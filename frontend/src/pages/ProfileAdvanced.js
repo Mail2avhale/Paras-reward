@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { 
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
-  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info, Building2
+  LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info, Building2,
+  HelpCircle, CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,201 @@ import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Security Question Card Component
+const SecurityQuestionCard = ({ user }) => {
+  const [hasQuestion, setHasQuestion] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState([]);
+  const [selectedQuestion, setSelectedQuestion] = useState(0);
+  const [answer, setAnswer] = useState('');
+  const [confirmAnswer, setConfirmAnswer] = useState('');
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchSecurityStatus();
+      fetchQuestions();
+    }
+  }, [user]);
+
+  const fetchSecurityStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/auth/security-question/check/${user.uid}`);
+      setHasQuestion(response.data.has_security_question);
+      setCurrentQuestion(response.data.security_question || '');
+      if (response.data.question_index !== undefined) {
+        setSelectedQuestion(response.data.question_index);
+      }
+    } catch (error) {
+      console.error('Error checking security question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchQuestions = async () => {
+    try {
+      const response = await axios.get(`${API}/auth/security-questions`);
+      setQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!answer.trim()) {
+      toast.error('Please enter an answer');
+      return;
+    }
+    if (answer !== confirmAnswer) {
+      toast.error('Answers do not match');
+      return;
+    }
+    if (answer.length < 2) {
+      toast.error('Answer must be at least 2 characters');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await axios.post(`${API}/auth/security-question/set`, {
+        user_id: user.uid,
+        question_index: selectedQuestion,
+        answer: answer.trim()
+      });
+      toast.success('Security question saved successfully!');
+      setHasQuestion(true);
+      setCurrentQuestion(questions[selectedQuestion]);
+      setShowForm(false);
+      setAnswer('');
+      setConfirmAnswer('');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save security question');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
+        <div className="h-6 bg-white/10 rounded w-1/2 mb-3"></div>
+        <div className="h-4 bg-white/10 rounded w-3/4"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-2xl p-4 border border-orange-500/30">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+            <HelpCircle className="w-5 h-5 text-orange-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white">Security Question</h3>
+            <p className="text-xs text-gray-400">For PIN reset verification</p>
+          </div>
+        </div>
+        {hasQuestion && (
+          <CheckCircle className="w-5 h-5 text-green-500" />
+        )}
+      </div>
+
+      {!showForm ? (
+        <>
+          {hasQuestion ? (
+            <div className="bg-white/5 rounded-xl p-3 mb-3">
+              <p className="text-xs text-gray-400 mb-1">Your Question:</p>
+              <p className="text-sm text-white">{currentQuestion}</p>
+            </div>
+          ) : (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-3">
+              <p className="text-sm text-red-400">
+                ⚠️ No security question set. Set one for secure PIN reset.
+              </p>
+            </div>
+          )}
+          <Button
+            onClick={() => setShowForm(true)}
+            variant="outline"
+            className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
+            data-testid="set-security-question-btn"
+          >
+            {hasQuestion ? 'Change Security Question' : 'Set Security Question'}
+          </Button>
+        </>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-gray-300 text-sm">Select Question</Label>
+            <select
+              value={selectedQuestion}
+              onChange={(e) => setSelectedQuestion(parseInt(e.target.value))}
+              className="w-full mt-1 p-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:border-orange-500 focus:outline-none"
+              data-testid="security-question-select"
+            >
+              {questions.map((q, i) => (
+                <option key={i} value={i} className="bg-gray-800 text-white">
+                  {q}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label className="text-gray-300 text-sm">Your Answer</Label>
+            <Input
+              type="text"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Enter your answer"
+              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+              data-testid="security-answer-input"
+            />
+          </div>
+
+          <div>
+            <Label className="text-gray-300 text-sm">Confirm Answer</Label>
+            <Input
+              type="text"
+              value={confirmAnswer}
+              onChange={(e) => setConfirmAnswer(e.target.value)}
+              placeholder="Confirm your answer"
+              className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+              data-testid="security-answer-confirm-input"
+            />
+          </div>
+
+          <p className="text-xs text-gray-400">
+            💡 Answer is case-insensitive. Remember it for PIN reset!
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={() => { setShowForm(false); setAnswer(''); setConfirmAnswer(''); }}
+              variant="outline"
+              className="flex-1 border-gray-500/50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !answer.trim() || answer !== confirmAnswer}
+              className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500"
+              data-testid="save-security-question-btn"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Bank Details Card Component
 const BankDetailsCard = ({ user }) => {
