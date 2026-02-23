@@ -1621,23 +1621,6 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
                 redeem_request = all_matching
         
         logging.info(f"=== RD REJECT RESULT === Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
-            if temp_request and (temp_request.get("rd_id") or "RD" in request_id.upper()):
-                redeem_request = temp_request
-        
-        # Strategy 4: Check rd_redeem_requests collection
-        if not redeem_request:
-            redeem_request = await db.rd_redeem_requests.find_one({"request_id": request_id})
-            if redeem_request:
-                source_collection = "rd_redeem_requests"
-        
-        # Strategy 5: Check withdrawal_requests collection
-        if not redeem_request:
-            redeem_request = await db.withdrawal_requests.find_one({"request_id": request_id})
-            if redeem_request and redeem_request.get("rd_id"):
-                source_collection = "withdrawal_requests"
-        
-        # Strategy 6: Regex search
-        if not redeem_request and "RD_REQ" in request_id:
             redeem_request = await db.bank_redeem_requests.find_one({
                 "request_id": {"$regex": request_id, "$options": "i"}
             })
