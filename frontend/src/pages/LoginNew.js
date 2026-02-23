@@ -134,17 +134,9 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
-      // Validate based on auth type
-      const credential = authType === 'password' ? loginData.password : loginData.pin;
-      
-      if (authType === 'pin' && (!loginData.pin || loginData.pin.length !== 6)) {
+      // Validate PIN
+      if (!loginData.pin || loginData.pin.length !== 6) {
         setPinError('Please enter your 6-digit PIN');
-        setLoading(false);
-        return;
-      }
-      
-      if (authType === 'password' && !loginData.password) {
-        toast.error('Please enter your password');
         setLoading(false);
         return;
       }
@@ -155,7 +147,7 @@ const LoginNew = ({ onLogin }) => {
         {
           params: {
             identifier: loginData.identifier,
-            password: credential,
+            password: loginData.pin,
             device_id: loginData.device_id,
             ip_address: loginData.ip_address
           }
@@ -168,7 +160,7 @@ const LoginNew = ({ onLogin }) => {
         return;
       }
 
-      // Check if user needs to set new PIN (migration from password)
+      // Check if user needs to set new PIN
       if (response.data.needs_pin_migration) {
         toast.info('Please set a new 6-digit PIN for enhanced security', {
           duration: 4000,
@@ -177,6 +169,7 @@ const LoginNew = ({ onLogin }) => {
         navigate('/set-new-pin', { state: { user: response.data } });
         return;
       }
+
 
       setAnimatedFeedback({
         message: `✅ Welcome Back!\n🎉 Login Successful!`,
