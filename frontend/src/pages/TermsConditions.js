@@ -290,6 +290,71 @@ const TermsConditions = () => {
                 </div>
               </section>
 
+              {/* Advertising & Rewards - Google AdMob Compliance */}
+              <section id="advertising" data-section="advertising" className="mb-12">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                    <Smartphone className="h-5 w-5 text-orange-400" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">6. Advertising & Rewarded Content</h2>
+                </div>
+                <div className="text-gray-300 space-y-4 leading-relaxed">
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                    <p className="text-orange-400 text-sm">
+                      <strong>Disclosure:</strong> This app displays advertisements through Google AdMob and other third-party advertising networks. Some rewards may be earned by viewing optional video advertisements.
+                    </p>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">6.1 Types of Advertisements</h3>
+                  <p>Our app may display the following types of advertisements:</p>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li><strong>Banner Ads:</strong> Small advertisements displayed at the bottom or top of screens</li>
+                    <li><strong>Interstitial Ads:</strong> Full-screen advertisements shown at natural transition points</li>
+                    <li><strong>Rewarded Video Ads:</strong> Optional video advertisements that grant PRC rewards when viewed completely</li>
+                    <li><strong>Native Ads:</strong> Advertisements integrated into the app's content feed</li>
+                  </ul>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">6.2 Rewarded Advertisements</h3>
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                    <p className="text-blue-400 text-sm">
+                      <strong>Important:</strong> Watching rewarded video ads is completely <strong>OPTIONAL</strong>. You are never required to watch ads to use the core features of our app.
+                    </p>
+                  </div>
+                  <ul className="list-disc list-inside space-y-2 ml-4 mt-4">
+                    <li>Rewards are credited only after complete ad viewing</li>
+                    <li>Reward amounts may vary and are at our sole discretion</li>
+                    <li>Daily limits may apply to rewarded ad views</li>
+                    <li>We do not guarantee ad availability at all times</li>
+                    <li>Rewards earned from ads are subject to the same terms as other PRC points</li>
+                  </ul>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">6.3 Third-Party Advertisers</h3>
+                  <p>
+                    Advertisements are served by third-party networks including Google AdMob. These networks may:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 ml-4">
+                    <li>Use cookies and similar technologies for ad personalization</li>
+                    <li>Collect device information for analytics</li>
+                    <li>Display targeted ads based on your interests</li>
+                  </ul>
+                  <p className="mt-4">
+                    Please review our <a href="/privacy" className="text-blue-400 hover:underline">Privacy Policy</a> and Google's advertising policies for more information on data usage.
+                  </p>
+
+                  <h3 className="text-lg font-semibold text-white mt-6">6.4 Ad Interaction Rules</h3>
+                  <p>You agree NOT to:</p>
+                  <ul className="list-disc list-inside space-y-2 ml-4 text-red-300">
+                    <li>Click on ads repeatedly or artificially</li>
+                    <li>Use automated tools to view rewarded ads</li>
+                    <li>Attempt to manipulate ad impressions or clicks</li>
+                    <li>Encourage others to click ads fraudulently</li>
+                  </ul>
+                  <p className="mt-4 text-yellow-400">
+                    <strong>Warning:</strong> Fraudulent ad interactions will result in immediate account termination and forfeiture of all rewards.
+                  </p>
+                </div>
+              </section>
+
               {/* Prohibited Activities */}
               <section id="prohibited" data-section="prohibited" className="mb-12">
                 <div className="flex items-center gap-3 mb-4">
