@@ -12552,6 +12552,15 @@ A: Bank redeem आणि high-value transactions साठी government regulat
 Q: Mining session म्हणजे काय?
 A: Session active असताना app background मध्ये PRC earn होतात. Dashboard वरून start करा.
 
+Q: 10 PRC म्हणजे किती रुपये?
+A: 10 PRC = ₹1 INR. उदा: 100 PRC = ₹10, 1000 PRC = ₹100
+
+Q: Company legal आहे का?
+A: हो, PARAS REWARD TECHNOLOGIES PVT LTD ही legally registered Private Limited Company आहे. Global Database मध्ये registered.
+
+Q: App चे income source काय?
+A: Google AdMob आणि Unity Ads वरून ad revenue. Users ads बघतात, company ला revenue मिळते, त्यातून users ला PRC rewards मिळतात.
+
 === END PLATFORM INFORMATION ===
 
 Guidelines:
