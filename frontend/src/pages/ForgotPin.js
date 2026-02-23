@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Shield, ArrowLeft, Mail, Phone, CreditCard, Lock, 
-  CheckCircle, RefreshCw, AlertCircle, ArrowRight 
+  CheckCircle, RefreshCw, AlertCircle, ArrowRight, HelpCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
