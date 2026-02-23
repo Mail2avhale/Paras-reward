@@ -1,0 +1,50 @@
+# robots.txt for PARAS REWARD
+# https://www.parasreward.com/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /terms
+Allow: /privacy
+Allow: /disclaimer
+Allow: /refund-policy
+Allow: /contact-us
+Allow: /about-us
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /settings
+Disallow: /mining
+Disallow: /orders
+Disallow: /referrals
+Disallow: /bill-payments
+Disallow: /gift-vouchers
+Disallow: /marketplace
+
+# Sitemap location
+Sitemap: https://www.parasreward.com/sitemap.xml
+
+# Crawl delay for polite crawling
+Crawl-delay: 10
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 5
+
+# Bing specific  
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 10
+
+# Disallow bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
