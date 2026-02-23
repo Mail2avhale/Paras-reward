@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { AIReferralCoach } from '@/components/AINetworkReferral';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import AISmartTip from '@/components/AISmartTip';
 
 // Network Tree Node Component - defined outside to avoid re-creation
 const TreeNode = ({ node, depth = 0 }) => {
