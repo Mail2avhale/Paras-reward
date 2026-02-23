@@ -1018,3 +1018,556 @@ async def update_redeem_settings(request: Request):
     )
     
     return {"success": True, "message": "Redeem settings updated"}
+
+
+# ========== NEW FINANCE ANALYTICS APIs ==========
+
+@router.get("/month-comparison")
+async def get_month_comparison():
+    """
+    Month-over-Month Comparison
+    Compare current month vs previous month
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Current month range
+        current_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        current_end = now
+        
+        # Previous month range
+        prev_month_end = current_start - timedelta(seconds=1)
+        prev_month_start = prev_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        async def get_month_stats(start_date, end_date):
+            start_str = start_date.isoformat()
+            end_str = end_date.isoformat()
+            
+            # VIP Revenue
+            vip_payments = await db.vip_payments.find({
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                    {"created_at": {"$gte": start_str, "$lte": end_str}}
+                ]
+            }, {"_id": 0, "amount": 1}).to_list(10000)
+            vip_revenue = sum(p.get("amount", 0) for p in vip_payments)
+            
+            # Service fees
+            bills = await db.bill_payments.find({
+                "status": "approved",
+                "approved_at": {"$gte": start_str, "$lte": end_str}
+            }, {"_id": 0, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+            bill_fees = sum(b.get("processing_fee", 0) + b.get("admin_charge", 0) for b in bills)
+            
+            vouchers = await db.gift_voucher_requests.find({
+                "status": "approved",
+                "approved_at": {"$gte": start_str, "$lte": end_str}
+            }, {"_id": 0, "processing_fee": 1, "admin_charge": 1}).to_list(10000)
+            voucher_fees = sum(v.get("processing_fee", 0) + v.get("admin_charge", 0) for v in vouchers)
+            
+            total_revenue = vip_revenue + bill_fees + voucher_fees
+            
+            # New users
+            new_users = await db.users.count_documents({
+                "created_at": {"$gte": start_str, "$lte": end_str}
+            })
+            
+            # New paid users
+            new_paid = await db.vip_payments.count_documents({
+                "status": "approved",
+                "$or": [
+                    {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                    {"created_at": {"$gte": start_str, "$lte": end_str}}
+                ]
+            })
+            
+            return {
+                "revenue": round(total_revenue, 2),
+                "vip_revenue": round(vip_revenue, 2),
+                "service_fees": round(bill_fees + voucher_fees, 2),
+                "new_users": new_users,
+                "new_paid_users": new_paid
+            }
+        
+        current_stats = await get_month_stats(current_start, current_end)
+        prev_stats = await get_month_stats(prev_month_start, prev_month_end)
+        
+        def calc_change(current, previous):
+            if previous == 0:
+                return 100 if current > 0 else 0
+            return round(((current - previous) / previous) * 100, 1)
+        
+        return {
+            "current_month": {
+                "label": now.strftime("%B %Y"),
+                **current_stats
+            },
+            "previous_month": {
+                "label": prev_month_start.strftime("%B %Y"),
+                **prev_stats
+            },
+            "changes": {
+                "revenue": calc_change(current_stats["revenue"], prev_stats["revenue"]),
+                "new_users": calc_change(current_stats["new_users"], prev_stats["new_users"]),
+                "new_paid_users": calc_change(current_stats["new_paid_users"], prev_stats["new_paid_users"])
+            }
+        }
+    except Exception as e:
+        logging.error(f"Month comparison error: {e}")
+        return {"error": str(e)}
+
+
+@router.get("/subscription-revenue-details")
+async def get_subscription_revenue_details():
+    """
+    Detailed Subscription Revenue Breakdown
+    - Plan-wise revenue (Startup, Growth, Elite)
+    - New vs Renewal breakdown
+    - Duration-wise breakdown (Monthly, Quarterly, Yearly)
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_str = month_start.isoformat()
+        end_str = now.isoformat()
+        
+        # Get all approved payments this month
+        payments = await db.vip_payments.find({
+            "status": "approved",
+            "$or": [
+                {"approved_at": {"$gte": start_str, "$lte": end_str}},
+                {"created_at": {"$gte": start_str, "$lte": end_str}}
+            ]
+        }, {"_id": 0}).to_list(10000)
+        
+        # Plan-wise breakdown
+        plan_revenue = {"startup": 0, "growth": 0, "elite": 0}
+        plan_counts = {"startup": 0, "growth": 0, "elite": 0}
+        
+        # New vs Renewal
+        new_subscriptions = {"count": 0, "revenue": 0}
+        renewals = {"count": 0, "revenue": 0}
+        
+        # Duration-wise
+        duration_revenue = {"monthly": 0, "quarterly": 0, "half_yearly": 0, "yearly": 0}
+        
+        for p in payments:
+            plan = p.get("plan_name", "").lower()
+            amount = p.get("amount", 0)
+            sub_type = p.get("subscription_type", "new")
+            duration = p.get("duration", "monthly")
+            
+            # Plan revenue
+            if plan in plan_revenue:
+                plan_revenue[plan] += amount
+                plan_counts[plan] += 1
+            
+            # New vs Renewal
+            if sub_type == "renewal":
+                renewals["count"] += 1
+                renewals["revenue"] += amount
+            else:
+                new_subscriptions["count"] += 1
+                new_subscriptions["revenue"] += amount
+            
+            # Duration
+            if duration in duration_revenue:
+                duration_revenue[duration] += amount
+        
+        total_revenue = sum(plan_revenue.values())
+        total_count = sum(plan_counts.values())
+        
+        return {
+            "period": now.strftime("%B %Y"),
+            "total_revenue": round(total_revenue, 2),
+            "total_subscriptions": total_count,
+            "by_plan": {
+                "startup": {"count": plan_counts["startup"], "revenue": round(plan_revenue["startup"], 2)},
+                "growth": {"count": plan_counts["growth"], "revenue": round(plan_revenue["growth"], 2)},
+                "elite": {"count": plan_counts["elite"], "revenue": round(plan_revenue["elite"], 2)}
+            },
+            "new_vs_renewal": {
+                "new": new_subscriptions,
+                "renewal": renewals,
+                "renewal_rate": round(renewals["count"] / total_count * 100, 1) if total_count > 0 else 0
+            },
+            "by_duration": duration_revenue,
+            "avg_revenue_per_sub": round(total_revenue / total_count, 2) if total_count > 0 else 0
+        }
+    except Exception as e:
+        logging.error(f"Subscription revenue details error: {e}")
+        return {"error": str(e)}
+
+
+@router.get("/prc-liability")
+async def get_prc_liability():
+    """
+    PRC Liability Tracker
+    - Total PRC in circulation
+    - Estimated INR liability (10 PRC = ₹1)
+    - Burn rate and projection
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Total PRC balance across all users
+        prc_pipeline = [
+            {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
+        ]
+        prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
+        total_prc = prc_result[0]["total_prc"] if prc_result else 0
+        
+        # PRC in savings vault
+        vault_pipeline = [
+            {"$match": {"status": "active"}},
+            {"$group": {"_id": None, "total": {"$sum": "$current_balance"}}}
+        ]
+        vault_result = await db.recurring_deposits.aggregate(vault_pipeline).to_list(1)
+        vault_prc = vault_result[0]["total"] if vault_result else 0
+        
+        # Total PRC liability
+        total_liability_prc = total_prc + vault_prc
+        total_liability_inr = total_liability_prc / 10  # 10 PRC = ₹1
+        
+        # Get burn stats from last 30 days
+        thirty_days_ago = (now - timedelta(days=30)).isoformat()
+        burn_txns = await db.transactions.find({
+            "type": "prc_burn",
+            "timestamp": {"$gte": thirty_days_ago}
+        }, {"_id": 0, "amount": 1}).to_list(10000)
+        total_burned_30d = sum(abs(t.get("amount", 0)) for t in burn_txns)
+        daily_burn_rate = total_burned_30d / 30
+        
+        # Mining stats (last 30 days)
+        mining_txns = await db.transactions.find({
+            "type": {"$in": ["mining", "tap_game"]},
+            "timestamp": {"$gte": thirty_days_ago}
+        }, {"_id": 0, "amount": 1}).to_list(50000)
+        total_mined_30d = sum(abs(t.get("amount", 0)) for t in mining_txns)
+        daily_mining_rate = total_mined_30d / 30
+        
+        # Net daily change
+        net_daily_change = daily_mining_rate - daily_burn_rate
+        
+        # Paid vs Free user breakdown
+        paid_prc = await db.users.aggregate([
+            {"$match": {"subscription_plan": {"$in": ["startup", "growth", "elite"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        free_prc = await db.users.aggregate([
+            {"$match": {"$or": [
+                {"subscription_plan": {"$in": ["explorer", "free", None, ""]}},
+                {"subscription_plan": {"$exists": False}}
+            ]}},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        return {
+            "total_prc_in_circulation": round(total_liability_prc, 2),
+            "total_inr_liability": round(total_liability_inr, 2),
+            "breakdown": {
+                "user_wallets": round(total_prc, 2),
+                "savings_vault": round(vault_prc, 2)
+            },
+            "by_user_type": {
+                "paid_users": {
+                    "prc": round(paid_prc[0]["total"], 2) if paid_prc else 0,
+                    "count": paid_prc[0]["count"] if paid_prc else 0
+                },
+                "free_users": {
+                    "prc": round(free_prc[0]["total"], 2) if free_prc else 0,
+                    "count": free_prc[0]["count"] if free_prc else 0
+                }
+            },
+            "rates_30d": {
+                "daily_mining": round(daily_mining_rate, 2),
+                "daily_burn": round(daily_burn_rate, 2),
+                "net_daily_change": round(net_daily_change, 2)
+            },
+            "projection": {
+                "30_day_liability_inr": round((total_liability_prc + (net_daily_change * 30)) / 10, 2),
+                "90_day_liability_inr": round((total_liability_prc + (net_daily_change * 90)) / 10, 2)
+            },
+            "conversion_rate": "10 PRC = ₹1 INR"
+        }
+    except Exception as e:
+        logging.error(f"PRC liability error: {e}")
+        return {"error": str(e)}
+
+
+@router.get("/cash-flow-projection")
+async def get_cash_flow_projection():
+    """
+    Cash Flow Projection for next 3 months
+    Based on historical data and current trends
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get last 3 months data for trends
+        months_data = []
+        for i in range(3, 0, -1):
+            month_date = now - timedelta(days=30 * i)
+            month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if month_date.month == 12:
+                month_end = month_start.replace(year=month_start.year + 1, month=1) - timedelta(seconds=1)
+            else:
+                month_end = month_start.replace(month=month_start.month + 1) - timedelta(seconds=1)
+            
+            # Revenue
+            payments = await db.vip_payments.find({
+                "status": "approved",
+                "approved_at": {"$gte": month_start.isoformat(), "$lte": month_end.isoformat()}
+            }, {"_id": 0, "amount": 1}).to_list(5000)
+            revenue = sum(p.get("amount", 0) for p in payments)
+            
+            months_data.append({
+                "month": month_start.strftime("%b %Y"),
+                "revenue": revenue
+            })
+        
+        # Calculate average growth rate
+        if len(months_data) >= 2 and months_data[0]["revenue"] > 0:
+            growth_rates = []
+            for i in range(1, len(months_data)):
+                if months_data[i-1]["revenue"] > 0:
+                    rate = (months_data[i]["revenue"] - months_data[i-1]["revenue"]) / months_data[i-1]["revenue"]
+                    growth_rates.append(rate)
+            avg_growth = sum(growth_rates) / len(growth_rates) if growth_rates else 0.1
+        else:
+            avg_growth = 0.1  # Default 10% growth
+        
+        # Project next 3 months
+        last_revenue = months_data[-1]["revenue"] if months_data else 10000
+        projections = []
+        
+        for i in range(1, 4):
+            future_date = now + timedelta(days=30 * i)
+            projected_revenue = last_revenue * ((1 + avg_growth) ** i)
+            
+            # Estimate expenses (typically 40-60% of revenue)
+            projected_expenses = projected_revenue * 0.5
+            
+            projections.append({
+                "month": future_date.strftime("%b %Y"),
+                "projected_revenue": round(projected_revenue, 2),
+                "projected_expenses": round(projected_expenses, 2),
+                "projected_profit": round(projected_revenue - projected_expenses, 2)
+            })
+        
+        return {
+            "historical": months_data,
+            "projections": projections,
+            "growth_rate_used": round(avg_growth * 100, 1),
+            "note": "Projections based on historical trends. Actual results may vary."
+        }
+    except Exception as e:
+        logging.error(f"Cash flow projection error: {e}")
+        return {"error": str(e)}
+
+
+# ========== AUTO PRC BURN SYSTEM ==========
+
+@router.get("/prc-burn-settings")
+async def get_prc_burn_settings():
+    """Get PRC auto-burn settings"""
+    settings = await db.settings.find_one({"key": "prc_burn_settings"}, {"_id": 0})
+    return settings or {
+        "key": "prc_burn_settings",
+        "auto_burn_enabled": False,
+        "daily_burn_percentage": 1.0,  # 1% daily burn
+        "target_user_type": "free",  # free, all, inactive
+        "min_balance_to_burn": 10,  # Minimum PRC balance to apply burn
+        "last_auto_burn": None
+    }
+
+
+@router.post("/prc-burn-settings")
+async def update_prc_burn_settings(request: Request):
+    """
+    Update PRC auto-burn settings
+    Admin can set:
+    - Enable/disable auto burn
+    - Daily burn percentage (0.5% to 10%)
+    - Target user type (free users only, all inactive, etc.)
+    """
+    data = await request.json()
+    
+    burn_percentage = float(data.get("daily_burn_percentage", 1.0))
+    if burn_percentage < 0.1 or burn_percentage > 10:
+        return {"error": "Burn percentage must be between 0.1% and 10%"}
+    
+    settings = {
+        "key": "prc_burn_settings",
+        "auto_burn_enabled": data.get("auto_burn_enabled", False),
+        "daily_burn_percentage": burn_percentage,
+        "target_user_type": data.get("target_user_type", "free"),
+        "min_balance_to_burn": data.get("min_balance_to_burn", 10),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": data.get("admin_id")
+    }
+    
+    await db.settings.update_one(
+        {"key": "prc_burn_settings"},
+        {"$set": settings},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "PRC burn settings updated", "settings": settings}
+
+
+@router.post("/prc-burn-execute")
+async def execute_daily_prc_burn(request: Request):
+    """
+    Execute daily PRC burn based on settings
+    Burns X% of available PRC balance from target users
+    
+    SAFETY: Only burns from users who:
+    - Are free/explorer users (or as per target_user_type setting)
+    - Have never had a paid subscription
+    - Have minimum required balance
+    """
+    try:
+        # Get settings
+        settings = await db.settings.find_one({"key": "prc_burn_settings"})
+        if not settings or not settings.get("auto_burn_enabled"):
+            return {"error": "Auto burn is not enabled", "burned": 0}
+        
+        burn_percentage = settings.get("daily_burn_percentage", 1.0)
+        target_type = settings.get("target_user_type", "free")
+        min_balance = settings.get("min_balance_to_burn", 10)
+        
+        now = datetime.now(timezone.utc)
+        
+        # Build query based on target type
+        if target_type == "free":
+            # Only free users who never had paid subscription
+            query = {
+                "$and": [
+                    {"$or": [
+                        {"subscription_plan": "explorer"},
+                        {"subscription_plan": "free"},
+                        {"subscription_plan": None},
+                        {"subscription_plan": ""},
+                        {"subscription_plan": {"$exists": False}}
+                    ]},
+                    {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+                    {"$or": [
+                        {"vip_activated_at": {"$exists": False}},
+                        {"vip_activated_at": None}
+                    ]},
+                    {"$or": [
+                        {"subscription_expiry": {"$exists": False}},
+                        {"subscription_expiry": None}
+                    ]},
+                    {"prc_balance": {"$gte": min_balance}}
+                ]
+            }
+        elif target_type == "inactive":
+            # Inactive users (no activity in 7 days)
+            seven_days_ago = (now - timedelta(days=7)).isoformat()
+            query = {
+                "$and": [
+                    {"$or": [
+                        {"last_mining_time": {"$lt": seven_days_ago}},
+                        {"last_mining_time": {"$exists": False}}
+                    ]},
+                    {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+                    {"$or": [
+                        {"vip_activated_at": {"$exists": False}},
+                        {"vip_activated_at": None}
+                    ]},
+                    {"prc_balance": {"$gte": min_balance}}
+                ]
+            }
+        else:
+            return {"error": f"Invalid target_type: {target_type}"}
+        
+        # Get target users
+        users = await db.users.find(query, {"_id": 0, "uid": 1, "prc_balance": 1, "email": 1}).to_list(10000)
+        
+        total_burned = 0
+        users_affected = 0
+        
+        for user in users:
+            uid = user.get("uid")
+            balance = user.get("prc_balance", 0)
+            
+            if balance < min_balance:
+                continue
+            
+            # Calculate burn amount (X% of balance)
+            burn_amount = balance * (burn_percentage / 100)
+            burn_amount = round(burn_amount, 2)
+            
+            if burn_amount < 0.01:
+                continue
+            
+            # Update user balance
+            new_balance = balance - burn_amount
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {"prc_balance": round(new_balance, 2)}}
+            )
+            
+            # Log transaction
+            await db.transactions.insert_one({
+                "transaction_id": str(uuid.uuid4()),
+                "user_id": uid,
+                "type": "prc_burn",
+                "amount": -burn_amount,
+                "balance_after": round(new_balance, 2),
+                "description": f"Daily auto-burn ({burn_percentage}% of balance)",
+                "timestamp": now.isoformat(),
+                "status": "completed",
+                "burn_reason": "DAILY_AUTO_BURN",
+                "burn_percentage": burn_percentage
+            })
+            
+            total_burned += burn_amount
+            users_affected += 1
+        
+        # Update last burn time
+        await db.settings.update_one(
+            {"key": "prc_burn_settings"},
+            {"$set": {"last_auto_burn": now.isoformat(), "last_burn_result": {
+                "users_affected": users_affected,
+                "total_burned": round(total_burned, 2)
+            }}}
+        )
+        
+        logging.info(f"[AUTO PRC BURN] Burned {total_burned:.2f} PRC from {users_affected} users")
+        
+        return {
+            "success": True,
+            "users_affected": users_affected,
+            "total_burned": round(total_burned, 2),
+            "burn_percentage": burn_percentage,
+            "target_type": target_type,
+            "executed_at": now.isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Auto PRC burn error: {e}")
+        return {"error": str(e)}
+
+
+@router.get("/prc-burn-history")
+async def get_prc_burn_history(limit: int = 30):
+    """Get history of PRC burns"""
+    burns = await db.transactions.find(
+        {"type": "prc_burn"},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    # Aggregate stats
+    total_burned = sum(abs(b.get("amount", 0)) for b in burns)
+    
+    return {
+        "burns": burns,
+        "total_burned_in_period": round(total_burned, 2),
+        "count": len(burns)
+    }
+
