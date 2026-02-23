@@ -345,13 +345,15 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       });
 
       const responseText = response.data.response;
+      const isDiagnostic = response.data.is_diagnostic;
       const actions = parseResponseForActions(responseText);
 
       const botMessage = {
         type: 'bot',
         text: responseText,
         timestamp: new Date(),
-        actions: actions
+        actions: actions,
+        isDiagnostic: isDiagnostic
       };
 
       setMessages(prev => [...prev, botMessage]);
