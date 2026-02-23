@@ -145,8 +145,17 @@ const ForgotPin = () => {
       if (response.ok && data.success) {
         setVerifiedFields(prev => ({ ...prev, document: true }));
         setVerificationToken(data.reset_token || verificationToken);
-        toast.success(`✓ ${documentType.toUpperCase()} verified! Now set your new PIN`);
-        setStep(4);
+        
+        // Check if user has security question
+        if (data.has_security_question && data.security_question) {
+          setHasSecurityQuestion(true);
+          setSecurityQuestion(data.security_question);
+          toast.success(`✓ ${documentType.toUpperCase()} verified! Now answer your security question`);
+          setStep(4); // Security Question step
+        } else {
+          toast.success(`✓ ${documentType.toUpperCase()} verified! Now set your new PIN`);
+          setStep(5); // Direct to Set New PIN
+        }
       } else {
         toast.error(data.detail || 'Document number does not match our records');
       }
@@ -158,7 +167,46 @@ const ForgotPin = () => {
     }
   };
 
-  // Step 4: Set New PIN
+  // Step 4: Verify Security Question
+  const handleVerifySecurityQuestion = async (e) => {
+    e.preventDefault();
+    
+    if (!securityAnswer.trim()) {
+      toast.error('Please enter your security answer');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API}/auth/forgot-pin/verify-security`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          answer: securityAnswer.trim(),
+          reset_token: verificationToken
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setVerifiedFields(prev => ({ ...prev, security: true }));
+        setVerificationToken(data.reset_token || verificationToken);
+        toast.success('✓ Security answer verified! Now set your new PIN');
+        setStep(5);
+      } else {
+        toast.error(data.detail || 'Incorrect security answer');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Verification failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 5: Set New PIN
   const handleSetNewPin = async (e) => {
     e.preventDefault();
     
