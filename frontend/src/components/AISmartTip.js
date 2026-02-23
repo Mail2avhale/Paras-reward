@@ -184,9 +184,8 @@ const getSmartTipsForPage = (pageName, user, userStats) => {
   return tips.sort((a, b) => (a.priority || 10) - (b.priority || 10)).slice(0, 3);
 };
 
-const AISmartTip = ({ pageName = 'dashboard', customTips = null, variant = 'card' }) => {
+const AISmartTip = ({ pageName = 'dashboard', customTips = null, variant = 'card', user = null, userStats = null }) => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const [tips, setTips] = useState([]);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -196,10 +195,10 @@ const AISmartTip = ({ pageName = 'dashboard', customTips = null, variant = 'card
     if (customTips) {
       setTips(customTips);
     } else {
-      const smartTips = getSmartTipsForPage(pageName, user, null);
+      const smartTips = getSmartTipsForPage(pageName, user, userStats);
       setTips(smartTips.filter(tip => !dismissed.includes(tip.title)));
     }
-  }, [pageName, user, customTips, dismissed]);
+  }, [pageName, user, userStats, customTips, dismissed]);
 
   const handleDismiss = (tipTitle) => {
     setDismissed(prev => [...prev, tipTitle]);
