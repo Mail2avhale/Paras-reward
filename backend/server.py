@@ -5296,7 +5296,8 @@ async def forgot_pin_set_new_pin(request: Request):
         {
             "$set": {
                 "password": hashed_pin,
-                "pin": hashed_pin,  # Also set pin field
+                "password_hash": hashed_pin,  # For login compatibility
+                "pin_hash": hashed_pin,  # Primary PIN field for login
                 "pin_migrated": True,
                 "pin_updated_at": datetime.now(timezone.utc).isoformat()
             },
