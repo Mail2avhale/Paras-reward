@@ -3192,20 +3192,25 @@ async def burn_expired_prc_for_explorer_users():
                 logging.info(f"[PRC BURN SKIP] {uid} has paid plan: {subscription_plan}")
                 continue
             
-            # Skip if has subscription expiry in future
+            # Skip if has subscription expiry (even in past - means was paid)
             sub_expiry = user.get("subscription_expiry")
             if sub_expiry:
-                try:
-                    expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
-                    if expiry_dt > now:
-                        logging.info(f"[PRC BURN SKIP] {uid} has active subscription until {expiry_dt}")
-                        continue
-                except:
-                    pass
+                logging.info(f"[PRC BURN SKIP] {uid} has subscription_expiry (was paid user)")
+                continue
             
             # Skip if ever had a subscription start date
             if user.get("subscription_start"):
                 logging.info(f"[PRC BURN SKIP] {uid} has subscription_start (was paid user)")
+                continue
+            
+            # Skip if ever had VIP activation (was paid user)
+            if user.get("vip_activated_at"):
+                logging.info(f"[PRC BURN SKIP] {uid} has vip_activated_at (was paid user)")
+                continue
+            
+            # Skip if has vip_expiry (was VIP)
+            if user.get("vip_expiry"):
+                logging.info(f"[PRC BURN SKIP] {uid} has vip_expiry (was paid user)")
                 continue
             
             # Check last mining activity
