@@ -274,7 +274,7 @@ async def check_withdrawal_eligibility(user_id: str):
         return {
             "eligible": False,
             "reason": "emi_done_this_week",
-            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
+            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
         }
     
     # Check for existing bank withdrawal request this week
@@ -298,6 +298,21 @@ async def check_withdrawal_eligibility(user_id: str):
                 "status": recent_request.get("status"),
                 "created_at": recent_request.get("created_at")
             }
+        }
+    
+    # STRICT: Check if user has done RD (PRC Savings Vault) redeem this week
+    rd_redeem_request = await db.bank_redeem_requests.find_one({
+        "user_id": user_id,
+        "request_type": "rd_redeem",
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
+    })
+    
+    if rd_redeem_request:
+        return {
+            "eligible": False,
+            "reason": "rd_redeem_done_this_week",
+            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done PRC Savings Vault Redeem this week. Try again from Monday ({next_monday.isoformat()[:10]})."
         }
     
     return {
