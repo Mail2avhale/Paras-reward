@@ -12141,10 +12141,8 @@ PRC is the digital reward currency of Paras Reward Platform.
    - Earn PRC every hour while active
    - Mining rate depends on subscription plan:
      - Explorer: 0.1 PRC/hour
-     - Starter: 0.2 PRC/hour
-     - Growth: 0.3 PRC/hour
-     - Professional: 0.5 PRC/hour
-     - Enterprise: 1.0 PRC/hour
+     - Startup: 0.5 PRC/hour (1.5x)
+     - Elite: 2.0 PRC/hour (3x)
 
 3. **Referral Program (5 Levels)**
    - Level 1 (Direct): 10% of referral's earnings
