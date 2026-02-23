@@ -12769,10 +12769,10 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
 - Gift Vouchers: {'Available ✅' if subscription_plan not in ['explorer', 'free'] else 'VIP Only ⚠️'}
 - Shopping: {'Available ✅' if subscription_plan not in ['explorer', 'free'] else 'VIP Only ⚠️'}
 
-**💰 Wallet & Balance:**
-- PRC Balance: {user.get('prc_balance', 0):.2f} PRC
-- Cashback Balance: {user.get('cashback_balance', 0):.2f} PRC
-- Total Mined: {total_mined:.2f} PRC
+**💰 Wallet & Balance (10 PRC = ₹1 INR):**
+- PRC Balance: {user.get('prc_balance', 0):.2f} PRC (≈ ₹{user.get('prc_balance', 0)/10:.2f})
+- Cashback Balance: {user.get('cashback_balance', 0):.2f} PRC (≈ ₹{user.get('cashback_balance', 0)/10:.2f})
+- Total Mined: {total_mined:.2f} PRC (≈ ₹{total_mined/10:.2f})
 - Mining Rate: {mining_rate} PRC/hour
 
 **🔐 KYC Status:**
