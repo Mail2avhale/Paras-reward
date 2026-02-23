@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://reward-app-final.preview.emergentagent.com/setup
+   https://prc-burn-patch.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
