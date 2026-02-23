@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, ChevronRight, Lightbulb, TrendingUp, AlertCircle, Gift, Users, Shield, Wallet, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '@/context/AuthContext';
 
 // Smart tips based on user's current page and status
 const getSmartTipsForPage = (pageName, user, userStats) => {
