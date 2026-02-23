@@ -32116,15 +32116,23 @@ async def get_user_cost_analysis(page: int = 1, limit: int = 50, filter_type: st
 # ========== 180-DAY PRC EXPIRY FOR INACTIVE USERS ==========
 
 async def burn_inactive_user_prc():
-    """Burn PRC for users inactive for 180+ days"""
+    """
+    Burn PRC for users inactive for 180+ days
+    IMPORTANT: Skip all paid/VIP users
+    """
     try:
         now = datetime.now(timezone.utc)
         inactive_threshold = now - timedelta(days=180)
         
         # Find inactive users with positive PRC balance
+        # EXCLUDE all paid users
         inactive_users = db.users.find({
             "last_login": {"$lt": inactive_threshold.isoformat()},
-            "prc_balance": {"$gt": 0}
+            "prc_balance": {"$gt": 0},
+            # Exclude paid users
+            "subscription_plan": {"$in": ["explorer", None, ""]},
+            "subscription_expiry": {"$exists": False},
+            "vip_activated_at": {"$exists": False}
         })
         
         burn_count = 0
@@ -32133,6 +32141,16 @@ async def burn_inactive_user_prc():
         async for user in inactive_users:
             uid = user.get("uid")
             prc_balance = user.get("prc_balance", 0)
+            
+            # DOUBLE CHECK: Skip if user has ANY paid subscription indicators
+            subscription_plan = user.get("subscription_plan", "explorer")
+            if subscription_plan and subscription_plan.lower() not in ["explorer", "free", "", "none"]:
+                logging.info(f"[180-DAY BURN SKIP] User {uid} has paid plan: {subscription_plan}")
+                continue
+            
+            if user.get("vip_activated_at") or user.get("subscription_expiry") or user.get("subscription_start"):
+                logging.info(f"[180-DAY BURN SKIP] User {uid} has subscription history")
+                continue
             
             if prc_balance > 0:
                 # Burn all PRC
