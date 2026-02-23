@@ -627,7 +627,7 @@ const LoginNew = ({ onLogin }) => {
         />
       )}
 
-      {/* Forgot PIN Modal - Redirect to OTP page */}
+      {/* Forgot PIN Modal - Redirect to verification page */}
       {showForgotPin && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -639,15 +639,16 @@ const LoginNew = ({ onLogin }) => {
                 Forgot PIN?
               </h2>
               <p className="text-gray-500 text-sm mt-1">
-                Reset your PIN using OTP verification
+                Reset your PIN by verifying your details
               </p>
             </div>
 
-            {/* OTP Reset Info */}
+            {/* Verification Steps Info */}
             <div className="space-y-4">
               <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
                 <p className="text-sm text-purple-800 text-center leading-relaxed">
-                  You will receive an <strong>OTP</strong> on your registered mobile number to verify your identity and reset your PIN.
+                  You'll need to verify your:<br />
+                  <strong>1. Email</strong> → <strong>2. Mobile</strong> → <strong>3. Aadhaar/PAN</strong>
                 </p>
               </div>
 
@@ -664,7 +665,7 @@ const LoginNew = ({ onLogin }) => {
               </Button>
 
               <p className="text-xs text-gray-400 text-center">
-                You'll receive OTP within 30 seconds
+                Make sure you have your registered details handy
               </p>
             </div>
 
