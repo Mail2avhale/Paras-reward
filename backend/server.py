@@ -12485,12 +12485,23 @@ async def ai_chatbot(
     
     # Detect if this is a diagnostic/problem query
     diagnostic_keywords = [
+        # English keywords
         "fail", "not working", "problem", "issue", "error", "why", "stuck",
-        "pending", "rejected", "काम नाही", "समस्या", "का", "कसे",
-        "नाही झाले", "अडकले", "फेल", "कामात नाही", "होत नाही",
-        "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
+        "pending", "rejected", "approved", "status", "check", "help",
         "redeem", "withdraw", "payment", "bonus", "referral", "mining",
-        "session", "login", "kyc", "balance"
+        "session", "login", "kyc", "balance", "subscription", "plan",
+        "voucher", "gift", "bill", "recharge", "order", "shopping",
+        "contact", "support", "wallet", "transaction", "earnings",
+        # Marathi keywords
+        "काम नाही", "समस्या", "का", "कसे", "नाही झाले", "अडकले", "फेल", 
+        "कामात नाही", "होत नाही", "पेंडिंग", "रिजेक्ट", "अप्रूव्ह",
+        "सबस्क्रिप्शन", "प्लॅन", "व्हाउचर", "बिल", "रिचार्ज", "बॅलन्स",
+        "केवायसी", "रेफरल", "बोनस", "माइनिंग", "ऑर्डर", "शॉपिंग",
+        # Hindi keywords
+        "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
+        "pending", "reject", "approve", "subscription", "plan",
+        "voucher", "bill", "recharge", "balance", "kyc", "referral",
+        "bonus", "mining", "order", "shopping", "contact", "support"
     ]
     
     is_diagnostic_query = any(keyword in message.lower() for keyword in diagnostic_keywords)
