@@ -12312,10 +12312,8 @@ Paras Reward Platform चे income sources:
 | Plan | Base Rate | Per Day (24hr) | Per Month | Monthly INR Value |
 |------|-----------|----------------|-----------|-------------------|
 | EXPLORER | 0.10 PRC/hr | 2.4 PRC | 72 PRC | ₹7.20 |
-| STARTER | 0.20 PRC/hr | 4.8 PRC | 144 PRC | ₹14.40 |
-| GROWTH | 0.30 PRC/hr | 7.2 PRC | 216 PRC | ₹21.60 |
-| PROFESSIONAL | 0.50 PRC/hr | 12 PRC | 360 PRC | ₹36 |
-| ENTERPRISE | 1.00 PRC/hr | 24 PRC | 720 PRC | ₹72 |
+| STARTUP | 0.50 PRC/hr | 12 PRC | 360 PRC | ₹36 |
+| ELITE | 2.00 PRC/hr | 48 PRC | 1440 PRC | ₹144 |
 
 **Rate कसा Calculate होतो:**
 - Base Rate × Active Session Hours = Daily PRC
