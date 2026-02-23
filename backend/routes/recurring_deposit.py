@@ -1492,11 +1492,14 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
         redeem_request = None
         source_collection = "bank_redeem_requests"
         
+        logging.info(f"=== RD REJECT START === Request ID: {request_id}, Admin: {admin_id}")
+        
         # Strategy 1: Check bank_redeem_requests with request_type
         redeem_request = await db.bank_redeem_requests.find_one({
             "request_id": request_id,
             "request_type": "rd_redeem"
         })
+        logging.info(f"Strategy 1 (bank_redeem_requests + request_type): Found={bool(redeem_request)}")
         
         # Strategy 2: Check bank_redeem_requests without request_type but with rd_id
         if not redeem_request:
@@ -1504,10 +1507,44 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
                 "request_id": request_id,
                 "rd_id": {"$exists": True, "$ne": None}
             })
+            logging.info(f"Strategy 2 (bank_redeem_requests + rd_id): Found={bool(redeem_request)}")
         
         # Strategy 3: Check bank_redeem_requests with just request_id
         if not redeem_request:
             temp_request = await db.bank_redeem_requests.find_one({"request_id": request_id})
+            logging.info(f"Strategy 3 (bank_redeem_requests any): temp_found={bool(temp_request)}")
+            if temp_request and (temp_request.get("rd_id") or "RD" in request_id.upper()):
+                redeem_request = temp_request
+        
+        # Strategy 4: Check rd_redeem_requests collection
+        if not redeem_request:
+            redeem_request = await db.rd_redeem_requests.find_one({"request_id": request_id})
+            logging.info(f"Strategy 4 (rd_redeem_requests): Found={bool(redeem_request)}")
+            if redeem_request:
+                source_collection = "rd_redeem_requests"
+        
+        # Strategy 5: Check withdrawal_requests collection
+        if not redeem_request:
+            redeem_request = await db.withdrawal_requests.find_one({"request_id": request_id})
+            logging.info(f"Strategy 5 (withdrawal_requests): Found={bool(redeem_request)}")
+            if redeem_request and redeem_request.get("rd_id"):
+                source_collection = "withdrawal_requests"
+        
+        # Strategy 6: Regex search
+        if not redeem_request and "RD_REQ" in request_id:
+            redeem_request = await db.bank_redeem_requests.find_one({
+                "request_id": {"$regex": request_id, "$options": "i"}
+            })
+            logging.info(f"Strategy 6 (regex): Found={bool(redeem_request)}")
+        
+        # Strategy 7: BROAD search
+        if not redeem_request:
+            all_matching = await db.bank_redeem_requests.find_one({"request_id": request_id})
+            if all_matching:
+                logging.info(f"Strategy 7: Found with exact match!")
+                redeem_request = all_matching
+        
+        logging.info(f"=== RD REJECT RESULT === Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
             if temp_request and (temp_request.get("rd_id") or "RD" in request_id.upper()):
                 redeem_request = temp_request
         
