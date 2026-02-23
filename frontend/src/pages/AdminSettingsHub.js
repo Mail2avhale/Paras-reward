@@ -252,7 +252,6 @@ const AdminSettingsHub = ({ user, onLogout }) => {
                 <li>• Use <span className="text-purple-400">Payment Settings</span> to update UPI and bank details</li>
                 <li>• Configure subscription pricing in <span className="text-purple-400">System Settings</span></li>
                 <li>• Set withdrawal limits in <span className="text-purple-400">Redeem Safety</span></li>
-                <li>• Manage PRC distribution events in <span className="text-purple-400">PRC Rain Drop</span></li>
                 <li>• Run <span className="text-purple-400">System Tasks</span> daily for notifications & cleanup</li>
               </ul>
             </div>
