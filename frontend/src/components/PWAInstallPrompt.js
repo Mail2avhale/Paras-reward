@@ -215,15 +215,39 @@ export const InstallAppButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  
-  // APK download URL - can be configured via environment variable
-  const APK_URL = process.env.REACT_APP_APK_URL || '/paras-reward.apk';
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Comprehensive check for installed state
+    const checkIfInstalled = () => {
+      // Check display modes
+      if (window.matchMedia('(display-mode: standalone)').matches) return true;
+      if (window.matchMedia('(display-mode: fullscreen)').matches) return true;
+      if (window.matchMedia('(display-mode: minimal-ui)').matches) return true;
+      // iOS standalone
+      if (window.navigator.standalone === true) return true;
+      // Android TWA
+      if (document.referrer.includes('android-app://')) return true;
+      // localStorage flag
+      if (localStorage.getItem('pwa_installed') === 'true') return true;
+      return false;
+    };
+
+    if (checkIfInstalled()) {
       setIsInstalled(true);
       return;
+    }
+
+    // Listen for display mode changes
+    const displayModeQuery = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayModeChange = (e) => {
+      if (e.matches) {
+        setIsInstalled(true);
+        localStorage.setItem('pwa_installed', 'true');
+      }
+    };
+    
+    if (displayModeQuery.addEventListener) {
+      displayModeQuery.addEventListener('change', handleDisplayModeChange);
     }
 
     const handleBeforeInstallPrompt = (e) => {
@@ -233,24 +257,21 @@ export const InstallAppButton = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
-    window.addEventListener('appinstalled', () => {
+    const handleAppInstalled = () => {
       setIsInstalled(true);
-    });
+      localStorage.setItem('pwa_installed', 'true');
+    };
+    
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      if (displayModeQuery.removeEventListener) {
+        displayModeQuery.removeEventListener('change', handleDisplayModeChange);
+      }
     };
   }, []);
-
-  const handleDownloadAPK = () => {
-    // Show informative message instead of downloading placeholder
-    alert('📱 Install PARAS REWARD App\n\n' + 
-          '✅ For the best experience, install our Progressive Web App:\n\n' +
-          '1. Tap the menu (⋮) in your browser\n' +
-          '2. Select "Add to Home screen" or "Install app"\n' +
-          '3. Enjoy the full app experience!\n\n' +
-          'Native Android APK coming soon! 🚀');
-  };
 
   const handleInstallClick = async () => {
     // Check if user is on Android
@@ -284,6 +305,8 @@ export const InstallAppButton = () => {
     
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
+      setIsInstalled(true);
+      localStorage.setItem('pwa_installed', 'true');
       alert('✅ Installation started! The app will be added to your home screen.');
     }
     
@@ -296,6 +319,7 @@ export const InstallAppButton = () => {
         disabled
         size="lg" 
         className="bg-gradient-to-r from-green-600 to-green-700 text-white px-10 py-7 text-lg rounded-2xl shadow-xl"
+        data-testid="pwa-installed-btn"
       >
         <Check className="mr-2 h-5 w-5" />
         App Installed
@@ -309,6 +333,7 @@ export const InstallAppButton = () => {
       disabled={isDownloading}
       size="lg" 
       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-7 text-lg rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 border-0"
+      data-testid="pwa-install-home-btn"
     >
       <Download className="mr-2 h-5 w-5" />
       {isDownloading ? 'Installing...' : 'Install App'}
