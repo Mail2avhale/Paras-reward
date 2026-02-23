@@ -1,8 +1,8 @@
 {
-  "name": "PARAS REWARD - India's Next-Generation Trusted Reward Platform",
+  "name": "PARAS REWARD - India's Trusted Reward Platform",
   "short_name": "PARAS REWARD",
-  "description": "India's Next-Generation Trusted Reward Platform. Collect PRC points through daily activities, play games, invite friends and redeem for real products!",
-  "start_url": "/dashboard?utm_source=twa&utm_medium=android",
+  "description": "India's Next-Generation Trusted Reward Platform. Earn PRC points daily, play games, invite friends, and redeem for real products & vouchers!",
+  "start_url": "/dashboard?utm_source=pwa&utm_medium=homescreen",
   "display": "standalone",
   "background_color": "#030712",
   "theme_color": "#030712",
@@ -10,7 +10,7 @@
   "scope": "/",
   "lang": "en-IN",
   "dir": "ltr",
-  "id": "/",
+  "id": "com.parasreward.app",
   "icons": [
     {
       "src": "/icons/icon-48x48.png",
@@ -81,18 +81,33 @@
   ],
   "screenshots": [
     {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
+      "src": "/screenshots/dashboard-mobile.png",
+      "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "PARAS REWARD Dashboard"
+      "label": "Dashboard - Track your PRC rewards"
+    },
+    {
+      "src": "/screenshots/rewards-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Daily Rewards - Earn PRC every day"
+    },
+    {
+      "src": "/screenshots/game-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tap Game - Play and win PRC"
     }
   ],
   "categories": [
     "entertainment",
     "lifestyle",
     "shopping",
-    "finance"
+    "finance",
+    "games"
   ],
   "shortcuts": [
     {
@@ -100,64 +115,88 @@
       "short_name": "Home",
       "description": "View your rewards dashboard",
       "url": "/dashboard?utm_source=shortcut",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Daily Rewards",
       "short_name": "Rewards",
       "description": "Collect your daily PRC points",
       "url": "/daily-rewards?utm_source=shortcut",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Tap Game",
       "short_name": "Play",
       "description": "Play tap game and earn PRC",
       "url": "/game?utm_source=shortcut",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Marketplace",
-      "short_name": "Shop",
-      "description": "Redeem PRC for products",
-      "url": "/marketplace?utm_source=shortcut",
-      "icons": [
-        {
-          "src": "/icons/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "name": "Referrals",
+      "short_name": "Invite",
+      "description": "Invite friends and earn bonus",
+      "url": "/referrals?utm_source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Gift Vouchers",
+      "short_name": "Vouchers",
+      "description": "Redeem PRC for gift vouchers",
+      "url": "/gift-vouchers?utm_source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Bill Payments",
+      "short_name": "Bills",
+      "description": "Pay bills with PRC",
+      "url": "/bill-payments?utm_source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "PRC Savings Vault",
+      "short_name": "Savings",
+      "description": "Grow your PRC with interest",
+      "url": "/rd?utm_source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "description": "View your profile and settings",
+      "url": "/profile?utm_source=shortcut",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "prefer_related_applications": false,
-  "display_override": [
-    "standalone",
-    "minimal-ui"
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.parasreward.app",
+      "id": "com.parasreward.app"
+    }
   ],
+  "display_override": ["standalone", "minimal-ui", "window-controls-overlay"],
   "edge_side_panel": {
     "preferred_width": 400
   },
   "launch_handler": {
-    "client_mode": [
-      "navigate-existing",
-      "auto"
-    ]
+    "client_mode": ["navigate-existing", "auto"]
   },
   "handle_links": "preferred",
-  "capture_links": "existing-client-navigate"
+  "capture_links": "existing-client-navigate",
+  "share_target": {
+    "action": "/referrals",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+parasreward",
+      "url": "/handle-protocol?type=%s"
+    }
+  ]
 }
