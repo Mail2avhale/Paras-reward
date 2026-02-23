@@ -40,7 +40,59 @@ const AdminBurnDashboard = ({ user, onLogout }) => {
     }
     fetchBurnStatistics();
     fetchUsersAtRisk();
+    fetchBurnSettings();
+    fetchPrcLiability();
   }, [user]);
+  
+  const fetchBurnSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/finance/prc-burn-settings`);
+      setBurnSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching burn settings:', error);
+    }
+  };
+  
+  const fetchPrcLiability = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/finance/prc-liability`);
+      setPrcLiability(response.data);
+    } catch (error) {
+      console.error('Error fetching PRC liability:', error);
+    }
+  };
+  
+  const saveBurnSettings = async (newSettings) => {
+    try {
+      await axios.post(`${API}/admin/finance/prc-burn-settings`, {
+        ...newSettings,
+        admin_id: user?.uid
+      });
+      toast.success('Auto burn settings saved!');
+      fetchBurnSettings();
+      setShowBurnSettings(false);
+    } catch (error) {
+      toast.error('Failed to save settings');
+    }
+  };
+  
+  const executeAutoBurn = async () => {
+    if (!window.confirm('Are you sure you want to execute Auto PRC Burn now? This will burn the configured percentage from eligible users.')) {
+      return;
+    }
+    
+    setBurning(true);
+    try {
+      const response = await axios.post(`${API}/admin/finance/prc-burn-execute`, { admin_id: user?.uid });
+      toast.success(`Auto burn completed! Burned ${response.data.total_burned?.toLocaleString()} PRC from ${response.data.users_affected} users`);
+      fetchBurnStatistics();
+      fetchPrcLiability();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Auto burn failed');
+    } finally {
+      setBurning(false);
+    }
+  };
 
   const fetchBurnStatistics = async () => {
     try {
