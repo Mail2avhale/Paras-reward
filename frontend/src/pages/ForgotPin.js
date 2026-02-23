@@ -286,7 +286,7 @@ const ForgotPin = () => {
               }`}>
                 {step > s ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> : s}
               </div>
-              {s < 4 && (
+              {s < totalSteps && (
                 <div className={`w-4 sm:w-8 h-1 transition-all ${step > s ? 'bg-green-500' : 'bg-gray-200'}`} />
               )}
             </div>
