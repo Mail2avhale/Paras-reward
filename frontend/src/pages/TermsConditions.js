@@ -45,7 +45,7 @@ const TermsConditions = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const lastUpdated = 'February 7, 2026';
+  const lastUpdated = 'February 23, 2026';
 
   const sections = [
     { id: 'acceptance', title: 'Acceptance of Terms', icon: CheckCircle },
@@ -53,6 +53,7 @@ const TermsConditions = () => {
     { id: 'account', title: 'Account Registration', icon: Shield },
     { id: 'prc-system', title: 'PRC Points System', icon: Award },
     { id: 'redemption', title: 'Redemption & Payments', icon: CreditCard },
+    { id: 'advertising', title: 'Advertising & Rewards', icon: Smartphone },
     { id: 'prohibited', title: 'Prohibited Activities', icon: Ban },
     { id: 'intellectual', title: 'Intellectual Property', icon: FileText },
     { id: 'disclaimer', title: 'Disclaimers', icon: AlertTriangle },
