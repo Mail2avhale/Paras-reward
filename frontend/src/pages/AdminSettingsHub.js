@@ -120,7 +120,6 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   // Tabs that redirect to separate pages
   const externalRoutes = {
     'redeem-safety': '/admin/redeem-settings',
-    'prc-rain': '/admin/prc-rain',
     'video-ads': '/admin/video-ads',
     'redeem': '/admin/redeem-settings',
   };
