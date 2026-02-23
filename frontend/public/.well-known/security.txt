@@ -1,0 +1,11 @@
+# PARAS REWARD Security Policy
+# https://www.parasreward.com/.well-known/security.txt
+
+Contact: mailto:security@parasreward.com
+Contact: https://www.parasreward.com/contact-us
+Expires: 2026-12-31T23:59:00.000Z
+Preferred-Languages: en, hi, mr
+Canonical: https://www.parasreward.com/.well-known/security.txt
+
+# We appreciate responsible disclosure of security vulnerabilities.
+# Please report any security issues to our security team.
