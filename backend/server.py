@@ -12113,36 +12113,22 @@ PRC is the digital reward currency of Paras Reward Platform.
 1. **EXPLORER (Free)**
    - Basic access to app
    - Limited earning features
-   - Weekly redeem limit: 2
+   - Weekly redeem limit: 1
    - No bill payment or vouchers
 
-2. **STARTER (₹299/year)**
-   - Enhanced earning rate
-   - Weekly redeem limit: 5
+2. **STARTUP (₹299/month)**
+   - 1.5x earning rate
+   - Weekly redeem limit: 2
    - Access to gift vouchers
    - Basic bill payments
 
-3. **GROWTH (₹599/year)**
-   - 2x earning rate
-   - Weekly redeem limit: 20
+3. **ELITE (₹799/month)**
+   - 3x earning rate
+   - Weekly redeem limit: 5
    - All gift vouchers (Amazon, Flipkart, etc.)
    - All bill payments
    - Shopping access
-
-4. **PROFESSIONAL (₹999/year)**
-   - 3x earning rate
-   - Weekly redeem limit: 50
    - Priority support
-   - All features unlocked
-
-5. **ENTERPRISE (₹1999/year)**
-   - 5x earning rate
-   - Unlimited redeems
-   - VIP support
-   - All premium features
-
-6. **DIRECTOR 365 (Coming Soon)**
-   - Ultimate plan with maximum benefits
 
 **⛏️ HOW TO EARN PRC:**
 
