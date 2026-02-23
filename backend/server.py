@@ -3242,7 +3242,14 @@ async def burn_expired_prc_for_free_users():
     """
     Legacy: Burn PRC earned by free users after 48 hours (2 days)
     FIFO - First Earned First Burn
+    
+    IMPORTANT: This function is DISABLED for safety.
+    Paid users were incorrectly affected due to query issues.
     """
+    logging.info("[PRC BURN] burn_expired_prc_for_free_users is DISABLED for safety")
+    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
+    
+    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
         burn_threshold = now - timedelta(days=2)
