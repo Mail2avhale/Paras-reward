@@ -96,16 +96,6 @@ const settingsCategories = [
     borderColor: 'border-red-500/30'
   },
   { 
-    id: 'prc-rain', 
-    label: 'PRC Rain Drop', 
-    icon: CloudRain, 
-    description: 'Configure PRC rain events, drop rates and distribution settings',
-    path: '/admin/prc-rain',
-    color: 'from-indigo-500 to-purple-500',
-    bgColor: 'bg-indigo-500/10',
-    borderColor: 'border-indigo-500/30'
-  },
-  { 
     id: 'service-toggles', 
     label: 'Service On/Off', 
     icon: ToggleLeft, 
