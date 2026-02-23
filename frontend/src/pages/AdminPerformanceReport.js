@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Users, CheckCircle, XCircle, RefreshCw, BarChart3,
-  TrendingUp, Calendar, Award, Shield
+  TrendingUp, Calendar, Award, Shield, FileText
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
