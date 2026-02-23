@@ -12403,7 +12403,7 @@ Paras Reward Platform चे income sources:
 **OPTION 2: Gift Vouchers**
 
 *Requirements:*
-- Paid plan (Starter+) असणे आवश्यक
+- Paid plan (Startup/Growth/Elite) असणे आवश्यक
 - Sufficient PRC balance
 
 *Steps:*
