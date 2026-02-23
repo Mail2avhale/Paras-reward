@@ -266,9 +266,6 @@ const DashboardModern = ({ user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
-      
-      {/* PRC Rain Drop Game */}
-      <PRCRain user={user} onComplete={() => fetchDashboardData()} />
 
       {/* Profile Completion Popup */}
       {showProfilePopup && (
