@@ -25062,6 +25062,7 @@ async def preview_prc_burn():
     burn_threshold_2days = now - timedelta(days=2)
     
     # Count Explorer users that would be affected
+    # MUST exclude users who ever had VIP/paid subscription
     explorer_query = {
         "$and": [
             {"$or": [
@@ -25080,6 +25081,15 @@ async def preview_prc_burn():
             {"$or": [
                 {"subscription_start": {"$exists": False}},
                 {"subscription_start": None}
+            ]},
+            # NEW: Exclude users who ever had VIP
+            {"$or": [
+                {"vip_activated_at": {"$exists": False}},
+                {"vip_activated_at": None}
+            ]},
+            {"$or": [
+                {"vip_expiry": {"$exists": False}},
+                {"vip_expiry": None}
             ]},
             {"prc_balance": {"$gt": 0}}
         ]
@@ -25101,6 +25111,11 @@ async def preview_prc_burn():
                 {"subscription_expiry": {"$exists": False}},
                 {"subscription_expiry": None},
                 {"subscription_expiry": {"$lt": now_iso}}
+            ]},
+            # NEW: Exclude users who ever had VIP
+            {"$or": [
+                {"vip_activated_at": {"$exists": False}},
+                {"vip_activated_at": None}
             ]},
             {"mining_history": {"$exists": True, "$ne": []}}
         ]
