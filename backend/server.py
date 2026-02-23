@@ -3129,20 +3129,27 @@ async def burn_expired_prc_for_explorer_users():
     Burn PRC for Explorer (demo) users after 2 days of inactivity
     NEW RULE: If Last_Active_Mining_Date + 2 days < Current_Date THEN Burn 100% PRC
     Only burns for users who have NEVER had a paid subscription
+    
+    IMPORTANT: This function is DISABLED for safety.
+    Paid users were incorrectly affected due to query issues.
     """
+    logging.info("[PRC BURN] burn_expired_prc_for_explorer_users is DISABLED for safety")
+    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
+    
+    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
         burn_threshold = now - timedelta(days=2)
         
-        # Find Explorer users who have never had a paid subscription
-        # and have been inactive for 2+ days
+        # STRICT QUERY: Only target users who are DEFINITELY free/explorer
+        # Must NOT have any subscription plan other than explorer
         explorer_users = db.users.find({
-            "$or": [
-                {"subscription_plan": "explorer"},
-                {"subscription_plan": {"$exists": False}},
-                {"membership_type": {"$ne": "vip"}}
-            ],
-            "prc_balance": {"$gt": 0}
+            "$and": [
+                {"subscription_plan": {"$in": ["explorer", None, ""]}},  # Only explorer or no plan
+                {"subscription_expiry": {"$exists": False}},  # Never had subscription
+                {"vip_activated_at": {"$exists": False}},  # Never had VIP
+                {"subscription_start": {"$exists": False}},  # Never started subscription
+                {"prc_balance": {"$gt": 0}}
         })
         
         burn_count = 0
