@@ -430,27 +430,22 @@ const LoginNew = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* Auth Type Badge */}
-          {identifierChecked && authType !== 'unknown' && (
+          {/* Auth Type Badge - PIN Only */}
+          {identifierChecked && (
             <div className="flex justify-center">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                authType === 'pin' 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
-                {authType === 'pin' ? '🔢 Login with 6-Digit PIN' : '🔑 Login with Password'}
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                🔢 Login with 6-Digit PIN
               </span>
             </div>
           )}
 
-          {/* PIN Input (for migrated users / new users) */}
-          {authType === 'pin' && identifierChecked && (
+          {/* PIN Input */}
+          {identifierChecked && (
             <div className="pt-2">
               <PinInput
                 value={loginData.pin}
                 onChange={(val) => {
                   setLoginData({ ...loginData, pin: val });
-                  // Only clear error when user actually types something
                   if (val.length > 0) {
                     setPinError('');
                   }
@@ -463,21 +458,7 @@ const LoginNew = ({ onLogin }) => {
             </div>
           )}
 
-          {/* Password Input (for old users who haven't migrated) */}
-          {authType === 'password' && identifierChecked && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  data-testid="login-password-input"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  className="pl-10 pr-10 py-6 rounded-xl border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+          {/* Remember Me & Forgot PIN Row */}
                 />
                 <button
                   type="button"
