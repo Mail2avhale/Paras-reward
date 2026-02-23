@@ -20,6 +20,7 @@ A production-grade reward platform serving 3000+ users with subscription managem
      - `subscription_plan` NOT in startup/growth/elite/vip/pro
      - NO `subscription_expiry` (never had subscription)
      - NO `subscription_start` (never started subscription)
+     - NO `vip_activated_at` (never was VIP)
    - Additional runtime safety checks before each burn
 
 2. **`burn_expired_prc_for_free_users()`** - Burns PRC older than 48 hours (FIFO)
@@ -35,7 +36,51 @@ A production-grade reward platform serving 3000+ users with subscription managem
 - `GET /api/admin/burn-prc-preview` - Preview which users would be affected WITHOUT burning
 - `POST /api/admin/burn-prc-now` - Execute burn job
 
-**Testing:** ✅ Preview API verified - No paid users in burn targets
+---
+
+### 📊 Enhanced P&L Dashboard with Auto Burn ✅ (Dec 2025)
+
+**New Features Added to Profit & Loss Page:**
+
+1. **Paid Users Wallet Summary Card**
+   - Total PRC balance सर्व paid users चे with INR value
+   - Plan-wise breakdown (Startup/Growth/Elite)
+   - Total redeemed amount
+
+2. **Month-over-Month Comparison**
+   - Current vs Previous month comparison
+   - Growth/Decline percentages for revenue, users, paid users
+
+3. **Cash Flow Projection**
+   - Next 3 months projected revenue
+   - Based on historical growth rate
+
+4. **Subscription Revenue Details**
+   - Plan-wise revenue breakdown
+   - New vs Renewal breakdown with renewal rate
+
+5. **PRC Liability Tracker**
+   - Total PRC in circulation
+   - INR liability calculation
+   - Daily mining vs burn rates
+   - 30/90 day liability projections
+
+6. **Auto PRC Burn System**
+   - Admin can enable/disable auto burn
+   - Set daily burn percentage (0.1% to 10%)
+   - Choose target users (free/inactive)
+   - Set minimum balance threshold
+   - Manual "Execute Burn Now" button
+
+**New Backend APIs:**
+- `GET /api/admin/finance/month-comparison`
+- `GET /api/admin/finance/subscription-revenue-details`
+- `GET /api/admin/finance/prc-liability`
+- `GET /api/admin/finance/cash-flow-projection`
+- `GET /api/admin/finance/prc-burn-settings`
+- `POST /api/admin/finance/prc-burn-settings`
+- `POST /api/admin/finance/prc-burn-execute`
+- `GET /api/admin/finance/prc-burn-history`
 
 ---
 
