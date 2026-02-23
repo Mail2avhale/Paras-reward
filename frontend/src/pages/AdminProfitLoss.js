@@ -645,7 +645,7 @@ const AdminProfitLoss = ({ user }) => {
         )}
       </Card>
 
-      {/* Add Expense Modal */}
+            {/* Add Expense Modal */}
       {showAddExpense && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-gray-900 border-gray-700">
