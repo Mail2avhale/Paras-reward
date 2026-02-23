@@ -23,36 +23,39 @@ const AdminPerformanceReport = ({ user }) => {
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const params = {};
+      const params = new URLSearchParams();
       if (dateRange === 'week') {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
-        params.date_from = weekAgo.toISOString().split('T')[0];
+        params.append('date_from', weekAgo.toISOString().split('T')[0]);
       } else if (dateRange === 'month') {
         const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
-        params.date_from = monthAgo.toISOString().split('T')[0];
+        params.append('date_from', monthAgo.toISOString().split('T')[0]);
       } else if (dateFrom) {
-        params.date_from = dateFrom;
+        params.append('date_from', dateFrom);
       }
       if (dateTo) {
-        params.date_to = dateTo;
+        params.append('date_to', dateTo);
       }
 
-      console.log('Fetching report with params:', params);
-      const response = await axios.get(`${API}/admin/performance-report`, { params });
-      console.log('Report response:', response.data);
+      const url = `${API}/admin/performance-report${params.toString() ? '?' + params.toString() : ''}`;
+      console.log('Fetching:', url);
       
-      if (response.data && response.data.success) {
-        setReport(response.data);
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log('Report data:', data);
+      
+      if (data && (data.success || data.admins)) {
+        setReport(data);
       } else {
-        // Handle case where API returns but no success flag
-        setReport(response.data || { admins: [], summary: {} });
+        setReport({ admins: [], summary: { total_admins: 0, total_approved: 0, total_rejected: 0, total_processed: 0 }, by_category: {} });
+        toast.error('No data returned from server');
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      toast.error('Failed to load performance report: ' + (error.response?.data?.detail || error.message));
-      setReport({ admins: [], summary: {}, by_category: {} });
+      toast.error('Failed to load: ' + error.message);
+      setReport({ admins: [], summary: { total_admins: 0, total_approved: 0, total_rejected: 0, total_processed: 0 }, by_category: {} });
     } finally {
       setLoading(false);
     }
