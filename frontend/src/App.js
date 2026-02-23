@@ -124,60 +124,61 @@ const BankRedeem = lazy(() => import("@/pages/BankRedeem"));
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
 // This reduces initial bundle size for regular users by ~30%
-const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboard"));
+// ADMIN PAGES - Only loaded if NOT user build (excluded from Play Store AAB)
+const AdminDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDashboard"));
 // AdminDashboardModern removed - not in use
-const AdminAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAnalytics"));
-const AdminPRCAnalytics = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCAnalytics"));
-const AdminAuditService = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAuditService"));
-const AdminProfitLoss = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminProfitLoss"));
-const AdminLiquidity = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLiquidity"));
-const AdminCompanyWallets = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCompanyWallets"));
-const AdminCashBankBook = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCashBankBook"));
-const AdminPRCLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCLedger"));
-const AdminFinancialReports = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialReports"));
-const AdminCapitalManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCapitalManagement"));
-const AdminTrialBalance = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminTrialBalance"));
-const AdminAccountsReceivable = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsReceivable"));
-const AdminAccountsPayable = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsPayable"));
-const AdminFinancialRatios = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialRatios"));
-const AdminAdsIncome = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAdsIncome"));
-const AdminFraudAlerts = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudAlerts"));
-const AdminFraudDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
-const AdminVideoAds = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
-const AdminFixedExpenses = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
-const AdminKYC = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
-const AdminOrders = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
-const AdminSupport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
-const AdminContactSubmissions = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
-const AdminContactSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
+const AdminAnalytics = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAnalytics"));
+const AdminPRCAnalytics = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCAnalytics"));
+const AdminAuditService = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAuditService"));
+const AdminProfitLoss = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminProfitLoss"));
+const AdminLiquidity = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLiquidity"));
+const AdminCompanyWallets = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCompanyWallets"));
+const AdminCashBankBook = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCashBankBook"));
+const AdminPRCLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCLedger"));
+const AdminFinancialReports = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialReports"));
+const AdminCapitalManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminCapitalManagement"));
+const AdminTrialBalance = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminTrialBalance"));
+const AdminAccountsReceivable = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsReceivable"));
+const AdminAccountsPayable = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountsPayable"));
+const AdminFinancialRatios = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFinancialRatios"));
+const AdminAdsIncome = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAdsIncome"));
+const AdminFraudAlerts = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudAlerts"));
+const AdminFraudDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
+const AdminVideoAds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
+const AdminFixedExpenses = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
+const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
+const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
+const AdminSupport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
+const AdminContactSubmissions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
+const AdminContactSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
 // AdminMarketplace removed - feature deprecated
-const AdminSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
+const AdminSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettings"));
 // AdminPaymentSettings, AdminSystemSettings, AdminWebSettings, AdminSocialMediaSettings, AdminRedeemSettings removed - merged into AdminSettingsHub
-const AdminSettingsHub = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
-const AdminSecurityDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
+const AdminSettingsHub = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSettingsHub"));
+const AdminSecurityDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSecurityDashboard"));
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
-const AdminSubscriptionManagement = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
-const AdminMembers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMembers"));
-const AdminBurnDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBurnDashboard"));
-const AdminDataBackup = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
-const AdminBillPayments = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
-const AdminBankWithdrawals = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBankWithdrawals"));
-const AdminGiftVouchers = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
-const AdminServiceCharges = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
-const AdminServiceToggles = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
-const AdminPolicies = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
-const AdminUserLedger = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
+const AdminSubscriptionManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
+const AdminMembers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMembers"));
+const AdminBurnDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBurnDashboard"));
+const AdminDataBackup = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
+const AdminBillPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
+const AdminBankWithdrawals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBankWithdrawals"));
+const AdminGiftVouchers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
+const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
+const AdminServiceToggles = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
+const AdminPolicies = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
+const AdminUserLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
 // AdminPRCRain removed - feature deleted
-const AdminRedeemSettings = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRedeemSettings"));
-const AdminAccountingDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
-const PRCEmergencyControls = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
+const AdminRedeemSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRedeemSettings"));
+const AdminAccountingDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
+const PRCEmergencyControls = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/PRCEmergencyControls"));
 // AdminUserControls removed - functionality merged into AdminUser360
 // AdvancedUserManagement removed - functionality merged into AdminUser360
 // AdminDeliveryPartners removed - feature deprecated
-const AdminUser360 = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
-const AdminLuxuryClaims = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
-const AdminRecurringDeposits = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
-const AdminPerformanceReport = lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
+const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
+const AdminLuxuryClaims = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
+const AdminRecurringDeposits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
+const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
