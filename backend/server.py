@@ -3132,7 +3132,7 @@ async def burn_expired_prc_for_explorer_users():
     SAFETY: Only burns for users who:
     1. subscription_plan is explorer/free/null/empty
     2. Have NO active subscription (subscription_expiry is null OR in the past)
-    3. Have NEVER had a paid subscription (no subscription_start field)
+    3. Have NEVER had a paid subscription (no subscription_start, no vip_activated_at)
     """
     try:
         now = datetime.now(timezone.utc)
@@ -3152,7 +3152,7 @@ async def burn_expired_prc_for_explorer_users():
                 ]},
                 # Must NOT have startup/growth/elite as plan
                 {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
-                # Must NOT have active subscription
+                # Must NOT have active subscription expiry
                 {"$or": [
                     {"subscription_expiry": {"$exists": False}},
                     {"subscription_expiry": None},
@@ -3162,6 +3162,16 @@ async def burn_expired_prc_for_explorer_users():
                 {"$or": [
                     {"subscription_start": {"$exists": False}},
                     {"subscription_start": None}
+                ]},
+                # Must NOT have vip_activated_at (never was VIP)
+                {"$or": [
+                    {"vip_activated_at": {"$exists": False}},
+                    {"vip_activated_at": None}
+                ]},
+                # Must NOT have vip_expiry (never was VIP)
+                {"$or": [
+                    {"vip_expiry": {"$exists": False}},
+                    {"vip_expiry": None}
                 ]},
                 # Must have some PRC to burn
                 {"prc_balance": {"$gt": 0}}
