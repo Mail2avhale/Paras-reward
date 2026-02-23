@@ -2,6 +2,9 @@
 const path = require("path");
 require("dotenv").config();
 
+// Check if this is a user-only build (for Play Store AAB)
+const IS_USER_BUILD = process.env.REACT_APP_BUILD_TYPE === 'user';
+
 // Environment variable overrides
 const config = {
   disableHotReload: process.env.DISABLE_HOT_RELOAD === "true",
@@ -35,6 +38,23 @@ const webpackConfig = {
       '@': path.resolve(__dirname, 'src'),
     },
     configure: (webpackConfig) => {
+
+      // USER BUILD OPTIMIZATION: Exclude admin pages from bundle
+      if (IS_USER_BUILD && process.env.NODE_ENV === 'production') {
+        console.log('🚀 Building USER-ONLY bundle (Admin pages excluded)');
+        
+        // Add rule to replace admin imports with empty modules
+        webpackConfig.module.rules.push({
+          test: /[\\/]pages[\\/]Admin.*\.js$/,
+          use: 'null-loader'
+        });
+        
+        // Also exclude AdminLayout
+        webpackConfig.module.rules.push({
+          test: /[\\/]components[\\/]layouts[\\/]AdminLayout\.js$/,
+          use: 'null-loader'
+        });
+      }
 
       // Performance optimizations for production
       if (process.env.NODE_ENV === 'production') {
