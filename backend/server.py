@@ -24249,18 +24249,35 @@ async def create_bill_payment_request(request: Request):
     
     # ===== STRICT: EMI OR BANK REDEEM - ONLY ONE PER WEEK =====
     if request_type == "loan_emi":
+        # Check if user has done any other withdrawal this week
+        monday, sunday, next_monday = get_current_week_bounds()
+        monday_str = monday.isoformat()
+        
+        # Check bank redeem
         emi_bank_check = await check_weekly_emi_or_bank_redeem(user_id)
-        if not emi_bank_check["can_do_loan_emi"]:
-            if emi_bank_check["has_bank_redeem"]:
-                raise HTTPException(
-                    status_code=429, 
-                    detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Bank Redeem this week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
-                )
-            elif emi_bank_check["has_loan_emi"]:
-                raise HTTPException(
-                    status_code=429, 
-                    detail=f"Weekly limit: Only 1 Pay EMI allowed per week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
-                )
+        if emi_bank_check["has_bank_redeem"]:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done Bank Redeem this week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
+            )
+        if emi_bank_check["has_loan_emi"]:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Weekly limit: Only 1 Pay EMI allowed per week. Try again from Monday ({emi_bank_check['next_monday'][:10]})."
+            )
+        
+        # Check RD (PRC Savings Vault) redeem this week
+        rd_redeem_request = await db.bank_redeem_requests.find_one({
+            "user_id": user_id,
+            "request_type": "rd_redeem",
+            "created_at": {"$gte": monday_str},
+            "status": {"$nin": ["rejected", "cancelled"]}
+        })
+        if rd_redeem_request:
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done PRC Savings Vault Redeem this week. Try again from Monday ({next_monday.isoformat()[:10]})."
+            )
     # =========================================================
     
     # ===== WEEKLY SERVICE LIMIT CHECK (VIP Tier Based) =====
