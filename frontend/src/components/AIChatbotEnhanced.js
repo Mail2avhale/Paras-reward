@@ -188,13 +188,13 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
       setMessages([{
         type: 'bot',
-        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras Assistant. How can I help you?\n\n🎤 *Tip: Click the mic to speak!*`,
+        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras AI with **Smart Diagnosis**. Ask me about any problem - I'll analyze your account and find the exact issue!\n\n🔍 *Try: "माझी bank redeem का fail झाली?"*`,
         timestamp: new Date(),
         suggestions: getAISuggestions(userStats, user?.name),
         quickFAQ: [
-          { q: 'How to earn PRC?', icon: '💰' },
-          { q: 'How to redeem rewards?', icon: '🎁' },
-          { q: 'KYC verification process?', icon: '📋' },
+          { q: 'Check my account', icon: '🔍' },
+          { q: 'Why redeem failed?', icon: '❌' },
+          { q: 'KYC status check', icon: '📋' },
           { q: 'Contact support', icon: '📞' }
         ]
       }]);
