@@ -9,7 +9,7 @@ import os
 import base64
 
 # Use preview URL for testing (same as frontend sees)
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rd-system-launch.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://vault-admin-debug.preview.emergentagent.com').rstrip('/')
 
 # Test credentials from review request
 TEST_USER_EMAIL = "mail2avhale@gmail.com"

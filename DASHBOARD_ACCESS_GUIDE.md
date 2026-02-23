@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://rd-system-launch.preview.emergentagent.com/setup
+   https://vault-admin-debug.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

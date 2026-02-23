@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://rd-system-launch.preview.emergentagent.com",
+    "url": "https://vault-admin-debug.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
