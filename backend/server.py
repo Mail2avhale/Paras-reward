@@ -3150,6 +3150,7 @@ async def burn_expired_prc_for_explorer_users():
                 {"vip_activated_at": {"$exists": False}},  # Never had VIP
                 {"subscription_start": {"$exists": False}},  # Never started subscription
                 {"prc_balance": {"$gt": 0}}
+            ]
         })
         
         burn_count = 0
