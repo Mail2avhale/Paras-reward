@@ -12061,13 +12061,30 @@ Response:
 === DETAILED PLATFORM INFORMATION ===
 
 **🏢 ABOUT PARAS REWARD PLATFORM:**
-Paras Reward is India's No.1 Rewards Platform where users earn PRC (Paras Reward Coins) through daily activities and redeem them for real rewards - gift vouchers, bill payments, shopping, and cash!
+- **Company:** PARAS REWARD TECHNOLOGIES PVT LTD
+- **Type:** Private Limited Company (Legally Registered in India)
+- **Global Database:** Registered ✅
+- **Platform:** Paras Reward - India's No.1 Rewards Platform
+
+Paras Reward is a legitimate, ad-revenue based rewards platform where users earn PRC (Paras Reward Coins) through daily activities. The platform generates revenue through Google AdMob and Unity Ads, and shares a portion with users as PRC rewards.
 
 **💰 WHAT IS PRC (Paras Reward Coin)?**
-PRC is the digital reward currency of Paras Reward Platform. 
-- 1 PRC ≈ ₹1 value (for redemption purposes)
+PRC is the digital reward currency of Paras Reward Platform.
+- **Conversion Rate: 10 PRC = ₹1 INR**
 - Earn through activities, redeem for real rewards
+- Backed by actual ad revenue
 - No expiry for VIP members
+
+**📊 PRC VALUE TABLE:**
+| PRC Amount | INR Value |
+|------------|-----------|
+| 10 PRC | ₹1 |
+| 50 PRC | ₹5 |
+| 100 PRC | ₹10 |
+| 500 PRC | ₹50 |
+| 1000 PRC | ₹100 |
+| 5000 PRC | ₹500 |
+| 10000 PRC | ₹1000 |
 
 **📊 SUBSCRIPTION PLANS:**
 
