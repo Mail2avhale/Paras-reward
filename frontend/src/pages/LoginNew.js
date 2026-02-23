@@ -88,7 +88,7 @@ const LoginNew = ({ onLogin }) => {
           params: { identifier: loginData.identifier }
         });
         
-        setAuthType(response.data.auth_type);
+        setAuthType('pin'); // Always PIN
         setIdentifierChecked(true);
         
         // Check if user needs to set up PIN (no PIN exists yet)
@@ -96,12 +96,12 @@ const LoginNew = ({ onLogin }) => {
           toast.info('Please set your 6-digit PIN to login', { duration: 5000 });
         }
         
-        // Clear previous credential when switching
-        setLoginData(prev => ({ ...prev, pin: '', password: '' }));
+        // Clear previous credential
+        setLoginData(prev => ({ ...prev, pin: '' }));
         setPinError('');
       } catch (error) {
         console.error('Error checking auth type:', error);
-        setAuthType('pin'); // Default to PIN for new users
+        setAuthType('pin');
         setIdentifierChecked(true);
       } finally {
         setCheckingAuthType(false);
@@ -114,14 +114,14 @@ const LoginNew = ({ onLogin }) => {
 
   // Auto-login when 6-digit PIN is complete
   useEffect(() => {
-    if (authType === 'pin' && loginData.pin.length === 6 && loginData.identifier && !loading) {
+    if (loginData.pin.length === 6 && loginData.identifier && !loading) {
       // Small delay to show the last digit before submitting
       const autoLoginTimer = setTimeout(() => {
         handleLoginSubmit();
       }, 300);
       return () => clearTimeout(autoLoginTimer);
     }
-  }, [loginData.pin, authType, loginData.identifier, loading]);
+  }, [loginData.pin, loginData.identifier, loading]);
 
   const handleLoginSubmit = async () => {
     setPinError('');
