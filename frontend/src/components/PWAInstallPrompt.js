@@ -9,30 +9,70 @@ const PWAInstallPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Multiple checks for installed state
+    // Comprehensive check for installed state
     const checkIfInstalled = () => {
-      // Check 1: display-mode standalone
+      // Check 1: display-mode standalone (most common)
       if (window.matchMedia('(display-mode: standalone)').matches) {
         return true;
       }
-      // Check 2: iOS standalone
+      // Check 2: display-mode fullscreen (some PWAs use this)
+      if (window.matchMedia('(display-mode: fullscreen)').matches) {
+        return true;
+      }
+      // Check 3: display-mode minimal-ui
+      if (window.matchMedia('(display-mode: minimal-ui)').matches) {
+        return true;
+      }
+      // Check 4: iOS standalone (Safari)
       if (window.navigator.standalone === true) {
         return true;
       }
-      // Check 3: Android TWA
+      // Check 5: Android TWA (Trusted Web Activity)
       if (document.referrer.includes('android-app://')) {
         return true;
       }
-      // Check 4: Check localStorage flag
+      // Check 6: Check if launched from home screen (Android)
+      if (window.matchMedia('(display-mode: window-controls-overlay)').matches) {
+        return true;
+      }
+      // Check 7: Check localStorage flag (set after installation)
       if (localStorage.getItem('pwa_installed') === 'true') {
         return true;
+      }
+      // Check 8: Check if running in secure context with service worker
+      if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        // Additional check - if URL contains ?source=pwa or similar
+        if (window.location.search.includes('source=pwa') || 
+            window.location.search.includes('utm_source=homescreen')) {
+          return true;
+        }
       }
       return false;
     };
 
+    // Initial check
     if (checkIfInstalled()) {
       setIsInstalled(true);
+      localStorage.setItem('pwa_installed', 'true');
       return;
+    }
+
+    // Listen for display mode changes (in case user installs while on site)
+    const displayModeQuery = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayModeChange = (e) => {
+      if (e.matches) {
+        setIsInstalled(true);
+        setShowPrompt(false);
+        localStorage.setItem('pwa_installed', 'true');
+      }
+    };
+    
+    // Use addEventListener for modern browsers
+    if (displayModeQuery.addEventListener) {
+      displayModeQuery.addEventListener('change', handleDisplayModeChange);
+    } else if (displayModeQuery.addListener) {
+      // Fallback for older browsers
+      displayModeQuery.addListener(handleDisplayModeChange);
     }
 
     // Check if user dismissed recently (within 7 days)
@@ -49,7 +89,7 @@ const PWAInstallPrompt = () => {
       e.preventDefault();
       setDeferredPrompt(e);
       
-      // Show prompt after 3 seconds delay
+      // Show prompt after 3 seconds delay, but recheck installation status
       setTimeout(() => {
         if (!checkIfInstalled()) {
           setShowPrompt(true);
@@ -71,6 +111,11 @@ const PWAInstallPrompt = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      if (displayModeQuery.removeEventListener) {
+        displayModeQuery.removeEventListener('change', handleDisplayModeChange);
+      } else if (displayModeQuery.removeListener) {
+        displayModeQuery.removeListener(handleDisplayModeChange);
+      }
     };
   }, []);
 
@@ -98,7 +143,7 @@ const PWAInstallPrompt = () => {
     localStorage.setItem('pwaPromptDismissed', Date.now().toString());
   };
 
-  // Check if dismissed recently
+  // Additional check on mount for dismissed state
   useEffect(() => {
     const dismissed = localStorage.getItem('pwaPromptDismissed');
     if (dismissed) {
@@ -110,6 +155,7 @@ const PWAInstallPrompt = () => {
     }
   }, []);
 
+  // Don't show if installed or prompt should be hidden
   if (isInstalled || !showPrompt) {
     return null;
   }
@@ -133,6 +179,7 @@ const PWAInstallPrompt = () => {
                 onClick={handleInstallClick}
                 className="bg-white text-purple-600 hover:bg-white/90 font-semibold"
                 size="sm"
+                data-testid="pwa-install-btn"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Install App
@@ -142,6 +189,7 @@ const PWAInstallPrompt = () => {
                 variant="ghost"
                 className="text-white hover:bg-white/20"
                 size="sm"
+                data-testid="pwa-dismiss-btn"
               >
                 Maybe Later
               </Button>
@@ -151,6 +199,7 @@ const PWAInstallPrompt = () => {
           <button 
             onClick={handleDismiss}
             className="text-white/80 hover:text-white"
+            data-testid="pwa-close-btn"
           >
             <X className="h-5 w-5" />
           </button>
@@ -158,6 +207,7 @@ const PWAInstallPrompt = () => {
       </Card>
     </div>
   );
+};
 };
 
 // Install Button Component (for homepage)
