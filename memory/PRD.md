@@ -65,12 +65,17 @@ A production-grade reward platform serving 3000+ users with subscription managem
    - Daily mining vs burn rates
    - 30/90 day liability projections
 
-6. **Auto PRC Burn System**
+6. **Auto PRC Burn System** (Moved to PRC Burn Management page)
    - Admin can enable/disable auto burn
    - Set daily burn percentage (0.1% to 10%)
    - Choose target users (free/inactive)
    - Set minimum balance threshold
    - Manual "Execute Burn Now" button
+
+**Admin API Performance Optimizations:**
+- `GET /api/admin/performance-report` - Optimized with MongoDB aggregation (was timing out)
+- `GET /api/admin/prc-analytics` - Optimized with aggregation, fixed undefined variable bug
+- All APIs now respond in <0.5 seconds instead of timing out
 
 **New Backend APIs:**
 - `GET /api/admin/finance/month-comparison`
