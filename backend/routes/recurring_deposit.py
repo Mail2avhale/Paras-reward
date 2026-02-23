@@ -1621,11 +1621,6 @@ async def admin_reject_rd_redeem(request_id: str, admin_id: str, reason: str = N
                 redeem_request = all_matching
         
         logging.info(f"=== RD REJECT RESULT === Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
-            redeem_request = await db.bank_redeem_requests.find_one({
-                "request_id": {"$regex": request_id, "$options": "i"}
-            })
-        
-        logging.info(f"RD Reject - Request ID: {request_id}, Found: {bool(redeem_request)}, Source: {source_collection if redeem_request else 'None'}")
         
         if not redeem_request:
             raise HTTPException(status_code=404, detail=f"Request not found: {request_id}. Please contact support.")
