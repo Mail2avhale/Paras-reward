@@ -814,7 +814,7 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* AI Smart Tip */}
       <div className="px-5 mb-4">
-        <AISmartTip pageName="dashboard" variant="banner" />
+        <AISmartTip pageName="dashboard" variant="banner" user={user} userStats={stats} />
       </div>
 
       {/* Quick Actions */}
