@@ -46,7 +46,7 @@ const PrivacyPolicy = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const lastUpdated = 'February 7, 2026';
+  const lastUpdated = 'February 23, 2026';
 
   const sections = [
     { id: 'introduction', title: 'Introduction', icon: FileText },
@@ -57,9 +57,11 @@ const PrivacyPolicy = () => {
     { id: 'cookies', title: 'Cookies & Tracking', icon: Globe },
     { id: 'third-party', title: 'Third-Party Services', icon: Building2 },
     { id: 'advertising', title: 'Advertising (AdMob/AdSense)', icon: Smartphone },
+    { id: 'data-safety', title: 'Google Play Data Safety', icon: Shield },
     { id: 'children', title: "Children's Privacy", icon: Shield },
     { id: 'your-rights', title: 'Your Rights', icon: Scale },
     { id: 'data-retention', title: 'Data Retention', icon: Clock },
+    { id: 'international', title: 'International Users', icon: Globe },
     { id: 'changes', title: 'Policy Changes', icon: RefreshCw },
     { id: 'contact', title: 'Contact Us', icon: Mail },
   ];
