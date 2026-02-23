@@ -13,7 +13,7 @@ import {
   Calendar, RefreshCw, FileText, PieChart as PieIcon,
   ArrowUpRight, ArrowDownRight, Receipt, CreditCard, Building,
   Smartphone, Megaphone, Users, Wallet, AlertTriangle, CheckCircle,
-  Info, ChevronRight, Loader2, Heart, Flame, Crown, Zap, Settings,
+  Info, ChevronRight, Loader2, Heart, Crown, Zap,
   BarChart3, Target, Clock
 } from 'lucide-react';
 
