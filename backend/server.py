@@ -3126,29 +3126,44 @@ async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type:
 
 async def burn_expired_prc_for_explorer_users():
     """
-    Burn PRC for Explorer (demo) users after 2 days of inactivity
-    NEW RULE: If Last_Active_Mining_Date + 2 days < Current_Date THEN Burn 100% PRC
-    Only burns for users who have NEVER had a paid subscription
+    Burn PRC for Explorer (demo/free) users after 2 days of inactivity.
+    Rule: If Last_Active_Mining_Date + 2 days < Current_Date THEN Burn 100% PRC
     
-    IMPORTANT: This function is DISABLED for safety.
-    Paid users were incorrectly affected due to query issues.
+    SAFETY: Only burns for users who:
+    1. subscription_plan is explorer/free/null/empty
+    2. Have NO active subscription (subscription_expiry is null OR in the past)
+    3. Have NEVER had a paid subscription (no subscription_start field)
     """
-    logging.info("[PRC BURN] burn_expired_prc_for_explorer_users is DISABLED for safety")
-    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
-    
-    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
         burn_threshold = now - timedelta(days=2)
         
-        # STRICT QUERY: Only target users who are DEFINITELY free/explorer
-        # Must NOT have any subscription plan other than explorer
+        # ULTRA-SAFE QUERY: Only target TRUE free users
+        # Explicitly exclude anyone with ANY paid plan indicator
         explorer_users = db.users.find({
             "$and": [
-                {"subscription_plan": {"$in": ["explorer", None, ""]}},  # Only explorer or no plan
-                {"subscription_expiry": {"$exists": False}},  # Never had subscription
-                {"vip_activated_at": {"$exists": False}},  # Never had VIP
-                {"subscription_start": {"$exists": False}},  # Never started subscription
+                # Plan must be explorer, free, null, or empty string
+                {"$or": [
+                    {"subscription_plan": "explorer"},
+                    {"subscription_plan": "free"},
+                    {"subscription_plan": None},
+                    {"subscription_plan": ""},
+                    {"subscription_plan": {"$exists": False}}
+                ]},
+                # Must NOT have startup/growth/elite as plan
+                {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+                # Must NOT have active subscription
+                {"$or": [
+                    {"subscription_expiry": {"$exists": False}},
+                    {"subscription_expiry": None},
+                    {"subscription_expiry": ""}
+                ]},
+                # Must NOT have subscription start date (never paid)
+                {"$or": [
+                    {"subscription_start": {"$exists": False}},
+                    {"subscription_start": None}
+                ]},
+                # Must have some PRC to burn
                 {"prc_balance": {"$gt": 0}}
             ]
         })
@@ -3159,20 +3174,33 @@ async def burn_expired_prc_for_explorer_users():
         async for user in explorer_users:
             uid = user.get("uid")
             prc_balance = user.get("prc_balance", 0)
+            email = user.get("email", "")
             
-            # Skip if user has/had paid subscription
-            subscription_plan = user.get("subscription_plan", "explorer")
-            if subscription_plan in ["startup", "growth", "elite"]:
+            # TRIPLE CHECK: Skip if ANY paid indicator exists
+            subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+            if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
+                logging.info(f"[PRC BURN SKIP] {uid} has paid plan: {subscription_plan}")
                 continue
             
-            # Check if ever had VIP/paid subscription (legacy check)
-            if user.get("vip_activated_at") or user.get("subscription_expiry"):
+            # Skip if has subscription expiry in future
+            sub_expiry = user.get("subscription_expiry")
+            if sub_expiry:
+                try:
+                    expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
+                    if expiry_dt > now:
+                        logging.info(f"[PRC BURN SKIP] {uid} has active subscription until {expiry_dt}")
+                        continue
+                except:
+                    pass
+            
+            # Skip if ever had a subscription start date
+            if user.get("subscription_start"):
+                logging.info(f"[PRC BURN SKIP] {uid} has subscription_start (was paid user)")
                 continue
             
             # Check last mining activity
             last_mining = user.get("mining_session_end") or user.get("mining_start_time")
             if not last_mining:
-                # Check last transaction
                 last_txn = await db.transactions.find_one(
                     {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
                     sort=[("timestamp", -1)]
@@ -3199,45 +3227,41 @@ async def burn_expired_prc_for_explorer_users():
             
             # Check if inactive for 2+ days
             if last_mining_dt + timedelta(days=2) < now:
-                # Burn 100% PRC
                 burned_amount = prc_balance
                 
-                # Update user balance
                 await db.users.update_one(
                     {"uid": uid},
                     {"$set": {"prc_balance": 0}}
                 )
                 
-                # Log burn transaction
                 await db.transactions.insert_one({
                     "transaction_id": str(uuid.uuid4()),
                     "user_id": uid,
                     "type": "prc_burn",
                     "amount": -burned_amount,
-                    "description": "Demo user inactivity burn (2 days)",
+                    "description": "Explorer user inactivity burn (2 days inactive)",
                     "timestamp": now.isoformat(),
                     "status": "completed",
-                    "burn_reason": "DEMO_INACTIVITY_BURN"
+                    "burn_reason": "EXPLORER_INACTIVITY_BURN"
                 })
                 
-                # Log activity
                 await log_activity(
                     user_id=uid,
                     action_type="prc_burn",
-                    description=f"Demo user PRC burned due to 2-day inactivity: {burned_amount} PRC",
-                    metadata={"burn_reason": "DEMO_INACTIVITY_BURN", "burned_amount": burned_amount}
+                    description=f"Explorer user PRC burned due to 2-day inactivity: {burned_amount} PRC",
+                    metadata={"burn_reason": "EXPLORER_INACTIVITY_BURN", "burned_amount": burned_amount}
                 )
                 
                 burn_count += 1
                 total_burned += burned_amount
-                logging.info(f"Burned {burned_amount} PRC for explorer user {uid} (inactive since {last_mining_dt})")
+                logging.info(f"[PRC BURN] Burned {burned_amount} PRC for explorer user {uid} (inactive since {last_mining_dt})")
         
-        logging.info(f"Explorer burn job complete: {burn_count} users, {total_burned} PRC burned")
+        logging.info(f"[PRC BURN] Explorer burn complete: {burn_count} users, {total_burned} PRC burned")
         return {"users_affected": burn_count, "total_burned": total_burned}
         
     except Exception as e:
-        logging.error(f"Error burning PRC for explorer users: {e}")
-        return {"error": str(e)}
+        logging.error(f"[PRC BURN ERROR] Explorer burn failed: {e}")
+        return {"error": str(e), "users_affected": 0, "total_burned": 0.0}
 
 async def burn_expired_prc_for_free_users():
     """
