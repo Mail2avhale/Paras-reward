@@ -5171,17 +5171,22 @@ async def check_security_question(user_id: str):
     logging.info(f"Checking security question for user_id: {user_id}")
     logging.info(f"DB name: {db.name}")
     
-    # Try to find the user
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "security_question": 1, "security_question_index": 1})
-    logging.info(f"User found: {user is not None}")
+    # Try finding without projection first
+    user_raw = await db.users.find_one({"uid": user_id})
+    logging.info(f"User found raw: {user_raw is not None}")
     
-    if not user:
-        # Debug: try finding by other means
-        sample_user = await db.users.find_one({}, {"uid": 1, "email": 1, "_id": 0})
+    if user_raw:
+        user = {
+            "security_question": user_raw.get("security_question"),
+            "security_question_index": user_raw.get("security_question_index")
+        }
+    else:
+        # Debug: try different query
+        all_uids = await db.users.find({}, {"uid": 1, "_id": 0}).limit(5).to_list(5)
         all_users_count = await db.users.count_documents({})
         logging.error(f"User not found by uid: {user_id}")
-        logging.error(f"Total users: {all_users_count}, Sample: {sample_user}")
-        raise HTTPException(status_code=404, detail=f"User not found. UID: {user_id}, DB has {all_users_count} users")
+        logging.error(f"Total users: {all_users_count}, First 5 UIDs: {all_uids}")
+        raise HTTPException(status_code=404, detail=f"User not found. UID: {user_id}")
     
     has_question = bool(user.get("security_question"))
     
