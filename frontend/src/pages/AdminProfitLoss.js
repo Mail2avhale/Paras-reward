@@ -645,7 +645,330 @@ const AdminProfitLoss = ({ user }) => {
         )}
       </Card>
 
-            {/* Add Expense Modal */}
+      {/* ===== NEW ANALYTICS SECTIONS ===== */}
+      
+      {/* Month-over-Month Comparison */}
+      {monthComparison && !monthComparison.error && (
+        <Card className="p-6 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-blue-500/30">
+          <h3 className="text-lg font-bold text-blue-400 flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5" />
+            Month-over-Month Comparison
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-sm text-gray-400 mb-1">{monthComparison.current_month?.label}</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(monthComparison.current_month?.revenue)}</p>
+              <div className="mt-2 text-xs text-gray-400">
+                <p>New Users: {monthComparison.current_month?.new_users}</p>
+                <p>New Paid: {monthComparison.current_month?.new_paid_users}</p>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-sm text-gray-400 mb-1">{monthComparison.previous_month?.label}</p>
+              <p className="text-2xl font-bold text-gray-400">{formatCurrency(monthComparison.previous_month?.revenue)}</p>
+              <div className="mt-2 text-xs text-gray-400">
+                <p>New Users: {monthComparison.previous_month?.new_users}</p>
+                <p>New Paid: {monthComparison.previous_month?.new_paid_users}</p>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gray-800/50 rounded-lg">
+              <p className="text-sm text-gray-400 mb-2">Growth</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Revenue</span>
+                  <span className={`font-bold ${monthComparison.changes?.revenue >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {monthComparison.changes?.revenue >= 0 ? '+' : ''}{monthComparison.changes?.revenue}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Users</span>
+                  <span className={`font-bold ${monthComparison.changes?.new_users >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {monthComparison.changes?.new_users >= 0 ? '+' : ''}{monthComparison.changes?.new_users}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+      
+      {/* Paid Users Wallet Summary */}
+      {paidWalletSummary && paidWalletSummary.summary && (
+        <Card className="p-6 bg-gradient-to-r from-amber-900/30 to-orange-900/30 border-amber-500/30">
+          <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2 mb-4">
+            <Crown className="w-5 h-5" />
+            Paid Users Wallet Summary
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-3xl font-bold text-amber-400">{paidWalletSummary.summary.total_paid_users}</p>
+              <p className="text-xs text-gray-400">Paid Users</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-purple-400">{paidWalletSummary.summary.total_prc_balance?.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Total PRC Balance</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-green-400">{formatCurrency(paidWalletSummary.summary.total_prc_inr_value)}</p>
+              <p className="text-xs text-gray-400">INR Value</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-blue-400">{formatCurrency(paidWalletSummary.summary.total_redeemed_inr)}</p>
+              <p className="text-xs text-gray-400">Total Redeemed</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            {Object.entries(paidWalletSummary.balance_by_plan || {}).map(([plan, data]) => (
+              <div key={plan} className="p-3 bg-gray-800/30 rounded-lg">
+                <span className="font-medium text-white capitalize">{plan}</span>
+                <p className="text-lg font-bold text-white">{data.total_prc?.toLocaleString()} PRC</p>
+                <p className="text-xs text-gray-400">{data.user_count} users</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+      
+      {/* Subscription Revenue Details */}
+      {subscriptionRevenue && !subscriptionRevenue.error && (
+        <Card className="p-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-purple-500/30">
+          <h3 className="text-lg font-bold text-purple-400 flex items-center gap-2 mb-4">
+            <Target className="w-5 h-5" />
+            Subscription Revenue ({subscriptionRevenue.period})
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-green-400">{formatCurrency(subscriptionRevenue.total_revenue)}</p>
+              <p className="text-xs text-gray-400">Total Revenue</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-white">{subscriptionRevenue.total_subscriptions}</p>
+              <p className="text-xs text-gray-400">Total Subs</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-blue-400">{subscriptionRevenue.new_vs_renewal?.new?.count || 0}</p>
+              <p className="text-xs text-gray-400">New</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-amber-400">{subscriptionRevenue.new_vs_renewal?.renewal_rate || 0}%</p>
+              <p className="text-xs text-gray-400">Renewal Rate</p>
+            </div>
+          </div>
+        </Card>
+      )}
+      
+      {/* PRC Liability Tracker */}
+      {prcLiability && !prcLiability.error && (
+        <Card className="p-6 bg-gradient-to-r from-red-900/30 to-rose-900/30 border-red-500/30">
+          <h3 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5" />
+            PRC Liability Tracker
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-purple-400">{prcLiability.total_prc_in_circulation?.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Total PRC</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-red-400">{formatCurrency(prcLiability.total_inr_liability)}</p>
+              <p className="text-xs text-gray-400">INR Liability</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-green-400">+{prcLiability.rates_30d?.daily_mining?.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Daily Mining</p>
+            </div>
+            <div className="p-4 bg-gray-800/50 rounded-lg text-center">
+              <p className="text-2xl font-bold text-orange-400">-{prcLiability.rates_30d?.daily_burn?.toLocaleString()}</p>
+              <p className="text-xs text-gray-400">Daily Burn</p>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-gray-800/30 rounded-lg">
+            <p className="text-sm text-gray-400 mb-2">Liability Projections</p>
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-xs text-gray-500">30 Days</p>
+                <p className="text-lg font-bold text-yellow-400">{formatCurrency(prcLiability.projection?.['30_day_liability_inr'])}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">90 Days</p>
+                <p className="text-lg font-bold text-orange-400">{formatCurrency(prcLiability.projection?.['90_day_liability_inr'])}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+      
+      {/* Cash Flow Projection */}
+      {cashFlowProjection && !cashFlowProjection.error && (
+        <Card className="p-6 bg-gradient-to-r from-cyan-900/30 to-teal-900/30 border-cyan-500/30">
+          <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5" />
+            Cash Flow Projection (3 Months)
+          </h3>
+          
+          <div className="grid grid-cols-3 gap-4">
+            {cashFlowProjection.projections?.map((proj, idx) => (
+              <div key={idx} className="p-4 bg-gray-800/50 rounded-lg">
+                <p className="text-sm text-gray-400 mb-2">{proj.month}</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-400">Revenue</span>
+                    <span className="text-green-400">{formatCurrency(proj.projected_revenue)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-400">Profit</span>
+                    <span className={proj.projected_profit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      {formatCurrency(proj.projected_profit)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+      
+      {/* Auto PRC Burn Settings */}
+      <Card className="p-6 bg-gradient-to-r from-orange-900/30 to-red-900/30 border-orange-500/30">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+            <Flame className="w-5 h-5" />
+            Auto PRC Burn Settings
+          </h3>
+          <Button 
+            onClick={() => setShowBurnSettings(!showBurnSettings)}
+            variant="outline" 
+            size="sm" 
+            className="border-orange-500/50"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Configure
+          </Button>
+        </div>
+        
+        {burnSettings && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400">Status</p>
+              <p className={`text-lg font-bold ${burnSettings.auto_burn_enabled ? 'text-green-400' : 'text-red-400'}`}>
+                {burnSettings.auto_burn_enabled ? 'ENABLED' : 'DISABLED'}
+              </p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400">Daily Burn %</p>
+              <p className="text-lg font-bold text-orange-400">{burnSettings.daily_burn_percentage}%</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400">Target Users</p>
+              <p className="text-lg font-bold text-white capitalize">{burnSettings.target_user_type}</p>
+            </div>
+            <div className="p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400">Min Balance</p>
+              <p className="text-lg font-bold text-white">{burnSettings.min_balance_to_burn} PRC</p>
+            </div>
+          </div>
+        )}
+        
+        {showBurnSettings && (
+          <div className="mt-4 p-4 bg-gray-800/50 rounded-lg space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-400">Daily Burn Percentage</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  max="10"
+                  defaultValue={burnSettings?.daily_burn_percentage || 1}
+                  className="bg-gray-700 border-gray-600 mt-1"
+                  id="burnPercentage"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400">Min Balance to Burn</label>
+                <Input
+                  type="number"
+                  min="1"
+                  defaultValue={burnSettings?.min_balance_to_burn || 10}
+                  className="bg-gray-700 border-gray-600 mt-1"
+                  id="minBalance"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400">Target User Type</label>
+              <select 
+                className="w-full mt-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                defaultValue={burnSettings?.target_user_type || 'free'}
+                id="targetType"
+              >
+                <option value="free">Free Users Only</option>
+                <option value="inactive">Inactive Users (7+ days)</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="burnEnabled"
+                defaultChecked={burnSettings?.auto_burn_enabled}
+                className="w-4 h-4"
+              />
+              <label htmlFor="burnEnabled" className="text-sm text-gray-300">Enable Auto Burn</label>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={async () => {
+                  const newSettings = {
+                    auto_burn_enabled: document.getElementById('burnEnabled').checked,
+                    daily_burn_percentage: parseFloat(document.getElementById('burnPercentage').value),
+                    min_balance_to_burn: parseInt(document.getElementById('minBalance').value),
+                    target_user_type: document.getElementById('targetType').value,
+                    admin_id: user?.uid
+                  };
+                  try {
+                    await axios.post(`${API}/admin/finance/prc-burn-settings`, newSettings);
+                    toast.success('Settings saved!');
+                    fetchAnalyticsData();
+                    setShowBurnSettings(false);
+                  } catch (e) {
+                    toast.error('Failed to save');
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                Save Settings
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!window.confirm('Execute PRC burn now?')) return;
+                  try {
+                    const res = await axios.post(`${API}/admin/finance/prc-burn-execute`, { admin_id: user?.uid });
+                    toast.success(`Burned ${res.data.total_burned} PRC from ${res.data.users_affected} users`);
+                    fetchAnalyticsData();
+                  } catch (e) {
+                    toast.error(e.response?.data?.error || 'Burn failed');
+                  }
+                }}
+                variant="outline"
+                className="border-orange-500 text-orange-400"
+              >
+                <Flame className="w-4 h-4 mr-2" />
+                Execute Burn Now
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Add Expense Modal */}
       {showAddExpense && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-gray-900 border-gray-700">
