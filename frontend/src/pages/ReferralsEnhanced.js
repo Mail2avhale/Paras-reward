@@ -727,6 +727,11 @@ Download now & start earning!`;
         </div>
       </div>
 
+      {/* AI Smart Tip for Referrals */}
+      <div className="px-5 mb-4">
+        <AISmartTip pageName="referrals" variant="compact" />
+      </div>
+
       {/* Hero Card - Your Unique Code */}
       <div className="px-5 mb-6">
         <motion.div 
