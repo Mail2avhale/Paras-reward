@@ -585,12 +585,23 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                     )}
                   </div>
                   <div className="flex-1">
+                    {/* Diagnostic Badge */}
+                    {msg.isDiagnostic && msg.type === 'bot' && (
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-medium rounded-full">
+                          <Sparkles className="w-3 h-3" />
+                          Smart Diagnosis
+                        </span>
+                      </div>
+                    )}
                     <div className={`rounded-2xl px-4 py-3 ${
                       msg.type === 'user' 
                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-md' 
                         : msg.isError 
                           ? 'bg-red-100 text-red-800 rounded-bl-md'
-                          : 'bg-white text-gray-800 shadow-md rounded-bl-md border border-gray-100'
+                          : msg.isDiagnostic
+                            ? 'bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 shadow-md rounded-bl-md border border-emerald-200'
+                            : 'bg-white text-gray-800 shadow-md rounded-bl-md border border-gray-100'
                     }`}>
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                       
