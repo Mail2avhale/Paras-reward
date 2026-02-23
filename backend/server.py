@@ -23130,17 +23130,17 @@ async def get_prc_analytics():
         mining_agg = await db.transactions.aggregate([
             {"$match": {"type": {"$in": ["mining", "tap_game"]}, "timestamp": {"$gte": thirty_days_str}}},
             {"$addFields": {"date": {"$substr": ["$timestamp", 0, 10]}}},
-            {"$group": {"_id": "$date", "mined": {"$sum": {"$abs": "$amount"}}}}
+            {"$group": {"_id": "$date", "mined": {"$sum": "$amount"}}}
         ]).to_list(100)
-        daily_mining = {d["_id"]: d["mined"] for d in mining_agg if d["_id"]}
+        daily_mining = {d["_id"]: abs(d["mined"]) for d in mining_agg if d["_id"]}
         
         # Daily consumption - from transactions
         consume_agg = await db.transactions.aggregate([
             {"$match": {"type": {"$in": ["redeem", "bill_payment", "gift_voucher", "marketplace"]}, "timestamp": {"$gte": thirty_days_str}}},
             {"$addFields": {"date": {"$substr": ["$timestamp", 0, 10]}}},
-            {"$group": {"_id": "$date", "consumed": {"$sum": {"$abs": "$amount"}}}}
+            {"$group": {"_id": "$date", "consumed": {"$sum": "$amount"}}}
         ]).to_list(100)
-        daily_consumption = {d["_id"]: d["consumed"] for d in consume_agg if d["_id"]}
+        daily_consumption = {d["_id"]: abs(d["consumed"]) for d in consume_agg if d["_id"]}
         
         # Create timeline data
         timeline_data = []
