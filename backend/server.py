@@ -12211,7 +12211,261 @@ PRC is the digital reward currency of Paras Reward Platform.
 - WhatsApp: +91-9999999999
 - Working Hours: Mon-Sat, 10 AM - 7 PM
 
-**🎯 FREQUENTLY ASKED QUESTIONS:**
+=== ⚠️ IMPORTANT DISCLAIMER - PRC काय आहे आणि काय नाही ===
+
+**✅ PRC काय आहे (What PRC IS):**
+- PRC म्हणजे Paras Reward Coin - एक Digital Reward Currency
+- Platform वर activities करून कमावता येते
+- Gift Vouchers, Bill Payments, Shopping साठी redeem करता येते
+- 1 PRC ≈ ₹1 redemption value (platform वर)
+- Legitimate reward points system
+
+**❌ PRC काय नाही (What PRC is NOT):**
+- PRC हे Cryptocurrency नाही (Bitcoin, Ethereum सारखे नाही)
+- PRC ला कोणत्याही exchange वर trade करता येत नाही
+- PRC ची market value fluctuate होत नाही
+- PRC हे investment scheme नाही
+- PRC guaranteed income नाही - हे reward points आहेत
+- PRC फक्त Paras Reward Platform वरच valid आहे
+- PRC cash directly नाही - redemption द्वारे value मिळते
+
+**⚖️ Legal Disclaimer:**
+- Paras Reward हे reward-based engagement platform आहे
+- कोणतेही guaranteed returns नाहीत
+- Earnings depend on user activity and platform rules
+- यावर investment म्हणून अवलंबून राहू नये
+- हे financial product नाही
+
+=== 📊 TODAY'S RATES & USER'S RATE ===
+
+**आजचे Base Mining Rates (Plan-wise):**
+| Plan | Base Rate | Per Day (24hr) | Per Month |
+|------|-----------|----------------|-----------|
+| EXPLORER | 0.10 PRC/hr | 2.4 PRC | 72 PRC |
+| STARTER | 0.20 PRC/hr | 4.8 PRC | 144 PRC |
+| GROWTH | 0.30 PRC/hr | 7.2 PRC | 216 PRC |
+| PROFESSIONAL | 0.50 PRC/hr | 12 PRC | 360 PRC |
+| ENTERPRISE | 1.00 PRC/hr | 24 PRC | 720 PRC |
+
+**Rate कसा Calculate होतो:**
+- Base Rate × Active Session Hours = Daily PRC
+- Bonus events/promotions मध्ये extra % मिळू शकतो
+- Session active असणे आवश्यक आहे
+
+**User ला मिळणारा Rate:**
+- User चा plan check करा (diagnostic data मध्ये आहे)
+- User चा mining_rate field check करा
+- Plan आणि actual rate मध्ये mismatch असल्यास explain करा
+
+=== 📋 KYC कशी करायची (Step-by-Step) ===
+
+**KYC का आवश्यक?**
+- Bank Redeem (पैसे काढण्यासाठी)
+- High-value transactions
+- Government regulations compliance
+- Account security
+
+**KYC साठी लागणारे Documents:**
+1. **Aadhaar Card** - Front + Back photo
+2. **PAN Card** - Clear photo
+3. **Selfie** - Live photo (काही cases मध्ये)
+
+**KYC Steps (Mobile App):**
+1. App उघडा → **Profile** tab वर जा
+2. **KYC Verification** किंवा **Verify Identity** वर click करा
+3. **Aadhaar Upload:**
+   - "Upload Aadhaar" वर tap करा
+   - Camera किंवा Gallery निवडा
+   - Aadhaar front photo घ्या (clear असावी)
+   - Aadhaar back photo घ्या
+   - 12-digit Aadhaar number टाका
+4. **PAN Upload:**
+   - "Upload PAN" वर tap करा
+   - PAN card चा clear photo घ्या
+   - 10-character PAN number टाका (format: ABCDE1234F)
+5. **Name Match करा:**
+   - Aadhaar आणि PAN वरचे नाव match असावे
+   - App मधले नाव पण same असावे
+6. **Submit करा**
+7. **Wait for Verification:**
+   - Status: "Pending" दिसेल
+   - 24-48 तासात verification होते
+   - Approved/Rejected notification येईल
+
+**KYC Tips:**
+- Photos clear आणि readable असाव्यात
+- Documents expired नसावेत
+- Name spelling सर्वत्र same असावे
+- Glare/blur नसलेले photos घ्या
+
+**KYC Rejection कारणे:**
+- Blurry/unclear photos
+- Name mismatch
+- Expired documents
+- Photo मध्ये details दिसत नाहीत
+- Wrong document uploaded
+
+=== 💰 REDEEM कसे करायचे (All Options) ===
+
+**OPTION 1: Bank Redeem (EMI Pay) - पैसे Bank मध्ये**
+
+*Requirements:*
+- KYC Approved असणे आवश्यक
+- Minimum PRC balance (plan नुसार)
+- Weekly limit मध्ये असणे आवश्यक
+- Bank details added असणे आवश्यक
+
+*Steps:*
+1. App → **Dashboard** किंवा **Redeem** section
+2. **Bank Redeem** किंवा **EMI Pay** निवडा
+3. **Amount** टाका (किती PRC redeem करायचे)
+4. **Bank Details** verify करा:
+   - Account Number
+   - IFSC Code
+   - Account Holder Name
+5. **Submit Request** करा
+6. Admin approval नंतर 24-48 तासात bank मध्ये पैसे येतात
+
+*Weekly Limits:*
+- Explorer: 2 redeems/week
+- Starter: 5 redeems/week
+- Growth: 20 redeems/week
+- Professional: 50 redeems/week
+- Enterprise: Unlimited
+
+**OPTION 2: Gift Vouchers**
+
+*Requirements:*
+- Paid plan (Starter+) असणे आवश्यक
+- Sufficient PRC balance
+
+*Steps:*
+1. App → **Gift Vouchers** section
+2. **Brand निवडा** (Amazon/Flipkart/Myntra/Swiggy/Zomato)
+3. **Voucher Amount** निवडा (₹100, ₹200, ₹500, etc.)
+4. **PRC Pay** करा
+5. **Voucher Code** email वर येतो (24-48 hrs)
+6. Code वापरून shopping करा
+
+**OPTION 3: Bill Payments**
+
+*Requirements:*
+- Paid plan असणे आवश्यक
+- Sufficient PRC balance
+
+*Steps:*
+1. App → **Bill Payments** section
+2. **Service निवडा:**
+   - Mobile Recharge
+   - DTH Recharge
+   - Electricity Bill
+   - Water Bill
+   - Gas Bill
+3. **Details भरा:**
+   - Mobile: Number + Operator + Plan
+   - Electricity: Consumer Number + Board
+   - DTH: Subscriber ID + Operator
+4. **Amount confirm** करा
+5. **Pay with PRC** करा
+6. Instant/24hr मध्ये recharge/payment होते
+
+**OPTION 4: Shopping (Marketplace)**
+
+*Steps:*
+1. App → **Marketplace** / **Shop**
+2. Category browse करा
+3. Product निवडा
+4. **Add to Cart**
+5. **Checkout** → Address भरा
+6. **Pay with PRC**
+7. Order delivery 5-7 days
+
+=== 🔄 SUBSCRIPTION RENEWAL कशी करायची ===
+
+**कधी Renew करायची?**
+- Plan expiry date जवळ आल्यावर
+- Expiry notification आल्यावर
+- Dashboard वर "Renew" दिसल्यावर
+
+**Renewal Steps:**
+1. App → **Profile** किंवा **Subscription** section
+2. Current plan आणि expiry date बघा
+3. **Renew** किंवा **Upgrade Plan** वर click करा
+4. **Plan निवडा** (same plan किंवा upgrade)
+5. **Payment Method निवडा:**
+   - UPI (Google Pay/PhonePe/Paytm)
+   - Debit/Credit Card
+   - Net Banking
+   - PRC Balance (available असल्यास)
+6. **Payment करा**
+7. **Screenshot Upload करा** (manual verification असल्यास)
+8. Admin approval नंतर plan activate होतो
+
+**Renewal Tips:**
+- Expiry आधी renew करा - gap पडल्यास earning थांबते
+- Auto-renewal option असल्यास enable करा
+- Payment proof जपून ठेवा
+
+**Payment Pending असल्यास:**
+- 24-48 तास wait करा
+- Screenshot uploaded आहे का check करा
+- Support ला contact करा transaction ID सह
+
+=== 👥 INVITE कसे करायचे (Referral) ===
+
+**तुमचा Referral Code कुठे मिळेल:**
+1. App → **Referrals** किंवा **Invite Friends** section
+2. तुमचा unique code दिसेल (Example: ABC12345)
+3. "Copy Code" किंवा "Share" button वापरा
+
+**Invite करण्याचे पर्याय:**
+
+*Option 1: WhatsApp Share*
+1. **Share** button वर tap करा
+2. **WhatsApp** निवडा
+3. Friend निवडा आणि send करा
+4. Auto-generated message जाईल referral code आणि link सह
+
+*Option 2: Code Copy करून Share*
+1. Code **Copy** करा
+2. कोणत्याही app मधून share करा:
+   - WhatsApp, Telegram, SMS
+   - Facebook, Instagram
+   - Email
+3. Message example:
+   "Paras Reward App download करा आणि माझा code [ABC12345] वापरा. दोघांनाही bonus मिळेल! Link: [app link]"
+
+*Option 3: QR Code*
+1. Referrals section मध्ये QR code असेल
+2. Friend ला QR scan करायला सांगा
+3. Direct app download + code apply होईल
+
+**Friend ला काय करायचे:**
+1. App download करा (Play Store/App Store)
+2. Register करताना **Referral Code** field मध्ये तुमचा code टाका
+3. Registration complete करा
+4. दोघांनाही bonus मिळेल!
+
+**Referral Bonus कधी मिळतो:**
+- Friend ने code वापरून join केल्यावर
+- Friend ने paid subscription घेतल्यावर (जर applicable)
+- Friend earn करायला लागल्यावर तुम्हाला % मिळतो
+
+**Referral Earnings Structure:**
+- Level 1 (Direct): Friend च्या earning चे 10%
+- Level 2: 5%
+- Level 3: 3%
+- Level 4: 2%
+- Level 5: 1%
+- Total: Up to 21% passive income!
+
+**Tips for More Referrals:**
+- Family members ला invite करा
+- Friends group मध्ये share करा
+- Social media वर post करा
+- Benefits explain करा
+
+=== 🎯 FREQUENTLY ASKED QUESTIONS ===
 
 Q: PRC कसे कमवायचे?
 A: Daily login करा, session start करा, tap game खेळा, आणि friends ला invite करा.
