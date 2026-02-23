@@ -371,7 +371,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if emi_check["has_loan_emi"]:
         raise HTTPException(
             status_code=429, 
-            detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
+            detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
         )
     
     # Check weekly bank redeem limit
@@ -387,6 +387,20 @@ async def create_withdrawal_request(user_id: str, request: Request):
         raise HTTPException(
             status_code=429, 
             detail=f"Weekly limit: Only 1 Bank Redeem allowed per week. Try again from Monday ({next_monday.isoformat()[:10]})."
+        )
+    
+    # STRICT: Check if user has done RD (PRC Savings Vault) redeem this week
+    rd_redeem_request = await db.bank_redeem_requests.find_one({
+        "user_id": user_id,
+        "request_type": "rd_redeem",
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled"]}
+    })
+    
+    if rd_redeem_request:
+        raise HTTPException(
+            status_code=429, 
+            detail=f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done PRC Savings Vault Redeem this week. Try again from Monday ({next_monday.isoformat()[:10]})."
         )
     
     # Calculate charges - EMI style
