@@ -23170,9 +23170,9 @@ async def get_prc_analytics():
             "consumption_rate": round((total_prc_consumed / total_prc_mined * 100), 2) if total_prc_mined > 0 else 0,
             "consumption_breakdown": consumption_breakdown,
             "timeline_data": timeline_data[-30:],  # Last 30 days
-            "total_users": len(users),
-            "vip_users": len(vip_users),
-            "avg_prc_per_user": round(total_current_balance / len(users), 2) if users else 0
+            "total_users": balance_agg[0]["user_count"] if balance_agg else 0,
+            "vip_users": vip_count,
+            "avg_prc_per_user": round(total_current_balance / (balance_agg[0]["user_count"] if balance_agg else 1), 2)
         }
         
     except Exception as e:
