@@ -12108,18 +12108,202 @@ Guidelines:
 # Store chat sessions in memory (for demo - production should use DB)
 chat_sessions = {}
 
+async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
+    """
+    Fetch comprehensive user data for smart diagnosis.
+    This enables the chatbot to automatically diagnose issues.
+    """
+    now = datetime.now(timezone.utc)
+    week_start = now - timedelta(days=now.weekday())
+    
+    # 1. Get pending bank redeem requests
+    pending_bank_redeems = await db.bank_redeem_requests.find({
+        "user_id": uid,
+        "status": "pending"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(5)
+    
+    # 2. Get weekly withdrawal count
+    weekly_withdrawals = await db.bank_redeem_requests.count_documents({
+        "user_id": uid,
+        "status": {"$in": ["approved", "completed"]},
+        "created_at": {"$gte": week_start.isoformat()}
+    })
+    
+    # 3. Get pending PRC Savings Vault requests
+    pending_rd_redeems = await db.rd_redeem_requests.find({
+        "user_id": uid,
+        "status": "pending"
+    }, {"_id": 0, "request_id": 1, "amount": 1, "created_at": 1}).to_list(5)
+    
+    # 4. Get active RD accounts
+    active_rds = await db.recurring_deposits.find({
+        "user_id": uid,
+        "status": "active"
+    }, {"_id": 0, "rd_id": 1, "total_deposited": 1, "interest_earned": 1}).to_list(5)
+    
+    # 5. Get pending subscription payments
+    pending_subscriptions = await db.subscriptions.find({
+        "user_id": uid,
+        "status": "pending"
+    }, {"_id": 0, "payment_id": 1, "amount": 1, "created_at": 1}).to_list(3)
+    
+    # 6. Get KYC documents status
+    kyc_docs = await db.kyc_documents.find_one(
+        {"user_id": uid},
+        {"_id": 0, "status": 1, "rejection_reason": 1, "submitted_at": 1}
+    )
+    
+    # 7. Get referral stats
+    direct_referrals = await db.referrals.count_documents({"referrer_uid": uid, "level": 1})
+    total_referrals = await db.referrals.count_documents({"referrer_uid": uid})
+    
+    # 8. Get recent failed login attempts
+    recent_login_fails = await db.login_attempts.count_documents({
+        "identifier": {"$in": [user.get("email"), user.get("mobile"), uid]},
+        "success": False,
+        "timestamp": {"$gte": (now - timedelta(hours=24)).isoformat()}
+    })
+    
+    # 9. Get pending orders
+    pending_orders = await db.orders.find({
+        "user_id": uid,
+        "status": "pending"
+    }, {"_id": 0, "order_id": 1, "product_name": 1, "created_at": 1}).to_list(5)
+    
+    # 10. Get mining/session info
+    mining_active = user.get("mining_active", False)
+    last_mining_collect = user.get("last_mining_collect")
+    
+    # 11. Check subscription expiry
+    subscription_plan = user.get("subscription_plan", "explorer")
+    subscription_expiry = user.get("subscription_expiry")
+    is_expired = False
+    days_until_expiry = 0
+    
+    if subscription_expiry and subscription_plan != "explorer":
+        try:
+            expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            if expiry_date < now:
+                is_expired = True
+            else:
+                days_until_expiry = (expiry_date - now).days
+        except:
+            pass
+    
+    # 12. Calculate weekly limits
+    plan_limits = WEEKLY_SERVICE_LIMITS.get(subscription_plan, WEEKLY_SERVICE_LIMITS["explorer"])
+    weekly_limit = plan_limits.get("shopping", 10)
+    
+    # Build diagnostic context
+    diagnostic_context = f"""
+
+=== SMART DIAGNOSTIC DATA (Real-time from Database) ===
+
+**User Status:**
+- Name: {user.get('name', 'User')}
+- UID: {uid}
+- Email: {user.get('email', 'Not set')}
+- Mobile: {user.get('mobile', 'Not set')}
+- State: {user.get('state', 'Not set')}
+
+**Account Status:**
+- Subscription Plan: {subscription_plan.upper()}
+- Plan Expired: {'YES ⚠️' if is_expired else 'NO ✅'}
+- Days Until Expiry: {days_until_expiry if not is_expired and days_until_expiry > 0 else 'N/A'}
+- PRC Balance: {user.get('prc_balance', 0):.2f} PRC
+- Wallet Status: {user.get('wallet_status', 'active')}
+
+**KYC Status:**
+- Status: {user.get('kyc_status', 'not_submitted').upper()}
+- KYC Doc Status: {kyc_docs.get('status', 'Not submitted') if kyc_docs else 'Not submitted'}
+- Rejection Reason: {kyc_docs.get('rejection_reason', 'None') if kyc_docs else 'None'}
+
+**Bank Redeem Status:**
+- Pending Requests: {len(pending_bank_redeems)}
+- Weekly Withdrawals Used: {weekly_withdrawals}/{weekly_limit}
+- Weekly Limit Reached: {'YES ⚠️' if weekly_withdrawals >= weekly_limit else 'NO ✅'}
+
+**PRC Savings Vault Status:**
+- Active Accounts: {len(active_rds)}
+- Total Deposited: {sum(rd.get('total_deposited', 0) for rd in active_rds):.2f} PRC
+- Pending Redeem Requests: {len(pending_rd_redeems)}
+
+**Subscription/Payment Status:**
+- Pending Payments: {len(pending_subscriptions)}
+- Payment Details: {pending_subscriptions[0] if pending_subscriptions else 'None'}
+
+**Mining/Session Status:**
+- Session Active: {'YES ✅' if mining_active else 'NO ⚠️'}
+- Total Mined: {user.get('total_mined', 0):.2f} PRC
+
+**Referral Network:**
+- Direct Referrals: {direct_referrals}
+- Total Network: {total_referrals}
+- Referral Code: {user.get('referral_code', 'N/A')}
+
+**Security Status:**
+- Failed Login Attempts (24h): {recent_login_fails}
+- Account Locked: {'YES ⚠️' if user.get('locked_until') else 'NO ✅'}
+- Security Question Set: {'YES ✅' if user.get('security_question') else 'NO ⚠️'}
+
+**Pending Orders:**
+- Count: {len(pending_orders)}
+
+=== DIAGNOSTIC RULES ===
+
+When user asks about an issue, analyze the above data and provide:
+1. ❌ The EXACT problem found (with specific data)
+2. ✅ What is working fine
+3. 🔧 Step-by-step solution
+
+**Common Issue Diagnosis:**
+
+1. **Bank Redeem Not Working:**
+   - Check: KYC Status must be 'verified' or 'approved'
+   - Check: Weekly limit not exceeded ({weekly_withdrawals}/{weekly_limit} used)
+   - Check: Sufficient PRC balance
+   - Check: No pending requests already
+
+2. **PRC Savings Vault Redeem Failed:**
+   - Check: Weekly withdrawal limit
+   - Check: KYC status
+   - Check: Active RD account exists
+
+3. **Subscription Payment Pending:**
+   - Check pending_subscriptions data
+   - Guide to contact admin if stuck > 48 hours
+
+4. **Not Earning PRC:**
+   - Check: Session active? {mining_active}
+   - Check: Subscription expired? {is_expired}
+   - Solution: Start session from Dashboard
+
+5. **Login Issues:**
+   - Check: Failed attempts: {recent_login_fails}
+   - Check: Account locked: {user.get('locked_until')}
+   - Solution: Wait or contact admin
+
+6. **Referral Bonus Not Credited:**
+   - Check referral's subscription status
+   - Explain: Bonus only from PAID referrals
+
+=== END DIAGNOSTIC DATA ===
+"""
+    return diagnostic_context
+
+
 @api_router.post("/ai/chatbot")
 async def ai_chatbot(
     uid: str,
     message: str,
     session_id: Optional[str] = None
 ):
-    """AI Chatbot for customer support"""
+    """AI Chatbot for customer support with Smart Diagnostics"""
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
     # Get user info for context
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "pin_hash": 0, "security_answer": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -12127,22 +12311,38 @@ async def ai_chatbot(
     if not session_id:
         session_id = f"chat_{uid}_{str(uuid.uuid4())[:8]}"
     
+    # Detect if this is a diagnostic/problem query
+    diagnostic_keywords = [
+        "fail", "not working", "problem", "issue", "error", "why", "stuck",
+        "pending", "rejected", "काम नाही", "समस्या", "का", "कसे",
+        "नाही झाले", "अडकले", "फेल", "कामात नाही", "होत नाही",
+        "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
+        "redeem", "withdraw", "payment", "bonus", "referral", "mining",
+        "session", "login", "kyc", "balance"
+    ]
+    
+    is_diagnostic_query = any(keyword in message.lower() for keyword in diagnostic_keywords)
+    
     # Get or create chat instance
-    if session_id not in chat_sessions:
-        # Add user context to system message
-        user_context = f"""
+    if session_id not in chat_sessions or is_diagnostic_query:
+        # Get smart diagnostic context for problem queries
+        if is_diagnostic_query:
+            diagnostic_context = await get_smart_diagnostic_context(uid, user)
+        else:
+            diagnostic_context = f"""
 
 Current User Context:
 - Name: {user.get('name', 'User')}
-- Membership: {user.get('membership_type', 'free').upper()}
+- Membership: {user.get('subscription_plan', 'explorer').upper()}
 - PRC Balance: {user.get('prc_balance', 0):.2f}
 - KYC Status: {user.get('kyc_status', 'pending')}
 - Session Active: {'Yes' if user.get('mining_active') else 'No'}
 """
+        
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=session_id,
-            system_message=CHATBOT_SYSTEM_MESSAGE + user_context
+            system_message=CHATBOT_SYSTEM_MESSAGE + diagnostic_context
         ).with_model("openai", "gpt-5.2")
         chat_sessions[session_id] = chat
     else:
@@ -12159,12 +12359,14 @@ Current User Context:
             "session_id": session_id,
             "user_message": message,
             "bot_response": response,
+            "is_diagnostic": is_diagnostic_query,
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
         
         return {
             "response": response,
-            "session_id": session_id
+            "session_id": session_id,
+            "is_diagnostic": is_diagnostic_query
         }
     except Exception as e:
         logging.error(f"Chatbot error: {e}")
