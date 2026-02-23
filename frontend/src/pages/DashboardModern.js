@@ -812,6 +812,11 @@ const DashboardModern = ({ user, onLogout }) => {
         />
       </div>
 
+      {/* AI Smart Tip */}
+      <div className="px-5 mb-4">
+        <AISmartTip pageName="dashboard" variant="banner" />
+      </div>
+
       {/* Quick Actions */}
       <div className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-3">
