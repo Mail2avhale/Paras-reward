@@ -54,6 +54,8 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
+    "build:user": "cross-env REACT_APP_BUILD_TYPE=user craco build",
+    "build:admin": "cross-env REACT_APP_BUILD_TYPE=admin craco build",
     "test": "craco test"
   },
   "browserslist": {
