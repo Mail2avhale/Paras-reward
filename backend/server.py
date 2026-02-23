@@ -3623,8 +3623,16 @@ async def run_prc_burn_job():
     """
     Scheduled job to burn expired PRC
     Should be run periodically (every hour or daily)
+    
+    Three types of burns:
+    1. Explorer users (2 days inactive) - 100% burn
+    2. Free users (48 hour FIFO expiry)
+    3. Expired subscriptions (5 days after expiry for PRC mined post-expiry)
     """
-    logging.info("Starting PRC burn job...")
+    logging.info("[PRC BURN JOB] Starting PRC burn job...")
+    
+    # Burn explorer user PRC (2 days inactive)
+    explorer_result = await burn_expired_prc_for_explorer_users()
     
     # Burn free user PRC (48 hours expiry)
     free_result = await burn_expired_prc_for_free_users()
@@ -3632,8 +3640,12 @@ async def run_prc_burn_job():
     # Burn expired subscription PRC (5 days after expiry)
     sub_result = await burn_expired_subscription_prc()
     
-    logging.info(f"PRC burn job complete: Free={free_result}, Subscription={sub_result}")
-    return {"free_users": free_result, "expired_subscriptions": sub_result}
+    logging.info(f"[PRC BURN JOB] Complete: Explorer={explorer_result}, Free={free_result}, Subscription={sub_result}")
+    return {
+        "explorer_users": explorer_result, 
+        "free_users": free_result, 
+        "expired_subscriptions": sub_result
+    }
 
 # ==================== END PRC BURN SYSTEM ====================
 
