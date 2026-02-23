@@ -25036,6 +25036,109 @@ async def toggle_registration(request: Request):
     return {"message": f"Registration {status} successfully", "registration_enabled": enabled}
 
 # PRC Burn Admin Endpoints
+@api_router.get("/admin/burn-prc-preview")
+async def preview_prc_burn():
+    """
+    Preview PRC burn - shows which users WOULD be affected without actually burning.
+    Use this to verify the logic is correct before running actual burn.
+    """
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    burn_threshold_2days = now - timedelta(days=2)
+    
+    # Count Explorer users that would be affected
+    explorer_query = {
+        "$and": [
+            {"$or": [
+                {"subscription_plan": "explorer"},
+                {"subscription_plan": "free"},
+                {"subscription_plan": None},
+                {"subscription_plan": ""},
+                {"subscription_plan": {"$exists": False}}
+            ]},
+            {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+            {"$or": [
+                {"subscription_expiry": {"$exists": False}},
+                {"subscription_expiry": None},
+                {"subscription_expiry": ""}
+            ]},
+            {"$or": [
+                {"subscription_start": {"$exists": False}},
+                {"subscription_start": None}
+            ]},
+            {"prc_balance": {"$gt": 0}}
+        ]
+    }
+    explorer_count = await db.users.count_documents(explorer_query)
+    
+    # Count Free users that would be affected
+    free_query = {
+        "$and": [
+            {"$or": [
+                {"subscription_plan": {"$exists": False}},
+                {"subscription_plan": None},
+                {"subscription_plan": ""},
+                {"subscription_plan": "explorer"},
+                {"subscription_plan": "free"}
+            ]},
+            {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+            {"$or": [
+                {"subscription_expiry": {"$exists": False}},
+                {"subscription_expiry": None},
+                {"subscription_expiry": {"$lt": now_iso}}
+            ]},
+            {"mining_history": {"$exists": True, "$ne": []}}
+        ]
+    }
+    free_count = await db.users.count_documents(free_query)
+    
+    # Count Expired subscription users that would be affected
+    expired_query = {
+        "$and": [
+            {"subscription_plan": {"$in": ["startup", "growth", "elite"]}},
+            {"subscription_expiry": {"$exists": True, "$ne": None, "$lt": now_iso}},
+            {"mining_history": {"$exists": True, "$ne": []}}
+        ]
+    }
+    expired_count = await db.users.count_documents(expired_query)
+    
+    # Get sample users for each category (first 5)
+    explorer_samples = await db.users.find(explorer_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1}).limit(5).to_list(5)
+    free_samples = await db.users.find(free_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1}).limit(5).to_list(5)
+    expired_samples = await db.users.find(expired_query, {"uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1, "subscription_expiry": 1}).limit(5).to_list(5)
+    
+    # Clean _id from samples
+    for samples in [explorer_samples, free_samples, expired_samples]:
+        for s in samples:
+            s.pop("_id", None)
+    
+    return {
+        "preview_only": True,
+        "note": "No PRC was burned. This is a preview of what WOULD happen.",
+        "timestamp": now_iso,
+        "potential_burns": {
+            "explorer_users": {
+                "count": explorer_count,
+                "rule": "2 days inactive, never had paid subscription",
+                "sample_users": explorer_samples
+            },
+            "free_users": {
+                "count": free_count,
+                "rule": "PRC older than 48 hours (FIFO)",
+                "sample_users": free_samples
+            },
+            "expired_subscriptions": {
+                "count": expired_count,
+                "rule": "PRC mined after subscription expiry, 5+ days old",
+                "sample_users": expired_samples
+            }
+        },
+        "safety_checks": {
+            "paid_users_excluded": True,
+            "active_subscriptions_excluded": True
+        }
+    }
+
 @api_router.post("/admin/burn-prc-now")
 async def trigger_prc_burn():
     """Manually trigger PRC burn job (Admin only)"""
