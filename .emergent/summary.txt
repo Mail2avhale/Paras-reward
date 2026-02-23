@@ -1,156 +1,203 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to finalize their Paras Reward application for a Google Play Store launch. This involves resolving critical production bugs, enhancing admin capabilities, removing unused features, and preparing the application for packaging.
+The user's primary goal is to finalize the Paras Reward application for a Google Play Store release by generating an AAB file. This session focused on resolving numerous production bugs, implementing user-requested features, and preparing the codebase for a user-only build.
 
-Key user requests during this session included:
-1.  **Fix Critical Bugs (P0):** Resolve the persistent issue where paid users' PRC balances reset to zero upon login.
-2.  **Simplify Membership Logic:** Address the complexity and bugs arising from having two fields ( and ) to determine user status.
-3.  **Full Feature Cleanup:** Remove the Marketplace and Delivery Partners features entirely from both the user and admin sections of the application.
-4.  **Enhance My Orders Page:** Create a consolidated My Orders page to show all user requests (Bill Payments, Gift Cards, Redeem to Bank) with advanced features like sorting, pagination, and rejection reasons.
-5.  **Improve UI/UX:** Add a Redeem To Bank link to the user's main sidebar for better visibility.
-6.  **Fix Redeem to Bank Visibility:** Debug why the Redeem to Bank card was not appearing on the dashboard for some KYC-verified users.
-7.  **Remove Treasury Hunt Game:** Clean up all code, pages, and routes related to the Treasury Hunt game.
-8.  **New Production Bug:** After deployment, the user reported that the Collect PRC functionality is not working.
+The key objectives addressed were:
+1.  **Bug Fixes:** Resolve critical and recurring production issues, including the PRC Savings Vault redemption failure, the non-functional Admin Performance Report page, inconsistent weekly withdrawal limits, and a faulty PWA install banner.
+2.  **Feature Removal:** Completely eradicate the PRC Rain Drop feature from the entire codebase as requested.
+3.  **Codebase Preparation for AAB:** Split the frontend codebase to generate a smaller, faster, user-only application build, excluding all admin-related code.
+4.  **App Store Optimization:** Improve the app's SEO and PWA score through various Quick Win optimizations.
+5.  **Policy Compliance:** Update legal documents (Terms, Privacy Policy) to align with the latest Google Play and AdMob policies for 2025.
+6.  **New Feature:** Implement a Security Question mechanism as an additional step in the PIN reset flow for enhanced security.
 
-**User's preferred language**: The user communicates in both English and Marathi. The most recent interactions were in **Marathi**. The next agent **MUST** start the conversation in Marathi and continue in the user's preferred language.
+**User's preferred language**: The user communicates primarily in **Marathi**. The next agent **MUST** start the conversation in Marathi and continue in the user's preferred language.
 
 **what currently exists?**
-The Paras Reward application is a full-stack React/FastAPI platform. During this session, the agent successfully addressed a critical PRC balance reset bug by refactoring the membership logic into centralized helper functions (, ) and implementing a PRC restoration tool for admins. Significant cleanup was performed, completely removing the Marketplace, Delivery Partners, and Treasury Hunt features. The user-facing My Orders page was significantly enhanced to be a central hub for all requests. However, after the user deployed these changes, a new critical bug has emerged: users are unable to collect their daily PRC.
+The application is now significantly more stable and optimized. All major user-reported production bugs from the previous session have been fixed and verified. The codebase has been cleaned by removing the deprecated PRC Rain Drop feature.
+
+Crucially, the frontend build process has been reconfigured to support separate builds for the user-facing application and the admin panel. This allows for the generation of a smaller, optimized AAB file for the Play Store that excludes all admin code. SEO and PWA scores have been improved, legal policies are updated, and a new Security Question feature for PIN reset has been fully implemented on both the frontend and backend.
 
 **Last working item**:
--   **Last item agent was working:** Investigating a new, critical production bug reported by the user via a screen recording. The video shows that tapping the Collect PRC button on the dashboard does nothing; the balance does not update, and the button remains active. The agent was acknowledging the issue just as the session ended.
--   **Status:** IN PROGRESS
+-   **Last item agent was working:** Testing the newly implemented Security Question PIN reset flow with a mock user. The agent was attempting a full end-to-end test from user creation to PIN reset.
+-   **Status:** BLOCKED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both. The agent must first investigate the backend endpoint responsible for PRC collection (likely  or similar in ) using  to check for errors. Concurrently, the frontend code in  that triggers the collection needs to be reviewed. After a fix is implemented, the  must be used to verify the functionality on the dashboard.
--   **User Testing Done:** Y (User discovered and reported the bug from the deployed production environment).
+-   **Which testing method agent to use?** Manual testing. The agent was blocked by a database discrepancy in the preview environment where the user created via bash was not found by the running API. The next agent should attempt to test this by creating a user through the UI, setting a security question in the profile, and then initiating the Forgot PIN flow.
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0): CRITICAL - PRC Collect is Not Working on Production**
--   **Issue 2 (P1): Subscription Deletion Fails on Production**
+-   **Issue 1 (P0): Test the Security Question PIN Reset Flow**
+-   **Issue 2 (P1): Team and Level Members Not Displaying**
+-   **Issue 3 (P2): Incorrect Counts in Admin Menu**
 
 **Issues Detail:**
--   **Issue 1: CRITICAL - PRC Collect is Not Working on Production**
-    -   **Attempted fixes:** None yet. This is a newly reported bug.
+-   **Issue 1: Test the Security Question PIN Reset Flow**
+    -   **Attempted fixes:** The agent created backend APIs, and frontend UI, and attempted an E2E test using . The test failed because the mock user created in the shell was not accessible to the running backend service, a common issue in the preview environment.
     -   **Next debug checklist:**
-        1.  Analyze the user-provided screen recording () to understand the exact user flow and UI behavior.
-        2.  Inspect the browser's developer console in the recording for any client-side errors.
-        3.  Examine the backend code in  for the API endpoint that handles PRC collection. Look for recent changes that might have broken it, especially related to the membership logic refactor.
-        4.  Review the frontend code in  to check the  handler for the Collect PRC button and the subsequent API call.
-        5.  Use  to manually test the collection API endpoint to isolate whether the issue is in the frontend or backend.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a core feature of the app's reward loop. If users cannot collect their currency, user engagement and retention will plummet. This is a showstopper bug.
+        1.  Do not use  or  to create a test user.
+        2.  Use the application's UI to register a new test user.
+        3.  Log in as the test user and navigate to the Profile page.
+        4.  Set a security question and answer.
+        5.  Log out, and go to the Forgot PIN page.
+        6.  Complete all steps of the flow (Email -> Mobile -> Aadhaar/PAN -> Security Question -> Set New PIN) to verify it works end-to-end.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a new, user-facing security feature. It must be verified before the AAB is generated and released.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N (This is a new bug).
+    -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
 
--   **Issue 2: Subscription Deletion Fails on Production**
-    -   **Attempted fixes:** A fix was implemented in a previous session to target the correct MongoDB collections.
-    -   **Next debug checklist:** The fix has not been verified by the user on the production environment. The next agent should ask the user to test this admin functionality and confirm if it's resolved.
-    -   **Why fix this issue and what will be achieved with the fix?** Provides admins with necessary user data management capabilities.
+-   **Issue 2: Team and Level Members Not Displaying**
+    -   **Attempted fixes:** A fix was attempted in the previous session (adding a fallback structure and Redis caching).
+    -   **Next debug checklist:** This is a recurring production bug. Ask the user if this issue is still occurring in the production app . If it is, the backend query in  in  needs to be re-analyzed for performance issues on a large dataset.
+    -   **Why fix this issue and what will be achieved with the fix?** It's a core dashboard feature for users. Its failure is a major source of user frustration.
     -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend (Admin action).
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None
+
+-   **Issue 3: Incorrect Counts in Admin Menu**
+    -   **Attempted fixes:** The API calls and calculations in  were corrected in the previous session.
+    -   **Next debug checklist:** Ask the user to check the admin panel on their production app and confirm if the pending request counts in the sidebar are now accurate.
+    -   **Why fix this issue and what will be achieved with the fix?** Provides admins with an accurate overview of their workload.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
+
+**In progress Task List**:
+There are no tasks currently in progress. The last task (Security Question implementation) is complete, pending testing.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Restore Lost PRC for Affected Users:** Guide the admin on how to use the newly created Restore PRC tool on the production environment for all users affected by the previous balance reset bug.
--   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment).
--   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay).
--   **P1: Finalize AAB Generation for Play Store:** Guide the user through using  to package the AAB file now that PWA enhancements are in place.
+*   **P0:** Guide the user on how to generate the User App AAB file for Play Store submission using the new yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command.
+*   **P1:** Integrate a third-party API for utility payments (Mobile recharge, DTH, Bill payment).
+*   **P1:** Implement a UPI Payment Gateway (e.g., Razorpay).
+*   **P2:** Add Email/Mobile OTP verification on signup.
+*   **P2:** Further improve App Score with performance optimizations like image compression and lazy loading.
 
 **Future Tasks:**
--   **P2:** Design and implement the DIRECTOR 365 subscription plan.
--   **P2:** Implement advanced PRC burning concepts.
--   **P2:** Add a Force PIN Change feature for users.
--   **P3:** Migrate KYC/Receipt images from MongoDB (base64) to a dedicated file storage solution (e.g., S3).
--   **P3: Refactor :** The main backend file is excessively large. It should be broken down into a proper structure with separate files for routes, models, and services.
+*   **P2:** Implement advanced fraud detection mechanisms.
+*   **P2:** Design and implement the DIRECTOR 365 subscription plan.
+*   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution (e.g., S3).
+*   **P3:** Refactor the monolithic  into a modern structure (routes, models, services).
 
 **Completed work in this session**
--   **PRC Balance Reset Bug (FIXED):** Resolved the critical bug causing PRC to reset on login by refactoring membership checks to use new helper functions (, ).
--   **PRC Restoration Tool (IMPLEMENTED):** Created a backend API () and a frontend button in User 360 for admins to restore lost PRC for affected users.
--   **Membership Logic Refactor (COMPLETED):** Greatly simplified the application's logic by standardizing on the  helper function, removing dozens of direct, error-prone checks on .
--   **Feature Removal (Marketplace, Delivery Partners, Treasury Hunt):** Successfully performed a full cleanup, removing all frontend and backend code, routes, and UI elements associated with these unused features.
--   **My Orders Page Overhaul (COMPLETED):** Enhanced the  page to be a unified dashboard for all user requests, adding sorting, pagination, patience messages, and URL-based filtering. Redundant history sections were removed from other pages.
--   **UI Improvements (COMPLETED):** Added a Redeem To Bank link to the user's main sidebar () for easier access.
--   **KYC Visibility Bug (FIXED):** Resolved an issue preventing the Redeem to Bank card from appearing by implementing a KYC status auto-sync mechanism in the backend ().
+-   **Production Bug Fix (Verified):** Resolved the PRC Savings Vault redeem failure. The agent added extensive logging, a debug endpoint, and successfully guided the user to test and reject 5 pending requests via  against their production API.
+-   **Bug Fix:** Fixed the Admin Performance Report page, which was stuck on loading due to a missing  icon import.
+-   **Bug Fix:** Corrected the weekly withdrawal limit logic, ensuring that attempts to redeem from EMI Pay, Bank Redeem, or PRC Savings Vault correctly check for recent withdrawals across all three features.
+-   **Feature Removal:** Completely removed the PRC Rain Drop feature from frontend components, routes, and backend API endpoints.
+-   **AAB Preparation:** Reconfigured the frontend build process using , , and  to support separate builds. The yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command now generates a smaller build for the user app, excluding admin pages and reducing the admin chunk size from 838KB to 18KB.
+-   **New Feature:** Implemented and integrated a Security Question feature for PIN reset. This included:
+    -   Backend: New APIs in  to set, get, and verify security questions, with answers stored hashed. Updated the forgot PIN logic to include this new step.
+    -   Frontend: A new  component for the user's profile, and added the fourth step to the  flow.
+-   **App Store Optimization:**
+    -   Updated  with app screenshots and additional shortcuts.
+    -   Added  structured data to  for better SEO.
+    -   Created  and  files.
+    -   Installed  and implemented dynamic meta tags on the landing page for improved SEO.
+-   **Policy Compliance:** Updated  and  with new sections on Data Safety and Advertising to comply with latest Google Play policies.
+-   **UI Improvement:** Enhanced the logic for the PWA install banner in  to be more reliable.
+
+**Earlier issues found/mentioned but not fixed**
+The recurring issues of Team and Level Members Not Displaying and Incorrect Counts in Admin Menu have fixes that are pending user verification from the previous session. They have been carried over to the .
 
 **Known issue recurrence from previous fork**
--   The critical **PRC balance reset bug** was a recurring issue that was fixed during this session by a significant refactor. However, a new, related critical bug (**PRC collection failure**) has appeared on production immediately after deployment, indicating potential fragility in the PRC logic.
+-   **Issue recurrence in previous fork:** PRC Savings Vault Redeem Fails in Production and Admin Performance Report Not Loading.
+-   **Recurrence count:** 3+
+-   **Status:** RESOLVED. Both of these highly recurring and critical production bugs were successfully fixed and verified in this session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Production Debugging:** Analyzing user-provided screen recordings to diagnose critical bugs in a live environment.
--   **Code Refactoring & Simplification:** Reducing technical debt by replacing a complex, dual-field system (, ) with a single source of truth (helper functions).
--   **Large-Scale Feature Removal:** Systematically removing all traces of unused features from a large codebase across both frontend and backend to reduce complexity and potential bugs.
--   **Centralized UI Components:** Consolidating related user information (all order/request types) into a single, enhanced UI component (My Orders) for better user experience.
+-   **Backend:** FastAPI, MongoDB
+-   **Frontend:** React, Shadcn UI
+-   **PWA:** Service Workers, Manifest file, Offline Caching
+-   **Build System:**  for overriding Create React App's Webpack config,  for environment variables,  for excluding modules from builds.
+-   **SEO:**  for dynamic meta tags, JSON-LD for structured data, sitemap.
+-   **Security:**  for hashing security question answers.
 
 **key DB schema**
--   **users:** Contains , , and . The  field is now being phased out in favor of logic based on .  was found to be missing for some users, requiring an auto-sync mechanism.
--   **kyc_documents:** Stores KYC files. Used as the source of truth for the KYC status auto-sync.
--   **bill_payment_requests, gift_card_requests, bank_redeem_requests:** Separate collections for different user requests, which are all aggregated on the My Orders page.
+-   **users:**
+    -    (string, optional)
+    -    (string, hashed, optional)
+
+**changes in tech stack**
+The following npm packages were added to the frontend:
+-   : To allow customizing the Webpack configuration.
+-   : To set environment variables across different platforms for build scripts.
+-   : A Webpack loader used to replace modules (like admin pages) with an empty module in the user-only build.
+-   : To manage changes to the document head for dynamic SEO.
 
 **All files of reference**
--    (Primary file for all backend logic)
--    (Location of the failing Collect PRC button)
--    (The newly enhanced orders page)
--    (User navigation)
--    (Main router)
--    (Admin tool for user management)
+-   : Contains new security question logic and weekly limit fixes.
+-   : The core of the user/admin build split.
+-   : Shows new dependencies and build scripts (, ).
+-   : Contains the new multi-step UI for PIN reset.
+-   : UI for setting the security question.
+-   : Contains updated Google policy text.
 
 **Areas that need refactoring**:
--   **Massive  file:** This file contains over 20,000 lines of code, mixing API routes, business logic, database queries, and helper functions. It is extremely difficult to maintain and is a high-risk area for regressions. It urgently needs to be broken down into a modern web framework structure (e.g., separate directories for routes, controllers/services, models, and utils).
--   **Consolidate Subscription Collections:** The data model for subscriptions is still scattered across , , and . This should be unified to prevent data inconsistencies.
+-   The backend is still a single monolithic  file. A future task is to refactor it into a more modern structure with separate files for routes, models, and services to improve maintainability.
 
 **key api endpoints**
--   : **(POTENTIALLY BROKEN)** The endpoint responsible for the daily PRC collection.
--   : **(NEW)** Restores a user's PRC balance based on their transaction history.
--   : Returns stats for the user dashboard; was modified to include an auto-sync for KYC status.
--   : Returns user profile data; was modified to include an auto-sync for KYC status.
+-   : Sets the security question for a logged-in user.
+-   : Verifies the answer during the PIN reset flow.
+-   : Retrieves the user's chosen question.
+-   : (Fixed) Approves a savings vault request.
+-   : (Fixed) Rejects a savings vault request.
+-   : (New) Diagnostic endpoint to find which collection a request ID belongs to.
 
 **Critical Info for New Agent**
--   **Language:** Start the conversation in **Marathi**. The user's last messages were in Marathi.
--   **Top Priority:** The absolute top priority is the new **PRC is not being collected bug (P0)**. The user has just deployed the app, and this functionality is critical for user engagement. All other tasks are secondary.
--   **Video Evidence:** The user has provided a screen recording of the bug. You must analyze this first to understand the problem.
--   **Massive Backend File:** Be extremely careful when editing . It is a very large and fragile file. Any changes must be surgical and well-tested. Proposing a refactor of this file should be a future task after the current critical bug is fixed.
+-   **Build Process is Key:** The most significant change is the introduction of separate build types. The user's main goal is to generate an AAB. You must guide them to use the yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. command. The full build for the web-based admin panel is yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. or yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.. Do not use the standard yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. for the AAB.
+-   **Test Security Question Feature:** The security question flow is fully implemented but was not successfully tested E2E due to environment limitations. This is the highest priority testing task.
+-   **User Verification:** Several older bug fixes for Team/Levels Display and Admin Menu Counts are still pending verification from the user. You should ask the user to check these in their production app.
+-   **Production is the Source of Truth:** The user's production app is live. When debugging, especially for data-related issues like the remaining pending items, always ask the user to verify behavior on .
 
 **documents and test reports created in this job**
--    (From a previous fork)
--    (From a previous fork)
--    (Generated in this session, verifying the PRC reset fix)
+-    was updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Reports PRC is not being collected after deploying the app, and provides a screen recording. **Status: IN PROGRESS (HIGHEST PRIORITY)**
-2.  **User:** Asks about subscription expiry conditions. **Status: ADDRESSED**
-3.  **User:** Asks to remove the Treasury Hunt game completely. **Status: COMPLETED**
-4.  **User:** Reports that the Redeem to Bank card is not visible for some verified users. **Status: COMPLETED**
-5.  **User:** Asks to continue with refactoring the membership complexity. **Status: COMPLETED**
-6.  **User:** Asks if the proposed refactor plan is safe and easy. **Status: ADDRESSED**
-7.  **User:** Asks if there is still complexity in the membership system. **Status: ADDRESSED**
-8.  **User:** Asks to add pagination, sorting, and latest-on-top to the My Orders page. **Status: COMPLETED**
-9.  **User:** Asks to advance the My Orders page to consolidate all requests and add patience messages. **Status: COMPLETED**
-10. **User:** Asks to remove Delivery Partners and add Redeem To Bank to the user menu. **Status: COMPLETED**
+1.  **User:** Can you add Security Questions for PIN reset? **Status: COMPLETED**
+2.  **User:** Make the security questions in English. **Status: COMPLETED**
+3.  **User:** Test the PIN reset flow for me with a mock user. **Status: BLOCKED**
+4.  **User:** The app is deployed now. What is the command to reject a PRC Redeem request? **Status: COMPLETED**
+5.  **User:** Here is my admin ID and the request ID to reject. **Status: COMPLETED**
+6.  **User:** Reject these 4 other requests as well. **Status: COMPLETED**
+7.  **User:** Okay Thanks. **Status: ACKNOWLEDGED**
+8.  **User:** Now we just need to do the user app AAB. Are the codes split? What have you done for fast loading and offline? **Status: COMPLETED**
+9.  **User:** I like Option 2 (complete split), but first explain what needs to be done, pros and cons. We will decide later. **Status: COMPLETED**
+10. **User:** Explain Option 1.5 (exclude admin from build) to me, its benefits etc. **Status: COMPLETED**
+11. **User:** Can you do all of this for me? I can't do 2 builds and don't get support. **Status: COMPLETED**
+12. **User:** Do I need to deploy the app first? Explain step-by-step how to run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command., use the folder to generate AAB, and upload to Play Store. **Status: COMPLETED**
+13. **User:** What have you done to increase our app's score? What else can be done? **Status: COMPLETED**
+14. **User:** Do all the Quick Wins. **Status: COMPLETED**
+15. **User:** SEO. **Status: COMPLETED**
+16. **User:** Again, check Terms and Conditions, Google Policy, Google AdMob Policy latest updates and update the app. **Status: COMPLETED**
 
 **Project Health Check:**
--   **Broken:**
-    -   The core **PRC collection mechanism is critically broken** on the production environment. This is the highest priority issue.
--   **Mocked:** None.
+-   **Broken:** None. The critical production bugs from the start of the session are now fixed.
+-   **Blocked:**
+    -   End-to-end testing of the new Security Question PIN reset flow is blocked on finding a reliable way to test in the preview environment (UI-based testing is the proposed solution).
 
 **3rd Party Integrations**
 -   **Redis (Upstash):** Used for caching.
 -   **Dun & Bradstreet:** D-U-N-S® Registered Seal.
--   **Google AdMob:** Integrated with the user's Publisher ID, App ID, Banner Ad, and Rewarded Ad Unit IDs.
+-   **Google AdMob:** Integrated with user-provided IDs.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, the testing agent was used to validate the fix for the PRC balance reset bug.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None.
--   **Known regressions:** A new critical regression has appeared on production where PRC cannot be collected.
+-   **Test files created:** []
+-   **Known regressions:** The recurring issues (Team/Levels, Admin Counts) are pending user verification and could still be present.
 
 **Credentials to test flow:**
--   **Admin User:**  / PIN: 
--   **Production Test User (from previous handoff):**  / PIN: 
+N/A
 
 **What agent forgot to execute**
--   The agent did not get a chance to investigate the newly reported PRC collection failure bug. The immediate next step is to start debugging this issue.</analysis>
+-   The agent correctly implemented the security question feature but failed to complete the end-to-end testing, leaving the feature unverified. While the agent identified the environmental cause of the failure, they did not pivot to a UI-driven test method which would have likely succeeded.</analysis>
