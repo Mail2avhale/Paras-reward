@@ -5110,11 +5110,11 @@ async def forgot_pin_verify_document(request: Request):
 
 # Security Questions List
 SECURITY_QUESTIONS = [
-    "तुमच्या आईचे माहेरचे गाव कोणते?",  # What is your mother's maiden village?
-    "तुमचा पहिला मोबाईल नंबर कोणता होता?",  # What was your first mobile number?
-    "तुमच्या पहिल्या शाळेचे नाव काय?",  # What was your first school's name?
-    "तुमच्या बालपणीच्या सर्वात चांगल्या मित्राचे नाव काय?",  # What is your childhood best friend's name?
-    "तुमच्या आवडत्या शिक्षकाचे नाव काय?",  # What is your favorite teacher's name?
+    "What is your mother's maiden village/town name?",
+    "What was your first mobile number?",
+    "What was the name of your first school?",
+    "What is your childhood best friend's name?",
+    "What is your favorite teacher's name?",
 ]
 
 @api_router.get("/auth/security-questions")
