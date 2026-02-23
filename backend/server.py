@@ -3265,24 +3265,38 @@ async def burn_expired_prc_for_explorer_users():
 
 async def burn_expired_prc_for_free_users():
     """
-    Legacy: Burn PRC earned by free users after 48 hours (2 days)
-    FIFO - First Earned First Burn
+    Burn PRC earned by FREE users after 48 hours (2 days) - FIFO method.
     
-    IMPORTANT: This function is DISABLED for safety.
-    Paid users were incorrectly affected due to query issues.
+    SAFETY: Only burns for users who:
+    1. subscription_plan is NOT startup/growth/elite/vip/pro
+    2. Have NO active subscription (subscription_expiry null OR in past)
+    3. Have mining_history with unburned entries older than 48 hours
     """
-    logging.info("[PRC BURN] burn_expired_prc_for_free_users is DISABLED for safety")
-    return {"users_affected": 0, "total_burned": 0.0, "status": "disabled"}
-    
-    # DISABLED CODE BELOW - DO NOT EXECUTE
     try:
         now = datetime.now(timezone.utc)
         burn_threshold = now - timedelta(days=2)
         
-        # Find all free users
+        # SAFE QUERY: Only target TRUE free users with mining history
+        # Explicitly check for NO paid subscription
         free_users = db.users.find({
-            "membership_type": {"$ne": "vip"},
-            "mining_history": {"$exists": True, "$ne": []}
+            "$and": [
+                # Must NOT have paid subscription plan
+                {"$or": [
+                    {"subscription_plan": {"$exists": False}},
+                    {"subscription_plan": None},
+                    {"subscription_plan": ""},
+                    {"subscription_plan": "explorer"},
+                    {"subscription_plan": "free"}
+                ]},
+                {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+                # Must NOT have active subscription (expiry in future)
+                {"$or": [
+                    {"subscription_expiry": {"$exists": False}},
+                    {"subscription_expiry": None},
+                    {"subscription_expiry": {"$lt": now.isoformat()}}
+                ]},
+                {"mining_history": {"$exists": True, "$ne": []}}
+            ]
         })
         
         burn_count = 0
@@ -3293,10 +3307,27 @@ async def burn_expired_prc_for_free_users():
             mining_history = user.get("mining_history", [])
             prc_balance = user.get("prc_balance", 0)
             
+            # SAFETY CHECK: Skip if user has paid plan
+            subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+            if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
+                logging.info(f"[FREE BURN SKIP] {uid} has paid plan: {subscription_plan}")
+                continue
+            
+            # SAFETY CHECK: Skip if subscription is active
+            sub_expiry = user.get("subscription_expiry")
+            if sub_expiry:
+                try:
+                    expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
+                    if expiry_dt > now:
+                        logging.info(f"[FREE BURN SKIP] {uid} has active subscription until {expiry_dt}")
+                        continue
+                except:
+                    pass
+            
             if not mining_history or prc_balance <= 0:
                 continue
             
-            # Find expired PRC (older than 48 hours)
+            # Find expired PRC (older than 48 hours) using FIFO
             burned_amount = 0.0
             updated_history = []
             
@@ -3309,57 +3340,49 @@ async def burn_expired_prc_for_free_users():
                     updated_history.append(entry)
                     continue
                 
-                # Parse timestamp
                 try:
                     if isinstance(timestamp_str, str):
                         mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                     else:
-                        mining_time = timestamp_str
+                        mining_time = now
                 except:
-                    mining_time = now  # Skip if parse fails
+                    mining_time = now
                 
-                # Check if expired
+                # Check if expired (older than 48 hours)
                 if mining_time < burn_threshold and not is_burned:
-                    # Burn this PRC
                     burned_amount += amount
                     entry["burned"] = True
                     entry["burned_at"] = now.isoformat()
+                    entry["burn_reason"] = "FREE_USER_48HR_EXPIRY"
                 
                 updated_history.append(entry)
             
             if burned_amount > 0:
-                # Update mining history only (log_transaction will update balance)
-                logging.info(f"[FREE BURN DEBUG] User {uid}: burning {burned_amount}, old_balance={prc_balance}")
+                logging.info(f"[FREE BURN] User {uid}: burning {burned_amount:.2f} PRC, old_balance={prc_balance}")
                 
-                # First update mining history
                 await db.users.update_one(
                     {"uid": uid},
-                    {
-                        "$set": {
-                            "mining_history": updated_history
-                        }
-                    }
+                    {"$set": {"mining_history": updated_history}}
                 )
                 
-                # Log burn transaction (this also updates balance)
                 await log_transaction(
                     user_id=uid,
                     wallet_type="prc",
                     transaction_type="prc_burn",
                     amount=burned_amount,
-                    description=f"Burned {burned_amount:.2f} PRC (expired after 48 hours - Free user FIFO)",
-                    metadata={"burn_reason": "free_user_expiry", "burn_threshold_hours": 48}
+                    description=f"Burned {burned_amount:.2f} PRC (expired after 48 hours - Free user)",
+                    metadata={"burn_reason": "FREE_USER_48HR_EXPIRY", "burn_threshold_hours": 48}
                 )
                 
                 burn_count += 1
                 total_burned += burned_amount
         
-        logging.info(f"Free user PRC burn: {burn_count} users, {total_burned:.2f} PRC burned")
+        logging.info(f"[PRC BURN] Free user burn complete: {burn_count} users, {total_burned:.2f} PRC burned")
         return {"users_affected": burn_count, "total_burned": total_burned}
         
     except Exception as e:
-        logging.error(f"Error burning expired PRC for free users: {e}")
-        return {"users_affected": 0, "total_burned": 0.0}
+        logging.error(f"[PRC BURN ERROR] Free user burn failed: {e}")
+        return {"users_affected": 0, "total_burned": 0.0, "error": str(e)}
 
 async def burn_expired_subscription_prc():
     """
