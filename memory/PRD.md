@@ -34,6 +34,25 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ---
 
+### 🔧 PWA Install Banner Fix ✅ (Feb 23, 2026)
+**Problem:** "Install App" banner showing even when PWA is already installed.
+
+**Root Cause:** Insufficient checks for installed state - only checked `display-mode: standalone`.
+
+**Solution - Enhanced Installation Detection:**
+1. Added multiple display mode checks: `standalone`, `fullscreen`, `minimal-ui`, `window-controls-overlay`
+2. Added iOS Safari `navigator.standalone` check
+3. Added Android TWA `document.referrer` check
+4. Added localStorage flag persistence
+5. Added URL parameter detection (`?source=pwa`)
+6. Added **real-time MediaQuery listener** to detect installation while user is on site
+7. Proper cleanup of event listeners
+
+**Files Modified:**
+- `frontend/src/components/PWAInstallPrompt.js`
+
+---
+
 ### 🐛 Admin Performance Report Fix ✅ (Feb 23, 2026)
 **Problem:** Admin Performance Report page stuck on loading due to missing `FileText` icon import.
 
