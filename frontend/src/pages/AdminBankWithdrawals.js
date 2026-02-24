@@ -499,31 +499,31 @@ const AdminBankWithdrawals = ({ user }) => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">Principal</span>
-                                <span className="text-white">₹{(req.principal_amount || 0).toLocaleString()} PRC</span>
+                                <span className="text-white">{(req.principal_amount || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500">Interest Earned</span>
-                                <span className="text-green-400">+₹{(req.interest_earned || 0).toLocaleString()}</span>
+                                <span className="text-gray-500">Bonus Earned</span>
+                                <span className="text-green-400">+{(req.interest_earned || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">Current Value</span>
-                                <span className="text-white">₹{(req.current_value || 0).toLocaleString()} PRC</span>
+                                <span className="text-white">{(req.current_value || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">Early Penalty ({req.penalty_percent || 3}%)</span>
-                                <span className="text-red-400">-₹{(req.penalty_amount || 0).toLocaleString()}</span>
+                                <span className="text-red-400">-{(req.penalty_amount || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-500">Admin Charge ({req.admin_charge_percent || 20}%)</span>
-                                <span className="text-red-400">-₹{(req.admin_charge || 0).toLocaleString()}</span>
+                                <span className="text-gray-500">Service Fee ({req.admin_charge_percent || 20}%)</span>
+                                <span className="text-red-400">-{(req.admin_charge || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between pt-2 border-t border-gray-700">
-                                <span className="text-amber-400 font-medium">Net Amount (PRC)</span>
-                                <span className="text-amber-400 font-bold">₹{(req.net_amount || 0).toLocaleString()}</span>
+                                <span className="text-amber-400 font-medium">Net Amount</span>
+                                <span className="text-amber-400 font-bold">{(req.net_amount || 0).toLocaleString()} PRC</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-emerald-400 font-medium">Bank Transfer (INR)</span>
-                                <span className="text-emerald-400 font-bold">₹{(req.amount_inr || 0).toLocaleString()}</span>
+                                <span className="text-emerald-400 font-medium">Estimated Value</span>
+                                <span className="text-emerald-400 font-bold">{(req.amount_inr || 0).toLocaleString()} PRC</span>
                               </div>
                             </>
                           ) : (
