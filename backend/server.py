@@ -3767,32 +3767,48 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
     """Backward compatible wrapper"""
     return await check_vip_service_access(uid, "marketplace")
 
+# ==================== PRC BURN SYSTEM - DEPRECATED ====================
+# NOTE: As of Feb 2026, free users CANNOT collect PRC anymore.
+# Therefore, PRC burning for free users is NO LONGER NEEDED.
+# These functions are kept for backward compatibility but do nothing.
+
+async def burn_expired_prc_for_explorer_users():
+    """
+    DEPRECATED: Free users can no longer collect PRC.
+    This function is kept for backward compatibility but does nothing.
+    """
+    logging.info("[PRC BURN] Explorer burn SKIPPED - Free users cannot collect PRC (new policy)")
+    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Free users cannot collect PRC"}
+
+async def burn_expired_prc_for_free_users():
+    """
+    DEPRECATED: Free users can no longer collect PRC.
+    This function is kept for backward compatibility but does nothing.
+    """
+    logging.info("[PRC BURN] Free user burn SKIPPED - Free users cannot collect PRC (new policy)")
+    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Free users cannot collect PRC"}
+
+async def burn_expired_subscription_prc():
+    """
+    DEPRECATED: Expired subscription users become free users and cannot collect PRC.
+    This function is kept for backward compatibility but does nothing.
+    """
+    logging.info("[PRC BURN] Expired subscription burn SKIPPED - Expired users cannot collect PRC (new policy)")
+    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Expired users cannot collect PRC"}
+
 async def run_prc_burn_job():
     """
-    Scheduled job to burn expired PRC
-    Should be run periodically (every hour or daily)
-    
-    Three types of burns:
-    1. Explorer users (2 days inactive) - 100% burn
-    2. Free users (48 hour FIFO expiry)
-    3. Expired subscriptions (5 days after expiry for PRC mined post-expiry)
+    DEPRECATED: PRC burn job is no longer needed.
+    Free users cannot collect PRC, so there's nothing to burn.
+    This function returns immediately with a skip message.
     """
-    logging.info("[PRC BURN JOB] Starting PRC burn job...")
-    
-    # Burn explorer user PRC (2 days inactive)
-    explorer_result = await burn_expired_prc_for_explorer_users()
-    
-    # Burn free user PRC (48 hours expiry)
-    free_result = await burn_expired_prc_for_free_users()
-    
-    # Burn expired subscription PRC (5 days after expiry)
-    sub_result = await burn_expired_subscription_prc()
-    
-    logging.info(f"[PRC BURN JOB] Complete: Explorer={explorer_result}, Free={free_result}, Subscription={sub_result}")
+    logging.info("[PRC BURN JOB] SKIPPED - New policy: Free users cannot collect PRC, no burning needed")
     return {
-        "explorer_users": explorer_result, 
-        "free_users": free_result, 
-        "expired_subscriptions": sub_result
+        "status": "skipped",
+        "reason": "Free users cannot collect PRC (Feb 2026 policy change)",
+        "explorer_users": {"users_affected": 0, "total_burned": 0},
+        "free_users": {"users_affected": 0, "total_burned": 0},
+        "expired_subscriptions": {"users_affected": 0, "total_burned": 0}
     }
 
 # ==================== END PRC BURN SYSTEM ====================
