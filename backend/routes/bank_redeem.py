@@ -509,6 +509,215 @@ async def get_withdrawal_history(user_id: str, page: int = 1, limit: int = 10):
     }
 
 
+
+# ========== USER EDIT PENDING REQUEST ==========
+
+@router.put("/bank-redeem/request/{user_id}/{request_id}")
+async def edit_pending_request(user_id: str, request_id: str, request: Request):
+    """
+    Allow user to edit their pending bank redeem request
+    - Only pending requests can be edited
+    - Can change: amount, bank details
+    - PRC will be adjusted accordingly
+    """
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get the existing request
+    existing_request = await db.bank_withdrawal_requests.find_one({
+        "request_id": request_id,
+        "user_id": user_id
+    })
+    
+    if not existing_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Only pending requests can be edited
+    if existing_request.get("status") != "pending":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Only pending requests can be edited. Current status: {existing_request.get('status')}"
+        )
+    
+    data = await request.json()
+    new_amount_inr = data.get("amount_inr")
+    new_bank_details = data.get("bank_details")
+    
+    if not new_amount_inr and not new_bank_details:
+        raise HTTPException(status_code=400, detail="No changes provided")
+    
+    old_amount_inr = existing_request.get("amount_inr", 0)
+    old_total_prc = existing_request.get("total_prc_deducted", 0)
+    
+    updates = {
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    prc_adjustment = 0
+    
+    # Handle amount change
+    if new_amount_inr and new_amount_inr != old_amount_inr:
+        # Validate new amount
+        if new_amount_inr < MIN_AMOUNT or new_amount_inr > MAX_AMOUNT:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Amount must be between ₹{MIN_AMOUNT} and ₹{MAX_AMOUNT}"
+            )
+        
+        # Calculate new charges
+        new_charges = calculate_charges(new_amount_inr)
+        new_total_prc = calculate_total_prc(new_amount_inr)
+        
+        if not new_total_prc:
+            raise HTTPException(status_code=400, detail="Invalid amount")
+        
+        new_total_prc = new_total_prc["total_prc"]
+        prc_adjustment = old_total_prc - new_total_prc  # Positive = refund, Negative = deduct more
+        
+        # Check if user has enough balance for additional deduction
+        if prc_adjustment < 0:
+            current_balance = user.get("prc_balance", 0)
+            if current_balance < abs(prc_adjustment):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Insufficient PRC balance. Need {abs(prc_adjustment)} more PRC."
+                )
+        
+        updates.update({
+            "amount_inr": new_amount_inr,
+            "processing_fee_inr": new_charges["processing_fee_inr"],
+            "admin_charge_inr": new_charges["admin_charge_inr"],
+            "total_inr": new_charges["total_inr"],
+            "total_prc_deducted": new_total_prc
+        })
+    
+    # Handle bank details change
+    if new_bank_details:
+        # Validate bank details
+        if new_bank_details.get("account_number"):
+            acc_num = new_bank_details["account_number"].replace(" ", "")
+            if len(acc_num) < 9 or len(acc_num) > 18:
+                raise HTTPException(status_code=400, detail="Account number must be 9-18 digits")
+            new_bank_details["account_number"] = acc_num
+        
+        if new_bank_details.get("ifsc_code"):
+            ifsc = new_bank_details["ifsc_code"].upper()
+            import re
+            if not re.match(r'^[A-Z]{4}0[A-Z0-9]{6}$', ifsc):
+                raise HTTPException(status_code=400, detail="Invalid IFSC format")
+            new_bank_details["ifsc_code"] = ifsc
+        
+        # Merge with existing bank details
+        current_bank = existing_request.get("bank_details", {})
+        current_bank.update(new_bank_details)
+        updates["bank_details"] = current_bank
+    
+    # Apply updates
+    await db.bank_withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {"$set": updates}
+    )
+    
+    # Adjust PRC balance if amount changed
+    if prc_adjustment != 0:
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$inc": {"prc_balance": prc_adjustment}}
+        )
+        
+        # Log the adjustment transaction
+        now = datetime.now(timezone.utc)
+        adjustment_type = "prc_refund" if prc_adjustment > 0 else "prc_deduction"
+        await db.transactions.insert_one({
+            "transaction_id": f"TXN{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            "user_id": user_id,
+            "type": adjustment_type,
+            "amount": prc_adjustment,
+            "description": f"Bank redeem request edit: ₹{old_amount_inr} → ₹{new_amount_inr}",
+            "reference_id": request_id,
+            "created_at": now.isoformat()
+        })
+    
+    return {
+        "success": True,
+        "message": "Request updated successfully",
+        "request_id": request_id,
+        "changes": {
+            "amount_changed": new_amount_inr != old_amount_inr if new_amount_inr else False,
+            "bank_details_changed": new_bank_details is not None,
+            "prc_adjustment": prc_adjustment
+        }
+    }
+
+
+@router.delete("/bank-redeem/request/{user_id}/{request_id}")
+async def cancel_pending_request(user_id: str, request_id: str):
+    """
+    Allow user to cancel their pending bank redeem request
+    - Full PRC refund on cancellation
+    """
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get the existing request
+    existing_request = await db.bank_withdrawal_requests.find_one({
+        "request_id": request_id,
+        "user_id": user_id
+    })
+    
+    if not existing_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Only pending requests can be cancelled
+    if existing_request.get("status") != "pending":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Only pending requests can be cancelled. Current status: {existing_request.get('status')}"
+        )
+    
+    prc_to_refund = existing_request.get("total_prc_deducted", 0)
+    
+    # Update request status
+    now = datetime.now(timezone.utc)
+    await db.bank_withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "status": "cancelled",
+            "cancelled_at": now.isoformat(),
+            "cancelled_by": "user"
+        }}
+    )
+    
+    # Refund PRC
+    if prc_to_refund > 0:
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$inc": {"prc_balance": prc_to_refund}}
+        )
+        
+        # Log refund transaction
+        await db.transactions.insert_one({
+            "transaction_id": f"TXN{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            "user_id": user_id,
+            "type": "prc_refund",
+            "amount": prc_to_refund,
+            "description": f"Bank redeem request cancelled - ₹{existing_request.get('amount_inr', 0)}",
+            "reference_id": request_id,
+            "created_at": now.isoformat()
+        })
+    
+    return {
+        "success": True,
+        "message": "Request cancelled successfully",
+        "request_id": request_id,
+        "prc_refunded": prc_to_refund
+    }
+
+
+
 # ========== ADMIN ENDPOINTS ==========
 
 @router.get("/admin/bank-redeem/requests")
