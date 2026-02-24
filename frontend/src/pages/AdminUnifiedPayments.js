@@ -487,22 +487,26 @@ const AdminUnifiedPayments = ({ user }) => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2">
-        <Card className="p-2 bg-gray-800/50 border-gray-700">
-          <p className="text-gray-400 text-[10px]">Total</p>
-          <p className="text-xl font-bold text-white">{stats.total}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Card className="p-3 bg-yellow-500/10 border-yellow-500/30">
+          <p className="text-yellow-400 text-xs font-medium">Pending</p>
+          <p className="text-2xl font-bold text-white">{stats.pending?.count || 0}</p>
+          <p className="text-yellow-300 text-sm font-semibold">₹{(stats.pending?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-2 bg-blue-500/10 border-blue-500/30">
-          <p className="text-blue-400 text-[10px]">Bank</p>
-          <p className="text-xl font-bold text-white">{stats.bank}</p>
+        <Card className="p-3 bg-green-500/10 border-green-500/30">
+          <p className="text-green-400 text-xs font-medium">Approved</p>
+          <p className="text-2xl font-bold text-white">{stats.approved?.count || 0}</p>
+          <p className="text-green-300 text-sm font-semibold">₹{(stats.approved?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-2 bg-orange-500/10 border-orange-500/30">
-          <p className="text-orange-400 text-[10px]">EMI</p>
-          <p className="text-xl font-bold text-white">{stats.emi}</p>
+        <Card className="p-3 bg-red-500/10 border-red-500/30">
+          <p className="text-red-400 text-xs font-medium">Rejected</p>
+          <p className="text-2xl font-bold text-white">{stats.rejected?.count || 0}</p>
+          <p className="text-red-300 text-sm font-semibold">₹{(stats.rejected?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-2 bg-purple-500/10 border-purple-500/30">
-          <p className="text-purple-400 text-[10px]">Savings</p>
-          <p className="text-xl font-bold text-white">{stats.rd}</p>
+        <Card className="p-3 bg-gray-800/50 border-gray-700">
+          <p className="text-gray-400 text-xs font-medium">Total</p>
+          <p className="text-2xl font-bold text-white">{stats.total}</p>
+          <p className="text-gray-400 text-xs">B:{stats.bank} E:{stats.emi} S:{stats.rd}</p>
         </Card>
       </div>
 
