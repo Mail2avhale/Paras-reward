@@ -7249,6 +7249,37 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
     subscription_plan = user.get("subscription_plan", "explorer")
     membership_type = "vip" if is_vip else "free"
     
+    # ============ FREE USER BLOCK - NO PRC COLLECTION ============
+    # Free/Explorer users can START mining but CANNOT collect PRC
+    # This eliminates the need for PRC burning/expiry for free users
+    if not is_vip:
+        # Reset mining session to restart (so UI continues working)
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"mining_start_time": now.isoformat()}}
+        )
+        
+        # Log this attempt
+        await log_activity(
+            user_id=uid,
+            action_type="mining_collect_blocked",
+            description="Free user attempted to collect PRC - blocked",
+            metadata={"subscription_plan": subscription_plan}
+        )
+        
+        return {
+            "success": False,
+            "blocked": True,
+            "message": "तुम्ही Free user आहात. PRC collect करण्यासाठी Startup किंवा Elite plan घ्या! 🚀",
+            "message_en": "You are a Free user. Upgrade to Startup or Elite plan to collect PRC!",
+            "prc_collected": 0,
+            "new_balance": user.get("prc_balance", 0),
+            "membership_type": membership_type,
+            "upgrade_required": True,
+            "session_restarted": True
+        }
+    # ============================================================
+    
     # Check if mining session is active
     if not user.get("mining_start_time"):
         raise HTTPException(status_code=400, detail="No active mining session")
