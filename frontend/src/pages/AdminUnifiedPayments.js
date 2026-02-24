@@ -144,14 +144,27 @@ const AdminUnifiedPayments = ({ user }) => {
   };
 
   const calculateStats = (requests) => {
+    const pendingReqs = requests.filter(r => r.status === 'pending');
+    const approvedReqs = requests.filter(r => ['approved', 'completed'].includes(r.status));
+    const rejectedReqs = requests.filter(r => r.status === 'rejected');
+    
     setStats({
       total: requests.length,
       bank: requests.filter(r => r._type === 'bank').length,
       emi: requests.filter(r => r._type === 'emi').length,
       rd: requests.filter(r => r._type === 'rd').length,
-      pending: { count: requests.filter(r => r.status === 'pending').length },
-      approved: { count: requests.filter(r => ['approved', 'completed'].includes(r.status)).length },
-      rejected: { count: requests.filter(r => r.status === 'rejected').length }
+      pending: { 
+        count: pendingReqs.length,
+        totalInr: pendingReqs.reduce((sum, r) => sum + (r.amount_inr || 0), 0)
+      },
+      approved: { 
+        count: approvedReqs.length,
+        totalInr: approvedReqs.reduce((sum, r) => sum + (r.amount_inr || 0), 0)
+      },
+      rejected: { 
+        count: rejectedReqs.length,
+        totalInr: rejectedReqs.reduce((sum, r) => sum + (r.amount_inr || 0), 0)
+      }
     });
   };
 
