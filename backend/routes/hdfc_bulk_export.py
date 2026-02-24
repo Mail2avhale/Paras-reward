@@ -211,6 +211,9 @@ async def export_bank_redeem_hdfc(
             else:
                 query["created_at"] = {"$lte": date_to}
         
+        if db is None:
+            raise HTTPException(status_code=500, detail="Database not initialized")
+        
         # Fetch requests with user details
         requests = await db.bank_redeem_requests.find(query).sort("created_at", -1).limit(limit).to_list(limit)
         
@@ -223,13 +226,18 @@ async def export_bank_redeem_hdfc(
             uid = req.get("uid", req.get("user_id"))
             user = await db.users.find_one({"uid": uid}, {"_id": 0, "email": 1, "mobile": 1, "phone": 1, "bank_details": 1, "name": 1})
             
+            # Safely get bank_details
+            req_bank = req.get("bank_details") or {}
+            user_bank = (user.get("bank_details") if user else None) or {}
+            final_bank = req_bank if req_bank else user_bank
+            
             export_item = {
                 "request_id": req.get("request_id", str(req.get("_id", ""))),
                 "uid": uid,
                 "user_name": req.get("user_name", user.get("name", "") if user else ""),
                 "email": user.get("email", "") if user else "",
                 "mobile": user.get("mobile", user.get("phone", "")) if user else "",
-                "bank_details": req.get("bank_details", user.get("bank_details", {}) if user else {}),
+                "bank_details": final_bank,
                 "amount_inr": req.get("amount_inr", req.get("amount", 0)),
                 "net_amount": req.get("net_amount", 0),
                 "created_at": req.get("created_at", "")
