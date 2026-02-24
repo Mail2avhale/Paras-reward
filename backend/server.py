@@ -3402,6 +3402,13 @@ async def burn_expired_prc_for_free_users():
             mining_history = user.get("mining_history", [])
             prc_balance = user.get("prc_balance", 0)
             
+            # ============ CRITICAL FINAL SAFETY CHECK ============
+            # This is the ULTIMATE protection - MUST be called before any burn
+            if await is_protected_from_burn(db, uid):
+                logging.warning(f"[FREE BURN BLOCKED] {uid} is PROTECTED from burn - skipping")
+                continue
+            # =====================================================
+            
             # SAFETY CHECK: Skip if user has paid plan
             subscription_plan = (user.get("subscription_plan") or "explorer").lower()
             if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
