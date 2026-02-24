@@ -107,9 +107,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
           subscriptions: getValue(results[1], d => d?.total || d?.payments?.length),
           bills: getValue(results[2], d => d?.requests?.length || d?.total),
           gifts: getValue(results[3], d => d?.requests?.length || d?.stats?.pending || d?.total),
-          luxury: getValue(results[4], d => d?.total || (Array.isArray(d) ? d.length : 0)),
-          bankWithdrawals: getValue(results[5], d => d?.stats?.pending?.count || d?.total),
-          rdRedeem: getValue(results[6], d => d?.stats?.pending || d?.total)
+          // luxury count REMOVED - feature deprecated
+          bankWithdrawals: getValue(results[4], d => d?.stats?.pending?.count || d?.total),
+          rdRedeem: getValue(results[5], d => d?.stats?.pending || d?.total)
         });
       } catch (error) {
         console.error('Error fetching pending counts:', error);
