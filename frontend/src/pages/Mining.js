@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { InfoTooltip } from '@/components/InfoTooltip';
-import PRCBurnAlert, { usePRCExpiry } from '@/components/PRCBurnAlert';
+// PRCBurnAlert removed - free users no longer collect PRC
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
