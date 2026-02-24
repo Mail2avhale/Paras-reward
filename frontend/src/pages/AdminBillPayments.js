@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { 
   ArrowLeft, Clock, CheckCircle, XCircle, Search, 
   RefreshCw, Loader2, Phone, Zap, Tv, CreditCard, Wallet,
-  Eye, User, Calendar, TrendingUp, IndianRupee, Building,
+  Eye, User, Calendar, TrendingUp, IndianRupee,
   ChevronDown, ChevronRight, AlertTriangle, FileText,
   Download, Filter, MoreVertical, CheckSquare, Square,
   ArrowUpDown, X, Receipt, Timer
