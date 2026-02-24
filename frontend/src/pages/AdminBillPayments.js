@@ -104,7 +104,9 @@ const AdminBillPayments = ({ user }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todayRequests = allRequests.filter(r => new Date(r.created_at) >= today);
+    // Exclude EMI requests from stats (handled in unified payment dashboard)
+    const nonEmiRequests = allRequests.filter(r => r.request_type !== 'loan_emi' && r.payment_type !== 'emi');
+    const todayRequests = nonEmiRequests.filter(r => new Date(r.created_at) >= today);
 
     const calcStatusStats = (reqs) => ({
       pending: reqs.filter(r => r.status === 'pending').length,
@@ -121,7 +123,7 @@ const AdminBillPayments = ({ user }) => {
     // Category-wise stats
     const byCategory = {};
     Object.keys(SERVICE_CATEGORIES).forEach(cat => {
-      const catRequests = allRequests.filter(r => r.request_type === cat);
+      const catRequests = nonEmiRequests.filter(r => r.request_type === cat);
       byCategory[cat] = {
         total: catRequests.length,
         pending: catRequests.filter(r => r.status === 'pending').length,
@@ -134,7 +136,7 @@ const AdminBillPayments = ({ user }) => {
 
     setStats({
       today: calcStatusStats(todayRequests),
-      allTime: calcStatusStats(allRequests),
+      allTime: calcStatusStats(nonEmiRequests),
       byCategory
     });
   };
