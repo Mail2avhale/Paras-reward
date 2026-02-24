@@ -886,7 +886,7 @@ const AdminUser360 = ({ user: adminUser }) => {
               <span className="px-2 py-1 bg-gray-800 rounded">🆔 User ID</span>
               <span className="px-2 py-1 bg-gray-800 rounded">🔗 Referral Code</span>
             </div>
-            <p className="text-xs text-amber-400 mt-2">💡 टीप: नाव टाकायला सुरुवात करा - matching users आपोआप दिसतील</p>
+            <p className="text-xs text-amber-400 mt-2">💡 Tip: Start typing name - matching users will appear automatically</p>
           </Card>
 
       {/* User Data */}
