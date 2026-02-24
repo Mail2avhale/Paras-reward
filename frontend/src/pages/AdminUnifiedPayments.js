@@ -627,127 +627,135 @@ const AdminUnifiedPayments = ({ user }) => {
 
       {/* Selection Info */}
       {selectedIds.length > 0 && (
-        <Card className="p-2 bg-cyan-500/10 border-cyan-500/30">
-          <div className="flex items-center justify-between">
-            <span className="text-cyan-400 text-sm font-medium">Selected: {selectedIds.length}</span>
-            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-gray-400 text-xs h-6">Clear</Button>
+        <Card className="p-3 bg-cyan-500/10 border-cyan-500/30">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-cyan-400 text-base font-semibold">Selected: {selectedIds.length} requests</span>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={clearSelection} className="text-gray-400 h-8">Clear</Button>
+            </div>
           </div>
         </Card>
       )}
-
-      {/* Filters Row 1: Status + Type */}
-      <div className="flex flex-wrap gap-2">
-        {['pending', 'approved', 'rejected'].map(s => (
-          <button key={s} onClick={() => { setStatusFilter(s); setSelectedIds([]); }}
-            className={`px-3 py-1.5 rounded text-xs font-medium ${
-              statusFilter === s 
-                ? s === 'pending' ? 'bg-yellow-500 text-black' 
-                  : s === 'approved' ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
-                : 'bg-gray-800 text-gray-400'
-            }`}>
-            {s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
-        <div className="border-l border-gray-700 mx-1" />
-        {[
-          { v: 'all', l: 'All', c: 'cyan' },
-          { v: 'bank', l: 'Bank', c: 'blue' },
-          { v: 'emi', l: 'EMI', c: 'orange' },
-          { v: 'rd', l: 'Savings', c: 'purple' }
-        ].map(t => (
-          <button key={t.v} onClick={() => setTypeFilter(t.v)}
-            className={`px-3 py-1.5 rounded text-xs font-medium ${
-              typeFilter === t.v ? `bg-${t.c}-500 text-black` : 'bg-gray-800 text-gray-400'
-            }`}>
-            {t.l}
-          </button>
-        ))}
-      </div>
-
-      {/* Filters Row 2: Search + Date */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-[150px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search..." className="pl-8 h-8 text-sm bg-gray-800 border-gray-700" />
-        </div>
-        <div className="flex items-center gap-1">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-            className="w-28 h-8 text-xs bg-gray-800 border-gray-700" />
-          <span className="text-gray-500 text-xs">to</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-            className="w-28 h-8 text-xs bg-gray-800 border-gray-700" />
-        </div>
-        <Button variant="outline" size="sm" 
-          onClick={() => statusFilter !== 'pending' && setSortOrder(p => p === 'desc' ? 'asc' : 'desc')} 
-          className={`h-8 px-2 text-xs ${statusFilter === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={statusFilter === 'pending' ? 'Pending: जुने आधी (Auto)' : 'Sort बदला'}>
-          <ArrowUpDown className="w-3 h-3 mr-1" />
-          {statusFilter === 'pending' ? 'Old→New' : (sortOrder === 'desc' ? 'New→Old' : 'Old→New')}
-        </Button>
-      </div>
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
-        <Card className="p-2 bg-gray-800 border-gray-700">
-          <div className="flex flex-wrap items-center gap-2">
+        <Card className="p-4 bg-gray-800 border-gray-700">
+          <div className="flex flex-wrap items-center gap-3">
             <Input value={bulkTransactionRef} onChange={(e) => setBulkTransactionRef(e.target.value)}
-              placeholder="UTR/Ref for all" className="flex-1 min-w-[120px] h-8 text-sm bg-gray-900 border-gray-700" />
-            <Button onClick={() => setShowBulkApproveConfirm(true)} size="sm" className="h-8 bg-green-600 hover:bg-green-700 text-xs gap-1">
-              <CheckCircle className="w-3 h-3" />Approve
+              placeholder="UTR/Ref for all selected" className="flex-1 min-w-[150px] h-10 text-base bg-gray-900 border-gray-700" />
+            <Button onClick={() => setShowBulkApproveConfirm(true)} size="sm" className="h-10 px-4 bg-green-600 hover:bg-green-700 text-base font-semibold gap-2">
+              <CheckCircle className="w-5 h-5" />Approve All
             </Button>
-            <Button onClick={() => setShowBulkRejectConfirm(true)} size="sm" variant="destructive" className="h-8 text-xs gap-1">
-              <XCircle className="w-3 h-3" />Reject
+            <Button onClick={() => setShowBulkRejectConfirm(true)} size="sm" variant="destructive" className="h-10 px-4 text-base font-semibold gap-2">
+              <XCircle className="w-5 h-5" />Reject All
             </Button>
           </div>
         </Card>
       )}
 
-      {/* Select All */}
-      {statusFilter === 'pending' && filteredRequests.filter(r => r.status === 'pending').length > 0 && selectedIds.length === 0 && (
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={selectAll} className="h-7 text-xs gap-1">
-            <CheckSquare className="w-3 h-3" />Select All ({filteredRequests.filter(r => r.status === 'pending').length})
+      {/* Results Info & Select All */}
+      <div className="flex items-center justify-between">
+        <p className="text-gray-400 text-sm">
+          Showing {paginatedRequests.length} of {filteredRequests.length} requests
+          {totalPages > 1 && ` (Page ${currentPage}/${totalPages})`}
+        </p>
+        {statusFilter === 'pending' && paginatedRequests.filter(r => r.status === 'pending').length > 0 && selectedIds.length === 0 && (
+          <Button variant="outline" size="sm" onClick={selectAll} className="h-9 text-sm gap-2">
+            <CheckSquare className="w-4 h-4" />Select All on Page ({paginatedRequests.filter(r => r.status === 'pending').length})
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Requests List */}
-      <div className="space-y-2">
+      {/* Requests List - Vertical Layout */}
+      <div className="space-y-3">
         {loading ? (
-          <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin text-purple-500" /></div>
-        ) : filteredRequests.length === 0 ? (
-          <Card className="p-8 text-center bg-gray-900 border-gray-800">
-            <p className="text-gray-400">No requests found</p>
+          <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-purple-500" /></div>
+        ) : paginatedRequests.length === 0 ? (
+          <Card className="p-12 text-center bg-gray-900 border-gray-800">
+            <p className="text-gray-400 text-lg">No requests found</p>
           </Card>
         ) : (
-          filteredRequests.map((req) => (
-            <Card key={req._id} className={`bg-gray-900 border-gray-800 ${expandedRequest === req._id ? 'ring-1 ring-purple-500' : ''}`}>
-              {/* Main Row */}
-              <div className="p-3 cursor-pointer" onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}>
-                <div className="flex items-center gap-2 flex-wrap">
+          paginatedRequests.map((req) => (
+            <Card key={req._id} className={`bg-gray-900 border-gray-800 overflow-hidden ${expandedRequest === req._id ? 'ring-2 ring-purple-500' : ''}`}>
+              {/* Main Content - Vertical Layout */}
+              <div className="p-4 cursor-pointer" onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}>
+                {/* Row 1: Checkbox + Type + Name + Amount */}
+                <div className="flex items-center gap-3 mb-3">
                   {/* Checkbox */}
                   {req.status === 'pending' && (
                     <div onClick={(e) => toggleSelect(e, req._id)} className="flex-shrink-0">
                       {selectedIds.includes(req._id) 
-                        ? <CheckSquare className="w-5 h-5 text-cyan-400" />
-                        : <Square className="w-5 h-5 text-gray-600" />}
+                        ? <CheckSquare className="w-6 h-6 text-cyan-400" />
+                        : <Square className="w-6 h-6 text-gray-600 hover:text-gray-400" />}
                     </div>
                   )}
                   
-                  {/* Type Badge + Request ID */}
-                  <div className="flex flex-col items-start">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium text-white ${getTypeColor(req._type)}`}>
-                      {req._typeLabel}
-                    </span>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-gray-500 text-[9px] font-mono">{req.request_id?.slice(-8) || '-'}</span>
-                      <Copy className="w-3 h-3 text-gray-600 hover:text-cyan-400 cursor-pointer" 
-                        onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} />
-                    </div>
+                  {/* Type Badge */}
+                  <span className={`px-3 py-1 rounded-lg text-sm font-semibold text-white ${getTypeColor(req._type)}`}>
+                    {req._typeLabel}
+                  </span>
+
+                  {/* Name */}
+                  <div className="flex-1 flex items-center gap-2">
+                    <p className="text-white text-lg font-bold truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
+                    <Copy className="w-4 h-4 text-gray-500 hover:text-cyan-400 cursor-pointer flex-shrink-0" 
+                      onClick={(e) => copyToClipboard(e, req.account_holder_name || req.user_name, 'Name')} />
                   </div>
 
-                  {/* User Info with Copy */}
+                  {/* Amount & Status */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-green-400 font-bold text-xl">₹{(req.amount_inr || 0).toLocaleString()}</p>
+                    <p className={`text-sm font-semibold ${getStatusColor(req.status)}`}>{req.status}</p>
+                  </div>
+
+                  {/* Expand Icon */}
+                  <div className="flex-shrink-0">
+                    {expandedRequest === req._id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  </div>
+                </div>
+
+                {/* Row 2: Request ID + Mobile */}
+                <div className="flex items-center gap-4 mb-2 pl-9">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">ID:</span>
+                    <span className="text-cyan-400 font-mono text-sm">{req.request_id?.slice(-10) || '-'}</span>
+                    <Copy className="w-3.5 h-3.5 text-gray-600 hover:text-cyan-400 cursor-pointer" 
+                      onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Mobile:</span>
+                    <span className="text-gray-300 text-sm">{req.mobile || req.user_email || '-'}</span>
+                  </div>
+                </div>
+
+                {/* Row 3: Bank Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-9 py-2 bg-gray-800/30 rounded-lg">
+                  <div>
+                    <p className="text-gray-500 text-sm">Account Number</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-mono text-base font-semibold">{req.account_number || '-'}</p>
+                      {req.account_number && (
+                        <Copy className="w-4 h-4 text-gray-500 hover:text-cyan-400 cursor-pointer" 
+                          onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">IFSC Code</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-cyan-400 font-mono text-base font-semibold">{req.ifsc_code || '-'}</p>
+                      {req.ifsc_code && (
+                        <Copy className="w-4 h-4 text-gray-500 hover:text-cyan-400 cursor-pointer" 
+                          onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-sm">Bank Name</p>
+                    <p className="text-gray-200 text-base font-medium">{req.bank_name || '-'}</p>
+                  </div>
+                </div>
+              </div>
                   <div className="flex-1 min-w-[120px]">
                     <div className="flex items-center gap-1">
                       <p className="text-white text-base font-semibold truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
