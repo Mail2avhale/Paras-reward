@@ -839,6 +839,28 @@ const Orders = ({ user, onLogout }) => {
                           Cancel Order
                         </button>
                       )}
+                      
+                      {/* Edit/Cancel buttons for pending bank_redeem requests */}
+                      {request.type === 'bank_redeem' && request.status === 'pending' && (
+                        <div className="mt-3 pt-3 border-t border-gray-800 flex gap-2">
+                          <button
+                            onClick={() => navigate(`/bank-redeem/edit/${request.id}`)}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-xs font-medium transition-colors"
+                            data-testid={`edit-request-${request.id}`}
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            Edit Request
+                          </button>
+                          <button
+                            onClick={() => setDeleteOrderId(request.id)}
+                            className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition-colors"
+                            data-testid={`cancel-request-${request.id}`}
+                          >
+                            <XCircle className="w-3 h-3" />
+                            Cancel Request
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
