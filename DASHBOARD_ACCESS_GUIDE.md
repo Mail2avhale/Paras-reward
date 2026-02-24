@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://admin-consolidation.preview.emergentagent.com/setup
+   https://payment-consolidate.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
