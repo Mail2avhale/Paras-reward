@@ -4,13 +4,15 @@ import { toast } from 'sonner';
 import {
   Building2, Clock, CheckCircle, XCircle, Search, RefreshCw,
   ChevronDown, ChevronUp, User, Copy, Calendar, FileSpreadsheet, Banknote,
-  CheckSquare, Square, ArrowUpDown, Eye, RotateCcw, Download, AlertTriangle
+  CheckSquare, Square, ArrowUpDown, Eye, RotateCcw, Download, AlertTriangle,
+  ChevronLeft, ChevronRight, Filter, SlidersHorizontal
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const ITEMS_PER_PAGE = 15;
 
 const AdminUnifiedPayments = ({ user }) => {
   const [loading, setLoading] = useState(true);
@@ -21,12 +23,16 @@ const AdminUnifiedPayments = ({ user }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  
   // Filters
   const [statusFilter, setStatusFilter] = useState('pending');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Sort: pending = oldest first (asc), approved/rejected = newest first (desc)
   const [sortOrder, setSortOrder] = useState('asc'); // Will change based on statusFilter
   
