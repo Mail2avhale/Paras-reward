@@ -815,6 +815,21 @@ const AdminUnifiedPayments = ({ user }) => {
                         <div className={`text-lg font-semibold mb-2 ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>
                           {req.status === 'approved' ? '✓ Payment Approved' : '✗ Payment Rejected'}
                         </div>
+                        
+                        {/* Approved/Rejected By */}
+                        {(req.approved_by || req.approved_by_name || req.processed_by || req.processed_by_name) && req.status === 'approved' && (
+                          <p className="text-green-300 text-sm mb-2">
+                            <span className="text-gray-500">Approved by:</span>{' '}
+                            <span className="font-semibold">{req.approved_by_name || req.processed_by_name || req.approved_by || req.processed_by}</span>
+                          </p>
+                        )}
+                        {(req.rejected_by || req.rejected_by_name || req.processed_by || req.processed_by_name) && req.status === 'rejected' && (
+                          <p className="text-red-300 text-sm mb-2">
+                            <span className="text-gray-500">Rejected by:</span>{' '}
+                            <span className="font-semibold">{req.rejected_by_name || req.processed_by_name || req.rejected_by || req.processed_by}</span>
+                          </p>
+                        )}
+                        
                         {req.transaction_ref && (
                           <p className="text-gray-300 text-base">
                             <span className="text-gray-500">UTR:</span> {req.transaction_ref}
