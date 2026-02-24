@@ -363,8 +363,8 @@ const AdminBankWithdrawals = ({ user }) => {
   };
 
   // Current list based on request type
-  const currentRequests = requestType === 'bank' ? requests : rdRequests;
-  const currentStats = requestType === 'bank' ? stats : rdStats;
+  const currentRequests = requestType === 'bank' ? requests : (requestType === 'rd' ? rdRequests : emiRequests);
+  const currentStats = requestType === 'bank' ? stats : (requestType === 'rd' ? rdStats : emiStats);
 
   // Sorting for display (pending first, then by date)
   const filteredRequests = [...currentRequests].sort((a, b) => {
@@ -384,18 +384,18 @@ const AdminBankWithdrawals = ({ user }) => {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
             <Building2 className="h-7 w-7 text-green-400" />
-            Redeem Requests
+            Payment Requests
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Manage Bank Redeem & Savings Vault requests</p>
+          <p className="text-gray-400 text-sm mt-1">Manage Bank Redeem, EMI Pay & Savings Vault requests</p>
         </div>
-        <Button onClick={() => { fetchRequests(); fetchRdRequests(); }} variant="outline" className="gap-2">
+        <Button onClick={() => { fetchRequests(); fetchRdRequests(); fetchEmiRequests(); }} variant="outline" className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
       {/* Request Type Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         <button
           onClick={() => { setRequestType('bank'); setPage(1); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
@@ -409,6 +409,22 @@ const AdminBankWithdrawals = ({ user }) => {
           {stats.pending?.count > 0 && (
             <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
               {stats.pending.count}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => { setRequestType('emi'); setPage(1); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+            requestType === 'emi' 
+              ? 'bg-purple-500 text-white' 
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <Banknote className="w-4 h-4" />
+          EMI Pay
+          {emiStats.pending > 0 && (
+            <span className="bg-yellow-500 text-black text-xs px-2 py-0.5 rounded-full">
+              {emiStats.pending}
             </span>
           )}
         </button>
