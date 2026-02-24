@@ -562,14 +562,25 @@ const AdminUnifiedPayments = ({ user }) => {
                     </div>
                   )}
                   
-                  {/* Type Badge */}
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium text-white ${getTypeColor(req._type)}`}>
-                    {req._typeLabel}
-                  </span>
+                  {/* Type Badge + Request ID */}
+                  <div className="flex flex-col items-start">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium text-white ${getTypeColor(req._type)}`}>
+                      {req._typeLabel}
+                    </span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-gray-500 text-[9px] font-mono">{req.request_id?.slice(-8) || '-'}</span>
+                      <Copy className="w-3 h-3 text-gray-600 hover:text-cyan-400 cursor-pointer" 
+                        onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} />
+                    </div>
+                  </div>
 
-                  {/* User Info */}
+                  {/* User Info with Copy */}
                   <div className="flex-1 min-w-[120px]">
-                    <p className="text-white text-sm font-medium truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-white text-sm font-medium truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
+                      <Copy className="w-3 h-3 text-gray-600 hover:text-cyan-400 cursor-pointer flex-shrink-0" 
+                        onClick={(e) => copyToClipboard(e, req.account_holder_name || req.user_name, 'Name')} />
+                    </div>
                     <p className="text-gray-500 text-xs truncate">{req.mobile || req.user_email || '-'}</p>
                   </div>
 
