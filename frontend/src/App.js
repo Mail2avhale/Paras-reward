@@ -116,7 +116,7 @@ const NetworkFeed = lazy(() => import("@/pages/NetworkFeed"));
 const Messages = lazy(() => import("@/pages/Messages"));
 const FollowersList = lazy(() => import("@/pages/FollowersList"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
-const ParasLuxuryLife = lazy(() => import("@/pages/ParasLuxuryLife"));
+// ParasLuxuryLife - REMOVED (deprecated feature)
 const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit"));
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const BankRedeem = lazy(() => import("@/pages/BankRedeem"));
