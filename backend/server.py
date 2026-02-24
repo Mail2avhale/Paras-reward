@@ -38795,6 +38795,11 @@ set_rd_db(db)
 set_rd_cache(cache)
 api_router.include_router(rd_router)
 
+# User Logs Router - Comprehensive logging system
+set_user_logs_db(db)
+set_user_logs_cache(cache)
+api_router.include_router(user_logs_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
