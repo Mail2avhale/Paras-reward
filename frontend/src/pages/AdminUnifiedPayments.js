@@ -483,50 +483,147 @@ const AdminUnifiedPayments = ({ user }) => {
   };
 
   return (
-    <div className="p-3 md:p-4 space-y-3">
+    <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-green-500" />
+          <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+            <Banknote className="w-6 h-6 text-green-500" />
             Unified Payment Dashboard
           </h1>
-          <p className="text-gray-500 text-xs">Bank + EMI + Savings</p>
+          <p className="text-gray-400 text-sm">Bank + EMI + Savings</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={fetchAllRequests} variant="outline" size="sm" className="h-8 px-2">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <Button onClick={fetchAllRequests} variant="outline" size="sm" className="h-10 px-3">
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <Button onClick={handleExportExcel} size="sm" className="h-8 px-3 bg-green-600 hover:bg-green-700 gap-1">
-            <Download className="w-4 h-4" />
+          <Button onClick={handleExportExcel} size="sm" className="h-10 px-4 bg-green-600 hover:bg-green-700 gap-2 text-base font-semibold">
+            <Download className="w-5 h-5" />
             <span className="hidden sm:inline">Excel</span>
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Card className="p-3 bg-yellow-500/10 border-yellow-500/30">
-          <p className="text-yellow-400 text-xs font-medium">Pending</p>
-          <p className="text-2xl font-bold text-white">{stats.pending?.count || 0}</p>
-          <p className="text-yellow-300 text-sm font-semibold">₹{(stats.pending?.totalInr || 0).toLocaleString()}</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+          <p className="text-yellow-400 text-sm font-medium">Pending</p>
+          <p className="text-3xl font-bold text-white">{stats.pending?.count || 0}</p>
+          <p className="text-yellow-300 text-lg font-bold">₹{(stats.pending?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-3 bg-green-500/10 border-green-500/30">
-          <p className="text-green-400 text-xs font-medium">Approved</p>
-          <p className="text-2xl font-bold text-white">{stats.approved?.count || 0}</p>
-          <p className="text-green-300 text-sm font-semibold">₹{(stats.approved?.totalInr || 0).toLocaleString()}</p>
+        <Card className="p-4 bg-green-500/10 border-green-500/30">
+          <p className="text-green-400 text-sm font-medium">Approved</p>
+          <p className="text-3xl font-bold text-white">{stats.approved?.count || 0}</p>
+          <p className="text-green-300 text-lg font-bold">₹{(stats.approved?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-3 bg-red-500/10 border-red-500/30">
-          <p className="text-red-400 text-xs font-medium">Rejected</p>
-          <p className="text-2xl font-bold text-white">{stats.rejected?.count || 0}</p>
-          <p className="text-red-300 text-sm font-semibold">₹{(stats.rejected?.totalInr || 0).toLocaleString()}</p>
+        <Card className="p-4 bg-red-500/10 border-red-500/30">
+          <p className="text-red-400 text-sm font-medium">Rejected</p>
+          <p className="text-3xl font-bold text-white">{stats.rejected?.count || 0}</p>
+          <p className="text-red-300 text-lg font-bold">₹{(stats.rejected?.totalInr || 0).toLocaleString()}</p>
         </Card>
-        <Card className="p-3 bg-gray-800/50 border-gray-700">
-          <p className="text-gray-400 text-xs font-medium">Total</p>
-          <p className="text-2xl font-bold text-white">{stats.total}</p>
-          <p className="text-gray-400 text-xs">B:{stats.bank} E:{stats.emi} S:{stats.rd}</p>
+        <Card className="p-4 bg-gray-800/50 border-gray-700">
+          <p className="text-gray-400 text-sm font-medium">Total</p>
+          <p className="text-3xl font-bold text-white">{stats.total}</p>
+          <p className="text-gray-400 text-sm">Bank:{stats.bank} EMI:{stats.emi} RD:{stats.rd}</p>
         </Card>
       </div>
+
+      {/* Advanced Filters & Sorting - TOP */}
+      <Card className="p-4 bg-gray-900/80 border-gray-800">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-semibold flex items-center gap-2">
+            <SlidersHorizontal className="w-5 h-5 text-purple-400" />
+            Filters & Sorting
+          </h3>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="text-gray-400"
+          >
+            {showAdvancedFilters ? 'Hide' : 'Show More'}
+            <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+
+        {/* Status Filter - Always Visible */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span className="text-gray-400 text-sm self-center mr-2">Status:</span>
+          {['pending', 'approved', 'rejected'].map(s => (
+            <button key={s} onClick={() => { setStatusFilter(s); setSelectedIds([]); }}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                statusFilter === s 
+                  ? s === 'pending' ? 'bg-yellow-500 text-black' 
+                    : s === 'approved' ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Type Filter & Search - Always Visible */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex gap-2">
+            <span className="text-gray-400 text-sm self-center">Type:</span>
+            {[
+              { value: 'all', label: 'All', color: 'bg-gray-600' },
+              { value: 'bank', label: 'Bank', color: 'bg-blue-600' },
+              { value: 'emi', label: 'EMI', color: 'bg-orange-600' },
+              { value: 'rd', label: 'Savings', color: 'bg-purple-600' }
+            ].map(t => (
+              <button key={t.value} onClick={() => setTypeFilter(t.value)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  typeFilter === t.value ? `${t.color} text-white` : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Input 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search name, mobile, A/C, IFSC..." 
+              className="pl-10 h-10 text-base bg-gray-800 border-gray-700" 
+            />
+          </div>
+
+          {/* Sort Button */}
+          <Button variant="outline" size="sm" 
+            onClick={() => statusFilter !== 'pending' && setSortOrder(p => p === 'desc' ? 'asc' : 'desc')} 
+            className={`h-10 px-4 text-sm font-medium ${statusFilter === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={statusFilter === 'pending' ? 'Pending: जुने आधी (Auto)' : 'Sort बदला'}>
+            <ArrowUpDown className="w-4 h-4 mr-2" />
+            {statusFilter === 'pending' ? 'Oldest First' : (sortOrder === 'desc' ? 'Newest First' : 'Oldest First')}
+          </Button>
+        </div>
+
+        {/* Advanced Filters - Collapsible */}
+        {showAdvancedFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-800">
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-gray-500" />
+                <span className="text-gray-400 text-sm">Date Range:</span>
+              </div>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 w-40 bg-gray-800 border-gray-700 text-base" />
+              <span className="text-gray-500">to</span>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 w-40 bg-gray-800 border-gray-700 text-base" />
+              {(dateFrom || dateTo) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}
+                  className="text-red-400">
+                  Clear Dates
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Selection Info */}
       {selectedIds.length > 0 && (
