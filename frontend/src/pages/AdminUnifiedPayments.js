@@ -387,21 +387,38 @@ const AdminUnifiedPayments = ({ user }) => {
     try {
       toast.info('Downloading Excel...');
       const response = await axios.get(`${API}/admin/hdfc-export/combined`, {
-        params: { status: 'pending' },
+        params: { status: statusFilter || 'pending' },
         responseType: 'blob'
       });
+      
+      // Check if response is actually an error JSON (not blob)
+      const contentType = response.headers['content-type'];
+      if (contentType && contentType.includes('application/json')) {
+        // Response is JSON error, not file
+        const text = await response.data.text();
+        const errorData = JSON.parse(text);
+        toast.error(errorData.detail || 'No data to export');
+        return;
+      }
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Payment_Requests_${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.setAttribute('download', `Payment_Requests_${statusFilter}_${new Date().toISOString().split('T')[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       toast.success('Excel downloaded!');
     } catch (error) {
-      toast.error('Download failed');
+      // Handle 404 (no requests found) gracefully
+      if (error.response?.status === 404) {
+        toast.error('Export साठी requests सापडले नाहीत. फिल्टर बदलून बघा.');
+      } else if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error('Download failed - कृपया पुन्हा प्रयत्न करा');
+      }
     }
   };
 
