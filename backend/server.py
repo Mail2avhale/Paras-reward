@@ -3962,16 +3962,22 @@ async def register_user(request: Request):
         referrer = await db.users.find_one({"uid": referrer_uid}, {"_id": 0, "name": 1})
         new_user_name = user_dict.get("name", "Someone")
         
-        # Create notification for the referrer
+        # Create notification for the referrer (old system)
         await create_social_notification(
             user_uid=referrer_uid,
             notification_type="new_referral",
-            title="🎉 New Referral Joined!",
+            title="New Referral Joined!",
             message=f"{new_user_name} just joined using your referral link! Help them get started.",
             from_uid=user.uid,
             from_name=new_user_name,
             icon="👋",
             action_url=f"/messages/{user.uid}"
+        )
+        
+        # Create in-app notification (new bell system)
+        await notify_referral_joined(
+            user_id=referrer_uid,
+            referral_name=new_user_name
         )
         
         # Log to activity
