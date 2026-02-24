@@ -644,7 +644,6 @@ const ParasRecurringDeposit = () => {
               >
                 {processing ? 'Creating...' : 'Create Savings Plan'}
               </button>
-              </button>
             </motion.div>
           </motion.div>
         )}
