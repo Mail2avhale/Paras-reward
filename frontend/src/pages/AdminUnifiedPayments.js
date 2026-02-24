@@ -546,8 +546,12 @@ const AdminUnifiedPayments = ({ user }) => {
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
             className="w-28 h-8 text-xs bg-gray-800 border-gray-700" />
         </div>
-        <Button variant="outline" size="sm" onClick={() => setSortOrder(p => p === 'desc' ? 'asc' : 'desc')} className="h-8 px-2 text-xs">
-          <ArrowUpDown className="w-3 h-3 mr-1" />{sortOrder === 'desc' ? 'New' : 'Old'}
+        <Button variant="outline" size="sm" 
+          onClick={() => statusFilter !== 'pending' && setSortOrder(p => p === 'desc' ? 'asc' : 'desc')} 
+          className={`h-8 px-2 text-xs ${statusFilter === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={statusFilter === 'pending' ? 'Pending: जुने आधी (Auto)' : 'Sort बदला'}>
+          <ArrowUpDown className="w-3 h-3 mr-1" />
+          {statusFilter === 'pending' ? 'Old→New' : (sortOrder === 'desc' ? 'New→Old' : 'Old→New')}
         </Button>
       </div>
 
