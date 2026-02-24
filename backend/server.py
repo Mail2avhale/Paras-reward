@@ -3259,6 +3259,13 @@ async def burn_expired_prc_for_explorer_users():
             prc_balance = user.get("prc_balance", 0)
             email = user.get("email", "")
             
+            # ============ CRITICAL FINAL SAFETY CHECK ============
+            # This is the ULTIMATE protection - MUST be called before any burn
+            if await is_protected_from_burn(db, uid):
+                logging.warning(f"[EXPLORER BURN BLOCKED] {uid} ({email}) is PROTECTED from burn - skipping")
+                continue
+            # =====================================================
+            
             # TRIPLE CHECK: Skip if ANY paid indicator exists
             subscription_plan = (user.get("subscription_plan") or "explorer").lower()
             if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
