@@ -115,15 +115,15 @@ const ParasRecurringDeposit = () => {
       
       const data = await response.json();
       if (data.success) {
-        toast.success('RD created successfully!');
+        toast.success('Savings plan created successfully!');
         setShowCreateModal(false);
         fetchRdsData();
       } else {
-        toast.error(data.detail || 'Failed to create RD');
+        toast.error(data.detail || 'Failed to create savings plan');
       }
     } catch (error) {
-      console.error('Error creating RD:', error);
-      toast.error('Failed to create RD');
+      console.error('Error creating savings plan:', error);
+      toast.error('Failed to create savings plan');
     } finally {
       setProcessing(false);
     }
