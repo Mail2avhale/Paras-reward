@@ -20,7 +20,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 - Use cashback wallet
 
 ### 2. **Admin**
-**Access:** https://elite-user-safety.preview.emergentagent.com/admin
+**Access:** https://admin-consolidation.preview.emergentagent.com/admin
 
 **Capabilities:**
 - View platform statistics (Total users, VIP users, Orders, etc.)
@@ -29,7 +29,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 - Monitor all platform activities
 
 ### 3. **Outlet**
-**Access:** https://elite-user-safety.preview.emergentagent.com/outlet
+**Access:** https://admin-consolidation.preview.emergentagent.com/outlet
 
 **Capabilities:**
 - Verify customer secret codes
@@ -41,7 +41,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 ## 🚀 Getting Started
 
 ### Step 1: Create Account
-1. Visit: https://elite-user-safety.preview.emergentagent.com
+1. Visit: https://admin-consolidation.preview.emergentagent.com
 2. Click "Get Started"
 3. Enter your email and name
 4. Click "Sign In with Google"
@@ -155,7 +155,7 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
    - Sign up normally with email/name
 
 2. **Go to Setup Page:**
-   - Visit: https://elite-user-safety.preview.emergentagent.com/setup
+   - Visit: https://admin-consolidation.preview.emergentagent.com/setup
 
 3. **Promote User:**
    - Enter user's email
@@ -212,10 +212,10 @@ PARAS APP is a mining-based reward platform where users earn PRC (PARAS Reward C
 
 ## 📱 Key URLs
 
-- **Home:** https://elite-user-safety.preview.emergentagent.com
-- **Setup (Promote Users):** https://elite-user-safety.preview.emergentagent.com/setup
-- **Admin Dashboard:** https://elite-user-safety.preview.emergentagent.com/admin
-- **Outlet Panel:** https://elite-user-safety.preview.emergentagent.com/outlet
+- **Home:** https://admin-consolidation.preview.emergentagent.com
+- **Setup (Promote Users):** https://admin-consolidation.preview.emergentagent.com/setup
+- **Admin Dashboard:** https://admin-consolidation.preview.emergentagent.com/admin
+- **Outlet Panel:** https://admin-consolidation.preview.emergentagent.com/outlet
 
 ---
 
