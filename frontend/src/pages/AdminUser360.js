@@ -1292,23 +1292,96 @@ const AdminUser360 = ({ user: adminUser }) => {
               )}
 
               {activeTab === 'redemptions' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {userData.transactions.redemptions?.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No redemption requests found</p>
                   ) : (
                     userData.transactions.redemptions?.map((redeem, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div>
-                          <p className="text-white font-medium">{redeem.type || 'Bank Transfer'}</p>
-                          <p className="text-gray-400 text-xs">
-                            {redeem.account_number ? `A/C: ****${redeem.account_number.slice(-4)}` : ''}
-                            {' • '}{formatDate(redeem.created_at)}
-                          </p>
+                      <div key={idx} className="bg-gray-800 rounded-lg overflow-hidden">
+                        {/* Header Row */}
+                        <div className="p-4 border-b border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-600 text-white">
+                                BANK
+                              </span>
+                              <div>
+                                <p className="text-white font-semibold">{redeem.bank_details?.account_holder_name || redeem.user_name || 'Bank Transfer'}</p>
+                                <p className="text-gray-400 text-xs">ID: {redeem.request_id?.slice(-10) || redeem._id?.slice(-10)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-green-400 font-bold text-lg">₹{(redeem.amount_inr || redeem.inr_amount || (redeem.amount / 10)).toLocaleString()}</p>
+                              <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                redeem.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                redeem.status === 'approved' || redeem.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                'bg-red-500/20 text-red-400'
+                              }`}>{redeem.status}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-amber-400 font-bold">{redeem.prc_amount || redeem.amount} PRC</p>
-                          <p className="text-green-400 text-sm">₹{redeem.inr_amount || (redeem.amount / 10)}</p>
-                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(redeem.status)}`}>{redeem.status}</span>
+                        
+                        {/* Details Grid */}
+                        <div className="p-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-500 text-xs">Account Number</p>
+                            <p className="text-white font-mono">{redeem.bank_details?.account_number || redeem.account_number || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">IFSC Code</p>
+                            <p className="text-cyan-400 font-mono">{redeem.bank_details?.ifsc_code || redeem.ifsc_code || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Bank Name</p>
+                            <p className="text-white">{redeem.bank_details?.bank_name || redeem.bank_name || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">PRC Deducted</p>
+                            <p className="text-purple-400 font-semibold">{(redeem.total_prc_deducted || redeem.prc_amount || redeem.amount || 0).toLocaleString()} PRC</p>
+                          </div>
+                          
+                          {/* Timestamps */}
+                          <div>
+                            <p className="text-gray-500 text-xs">📅 Request Date</p>
+                            <p className="text-gray-300">{formatDate(redeem.created_at)}</p>
+                          </div>
+                          
+                          {/* Approved/Rejected Info */}
+                          {redeem.status === 'approved' || redeem.status === 'completed' ? (
+                            <div className="col-span-2 mt-2 p-2 bg-green-500/10 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-green-400 text-xs font-semibold">✓ Approved</p>
+                                  <p className="text-green-300 text-xs">{formatDate(redeem.approved_at || redeem.processed_at)}</p>
+                                </div>
+                                {(redeem.approved_by_name || redeem.processed_by_name || redeem.approved_by) && (
+                                  <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                                    by {redeem.approved_by_name || redeem.processed_by_name || redeem.approved_by}
+                                  </span>
+                                )}
+                              </div>
+                              {redeem.transaction_ref && (
+                                <p className="text-gray-400 text-xs mt-1">UTR: {redeem.transaction_ref}</p>
+                              )}
+                            </div>
+                          ) : redeem.status === 'rejected' ? (
+                            <div className="col-span-2 mt-2 p-2 bg-red-500/10 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-red-400 text-xs font-semibold">✗ Rejected</p>
+                                  <p className="text-red-300 text-xs">{formatDate(redeem.rejected_at || redeem.processed_at)}</p>
+                                </div>
+                                {(redeem.rejected_by_name || redeem.processed_by_name || redeem.rejected_by) && (
+                                  <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
+                                    by {redeem.rejected_by_name || redeem.processed_by_name || redeem.rejected_by}
+                                  </span>
+                                )}
+                              </div>
+                              {redeem.rejection_reason && (
+                                <p className="text-gray-400 text-xs mt-1">Reason: {redeem.rejection_reason}</p>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     ))
