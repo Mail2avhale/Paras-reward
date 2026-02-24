@@ -44,23 +44,29 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 **User Request:** Add EMI Pay requests tab to unified payment dashboard.
 
-**Changes Made:**
-1. **AdminBankWithdrawals.js** now has 3 tabs:
-   - Bank Redeem
-   - EMI Pay (NEW)
-   - Savings Vault
-   
-2. **EMI Tab Features:**
-   - Fetches from `/api/admin/bill-payment/requests?payment_type=emi`
-   - Shows EMI-specific details (Bank Name, Loan Account, IFSC)
-   - Approve/Reject handlers wired correctly
-   - Stats cards update dynamically per tab
+**Updated Request (Later):** Remove separate tabs - show ALL requests (Bank, EMI, RD) in ONE list sorted by date with bulk approval.
 
-3. **Action Handlers Fixed:**
-   - Now uses correct handlers based on `requestType`:
-     - `requestType === 'emi'` → `handleEmiApprove/handleEmiReject`
-     - `requestType === 'rd'` → `handleRdApprove/handleRdReject`
-     - `requestType === 'bank'` → `handleApprove/handleReject`
+**Final Implementation:**
+
+1. **AdminUnifiedPayments.js** (`/admin/unified-payments`):
+   - Combines Bank Redeem + EMI Pay + Savings Vault in ONE list
+   - Sorted by date (Newest/Oldest toggle)
+   - Advanced Filters: Status, Type, Date Range
+   - Stats Cards: Pending/Approved/Rejected with **PRC and INR values**
+   - **Bulk Approval Feature:**
+     - Checkboxes for pending requests
+     - "Select All Pending" button
+     - "Approve Selected" with single UTR for all
+     - "Reject Selected" with single reason for all
+   - Individual approve/reject in expanded view
+   - HDFC Export button
+
+2. **AdminBillPayments.js** updated:
+   - EMI Payment tab **REMOVED**
+   - Only shows: Mobile Recharge, DTH, Electricity, Credit Card
+   - EMI requests filtered out from list and stats
+
+**Testing:** 100% passed (11/11 frontend tests)
 
 ---
 
