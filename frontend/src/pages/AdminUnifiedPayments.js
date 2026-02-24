@@ -767,16 +767,26 @@ const AdminUnifiedPayments = ({ user }) => {
               {/* Expanded View */}
               {expandedRequest === req._id && (
                 <div className="px-4 pb-4 border-t border-gray-800 pt-3">
-                  {/* PRC & Date Only (Bank details already shown above) */}
-                  <div className="flex items-center justify-between mb-4 bg-gray-800/50 rounded-lg p-3">
+                  {/* PRC Amount & Timestamps */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 bg-gray-800/50 rounded-lg p-4">
                     <div>
-                      <p className="text-gray-400 text-xs">PRC Amount</p>
-                      <p className="text-purple-400 font-bold text-lg">{(req.prc_amount || 0).toLocaleString()} PRC</p>
+                      <p className="text-gray-400 text-sm">PRC Amount</p>
+                      <p className="text-purple-400 font-bold text-xl">{(req.prc_amount || 0).toLocaleString()} PRC</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-gray-400 text-xs">Date</p>
-                      <p className="text-gray-300 font-medium">{formatDate(req.created_at)}</p>
+                    <div>
+                      <p className="text-gray-400 text-sm">📅 Request Date</p>
+                      <p className="text-gray-200 font-medium text-base">{formatDateTime(req.created_at)}</p>
                     </div>
+                    {req.status !== 'pending' && (
+                      <div>
+                        <p className={`text-sm ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>
+                          {req.status === 'approved' ? '✓ Approved On' : '✗ Rejected On'}
+                        </p>
+                        <p className="text-gray-200 font-medium text-base">
+                          {formatDateTime(req.approved_at || req.rejected_at || req.processed_at)}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -801,10 +811,20 @@ const AdminUnifiedPayments = ({ user }) => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className={`p-4 rounded-lg text-base font-medium ${req.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {req.status === 'approved' ? '✓ Approved' : '✗ Rejected'}
-                        {req.transaction_ref && <span className="ml-3 text-gray-300">UTR: {req.transaction_ref}</span>}
-                        {req.rejection_reason && <span className="ml-3 text-gray-300">Reason: {req.rejection_reason}</span>}
+                      <div className={`p-4 rounded-lg ${req.status === 'approved' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                        <div className={`text-lg font-semibold mb-2 ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>
+                          {req.status === 'approved' ? '✓ Payment Approved' : '✗ Payment Rejected'}
+                        </div>
+                        {req.transaction_ref && (
+                          <p className="text-gray-300 text-base">
+                            <span className="text-gray-500">UTR:</span> {req.transaction_ref}
+                          </p>
+                        )}
+                        {req.rejection_reason && (
+                          <p className="text-gray-300 text-base">
+                            <span className="text-gray-500">Reason:</span> {req.rejection_reason}
+                          </p>
+                        )}
                       </div>
                       <Button onClick={() => handleRevertStatus(req)} disabled={processing === req._id}
                         variant="outline" className="w-full h-10 text-sm font-medium border-amber-500/50 text-amber-400 gap-2">
