@@ -349,15 +349,15 @@ const ParasRecurringDeposit = () => {
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-xs text-gray-500">Principal</p>
-                <p className="text-lg font-bold text-white">₹{formatCurrency(calculateInterest().principal)}</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(calculateInterest().principal)} PRC</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Interest ({calculateInterest().rate}%)</p>
-                <p className="text-lg font-bold text-blue-400">+₹{formatCurrency(calculateInterest().interest)}</p>
+                <p className="text-xs text-gray-500">Bonus ({calculateInterest().rate}%)</p>
+                <p className="text-lg font-bold text-blue-400">+{formatCurrency(calculateInterest().interest)} PRC</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Maturity</p>
-                <p className="text-lg font-bold text-emerald-400">₹{formatCurrency(calculateInterest().maturity)}</p>
+                <p className="text-xs text-gray-500">Total</p>
+                <p className="text-lg font-bold text-emerald-400">{formatCurrency(calculateInterest().maturity)} PRC</p>
               </div>
             </div>
           </div>
