@@ -131,11 +131,14 @@ async def get_user_notifications(
         # Get unread count
         unread_count = await db.notifications.count_documents({"user_id": user_id, "read": False})
         
-        # Convert ObjectId to string
+        # Convert ObjectId to string and format dates
         for n in notifications:
             n["_id"] = str(n["_id"])
             if n.get("created_at"):
-                n["created_at"] = n["created_at"].isoformat()
+                # Handle both datetime objects and string dates
+                if hasattr(n["created_at"], 'isoformat'):
+                    n["created_at"] = n["created_at"].isoformat()
+                # If already a string, keep as is
         
         return {
             "notifications": notifications,
