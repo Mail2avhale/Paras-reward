@@ -635,40 +635,40 @@ const AdminUnifiedPayments = ({ user }) => {
                   {/* User Info with Copy */}
                   <div className="flex-1 min-w-[120px]">
                     <div className="flex items-center gap-1">
-                      <p className="text-white text-sm font-medium truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
-                      <Copy className="w-3 h-3 text-gray-600 hover:text-cyan-400 cursor-pointer flex-shrink-0" 
+                      <p className="text-white text-base font-semibold truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
+                      <Copy className="w-3.5 h-3.5 text-gray-600 hover:text-cyan-400 cursor-pointer flex-shrink-0" 
                         onClick={(e) => copyToClipboard(e, req.account_holder_name || req.user_name, 'Name')} />
                     </div>
-                    <p className="text-gray-500 text-xs truncate">{req.mobile || req.user_email || '-'}</p>
+                    <p className="text-gray-400 text-sm truncate">{req.mobile || req.user_email || '-'}</p>
                   </div>
 
                   {/* Bank Details - Always Visible */}
-                  <div className="hidden sm:flex flex-col min-w-[150px]">
+                  <div className="hidden sm:flex flex-col min-w-[160px]">
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400 text-xs">A/C:</span>
-                      <span className="text-white text-xs font-mono">{req.account_number || '-'}</span>
+                      <span className="text-gray-400 text-sm">A/C:</span>
+                      <span className="text-white text-sm font-mono">{req.account_number || '-'}</span>
                       {req.account_number && (
-                        <Copy className="w-3 h-3 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} />
+                        <Copy className="w-3.5 h-3.5 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} />
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400 text-xs">IFSC:</span>
-                      <span className="text-cyan-400 text-xs font-mono">{req.ifsc_code || '-'}</span>
+                      <span className="text-gray-400 text-sm">IFSC:</span>
+                      <span className="text-cyan-400 text-sm font-mono">{req.ifsc_code || '-'}</span>
                       {req.ifsc_code && (
-                        <Copy className="w-3 h-3 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />
+                        <Copy className="w-3.5 h-3.5 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />
                       )}
                     </div>
                   </div>
 
                   {/* Bank Name */}
-                  <div className="hidden md:block min-w-[100px]">
-                    <p className="text-gray-400 text-xs">{req.bank_name || '-'}</p>
+                  <div className="hidden md:block min-w-[110px]">
+                    <p className="text-gray-300 text-sm">{req.bank_name || '-'}</p>
                   </div>
 
                   {/* Amount */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-green-400 font-bold text-sm">₹{(req.amount_inr || 0).toLocaleString()}</p>
-                    <p className={`text-[10px] ${getStatusColor(req.status)}`}>{req.status}</p>
+                    <p className="text-green-400 font-bold text-base">₹{(req.amount_inr || 0).toLocaleString()}</p>
+                    <p className={`text-xs font-medium ${getStatusColor(req.status)}`}>{req.status}</p>
                   </div>
 
                   {/* Actions */}
