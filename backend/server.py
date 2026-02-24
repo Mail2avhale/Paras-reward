@@ -38319,6 +38319,249 @@ async def get_luxury_settings():
     }
 
 
+# ========== SIMPLE PRC BURN CONTROL (Manager/Admin) ==========
+
+@api_router.get("/admin/prc-burn-control/settings")
+async def get_prc_burn_control_settings():
+    """Get PRC burn control settings"""
+    try:
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        if not settings:
+            return {
+                "enabled": False,
+                "burn_percentage": 1.0,
+                "min_balance": 100,
+                "target_type": "all_users",
+                "last_executed": None
+            }
+        return {
+            "enabled": settings.get("enabled", False),
+            "burn_percentage": settings.get("burn_percentage", 1.0),
+            "min_balance": settings.get("min_balance", 100),
+            "target_type": settings.get("target_type", "all_users"),
+            "last_executed": settings.get("last_executed"),
+            "last_burn_stats": settings.get("last_burn_stats")
+        }
+    except Exception as e:
+        logging.error(f"Error getting PRC burn control settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-burn-control/settings")
+async def save_prc_burn_control_settings(request: Request):
+    """Save PRC burn control settings - Manager/Admin only"""
+    try:
+        data = await request.json()
+        
+        # Validate percentage
+        burn_pct = float(data.get("burn_percentage", 1.0))
+        if burn_pct < 0.1 or burn_pct > 50:
+            raise HTTPException(status_code=400, detail="Burn percentage must be between 0.1% and 50%")
+        
+        await db.system_settings.update_one(
+            {"type": "prc_burn_control"},
+            {"$set": {
+                "type": "prc_burn_control",
+                "enabled": data.get("enabled", False),
+                "burn_percentage": burn_pct,
+                "min_balance": int(data.get("min_balance", 100)),
+                "target_type": data.get("target_type", "all_users"),
+                "updated_by": data.get("updated_by"),
+                "updated_at": datetime.now(timezone.utc)
+            }},
+            upsert=True
+        )
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": data.get("updated_by"),
+            "action": "prc_burn_settings_update",
+            "details": {
+                "enabled": data.get("enabled"),
+                "burn_percentage": burn_pct,
+                "target_type": data.get("target_type")
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        return {"success": True, "message": "Settings saved"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error saving PRC burn control settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-burn-control/stats")
+async def get_prc_burn_control_stats():
+    """Get stats for PRC burn control page"""
+    try:
+        # Get burn settings
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        burn_pct = settings.get("burn_percentage", 1.0) if settings else 1.0
+        min_balance = settings.get("min_balance", 100) if settings else 100
+        target_type = settings.get("target_type", "all_users") if settings else "all_users"
+        
+        # Build user query based on target type
+        user_query = {"prc_balance": {"$gte": min_balance}}
+        if target_type == "free_only":
+            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
+        elif target_type == "inactive":
+            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+            user_query["last_active"] = {"$lt": thirty_days_ago}
+        
+        # Get total PRC in circulation
+        total_prc_pipeline = [
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]
+        total_result = await db.users.aggregate(total_prc_pipeline).to_list(1)
+        total_prc = total_result[0]["total"] if total_result else 0
+        
+        # Get total users
+        total_users = await db.users.count_documents({})
+        
+        # Get eligible users count
+        eligible_users = await db.users.count_documents(user_query)
+        
+        # Calculate estimated burn
+        eligible_prc_pipeline = [
+            {"$match": user_query},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]
+        eligible_result = await db.users.aggregate(eligible_prc_pipeline).to_list(1)
+        eligible_prc = eligible_result[0]["total"] if eligible_result else 0
+        estimated_burn = eligible_prc * burn_pct / 100
+        
+        return {
+            "total_prc_circulation": round(total_prc, 2),
+            "total_users": total_users,
+            "eligible_users": eligible_users,
+            "estimated_burn": round(estimated_burn, 2)
+        }
+    except Exception as e:
+        logging.error(f"Error getting PRC burn control stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-burn-control/execute")
+async def execute_prc_burn_control(request: Request):
+    """Execute PRC burn on all eligible users - Manager/Admin only"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        
+        # Get settings
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        if not settings or not settings.get("enabled"):
+            raise HTTPException(status_code=400, detail="PRC Burn is not enabled")
+        
+        burn_pct = settings.get("burn_percentage", 1.0)
+        min_balance = settings.get("min_balance", 100)
+        target_type = settings.get("target_type", "all_users")
+        
+        # Build user query
+        user_query = {"prc_balance": {"$gte": min_balance}}
+        if target_type == "free_only":
+            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
+        elif target_type == "inactive":
+            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+            user_query["last_active"] = {"$lt": thirty_days_ago}
+        
+        # Get eligible users
+        users = await db.users.find(user_query, {"uid": 1, "email": 1, "prc_balance": 1}).to_list(None)
+        
+        total_burned = 0
+        users_affected = 0
+        
+        for user in users:
+            try:
+                current_balance = user.get("prc_balance", 0)
+                burn_amount = current_balance * burn_pct / 100
+                
+                if burn_amount < 0.01:
+                    continue
+                
+                new_balance = current_balance - burn_amount
+                
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": user["uid"]},
+                    {"$set": {"prc_balance": round(new_balance, 2)}}
+                )
+                
+                # Log transaction
+                await db.transactions.insert_one({
+                    "user_id": user["uid"],
+                    "type": "prc_burn_control",
+                    "prc_amount": round(burn_amount, 2),
+                    "prc_balance_before": round(current_balance, 2),
+                    "prc_balance_after": round(new_balance, 2),
+                    "description": f"PRC Burn Control ({burn_pct}%)",
+                    "burn_percentage": burn_pct,
+                    "admin_id": admin_id,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                
+                # Log to PRC balance logs
+                await db.prc_balance_logs.insert_one({
+                    "user_email": user.get("email"),
+                    "user_id": user["uid"],
+                    "change_amount": -round(burn_amount, 2),
+                    "new_balance": round(new_balance, 2),
+                    "reason": f"PRC Burn Control ({burn_pct}%)",
+                    "admin_id": admin_id,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                
+                total_burned += burn_amount
+                users_affected += 1
+                
+            except Exception as e:
+                logging.error(f"Error burning PRC for user {user.get('uid')}: {e}")
+                continue
+        
+        # Update settings with last execution
+        await db.system_settings.update_one(
+            {"type": "prc_burn_control"},
+            {"$set": {
+                "last_executed": datetime.now(timezone.utc),
+                "last_burn_stats": {
+                    "total_burned": round(total_burned, 2),
+                    "users_affected": users_affected,
+                    "burn_percentage": burn_pct,
+                    "executed_by": admin_id
+                }
+            }}
+        )
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": admin_id,
+            "action": "prc_burn_executed",
+            "details": {
+                "total_burned": round(total_burned, 2),
+                "users_affected": users_affected,
+                "burn_percentage": burn_pct,
+                "target_type": target_type
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        logging.info(f"[PRC BURN CONTROL] Executed by {admin_id}: {users_affected} users, {total_burned:.2f} PRC burned")
+        
+        return {
+            "success": True,
+            "total_burned": round(total_burned, 2),
+            "users_affected": users_affected,
+            "burn_percentage": burn_pct
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error executing PRC burn control: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 # Include referral router (refactored)
 set_referral_db(db)
