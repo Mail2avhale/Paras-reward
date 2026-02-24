@@ -295,6 +295,9 @@ const DashboardModern = ({ user, onLogout }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* Notification Bell */}
+            <NotificationBell userId={user?.uid} />
+            
             {hasPaidPlan && (
               <div className={`px-3 py-1 rounded-full ${
                 stats.subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
