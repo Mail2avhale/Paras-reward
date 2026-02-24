@@ -259,21 +259,21 @@ const AdminRecurringDeposits = ({ user }) => {
           <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
             <div className="flex items-center gap-2 text-emerald-400 mb-2">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="text-sm">Active RDs</span>
+              <span className="text-sm">Active Savings</span>
             </div>
             <p className="text-2xl font-bold text-white">{rdsData.stats.total_active}</p>
           </div>
           <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
             <div className="flex items-center gap-2 text-amber-400 mb-2">
               <Clock className="w-5 h-5" />
-              <span className="text-sm">Matured</span>
+              <span className="text-sm">Completed</span>
             </div>
             <p className="text-2xl font-bold text-white">{rdsData.stats.total_matured}</p>
           </div>
           <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
             <div className="flex items-center gap-2 text-blue-400 mb-2">
               <PiggyBank className="w-5 h-5" />
-              <span className="text-sm">Withdrawn</span>
+              <span className="text-sm">Redeemed</span>
             </div>
             <p className="text-2xl font-bold text-white">{rdsData.stats.total_withdrawn}</p>
           </div>
@@ -282,7 +282,7 @@ const AdminRecurringDeposits = ({ user }) => {
               <DollarSign className="w-5 h-5" />
               <span className="text-sm">Total Deposited</span>
             </div>
-            <p className="text-2xl font-bold text-white">₹{formatCurrency(rdsData.stats.total_deposited)}</p>
+            <p className="text-2xl font-bold text-white">{formatCurrency(rdsData.stats.total_deposited)} PRC</p>
           </div>
         </div>
       )}
