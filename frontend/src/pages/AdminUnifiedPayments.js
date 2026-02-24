@@ -812,9 +812,62 @@ const AdminUnifiedPayments = ({ user }) => {
         )}
       </div>
 
-      {/* Count */}
-      <p className="text-center text-gray-500 text-xs py-2">
-        Showing {filteredRequests.length} of {allRequests.length}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="h-10 px-4"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Previous
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`h-10 w-10 ${currentPage === pageNum ? 'bg-purple-600' : ''}`}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="h-10 px-4"
+          >
+            Next
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Total Count */}
+      <p className="text-center text-gray-500 text-sm py-2">
+        Total: {filteredRequests.length} requests | Page {currentPage} of {totalPages || 1}
       </p>
 
       {/* Bulk Approve Confirmation Modal */}
