@@ -1175,19 +1175,115 @@ const AdminUser360 = ({ user: adminUser }) => {
               )}
 
               {activeTab === 'bills' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {userData.transactions.bill_payments?.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No bill payments found</p>
                   ) : (
                     userData.transactions.bill_payments?.map((bill, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div>
-                          <p className="text-white font-medium capitalize">{bill.request_type?.replace('_', ' ')}</p>
-                          <p className="text-gray-400 text-xs">{formatDate(bill.created_at)}</p>
+                      <div key={idx} className="bg-gray-800 rounded-lg overflow-hidden">
+                        {/* Header Row */}
+                        <div className="p-4 border-b border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                bill.payment_type?.toLowerCase().includes('emi') ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white'
+                              }`}>
+                                {bill.payment_type?.toUpperCase() || bill.request_type?.replace('_', ' ').toUpperCase()}
+                              </span>
+                              <div>
+                                <p className="text-white font-semibold capitalize">{bill.request_type?.replace('_', ' ')}</p>
+                                <p className="text-gray-400 text-xs">ID: {bill.request_id?.slice(-10) || bill._id?.slice(-10)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-green-400 font-bold text-lg">₹{(bill.amount_inr || 0).toLocaleString()}</p>
+                              <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                bill.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                bill.status === 'approved' || bill.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                'bg-red-500/20 text-red-400'
+                              }`}>{bill.status}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-white">₹{bill.amount_inr}</p>
-                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusBadge(bill.status)}`}>{bill.status}</span>
+                        
+                        {/* Details Grid */}
+                        <div className="p-4 grid grid-cols-2 gap-3 text-sm">
+                          {/* Bank Details if EMI/Loan */}
+                          {(bill.loan_account_number || bill.bank_details?.account_number) && (
+                            <>
+                              <div>
+                                <p className="text-gray-500 text-xs">Loan A/C Number</p>
+                                <p className="text-white font-mono">{bill.loan_account_number || bill.bank_details?.account_number}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Bank / IFSC</p>
+                                <p className="text-cyan-400">{bill.bank_name || bill.bank_details?.bank_name || '-'}</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {/* Mobile Recharge Details */}
+                          {bill.details?.phone_number && (
+                            <>
+                              <div>
+                                <p className="text-gray-500 text-xs">Mobile Number</p>
+                                <p className="text-white">{bill.details.phone_number}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Operator</p>
+                                <p className="text-white">{bill.details.operator} - {bill.details.circle}</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {/* PRC Details */}
+                          <div>
+                            <p className="text-gray-500 text-xs">PRC Deducted</p>
+                            <p className="text-purple-400 font-semibold">{(bill.total_prc_deducted || bill.prc_amount || 0).toLocaleString()} PRC</p>
+                          </div>
+                          
+                          {/* Timestamps */}
+                          <div>
+                            <p className="text-gray-500 text-xs">📅 Request Date</p>
+                            <p className="text-gray-300">{formatDate(bill.created_at)}</p>
+                          </div>
+                          
+                          {/* Approved/Rejected Info */}
+                          {bill.status === 'approved' || bill.status === 'completed' ? (
+                            <div className="col-span-2 mt-2 p-2 bg-green-500/10 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-green-400 text-xs font-semibold">✓ Approved</p>
+                                  <p className="text-green-300 text-xs">{formatDate(bill.approved_at || bill.processed_at)}</p>
+                                </div>
+                                {(bill.approved_by_name || bill.processed_by_name || bill.approved_by) && (
+                                  <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                                    by {bill.approved_by_name || bill.processed_by_name || bill.approved_by}
+                                  </span>
+                                )}
+                              </div>
+                              {bill.transaction_ref && (
+                                <p className="text-gray-400 text-xs mt-1">UTR: {bill.transaction_ref}</p>
+                              )}
+                            </div>
+                          ) : bill.status === 'rejected' ? (
+                            <div className="col-span-2 mt-2 p-2 bg-red-500/10 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-red-400 text-xs font-semibold">✗ Rejected</p>
+                                  <p className="text-red-300 text-xs">{formatDate(bill.rejected_at || bill.processed_at)}</p>
+                                </div>
+                                {(bill.rejected_by_name || bill.processed_by_name || bill.rejected_by) && (
+                                  <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
+                                    by {bill.rejected_by_name || bill.processed_by_name || bill.rejected_by}
+                                  </span>
+                                )}
+                              </div>
+                              {bill.rejection_reason && (
+                                <p className="text-gray-400 text-xs mt-1">Reason: {bill.rejection_reason}</p>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     ))
