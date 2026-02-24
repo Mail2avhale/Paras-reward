@@ -17,7 +17,6 @@ import { LanguageSelectorFull } from '@/components/LanguageSelector';
 import ShareApp from '@/components/ShareApp';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { Label } from '@/components/ui/label';
-import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -792,7 +791,6 @@ const ProfileAdvanced = ({ user, onLogout }) => {
 
       {/* AI Smart Tip for Profile */}
       <div className="px-5 mb-4">
-        <AISmartTip pageName="profile" variant="compact" />
       </div>
 
       {/* Profile Card */}

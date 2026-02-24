@@ -13,7 +13,6 @@ import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
-import AISmartTip from '@/components/AISmartTip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 import { InfoTooltip } from '@/components/InfoTooltip';
@@ -818,7 +817,6 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* AI Smart Tip */}
       <div className="px-5 mb-4">
-        <AISmartTip pageName="dashboard" variant="banner" user={user} userStats={stats} />
       </div>
 
       {/* Quick Actions */}

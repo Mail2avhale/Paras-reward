@@ -12,7 +12,6 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
-import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -341,7 +340,6 @@ const KYCVerification = ({ user }) => {
       {/* AI Smart Tip for KYC */}
       {!isVerified && documentStatus !== 'verified' && (
         <div className="px-5 mb-4">
-          <AISmartTip pageName="kyc" variant="compact" />
         </div>
       )}
 

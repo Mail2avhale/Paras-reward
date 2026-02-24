@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
-import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -256,7 +255,6 @@ const SubscriptionPlans = ({ user }) => {
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
           {/* AI Smart Tip for Subscription */}
-          <AISmartTip pageName="subscription" variant="compact" />
           
           {/* Limited Time Offer Banner */}
           <motion.div 

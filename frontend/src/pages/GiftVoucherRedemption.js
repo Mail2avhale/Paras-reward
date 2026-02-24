@@ -10,7 +10,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { InfoTooltip } from '@/components/InfoTooltip';
-import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -172,7 +171,6 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
         
         {/* AI Smart Tip */}
         <div className="mb-4">
-          <AISmartTip pageName="gift-vouchers" variant="compact" />
         </div>
         
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl p-5 border border-amber-500/30">

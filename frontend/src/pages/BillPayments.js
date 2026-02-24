@@ -19,7 +19,6 @@ import {
   validateMobile, validateIFSC, validateBankAccount
 } from '@/utils/indianValidation';
 import { InfoTooltip } from '@/components/InfoTooltip';
-import AISmartTip from '@/components/AISmartTip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -351,7 +350,6 @@ const BillPayments = ({ user, onLogout }) => {
             />
             
             {/* AI Smart Tip for Bill Payments */}
-            <AISmartTip pageName="bill-payments" variant="compact" />
             
             {/* Service Type Selection - Premium Cards */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl">
