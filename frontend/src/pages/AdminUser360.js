@@ -1539,6 +1539,84 @@ const AdminUser360 = ({ user: adminUser }) => {
                                 <p className="text-gray-400 text-xs mt-1">Reason: {redeem.rejection_reason}</p>
                               )}
                             </div>
+                          ) : redeem.status === 'pending' ? (
+                            /* Action Buttons for Pending Redemptions */
+                            <div className="col-span-2 mt-3 pt-3 border-t border-gray-700">
+                              {actionRequestId === redeem.request_id ? (
+                                <div className="space-y-2">
+                                  {actionType === 'approve' ? (
+                                    <>
+                                      <Input
+                                        value={actionUTR}
+                                        onChange={(e) => setActionUTR(e.target.value)}
+                                        placeholder="Enter UTR/Reference Number"
+                                        className="h-9 text-sm bg-gray-900 border-gray-600"
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button
+                                          onClick={() => handleRedeemAction(redeem.request_id, redeem._type, 'approve')}
+                                          disabled={actionLoading}
+                                          className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-sm"
+                                        >
+                                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-1" />}
+                                          Confirm Approve
+                                        </Button>
+                                        <Button
+                                          onClick={() => { setActionRequestId(null); setActionType(null); }}
+                                          variant="outline"
+                                          className="h-9 text-sm"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Input
+                                        value={actionReason}
+                                        onChange={(e) => setActionReason(e.target.value)}
+                                        placeholder="Enter rejection reason"
+                                        className="h-9 text-sm bg-gray-900 border-gray-600"
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button
+                                          onClick={() => handleRedeemAction(redeem.request_id, redeem._type, 'reject')}
+                                          disabled={actionLoading}
+                                          variant="destructive"
+                                          className="flex-1 h-9 text-sm"
+                                        >
+                                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                                          Confirm Reject
+                                        </Button>
+                                        <Button
+                                          onClick={() => { setActionRequestId(null); setActionType(null); }}
+                                          variant="outline"
+                                          className="h-9 text-sm"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={() => { setActionRequestId(redeem.request_id); setActionType('approve'); }}
+                                    className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-sm gap-1"
+                                  >
+                                    <CheckCircle className="w-4 h-4" /> Approve
+                                  </Button>
+                                  <Button
+                                    onClick={() => { setActionRequestId(redeem.request_id); setActionType('reject'); }}
+                                    variant="destructive"
+                                    className="flex-1 h-9 text-sm gap-1"
+                                  >
+                                    <XCircle className="w-4 h-4" /> Reject
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           ) : null}
                         </div>
                       </div>
