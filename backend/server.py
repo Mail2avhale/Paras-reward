@@ -38885,23 +38885,9 @@ async def startup_db():
     print("⏰ Starting scheduled tasks...")
     
     try:
-        # Schedule PRC burn for free users - runs every hour
-        scheduler.add_job(
-            burn_expired_prc_for_free_users,
-            CronTrigger(hour='*'),  # Every hour
-            id='burn_free_user_prc',
-            name='Burn expired PRC for free users (48 hour expiry)',
-            replace_existing=True
-        )
-        
-        # Schedule PRC burn for expired subscription users - runs daily at 2 AM
-        scheduler.add_job(
-            burn_expired_subscription_prc,
-            CronTrigger(hour=2, minute=0),  # Daily at 2 AM
-            id='burn_expired_subscription_prc',
-            name='Burn PRC for expired subscription users (5 day grace period)',
-            replace_existing=True
-        )
+        # NOTE: PRC burn jobs REMOVED (Feb 2026)
+        # Free users cannot collect PRC anymore, so no burning needed.
+        # Old jobs: burn_free_user_prc, burn_expired_subscription_prc - REMOVED
         
         # Schedule daily wallet reconciliation - runs at 3 AM
         scheduler.add_job(
