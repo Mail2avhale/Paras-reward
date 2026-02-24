@@ -70,36 +70,44 @@ const AdminUnifiedPayments = ({ user }) => {
         axios.get(`${API}/admin/bill-payment/requests`, { params: { payment_type: 'emi', limit: 1000 } }).catch(() => ({ data: [] }))
       ]);
 
-      const bankRequests = (bankRes.data?.requests || []).map(r => ({
-        ...r,
-        _type: 'bank',
-        _typeLabel: 'Bank',
-        _id: r.request_id || r._id,
-        request_id: r.request_id || r._id,
-        prc_amount: r.prc_amount || 0,
-        amount_inr: r.amount_inr || 0,
-        mobile: r.user_mobile || r.mobile || '',
-        account_number: r.account_number || '',
-        ifsc_code: r.ifsc_code || '',
-        bank_name: r.bank_name || '',
-        account_holder_name: r.account_holder_name || r.user_name || '',
-        created_at: r.created_at || r.timestamp
-      }));
+      const bankRequests = (bankRes.data?.requests || []).map(r => {
+        // Extract bank details from nested object if present
+        const bd = r.bank_details || {};
+        return {
+          ...r,
+          _type: 'bank',
+          _typeLabel: 'Bank',
+          _id: r.request_id || r._id,
+          request_id: r.request_id || r._id,
+          prc_amount: r.total_prc_deducted || r.prc_amount || 0,
+          amount_inr: r.amount_inr || 0,
+          mobile: r.user_mobile || r.mobile || '',
+          account_number: bd.account_number || r.account_number || '',
+          ifsc_code: bd.ifsc_code || r.ifsc_code || '',
+          bank_name: bd.bank_name || r.bank_name || '',
+          account_holder_name: bd.account_holder_name || r.account_holder_name || r.user_name || '',
+          created_at: r.created_at || r.timestamp
+        };
+      });
 
-      const rdRequests = (rdRes.data?.requests || []).map(r => ({
-        ...r,
-        _type: 'rd',
-        _typeLabel: 'Savings',
-        _id: r.request_id || r._id,
-        request_id: r.request_id || r._id || r.rd_id,
-        prc_amount: r.net_amount || r.current_value || 0,
-        amount_inr: r.amount_inr || 0,
-        mobile: r.user_mobile || r.mobile || '',
-        account_number: r.account_number || '',
-        ifsc_code: r.ifsc_code || '',
-        bank_name: r.bank_name || '',
-        created_at: r.created_at || r.requested_at
-      }));
+      const rdRequests = (rdRes.data?.requests || []).map(r => {
+        const bd = r.bank_details || {};
+        return {
+          ...r,
+          _type: 'rd',
+          _typeLabel: 'Savings',
+          _id: r.request_id || r._id,
+          request_id: r.request_id || r._id || r.rd_id,
+          prc_amount: r.net_amount || r.current_value || 0,
+          amount_inr: r.amount_inr || 0,
+          mobile: r.user_mobile || r.mobile || '',
+          account_number: bd.account_number || r.account_number || '',
+          ifsc_code: bd.ifsc_code || r.ifsc_code || '',
+          bank_name: bd.bank_name || r.bank_name || '',
+          account_holder_name: bd.account_holder_name || r.user_name || '',
+          created_at: r.created_at || r.requested_at
+        };
+      });
 
       const emiData = Array.isArray(emiRes.data) ? emiRes.data : (emiRes.data?.requests || []);
       const emiRequests = emiData.filter(r => 
