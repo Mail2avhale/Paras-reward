@@ -107,6 +107,35 @@ const AdminBankWithdrawals = ({ user }) => {
     }
   };
 
+  // Fetch EMI Pay requests
+  const fetchEmiRequests = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/bill-payment/requests`, {
+        params: {
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          payment_type: 'emi',
+          skip: (page - 1) * ITEMS_PER_PAGE,
+          limit: ITEMS_PER_PAGE,
+          search: debouncedSearch || undefined
+        }
+      });
+      
+      // Filter only EMI type requests
+      const emiData = (response.data?.requests || response.data || []).filter(
+        r => r.payment_type?.toLowerCase() === 'emi' || r.payment_type?.toLowerCase() === 'loan_emi'
+      );
+      setEmiRequests(emiData);
+      
+      // Calculate stats
+      const pending = emiData.filter(r => r.status === 'pending').length;
+      const approved = emiData.filter(r => r.status === 'approved').length;
+      const rejected = emiData.filter(r => r.status === 'rejected').length;
+      setEmiStats({ pending, approved, rejected, total: emiData.length });
+    } catch (error) {
+      console.error('Error fetching EMI requests:', error);
+    }
+  };
+
   // Reset page when filter changes
   const handleFilterChange = (newStatus) => {
     setStatusFilter(newStatus);
@@ -114,6 +143,54 @@ const AdminBankWithdrawals = ({ user }) => {
   };
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  // EMI Approve handler
+  const handleEmiApprove = async (requestId) => {
+    if (!transactionRef.trim()) {
+      toast.error('Please enter transaction reference number');
+      return;
+    }
+    
+    setProcessing(requestId);
+    try {
+      await axios.post(`${API}/admin/bill-payment/requests/${requestId}/approve`, {
+        admin_id: user.uid,
+        transaction_ref: transactionRef
+      });
+      toast.success('EMI Payment approved!');
+      setTransactionRef('');
+      setExpandedRequest(null);
+      fetchEmiRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve EMI');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  // EMI Reject handler
+  const handleEmiReject = async (requestId) => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter rejection reason');
+      return;
+    }
+    
+    setProcessing(requestId);
+    try {
+      await axios.post(`${API}/admin/bill-payment/requests/${requestId}/reject`, {
+        admin_id: user.uid,
+        reason: rejectReason
+      });
+      toast.success('EMI Payment rejected');
+      setRejectReason('');
+      setExpandedRequest(null);
+      fetchEmiRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject EMI');
+    } finally {
+      setProcessing(null);
+    }
+  };
 
   const handleApprove = async (requestId) => {
     if (!transactionRef.trim()) {
