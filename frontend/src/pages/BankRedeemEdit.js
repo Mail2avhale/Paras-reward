@@ -354,7 +354,7 @@ const BankRedeemEdit = ({ user }) => {
               <ul className="space-y-1 list-disc list-inside">
                 <li>Amount कमी केल्यास PRC refund होईल</li>
                 <li>Amount वाढवल्यास अतिरिक्त PRC कापले जाईल</li>
-                <li>Bank details बदलायचे असतील तरच "Edit Bank" वापरा</li>
+                <li>Only use "Edit Bank" if you need to change bank details</li>
               </ul>
             </div>
           </div>
