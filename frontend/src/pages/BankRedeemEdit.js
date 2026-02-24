@@ -46,6 +46,7 @@ const BankRedeemEdit = ({ user }) => {
       return;
     }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, requestId]);
 
   const fetchData = async () => {
