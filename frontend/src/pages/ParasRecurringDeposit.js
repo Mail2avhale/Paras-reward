@@ -58,8 +58,8 @@ const ParasRecurringDeposit = () => {
         setRdsData(data);
       }
     } catch (error) {
-      console.error('Error fetching RDs:', error);
-      toast.error('Failed to load RD data');
+      console.error('Error fetching savings data:', error);
+      toast.error('Failed to load savings data');
     } finally {
       setLoading(false);
     }
