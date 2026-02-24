@@ -184,9 +184,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc', pendingCount: pendingCounts.kyc },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
-        { id: 'unified-payments', label: 'All Payments', icon: CreditCard, path: '/admin/unified-payments', highlight: true },
-        { id: 'bill-payments', label: 'Bill', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
-        { id: 'bank-withdrawals', label: 'Bank Withdrawals', icon: Building2, path: '/admin/bank-withdrawals', pendingCount: pendingCounts.bankWithdrawals },
+        { id: 'unified-payments', label: 'All Payments', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
+        { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
         { id: 'recurring-deposits', label: 'PRC Savings Vault', icon: Building2, path: '/admin/recurring-deposits', pendingCount: pendingCounts.rdRedeem },
       ]
