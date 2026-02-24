@@ -61,9 +61,9 @@ class TestBankRedeemApproveReject:
         
         request_id = pending_requests[0].get("request_id")
         
-        # Try to approve without UTR
+        # Try to approve without UTR - now using CORRECT URL
         response = requests.post(
-            f"{BASE_URL}/api/admin/bank-redeem/requests/{request_id}/approve",
+            f"{BASE_URL}/api/admin/bank-redeem/{request_id}/approve",  # Fixed URL
             json={
                 "admin_uid": self.admin_uid,
                 "transaction_ref": "",  # Empty UTR
