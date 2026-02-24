@@ -70,10 +70,10 @@ const BottomNavItem = ({ icon: Icon, label, isActive, onClick }) => (
 
 const DashboardModern = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   
   // Time-based greeting
-  const greeting = useMemo(() => getTimeGreeting(language), [language]);
+  const greeting = useMemo(() => getTimeGreeting(), []);
   
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
