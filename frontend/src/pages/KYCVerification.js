@@ -98,7 +98,7 @@ const KYCVerification = ({ user }) => {
     setResetting(true);
     try {
       await axios.post(`${API}/kyc/reset-for-resubmit/${user.uid}`);
-      toast.success('KYC reset झाले! आता तुम्ही नवीन documents submit करू शकता.');
+      toast.success('KYC reset successful! You can now submit new documents.');
       // Refresh data
       await fetchData();
     } catch (error) {
