@@ -38480,6 +38480,10 @@ set_user_logs_db(db)
 set_user_logs_cache(cache)
 api_router.include_router(user_logs_router)
 
+# HDFC Bulk Export Router - Excel export for bulk payments
+set_hdfc_export_db(db)
+api_router.include_router(hdfc_export_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
