@@ -914,16 +914,16 @@ const AdminUnifiedPayments = ({ user }) => {
             size="sm" 
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="h-10 px-4"
+            className="h-10 px-4 text-white"
           >
             Next
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5 ml-1" />
           </Button>
         </div>
       )}
 
       {/* Total Count */}
-      <p className="text-center text-gray-500 text-sm py-2">
+      <p className="text-center text-gray-400 text-base font-medium py-2">
         Total: {filteredRequests.length} requests | Page {currentPage} of {totalPages || 1}
       </p>
 
