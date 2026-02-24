@@ -70,7 +70,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
     subscriptions: 0,
     bills: 0,
     gifts: 0,
-    luxury: 0,
     bankWithdrawals: 0,
     rdRedeem: 0
   });
