@@ -511,17 +511,21 @@ async def preview_export_data(
     Returns JSON with sample records and summary
     """
     try:
+        if db is None:
+            raise HTTPException(status_code=500, detail="Database not initialized")
+            
         data = []
         
         if payment_type in ["bank_redeem", "combined"]:
             requests = await db.bank_redeem_requests.find({"status": status}).limit(limit).to_list(limit)
             for req in requests:
+                bank_details = req.get("bank_details") or {}
                 data.append({
                     "type": "Bank Redeem",
                     "request_id": req.get("request_id", ""),
                     "amount": req.get("amount_inr", 0),
                     "user": req.get("user_name", ""),
-                    "bank": req.get("bank_details", {}).get("bank_name", "N/A")
+                    "bank": bank_details.get("bank_name", "N/A") if bank_details else "N/A"
                 })
         
         if payment_type in ["emi", "combined"]:
@@ -530,26 +534,28 @@ async def preview_export_data(
                 "payment_type": {"$in": ["emi", "EMI", "loan_emi"]}
             }).limit(limit).to_list(limit)
             for req in requests:
+                bank_details = req.get("bank_details") or {}
                 data.append({
                     "type": "EMI Payment",
                     "request_id": req.get("request_id", ""),
                     "amount": req.get("amount_inr", req.get("amount", 0)),
                     "user": req.get("user_name", ""),
-                    "bank": req.get("bank_details", {}).get("bank_name", "N/A")
+                    "bank": bank_details.get("bank_name", "N/A") if bank_details else "N/A"
                 })
         
         if payment_type in ["savings_vault", "combined"]:
             requests = await db.rd_redeem_requests.find({"status": status}).limit(limit).to_list(limit)
             for req in requests:
+                bank_details = req.get("bank_details") or {}
                 data.append({
                     "type": "Savings Vault",
                     "request_id": req.get("rd_id", req.get("request_id", "")),
                     "amount": req.get("amount_inr", 0),
                     "user": req.get("user_name", ""),
-                    "bank": req.get("bank_details", {}).get("bank_name", "N/A")
+                    "bank": bank_details.get("bank_name", "N/A") if bank_details else "N/A"
                 })
         
-        total_amount = sum(item.get("amount", 0) for item in data)
+        total_amount = sum(item.get("amount", 0) or 0 for item in data)
         
         return {
             "preview": data,
