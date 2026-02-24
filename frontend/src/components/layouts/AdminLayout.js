@@ -82,8 +82,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
         const results = await Promise.allSettled([
           axios.get(`${API}/kyc/stats`),
           axios.get(`${API}/admin/vip-payments?status=pending&limit=1`),
-          axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=500`),
-          axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=500`),
+          axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=1`),
+          axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=1`),
           // luxury-claims API call REMOVED - feature deprecated
           axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
           axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`)
@@ -104,8 +104,8 @@ const AdminLayout = ({ children, user, onLogout }) => {
         setPendingCounts({
           kyc: getValue(results[0], d => d?.pending),
           subscriptions: getValue(results[1], d => d?.total || d?.payments?.length),
-          bills: getValue(results[2], d => d?.requests?.length || d?.total),
-          gifts: getValue(results[3], d => d?.requests?.length || d?.stats?.pending || d?.total),
+          bills: getValue(results[2], d => d?.stats?.pending || d?.total),
+          gifts: getValue(results[3], d => d?.stats?.pending || d?.requests?.length || d?.total),
           // luxury count REMOVED - feature deprecated
           bankWithdrawals: getValue(results[4], d => d?.stats?.pending?.count || d?.total),
           rdRedeem: getValue(results[5], d => d?.stats?.pending || d?.total)
