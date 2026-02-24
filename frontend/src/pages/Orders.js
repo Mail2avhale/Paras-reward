@@ -799,9 +799,26 @@ const Orders = ({ user, onLogout }) => {
                         </div>
                         {/* Show approved/rejected date if applicable */}
                         {request.status === 'approved' && (request.approved_at || request.processed_at) && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-green-400 text-xs">✓ Approved:</span>
                             <span className="text-green-300 text-xs font-medium">{formatDateTime(request.approved_at || request.processed_at)}</span>
+                            {/* Speed Tags */}
+                            {(() => {
+                              const created = new Date(request.created_at);
+                              const approved = new Date(request.approved_at || request.processed_at);
+                              const hoursToApprove = (approved - created) / (1000 * 60 * 60);
+                              
+                              if (hoursToApprove <= 1) {
+                                return <span className="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded-full font-bold animate-pulse">⚡ Super Fast</span>;
+                              } else if (hoursToApprove <= 6) {
+                                return <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-semibold">🚀 Fast</span>;
+                              } else if (hoursToApprove <= 24) {
+                                return <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">✓ On Time</span>;
+                              } else if (hoursToApprove <= 48) {
+                                return <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full">⏱️ Standard</span>;
+                              }
+                              return null;
+                            })()}
                           </div>
                         )}
                         {request.status === 'rejected' && (request.rejected_at || request.processed_at) && (
