@@ -16962,7 +16962,7 @@ async def bulk_restore_prc(request: Request):
 async def user_360_quick_action(request: Request):
     """
     Perform quick admin actions on a user from the 360° view.
-    Actions: pause_mining, resume_mining, adjust_balance, set_cap, reset_password, send_notification, block_user, save_notes
+    Actions: pause_mining, resume_mining, adjust_balance, set_cap, reset_password, send_notification, block_user, unblock_user, save_notes
     """
     data = await request.json()
     user_id = data.get("user_id")
