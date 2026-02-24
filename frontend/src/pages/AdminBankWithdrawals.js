@@ -348,6 +348,50 @@ const AdminBankWithdrawals = ({ user }) => {
             </span>
           )}
         </button>
+        
+        {/* HDFC Export Dropdown */}
+        <div className="relative ml-auto group">
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            HDFC Export
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          <div className="absolute right-0 mt-1 w-56 bg-gray-800 rounded-lg shadow-xl border border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
+              Download Approved Requests (HDFC Format)
+            </div>
+            <button
+              onClick={() => handleHDFCExport('bank_redeem')}
+              className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-white hover:bg-gray-700 rounded-t"
+            >
+              <Building2 className="w-4 h-4 text-green-400" />
+              Bank Redeem
+            </button>
+            <button
+              onClick={() => handleHDFCExport('savings_vault')}
+              className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-white hover:bg-gray-700"
+            >
+              <PiggyBank className="w-4 h-4 text-emerald-400" />
+              Savings Vault
+            </button>
+            <button
+              onClick={() => handleHDFCExport('emi')}
+              className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-white hover:bg-gray-700"
+            >
+              <CreditCard className="w-4 h-4 text-purple-400" />
+              EMI Payments
+            </button>
+            <button
+              onClick={() => handleHDFCExport('combined')}
+              className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-white hover:bg-blue-600 rounded-b border-t border-gray-700"
+            >
+              <Download className="w-4 h-4 text-blue-400" />
+              All Combined
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
