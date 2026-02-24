@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -40,15 +40,8 @@ const BankRedeemEdit = ({ user }) => {
     return { processingFee, adminCharges, totalCharges, prcRequired, youReceive: amountInr };
   };
 
-  useEffect(() => {
-    if (!user?.uid) {
-      navigate('/login');
-      return;
-    }
-    fetchData();
-  }, [user?.uid, requestId, navigate]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!user?.uid) return;
     setLoading(true);
     try {
       const [userRes, historyRes] = await Promise.all([
