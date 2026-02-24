@@ -59,6 +59,7 @@ from routes.admin_products import router as admin_products_router, set_db as set
 from routes.admin_misc import router as admin_misc_router, set_db as set_admin_misc_db, set_helpers as set_admin_misc_helpers
 from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_redeem_db, set_cache as set_bank_redeem_cache, set_helpers as set_bank_redeem_helpers
 from routes.recurring_deposit import router as rd_router, set_db as set_rd_db, set_cache as set_rd_cache
+from routes.user_logs import router as user_logs_router, set_db as set_user_logs_db, set_cache as set_user_logs_cache
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
