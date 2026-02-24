@@ -189,7 +189,6 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'bill-payments', label: 'Bill', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
         { id: 'bank-withdrawals', label: 'Bank Withdrawals', icon: Building2, path: '/admin/bank-withdrawals', pendingCount: pendingCounts.bankWithdrawals },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
-        { id: 'luxury-claims', label: 'Luxury Life Claim', icon: Crown, path: '/admin/luxury-claims', pendingCount: pendingCounts.luxury },
         { id: 'recurring-deposits', label: 'PRC Savings Vault', icon: Building2, path: '/admin/recurring-deposits', pendingCount: pendingCounts.rdRedeem },
       ]
     },
