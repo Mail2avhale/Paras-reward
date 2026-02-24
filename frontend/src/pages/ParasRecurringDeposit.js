@@ -680,20 +680,20 @@ const ParasRecurringDeposit = () => {
               <div className="bg-gray-800/50 rounded-xl p-4 mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Current Value</span>
-                  <span className="text-white">₹{formatCurrency(selectedRd.current_value)} PRC</span>
+                  <span className="text-white">{formatCurrency(selectedRd.current_value)} PRC</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Early Penalty (3%)</span>
-                  <span className="text-red-400">-₹{formatCurrency(selectedRd.current_value * 0.03)}</span>
+                  <span className="text-red-400">-{formatCurrency(selectedRd.current_value * 0.03)} PRC</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Admin Charge (20%)</span>
-                  <span className="text-red-400">-₹{formatCurrency(selectedRd.current_value * 0.20)}</span>
+                  <span className="text-gray-400">Service Fee (20%)</span>
+                  <span className="text-red-400">-{formatCurrency(selectedRd.current_value * 0.20)} PRC</span>
                 </div>
                 <div className="border-t border-gray-700 pt-2 flex justify-between">
-                  <span className="text-white font-medium">Net Amount (PRC)</span>
+                  <span className="text-white font-medium">Net Amount</span>
                   <span className="text-emerald-400 font-bold">
-                    ₹{formatCurrency(selectedRd.current_value * 0.77)}
+                    {formatCurrency(selectedRd.current_value * 0.77)} PRC
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
