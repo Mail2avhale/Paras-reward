@@ -85,7 +85,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
           axios.get(`${API}/admin/vip-payments?status=pending&limit=1`),
           axios.get(`${API}/admin/bill-payment/requests?status=pending&limit=500`),
           axios.get(`${API}/admin/gift-voucher/requests?status=pending&limit=500`),
-          axios.get(`${API}/admin/luxury-claims?status=pending&limit=1`),
+          // luxury-claims API call REMOVED - feature deprecated
           axios.get(`${API}/admin/bank-redeem/requests?status=pending&page=1&limit=1`),
           axios.get(`${API}/rd/admin/redeem-requests?status=pending&skip=0&limit=1`)
         ]);
