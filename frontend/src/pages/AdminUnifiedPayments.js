@@ -27,7 +27,8 @@ const AdminUnifiedPayments = ({ user }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortOrder, setSortOrder] = useState('desc');
+  // Sort: pending = oldest first (asc), approved/rejected = newest first (desc)
+  const [sortOrder, setSortOrder] = useState('asc'); // Will change based on statusFilter
   
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState([]);
