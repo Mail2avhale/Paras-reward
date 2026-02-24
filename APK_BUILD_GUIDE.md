@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://prc-burn-patch.preview.emergentagent.com",
+    "url": "https://elite-user-safety.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

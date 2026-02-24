@@ -8,7 +8,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-burn-patch.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://elite-user-safety.preview.emergentagent.com')
 
 # Test credentials
 ADMIN_EMAIL = "admin@paras.com"

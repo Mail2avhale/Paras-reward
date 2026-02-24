@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://prc-burn-patch.preview.emergentagent.com/setup
+   https://elite-user-safety.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
