@@ -617,21 +617,21 @@ const ParasRecurringDeposit = () => {
                 />
               </div>
               
-              {/* Expected Maturity */}
+              {/* Expected Value */}
               <div className="bg-emerald-500/10 rounded-xl p-4 mb-6 border border-emerald-500/30">
-                <p className="text-sm text-gray-400 mb-2">Expected at Maturity</p>
+                <p className="text-sm text-gray-400 mb-2">Expected at Completion</p>
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-xs text-gray-500">Principal</p>
-                    <p className="text-white">₹{formatCurrency(calculateExpectedMaturity().principal)} PRC</p>
+                    <p className="text-white">{formatCurrency(calculateExpectedMaturity().principal)} PRC</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-gray-500">Interest</p>
-                    <p className="text-emerald-400">+₹{formatCurrency(calculateExpectedMaturity().interest)}</p>
+                    <p className="text-xs text-gray-500">Bonus</p>
+                    <p className="text-emerald-400">+{formatCurrency(calculateExpectedMaturity().interest)} PRC</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">Maturity</p>
-                    <p className="text-xl font-bold text-white">₹{formatCurrency(calculateExpectedMaturity().maturity)}</p>
+                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="text-xl font-bold text-white">{formatCurrency(calculateExpectedMaturity().maturity)} PRC</p>
                   </div>
                 </div>
               </div>
@@ -642,7 +642,8 @@ const ParasRecurringDeposit = () => {
                 className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl text-white font-bold text-lg disabled:opacity-50"
                 data-testid="confirm-create-rd-btn"
               >
-                {processing ? 'Creating...' : 'Create RD Account'}
+                {processing ? 'Creating...' : 'Create Savings Plan'}
+              </button>
               </button>
             </motion.div>
           </motion.div>
