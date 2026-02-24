@@ -367,7 +367,7 @@ const ParasRecurringDeposit = () => {
         <div className="bg-gray-900/50 rounded-2xl p-4 border border-gray-800">
           <div className="flex items-center gap-2 mb-3">
             <Percent className="w-5 h-5 text-blue-400" />
-            <h3 className="font-semibold text-white">Interest Rates</h3>
+            <h3 className="font-semibold text-white">Bonus Rates</h3>
           </div>
           <div className="grid grid-cols-4 gap-2">
             {TENURE_OPTIONS.map((tenure) => (
@@ -389,28 +389,28 @@ const ParasRecurringDeposit = () => {
           </div>
         </div>
 
-        {/* Create New RD Button */}
+        {/* Create New Savings Button */}
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowCreateModal(true)}
           className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl text-white font-bold text-lg shadow-lg shadow-emerald-500/30"
           data-testid="create-rd-btn"
         >
-          + Create New RD
+          + Create New Savings Plan
         </motion.button>
 
-        {/* RD List */}
+        {/* Savings List */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <History className="w-5 h-5 text-gray-400" />
-            Your RD Accounts
+            Your Savings Plans
           </h3>
           
           {(!rdsData?.rds || rdsData.rds.length === 0) ? (
             <div className="text-center py-10 bg-gray-900/30 rounded-2xl border border-gray-800/50">
               <PiggyBank className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">No RD accounts yet</p>
-              <p className="text-gray-500 text-sm mt-1">Create your first RD to start earning interest!</p>
+              <p className="text-gray-400">No savings plans yet</p>
+              <p className="text-gray-500 text-sm mt-1">Create your first savings plan to start earning bonus PRC!</p>
             </div>
           ) : (
             rdsData.rds.map((rd, index) => (
