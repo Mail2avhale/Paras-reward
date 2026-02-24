@@ -112,20 +112,24 @@ const AdminUnifiedPayments = ({ user }) => {
       const emiData = Array.isArray(emiRes.data) ? emiRes.data : (emiRes.data?.requests || []);
       const emiRequests = emiData.filter(r => 
         r.payment_type?.toLowerCase() === 'emi' || r.payment_type?.toLowerCase() === 'loan_emi'
-      ).map(r => ({
-        ...r,
-        _type: 'emi',
-        _typeLabel: 'EMI',
-        _id: r._id || r.request_id,
-        request_id: r._id || r.request_id,
-        prc_amount: r.total_prc_deducted || r.prc_amount || 0,
-        amount_inr: r.amount_inr || r.emi_amount || 0,
-        mobile: r.user_mobile || r.mobile || '',
-        account_number: r.loan_account_number || r.account_number || '',
-        ifsc_code: r.ifsc_code || '',
-        bank_name: r.bank_name || '',
-        created_at: r.created_at || r.timestamp
-      }));
+      ).map(r => {
+        const bd = r.bank_details || {};
+        return {
+          ...r,
+          _type: 'emi',
+          _typeLabel: 'EMI',
+          _id: r._id || r.request_id,
+          request_id: r._id || r.request_id,
+          prc_amount: r.total_prc_deducted || r.prc_amount || 0,
+          amount_inr: r.amount_inr || r.emi_amount || 0,
+          mobile: r.user_mobile || r.mobile || '',
+          account_number: bd.account_number || r.loan_account_number || r.account_number || '',
+          ifsc_code: bd.ifsc_code || r.ifsc_code || '',
+          bank_name: bd.bank_name || r.bank_name || '',
+          account_holder_name: bd.account_holder_name || r.user_name || '',
+          created_at: r.created_at || r.timestamp
+        };
+      });
 
       const combined = [...bankRequests, ...rdRequests, ...emiRequests];
       setAllRequests(combined);
