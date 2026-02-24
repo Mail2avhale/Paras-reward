@@ -271,14 +271,14 @@ const ParasRecurringDeposit = () => {
             <div>
               <p className="text-gray-400 text-xs mb-1">Total Deposited</p>
               <p className="text-2xl font-bold text-white">
-                ₹{formatCurrency(rdsData?.summary?.total_deposited || 0)}
+                {formatCurrency(rdsData?.summary?.total_deposited || 0)}
               </p>
               <p className="text-emerald-400 text-xs">PRC</p>
             </div>
             <div>
-              <p className="text-gray-400 text-xs mb-1">Interest Earned</p>
+              <p className="text-gray-400 text-xs mb-1">Bonus Earned</p>
               <p className="text-2xl font-bold text-emerald-400">
-                +₹{formatCurrency(rdsData?.summary?.total_interest_earned || 0)}
+                +{formatCurrency(rdsData?.summary?.total_interest_earned || 0)}
               </p>
               <p className="text-emerald-400/70 text-xs">PRC</p>
             </div>
@@ -288,17 +288,17 @@ const ParasRecurringDeposit = () => {
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm">Current Value</span>
               <span className="text-xl font-bold text-white">
-                ₹{formatCurrency(rdsData?.summary?.total_current_value || 0)} PRC
+                {formatCurrency(rdsData?.summary?.total_current_value || 0)} PRC
               </span>
             </div>
           </div>
           
           <div className="mt-4 flex gap-2">
             <span className="px-3 py-1 bg-emerald-500/20 rounded-full text-emerald-400 text-xs">
-              {rdsData?.summary?.active_rds || 0} Active RDs
+              {rdsData?.summary?.active_rds || 0} Active Savings
             </span>
             <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-400 text-xs">
-              20% Compulsory Savings
+              20% Auto Savings
             </span>
           </div>
         </motion.div>
