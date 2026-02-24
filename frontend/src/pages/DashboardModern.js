@@ -17,6 +17,7 @@ import AISmartTip from '@/components/AISmartTip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import NotificationBell from '@/components/NotificationBell';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
