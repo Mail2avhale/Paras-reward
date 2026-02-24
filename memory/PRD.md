@@ -6,7 +6,36 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 🔴 CRITICAL: PRC Burn Ultimate Safety Fix ✅ (Feb 2026 - Latest)
+### 📊 Comprehensive User Logging System ✅ (Feb 2026 - Latest)
+
+**New Module:** `routes/user_logs.py`
+
+**Purpose:** Debug issues like paid users losing PRC balance by tracking every action.
+
+**New Collections Created:**
+- `prc_balance_logs` - Every PRC credit/debit/burn with before/after balance
+- `burn_operation_logs` - Complete burn job records (who was burned, who was skipped & why)
+- `user_activity_logs` - User actions (login, mining, orders, etc.)
+- `admin_action_logs` - Admin actions audit trail
+
+**New API Endpoints:**
+- `GET /api/admin/logs/dashboard` - Overview of all logs
+- `GET /api/admin/logs/prc-balance` - PRC balance change history
+- `GET /api/admin/logs/prc-balance/user/{email}` - Specific user PRC history
+- `GET /api/admin/logs/burn-operations` - Burn job logs
+- `GET /api/admin/logs/burn-operations/check-user/{email}` - Check if user was ever burned
+- `GET /api/admin/logs/user-activity` - User activity logs
+- `GET /api/admin/logs/admin-actions` - Admin action audit logs
+- `POST /api/admin/logs/create-indexes` - Create indexes for performance
+
+**Integration with Burn Functions:**
+- Every burn operation now logs detailed records
+- Skipped users are logged with reasons
+- Burned users are logged with amounts
+
+---
+
+### 🔴 CRITICAL: PRC Burn Ultimate Safety Fix ✅ (Feb 2026)
 
 **Problem:** Paid user (`nisha@gmail.com`) repeatedly had PRC balance reset to zero despite previous fixes.
 
