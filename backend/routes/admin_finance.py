@@ -1421,24 +1421,21 @@ async def update_prc_burn_settings(request: Request):
 @router.post("/prc-burn-execute")
 async def execute_daily_prc_burn(request: Request):
     """
-    Execute daily PRC burn based on settings
-    Burns X% of available PRC balance from target users
+    DEPRECATED: As of Feb 2026, free users cannot collect PRC.
+    This endpoint is kept for backward compatibility but does nothing.
     
-    SAFETY: Only burns from users who:
-    - Are free/explorer users (or as per target_user_type setting)
-    - Have never had a paid subscription
-    - Have minimum required balance
-    - CRITICAL: Double-verify subscription status before EVERY burn
+    Old functionality: Burns X% of available PRC balance from target users
+    New policy: Free users cannot collect PRC, so there's nothing to burn.
     """
-    try:
-        # Get settings
-        settings = await db.settings.find_one({"key": "prc_burn_settings"})
-        if not settings or not settings.get("auto_burn_enabled"):
-            return {"error": "Auto burn is not enabled", "burned": 0}
-        
-        burn_percentage = settings.get("daily_burn_percentage", 1.0)
-        target_type = settings.get("target_user_type", "free")
-        min_balance = settings.get("min_balance_to_burn", 10)
+    logging.info("[PRC BURN] Execute endpoint called - SKIPPED (new policy: free users cannot collect PRC)")
+    return {
+        "success": True,
+        "status": "skipped",
+        "reason": "Free users cannot collect PRC (Feb 2026 policy change). No burning needed.",
+        "total_burned": 0,
+        "users_affected": 0,
+        "burns": []
+    }
         
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
