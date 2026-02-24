@@ -124,7 +124,7 @@ const AdminRecurringDeposits = ({ user }) => {
       });
       const data = await response.json();
       if (data.success) {
-        toast.success(`Migrated ${data.migrated_count} users (₹${formatCurrency(data.total_migrated_amount)} PRC)`);
+        toast.success(`Migrated ${data.migrated_count} users (${formatCurrency(data.total_migrated_amount)} PRC)`);
         fetchRds();
       } else {
         toast.error(data.detail || 'Migration failed');
