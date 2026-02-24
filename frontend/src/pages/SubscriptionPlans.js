@@ -195,7 +195,7 @@ const SubscriptionPlans = ({ user }) => {
       console.error('Submit error:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to submit payment';
       // Show specific message for UTR duplicate
-      if (errorMsg.includes('UTR') || errorMsg.includes('आधीच')) {
+      if (errorMsg.includes('UTR') || errorMsg.includes('already')) {
         toast.error('⚠️ UTR ALREADY IN USE - ' + errorMsg);
       } else {
         toast.error(errorMsg);
