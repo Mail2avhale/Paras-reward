@@ -699,9 +699,10 @@ async def reject_withdrawal(request_id: str, request: Request):
         try:
             await create_notification(
                 user_id=user_id,
-                title="Withdrawal Rejected",
-                message=f"Your withdrawal request of ₹{withdrawal['amount_inr']} was rejected. {refund_amount} PRC refunded. Reason: {reason}",
-                notification_type="withdrawal"
+                title="Payment Rejected",
+                message=f"Your withdrawal request of ₹{withdrawal['amount_inr']:,.0f} was rejected. {refund_amount:,.0f} PRC refunded. Reason: {reason}",
+                notification_type="payment_rejected",
+                data={"amount_inr": withdrawal['amount_inr'], "reason": reason, "payment_type": "bank_withdrawal"}
             )
         except Exception:
             pass
