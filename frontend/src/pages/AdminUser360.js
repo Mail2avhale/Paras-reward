@@ -1688,14 +1688,28 @@ const AdminUser360 = ({ user: adminUser }) => {
                 )}
                 <Button
                   onClick={() => {
-                    if (confirm('⚠️ Are you sure you want to block this user?')) handleQuickAction('block_user');
+                    const isBlocked = userData?.user?.is_blocked || userData?.user?.status === 'blocked';
+                    const action = isBlocked ? 'unblock_user' : 'block_user';
+                    const message = isBlocked 
+                      ? '✅ Are you sure you want to unblock this user?' 
+                      : '⚠️ Are you sure you want to block this user?';
+                    if (confirm(message)) handleQuickAction(action);
                   }}
                   disabled={processing}
                   variant="outline"
-                  className="h-auto py-3 border-red-500/50 text-red-400"
+                  className={`h-auto py-3 ${userData?.user?.is_blocked || userData?.user?.status === 'blocked' ? 'border-green-500/50 text-green-400' : 'border-red-500/50 text-red-400'}`}
                 >
-                  <Ban className="w-4 h-4 mr-2" />
-                  Block User
+                  {userData?.user?.is_blocked || userData?.user?.status === 'blocked' ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Unblock User
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="w-4 h-4 mr-2" />
+                      Block User
+                    </>
+                  )}
                 </Button>
                 <Button
                   onClick={async () => {
