@@ -25499,7 +25499,9 @@ async def get_user_bill_payment_requests(user_id: str):
 async def get_all_bill_payment_requests(
     status: Optional[str] = None,
     request_type: Optional[str] = None,
-    search: Optional[str] = None
+    payment_type: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 500
 ):
     """Get all bill payment requests (Admin only) with enriched user data"""
     query = {}
@@ -25509,17 +25511,32 @@ async def get_all_bill_payment_requests(
     if request_type:
         query["request_type"] = request_type
     
-    # Search by user_id, mobile, or request_id
+    # Filter by payment_type (for EMI requests)
+    if payment_type:
+        if payment_type.lower() in ['emi', 'loan_emi']:
+            query["$or"] = [
+                {"payment_type": {"$regex": "emi", "$options": "i"}},
+                {"request_type": "loan_emi"}
+            ]
+        else:
+            query["payment_type"] = payment_type
+    
+    # Search by user_id, mobile, name, email or request_id
     if search:
-        query["$or"] = [
+        search_query = [
             {"user_id": {"$regex": search, "$options": "i"}},
             {"user_mobile": {"$regex": search, "$options": "i"}},
             {"user_email": {"$regex": search, "$options": "i"}},
             {"user_name": {"$regex": search, "$options": "i"}},
             {"request_id": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            # Combine with existing $or
+            query = {"$and": [{"$or": query["$or"]}, {"$or": search_query}]}
+        else:
+            query["$or"] = search_query
     
-    requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     # Batch fetch all unique user IDs to avoid N+1 queries
     user_ids = list(set(req.get("user_id") for req in requests if req.get("user_id")))
