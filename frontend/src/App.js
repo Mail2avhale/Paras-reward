@@ -162,7 +162,7 @@ const AdminMembers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNam
 const AdminPRCBurnControl = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCBurnControl"));
 const AdminDataBackup = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
 const AdminBillPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
-const AdminBankWithdrawals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBankWithdrawals"));
+// AdminBankWithdrawals removed - merged into AdminUnifiedPayments
 const AdminGiftVouchers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminGiftVouchers"));
 const AdminServiceCharges = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceCharges"));
 const AdminServiceToggles = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminServiceToggles"));
