@@ -1161,10 +1161,10 @@ const DashboardModern = ({ user, onLogout }) => {
                   <h3 className="font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-200 text-base">PRC SAVINGS VAULT</h3>
                   <span className="px-2 py-0.5 bg-emerald-500/30 rounded text-[8px] text-emerald-300 font-bold">NEW</span>
                 </div>
-                <p className="text-emerald-200/70 text-xs italic mt-0.5">&ldquo;Earn up to 9.25% Interest&rdquo;</p>
+                <p className="text-emerald-200/70 text-xs italic mt-0.5">&ldquo;Earn up to 9.25% Bonus PRC&rdquo;</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-gray-400">💰 20% Compulsory Savings</span>
-                  <span className="text-[10px] text-gray-400">📈 Compound Interest</span>
+                  <span className="text-[10px] text-gray-400">💰 20% Auto Savings</span>
+                  <span className="text-[10px] text-gray-400">📈 Bonus PRC</span>
                 </div>
               </div>
             </div>
