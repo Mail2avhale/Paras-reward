@@ -86,7 +86,11 @@ const BankRedeemEdit = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid, requestId, navigate]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSave = async () => {
     if (amount < 100 || amount > 25000) {
