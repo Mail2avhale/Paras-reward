@@ -259,11 +259,13 @@ const AdminUnifiedPayments = ({ user }) => {
     setProcessing(request._id);
     try {
       if (request._type === 'bank') {
-        await axios.post(`${API}/admin/bank-redeem/requests/${request._id}/reject`, {
+        // Fixed: removed /requests/ from URL path to match backend route
+        await axios.post(`${API}/admin/bank-redeem/${request._id}/reject`, {
           admin_uid: user.uid, reason: rejectReason, admin_name: user.name || user.email
         });
       } else if (request._type === 'rd') {
-        await axios.post(`${API}/rd/admin/redeem/${request._id}/reject`, {
+        // Fixed: changed /redeem/ to /redeem-requests/ to match backend route
+        await axios.post(`${API}/rd/admin/redeem-requests/${request._id}/reject`, {
           admin_uid: user.uid, reason: rejectReason
         });
       } else if (request._type === 'emi') {
