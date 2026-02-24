@@ -351,13 +351,13 @@ const AdminRecurringDeposits = ({ user }) => {
                       <p className="text-xs text-emerald-400">{rd.interest_rate}% p.a.</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm text-white font-medium">₹{formatCurrency(rd.total_deposited)}</p>
+                      <p className="text-sm text-white font-medium">{formatCurrency(rd.total_deposited)} PRC</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm text-emerald-400">+₹{formatCurrency(rd.interest_earned)}</p>
+                      <p className="text-sm text-emerald-400">+{formatCurrency(rd.interest_earned)} PRC</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm text-white font-bold">₹{formatCurrency(rd.current_value)}</p>
+                      <p className="text-sm text-white font-bold">{formatCurrency(rd.current_value)} PRC</p>
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm text-gray-300">{formatDate(rd.maturity_date)}</p>
