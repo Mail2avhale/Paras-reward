@@ -30123,32 +30123,105 @@ async def get_ai_referral_suggestions(uid: str):
 
 
 # ========== NOTIFICATION SYSTEM ==========
+
+# Notification Types with icons and colors
+NOTIFICATION_TYPES_INFO = {
+    "payment_approved": {"icon": "✓", "color": "green"},
+    "payment_rejected": {"icon": "✗", "color": "red"},
+    "withdrawal": {"icon": "💰", "color": "green"},
+    "referral_joined": {"icon": "👤", "color": "blue"},
+    "prc_credited": {"icon": "💎", "color": "purple"},
+    "subscription_expiry": {"icon": "⚠️", "color": "yellow"},
+    "kyc_approved": {"icon": "✓", "color": "green"},
+    "kyc_rejected": {"icon": "✗", "color": "red"},
+    "general": {"icon": "🔔", "color": "gray"}
+}
+
 async def create_notification(
     user_id: str,
     title: str,
     message: str,
-    notification_type: str,
+    notification_type: str = "general",
     related_id: Optional[str] = None,
     icon: Optional[str] = None,
-    action_url: Optional[str] = None
+    action_url: Optional[str] = None,
+    data: Optional[dict] = None
 ):
-    """Helper function to create notifications"""
+    """
+    Create a notification for a user
+    Stores in notifications collection for in-app notification bell
+    """
+    type_info = NOTIFICATION_TYPES_INFO.get(notification_type, NOTIFICATION_TYPES_INFO["general"])
+    
     notification = {
         "notification_id": str(uuid.uuid4()),
         "user_id": user_id,
-        "user_uid": user_id,  # For compatibility with API queries
+        "user_uid": user_id,
         "title": title,
         "message": message,
         "type": notification_type,
+        "icon": type_info.get("icon", icon or "🔔"),
+        "color": type_info.get("color", "gray"),
         "related_id": related_id,
-        "icon": icon or "🔔",
         "action_url": action_url,
+        "data": data or {},
         "read": False,
         "is_read": False,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc)
     }
-    await db.notifications.insert_one(notification)
+    
+    try:
+        await db.notifications.insert_one(notification)
+        logging.info(f"[NOTIFICATION] Created for user {user_id}: {notification_type} - {title}")
+    except Exception as e:
+        logging.error(f"Error creating notification: {e}")
+    
     return notification
+
+
+# Helper functions for common notification types
+async def notify_payment_approved(user_id: str, amount_inr: float, payment_type: str = "withdrawal"):
+    """Notify user when payment is approved"""
+    await create_notification(
+        user_id=user_id,
+        title="Payment Approved ✓",
+        message=f"Your {payment_type} request of ₹{amount_inr:,.0f} has been approved and processed.",
+        notification_type="payment_approved",
+        data={"amount_inr": amount_inr, "payment_type": payment_type}
+    )
+
+
+async def notify_payment_rejected(user_id: str, amount_inr: float, reason: str, payment_type: str = "withdrawal"):
+    """Notify user when payment is rejected"""
+    await create_notification(
+        user_id=user_id,
+        title="Payment Rejected",
+        message=f"Your {payment_type} request of ₹{amount_inr:,.0f} was rejected. Reason: {reason}. PRC refunded.",
+        notification_type="payment_rejected",
+        data={"amount_inr": amount_inr, "reason": reason, "payment_type": payment_type}
+    )
+
+
+async def notify_referral_joined(user_id: str, referral_name: str):
+    """Notify user when a referral joins"""
+    await create_notification(
+        user_id=user_id,
+        title="New Team Member!",
+        message=f"{referral_name} joined using your referral code. Earn more rewards!",
+        notification_type="referral_joined",
+        data={"referral_name": referral_name}
+    )
+
+
+async def notify_prc_credited(user_id: str, amount: float, reason: str):
+    """Notify user when PRC is credited"""
+    await create_notification(
+        user_id=user_id,
+        title=f"+{amount:,.0f} PRC Credited",
+        message=f"You received {amount:,.0f} PRC. Reason: {reason}",
+        notification_type="prc_credited",
+        data={"amount": amount, "reason": reason}
+    )
 
 
 # ========== GAMIFICATION SYSTEM ==========
