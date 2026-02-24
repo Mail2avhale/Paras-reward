@@ -316,11 +316,13 @@ const AdminUnifiedPayments = ({ user }) => {
       if (!request || request.status !== 'pending') continue;
       try {
         if (request._type === 'bank') {
-          await axios.post(`${API}/admin/bank-redeem/requests/${id}/approve`, {
+          // Fixed: removed /requests/ from URL path to match backend route
+          await axios.post(`${API}/admin/bank-redeem/${id}/approve`, {
             admin_uid: user.uid, transaction_ref: bulkTransactionRef, admin_name: user.name || user.email
           });
         } else if (request._type === 'rd') {
-          await axios.post(`${API}/rd/admin/redeem/${id}/approve`, {
+          // Fixed: changed /redeem/ to /redeem-requests/ to match backend route
+          await axios.post(`${API}/rd/admin/redeem-requests/${id}/approve`, {
             admin_uid: user.uid, transaction_ref: bulkTransactionRef
           });
         } else if (request._type === 'emi') {
@@ -354,11 +356,13 @@ const AdminUnifiedPayments = ({ user }) => {
       if (!request || request.status !== 'pending') continue;
       try {
         if (request._type === 'bank') {
-          await axios.post(`${API}/admin/bank-redeem/requests/${id}/reject`, {
+          // Fixed: removed /requests/ from URL path to match backend route
+          await axios.post(`${API}/admin/bank-redeem/${id}/reject`, {
             admin_uid: user.uid, reason: bulkRejectReason, admin_name: user.name || user.email
           });
         } else if (request._type === 'rd') {
-          await axios.post(`${API}/rd/admin/redeem/${id}/reject`, {
+          // Fixed: changed /redeem/ to /redeem-requests/ to match backend route
+          await axios.post(`${API}/rd/admin/redeem-requests/${id}/reject`, {
             admin_uid: user.uid, reason: bulkRejectReason
           });
         } else if (request._type === 'emi') {
