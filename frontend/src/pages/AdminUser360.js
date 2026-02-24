@@ -363,6 +363,79 @@ const AdminUser360 = ({ user: adminUser }) => {
     }
   };
 
+  // Handle Bill Payment Approve/Reject
+  const handleBillAction = async (requestId, action) => {
+    if (action === 'approve' && !actionUTR.trim()) {
+      toast.error('Please enter UTR/Reference number');
+      return;
+    }
+    if (action === 'reject' && !actionReason.trim()) {
+      toast.error('Please enter rejection reason');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await axios.put(`${API}/admin/bill-payment/action/${requestId}`, {
+        action: action,
+        admin_id: adminUser?.uid,
+        transaction_ref: action === 'approve' ? actionUTR : undefined,
+        reason: action === 'reject' ? actionReason : undefined
+      });
+      
+      toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      setActionRequestId(null);
+      setActionType(null);
+      setActionUTR('');
+      setActionReason('');
+      refreshUserData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || `Failed to ${action} request`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Bank Redeem Approve/Reject
+  const handleRedeemAction = async (requestId, requestType, action) => {
+    if (action === 'approve' && !actionUTR.trim()) {
+      toast.error('Please enter UTR/Reference number');
+      return;
+    }
+    if (action === 'reject' && !actionReason.trim()) {
+      toast.error('Please enter rejection reason');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      // Determine correct API based on request type
+      let apiUrl = '';
+      if (requestType === 'rd' || requestType === 'savings') {
+        apiUrl = `${API}/rd/admin/process-redeem/${requestId}`;
+      } else {
+        apiUrl = `${API}/admin/bank-redeem/${action}/${requestId}`;
+      }
+      
+      await axios.post(apiUrl, {
+        admin_id: adminUser?.uid,
+        transaction_ref: action === 'approve' ? actionUTR : undefined,
+        reason: action === 'reject' ? actionReason : undefined
+      });
+      
+      toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      setActionRequestId(null);
+      setActionType(null);
+      setActionUTR('');
+      setActionReason('');
+      refreshUserData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || `Failed to ${action} request`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Auto Diagnose Function
   const runDiagnosis = async () => {
     if (!userData?.user?.uid) return;
