@@ -209,6 +209,63 @@ const AdminBankWithdrawals = ({ user }) => {
     }
   };
 
+  // HDFC Bank Excel Export function
+  const handleHDFCExport = async (exportType) => {
+    try {
+      toast.loading('Generating HDFC Excel file...');
+      
+      let endpoint = '';
+      let filename = '';
+      
+      switch(exportType) {
+        case 'bank_redeem':
+          endpoint = `${API}/admin/hdfc-export/bank-redeem?status=approved`;
+          filename = 'HDFC_BankRedeem_Approved.xlsx';
+          break;
+        case 'savings_vault':
+          endpoint = `${API}/admin/hdfc-export/savings-vault?status=approved`;
+          filename = 'HDFC_SavingsVault_Approved.xlsx';
+          break;
+        case 'emi':
+          endpoint = `${API}/admin/hdfc-export/emi-payments?status=approved`;
+          filename = 'HDFC_EMI_Approved.xlsx';
+          break;
+        case 'combined':
+          endpoint = `${API}/admin/hdfc-export/combined?status=approved`;
+          filename = 'HDFC_AllPayments_Approved.xlsx';
+          break;
+        default:
+          toast.error('Invalid export type');
+          return;
+      }
+      
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        toast.dismiss();
+        toast.error(error.detail || 'No approved requests found');
+        return;
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.dismiss();
+      toast.success(`${filename} downloaded successfully!`);
+    } catch (error) {
+      toast.dismiss();
+      toast.error('Failed to export: ' + (error.message || 'Unknown error'));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const config = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock },
