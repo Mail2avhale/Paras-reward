@@ -25486,6 +25486,122 @@ async def trigger_prc_burn():
         "results": result
     }
 
+@api_router.post("/admin/clear-free-users-prc")
+async def clear_all_free_users_prc():
+    """
+    Clear PRC balance for ALL free/explorer users.
+    Use this to implement the new rule: Free users cannot collect PRC.
+    
+    This is a ONE-TIME cleanup operation.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find all free users with PRC > 0
+        free_users_query = {
+            "$and": [
+                {"$or": [
+                    {"subscription_plan": "explorer"},
+                    {"subscription_plan": "free"},
+                    {"subscription_plan": None},
+                    {"subscription_plan": ""},
+                    {"subscription_plan": {"$exists": False}}
+                ]},
+                {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
+                {"prc_balance": {"$gt": 0}}
+            ]
+        }
+        
+        # Get users to clear
+        users_to_clear = await db.users.find(
+            free_users_query,
+            {"_id": 0, "uid": 1, "email": 1, "prc_balance": 1, "subscription_plan": 1}
+        ).to_list(10000)
+        
+        total_cleared = 0
+        total_prc_cleared = 0
+        cleared_users = []
+        
+        for user in users_to_clear:
+            uid = user.get("uid")
+            email = user.get("email", "")
+            old_balance = user.get("prc_balance", 0)
+            
+            if old_balance <= 0:
+                continue
+            
+            # Clear PRC and mining history
+            await db.users.update_one(
+                {"uid": uid},
+                {
+                    "$set": {
+                        "prc_balance": 0,
+                        "mining_history": [],
+                        "total_mined": 0
+                    }
+                }
+            )
+            
+            # Log the clear operation
+            await db.transactions.insert_one({
+                "transaction_id": str(uuid.uuid4()),
+                "user_id": uid,
+                "type": "prc_policy_clear",
+                "amount": -old_balance,
+                "description": "Policy change: Free users cannot hold PRC",
+                "timestamp": now.isoformat(),
+                "status": "completed",
+                "reason": "FREE_USER_PRC_POLICY_CHANGE"
+            })
+            
+            # Log to PRC balance logs for audit
+            from routes.user_logs import log_prc_balance_change
+            await log_prc_balance_change(
+                user_id=uid,
+                user_email=email,
+                action="policy_clear",
+                amount=old_balance,
+                balance_before=old_balance,
+                balance_after=0,
+                reason="Policy change: Free users cannot hold PRC. Upgrade to Startup/Elite.",
+                source_function="clear_all_free_users_prc",
+                metadata={"subscription_plan": user.get("subscription_plan", "explorer")}
+            )
+            
+            total_cleared += 1
+            total_prc_cleared += old_balance
+            cleared_users.append({
+                "uid": uid,
+                "email": email,
+                "prc_cleared": old_balance
+            })
+        
+        # Log this admin action
+        from routes.user_logs import log_burn_operation
+        await log_burn_operation(
+            operation_type="free_user_prc_policy_clear",
+            total_users_checked=len(users_to_clear),
+            users_burned=total_cleared,
+            users_skipped=0,
+            total_prc_burned=total_prc_cleared,
+            skipped_users_details=[],
+            burned_users_details=cleared_users[:100],
+            settings_used={"reason": "Policy change - Free users cannot collect PRC"}
+        )
+        
+        return {
+            "success": True,
+            "message": f"Cleared PRC for {total_cleared} free users",
+            "total_users_cleared": total_cleared,
+            "total_prc_cleared": round(total_prc_cleared, 2),
+            "sample_cleared_users": cleared_users[:20],
+            "timestamp": now.isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error clearing free users PRC: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/admin/burn-statistics")
 async def get_burn_statistics():
     """Get PRC burn statistics (Admin only)"""
