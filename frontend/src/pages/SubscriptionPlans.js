@@ -131,7 +131,7 @@ const SubscriptionPlans = ({ user }) => {
       setUtrValidationResult(response.data);
       
       if (!response.data.valid && response.data.error === 'UTR_ALREADY_USED') {
-        toast.error('⚠️ UTR ALREADY IN USE - हा UTR आधीच वापरला गेला आहे!');
+        toast.error('⚠️ UTR ALREADY IN USE - This UTR has already been used!');
       }
     } catch (error) {
       console.error('UTR validation error:', error);
