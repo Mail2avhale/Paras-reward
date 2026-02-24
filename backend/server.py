@@ -8008,9 +8008,12 @@ async def get_admin_subscription_pricing():
     return {"pricing": pricing}
 
 async def run_explorer_burn_job():
-    """Admin: Manually trigger Explorer user PRC burn job"""
-    result = await burn_expired_prc_for_explorer_users()
-    return {"success": True, "result": result}
+    """
+    DEPRECATED: Free users cannot collect PRC anymore.
+    This function is kept for backward compatibility.
+    """
+    logging.info("[ADMIN] Explorer burn job called - SKIPPED (new policy: free users cannot collect PRC)")
+    return {"success": True, "result": {"status": "skipped", "reason": "Free users cannot collect PRC"}}
 
 async def cleanup_database(request: Request):
     """
