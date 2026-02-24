@@ -21,7 +21,7 @@ import NotificationBell from '@/components/NotificationBell';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Get time-based greeting with emoji
-const getTimeGreeting = (language = 'en') => {
+const getTimeGreeting = () => {
   const hour = new Date().getHours();
   
   if (hour >= 5 && hour < 12) {
