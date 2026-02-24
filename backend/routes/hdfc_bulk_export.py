@@ -428,12 +428,9 @@ async def export_combined_hdfc(
     try:
         all_data = []
         
-        print(f"[DEBUG] Export combined called - status={status}, db_set={db is not None}")
-        
         # Bank Redeem
         if include_bank_redeem:
             bank_requests = await db.bank_redeem_requests.find({"status": status}).limit(limit).to_list(limit)
-            print(f"[DEBUG] Bank requests found: {len(bank_requests)}")
             for req in bank_requests:
                 uid = req.get("uid", req.get("user_id"))
                 user = await db.users.find_one({"uid": uid}, {"_id": 0, "email": 1, "mobile": 1, "bank_details": 1, "name": 1})
