@@ -5,7 +5,8 @@ import {
   Building2, Clock, CheckCircle, XCircle, Search, RefreshCw,
   ChevronDown, ChevronUp, User, Phone, Mail, CreditCard, AlertCircle,
   PiggyBank, Copy, Calendar, Filter, Download, FileSpreadsheet, Banknote,
-  CheckSquare, Square, ArrowUpDown, Coins, IndianRupee
+  CheckSquare, Square, ArrowUpDown, Coins, IndianRupee, RotateCcw, Eye,
+  Hash, Building, Landmark
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -24,7 +25,7 @@ const AdminUnifiedPayments = ({ user }) => {
   
   // Filters
   const [statusFilter, setStatusFilter] = useState('pending');
-  const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'bank', 'emi', 'rd'
+  const [typeFilter, setTypeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -36,19 +37,23 @@ const AdminUnifiedPayments = ({ user }) => {
   const [bulkRejectReason, setBulkRejectReason] = useState('');
   const [bulkTransactionRef, setBulkTransactionRef] = useState('');
   
+  // Detail modal
+  const [viewDetailRequest, setViewDetailRequest] = useState(null);
+  
   // Stats
   const [stats, setStats] = useState({
-    total: 0,
+    total: 0, bank: 0, emi: 0, rd: 0,
     pending: { count: 0, prc: 0, inr: 0 },
     approved: { count: 0, prc: 0, inr: 0 },
     rejected: { count: 0, prc: 0, inr: 0 }
   });
 
-  // Copy to clipboard
-  const copyToClipboard = (text, label) => {
+  // Copy to clipboard with visual feedback
+  const copyToClipboard = (e, text, label) => {
+    e?.stopPropagation();
     if (!text) return;
     navigator.clipboard.writeText(text);
-    toast.success(`${label}: ${text}`);
+    toast.success(`Copied ${label}`, { duration: 1500 });
   };
 
   useEffect(() => {
@@ -58,31 +63,33 @@ const AdminUnifiedPayments = ({ user }) => {
   const fetchAllRequests = async () => {
     setLoading(true);
     try {
-      // Fetch all 3 types in parallel
       const [bankRes, rdRes, emiRes] = await Promise.all([
-        axios.get(`${API}/admin/bank-redeem/requests`, { params: { limit: 500 } }).catch(() => ({ data: { requests: [] } })),
-        axios.get(`${API}/rd/admin/redeem-requests`, { params: { limit: 500 } }).catch(() => ({ data: { requests: [] } })),
-        axios.get(`${API}/admin/bill-payment/requests`, { params: { payment_type: 'emi', limit: 500 } }).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/bank-redeem/requests`, { params: { limit: 1000 } }).catch(() => ({ data: { requests: [] } })),
+        axios.get(`${API}/rd/admin/redeem-requests`, { params: { limit: 1000 } }).catch(() => ({ data: { requests: [] } })),
+        axios.get(`${API}/admin/bill-payment/requests`, { params: { payment_type: 'emi', limit: 1000 } }).catch(() => ({ data: [] }))
       ]);
 
-      // Normalize and combine all requests
       const bankRequests = (bankRes.data?.requests || []).map(r => ({
         ...r,
         _type: 'bank',
         _typeLabel: 'Bank Redeem',
         _id: r.request_id || r._id,
+        request_id: r.request_id || r._id,
         prc_amount: r.prc_amount || 0,
         amount_inr: r.amount_inr || 0,
+        mobile: r.user_mobile || r.mobile || '',
         created_at: r.created_at || r.timestamp
       }));
 
       const rdRequests = (rdRes.data?.requests || []).map(r => ({
         ...r,
         _type: 'rd',
-        _typeLabel: 'Savings Vault',
+        _typeLabel: 'Savings',
         _id: r.request_id || r._id,
+        request_id: r.request_id || r._id || r.rd_id,
         prc_amount: r.net_amount || r.current_value || 0,
         amount_inr: r.amount_inr || 0,
+        mobile: r.user_mobile || r.mobile || '',
         created_at: r.created_at || r.requested_at
       }));
 
@@ -92,10 +99,12 @@ const AdminUnifiedPayments = ({ user }) => {
       ).map(r => ({
         ...r,
         _type: 'emi',
-        _typeLabel: 'EMI Pay',
+        _typeLabel: 'EMI',
         _id: r._id || r.request_id,
+        request_id: r._id || r.request_id,
         prc_amount: r.total_prc_deducted || r.prc_amount || 0,
         amount_inr: r.amount_inr || r.emi_amount || 0,
+        mobile: r.user_mobile || r.mobile || '',
         created_at: r.created_at || r.timestamp
       }));
 
@@ -117,6 +126,9 @@ const AdminUnifiedPayments = ({ user }) => {
 
     setStats({
       total: requests.length,
+      bank: requests.filter(r => r._type === 'bank').length,
+      emi: requests.filter(r => r._type === 'emi').length,
+      rd: requests.filter(r => r._type === 'rd').length,
       pending: {
         count: pending.length,
         prc: pending.reduce((sum, r) => sum + (r.prc_amount || 0), 0),
@@ -153,15 +165,19 @@ const AdminUnifiedPayments = ({ user }) => {
       filtered = filtered.filter(r => r._type === typeFilter);
     }
 
-    // Search filter
+    // Advanced search - name, mobile, email, account, IFSC, request ID
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(r => 
         r.user_name?.toLowerCase().includes(q) ||
         r.user_email?.toLowerCase().includes(q) ||
+        r.mobile?.includes(q) ||
+        r.user_mobile?.includes(q) ||
         r.account_number?.includes(q) ||
         r.ifsc_code?.toLowerCase().includes(q) ||
-        r._id?.toLowerCase().includes(q)
+        r.request_id?.toLowerCase().includes(q) ||
+        r._id?.toLowerCase().includes(q) ||
+        r.bank_name?.toLowerCase().includes(q)
       );
     }
 
@@ -188,7 +204,8 @@ const AdminUnifiedPayments = ({ user }) => {
   }, [allRequests, statusFilter, typeFilter, searchQuery, dateFrom, dateTo, sortOrder]);
 
   // Selection handlers
-  const toggleSelect = (id) => {
+  const toggleSelect = (e, id) => {
+    e?.stopPropagation();
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
@@ -201,7 +218,7 @@ const AdminUnifiedPayments = ({ user }) => {
 
   const clearSelection = () => setSelectedIds([]);
 
-  // Individual approve/reject handlers
+  // Individual approve handler
   const handleApprove = async (request) => {
     if (!transactionRef.trim()) {
       toast.error('Please enter UTR/Transaction reference');
@@ -239,6 +256,7 @@ const AdminUnifiedPayments = ({ user }) => {
     }
   };
 
+  // Individual reject handler
   const handleReject = async (request) => {
     if (!rejectReason.trim()) {
       toast.error('Please enter rejection reason');
@@ -276,10 +294,34 @@ const AdminUnifiedPayments = ({ user }) => {
     }
   };
 
+  // Revert status - change approved/rejected back to pending
+  const handleRevertStatus = async (request) => {
+    if (!window.confirm(`Are you sure you want to revert this ${request._typeLabel} request to PENDING status? This will undo the previous action.`)) {
+      return;
+    }
+
+    setProcessing(request._id);
+    try {
+      await axios.post(`${API}/admin/payment-request/revert-status`, {
+        request_id: request._id,
+        request_type: request._type,
+        admin_uid: user.uid,
+        admin_name: user.name || user.email
+      });
+      
+      toast.success('Request reverted to pending!');
+      fetchAllRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to revert status');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   // Bulk approve
   const handleBulkApprove = async () => {
     if (!bulkTransactionRef.trim()) {
-      toast.error('Please enter UTR/Transaction reference for bulk approval');
+      toast.error('Please enter UTR/Transaction reference');
       return;
     }
     if (selectedIds.length === 0) {
@@ -315,7 +357,6 @@ const AdminUnifiedPayments = ({ user }) => {
         success++;
       } catch (error) {
         failed++;
-        console.error(`Failed to approve ${id}:`, error);
       }
     }
 
@@ -365,7 +406,6 @@ const AdminUnifiedPayments = ({ user }) => {
         success++;
       } catch (error) {
         failed++;
-        console.error(`Failed to reject ${id}:`, error);
       }
     }
 
@@ -401,251 +441,255 @@ const AdminUnifiedPayments = ({ user }) => {
   const formatDate = (date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      day: '2-digit', month: 'numeric', year: 'numeric'
     });
   };
 
   const getStatusBadge = (status) => {
     const styles = {
-      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      approved: 'bg-green-500/20 text-green-400 border-green-500/30',
-      completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-      rejected: 'bg-red-500/20 text-red-400 border-red-500/30'
+      pending: 'bg-yellow-500/20 text-yellow-400',
+      approved: 'bg-green-500/20 text-green-400',
+      completed: 'bg-green-500/20 text-green-400',
+      rejected: 'bg-red-500/20 text-red-400'
     };
     return styles[status] || styles.pending;
   };
 
   const getTypeBadge = (type) => {
     const styles = {
-      bank: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      rd: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      emi: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      bank: 'bg-blue-500/20 text-blue-400',
+      rd: 'bg-purple-500/20 text-purple-400',
+      emi: 'bg-orange-500/20 text-orange-400'
     };
     return styles[type] || styles.bank;
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Banknote className="w-7 h-7 text-emerald-500" />
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <Banknote className="w-6 h-6 text-emerald-500" />
             Unified Payment Dashboard
           </h1>
-          <p className="text-gray-400 text-sm mt-1">All payment requests in one place</p>
+          <p className="text-gray-500 text-sm">Bank Redeem + EMI + Savings Vault - All in One</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={fetchAllRequests} variant="outline" size="sm" className="gap-2">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={handleHDFCExport} variant="outline" size="sm" className="gap-2 text-green-400 border-green-500/30">
+          <Button onClick={handleHDFCExport} size="sm" className="gap-2 bg-green-600 hover:bg-green-700">
             <FileSpreadsheet className="w-4 h-4" />
             HDFC Export
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card 
-          className={`p-4 cursor-pointer transition-all ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''} bg-yellow-500/10 border-yellow-500/30`}
-          onClick={() => setStatusFilter('pending')}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-5 h-5 text-yellow-400" />
-            <span className="text-yellow-400 text-sm font-medium">Pending</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{stats.pending?.count || 0}</p>
-          <div className="flex justify-between text-xs mt-2">
-            <span className="text-purple-400">{(stats.pending?.prc || 0).toLocaleString()} PRC</span>
-            <span className="text-green-400">{(stats.pending?.inr || 0).toLocaleString()} INR</span>
-          </div>
+      {/* Stats Cards - Top Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-3 bg-gray-800/50 border-gray-700">
+          <p className="text-gray-400 text-xs">Total Requests</p>
+          <p className="text-2xl font-bold text-white">{stats.total}</p>
         </Card>
-
-        <Card 
-          className={`p-4 cursor-pointer transition-all ${statusFilter === 'approved' ? 'ring-2 ring-green-500' : ''} bg-green-500/10 border-green-500/30`}
-          onClick={() => setStatusFilter('approved')}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            <span className="text-green-400 text-sm font-medium">Approved</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{stats.approved?.count || 0}</p>
-          <div className="flex justify-between text-xs mt-2">
-            <span className="text-purple-400">{(stats.approved?.prc || 0).toLocaleString()} PRC</span>
-            <span className="text-green-400">{(stats.approved?.inr || 0).toLocaleString()} INR</span>
-          </div>
+        <Card className="p-3 bg-blue-500/10 border-blue-500/30">
+          <p className="text-blue-400 text-xs flex items-center gap-1"><Building2 className="w-3 h-3" /> Bank Redeem</p>
+          <p className="text-2xl font-bold text-white">{stats.bank}</p>
         </Card>
-
-        <Card 
-          className={`p-4 cursor-pointer transition-all ${statusFilter === 'rejected' ? 'ring-2 ring-red-500' : ''} bg-red-500/10 border-red-500/30`}
-          onClick={() => setStatusFilter('rejected')}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <XCircle className="w-5 h-5 text-red-400" />
-            <span className="text-red-400 text-sm font-medium">Rejected</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{stats.rejected?.count || 0}</p>
-          <div className="flex justify-between text-xs mt-2">
-            <span className="text-purple-400">{(stats.rejected?.prc || 0).toLocaleString()} PRC</span>
-            <span className="text-green-400">{(stats.rejected?.inr || 0).toLocaleString()} INR</span>
-          </div>
+        <Card className="p-3 bg-orange-500/10 border-orange-500/30">
+          <p className="text-orange-400 text-xs flex items-center gap-1"><CreditCard className="w-3 h-3" /> EMI</p>
+          <p className="text-2xl font-bold text-white">{stats.emi}</p>
         </Card>
-
-        <Card 
-          className={`p-4 cursor-pointer transition-all ${statusFilter === 'all' ? 'ring-2 ring-blue-500' : ''} bg-blue-500/10 border-blue-500/30`}
-          onClick={() => setStatusFilter('all')}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Banknote className="w-5 h-5 text-blue-400" />
-            <span className="text-blue-400 text-sm font-medium">All Total</span>
-          </div>
-          <p className="text-2xl font-bold text-white">{stats.total || 0}</p>
-          <div className="flex justify-between text-xs mt-2">
-            <span className="text-gray-400">All requests</span>
-          </div>
+        <Card className="p-3 bg-purple-500/10 border-purple-500/30">
+          <p className="text-purple-400 text-xs flex items-center gap-1"><PiggyBank className="w-3 h-3" /> Savings</p>
+          <p className="text-2xl font-bold text-white">{stats.rd}</p>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="p-4 bg-gray-900 border-gray-800">
-        <div className="flex flex-wrap gap-3 items-center">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
+      {/* Selected Count */}
+      {selectedIds.length > 0 && (
+        <Card className="p-3 bg-cyan-500/10 border-cyan-500/30">
+          <div className="flex items-center justify-between">
+            <span className="text-cyan-400">Selected: {selectedIds.length}</span>
+            <Button variant="ghost" size="sm" onClick={clearSelection} className="text-gray-400 text-xs">
+              Clear
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Status Filter Buttons */}
+      <div className="flex flex-wrap gap-2">
+        {['pending', 'approved', 'rejected'].map(status => (
+          <button
+            key={status}
+            onClick={() => { setStatusFilter(status); setSelectedIds([]); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              statusFilter === status 
+                ? status === 'pending' ? 'bg-yellow-500 text-black' 
+                  : status === 'approved' ? 'bg-green-500 text-black'
+                  : 'bg-red-500 text-white'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </button>
+        ))}
+        
+        <div className="border-l border-gray-700 mx-2" />
+        
+        {/* Type Filters */}
+        <button
+          onClick={() => setTypeFilter('all')}
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1 ${
+            typeFilter === 'all' ? 'bg-cyan-500 text-black' : 'bg-gray-800 text-gray-400'
+          }`}
+        >
+          <Filter className="w-3 h-3" /> All
+        </button>
+        <button
+          onClick={() => setTypeFilter('bank')}
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1 ${
+            typeFilter === 'bank' ? 'bg-blue-500 text-black' : 'bg-gray-800 text-gray-400'
+          }`}
+        >
+          <Building2 className="w-3 h-3" /> Bank
+        </button>
+        <button
+          onClick={() => setTypeFilter('emi')}
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1 ${
+            typeFilter === 'emi' ? 'bg-orange-500 text-black' : 'bg-gray-800 text-gray-400'
+          }`}
+        >
+          <CreditCard className="w-3 h-3" /> EMI
+        </button>
+        <button
+          onClick={() => setTypeFilter('rd')}
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1 ${
+            typeFilter === 'rd' ? 'bg-purple-500 text-black' : 'bg-gray-800 text-gray-400'
+          }`}
+        >
+          <PiggyBank className="w-3 h-3" /> Savings
+        </button>
+
+        {/* Search */}
+        <div className="flex-1 min-w-[200px]">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, email, account..."
-              className="pl-10 bg-gray-800 border-gray-700 text-white"
+              placeholder="Search user, bank, request ID..."
+              className="pl-9 bg-gray-800 border-gray-700 text-white h-10"
             />
           </div>
+        </div>
+      </div>
 
-          {/* Type Filter */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
-          >
-            <option value="all">All Types</option>
-            <option value="bank">Bank Redeem</option>
-            <option value="emi">EMI Pay</option>
-            <option value="rd">Savings Vault</option>
-          </select>
-
-          {/* Date From */}
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
-            />
-          </div>
-
-          {/* Date To */}
+      {/* Date Range & Sort */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-500" />
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-32 bg-gray-800 border-gray-700 text-white text-sm h-9"
+          />
+          <span className="text-gray-500">to</span>
           <Input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
+            className="w-32 bg-gray-800 border-gray-700 text-white text-sm h-9"
           />
-
-          {/* Sort Order */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-            className="gap-2"
-          >
-            <ArrowUpDown className="w-4 h-4" />
-            {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
-          </Button>
         </div>
-      </Card>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+          className="gap-1 h-9"
+        >
+          <ArrowUpDown className="w-3 h-3" />
+          {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+        </Button>
+        
+        {statusFilter === 'pending' && filteredRequests.filter(r => r.status === 'pending').length > 0 && (
+          <Button variant="outline" size="sm" onClick={selectAll} className="gap-1 ml-auto h-9">
+            <CheckSquare className="w-3 h-3" />
+            Select All ({filteredRequests.filter(r => r.status === 'pending').length})
+          </Button>
+        )}
+      </div>
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
-        <Card className="p-4 bg-purple-500/10 border-purple-500/30">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <CheckSquare className="w-5 h-5 text-purple-400" />
-              <span className="text-purple-400 font-medium">{selectedIds.length} selected</span>
-              <Button variant="ghost" size="sm" onClick={clearSelection} className="text-gray-400">
-                Clear
-              </Button>
-            </div>
-            
-            <div className="flex flex-wrap gap-3 items-center">
-              {!showBulkReject ? (
-                <>
-                  <Input
-                    value={bulkTransactionRef}
-                    onChange={(e) => setBulkTransactionRef(e.target.value)}
-                    placeholder="UTR/Ref for all"
-                    className="w-48 bg-gray-800 border-gray-700 text-white"
-                  />
-                  <Button
-                    onClick={handleBulkApprove}
-                    disabled={bulkProcessing}
-                    className="bg-green-600 hover:bg-green-700 gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {bulkProcessing ? 'Processing...' : 'Approve Selected'}
-                  </Button>
-                  <Button
-                    onClick={() => setShowBulkReject(true)}
-                    variant="destructive"
-                    className="gap-2"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Reject Selected
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Input
-                    value={bulkRejectReason}
-                    onChange={(e) => setBulkRejectReason(e.target.value)}
-                    placeholder="Rejection reason"
-                    className="w-64 bg-gray-800 border-gray-700 text-white"
-                  />
-                  <Button
-                    onClick={handleBulkReject}
-                    disabled={bulkProcessing}
-                    variant="destructive"
-                    className="gap-2"
-                  >
-                    {bulkProcessing ? 'Processing...' : 'Confirm Reject'}
-                  </Button>
-                  <Button
-                    onClick={() => setShowBulkReject(false)}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
-                </>
-              )}
-            </div>
+        <Card className="p-3 bg-purple-500/10 border-purple-500/30">
+          <div className="flex flex-wrap items-center gap-3">
+            {!showBulkReject ? (
+              <>
+                <Input
+                  value={bulkTransactionRef}
+                  onChange={(e) => setBulkTransactionRef(e.target.value)}
+                  placeholder="UTR/Ref for all selected"
+                  className="w-48 bg-gray-800 border-gray-700 text-white h-9"
+                />
+                <Button
+                  onClick={handleBulkApprove}
+                  disabled={bulkProcessing}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 gap-1"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {bulkProcessing ? 'Processing...' : 'Approve Selected'}
+                </Button>
+                <Button
+                  onClick={() => setShowBulkReject(true)}
+                  size="sm"
+                  variant="destructive"
+                  className="gap-1"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Reject Selected
+                </Button>
+              </>
+            ) : (
+              <>
+                <Input
+                  value={bulkRejectReason}
+                  onChange={(e) => setBulkRejectReason(e.target.value)}
+                  placeholder="Rejection reason"
+                  className="w-64 bg-gray-800 border-gray-700 text-white h-9"
+                />
+                <Button onClick={handleBulkReject} disabled={bulkProcessing} size="sm" variant="destructive">
+                  {bulkProcessing ? 'Processing...' : 'Confirm Reject'}
+                </Button>
+                <Button onClick={() => setShowBulkReject(false)} size="sm" variant="outline">
+                  Cancel
+                </Button>
+              </>
+            )}
           </div>
         </Card>
       )}
 
-      {/* Select All Button */}
-      {statusFilter === 'pending' && filteredRequests.filter(r => r.status === 'pending').length > 0 && (
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={selectAll} className="gap-2">
-            <CheckSquare className="w-4 h-4" />
-            Select All Pending ({filteredRequests.filter(r => r.status === 'pending').length})
-          </Button>
-        </div>
-      )}
+      {/* Table Header */}
+      <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 bg-gray-800/50 rounded-lg text-xs text-gray-400 font-medium">
+        <div className="col-span-1"></div>
+        <div className="col-span-1">TYPE</div>
+        <div className="col-span-1">REQUEST ID</div>
+        <div className="col-span-2">USER</div>
+        <div className="col-span-2">BANK A/C</div>
+        <div className="col-span-1">IFSC</div>
+        <div className="col-span-1">AMOUNT</div>
+        <div className="col-span-1">STATUS</div>
+        <div className="col-span-1">DATE</div>
+        <div className="col-span-1">ACTIONS</div>
+      </div>
 
       {/* Requests List */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
@@ -659,226 +703,220 @@ const AdminUnifiedPayments = ({ user }) => {
           filteredRequests.map((req) => (
             <Card 
               key={req._id}
-              className={`bg-gray-900 border-gray-800 overflow-hidden ${expandedRequest === req._id ? 'ring-2 ring-purple-500' : ''}`}
+              className={`bg-gray-900 border-gray-800 overflow-hidden ${expandedRequest === req._id ? 'ring-1 ring-purple-500' : ''}`}
             >
-              {/* Request Row */}
-              <div 
-                className="p-4 cursor-pointer hover:bg-gray-800/50 transition-colors"
-                onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}
-              >
-                <div className="flex items-center gap-4">
-                  {/* Checkbox for pending */}
+              {/* Row */}
+              <div className="grid grid-cols-12 gap-2 px-4 py-3 items-center text-sm cursor-pointer hover:bg-gray-800/30"
+                   onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}>
+                
+                {/* Checkbox */}
+                <div className="col-span-1 flex items-center gap-2">
                   {req.status === 'pending' && (
-                    <div onClick={(e) => { e.stopPropagation(); toggleSelect(req._id); }}>
+                    <div onClick={(e) => toggleSelect(e, req._id)}>
                       {selectedIds.includes(req._id) ? (
-                        <CheckSquare className="w-5 h-5 text-purple-400 cursor-pointer" />
+                        <CheckSquare className="w-5 h-5 text-cyan-400" />
                       ) : (
-                        <Square className="w-5 h-5 text-gray-600 cursor-pointer hover:text-gray-400" />
+                        <Square className="w-5 h-5 text-gray-600 hover:text-gray-400" />
                       )}
                     </div>
                   )}
+                </div>
 
-                  {/* Type Badge */}
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getTypeBadge(req._type)}`}>
+                {/* Type */}
+                <div className="col-span-1">
+                  <span className={`px-2 py-1 text-xs rounded ${getTypeBadge(req._type)}`}>
                     {req._typeLabel}
                   </span>
+                </div>
 
-                  {/* User Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium text-white truncate">{req.user_name || 'Unknown'}</span>
-                    </div>
-                    <p className="text-gray-500 text-sm truncate">{req.user_email}</p>
-                  </div>
+                {/* Request ID */}
+                <div className="col-span-1 flex items-center gap-1">
+                  <span className="text-gray-400 font-mono text-xs truncate">{req.request_id?.slice(-8) || '-'}</span>
+                  <Copy 
+                    className="w-3 h-3 text-gray-600 hover:text-white cursor-pointer flex-shrink-0" 
+                    onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} 
+                  />
+                </div>
 
-                  {/* PRC Amount */}
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 justify-end">
-                      <Coins className="w-4 h-4 text-purple-400" />
-                      <span className="text-purple-400 font-bold">{(req.prc_amount || 0).toLocaleString()}</span>
-                      <span className="text-purple-400 text-sm">PRC</span>
-                    </div>
-                    <div className="flex items-center gap-1 justify-end text-sm">
-                      <IndianRupee className="w-3 h-3 text-green-400" />
-                      <span className="text-green-400">{(req.amount_inr || 0).toLocaleString()}</span>
-                    </div>
-                  </div>
+                {/* User */}
+                <div className="col-span-2">
+                  <p className="text-white font-medium truncate">{req.user_name || 'Unknown'}</p>
+                  <p className="text-gray-500 text-xs truncate">{req.mobile || req.user_mobile || req.user_email || ''}</p>
+                </div>
 
-                  {/* Status Badge */}
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(req.status)}`}>
-                    {req.status?.toUpperCase()}
+                {/* Bank Account */}
+                <div className="col-span-2 flex items-center gap-1">
+                  <span className="text-gray-300 font-mono text-xs truncate">{req.account_number || '-'}</span>
+                  {req.account_number && (
+                    <Copy 
+                      className="w-3 h-3 text-gray-600 hover:text-white cursor-pointer flex-shrink-0" 
+                      onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} 
+                    />
+                  )}
+                </div>
+
+                {/* IFSC */}
+                <div className="col-span-1 flex items-center gap-1">
+                  <span className="text-gray-400 font-mono text-xs">{req.ifsc_code || '-'}</span>
+                  {req.ifsc_code && (
+                    <Copy 
+                      className="w-3 h-3 text-gray-600 hover:text-white cursor-pointer flex-shrink-0" 
+                      onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} 
+                    />
+                  )}
+                </div>
+
+                {/* Amount */}
+                <div className="col-span-1 text-right">
+                  <span className="text-green-400 font-bold">₹{(req.amount_inr || 0).toLocaleString()}</span>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-1">
+                  <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(req.status)}`}>
+                    {req.status}
                   </span>
+                </div>
 
-                  {/* Date */}
-                  <div className="text-right text-sm text-gray-500 hidden md:block">
-                    {formatDate(req.created_at)}
-                  </div>
+                {/* Date */}
+                <div className="col-span-1 text-gray-500 text-xs">
+                  {formatDate(req.created_at)}
+                </div>
 
-                  {/* Expand Icon */}
+                {/* Actions */}
+                <div className="col-span-1 flex items-center gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => { e.stopPropagation(); setViewDetailRequest(req); }}
+                  >
+                    <Eye className="w-4 h-4 text-gray-400" />
+                  </Button>
                   {expandedRequest === req._id ? (
-                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
                   )}
                 </div>
               </div>
 
-              {/* Expanded Details */}
+              {/* Expanded Actions */}
               {expandedRequest === req._id && (
-                <div className="p-4 border-t border-gray-800 bg-gray-900/50">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Left - Details */}
-                    <div className="space-y-3 text-sm">
-                      <h4 className="font-semibold text-white mb-3">{req._typeLabel} Details</h4>
+                <div className="px-4 py-4 border-t border-gray-800 bg-gray-900/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Details */}
+                    <div className="space-y-2 text-sm">
+                      <h4 className="font-semibold text-white">{req._typeLabel} Details</h4>
                       
-                      {/* Bank details */}
-                      {req._type === 'bank' && (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Account Holder</span>
-                            <span className="text-white">{req.account_holder_name || '-'}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500">Account Number</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-mono">{req.account_number}</span>
-                              <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={() => copyToClipboard(req.account_number, 'Account')} />
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500">IFSC Code</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-mono">{req.ifsc_code}</span>
-                              <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')} />
-                            </div>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Bank Name</span>
-                            <span className="text-white">{req.bank_name || '-'}</span>
-                          </div>
-                        </>
-                      )}
-
-                      {/* EMI details */}
-                      {req._type === 'emi' && (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Bank Name</span>
-                            <span className="text-white">{req.bank_name || '-'}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500">Loan Account</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-mono">{req.loan_account_number || req.account_number || '-'}</span>
-                              <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={() => copyToClipboard(req.loan_account_number || req.account_number, 'Loan Account')} />
-                            </div>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">IFSC Code</span>
-                            <span className="text-white font-mono">{req.ifsc_code || '-'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">EMI Amount</span>
-                            <span className="text-green-400">{(req.emi_amount || req.amount_inr || 0).toLocaleString()} INR</span>
-                          </div>
-                        </>
-                      )}
-
-                      {/* RD/Savings Vault details */}
-                      {req._type === 'rd' && (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">RD ID</span>
-                            <span className="text-emerald-400 font-mono">{req.rd_id}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Principal</span>
-                            <span className="text-white">{(req.principal_amount || 0).toLocaleString()} PRC</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Bonus Earned</span>
-                            <span className="text-green-400">+{(req.interest_earned || 0).toLocaleString()} PRC</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Net Amount</span>
-                            <span className="text-amber-400 font-bold">{(req.net_amount || 0).toLocaleString()} PRC</span>
-                          </div>
-                        </>
-                      )}
-
-                      {/* Common - PRC and INR */}
-                      <div className="pt-3 border-t border-gray-700">
-                        <div className="flex justify-between">
-                          <span className="text-purple-400">PRC Amount</span>
-                          <span className="text-purple-400 font-bold">{(req.prc_amount || 0).toLocaleString()} PRC</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-400">INR Value</span>
-                          <span className="text-green-400 font-bold">{(req.amount_inr || 0).toLocaleString()} INR</span>
-                        </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <span className="text-gray-500">PRC Amount:</span>
+                        <span className="text-purple-400 font-bold">{(req.prc_amount || 0).toLocaleString()} PRC</span>
+                        
+                        <span className="text-gray-500">INR Value:</span>
+                        <span className="text-green-400 font-bold">₹{(req.amount_inr || 0).toLocaleString()}</span>
+                        
+                        {req.bank_name && (
+                          <>
+                            <span className="text-gray-500">Bank:</span>
+                            <span className="text-white">{req.bank_name}</span>
+                          </>
+                        )}
+                        
+                        {req.transaction_ref && (
+                          <>
+                            <span className="text-gray-500">UTR/Ref:</span>
+                            <span className="text-green-400">{req.transaction_ref}</span>
+                          </>
+                        )}
+                        
+                        {req.rejection_reason && (
+                          <>
+                            <span className="text-gray-500">Rejection:</span>
+                            <span className="text-red-400">{req.rejection_reason}</span>
+                          </>
+                        )}
+                        
+                        {req.processed_by && (
+                          <>
+                            <span className="text-gray-500">Processed By:</span>
+                            <span className="text-gray-300">{req.processed_by}</span>
+                          </>
+                        )}
                       </div>
+                    </div>
 
-                      {/* Status info */}
-                      {req.status === 'approved' && req.transaction_ref && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">UTR/Reference</span>
-                          <span className="text-green-400">{req.transaction_ref}</span>
-                        </div>
-                      )}
-                      {req.status === 'rejected' && req.rejection_reason && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Rejection Reason</span>
-                          <span className="text-red-400">{req.rejection_reason}</span>
+                    {/* Actions */}
+                    <div className="space-y-3">
+                      {req.status === 'pending' ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-gray-400 text-xs">UTR/Transaction Reference</label>
+                            <Input
+                              value={transactionRef}
+                              onChange={(e) => setTransactionRef(e.target.value)}
+                              placeholder="Enter UTR after payment"
+                              className="bg-gray-800 border-gray-700 text-white h-9"
+                            />
+                            <Button
+                              onClick={() => handleApprove(req)}
+                              disabled={processing === req._id}
+                              className="w-full bg-green-600 hover:bg-green-700 gap-1 h-9"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              {processing === req._id ? 'Processing...' : 'Approve'}
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2 pt-2 border-t border-gray-700">
+                            <label className="text-gray-400 text-xs">Rejection Reason</label>
+                            <Input
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              placeholder="Enter reason"
+                              className="bg-gray-800 border-gray-700 text-white h-9"
+                            />
+                            <Button
+                              onClick={() => handleReject(req)}
+                              disabled={processing === req._id}
+                              variant="destructive"
+                              className="w-full gap-1 h-9"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Reject
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className={`p-3 rounded-lg ${req.status === 'approved' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                            <p className={`font-medium ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>
+                              {req.status === 'approved' ? '✓ Approved' : '✗ Rejected'}
+                            </p>
+                            {req.transaction_ref && (
+                              <p className="text-gray-400 text-sm mt-1">UTR: {req.transaction_ref}</p>
+                            )}
+                            {req.rejection_reason && (
+                              <p className="text-gray-400 text-sm mt-1">Reason: {req.rejection_reason}</p>
+                            )}
+                          </div>
+                          
+                          {/* Revert Status Button */}
+                          <Button
+                            onClick={() => handleRevertStatus(req)}
+                            disabled={processing === req._id}
+                            variant="outline"
+                            className="w-full gap-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            {processing === req._id ? 'Reverting...' : 'Revert to Pending'}
+                          </Button>
+                          <p className="text-gray-500 text-xs text-center">
+                            Use this to undo a mistaken approval/rejection
+                          </p>
                         </div>
                       )}
                     </div>
-
-                    {/* Right - Actions */}
-                    {req.status === 'pending' && (
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-white">Actions</h4>
-                        
-                        {/* Approve */}
-                        <div className="space-y-2">
-                          <label className="text-gray-400 text-xs">UTR/Transaction Reference</label>
-                          <Input
-                            value={transactionRef}
-                            onChange={(e) => setTransactionRef(e.target.value)}
-                            placeholder="Enter UTR/Ref after transfer"
-                            className="bg-gray-800 border-gray-700 text-white"
-                          />
-                          <Button
-                            onClick={() => handleApprove(req)}
-                            disabled={processing === req._id}
-                            className="w-full bg-green-600 hover:bg-green-700 gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            {processing === req._id ? 'Processing...' : 'Approve & Mark Paid'}
-                          </Button>
-                        </div>
-
-                        {/* Reject */}
-                        <div className="space-y-2 pt-3 border-t border-gray-700">
-                          <label className="text-gray-400 text-xs">Rejection Reason</label>
-                          <Input
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Enter rejection reason"
-                            className="bg-gray-800 border-gray-700 text-white"
-                          />
-                          <Button
-                            onClick={() => handleReject(req)}
-                            disabled={processing === req._id}
-                            variant="destructive"
-                            className="w-full gap-2"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Reject & Refund PRC
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -888,9 +926,120 @@ const AdminUnifiedPayments = ({ user }) => {
       </div>
 
       {/* Results Count */}
-      <div className="text-center text-gray-500 text-sm">
+      <div className="text-center text-gray-500 text-sm py-2">
         Showing {filteredRequests.length} of {allRequests.length} requests
       </div>
+
+      {/* View Detail Modal */}
+      {viewDetailRequest && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewDetailRequest(null)}>
+          <Card className="w-full max-w-lg bg-gray-900 border-gray-700 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Request Details</h3>
+              <Button variant="ghost" size="sm" onClick={() => setViewDetailRequest(null)}>
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Request ID</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono">{viewDetailRequest.request_id}</span>
+                  <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={(e) => copyToClipboard(e, viewDetailRequest.request_id, 'Request ID')} />
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Type</span>
+                <span className={`px-2 py-1 rounded text-xs ${getTypeBadge(viewDetailRequest._type)}`}>{viewDetailRequest._typeLabel}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">User</span>
+                <span className="text-white">{viewDetailRequest.user_name}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Email</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-300">{viewDetailRequest.user_email}</span>
+                  <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={(e) => copyToClipboard(e, viewDetailRequest.user_email, 'Email')} />
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Mobile</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-300">{viewDetailRequest.mobile || viewDetailRequest.user_mobile || '-'}</span>
+                  {(viewDetailRequest.mobile || viewDetailRequest.user_mobile) && (
+                    <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={(e) => copyToClipboard(e, viewDetailRequest.mobile || viewDetailRequest.user_mobile, 'Mobile')} />
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Account Number</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono">{viewDetailRequest.account_number || '-'}</span>
+                  {viewDetailRequest.account_number && (
+                    <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={(e) => copyToClipboard(e, viewDetailRequest.account_number, 'Account')} />
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">IFSC Code</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono">{viewDetailRequest.ifsc_code || '-'}</span>
+                  {viewDetailRequest.ifsc_code && (
+                    <Copy className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white" onClick={(e) => copyToClipboard(e, viewDetailRequest.ifsc_code, 'IFSC')} />
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Bank Name</span>
+                <span className="text-white">{viewDetailRequest.bank_name || '-'}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">PRC Amount</span>
+                <span className="text-purple-400 font-bold">{(viewDetailRequest.prc_amount || 0).toLocaleString()} PRC</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">INR Amount</span>
+                <span className="text-green-400 font-bold">₹{(viewDetailRequest.amount_inr || 0).toLocaleString()}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Status</span>
+                <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(viewDetailRequest.status)}`}>{viewDetailRequest.status}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Date</span>
+                <span className="text-gray-300">{formatDate(viewDetailRequest.created_at)}</span>
+              </div>
+              
+              {viewDetailRequest.transaction_ref && (
+                <div className="flex justify-between py-2 border-b border-gray-800">
+                  <span className="text-gray-400">UTR/Reference</span>
+                  <span className="text-green-400">{viewDetailRequest.transaction_ref}</span>
+                </div>
+              )}
+              
+              {viewDetailRequest.rejection_reason && (
+                <div className="flex justify-between py-2 border-b border-gray-800">
+                  <span className="text-gray-400">Rejection Reason</span>
+                  <span className="text-red-400">{viewDetailRequest.rejection_reason}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
