@@ -6,7 +6,65 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 🧹 Old Burn Code Cleanup - COMPLETE ✅ (Feb 2026 - LATEST)
+### 🔥 New Simple PRC Burn Control ✅ (Feb 24, 2026 - LATEST)
+
+**User Request:** Delete all old complex burn pages/code and create a simple admin-controlled % burn system.
+
+**Changes Made:**
+
+1. **Deleted Files:**
+   - `frontend/src/pages/AdminBurnDashboard.js` - Old complex burn dashboard
+   - `frontend/src/components/PRCBurnAlert.js` - Old user-facing burn alert component
+   
+2. **New Files Created:**
+   - `frontend/src/pages/AdminPRCBurnControl.js` - Simple % burn control page for Admin/Manager
+
+3. **New Backend APIs:**
+   - `GET /api/admin/prc-burn-control/settings` - Get burn settings
+   - `POST /api/admin/prc-burn-control/settings` - Save burn settings
+   - `GET /api/admin/prc-burn-control/stats` - Get PRC circulation stats
+   - `POST /api/admin/prc-burn-control/execute` - Execute burn on all eligible users
+
+4. **Features:**
+   - Enable/Disable burn toggle
+   - Burn percentage (0.1% - 50%)
+   - Minimum balance threshold
+   - Target users: All / Free Only / Inactive (30+ days)
+   - One-click execute burn
+   - Manager access allowed
+
+5. **Files Modified:**
+   - `frontend/src/App.js` - Updated route from `/admin/burn-management` to `/admin/prc-burn-control`
+   - `frontend/src/components/layouts/AdminLayout.js` - Updated menu link
+   - `frontend/src/pages/Mining.js` - Removed PRCBurnAlert usage
+
+---
+
+### 📋 Unified Payment Dashboard - EMI Integration Complete ✅ (Feb 24, 2026)
+
+**User Request:** Add EMI Pay requests tab to unified payment dashboard.
+
+**Changes Made:**
+1. **AdminBankWithdrawals.js** now has 3 tabs:
+   - Bank Redeem
+   - EMI Pay (NEW)
+   - Savings Vault
+   
+2. **EMI Tab Features:**
+   - Fetches from `/api/admin/bill-payment/requests?payment_type=emi`
+   - Shows EMI-specific details (Bank Name, Loan Account, IFSC)
+   - Approve/Reject handlers wired correctly
+   - Stats cards update dynamically per tab
+
+3. **Action Handlers Fixed:**
+   - Now uses correct handlers based on `requestType`:
+     - `requestType === 'emi'` → `handleEmiApprove/handleEmiReject`
+     - `requestType === 'rd'` → `handleRdApprove/handleRdReject`
+     - `requestType === 'bank'` → `handleApprove/handleReject`
+
+---
+
+### 🧹 Old Burn Code Cleanup - COMPLETE ✅ (Feb 2026)
 
 **All old PRC burn logic has been DEPRECATED:**
 
