@@ -606,29 +606,37 @@ const AdminBankWithdrawals = ({ user }) => {
       ) : (
         <div className="space-y-4">
           {filteredRequests.map((req) => (
-            <div key={req.request_id} className="bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden">
+            <div key={req.request_id || req._id} className="bg-gray-900/50 border border-gray-800 rounded-2xl overflow-hidden">
               {/* Request Header */}
               <div
                 className="p-4 cursor-pointer hover:bg-gray-800/50 transition-colors"
-                onClick={() => setExpandedRequest(expandedRequest === req.request_id ? null : req.request_id)}
+                onClick={() => setExpandedRequest(expandedRequest === (req.request_id || req._id) ? null : (req.request_id || req._id))}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-green-400" />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      requestType === 'bank' ? 'bg-green-500/20' : 
+                      requestType === 'emi' ? 'bg-purple-500/20' : 'bg-emerald-500/20'
+                    }`}>
+                      {requestType === 'bank' && <Building2 className="h-6 w-6 text-green-400" />}
+                      {requestType === 'emi' && <Banknote className="h-6 w-6 text-purple-400" />}
+                      {requestType === 'rd' && <PiggyBank className="h-6 w-6 text-emerald-400" />}
                     </div>
                     <div>
                       <p className="text-white font-semibold">{req.user_name || 'Unknown'}</p>
-                      <p className="text-gray-500 text-sm">{req.user_email}</p>
+                      <p className="text-gray-500 text-sm">{req.user_email || req.email}</p>
+                      {requestType === 'emi' && req.emi_details && (
+                        <p className="text-purple-400 text-xs">{req.emi_details.bank_name} - {req.emi_details.loan_account}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-amber-400">₹{req.amount_inr?.toLocaleString()}</p>
-                      <p className="text-gray-500 text-xs">{req.total_prc_deducted?.toLocaleString()} PRC</p>
+                      <p className="text-2xl font-bold text-amber-400">₹{(req.amount_inr || req.amount || req.net_amount || 0).toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs">{(req.total_prc_deducted || req.prc_amount || 0).toLocaleString()} PRC</p>
                     </div>
                     {getStatusBadge(req.status)}
-                    {expandedRequest === req.request_id ? (
+                    {expandedRequest === (req.request_id || req._id) ? (
                       <ChevronUp className="h-5 w-5 text-gray-500" />
                     ) : (
                       <ChevronDown className="h-5 w-5 text-gray-500" />
