@@ -51,15 +51,8 @@ const SERVICE_CATEGORIES = {
     bgColor: 'bg-emerald-500/10',
     borderColor: 'border-emerald-500/30',
     textColor: 'text-emerald-400'
-  },
-  loan_emi: { 
-    name: 'EMI Payment', 
-    icon: Building, 
-    color: 'rose',
-    bgColor: 'bg-rose-500/10',
-    borderColor: 'border-rose-500/30',
-    textColor: 'text-rose-400'
   }
+  // loan_emi (EMI Payment) removed - handled in separate unified payment dashboard
 };
 
 const AdminBillPayments = ({ user }) => {
