@@ -38562,6 +38562,118 @@ async def execute_prc_burn_control(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ========== REVERT PAYMENT REQUEST STATUS ==========
+
+@api_router.post("/admin/payment-request/revert-status")
+async def revert_payment_request_status(request: Request):
+    """
+    Revert an approved/rejected payment request back to pending status.
+    This allows admin to undo a mistaken approval or rejection.
+    """
+    try:
+        data = await request.json()
+        request_id = data.get("request_id")
+        request_type = data.get("request_type")  # 'bank', 'rd', 'emi'
+        admin_uid = data.get("admin_uid")
+        admin_name = data.get("admin_name", "Admin")
+        
+        if not request_id or not request_type:
+            raise HTTPException(status_code=400, detail="request_id and request_type are required")
+        
+        # Get the collection based on type
+        if request_type == 'bank':
+            collection = db.bank_redeem_requests
+            id_field = "request_id"
+        elif request_type == 'rd':
+            collection = db.rd_redeem_requests
+            id_field = "request_id"
+        elif request_type == 'emi':
+            collection = db.bill_payments
+            id_field = "_id"
+            # Convert to ObjectId for EMI
+            from bson import ObjectId
+            try:
+                request_id = ObjectId(request_id)
+            except:
+                pass
+        else:
+            raise HTTPException(status_code=400, detail="Invalid request_type. Must be 'bank', 'rd', or 'emi'")
+        
+        # Find the request
+        existing = await collection.find_one({id_field: request_id})
+        if not existing:
+            # Try with _id
+            existing = await collection.find_one({"_id": request_id})
+            if not existing:
+                raise HTTPException(status_code=404, detail="Request not found")
+        
+        old_status = existing.get("status")
+        
+        # Only allow reverting approved or rejected requests
+        if old_status not in ['approved', 'rejected', 'completed']:
+            raise HTTPException(status_code=400, detail=f"Cannot revert request with status '{old_status}'. Only approved/rejected can be reverted.")
+        
+        # Update to pending
+        update_data = {
+            "status": "pending",
+            "reverted_from": old_status,
+            "reverted_at": datetime.now(timezone.utc),
+            "reverted_by": admin_name,
+            "reverted_by_uid": admin_uid
+        }
+        
+        # Clear old approval/rejection data but keep history
+        if old_status in ['approved', 'completed']:
+            update_data["previous_transaction_ref"] = existing.get("transaction_ref")
+            update_data["transaction_ref"] = None
+            update_data["approved_at"] = None
+            update_data["approved_by"] = None
+        elif old_status == 'rejected':
+            update_data["previous_rejection_reason"] = existing.get("rejection_reason")
+            update_data["rejection_reason"] = None
+            update_data["rejected_at"] = None
+            update_data["rejected_by"] = None
+        
+        # Update the document
+        if id_field == "_id":
+            result = await collection.update_one({"_id": request_id}, {"$set": update_data})
+        else:
+            result = await collection.update_one({id_field: request_id}, {"$set": update_data})
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=500, detail="Failed to update request status")
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": admin_uid,
+            "admin_name": admin_name,
+            "action": "payment_request_revert",
+            "details": {
+                "request_id": str(request_id),
+                "request_type": request_type,
+                "old_status": old_status,
+                "new_status": "pending"
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        logging.info(f"[REVERT STATUS] {request_type} request {request_id} reverted from {old_status} to pending by {admin_name}")
+        
+        return {
+            "success": True,
+            "message": f"Request reverted from {old_status} to pending",
+            "request_id": str(request_id),
+            "old_status": old_status,
+            "new_status": "pending"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error reverting payment request status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 # Include referral router (refactored)
 set_referral_db(db)
