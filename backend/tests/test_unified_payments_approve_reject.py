@@ -121,8 +121,9 @@ class TestBankRedeemApproveReject:
         request_id = pending_requests[request_idx].get("request_id")
         print(f"Testing reject for request: {request_id}")
         
+        # Using CORRECT URL (without /requests/)
         response = requests.post(
-            f"{BASE_URL}/api/admin/bank-redeem/requests/{request_id}/reject",
+            f"{BASE_URL}/api/admin/bank-redeem/{request_id}/reject",  # Fixed URL
             json={
                 "admin_uid": self.admin_uid,
                 "reason": "Test rejection reason",
