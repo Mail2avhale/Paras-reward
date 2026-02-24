@@ -326,6 +326,11 @@ const AdminUser360 = ({ user: adminUser }) => {
           message: message || `${action} completed successfully`,
           type: action === 'block_user' || action === 'reject_kyc' ? 'warning' : 'success'
         });
+        
+        // Refresh user data after block/unblock
+        if (action === 'block_user' || action === 'unblock_user') {
+          fetchUserData(userData.user.uid);
+        }
       }
       
       // Silently refresh data without showing loading state
