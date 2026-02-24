@@ -646,7 +646,7 @@ const AdminBankWithdrawals = ({ user }) => {
               </div>
 
               {/* Expanded Details */}
-              {expandedRequest === req.request_id && (
+              {expandedRequest === (req.request_id || req._id) && (
                 <div className="border-t border-gray-800 p-4 bg-gray-800/30">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Left: User & Request Info */}
@@ -666,22 +666,22 @@ const AdminBankWithdrawals = ({ user }) => {
                           <div className="flex justify-between items-center">
                             <span className="text-gray-500">Email</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-white">{req.user_email}</span>
-                              <button onClick={() => copyToClipboard(req.user_email, 'Email')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                              <span className="text-white">{req.user_email || req.email}</span>
+                              <button onClick={() => copyToClipboard(req.user_email || req.email, 'Email')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-500">Mobile</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-white">{req.user_mobile || 'N/A'}</span>
-                              {req.user_mobile && <button onClick={() => copyToClipboard(req.user_mobile, 'Mobile')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>}
+                              <span className="text-white">{req.user_mobile || req.mobile || 'N/A'}</span>
+                              {(req.user_mobile || req.mobile) && <button onClick={() => copyToClipboard(req.user_mobile || req.mobile, 'Mobile')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>}
                             </div>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-500">Request ID</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-amber-400 font-mono text-xs">{req.request_id}</span>
-                              <button onClick={() => copyToClipboard(req.request_id, 'Request ID')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                              <span className="text-amber-400 font-mono text-xs">{req.request_id || req._id}</span>
+                              <button onClick={() => copyToClipboard(req.request_id || req._id, 'Request ID')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
                             </div>
                           </div>
                         </div>
@@ -689,11 +689,44 @@ const AdminBankWithdrawals = ({ user }) => {
 
                       <div>
                         <h4 className="text-gray-400 text-sm mb-2 flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" /> Charge Breakdown
+                          <CreditCard className="h-4 w-4" /> {requestType === 'emi' ? 'EMI Details' : 'Charge Breakdown'}
                         </h4>
                         <div className="bg-gray-900/50 rounded-xl p-3 space-y-2 text-sm">
+                          {/* EMI specific details */}
+                          {requestType === 'emi' && (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Bank Name</span>
+                                <span className="text-white">{req.emi_details?.bank_name || req.bank_details?.bank_name || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Loan Account</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400 font-mono">{req.emi_details?.loan_account || req.account_number || 'N/A'}</span>
+                                  <button onClick={() => copyToClipboard(req.emi_details?.loan_account || req.account_number, 'Account')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                                </div>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">EMI Amount</span>
+                                <span className="text-amber-400 font-bold">₹{(req.amount_inr || req.amount || 0).toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">PRC Deducted</span>
+                                <span className="text-white">{(req.prc_amount || req.total_prc_deducted || 0).toLocaleString()} PRC</span>
+                              </div>
+                              {req.emi_details?.ifsc_code && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">IFSC Code</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white">{req.emi_details.ifsc_code}</span>
+                                    <button onClick={() => copyToClipboard(req.emi_details.ifsc_code, 'IFSC')} className="p-1 hover:bg-gray-700 rounded"><Copy className="w-3 h-3 text-gray-400" /></button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                           {/* Show RD-specific details if it's an RD request */}
-                          {req.request_type === 'rd_redeem' ? (
+                          {(req.request_type === 'rd_redeem' || requestType === 'rd') && (
                             <>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">RD ID</span>
