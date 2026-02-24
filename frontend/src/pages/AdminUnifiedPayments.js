@@ -793,15 +793,15 @@ const AdminUnifiedPayments = ({ user }) => {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <div className={`p-2 rounded text-sm ${req.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                    <div className="space-y-3">
+                      <div className={`p-4 rounded-lg text-base font-medium ${req.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                         {req.status === 'approved' ? '✓ Approved' : '✗ Rejected'}
-                        {req.transaction_ref && <span className="ml-2 text-gray-400">UTR: {req.transaction_ref}</span>}
-                        {req.rejection_reason && <span className="ml-2 text-gray-400">Reason: {req.rejection_reason}</span>}
+                        {req.transaction_ref && <span className="ml-3 text-gray-300">UTR: {req.transaction_ref}</span>}
+                        {req.rejection_reason && <span className="ml-3 text-gray-300">Reason: {req.rejection_reason}</span>}
                       </div>
                       <Button onClick={() => handleRevertStatus(req)} disabled={processing === req._id}
-                        variant="outline" className="w-full h-8 text-xs border-amber-500/50 text-amber-400 gap-1">
-                        <RotateCcw className="w-3 h-3" />Revert to Pending
+                        variant="outline" className="w-full h-10 text-sm font-medium border-amber-500/50 text-amber-400 gap-2">
+                        <RotateCcw className="w-4 h-4" />Revert to Pending
                       </Button>
                     </div>
                   )}
