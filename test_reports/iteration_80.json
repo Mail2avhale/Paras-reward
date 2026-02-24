@@ -1,0 +1,72 @@
+{
+  "summary": "Fixed CRITICAL BUG: Frontend-Backend URL mismatch for Approve/Reject endpoints in Unified Payment Dashboard. Bank Redeem and RD/Savings Vault approve/reject functionality was broken due to incorrect API URL paths in frontend code.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/admin/payment-request/revert-status",
+        "issue": "FIXED: Was using wrong collection (bank_redeem_requests) instead of correct collection (bank_withdrawal_requests) for bank type requests",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Bank Redeem Approve/Reject",
+        "issue": "FIXED: Frontend was calling /admin/bank-redeem/requests/{id}/approve but backend route is /admin/bank-redeem/{id}/approve (extra /requests/ in path)",
+        "affected_selectors": ["handleApprove", "handleReject", "handleBulkApprove", "handleBulkReject"]
+      },
+      {
+        "flow": "RD/Savings Vault Approve/Reject",
+        "issue": "FIXED: Frontend was calling /rd/admin/redeem/{id}/approve but backend route is /rd/admin/redeem-requests/{id}/approve (missing -requests in path)",
+        "affected_selectors": ["handleApprove", "handleReject", "handleBulkApprove", "handleBulkReject"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_unified_payments_approve_reject.py",
+    "/app/test_reports/pytest/unified_payments_approve_reject_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Frontend AdminUnifiedPayments.js - Fixed all 8 API endpoint URLs for approve/reject operations",
+    "Backend server.py - Fixed revert-status endpoint to use correct collection (bank_withdrawal_requests)",
+    "Verified revert functionality works correctly after fix",
+    "All API endpoints tested and working: approve, reject, revert-to-pending"
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/AdminUnifiedPayments.js",
+    "/app/backend/server.py"
+  ],
+  "success_rate": {
+    "backend": "100% - All endpoint tests passed",
+    "frontend": "Fixes applied - Hot reload enabled"
+  },
+  "test_credentials": {
+    "admin_email": "admin@test.com",
+    "admin_pin": "123456"
+  },
+  "seed_data_creation": "No new seed data created - used existing pending request BWR2026021416265583906E",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Approve/Reject functionality for Unified Payment Dashboard has been fixed. Bank redeem, RD/Savings Vault, and revert-to-pending all working. EMI approve/reject not tested due to no pending EMI requests. Frontend URL fixes applied to handleApprove, handleReject, handleBulkApprove, handleBulkReject functions.",
+  "rca_of_the_issue": {
+    "root_cause": "URL path mismatch between frontend API calls and backend route definitions",
+    "reproduction_steps": [
+      "1. Go to Unified Payment Dashboard",
+      "2. Click on a pending bank redeem request to expand",
+      "3. Enter UTR and click Approve",
+      "4. Request fails with 404 Not Found"
+    ],
+    "fix_applied": [
+      "Frontend: Changed /admin/bank-redeem/requests/{id}/approve to /admin/bank-redeem/{id}/approve",
+      "Frontend: Changed /rd/admin/redeem/{id}/approve to /rd/admin/redeem-requests/{id}/approve",
+      "Same changes applied to reject endpoints and bulk operations",
+      "Backend: Fixed revert-status endpoint collection from bank_redeem_requests to bank_withdrawal_requests"
+    ],
+    "verification": "Tested approve endpoint with curl - returns 200 success. Full pytest suite passes."
+  }
+}
