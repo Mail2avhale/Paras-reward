@@ -552,7 +552,7 @@ const AdminUnifiedPayments = ({ user }) => {
             <Card key={req._id} className={`bg-gray-900 border-gray-800 ${expandedRequest === req._id ? 'ring-1 ring-purple-500' : ''}`}>
               {/* Main Row */}
               <div className="p-3 cursor-pointer" onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {/* Checkbox */}
                   {req.status === 'pending' && (
                     <div onClick={(e) => toggleSelect(e, req._id)} className="flex-shrink-0">
@@ -568,9 +568,32 @@ const AdminUnifiedPayments = ({ user }) => {
                   </span>
 
                   {/* User Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{req.user_name || 'Unknown'}</p>
+                  <div className="flex-1 min-w-[120px]">
+                    <p className="text-white text-sm font-medium truncate">{req.account_holder_name || req.user_name || 'Unknown'}</p>
                     <p className="text-gray-500 text-xs truncate">{req.mobile || req.user_email || '-'}</p>
+                  </div>
+
+                  {/* Bank Details - Always Visible */}
+                  <div className="hidden sm:flex flex-col min-w-[150px]">
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400 text-xs">A/C:</span>
+                      <span className="text-white text-xs font-mono">{req.account_number || '-'}</span>
+                      {req.account_number && (
+                        <Copy className="w-3 h-3 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400 text-xs">IFSC:</span>
+                      <span className="text-cyan-400 text-xs font-mono">{req.ifsc_code || '-'}</span>
+                      {req.ifsc_code && (
+                        <Copy className="w-3 h-3 text-gray-600 cursor-pointer" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bank Name */}
+                  <div className="hidden md:block min-w-[100px]">
+                    <p className="text-gray-400 text-xs">{req.bank_name || '-'}</p>
                   </div>
 
                   {/* Amount */}
@@ -586,6 +609,22 @@ const AdminUnifiedPayments = ({ user }) => {
                       <Eye className="w-4 h-4 text-gray-400" />
                     </Button>
                     {expandedRequest === req._id ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </div>
+
+                {/* Mobile: Bank Details Row */}
+                <div className="sm:hidden mt-2 pt-2 border-t border-gray-800 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-gray-500">A/C: </span>
+                    <span className="text-white font-mono">{req.account_number || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">IFSC: </span>
+                    <span className="text-cyan-400 font-mono">{req.ifsc_code || '-'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Bank: </span>
+                    <span className="text-white">{req.bank_name || '-'}</span>
                   </div>
                 </div>
               </div>
