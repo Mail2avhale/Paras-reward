@@ -3324,6 +3324,7 @@ async def burn_expired_prc_for_explorer_users():
             # Check if inactive for 2+ days
             if last_mining_dt + timedelta(days=2) < now:
                 burned_amount = prc_balance
+                balance_before = prc_balance
                 
                 await db.users.update_one(
                     {"uid": uid},
@@ -3341,6 +3342,25 @@ async def burn_expired_prc_for_explorer_users():
                     "burn_reason": "EXPLORER_INACTIVITY_BURN"
                 })
                 
+                # ============ DETAILED PRC BALANCE LOG ============
+                from routes.user_logs import log_prc_balance_change
+                await log_prc_balance_change(
+                    user_id=uid,
+                    user_email=email,
+                    action="burn",
+                    amount=burned_amount,
+                    balance_before=balance_before,
+                    balance_after=0,
+                    reason="Explorer user 2-day inactivity burn",
+                    source_function="burn_expired_prc_for_explorer_users",
+                    metadata={
+                        "burn_reason": "EXPLORER_INACTIVITY_BURN",
+                        "last_mining": str(last_mining_dt),
+                        "subscription_plan": subscription_plan
+                    }
+                )
+                # ================================================
+                
                 await log_activity(
                     user_id=uid,
                     action_type="prc_burn",
@@ -3350,7 +3370,26 @@ async def burn_expired_prc_for_explorer_users():
                 
                 burn_count += 1
                 total_burned += burned_amount
+                burned_users_list.append({
+                    "user_id": uid,
+                    "user_email": email,
+                    "amount_burned": burned_amount,
+                    "reason": "2-day inactivity"
+                })
                 logging.info(f"[PRC BURN] Burned {burned_amount} PRC for explorer user {uid} (inactive since {last_mining_dt})")
+        
+        # ============ LOG BURN OPERATION SUMMARY ============
+        from routes.user_logs import log_burn_operation
+        await log_burn_operation(
+            operation_type="explorer_burn",
+            total_users_checked=total_checked,
+            users_burned=burn_count,
+            users_skipped=len(skipped_users_list),
+            total_prc_burned=total_burned,
+            skipped_users_details=skipped_users_list,
+            burned_users_details=burned_users_list
+        )
+        # ===================================================
         
         logging.info(f"[PRC BURN] Explorer burn complete: {burn_count} users, {total_burned} PRC burned")
         return {"users_affected": burn_count, "total_burned": total_burned}
