@@ -234,6 +234,18 @@ const AdminUnifiedPayments = ({ user }) => {
     return filtered;
   }, [allRequests, statusFilter, typeFilter, searchQuery, dateFrom, dateTo, sortOrder]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredRequests.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredRequests, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, typeFilter, searchQuery, dateFrom, dateTo]);
+
   // Selection
   const toggleSelect = (e, id) => {
     e?.stopPropagation();
@@ -241,7 +253,7 @@ const AdminUnifiedPayments = ({ user }) => {
   };
 
   const selectAll = () => {
-    const ids = filteredRequests.filter(r => r.status === 'pending').map(r => r._id);
+    const ids = paginatedRequests.filter(r => r.status === 'pending').map(r => r._id);
     setSelectedIds(ids);
   };
 
