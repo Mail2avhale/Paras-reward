@@ -783,15 +783,33 @@ const Orders = ({ user, onLogout }) => {
                       </div>
                       
                       {/* Date & ID */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-800">
-                        <p className="text-gray-500 text-xs">{formatDate(request.created_at)}</p>
-                        <button
-                          onClick={() => copyToClipboard(request.id)}
-                          className="flex items-center gap-1 text-gray-500 hover:text-gray-400 text-xs"
-                        >
-                          <Copy className="w-3 h-3" />
-                          {request.id?.substring(0, 8)}...
-                        </button>
+                      <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-gray-800">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-xs">📅 Request:</span>
+                            <span className="text-gray-300 text-xs font-medium">{formatDateTime(request.created_at)}</span>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(request.id)}
+                            className="flex items-center gap-1 text-gray-500 hover:text-gray-400 text-xs"
+                          >
+                            <Copy className="w-3 h-3" />
+                            {request.id?.substring(0, 8)}...
+                          </button>
+                        </div>
+                        {/* Show approved/rejected date if applicable */}
+                        {request.status === 'approved' && (request.approved_at || request.processed_at) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-400 text-xs">✓ Approved:</span>
+                            <span className="text-green-300 text-xs font-medium">{formatDateTime(request.approved_at || request.processed_at)}</span>
+                          </div>
+                        )}
+                        {request.status === 'rejected' && (request.rejected_at || request.processed_at) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-400 text-xs">✗ Rejected:</span>
+                            <span className="text-red-300 text-xs font-medium">{formatDateTime(request.rejected_at || request.processed_at)}</span>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Admin Notes if rejected */}
