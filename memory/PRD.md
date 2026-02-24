@@ -6,7 +6,28 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 🚫 Free Users PRC Block - No Collection, No Expiry ✅ (Feb 2026 - LATEST)
+### 🧹 Old Burn Code Cleanup - COMPLETE ✅ (Feb 2026 - LATEST)
+
+**All old PRC burn logic has been DEPRECATED:**
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `burn_expired_prc_for_explorer_users()` | DEPRECATED | Returns skip message |
+| `burn_expired_prc_for_free_users()` | DEPRECATED | Returns skip message |
+| `burn_expired_subscription_prc()` | DEPRECATED | Returns skip message |
+| `run_prc_burn_job()` | DEPRECATED | Returns skip message |
+| `/api/admin/finance/prc-burn-execute` | DEPRECATED | Returns skip message |
+| `/api/admin/burn-prc-now` | DEPRECATED | Returns skip message |
+
+**Scheduled Jobs REMOVED:**
+- `burn_free_user_prc` (hourly) - REMOVED
+- `burn_expired_subscription_prc` (daily 2 AM) - REMOVED
+
+**Reason:** Free users cannot collect PRC anymore, so burning is unnecessary.
+
+---
+
+### 🚫 Free Users PRC Block - No Collection, No Expiry ✅ (Feb 2026)
 
 **Problem Solved:** Complex PRC burning/expiry logic was causing issues. Paid users accidentally getting burned.
 
