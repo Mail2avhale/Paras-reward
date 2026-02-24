@@ -629,9 +629,10 @@ async def approve_withdrawal(request_id: str, request: Request):
         try:
             await create_notification(
                 user_id=withdrawal["user_id"],
-                title="Withdrawal Approved!",
-                message=f"Your bank withdrawal of ₹{withdrawal['amount_inr']} has been approved and transferred to your bank account.",
-                notification_type="withdrawal"
+                title="Payment Approved ✓",
+                message=f"Your bank withdrawal of ₹{withdrawal['amount_inr']:,.0f} has been approved and transferred to your bank account.",
+                notification_type="payment_approved",
+                data={"amount_inr": withdrawal['amount_inr'], "payment_type": "bank_withdrawal"}
             )
         except Exception:
             pass
