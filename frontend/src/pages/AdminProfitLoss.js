@@ -124,7 +124,7 @@ const AdminProfitLoss = ({ user }) => {
 
   const handleAddExpense = async () => {
     if (!expenseForm.category || !expenseForm.amount) {
-      toast.error('Category आणि Amount आवश्यक आहे');
+      toast.error('Category and Amount are required');
       return;
     }
     
