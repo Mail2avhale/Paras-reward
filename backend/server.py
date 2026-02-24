@@ -3254,8 +3254,12 @@ async def burn_expired_prc_for_explorer_users():
         
         burn_count = 0
         total_burned = 0.0
+        total_checked = 0
+        skipped_users_list = []
+        burned_users_list = []
         
         async for user in explorer_users:
+            total_checked += 1
             uid = user.get("uid")
             prc_balance = user.get("prc_balance", 0)
             email = user.get("email", "")
@@ -3264,6 +3268,7 @@ async def burn_expired_prc_for_explorer_users():
             # This is the ULTIMATE protection - MUST be called before any burn
             if await is_protected_from_burn(db, uid):
                 logging.warning(f"[EXPLORER BURN BLOCKED] {uid} ({email}) is PROTECTED from burn - skipping")
+                skipped_users_list.append({"user_id": uid, "user_email": email, "reason": "is_protected_from_burn=True"})
                 continue
             # =====================================================
             
@@ -3271,6 +3276,7 @@ async def burn_expired_prc_for_explorer_users():
             subscription_plan = (user.get("subscription_plan") or "explorer").lower()
             if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
                 logging.info(f"[PRC BURN SKIP] {uid} has paid plan: {subscription_plan}")
+                skipped_users_list.append({"user_id": uid, "user_email": email, "reason": f"paid_plan:{subscription_plan}"})
                 continue
             
             # Skip if has subscription expiry (even in past - means was paid)
