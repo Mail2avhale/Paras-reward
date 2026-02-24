@@ -4,9 +4,51 @@
 A production-grade reward platform serving 3000+ users with subscription management, referral system, mining features, and marketplace.
 
 
-## Recent Changes (December 2025)
+## Recent Changes (February 2026)
 
-### 🔥 PRC Burn Logic Fixed & Re-enabled ✅ (Dec 2025 - Latest)
+### 🔴 CRITICAL: PRC Burn Ultimate Safety Fix ✅ (Feb 2026 - Latest)
+
+**Problem:** Paid user (`nisha@gmail.com`) repeatedly had PRC balance reset to zero despite previous fixes.
+
+**Root Cause Analysis (via troubleshoot_agent):** The burn functions lacked a FINAL safety check. Even though query filters existed, the actual execution loop didn't have an explicit verify before burning each user.
+
+**Solution - Ultimate Safety Layer Added:**
+
+1. **New Global Protection Function `is_protected_from_burn(db, uid)`**
+   - Added in `server.py` as the ULTIMATE safety check
+   - Called BEFORE any burn operation for any user
+   - 6-layer protection checking:
+     1. `subscription_plan` in ['startup', 'growth', 'elite', 'vip', 'pro']
+     2. Active `subscription_expiry` (expiry > now)
+     3. `vip_activated_at` exists (was VIP)
+     4. `subscription_start` exists (was paid)
+     5. `vip_expiry` exists (was VIP)
+     6. `membership_type` in ['vip', 'paid', 'premium']
+
+2. **`PAID_PLANS` Updated**
+   - Added 'growth' back to protected plans (for backward compatibility with existing growth users)
+   - `PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]`
+
+3. **Safety Check Added to All Burn Functions:**
+   - `burn_expired_prc_for_explorer_users()` - Line ~3267 in server.py
+   - `burn_expired_prc_for_free_users()` - Line ~3407 in server.py
+   - `prc-burn-execute` endpoint in admin_finance.py - `is_truly_free_user()` enhanced
+
+4. **Enhanced `is_truly_free_user()` in admin_finance.py:**
+   - Returns False (PROTECTED) if ANY paid indicator exists
+   - Added email logging for better debugging
+   - Protects if expiry can't be parsed (fail-safe)
+
+**Testing Verification:**
+- ✅ Burn query correctly EXCLUDES elite users
+- ✅ Burn query correctly INCLUDES free users
+- ✅ `is_protected_from_burn()` correctly protects elite users
+- ✅ `is_protected_from_burn()` correctly protects ex-VIP users
+- ✅ Free users with no paid history can be burned
+
+---
+
+### 🔥 PRC Burn Logic Fixed & Re-enabled ✅ (Dec 2025)
 
 **Problem:** PRC burn jobs were disabled because they incorrectly targeted paid users, causing their balances to reset to zero.
 
