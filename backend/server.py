@@ -3198,6 +3198,54 @@ async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type:
     
     return {"eligible": True, "reason": "Eligible for withdrawal", "lien_amount": lien_amount}
 
+
+async def check_vip_service_access(uid: str, service_name: str = "service") -> Dict:
+    """
+    Check if user can access paid services (marketplace, gift vouchers, bill payments)
+    Requirements:
+    1. User must have paid subscription (startup/growth/elite)
+    2. Subscription must not be expired
+    """
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        return {"allowed": False, "reason": "User not found", "requires_vip": True}
+    
+    # Use helper function - subscription_plan is source of truth
+    if is_free_user(user):
+        return {
+            "allowed": False, 
+            "reason": f"Paid subscription required to use {service_name}. Please subscribe.",
+            "requires_vip": True,
+            "is_expired": False
+        }
+    
+    # Check VIP expiry
+    vip_expiry_str = user.get("vip_expiry")
+    if not vip_expiry_str:
+        # VIP without expiry date - allow (legacy users)
+        return {"allowed": True, "reason": ""}
+    
+    try:
+        vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        
+        if vip_expiry < now:
+            # VIP expired - block service
+            days_expired = (now - vip_expiry).days
+            return {
+                "allowed": False,
+                "reason": f"Your VIP membership expired {days_expired} days ago. Please renew to access {service_name}.",
+                "days_expired": days_expired,
+                "requires_renewal": True,
+                "is_expired": True,
+                "expiry_date": vip_expiry_str
+            }
+        
+        return {"allowed": True, "reason": ""}
+    except:
+        return {"allowed": True, "reason": ""}
+
+
 # Keep old function name for backward compatibility
 async def check_vip_marketplace_access(uid: str) -> Dict:
     """Backward compatible wrapper"""
