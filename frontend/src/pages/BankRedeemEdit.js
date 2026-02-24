@@ -350,10 +350,10 @@ const BankRedeemEdit = ({ user }) => {
           <div className="flex items-start gap-2">
             <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-blue-300">
-              <p className="font-semibold mb-1">Edit करताना लक्षात ठेवा:</p>
+              <p className="font-semibold mb-1">Keep in mind while editing:</p>
               <ul className="space-y-1 list-disc list-inside">
-                <li>Amount कमी केल्यास PRC refund होईल</li>
-                <li>Amount वाढवल्यास अतिरिक्त PRC कापले जाईल</li>
+                <li>Reducing amount will refund PRC</li>
+                <li>Increasing amount will deduct additional PRC</li>
                 <li>Only use "Edit Bank" if you need to change bank details</li>
               </ul>
             </div>
