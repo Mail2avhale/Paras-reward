@@ -290,12 +290,24 @@ const Orders = ({ user, onLogout }) => {
 
   const handleDeleteOrder = async (orderId) => {
     try {
-      await axios.delete(`${API}/orders/${orderId}`);
-      toast.success('Order cancelled successfully');
+      // Find the request to determine its type
+      const request = requests.find(r => r.id === orderId);
+      
+      if (request?.type === 'bank_redeem') {
+        // Cancel bank redeem request
+        await axios.delete(`${API}/bank-redeem/request/${user.uid}/${orderId}`);
+        toast.success('Bank redeem request cancelled! PRC refunded.');
+      } else {
+        // Cancel regular order
+        await axios.delete(`${API}/orders/${orderId}`);
+        toast.success('Order cancelled successfully');
+      }
+      
       fetchRequests(currentPage, activeTab);
+      fetchUserStats(); // Refresh stats as PRC balance may have changed
       setDeleteOrderId(null);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to cancel order');
+      toast.error(error.response?.data?.detail || 'Failed to cancel request');
     }
   };
 
