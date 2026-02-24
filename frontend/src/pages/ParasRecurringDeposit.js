@@ -697,16 +697,16 @@ const ParasRecurringDeposit = () => {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Bank Transfer (INR)</span>
+                  <span className="text-gray-400">Estimated Value</span>
                   <span className="text-emerald-400 font-semibold">
-                    ₹{formatCurrency(selectedRd.current_value * 0.77 / 10)}
+                    {formatCurrency(selectedRd.current_value * 0.77)} PRC
                   </span>
                 </div>
               </div>
               
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
                 <p className="text-blue-400 text-xs text-center">
-                  Your request will be sent to admin for approval. Amount will be credited to your bank account after approval.
+                  Your request will be sent to admin for approval. PRC will be processed after approval.
                 </p>
               </div>
               
