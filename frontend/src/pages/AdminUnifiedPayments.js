@@ -199,12 +199,15 @@ const AdminUnifiedPayments = ({ user }) => {
           r.user_name,
           r.user_email,
           r.mobile,
+          r.user_mobile,
+          r.phone,
           r.account_number,
           r.ifsc_code,
           r.bank_name,
           r.request_id,
           r.account_holder_name,
           r.uid,
+          r.user_id,
           r.transaction_ref
         ].filter(Boolean).join(' ').toLowerCase();
         
