@@ -721,8 +721,8 @@ const AdminUnifiedPayments = ({ user }) => {
                   </div>
                 </div>
 
-                {/* Row 2: Request ID + Mobile */}
-                <div className="flex items-center gap-4 mb-2 pl-9">
+                {/* Row 2: Request ID + Mobile + Processed By */}
+                <div className="flex items-center gap-4 mb-2 pl-9 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 text-sm">ID:</span>
                     <span className="text-cyan-400 font-mono text-sm">{req.request_id?.slice(-10) || '-'}</span>
@@ -733,6 +733,18 @@ const AdminUnifiedPayments = ({ user }) => {
                     <span className="text-gray-500 text-sm">Mobile:</span>
                     <span className="text-gray-300 text-sm">{req.mobile || req.user_email || '-'}</span>
                   </div>
+                  
+                  {/* Approved/Rejected By Tag */}
+                  {req.status === 'approved' && (req.approved_by_name || req.processed_by_name || req.approved_by) && (
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
+                      ✓ by {req.approved_by_name || req.processed_by_name || req.approved_by}
+                    </span>
+                  )}
+                  {req.status === 'rejected' && (req.rejected_by_name || req.processed_by_name || req.rejected_by) && (
+                    <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                      ✗ by {req.rejected_by_name || req.processed_by_name || req.rejected_by}
+                    </span>
+                  )}
                 </div>
 
                 {/* Row 3: Bank Details */}
