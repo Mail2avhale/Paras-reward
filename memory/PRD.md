@@ -6,7 +6,42 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 📊 Comprehensive User Logging System ✅ (Feb 2026 - Latest)
+### 🚫 Free Users PRC Block - No Collection, No Expiry ✅ (Feb 2026 - LATEST)
+
+**Problem Solved:** Complex PRC burning/expiry logic was causing issues. Paid users accidentally getting burned.
+
+**New Policy (Simple & Safe):**
+- ✅ Free/Explorer users CAN start mining session (see animation)
+- ❌ Free/Explorer users CANNOT collect PRC
+- ❌ Free/Explorer users CANNOT earn PRC from Tap Game
+- 🎯 Result: No PRC = No burning/expiry needed = Zero risk
+
+**Implementation:**
+
+1. **Mining Collect Blocked (`/api/mining/collect/{uid}`):**
+   - Free users see: "तुम्ही Free user आहात. PRC collect करण्यासाठी Startup किंवा Elite plan घ्या!"
+   - Session restarts automatically
+   - Returns `blocked: true, upgrade_required: true`
+
+2. **Tap Game Blocked (`/api/game/tap/{uid}`):**
+   - Free users see: "तुम्ही Free user आहात. Tap Game मधून PRC मिळवण्यासाठी Startup किंवा Elite plan घ्या!"
+   - Tap count updates (UI feedback) but PRC = 0
+   - Returns `blocked: true, upgrade_required: true`
+
+3. **One-Time Cleanup API (`/api/admin/clear-free-users-prc`):**
+   - Clears existing free users' PRC balance
+   - Logs every clear to `prc_balance_logs`
+   - Already executed: 46 users, 3476.53 PRC cleared
+
+**Benefits:**
+- 🛡️ Zero risk of accidentally burning paid users
+- 🧹 No complex burn jobs needed
+- 💰 Strong conversion incentive to upgrade
+- 🎮 Free users still get app experience
+
+---
+
+### 📊 Comprehensive User Logging System ✅ (Feb 2026)
 
 **New Module:** `routes/user_logs.py`
 
