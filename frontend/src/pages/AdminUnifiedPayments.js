@@ -366,7 +366,7 @@ const AdminUnifiedPayments = ({ user }) => {
   const handleExportExcel = async () => {
     try {
       toast.info('Downloading Excel...');
-      const response = await axios.get(`${API}/admin/export-hdfc-bulk-payment`, {
+      const response = await axios.get(`${API}/admin/hdfc-export/combined`, {
         params: { status: 'pending' },
         responseType: 'blob'
       });
