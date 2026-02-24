@@ -107,6 +107,19 @@ def calculate_total_prc(amount_inr: int) -> dict:
     }
 
 
+def calculate_charges(amount_inr: int) -> dict:
+    """Calculate charges breakdown for a given amount"""
+    processing_fee = get_processing_fee(amount_inr)
+    admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
+    total_inr = amount_inr + processing_fee + admin_charge
+    
+    return {
+        "processing_fee_inr": processing_fee,
+        "admin_charge_inr": admin_charge,
+        "total_inr": total_inr
+    }
+
+
 # ========== BANK DETAILS MANAGEMENT ==========
 
 @router.get("/bank-details/{user_id}")
