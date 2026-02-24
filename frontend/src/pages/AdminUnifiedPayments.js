@@ -602,7 +602,7 @@ const AdminUnifiedPayments = ({ user }) => {
           <Button variant="outline" size="sm" 
             onClick={() => statusFilter !== 'pending' && setSortOrder(p => p === 'desc' ? 'asc' : 'desc')} 
             className={`h-10 px-4 text-sm font-medium ${statusFilter === 'pending' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={statusFilter === 'pending' ? 'Pending: जुने आधी (Auto)' : 'Sort बदला'}>
+            title={statusFilter === 'pending' ? 'Pending: Oldest First (Auto)' : 'Change Sort Order'}>
             <ArrowUpDown className="w-4 h-4 mr-2" />
             {statusFilter === 'pending' ? 'Oldest First' : (sortOrder === 'desc' ? 'Newest First' : 'Oldest First')}
           </Button>
