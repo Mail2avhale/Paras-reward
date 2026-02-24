@@ -26,28 +26,28 @@ const getTimeGreeting = (language = 'en') => {
   
   if (hour >= 5 && hour < 12) {
     return {
-      text: language === 'hi' ? 'सुप्रभात' : language === 'mr' ? 'सुप्रभात' : 'Good Morning',
+      text: 'Good Morning',
       emoji: '🌅',
       icon: Sunrise,
       color: 'from-orange-400 to-yellow-400'
     };
   } else if (hour >= 12 && hour < 17) {
     return {
-      text: language === 'hi' ? 'शुभ दोपहर' : language === 'mr' ? 'शुभ दुपार' : 'Good Afternoon',
+      text: 'Good Afternoon',
       emoji: '☀️',
       icon: Sun,
       color: 'from-yellow-400 to-orange-400'
     };
   } else if (hour >= 17 && hour < 21) {
     return {
-      text: language === 'hi' ? 'शुभ संध्या' : language === 'mr' ? 'शुभ संध्याकाळ' : 'Good Evening',
+      text: 'Good Evening',
       emoji: '🌆',
       icon: Sunset,
       color: 'from-purple-400 to-pink-400'
     };
   } else {
     return {
-      text: language === 'hi' ? 'शुभ रात्रि' : language === 'mr' ? 'शुभ रात्री' : 'Good Night',
+      text: 'Good Night',
       emoji: '🌙',
       icon: Moon,
       color: 'from-indigo-400 to-purple-400'
