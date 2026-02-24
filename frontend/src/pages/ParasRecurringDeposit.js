@@ -82,7 +82,7 @@ const ParasRecurringDeposit = () => {
         
         const migrateData = await migrateResponse.json();
         if (migrateData.success) {
-          toast.success(`Successfully converted ₹${formatCurrency(data.total_savings)} PRC to RD!`);
+          toast.success(`Successfully converted ${formatCurrency(data.total_savings)} PRC to Savings Vault!`);
           setLuxurySavings(null);
           fetchRdsData();
         }
