@@ -29,6 +29,13 @@ const AdminUser360 = ({ user: adminUser }) => {
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   
+  // Request action states
+  const [actionRequestId, setActionRequestId] = useState(null);
+  const [actionType, setActionType] = useState(null); // 'approve' or 'reject'
+  const [actionUTR, setActionUTR] = useState('');
+  const [actionReason, setActionReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  
   // User List Browse Mode State
   const [viewMode, setViewMode] = useState('search'); // 'search' or 'browse'
   const [userList, setUserList] = useState([]);
