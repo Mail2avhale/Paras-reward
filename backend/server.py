@@ -38840,6 +38840,10 @@ api_router.include_router(user_logs_router)
 set_hdfc_export_db(db)
 api_router.include_router(hdfc_export_router)
 
+# Notifications Router - In-app notifications
+set_notifications_db(db)
+api_router.include_router(notifications_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
