@@ -32596,11 +32596,13 @@ async def update_accounting_settings(request: Request):
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
 # Default permissions for manager role
-DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers"]
+DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers", "unified-payments"]
 
 # All available admin pages/permissions
 ALL_ADMIN_PERMISSIONS = [
     {"id": "dashboard", "label": "Dashboard", "category": "General"},
+    {"id": "members", "label": "Members Dashboard", "category": "General"},
+    {"id": "user-360", "label": "User 360° View", "category": "General"},
     {"id": "users", "label": "Users Management", "category": "General"},
     {"id": "analytics", "label": "Analytics", "category": "General"},
     {"id": "kyc", "label": "KYC Verification", "category": "General"},
@@ -32609,24 +32611,41 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "video_ads", "label": "Video Ads", "category": "Operations"},
     {"id": "prc_rain", "label": "PRC Rain Drop", "category": "Operations"},
     {"id": "support", "label": "Support Tickets", "category": "Operations"},
+    {"id": "contact-submissions", "label": "Contact Inquiries", "category": "Operations"},
     {"id": "fraud", "label": "Fraud Alerts", "category": "Security"},
+    {"id": "fraud-dashboard", "label": "Fraud Dashboard", "category": "Security"},
+    {"id": "security", "label": "Security Dashboard", "category": "Security"},
     {"id": "company_wallets", "label": "Company Wallets", "category": "Finance"},
+    {"id": "company-wallets", "label": "Company Wallets", "category": "Finance"},
     {"id": "ads_income", "label": "Ads Income", "category": "Finance"},
     {"id": "fixed_expenses", "label": "Fixed Expenses", "category": "Finance"},
     {"id": "user_ledger", "label": "User Ledger", "category": "Finance"},
+    {"id": "user-ledger", "label": "User Ledger", "category": "Finance"},
     {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
     {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
-    {"id": "subscription_payment", "label": "Subscription Payment Verification", "category": "Payments"},
+    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
+    {"id": "subscription_payment", "label": "Subscription Payment", "category": "Payments"},
+    {"id": "subscriptions", "label": "Subscriptions", "category": "Payments"},
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
-    {"id": "bank-withdrawals", "label": "Redeem to Bank", "category": "Payments"},
-    {"id": "gift_vouchers", "label": "Gift Voucher Requests", "category": "Payments"},
-    {"id": "bill_payments", "label": "Bill Payment Requests", "category": "Payments"},
+    {"id": "unified-payments", "label": "Unified Payments (All)", "category": "Payments"},
+    {"id": "bank-withdrawals", "label": "Bank Withdrawals", "category": "Payments"},
+    {"id": "gift_vouchers", "label": "Gift Vouchers", "category": "Payments"},
+    {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
+    {"id": "bill_payments", "label": "Bill Payments", "category": "Payments"},
+    {"id": "bill-payments", "label": "Bill Payments", "category": "Payments"},
+    {"id": "recurring-deposits", "label": "PRC Savings Vault", "category": "Payments"},
+    {"id": "prc-burn-control", "label": "PRC Burn Control", "category": "Controls"},
     {"id": "system_settings", "label": "System Settings", "category": "Settings"},
+    {"id": "settings-hub", "label": "Settings Hub", "category": "Settings"},
     {"id": "audit", "label": "Audit Service", "category": "Settings"},
+    {"id": "data-backup", "label": "Data Backup", "category": "Settings"},
     {"id": "prc_analytics", "label": "PRC Analytics", "category": "Analytics"},
+    {"id": "prc-analytics", "label": "PRC Analytics", "category": "Analytics"},
     {"id": "profit_loss", "label": "Profit & Loss", "category": "Analytics"},
-    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"}
+    {"id": "profit-loss", "label": "Profit & Loss", "category": "Analytics"},
+    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"},
+    {"id": "performance-report", "label": "Admin Performance", "category": "Analytics"}
 ]
 
 @api_router.get("/admin/permissions/list")
