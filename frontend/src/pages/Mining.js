@@ -332,8 +332,6 @@ const DailyRewards = ({ user }) => {
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
-  const [showBurnAlert, setShowBurnAlert] = useState(true);
-  const [burnAlertExpanded, setBurnAlertExpanded] = useState(false);
   
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
@@ -342,10 +340,9 @@ const DailyRewards = ({ user }) => {
   // Get global translation function
   const { t: globalT } = useLanguage();
   
-  // PRC Expiry hook for free users
+  // Check if user is free user
   const subscriptionPlan = userData?.subscription_plan || 'explorer';
   const isFreeUser = subscriptionPlan === 'explorer';
-  const { expiringBatches, totalExpiring } = usePRCExpiry(user?.uid, isFreeUser);
 
   // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
