@@ -6,7 +6,54 @@ A production-grade reward platform serving 3000+ users with subscription managem
 
 ## Recent Changes (February 2026)
 
-### 🔥 New Simple PRC Burn Control ✅ (Feb 24, 2026 - LATEST)
+### ✏️ User Edit/Cancel Pending Bank Redeem & Admin Smart Sorting ✅ (Feb 24, 2026 - LATEST)
+
+**User Request:** 
+1. Allow users to edit/cancel their pending bank redeem requests
+2. Admin dashboard: Pending = oldest first, Approved/Rejected = newest first  
+3. Fast searching in admin dashboard
+
+**Changes Made:**
+
+1. **New Backend APIs (`routes/bank_redeem.py`):**
+   - `PUT /api/bank-redeem/request/{user_id}/{request_id}` - Edit pending request (change amount, bank details)
+   - `DELETE /api/bank-redeem/request/{user_id}/{request_id}` - Cancel pending request (full PRC refund)
+
+2. **New Frontend Page:**
+   - `BankRedeemEdit.js` - Edit page for pending bank redeem requests
+   - Route: `/bank-redeem/edit/:requestId`
+   - Features: Amount slider, bank details edit, PRC adjustment preview
+
+3. **Orders.js Updated:**
+   - Edit and Cancel buttons for pending `bank_redeem` requests
+   - Cancel handler updated to call correct API based on request type
+
+4. **AdminUnifiedPayments.js Updated:**
+   - Smart sorting: Pending = ascending (oldest first), Approved/Rejected = descending (newest first)
+   - Enhanced search: Searches across user_name, email, mobile, account_number, ifsc, bank_name, request_id, uid, transaction_ref
+   - Sort button disabled for pending tab (auto oldest first)
+
+**Testing:** All APIs tested with curl - 100% working
+
+---
+
+### 📥 Export to Excel Bug Fix ✅ (Feb 24, 2026)
+
+**Issue:** "Download failed" error when clicking Export to Excel button on Unified Payment Dashboard.
+
+**Root Cause:** Frontend was showing generic error. Backend API working correctly.
+
+**Fix:**
+- Updated `handleExportExcel()` in `AdminUnifiedPayments.js`
+- Uses current `statusFilter` instead of hardcoded "pending"
+- Shows Marathi error message when no data: "Export साठी requests सापडले नाहीत. फिल्टर बदलून बघा."
+- Proper error handling for 404 responses
+
+**Testing:** 100% passed - Excel download working
+
+---
+
+### 🔥 New Simple PRC Burn Control ✅ (Feb 24, 2026)
 
 **User Request:** Delete all old complex burn pages/code and create a simple admin-controlled % burn system.
 
