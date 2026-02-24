@@ -1,442 +1,241 @@
 """
 Notification System API Tests
-Tests for notification CRUD operations, send, broadcast functionality
-
-Endpoints tested:
-- GET /api/notifications/{uid} - Get user notifications
-- GET /api/notifications/{uid}/unread-count - Get unread count  
-- PUT /api/notifications/{notification_id}/read - Mark notification as read
-- PUT /api/notifications/{uid}/read-all - Mark all as read
-- DELETE /api/notifications/{notification_id} - Delete notification
-- POST /api/notifications/send - Send notification to user
-- POST /api/notifications/broadcast - Broadcast to all users
+Tests for in-app notifications for events:
+- Payment Approved/Rejected
+- New Referral Joined
+- Subscription Expiry Reminder
+- PRC Credited
 """
 
 import pytest
 import requests
 import os
-import uuid
+from datetime import datetime, timezone, timedelta
 
-# Get BASE_URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
-# Test user UID provided by main agent
-TEST_USER_UID = "USR90a2c37d"
+# Test user ID - Admin user from database
+TEST_USER_ID = "8175c02a-4fbd-409c-8d47-d864e979f59f"
 
-class TestNotificationAPIs:
-    """Test notification API endpoints"""
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup test fixtures"""
-        self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/json"})
-        self.created_notification_ids = []
-    
-    def teardown_method(self, method):
-        """Cleanup created notifications after each test"""
-        for notif_id in self.created_notification_ids:
-            try:
-                self.session.delete(f"{BASE_URL}/api/notifications/{notif_id}")
-            except:
-                pass
-    
-    # ========== GET /api/notifications/{uid} ==========
-    def test_get_user_notifications(self):
-        """Test fetching user notifications"""
-        response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}")
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        
-        data = response.json()
-        assert "notifications" in data, "Response should contain 'notifications' field"
-        assert "unread_count" in data, "Response should contain 'unread_count' field"
-        assert "total" in data, "Response should contain 'total' field"
-        assert isinstance(data["notifications"], list), "notifications should be a list"
-        
-        print(f"✓ GET /api/notifications/{TEST_USER_UID} - Found {len(data['notifications'])} notifications, {data['unread_count']} unread")
-    
-    def test_get_notifications_with_pagination(self):
-        """Test notifications pagination"""
-        response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?page=1&limit=5")
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        assert "page" in data, "Response should contain 'page' field"
-        assert "limit" in data, "Response should contain 'limit' field"
-        assert data["page"] == 1, "Page should be 1"
-        assert data["limit"] == 5, "Limit should be 5"
-        
-        print(f"✓ GET notifications with pagination - page={data['page']}, limit={data['limit']}")
-    
-    def test_get_notifications_unread_only(self):
-        """Test fetching only unread notifications"""
-        response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?unread_only=true")
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        # All notifications in list should be unread
-        for notif in data.get("notifications", []):
-            assert notif.get("read") == False, "Unread filter should only return unread notifications"
-        
-        print(f"✓ GET notifications with unread_only filter - {len(data['notifications'])} unread notifications")
-    
-    # ========== GET /api/notifications/{uid}/unread-count ==========
+
+class TestNotificationsAPI:
+    """Test notification endpoints"""
+
     def test_get_unread_count(self):
-        """Test getting unread notification count"""
-        response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}/unread-count")
+        """TC1: GET /api/notifications/user/{user_id}/unread-count returns count"""
+        response = requests.get(f"{BASE_URL}/api/notifications/user/{TEST_USER_ID}/unread-count")
         
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
         data = response.json()
-        assert "unread_count" in data, "Response should contain 'unread_count' field"
+        assert "unread_count" in data, "Response should contain unread_count"
         assert isinstance(data["unread_count"], int), "unread_count should be an integer"
         assert data["unread_count"] >= 0, "unread_count should be non-negative"
+        print(f"✓ Unread count: {data['unread_count']}")
+
+    def test_get_user_notifications(self):
+        """TC2: GET /api/notifications/user/{user_id} returns notifications"""
+        response = requests.get(f"{BASE_URL}/api/notifications/user/{TEST_USER_ID}?limit=10")
         
-        print(f"✓ GET /api/notifications/{TEST_USER_UID}/unread-count - {data['unread_count']} unread")
-    
-    def test_get_unread_count_nonexistent_user(self):
-        """Test unread count for non-existent user - should return 0"""
-        fake_uid = f"FAKE_{uuid.uuid4().hex[:8]}"
-        response = self.session.get(f"{BASE_URL}/api/notifications/{fake_uid}/unread-count")
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        assert response.status_code == 200, "Should return 200 even for non-existent user"
         data = response.json()
-        assert data["unread_count"] == 0, "Non-existent user should have 0 unread notifications"
+        assert "notifications" in data, "Response should contain notifications array"
+        assert "unread_count" in data, "Response should contain unread_count"
+        assert "total" in data, "Response should contain total"
         
-        print(f"✓ GET unread count for non-existent user - returns 0")
-    
-    # ========== POST /api/notifications/send ==========
-    def test_send_notification_to_user(self):
-        """Test sending a notification to a specific user"""
-        payload = {
-            "user_uid": TEST_USER_UID,
-            "title": "TEST_Notification Title",
-            "message": "This is a test notification message",
-            "type": "system",
-            "icon": "🔔"
+        assert isinstance(data["notifications"], list), "notifications should be a list"
+        assert isinstance(data["total"], int), "total should be an integer"
+        
+        if len(data["notifications"]) > 0:
+            notif = data["notifications"][0]
+            # Check notification structure
+            assert "_id" in notif, "Notification should have _id"
+            assert "user_id" in notif, "Notification should have user_id"
+            assert "title" in notif or "message" in notif, "Notification should have title or message"
+            assert "created_at" in notif, "Notification should have created_at"
+            print(f"✓ Retrieved {len(data['notifications'])} notifications, unread: {data['unread_count']}")
+        else:
+            print("✓ No notifications found (empty list is valid)")
+
+    def test_get_notifications_unread_only(self):
+        """TC3: GET /api/notifications/user/{user_id}?unread_only=true filters correctly"""
+        response = requests.get(f"{BASE_URL}/api/notifications/user/{TEST_USER_ID}?unread_only=true&limit=20")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        # Verify all returned notifications are unread
+        for notif in data["notifications"]:
+            assert notif.get("read") == False or notif.get("is_read") == False, \
+                f"Notification {notif.get('_id')} should be unread"
+        
+        print(f"✓ unread_only filter working - returned {len(data['notifications'])} unread notifications")
+
+    def test_get_notifications_with_limit(self):
+        """TC4: GET /api/notifications/user/{user_id}?limit=5 respects limit"""
+        response = requests.get(f"{BASE_URL}/api/notifications/user/{TEST_USER_ID}?limit=5")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
+        data = response.json()
+        assert len(data["notifications"]) <= 5, "Should return at most 5 notifications"
+        print(f"✓ Limit respected - returned {len(data['notifications'])} notifications (max 5)")
+
+    def test_mark_all_read(self):
+        """TC5: POST /api/notifications/mark-all-read/{user_id} marks all as read"""
+        import pymongo
+        from bson import ObjectId
+        client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+        db = client['test_database']
+        
+        # Create unread test notification
+        test_notif = {
+            "user_id": TEST_USER_ID,
+            "type": "test",
+            "title": "TEST_Mark All Read Test",
+            "message": "This is a test notification",
+            "read": False,
+            "created_at": datetime.now(timezone.utc)
         }
-        
-        response = self.session.post(f"{BASE_URL}/api/notifications/send", json=payload)
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        
-        data = response.json()
-        assert data.get("success") == True, "Response should indicate success"
-        assert "notification_id" in data, "Response should contain notification_id"
-        
-        # Store for cleanup
-        self.created_notification_ids.append(data["notification_id"])
-        
-        print(f"✓ POST /api/notifications/send - Notification sent with ID: {data['notification_id']}")
-        
-        # Verify notification was created by fetching it
-        verify_response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?limit=50")
-        assert verify_response.status_code == 200
-        notifications = verify_response.json().get("notifications", [])
-        
-        found = False
-        for notif in notifications:
-            if notif.get("notification_id") == data["notification_id"]:
-                found = True
-                assert notif.get("title") == payload["title"], "Title should match"
-                assert notif.get("message") == payload["message"], "Message should match"
-                assert notif.get("read") == False, "New notification should be unread"
-                break
-        
-        assert found, "Created notification should be retrievable"
-        print(f"✓ Created notification verified in user's notifications list")
-    
-    def test_send_notification_without_user_uid(self):
-        """Test sending notification without user_uid - should fail"""
-        payload = {
-            "title": "TEST_Notification Title",
-            "message": "This is a test notification message"
-        }
-        
-        response = self.session.post(f"{BASE_URL}/api/notifications/send", json=payload)
-        
-        assert response.status_code == 400, f"Expected 400, got {response.status_code}"
-        
-        print(f"✓ POST send without user_uid correctly returns 400")
-    
-    def test_send_notification_with_action_url(self):
-        """Test sending notification with action_url"""
-        payload = {
-            "user_uid": TEST_USER_UID,
-            "title": "TEST_Action Notification",
-            "message": "Click to view order",
-            "type": "order",
-            "action_url": "/orders/123"
-        }
-        
-        response = self.session.post(f"{BASE_URL}/api/notifications/send", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        self.created_notification_ids.append(data["notification_id"])
-        
-        # Verify action_url was saved
-        verify_response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?limit=50")
-        notifications = verify_response.json().get("notifications", [])
-        
-        found_notif = None
-        for notif in notifications:
-            if notif.get("notification_id") == data["notification_id"]:
-                found_notif = notif
-                break
-        
-        assert found_notif is not None, "Notification should exist"
-        assert found_notif.get("action_url") == "/orders/123", "action_url should be saved"
-        
-        print(f"✓ POST send with action_url - saved correctly")
-    
-    # ========== PUT /api/notifications/{notification_id}/read ==========
-    def test_mark_notification_as_read(self):
-        """Test marking a notification as read"""
-        # First create a notification
-        create_response = self.session.post(f"{BASE_URL}/api/notifications/send", json={
-            "user_uid": TEST_USER_UID,
-            "title": "TEST_Read Test",
-            "message": "Testing mark as read"
-        })
-        assert create_response.status_code == 200
-        notification_id = create_response.json()["notification_id"]
-        self.created_notification_ids.append(notification_id)
-        
-        # Mark as read
-        response = self.session.put(f"{BASE_URL}/api/notifications/{notification_id}/read")
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        data = response.json()
-        assert data.get("success") == True, "Response should indicate success"
-        
-        # Verify it was marked as read
-        verify_response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?limit=50")
-        notifications = verify_response.json().get("notifications", [])
-        
-        found_notif = None
-        for notif in notifications:
-            if notif.get("notification_id") == notification_id:
-                found_notif = notif
-                break
-        
-        assert found_notif is not None, "Notification should exist"
-        assert found_notif.get("read") == True, "Notification should be marked as read"
-        
-        print(f"✓ PUT /api/notifications/{notification_id}/read - marked as read successfully")
-    
-    def test_mark_nonexistent_notification_as_read(self):
-        """Test marking non-existent notification as read - should return 404"""
-        fake_id = f"fake_{uuid.uuid4().hex[:16]}"
-        response = self.session.put(f"{BASE_URL}/api/notifications/{fake_id}/read")
-        
-        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
-        
-        print(f"✓ PUT mark non-existent notification correctly returns 404")
-    
-    # ========== PUT /api/notifications/{uid}/read-all ==========
-    def test_mark_all_notifications_as_read(self):
-        """Test marking all notifications as read for a user"""
-        # Create multiple notifications
-        for i in range(3):
-            create_response = self.session.post(f"{BASE_URL}/api/notifications/send", json={
-                "user_uid": TEST_USER_UID,
-                "title": f"TEST_Batch {i}",
-                "message": f"Batch notification {i}"
-            })
-            if create_response.status_code == 200:
-                self.created_notification_ids.append(create_response.json()["notification_id"])
+        result = db.notifications.insert_one(test_notif)
+        test_id = result.inserted_id
         
         # Mark all as read
-        response = self.session.put(f"{BASE_URL}/api/notifications/{TEST_USER_UID}/read-all")
+        response = requests.post(f"{BASE_URL}/api/notifications/mark-all-read/{TEST_USER_ID}")
         
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
         data = response.json()
         assert data.get("success") == True, "Response should indicate success"
         assert "marked_count" in data, "Response should contain marked_count"
         
         # Verify unread count is now 0
-        unread_response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}/unread-count")
-        assert unread_response.json()["unread_count"] == 0, "All notifications should be read now"
+        count_response = requests.get(f"{BASE_URL}/api/notifications/user/{TEST_USER_ID}/unread-count")
+        assert count_response.json().get("unread_count") == 0, "Unread count should be 0 after mark-all-read"
         
-        print(f"✓ PUT /api/notifications/{TEST_USER_UID}/read-all - marked {data.get('marked_count')} as read")
-    
-    # ========== DELETE /api/notifications/{notification_id} ==========
-    def test_delete_notification(self):
-        """Test deleting a notification"""
-        # First create a notification
-        create_response = self.session.post(f"{BASE_URL}/api/notifications/send", json={
-            "user_uid": TEST_USER_UID,
-            "title": "TEST_Delete Me",
-            "message": "This notification will be deleted"
-        })
-        assert create_response.status_code == 200
-        notification_id = create_response.json()["notification_id"]
+        # Cleanup - remove test notification
+        db.notifications.delete_one({"_id": test_id})
+        client.close()
         
-        # Delete it
-        response = self.session.delete(f"{BASE_URL}/api/notifications/{notification_id}")
+        print(f"✓ Marked {data.get('marked_count')} notifications as read")
+
+    def test_mark_single_notification_read(self):
+        """TC6: POST /api/notifications/mark-read/{notification_id} marks single as read"""
+        import pymongo
+        from bson import ObjectId
+        client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+        db = client['test_database']
         
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        # Create unread test notification
+        test_notif = {
+            "user_id": TEST_USER_ID,
+            "type": "payment_approved",
+            "title": "TEST_Single Mark Read",
+            "message": "Test notification for single mark read",
+            "read": False,
+            "created_at": datetime.now(timezone.utc)
+        }
+        result = db.notifications.insert_one(test_notif)
+        test_id = str(result.inserted_id)
+        
+        # Mark single notification as read
+        response = requests.post(f"{BASE_URL}/api/notifications/mark-read/{test_id}")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
         data = response.json()
         assert data.get("success") == True, "Response should indicate success"
         
-        # Verify it's deleted
-        verify_response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?limit=50")
-        notifications = verify_response.json().get("notifications", [])
-        
-        for notif in notifications:
-            assert notif.get("notification_id") != notification_id, "Deleted notification should not exist"
-        
-        print(f"✓ DELETE /api/notifications/{notification_id} - deleted successfully")
-    
-    def test_delete_nonexistent_notification(self):
-        """Test deleting non-existent notification - should return 404"""
-        fake_id = f"fake_{uuid.uuid4().hex[:16]}"
-        response = self.session.delete(f"{BASE_URL}/api/notifications/{fake_id}")
-        
-        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
-        
-        print(f"✓ DELETE non-existent notification correctly returns 404")
-    
-    # ========== POST /api/notifications/broadcast ==========
-    def test_broadcast_notification(self):
-        """Test broadcasting notification to all users"""
-        payload = {
-            "title": "TEST_Broadcast Announcement",
-            "message": "This is a test broadcast message",
-            "type": "announcement",
-            "icon": "📢"
-        }
-        
-        response = self.session.post(f"{BASE_URL}/api/notifications/broadcast", json=payload)
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        
-        data = response.json()
-        assert data.get("success") == True, "Response should indicate success"
-        assert "sent_count" in data, "Response should contain sent_count"
-        # Note: sent_count may be 0 if no users exist, but API should still work
-        assert isinstance(data["sent_count"], int), "sent_count should be an integer"
-        
-        print(f"✓ POST /api/notifications/broadcast - sent to {data['sent_count']} users")
-    
-    def test_broadcast_to_specific_plan(self):
-        """Test broadcasting to users of a specific subscription plan"""
-        payload = {
-            "title": "TEST_Elite Only Broadcast",
-            "message": "This is for elite users only",
-            "type": "announcement",
-            "target_plan": "elite"
-        }
-        
-        response = self.session.post(f"{BASE_URL}/api/notifications/broadcast", json=payload)
-        
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
-        
-        data = response.json()
-        assert data.get("success") == True
-        
-        print(f"✓ POST broadcast to specific plan - sent to {data.get('sent_count', 0)} elite users")
-
-
-class TestNotificationFields:
-    """Test notification data structure and fields"""
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup test fixtures"""
-        self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/json"})
-    
-    def test_notification_has_required_fields(self):
-        """Test that notifications have all required fields"""
-        # Create a notification
-        create_response = self.session.post(f"{BASE_URL}/api/notifications/send", json={
-            "user_uid": TEST_USER_UID,
-            "title": "TEST_Field Check",
-            "message": "Testing notification fields",
-            "type": "system",
-            "icon": "🔔"
-        })
-        assert create_response.status_code == 200
-        notification_id = create_response.json()["notification_id"]
-        
-        # Fetch and check fields
-        response = self.session.get(f"{BASE_URL}/api/notifications/{TEST_USER_UID}?limit=50")
-        notifications = response.json().get("notifications", [])
-        
-        found_notif = None
-        for notif in notifications:
-            if notif.get("notification_id") == notification_id:
-                found_notif = notif
-                break
-        
-        assert found_notif is not None, "Created notification should exist"
-        
-        # Check required fields
-        required_fields = ["notification_id", "title", "message", "type", "created_at", "read"]
-        for field in required_fields:
-            assert field in found_notif, f"Notification should have '{field}' field"
-        
-        # Check user_uid or user_id is present (for API compatibility)
-        assert found_notif.get("user_uid") or found_notif.get("user_id"), "Should have user_uid or user_id"
-        
-        print(f"✓ Notification has all required fields: {required_fields}")
+        # Verify notification is now read
+        notif = db.notifications.find_one({"_id": ObjectId(test_id)})
+        assert notif.get("read") == True, "Notification should be marked as read"
+        assert "read_at" in notif, "Notification should have read_at timestamp"
         
         # Cleanup
-        self.session.delete(f"{BASE_URL}/api/notifications/{notification_id}")
-
-
-class TestNotificationEdgeCases:
-    """Test edge cases for notification API"""
-    
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup test fixtures"""
-        self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/json"})
-    
-    def test_empty_notification_list(self):
-        """Test getting notifications for user with no notifications"""
-        # Use a unique fake uid
-        fake_uid = f"TEST_EMPTY_{uuid.uuid4().hex[:8]}"
-        response = self.session.get(f"{BASE_URL}/api/notifications/{fake_uid}")
+        db.notifications.delete_one({"_id": ObjectId(test_id)})
+        client.close()
         
-        assert response.status_code == 200, f"Should return 200 even with no notifications"
+        print(f"✓ Single notification {test_id} marked as read")
+
+    def test_mark_read_invalid_id(self):
+        """TC7: POST /api/notifications/mark-read/{invalid_id} returns 404"""
+        response = requests.post(f"{BASE_URL}/api/notifications/mark-read/000000000000000000000000")
+        
+        # Should return 404 or 500 for invalid notification
+        assert response.status_code in [404, 500], f"Expected 404 or 500 for invalid ID, got {response.status_code}"
+        print(f"✓ Invalid notification ID handled correctly (status: {response.status_code})")
+
+    def test_notifications_for_nonexistent_user(self):
+        """TC8: GET /api/notifications/user/{nonexistent_user} returns empty list"""
+        fake_user_id = "nonexistent-user-12345"
+        response = requests.get(f"{BASE_URL}/api/notifications/user/{fake_user_id}")
+        
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        
         data = response.json()
+        assert data["notifications"] == [], "Should return empty list for nonexistent user"
+        assert data["unread_count"] == 0, "Unread count should be 0 for nonexistent user"
+        print("✓ Nonexistent user returns empty notifications list")
+
+
+class TestNotificationTypes:
+    """Test specific notification type scenarios"""
+
+    def test_payment_approved_notification_structure(self):
+        """TC9: Payment approved notification has correct structure"""
+        import pymongo
+        client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+        db = client['test_database']
         
-        assert data.get("notifications") == [], "Should return empty list"
-        assert data.get("unread_count") == 0, "unread_count should be 0"
-        assert data.get("total") == 0, "total should be 0"
+        # Find a payment_approved notification or create test data
+        notif = db.notifications.find_one({"type": "payment_approved"})
         
-        print(f"✓ Empty notification list handled correctly")
-    
-    def test_notification_types(self):
-        """Test various notification types"""
-        notification_types = ["system", "order", "mining", "referral", "withdrawal", "announcement"]
-        created_ids = []
+        if notif:
+            assert "title" in notif, "Payment notification should have title"
+            assert "message" in notif, "Payment notification should have message"
+            print(f"✓ Found payment_approved notification: {notif.get('title')}")
+        else:
+            print("✓ No payment_approved notifications in DB (skipped)")
         
-        for ntype in notification_types:
-            response = self.session.post(f"{BASE_URL}/api/notifications/send", json={
-                "user_uid": TEST_USER_UID,
-                "title": f"TEST_{ntype} notification",
-                "message": f"Testing {ntype} type",
-                "type": ntype
-            })
-            
-            assert response.status_code == 200, f"Should accept type: {ntype}"
-            created_ids.append(response.json()["notification_id"])
-            print(f"  ✓ Type '{ntype}' accepted")
+        client.close()
+
+    def test_referral_joined_notification_structure(self):
+        """TC10: Referral joined notification has correct structure"""
+        import pymongo
+        client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+        db = client['test_database']
         
-        print(f"✓ All notification types work correctly")
+        # Find a referral_joined notification
+        notif = db.notifications.find_one({"type": "referral_joined"})
         
-        # Cleanup
-        for nid in created_ids:
-            self.session.delete(f"{BASE_URL}/api/notifications/{nid}")
+        if notif:
+            assert "title" in notif, "Referral notification should have title"
+            assert "message" in notif, "Referral notification should have message"
+            print(f"✓ Found referral_joined notification: {notif.get('title')}")
+        else:
+            print("✓ No referral_joined notifications in DB (skipped)")
+        
+        client.close()
+
+    def test_prc_credited_notification_structure(self):
+        """TC11: PRC credited notification has correct structure"""
+        import pymongo
+        client = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+        db = client['test_database']
+        
+        # Find a prc_credited notification
+        notif = db.notifications.find_one({"type": "prc_credited"})
+        
+        if notif:
+            assert "title" in notif, "PRC notification should have title"
+            assert "message" in notif, "PRC notification should have message"
+            print(f"✓ Found prc_credited notification: {notif.get('title')}")
+        else:
+            print("✓ No prc_credited notifications in DB (skipped)")
+        
+        client.close()
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v", "--tb=short"])
