@@ -175,8 +175,8 @@ const PRCEmergencyControls = IS_USER_BUILD ? null : lazy(() => import(/* webpack
 // AdminUserControls removed - functionality merged into AdminUser360
 // AdvancedUserManagement removed - functionality merged into AdminUser360
 // AdminDeliveryPartners removed - feature deprecated
+// AdminLuxuryClaims - REMOVED (deprecated feature)
 const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
-const AdminLuxuryClaims = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminLuxuryClaims"));
 const AdminRecurringDeposits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
