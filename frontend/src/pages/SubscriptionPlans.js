@@ -684,7 +684,7 @@ const SubscriptionPlans = ({ user }) => {
                 {utrValidationResult?.valid === true && (
                   <p className="text-green-400 text-sm flex items-center gap-1 font-medium">
                     <CheckCircle className="w-4 h-4" />
-                    ✓ UTR number योग्य आहे
+                    ✓ UTR number is valid
                   </p>
                 )}
                 
@@ -695,7 +695,7 @@ const SubscriptionPlans = ({ user }) => {
                       ⚠️ UTR ALREADY IN USE
                     </p>
                     <p className="text-red-300 text-xs mt-1">
-                      हा UTR आधीच वापरला गेला आहे! कृपया योग्य UTR number टाका.
+                      This UTR has already been used! Please enter a valid UTR number.
                     </p>
                     {utrValidationResult?.details && (
                       <p className="text-red-300/70 text-xs mt-1">
