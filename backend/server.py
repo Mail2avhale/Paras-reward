@@ -7819,6 +7819,40 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     plan = sub_info["plan"]
     is_paid = plan in ["startup", "growth", "elite"]
     
+    # ============ FREE USER BLOCK - NO PRC FROM TAP GAME ============
+    # Free/Explorer users can play tap game but WON'T earn PRC
+    # This eliminates the need for PRC burning/expiry for free users
+    if not is_paid:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        current_taps = user.get("taps_today", 0) if user.get("last_tap_date") == today else 0
+        
+        # Update tap count (for UI feedback) but don't give PRC
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"taps_today": current_taps + tap_data.taps, "last_tap_date": today}}
+        )
+        
+        # Log this attempt
+        await log_activity(
+            user_id=uid,
+            action_type="tap_game_blocked",
+            description=f"Free user played tap game ({tap_data.taps} taps) - PRC blocked",
+            metadata={"subscription_plan": plan, "taps": tap_data.taps}
+        )
+        
+        return {
+            "success": False,
+            "blocked": True,
+            "message": "तुम्ही Free user आहात. Tap Game मधून PRC मिळवण्यासाठी Startup किंवा Elite plan घ्या! 🎮",
+            "message_en": "You are a Free user. Upgrade to Startup or Elite plan to earn PRC from Tap Game!",
+            "taps_added": tap_data.taps,
+            "prc_earned": 0,
+            "remaining_taps": 100 - current_taps - tap_data.taps,
+            "subscription_plan": plan,
+            "upgrade_required": True
+        }
+    # ================================================================
+    
     # Get PRC per tap and tap limit from SUBSCRIPTION_PLANS
     plan_config = SUBSCRIPTION_PLANS.get(plan, SUBSCRIPTION_PLANS["explorer"])
     prc_per_tap = plan_config.get("prc_per_tap", 0.1)
