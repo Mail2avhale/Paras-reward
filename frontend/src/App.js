@@ -285,7 +285,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/followers/:uid" element={<FollowersList user={user} type="followers" />} />
             <Route path="/following/:uid" element={<FollowersList user={user} type="following" />} />
             <Route path="/notifications" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Notifications user={user} />) : <Navigate to="/login" />} />
-            <Route path="/luxury-life" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasLuxuryLife user={user} />) : <Navigate to="/login" />} />
+            {/* /luxury-life route REMOVED - deprecated feature */}
             <Route path="/recurring-deposit" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/rd" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
