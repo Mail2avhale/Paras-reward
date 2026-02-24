@@ -157,6 +157,9 @@ const AdminBillPayments = ({ user }) => {
   const filteredRequests = useMemo(() => {
     let filtered = [...requests];
 
+    // Exclude EMI requests (handled in unified payment dashboard)
+    filtered = filtered.filter(r => r.request_type !== 'loan_emi' && r.payment_type !== 'emi');
+
     // Filter by category
     if (activeCategory !== 'all') {
       filtered = filtered.filter(r => r.request_type === activeCategory);
