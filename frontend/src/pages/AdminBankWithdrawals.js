@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Building2, Clock, CheckCircle, XCircle, Search, RefreshCw,
   ChevronDown, ChevronUp, User, Phone, Mail, CreditCard, AlertCircle,
-  PiggyBank, Percent, Copy, Calendar, Filter, Download, FileSpreadsheet
+  PiggyBank, Percent, Copy, Calendar, Filter, Download, FileSpreadsheet, Banknote
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -15,8 +15,10 @@ const AdminBankWithdrawals = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [rdRequests, setRdRequests] = useState([]);
+  const [emiRequests, setEmiRequests] = useState([]);
   const [stats, setStats] = useState({});
   const [rdStats, setRdStats] = useState({});
+  const [emiStats, setEmiStats] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [statusFilter, setStatusFilter] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRequest, setExpandedRequest] = useState(null);
@@ -24,7 +26,7 @@ const AdminBankWithdrawals = ({ user }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
   
-  // Request type tab - 'bank' or 'rd'
+  // Request type tab - 'bank', 'rd', or 'emi'
   const [requestType, setRequestType] = useState('bank');
   
   // Date range filters
@@ -57,6 +59,7 @@ const AdminBankWithdrawals = ({ user }) => {
   useEffect(() => {
     fetchRequests();
     fetchRdRequests();
+    fetchEmiRequests();
   }, [statusFilter, page, debouncedSearch, dateFrom, dateTo, sortOrder]);
 
   const fetchRequests = async () => {
