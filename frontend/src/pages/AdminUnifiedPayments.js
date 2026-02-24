@@ -470,6 +470,13 @@ const AdminUnifiedPayments = ({ user }) => {
     return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'numeric', year: 'numeric' });
   };
 
+  const formatDateTime = (date) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+           ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
   const getStatusColor = (status) => {
     if (status === 'pending') return 'text-yellow-400';
     if (['approved', 'completed'].includes(status)) return 'text-green-400';
