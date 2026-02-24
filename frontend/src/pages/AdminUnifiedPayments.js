@@ -460,7 +460,7 @@ const AdminUnifiedPayments = ({ user }) => {
       } else if (error.response?.data?.detail) {
         toast.error(error.response.data.detail);
       } else {
-        toast.error('Download failed - कृपया पुन्हा प्रयत्न करा');
+        toast.error('Download failed - Please try again');
       }
     }
   };
