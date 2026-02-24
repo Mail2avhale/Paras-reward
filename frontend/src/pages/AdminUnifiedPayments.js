@@ -707,62 +707,36 @@ const AdminUnifiedPayments = ({ user }) => {
 
               {/* Expanded View */}
               {expandedRequest === req._id && (
-                <div className="px-3 pb-3 border-t border-gray-800 pt-3">
-                  {/* Bank Details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="px-4 pb-4 border-t border-gray-800 pt-3">
+                  {/* PRC & Date Only (Bank details already shown above) */}
+                  <div className="flex items-center justify-between mb-4 bg-gray-800/50 rounded-lg p-3">
                     <div>
-                      <p className="text-gray-500">Account Holder</p>
-                      <p className="text-white">{req.account_holder_name || req.user_name || '-'}</p>
+                      <p className="text-gray-400 text-xs">PRC Amount</p>
+                      <p className="text-purple-400 font-bold text-lg">{(req.prc_amount || 0).toLocaleString()} PRC</p>
                     </div>
-                    <div>
-                      <p className="text-gray-500">Bank Name</p>
-                      <p className="text-white">{req.bank_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Account Number</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-white font-mono">{req.account_number || '-'}</p>
-                        {req.account_number && (
-                          <Copy className="w-3 h-3 text-gray-500 cursor-pointer" onClick={(e) => copyToClipboard(e, req.account_number, 'Account')} />
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">IFSC Code</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-white font-mono">{req.ifsc_code || '-'}</p>
-                        {req.ifsc_code && (
-                          <Copy className="w-3 h-3 text-gray-500 cursor-pointer" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">PRC Amount</p>
-                      <p className="text-purple-400 font-medium">{(req.prc_amount || 0).toLocaleString()} PRC</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Date</p>
-                      <p className="text-gray-300">{formatDate(req.created_at)}</p>
+                    <div className="text-right">
+                      <p className="text-gray-400 text-xs">Date</p>
+                      <p className="text-gray-300 font-medium">{formatDate(req.created_at)}</p>
                     </div>
                   </div>
 
                   {/* Actions */}
                   {req.status === 'pending' ? (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div>
                         <Input value={transactionRef} onChange={(e) => setTransactionRef(e.target.value)}
-                          placeholder="UTR / Reference Number" className="h-9 text-sm bg-gray-800 border-gray-700 mb-2" />
+                          placeholder="UTR / Reference Number" className="h-10 text-base bg-gray-800 border-gray-700 mb-2" />
                         <Button onClick={() => handleApprove(req)} disabled={processing === req._id}
-                          className="w-full h-9 bg-green-600 hover:bg-green-700 text-sm gap-1">
-                          <CheckCircle className="w-4 h-4" />{processing === req._id ? 'Processing...' : 'Approve'}
+                          className="w-full h-10 bg-green-600 hover:bg-green-700 text-base font-semibold gap-2">
+                          <CheckCircle className="w-5 h-5" />{processing === req._id ? 'Processing...' : 'Approve'}
                         </Button>
                       </div>
                       <div>
                         <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
-                          placeholder="Rejection Reason" className="h-9 text-sm bg-gray-800 border-gray-700 mb-2" />
+                          placeholder="Rejection Reason" className="h-10 text-base bg-gray-800 border-gray-700 mb-2" />
                         <Button onClick={() => handleReject(req)} disabled={processing === req._id}
-                          variant="destructive" className="w-full h-9 text-sm gap-1">
-                          <XCircle className="w-4 h-4" />Reject
+                          variant="destructive" className="w-full h-10 text-base font-semibold gap-2">
+                          <XCircle className="w-5 h-5" />Reject
                         </Button>
                       </div>
                     </div>
