@@ -1428,6 +1428,7 @@ async def execute_daily_prc_burn(request: Request):
     - Are free/explorer users (or as per target_user_type setting)
     - Have never had a paid subscription
     - Have minimum required balance
+    - CRITICAL: Double-verify subscription status before EVERY burn
     """
     try:
         # Get settings
@@ -1440,6 +1441,61 @@ async def execute_daily_prc_burn(request: Request):
         min_balance = settings.get("min_balance_to_burn", 10)
         
         now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        
+        # CRITICAL: Helper function to verify user is TRULY free (not paid)
+        async def is_truly_free_user(uid):
+            """Double-check that user is NOT a paid user before burning"""
+            user = await db.users.find_one({"uid": uid}, {"_id": 0, 
+                "subscription_plan": 1, "subscription_expiry": 1, 
+                "vip_activated_at": 1, "subscription_start": 1,
+                "vip_expiry": 1, "membership_type": 1})
+            
+            if not user:
+                return False
+            
+            # Check 1: subscription_plan must NOT be paid
+            plan = (user.get("subscription_plan") or "").lower()
+            if plan in ["startup", "growth", "elite", "vip", "pro"]:
+                logging.warning(f"[BURN BLOCKED] {uid} has paid plan: {plan}")
+                return False
+            
+            # Check 2: Must NOT have active subscription (expiry in future)
+            expiry = user.get("subscription_expiry")
+            if expiry:
+                try:
+                    expiry_dt = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+                    if expiry_dt.tzinfo is None:
+                        expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                    if expiry_dt > now:
+                        logging.warning(f"[BURN BLOCKED] {uid} has ACTIVE subscription until {expiry_dt}")
+                        return False
+                except:
+                    # If expiry exists but can't parse, safer to skip
+                    logging.warning(f"[BURN BLOCKED] {uid} has unparseable subscription_expiry: {expiry}")
+                    return False
+            
+            # Check 3: Must NOT have vip_activated_at (was VIP before)
+            if user.get("vip_activated_at"):
+                logging.warning(f"[BURN BLOCKED] {uid} was VIP (vip_activated_at exists)")
+                return False
+            
+            # Check 4: Must NOT have subscription_start (was paid before)
+            if user.get("subscription_start"):
+                logging.warning(f"[BURN BLOCKED] {uid} was paid (subscription_start exists)")
+                return False
+            
+            # Check 5: Must NOT have vip_expiry (was VIP before)
+            if user.get("vip_expiry"):
+                logging.warning(f"[BURN BLOCKED] {uid} was VIP (vip_expiry exists)")
+                return False
+            
+            # Check 6: Must NOT have membership_type as vip
+            if (user.get("membership_type") or "").lower() == "vip":
+                logging.warning(f"[BURN BLOCKED] {uid} has membership_type=vip")
+                return False
+            
+            return True
         
         # Build query based on target type
         if target_type == "free":
@@ -1462,6 +1518,14 @@ async def execute_daily_prc_burn(request: Request):
                         {"subscription_expiry": {"$exists": False}},
                         {"subscription_expiry": None}
                     ]},
+                    {"$or": [
+                        {"subscription_start": {"$exists": False}},
+                        {"subscription_start": None}
+                    ]},
+                    {"$or": [
+                        {"vip_expiry": {"$exists": False}},
+                        {"vip_expiry": None}
+                    ]},
                     {"prc_balance": {"$gte": min_balance}}
                 ]
             }
@@ -1479,6 +1543,10 @@ async def execute_daily_prc_burn(request: Request):
                         {"vip_activated_at": {"$exists": False}},
                         {"vip_activated_at": None}
                     ]},
+                    {"$or": [
+                        {"subscription_start": {"$exists": False}},
+                        {"subscription_start": None}
+                    ]},
                     {"prc_balance": {"$gte": min_balance}}
                 ]
             }
@@ -1490,12 +1558,18 @@ async def execute_daily_prc_burn(request: Request):
         
         total_burned = 0
         users_affected = 0
+        skipped_paid_users = 0
         
         for user in users:
             uid = user.get("uid")
             balance = user.get("prc_balance", 0)
             
             if balance < min_balance:
+                continue
+            
+            # CRITICAL: Double-verify this is truly a free user
+            if not await is_truly_free_user(uid):
+                skipped_paid_users += 1
                 continue
             
             # Calculate burn amount (X% of balance)
@@ -1505,11 +1579,11 @@ async def execute_daily_prc_burn(request: Request):
             if burn_amount < 0.01:
                 continue
             
-            # Update user balance
+            # Update user balance using atomic $inc instead of $set
             new_balance = balance - burn_amount
             await db.users.update_one(
                 {"uid": uid},
-                {"$set": {"prc_balance": round(new_balance, 2)}}
+                {"$inc": {"prc_balance": -burn_amount}}
             )
             
             # Log transaction
@@ -1520,7 +1594,7 @@ async def execute_daily_prc_burn(request: Request):
                 "amount": -burn_amount,
                 "balance_after": round(new_balance, 2),
                 "description": f"Daily auto-burn ({burn_percentage}% of balance)",
-                "timestamp": now.isoformat(),
+                "timestamp": now_iso,
                 "status": "completed",
                 "burn_reason": "DAILY_AUTO_BURN",
                 "burn_percentage": burn_percentage
@@ -1532,21 +1606,23 @@ async def execute_daily_prc_burn(request: Request):
         # Update last burn time
         await db.settings.update_one(
             {"key": "prc_burn_settings"},
-            {"$set": {"last_auto_burn": now.isoformat(), "last_burn_result": {
+            {"$set": {"last_auto_burn": now_iso, "last_burn_result": {
                 "users_affected": users_affected,
-                "total_burned": round(total_burned, 2)
+                "total_burned": round(total_burned, 2),
+                "skipped_paid_users": skipped_paid_users
             }}}
         )
         
-        logging.info(f"[AUTO PRC BURN] Burned {total_burned:.2f} PRC from {users_affected} users")
+        logging.info(f"[AUTO PRC BURN] Burned {total_burned:.2f} PRC from {users_affected} users (skipped {skipped_paid_users} paid users)")
         
         return {
             "success": True,
             "users_affected": users_affected,
             "total_burned": round(total_burned, 2),
+            "skipped_paid_users": skipped_paid_users,
             "burn_percentage": burn_percentage,
             "target_type": target_type,
-            "executed_at": now.isoformat()
+            "executed_at": now_iso
         }
         
     except Exception as e:
