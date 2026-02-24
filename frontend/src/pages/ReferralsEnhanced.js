@@ -507,7 +507,7 @@ const ReferralsEnhanced = ({ user }) => {
       console.log('Fallback copy failed');
     }
     
-    toast.error('Copy नाही झाले. कृपया manually copy करा.');
+    toast.error('Copy failed. Please copy manually.');
     return false;
   };
 
