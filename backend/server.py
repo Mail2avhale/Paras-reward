@@ -536,7 +536,8 @@ async def verify_management(uid: str):
 
 # ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
 # Use this function EVERYWHERE instead of checking membership_type
-PAID_PLANS = ["startup", "elite", "vip", "pro"]  # Growth plan discontinued
+# CRITICAL: "growth" included for backward compatibility with existing growth users
+PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]  # Growth discontinued but existing users protected
 
 def is_paid_subscriber(user: dict) -> bool:
     """
@@ -555,6 +556,78 @@ def is_free_user(user: dict) -> bool:
     Opposite of is_paid_subscriber().
     """
     return not is_paid_subscriber(user)
+
+# ========== CRITICAL: PRC BURN PROTECTION FOR PAID USERS ==========
+# This function MUST be called before ANY PRC burn operation
+# It provides ABSOLUTE protection for paid users
+async def is_protected_from_burn(db_ref, uid: str) -> bool:
+    """
+    CRITICAL SAFETY CHECK: Determine if user is PROTECTED from PRC burn.
+    
+    Returns True if user should NOT be burned (i.e., is a paid user)
+    Returns False if user CAN be burned (i.e., is a free user)
+    
+    This is the ULTIMATE safety check - use this before every burn operation.
+    """
+    user = await db_ref.users.find_one({"uid": uid}, {
+        "_id": 0,
+        "subscription_plan": 1,
+        "subscription_expiry": 1,
+        "vip_activated_at": 1,
+        "subscription_start": 1,
+        "vip_expiry": 1,
+        "membership_type": 1,
+        "email": 1
+    })
+    
+    if not user:
+        return True  # User not found - protect by default
+    
+    # CHECK 1: Direct subscription_plan check (PRIMARY PROTECTION)
+    plan = (user.get("subscription_plan") or "").lower()
+    if plan in ["startup", "growth", "elite", "vip", "pro"]:
+        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has paid plan: {plan}")
+        return True
+    
+    # CHECK 2: Active subscription expiry (subscription is still valid)
+    expiry = user.get("subscription_expiry")
+    if expiry:
+        try:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            expiry_dt = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            if expiry_dt > now:
+                logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has ACTIVE subscription until {expiry_dt}")
+                return True
+        except Exception as e:
+            # If we can't parse expiry, protect the user
+            logging.warning(f"[BURN PROTECTED] User {uid} has unparseable expiry: {expiry}, protecting user")
+            return True
+    
+    # CHECK 3: Ever had VIP (was a paying customer)
+    if user.get("vip_activated_at"):
+        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was VIP (vip_activated_at exists)")
+        return True
+    
+    # CHECK 4: Ever had subscription start (was a paying customer)
+    if user.get("subscription_start"):
+        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was paid (subscription_start exists)")
+        return True
+    
+    # CHECK 5: Has vip_expiry field (was VIP at some point)
+    if user.get("vip_expiry"):
+        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) was VIP (vip_expiry exists)")
+        return True
+    
+    # CHECK 6: Legacy membership_type check
+    if (user.get("membership_type") or "").lower() in ["vip", "paid", "premium"]:
+        logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has paid membership_type")
+        return True
+    
+    # User is NOT protected - can be burned
+    return False
 
 def get_user_plan(user: dict) -> str:
     """Get user's subscription plan, defaulting to 'explorer'"""
