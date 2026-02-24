@@ -212,7 +212,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
         { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },
         { id: 'fraud-alerts', label: 'Fraud Alerts', icon: AlertTriangle, path: '/admin/fraud-alerts' },
-        { id: 'burn-management', label: 'Burn Management', icon: Activity, path: '/admin/burn-management' },
+        { id: 'prc-burn-control', label: 'PRC Burn Control', icon: Activity, path: '/admin/prc-burn-control' },
         { id: 'data-backup', label: 'Data Backup & Archive', icon: Database, path: '/admin/data-backup' },
       ]
     },
