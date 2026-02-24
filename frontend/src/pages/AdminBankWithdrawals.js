@@ -869,7 +869,7 @@ const AdminBankWithdrawals = ({ user }) => {
                         </div>
                       </div>
 
-                      {/* Actions for Pending */}
+                      {/* Actions for Pending - Different handlers for different request types */}
                       {req.status === 'pending' && (
                         <div className="space-y-3 pt-2">
                           <div>
@@ -883,12 +883,21 @@ const AdminBankWithdrawals = ({ user }) => {
                           </div>
                           <div className="flex gap-3">
                             <Button
-                              onClick={() => handleApprove(req.request_id)}
-                              disabled={processing === req.request_id}
+                              onClick={() => {
+                                // Use different handlers based on request type
+                                if (requestType === 'emi') {
+                                  handleEmiApprove(req._id || req.request_id);
+                                } else if (requestType === 'rd') {
+                                  handleRdApprove(req.request_id || req._id);
+                                } else {
+                                  handleApprove(req.request_id);
+                                }
+                              }}
+                              disabled={processing === (req.request_id || req._id)}
                               className="flex-1 bg-green-500 hover:bg-green-600 text-black"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              {processing === req.request_id ? 'Processing...' : 'Approve & Mark Paid'}
+                              {processing === (req.request_id || req._id) ? 'Processing...' : 'Approve & Mark Paid'}
                             </Button>
                           </div>
                           
@@ -901,8 +910,17 @@ const AdminBankWithdrawals = ({ user }) => {
                               className="bg-gray-900 border-gray-700 text-white text-sm mb-2"
                             />
                             <Button
-                              onClick={() => handleReject(req.request_id)}
-                              disabled={processing === req.request_id}
+                              onClick={() => {
+                                // Use different handlers based on request type
+                                if (requestType === 'emi') {
+                                  handleEmiReject(req._id || req.request_id);
+                                } else if (requestType === 'rd') {
+                                  handleRdReject(req.request_id || req._id);
+                                } else {
+                                  handleReject(req.request_id);
+                                }
+                              }}
+                              disabled={processing === (req.request_id || req._id)}
                               variant="destructive"
                               className="w-full"
                             >
