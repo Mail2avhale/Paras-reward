@@ -682,21 +682,21 @@ const AdminUnifiedPayments = ({ user }) => {
                 </div>
 
                 {/* Mobile: Bank Details Row */}
-                <div className="sm:hidden mt-2 pt-2 border-t border-gray-800 grid grid-cols-2 gap-2 text-xs">
+                <div className="sm:hidden mt-2 pt-2 border-t border-gray-800 grid grid-cols-2 gap-2 text-sm">
                   <div className="col-span-2 flex items-center gap-1">
                     <span className="text-gray-500">ID: </span>
                     <span className="text-cyan-400 font-mono">{req.request_id?.slice(-12) || '-'}</span>
-                    <Copy className="w-3 h-3 text-gray-600" onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} />
+                    <Copy className="w-3.5 h-3.5 text-gray-600" onClick={(e) => copyToClipboard(e, req.request_id, 'Request ID')} />
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-gray-500">A/C: </span>
                     <span className="text-white font-mono">{req.account_number || '-'}</span>
-                    {req.account_number && <Copy className="w-3 h-3 text-gray-600" onClick={(e) => copyToClipboard(e, req.account_number, 'A/C')} />}
+                    {req.account_number && <Copy className="w-3.5 h-3.5 text-gray-600" onClick={(e) => copyToClipboard(e, req.account_number, 'A/C')} />}
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-gray-500">IFSC: </span>
                     <span className="text-cyan-400 font-mono">{req.ifsc_code || '-'}</span>
-                    {req.ifsc_code && <Copy className="w-3 h-3 text-gray-600" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />}
+                    {req.ifsc_code && <Copy className="w-3.5 h-3.5 text-gray-600" onClick={(e) => copyToClipboard(e, req.ifsc_code, 'IFSC')} />}
                   </div>
                   <div className="col-span-2">
                     <span className="text-gray-500">Bank: </span>
