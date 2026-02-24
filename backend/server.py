@@ -17240,6 +17240,19 @@ async def user_360_quick_action(request: Request):
             }}
         )
         result_message = "User has been blocked"
+    
+    elif action == "unblock_user":
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "is_active": True,
+                "is_blocked": False,
+                "unblocked_at": now.isoformat(),
+                "unblocked_by": admin_id,
+                "updated_at": now.isoformat()
+            }}
+        )
+        result_message = "User has been unblocked"
         
     elif action == "save_notes":
         notes = data.get("notes", "")
