@@ -495,7 +495,8 @@ const AdminBankWithdrawals = ({ user }) => {
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
           <p className="text-yellow-400 text-sm">Pending</p>
           <p className="text-2xl font-bold text-white">
-            {requestType === 'bank' ? (stats.pending?.count || 0) : (rdStats.pending || 0)}
+            {requestType === 'bank' ? (stats.pending?.count || 0) : 
+             requestType === 'emi' ? (emiStats.pending || 0) : (rdStats.pending || 0)}
           </p>
           {requestType === 'bank' && (
             <p className="text-yellow-400/70 text-xs">₹{(stats.pending?.total || 0).toLocaleString()}</p>
@@ -504,7 +505,8 @@ const AdminBankWithdrawals = ({ user }) => {
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
           <p className="text-green-400 text-sm">Approved</p>
           <p className="text-2xl font-bold text-white">
-            {requestType === 'bank' ? (stats.approved?.count || 0) : (rdStats.approved || 0)}
+            {requestType === 'bank' ? (stats.approved?.count || 0) : 
+             requestType === 'emi' ? (emiStats.approved || 0) : (rdStats.approved || 0)}
           </p>
           {requestType === 'bank' && (
             <p className="text-green-400/70 text-xs">₹{(stats.approved?.total || 0).toLocaleString()}</p>
@@ -512,13 +514,21 @@ const AdminBankWithdrawals = ({ user }) => {
         </div>
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
           <p className="text-red-400 text-sm">Rejected</p>
-          <p className="text-2xl font-bold text-white">{stats.rejected?.count || 0}</p>
-          <p className="text-red-400/70 text-xs">₹{(stats.rejected?.total || 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">
+            {requestType === 'bank' ? (stats.rejected?.count || 0) : 
+             requestType === 'emi' ? (emiStats.rejected || 0) : (rdStats.rejected || 0)}
+          </p>
+          {requestType === 'bank' && (
+            <p className="text-red-400/70 text-xs">₹{(stats.rejected?.total || 0).toLocaleString()}</p>
+          )}
         </div>
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
           <p className="text-blue-400 text-sm">Total Requests</p>
-          <p className="text-2xl font-bold text-white">{requests.length}</p>
-          <p className="text-blue-400/70 text-xs">All time</p>
+          <p className="text-2xl font-bold text-white">
+            {requestType === 'bank' ? requests.length : 
+             requestType === 'emi' ? (emiStats.total || emiRequests.length) : rdRequests.length}
+          </p>
+          <p className="text-blue-400/70 text-xs">Current filter</p>
         </div>
       </div>
 
