@@ -38681,10 +38681,10 @@ async def revert_payment_request_status(request: Request):
         
         # Get the collection based on type
         if request_type == 'bank':
-            collection = db.bank_redeem_requests
+            collection = db.bank_withdrawal_requests  # Fixed: bank requests are in bank_withdrawal_requests
             id_field = "request_id"
         elif request_type == 'rd':
-            collection = db.rd_redeem_requests
+            collection = db.bank_redeem_requests  # RD redeem requests are stored in bank_redeem_requests with request_type=rd_redeem
             id_field = "request_id"
         elif request_type == 'emi':
             collection = db.bill_payments
