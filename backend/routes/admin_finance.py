@@ -1444,23 +1444,30 @@ async def execute_daily_prc_burn(request: Request):
         now_iso = now.isoformat()
         
         # CRITICAL: Helper function to verify user is TRULY free (not paid)
+        # THIS IS THE ULTIMATE SAFETY CHECK - Returns False if user should be PROTECTED
         async def is_truly_free_user(uid):
-            """Double-check that user is NOT a paid user before burning"""
+            """
+            CRITICAL SAFETY: Double-check that user is NOT a paid user before burning.
+            Returns True ONLY if user is absolutely a FREE user.
+            Returns False if ANY paid indicator exists (user is PROTECTED).
+            """
             user = await db.users.find_one({"uid": uid}, {"_id": 0, 
                 "subscription_plan": 1, "subscription_expiry": 1, 
                 "vip_activated_at": 1, "subscription_start": 1,
-                "vip_expiry": 1, "membership_type": 1})
+                "vip_expiry": 1, "membership_type": 1, "email": 1})
             
             if not user:
-                return False
+                return False  # User not found - PROTECT by returning False
             
-            # Check 1: subscription_plan must NOT be paid
+            email = user.get("email", "unknown")
+            
+            # CHECK 1: subscription_plan must NOT be paid (PRIMARY PROTECTION)
             plan = (user.get("subscription_plan") or "").lower()
             if plan in ["startup", "growth", "elite", "vip", "pro"]:
-                logging.warning(f"[BURN BLOCKED] {uid} has paid plan: {plan}")
+                logging.warning(f"[BURN BLOCKED] {uid} ({email}) has paid plan: {plan}")
                 return False
             
-            # Check 2: Must NOT have active subscription (expiry in future)
+            # CHECK 2: Must NOT have active subscription (expiry in future)
             expiry = user.get("subscription_expiry")
             if expiry:
                 try:
@@ -1468,33 +1475,35 @@ async def execute_daily_prc_burn(request: Request):
                     if expiry_dt.tzinfo is None:
                         expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
                     if expiry_dt > now:
-                        logging.warning(f"[BURN BLOCKED] {uid} has ACTIVE subscription until {expiry_dt}")
+                        logging.warning(f"[BURN BLOCKED] {uid} ({email}) has ACTIVE subscription until {expiry_dt}")
                         return False
                 except:
-                    # If expiry exists but can't parse, safer to skip
-                    logging.warning(f"[BURN BLOCKED] {uid} has unparseable subscription_expiry: {expiry}")
+                    # If expiry exists but can't parse, PROTECT the user
+                    logging.warning(f"[BURN BLOCKED] {uid} ({email}) has unparseable subscription_expiry: {expiry} - PROTECTING USER")
                     return False
             
-            # Check 3: Must NOT have vip_activated_at (was VIP before)
+            # CHECK 3: Must NOT have vip_activated_at (was VIP before)
             if user.get("vip_activated_at"):
-                logging.warning(f"[BURN BLOCKED] {uid} was VIP (vip_activated_at exists)")
+                logging.warning(f"[BURN BLOCKED] {uid} ({email}) was VIP (vip_activated_at exists)")
                 return False
             
-            # Check 4: Must NOT have subscription_start (was paid before)
+            # CHECK 4: Must NOT have subscription_start (was paid before)
             if user.get("subscription_start"):
-                logging.warning(f"[BURN BLOCKED] {uid} was paid (subscription_start exists)")
+                logging.warning(f"[BURN BLOCKED] {uid} ({email}) was paid (subscription_start exists)")
                 return False
             
-            # Check 5: Must NOT have vip_expiry (was VIP before)
+            # CHECK 5: Must NOT have vip_expiry (was VIP before)
             if user.get("vip_expiry"):
-                logging.warning(f"[BURN BLOCKED] {uid} was VIP (vip_expiry exists)")
+                logging.warning(f"[BURN BLOCKED] {uid} ({email}) was VIP (vip_expiry exists)")
                 return False
             
-            # Check 6: Must NOT have membership_type as vip
-            if (user.get("membership_type") or "").lower() == "vip":
-                logging.warning(f"[BURN BLOCKED] {uid} has membership_type=vip")
+            # CHECK 6: Must NOT have membership_type as vip/paid/premium
+            membership = (user.get("membership_type") or "").lower()
+            if membership in ["vip", "paid", "premium"]:
+                logging.warning(f"[BURN BLOCKED] {uid} ({email}) has paid membership_type: {membership}")
                 return False
             
+            # User is truly FREE - can be burned
             return True
         
         # Build query based on target type
