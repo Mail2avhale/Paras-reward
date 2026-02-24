@@ -171,12 +171,11 @@ const AdminLayout = ({ children, user, onLogout }) => {
     'subscriptions': pendingCounts.subscriptions,
     'bill-payments': pendingCounts.bills,
     'gift-vouchers': pendingCounts.gifts,
-    'luxury-claims': pendingCounts.luxury,
     'bank-withdrawals': pendingCounts.bankWithdrawals,
     'recurring-deposits': pendingCounts.rdRedeem
   };
   
-  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.luxury + pendingCounts.bankWithdrawals + pendingCounts.rdRedeem;
+  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.bankWithdrawals + pendingCounts.rdRedeem;
 
   const menuGroups = {
     requestApprovals: {
