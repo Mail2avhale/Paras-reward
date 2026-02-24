@@ -108,6 +108,14 @@ const Orders = ({ user, onLogout }) => {
     }
   };
 
+  // Format date with time
+  const formatDateTime = (date) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + 
+           ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
   // Display friendly status name
   const getStatusLabel = (status) => {
     switch (status?.toLowerCase()) {
