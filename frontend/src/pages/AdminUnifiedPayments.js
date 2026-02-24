@@ -329,7 +329,7 @@ const AdminUnifiedPayments = ({ user }) => {
 
   // Revert status
   const handleRevertStatus = async (request) => {
-    if (!window.confirm(`${request._typeLabel} request परत Pending करायचे का?`)) return;
+    if (!window.confirm(`Revert ${request._typeLabel} request back to Pending?`)) return;
     setProcessing(request._id);
     try {
       await axios.post(`${API}/admin/payment-request/revert-status`, {
