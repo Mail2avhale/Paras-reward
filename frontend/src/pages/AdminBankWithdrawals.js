@@ -736,7 +736,7 @@ const AdminBankWithdrawals = ({ user }) => {
                             </>
                           )}
                           {/* Show RD-specific details if it's an RD request */}
-                          {(req.request_type === 'rd_redeem' || requestType === 'rd') && (
+                          {(req.request_type === 'rd_redeem' || requestType === 'rd') ? (
                             <>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">RD ID</span>
@@ -774,7 +774,7 @@ const AdminBankWithdrawals = ({ user }) => {
                                 <span className="text-emerald-400 font-bold">{(req.amount_inr || 0).toLocaleString()} PRC</span>
                               </div>
                             </>
-                          ) : (
+                          ) : requestType === 'bank' && (
                             <>
                               <div className="flex justify-between">
                                 <span className="text-gray-500">Withdrawal Amount</span>
