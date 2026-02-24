@@ -171,17 +171,26 @@ const AdminUnifiedPayments = ({ user }) => {
       filtered = filtered.filter(r => r._type === typeFilter);
     }
 
+    // Fast search - using pre-computed search index
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
-        r.user_name?.toLowerCase().includes(q) ||
-        r.user_email?.toLowerCase().includes(q) ||
-        r.mobile?.includes(q) ||
-        r.account_number?.includes(q) ||
-        r.ifsc_code?.toLowerCase().includes(q) ||
-        r.bank_name?.toLowerCase().includes(q) ||
-        r.request_id?.toLowerCase().includes(q)
-      );
+      filtered = filtered.filter(r => {
+        // Search in all relevant fields
+        const searchFields = [
+          r.user_name,
+          r.user_email,
+          r.mobile,
+          r.account_number,
+          r.ifsc_code,
+          r.bank_name,
+          r.request_id,
+          r.account_holder_name,
+          r.uid,
+          r.transaction_ref
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        return searchFields.includes(q);
+      });
     }
 
     if (dateFrom) {
@@ -195,10 +204,12 @@ const AdminUnifiedPayments = ({ user }) => {
       filtered = filtered.filter(r => new Date(r.created_at) <= to);
     }
 
+    // Smart sorting: Pending = oldest first (asc), Approved/Rejected = newest first (desc)
+    const effectiveSortOrder = statusFilter === 'pending' ? 'asc' : sortOrder;
     filtered.sort((a, b) => {
       const dateA = new Date(a.created_at);
       const dateB = new Date(b.created_at);
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      return effectiveSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
 
     return filtered;
