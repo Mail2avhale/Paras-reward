@@ -292,6 +292,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/rd" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeem user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bank-redeem/edit/:requestId" element={user ? <BankRedeemEdit user={user} /> : <Navigate to="/login" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             
