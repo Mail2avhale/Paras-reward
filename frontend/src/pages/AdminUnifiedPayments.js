@@ -871,16 +871,16 @@ const AdminUnifiedPayments = ({ user }) => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 py-4">
+        <div className="flex items-center justify-center gap-2 py-4 flex-wrap">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="h-10 px-4"
+            className="h-10 px-4 text-white"
           >
-            <ChevronLeft className="w-5 h-5" />
-            Previous
+            <ChevronLeft className="w-5 h-5 mr-1" />
+            Prev
           </Button>
           
           <div className="flex items-center gap-1">
@@ -901,7 +901,7 @@ const AdminUnifiedPayments = ({ user }) => {
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="sm"
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`h-10 w-10 ${currentPage === pageNum ? 'bg-purple-600' : ''}`}
+                  className={`h-10 w-10 text-base font-bold ${currentPage === pageNum ? 'bg-purple-600 text-white' : 'text-white border-gray-600'}`}
                 >
                   {pageNum}
                 </Button>
