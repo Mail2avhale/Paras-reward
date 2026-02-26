@@ -743,7 +743,10 @@ async def get_admin_withdrawal_requests(
     date_to: str = None,
     sort_order: str = "desc"
 ):
-    """Get all bank withdrawal requests for admin with search and date filters"""
+    """Get all bank withdrawal requests for admin with search and date filters
+    Note: Fetches from BOTH bank_withdrawal_requests AND bank_redeem_requests collections
+    to handle legacy data migration issues
+    """
     query = {}
     if status:
         query["status"] = status
@@ -752,15 +755,14 @@ async def get_admin_withdrawal_requests(
     if date_from or date_to:
         date_query = {}
         if date_from:
-            # Convert date string (YYYY-MM-DD) to ISO format with start of day
             date_query["$gte"] = f"{date_from}T00:00:00+00:00"
         if date_to:
-            # Convert date string (YYYY-MM-DD) to ISO format with end of day
             date_query["$lte"] = f"{date_to}T23:59:59+00:00"
         if date_query:
             query["created_at"] = date_query
     
     # If search provided, find matching user IDs first
+    user_ids_to_search = []
     if search:
         search_users = await db.users.find({
             "$or": [
@@ -772,38 +774,62 @@ async def get_admin_withdrawal_requests(
         }, {"_id": 0, "uid": 1}).to_list(100)
         user_ids_to_search = [u["uid"] for u in search_users]
         
-        # Search by user_id or request_id or bank name
-        query["$or"] = [
-            {"user_id": {"$in": user_ids_to_search}} if user_ids_to_search else {"user_id": None},
+        # Search by user_id or request_id or bank name or mobile
+        search_query = [
             {"request_id": {"$regex": search, "$options": "i"}},
-            {"bank_details.bank_name": {"$regex": search, "$options": "i"}}
+            {"bank_details.bank_name": {"$regex": search, "$options": "i"}},
+            {"user_mobile": {"$regex": search, "$options": "i"}},
+            {"mobile": {"$regex": search, "$options": "i"}}
         ]
+        if user_ids_to_search:
+            search_query.append({"user_id": {"$in": user_ids_to_search}})
+        query["$or"] = search_query
     
     skip = (page - 1) * limit
-    
-    # Sort order: asc = oldest first, desc = newest first
     sort_direction = 1 if sort_order == "asc" else -1
     
-    requests_list = await db.bank_withdrawal_requests.find(
-        query,
-        {"_id": 0}
-    ).sort("created_at", sort_direction).skip(skip).limit(limit).to_list(limit)
+    # Fetch from BOTH collections and merge
+    requests_from_withdrawal = await db.bank_withdrawal_requests.find(
+        query, {"_id": 0}
+    ).sort("created_at", sort_direction).to_list(2000)
     
-    total = await db.bank_withdrawal_requests.count_documents(query)
+    # Also fetch from bank_redeem_requests (legacy collection)
+    requests_from_redeem = await db.bank_redeem_requests.find(
+        query, {"_id": 0}
+    ).sort("created_at", sort_direction).to_list(2000)
     
-    # Get stats
-    stats = await db.bank_withdrawal_requests.aggregate([
-        {"$group": {
-            "_id": "$status",
-            "count": {"$sum": 1},
-            "total_amount": {"$sum": "$amount_inr"}
-        }}
-    ]).to_list(10)
+    # Merge and deduplicate by request_id
+    all_requests = []
+    seen_ids = set()
     
-    stats_dict = {s["_id"]: {"count": s["count"], "total": s["total_amount"]} for s in stats}
+    for req in requests_from_withdrawal + requests_from_redeem:
+        req_id = req.get("request_id") or req.get("_id")
+        if req_id and req_id not in seen_ids:
+            seen_ids.add(req_id)
+            all_requests.append(req)
+    
+    # Sort merged results
+    all_requests.sort(
+        key=lambda x: x.get("created_at", ""), 
+        reverse=(sort_direction == -1)
+    )
+    
+    # Apply pagination
+    total = len(all_requests)
+    paginated = all_requests[skip:skip + limit]
+    
+    # Get combined stats
+    all_for_stats = requests_from_withdrawal + requests_from_redeem
+    stats_dict = {}
+    for req in all_for_stats:
+        s = req.get("status", "unknown")
+        if s not in stats_dict:
+            stats_dict[s] = {"count": 0, "total": 0}
+        stats_dict[s]["count"] += 1
+        stats_dict[s]["total"] += req.get("amount_inr", 0)
     
     return {
-        "requests": requests_list,
+        "requests": paginated,
         "total": total,
         "page": page,
         "stats": stats_dict
