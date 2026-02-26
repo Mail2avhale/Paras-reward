@@ -7,6 +7,7 @@ import {
   Globe, Lock, Eye, UserCheck, CreditCard, RefreshCw,
   Smartphone, Bell, Database, Trash2, Clock, MapPin
 } from 'lucide-react';
+import SEO, { SEOConfigs } from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Coins, Crown, ShoppingBag, Wallet, AlertCircle, CheckCircle, HelpCircle, Mail } from 'lucide-react';
+import SEO, { SEOConfigs } from '@/components/SEO';
 
 const RefundPolicy = () => {
   const navigate = useNavigate();

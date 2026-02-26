@@ -6,6 +6,7 @@ import {
   CheckCircle, Info, FileWarning, DollarSign, Globe,
   Smartphone, Building2, Mail, Phone, MapPin, Clock
 } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
