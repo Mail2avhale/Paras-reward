@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, MessageSquare, Clock, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import SEO from '@/components/SEO';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

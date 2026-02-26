@@ -7,6 +7,7 @@ import {
   Globe, Lock, Eye, CreditCard, RefreshCw, Gavel,
   Smartphone, Bell, Clock, MapPin, XCircle, Award
 } from 'lucide-react';
+import SEO, { SEOConfigs } from '@/components/SEO';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
