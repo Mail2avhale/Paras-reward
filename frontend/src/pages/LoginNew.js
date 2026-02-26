@@ -532,6 +532,7 @@ const LoginNew = ({ onLogin }) => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
