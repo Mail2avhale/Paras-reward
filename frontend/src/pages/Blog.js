@@ -131,6 +131,7 @@ const Blog = () => {
 
       <Footer />
     </div>
+    </>
   );
 };
 
