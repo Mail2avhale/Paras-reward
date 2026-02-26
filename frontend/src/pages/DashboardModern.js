@@ -1051,8 +1051,7 @@ const DashboardModern = ({ user, onLogout }) => {
       </div>
 
       {/* ========== REDEEM TO BANK CARD ========== */}
-      {/* ========== REDEEM TO BANK CARD (for KYC verified paid users) ========== */}
-      {/* Debug: Check console for condition values */}
+      {/* Shows active card for KYC verified paid users, or KYC pending message for others */}
       {(() => {
         const plan = (stats.subscriptionPlan || userData?.subscription_plan || user?.subscription_plan || '').toLowerCase();
         const kycFromUserData = userData?.kyc_status?.toLowerCase();
@@ -1060,83 +1059,151 @@ const DashboardModern = ({ user, onLogout }) => {
         const kycStatus = kycFromUserData || kycFromUser || '';
         const isPaidPlan = ['startup', 'growth', 'elite'].includes(plan);
         const isKycVerified = ['verified', 'approved'].includes(kycStatus);
+        const isKycPending = ['pending', 'submitted', 'under_review'].includes(kycStatus);
+        const isKycRejected = ['rejected', 'failed'].includes(kycStatus);
         
-        // Debug logging - remove after fixing
-        if (typeof window !== 'undefined' && !window._redeemDebugLogged) {
-          console.log('[REDEEM DEBUG] Plan:', plan, 'KYC:', kycStatus, 'isPaid:', isPaidPlan, 'isKycVerified:', isKycVerified);
-          window._redeemDebugLogged = true;
-        }
-        
+        // KYC Verified + Paid Plan = Show full Redeem card
         if (isPaidPlan && isKycVerified) {
           return (
-        <div className="px-5 mb-4">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => navigate('/bank-redeem')}
-            className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
-            style={{
-              background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
-              boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
-            }}
-            data-testid="redeem-to-bank-card"
-          >
-            {/* Background decorations */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
-            <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-400/20 rounded-full blur-2xl"></div>
-            
-            {/* Floating coins animation */}
-            <div className="absolute top-4 right-8 animate-bounce" style={{ animationDelay: '0s' }}>
-              <span className="text-2xl">💰</span>
-            </div>
-            <div className="absolute top-10 right-20 animate-bounce" style={{ animationDelay: '0.3s' }}>
-              <span className="text-lg">🪙</span>
-            </div>
-            
-            <div className="relative z-10">
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                  <Banknote className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-white/60 text-xs uppercase tracking-wider">PRC Balance</p>
-                  <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()}</p>
-                </div>
-              </div>
-              
-              {/* Redeem Info */}
-              <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-emerald-200/80 text-xs">Redeem up to (100% limit)</p>
-                    <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-emerald-200/60 text-xs">Rate</p>
-                    <p className="text-emerald-300 text-sm font-medium">10 PRC = ₹1</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* CTA Button */}
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate('/bank-redeem');
+            <div className="px-5 mb-4">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => navigate('/bank-redeem')}
+                className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
+                style={{
+                  background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
+                  boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
                 }}
-                className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
-                data-testid="redeem-to-bank-btn"
+                data-testid="redeem-to-bank-card"
               >
-                <Building2 className="w-5 h-5" />
-                Redeem To Bank
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
+                {/* Background decorations */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-green-400/20 rounded-full blur-2xl"></div>
+                
+                {/* Floating coins animation */}
+                <div className="absolute top-4 right-8 animate-bounce" style={{ animationDelay: '0s' }}>
+                  <span className="text-2xl">💰</span>
+                </div>
+                <div className="absolute top-10 right-20 animate-bounce" style={{ animationDelay: '0.3s' }}>
+                  <span className="text-lg">🪙</span>
+                </div>
+                
+                <div className="relative z-10">
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                      <Banknote className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs uppercase tracking-wider">PRC Balance</p>
+                      <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Redeem Info */}
+                  <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-emerald-200/80 text-xs">Redeem up to (100% limit)</p>
+                        <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-emerald-200/60 text-xs">Rate</p>
+                        <p className="text-emerald-300 text-sm font-medium">10 PRC = ₹1</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* CTA Button */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/bank-redeem');
+                    }}
+                    className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
+                    data-testid="redeem-to-bank-btn"
+                  >
+                    <Building2 className="w-5 h-5" />
+                    Redeem To Bank
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
-        </div>
           );
         }
+        
+        // Paid Plan but KYC Pending/Rejected = Show KYC message card
+        if (isPaidPlan && !isKycVerified) {
+          return (
+            <div className="px-5 mb-4">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => navigate('/profile')}
+                className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
+                style={{
+                  background: isKycRejected 
+                    ? 'linear-gradient(145deg, #7f1d1d 0%, #991b1b 30%, #b91c1c 70%, #450a0a 100%)'
+                    : 'linear-gradient(145deg, #78350f 0%, #92400e 30%, #b45309 70%, #451a03 100%)',
+                  boxShadow: isKycRejected 
+                    ? '0 15px 40px -10px rgba(239, 68, 68, 0.4)'
+                    : '0 15px 40px -10px rgba(245, 158, 11, 0.4)'
+                }}
+                data-testid="redeem-kyc-pending-card"
+              >
+                {/* Background decorations */}
+                <div className={`absolute top-0 right-0 w-32 h-32 ${isKycRejected ? 'bg-red-400/20' : 'bg-amber-400/20'} rounded-full blur-3xl`}></div>
+                <div className={`absolute -bottom-10 -left-10 w-24 h-24 ${isKycRejected ? 'bg-red-400/20' : 'bg-yellow-400/20'} rounded-full blur-2xl`}></div>
+                
+                <div className="relative z-10">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-12 h-12 rounded-xl ${isKycRejected ? 'bg-red-500/30' : 'bg-amber-500/30'} backdrop-blur flex items-center justify-center`}>
+                      <ShieldAlert className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-lg">Redeem To Bank</p>
+                      <p className={`${isKycRejected ? 'text-red-200' : 'text-amber-200'} text-sm`}>
+                        {isKycRejected ? 'KYC Rejected' : 'KYC Verification Required'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Message */}
+                  <div className={`${isKycRejected ? 'bg-red-900/30' : 'bg-amber-900/30'} backdrop-blur rounded-xl p-4 mb-4`}>
+                    <p className="text-white/90 text-sm leading-relaxed">
+                      {isKycRejected 
+                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable bank withdrawals.'
+                        : 'Complete your KYC verification to unlock the Redeem to Bank feature. Your PRC balance will be waiting for you!'
+                      }
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Banknote className="w-4 h-4 text-white/60" />
+                      <span className="text-white/70 text-xs">Your Balance: <span className="text-white font-semibold">{stats.prcBalance.toLocaleString()} PRC</span></span>
+                    </div>
+                  </div>
+                  
+                  {/* CTA Button */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/profile');
+                    }}
+                    className={`w-full py-3.5 ${isKycRejected ? 'bg-red-500 hover:bg-red-400' : 'bg-amber-500 hover:bg-amber-400'} text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-colors`}
+                    data-testid="complete-kyc-btn"
+                  >
+                    <ShieldAlert className="w-5 h-5" />
+                    {isKycRejected ? 'Update KYC Documents' : 'Complete KYC Now'}
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        }
+        
         return null;
       })()}
 
