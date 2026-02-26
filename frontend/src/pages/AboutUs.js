@@ -37,7 +37,13 @@ const AboutUs = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <>
+      <SEO 
+        title="About Us - Learn About PARAS REWARD"
+        description="PARAS REWARD is India's trusted reward platform. Learn about our mission, values, and how we help millions earn rewards daily."
+        url="https://www.parasreward.com/about-us"
+      />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
         <div className="flex items-center gap-4">
