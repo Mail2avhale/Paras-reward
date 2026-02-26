@@ -117,8 +117,11 @@ const AdminUnifiedPayments = ({ user }) => {
       });
 
       const emiData = Array.isArray(emiRes.data) ? emiRes.data : (emiRes.data?.requests || []);
+      // Filter EMI: check both payment_type AND request_type
       const emiRequests = emiData.filter(r => 
-        r.payment_type?.toLowerCase() === 'emi' || r.payment_type?.toLowerCase() === 'loan_emi'
+        r.payment_type?.toLowerCase()?.includes('emi') || 
+        r.request_type?.toLowerCase()?.includes('emi') ||
+        r.request_type === 'loan_emi'
       ).map(r => {
         const bd = r.bank_details || {};
         return {
