@@ -10,7 +10,13 @@ const Blog = () => {
   const categories = [...new Set(blogArticles.map(article => article.category))];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <>
+      <SEO 
+        title="Blog - Tips, News & Updates"
+        description="Read the latest updates, tips, and news from PARAS REWARD. Learn how to maximize your earnings and rewards."
+        url="https://www.parasreward.com/blog"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4">

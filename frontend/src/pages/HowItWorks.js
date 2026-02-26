@@ -6,7 +6,13 @@ import SEO from '@/components/SEO';
 
 const HowItWorks = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <>
+      <SEO 
+        title="How It Works"
+        description="Learn how to earn PRC reward points on PARAS REWARD - from daily mining to referrals and VIP benefits."
+        url="https://www.parasreward.com/how-it-works"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4">

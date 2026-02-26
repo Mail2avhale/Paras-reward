@@ -198,7 +198,13 @@ const FAQ = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <>
+      <SEO 
+        title="FAQs - Frequently Asked Questions"
+        description="Find answers to common questions about PARAS REWARD - how to earn PRC points, redeem rewards, VIP membership, and more."
+        url="https://www.parasreward.com/faq"
+      />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
         <div className="flex items-center gap-4">
