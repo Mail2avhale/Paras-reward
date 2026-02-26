@@ -96,7 +96,13 @@ const ContactUs = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
+    <>
+      <SEO 
+        title="Contact Us"
+        description="Get in touch with PARAS REWARD team. We're here to help with your queries about rewards, redemptions, and more."
+        url="https://www.parasreward.com/contact-us"
+      />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 sticky top-0 z-10 bg-gray-950/80 backdrop-blur-md">
         <div className="flex items-center gap-4">
