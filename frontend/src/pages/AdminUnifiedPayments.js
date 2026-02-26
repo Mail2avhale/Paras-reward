@@ -71,10 +71,11 @@ const AdminUnifiedPayments = ({ user }) => {
   const fetchAllRequests = async () => {
     setLoading(true);
     try {
-      const [bankRes, rdRes, emiRes] = await Promise.all([
-        axios.get(`${API}/admin/bank-redeem/requests`, { params: { limit: 1000 } }).catch(() => ({ data: { requests: [] } })),
-        axios.get(`${API}/rd/admin/redeem-requests`, { params: { limit: 1000 } }).catch(() => ({ data: { requests: [] } })),
-        axios.get(`${API}/admin/bill-payment/requests`, { params: { payment_type: 'emi', limit: 1000 } }).catch(() => ({ data: [] }))
+      const [bankRes, rdRes, billRes] = await Promise.all([
+        axios.get(`${API}/admin/bank-redeem/requests`, { params: { limit: 2000 } }).catch(() => ({ data: { requests: [] } })),
+        axios.get(`${API}/rd/admin/redeem-requests`, { params: { limit: 2000 } }).catch(() => ({ data: { requests: [] } })),
+        // Get ALL bill payments (including EMI, recharge, etc.)
+        axios.get(`${API}/admin/bill-payment/requests`, { params: { limit: 2000 } }).catch(() => ({ data: { requests: [] } }))
       ]);
 
       const bankRequests = (bankRes.data?.requests || []).map(r => {
@@ -116,9 +117,11 @@ const AdminUnifiedPayments = ({ user }) => {
         };
       });
 
-      const emiData = Array.isArray(emiRes.data) ? emiRes.data : (emiRes.data?.requests || []);
-      // Filter EMI: check both payment_type AND request_type
-      const emiRequests = emiData.filter(r => 
+      // Process ALL bill payment requests
+      const billData = billRes.data?.requests || (Array.isArray(billRes.data) ? billRes.data : []);
+      
+      // Separate EMI from other bill payments
+      const emiRequests = billData.filter(r => 
         r.payment_type?.toLowerCase()?.includes('emi') || 
         r.request_type?.toLowerCase()?.includes('emi') ||
         r.request_type === 'loan_emi'
