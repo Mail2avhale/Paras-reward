@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://payment-consolidate.preview.emergentagent.com",
+    "url": "https://payment-merge-api.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
