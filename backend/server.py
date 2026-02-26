@@ -8940,11 +8940,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Calculate duration days
         now = datetime.now(timezone.utc)
         duration_days = {
-            "monthly": 30,
-            "quarterly": 90,
-            "half_yearly": 180,
-            "yearly": 365
-        }.get(plan_type, 30)
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }.get(plan_type, 28)
         
         # Get current user to check existing subscription with timeout
         try:
@@ -17535,12 +17535,12 @@ async def submit_vip_payment_new(request: Request):
     plan_type = data.get("plan_type", "monthly")
     amount = float(data.get("amount", 299))
     
-    # Duration mapping based on plan type
+    # Duration mapping based on plan type (28 days per month)
     plan_details = {
-        "monthly": {"days": 30, "name": "Monthly VIP"},
-        "quarterly": {"days": 90, "name": "Quarterly VIP"},
-        "half_yearly": {"days": 180, "name": "Half-Yearly VIP"},
-        "yearly": {"days": 365, "name": "Yearly VIP"}
+        "monthly": {"days": 28, "name": "Monthly VIP"},
+        "quarterly": {"days": 84, "name": "Quarterly VIP"},
+        "half_yearly": {"days": 168, "name": "Half-Yearly VIP"},
+        "yearly": {"days": 336, "name": "Yearly VIP"}
     }
     
     plan_info = plan_details.get(plan_type, plan_details["monthly"])
@@ -25183,13 +25183,13 @@ async def update_vip_plan(request: Request):
     # Get or create settings
     settings = await db.settings.find_one({})
     if not settings:
-        # Create initial settings with default VIP plans
+        # Create initial settings with default VIP plans (28 days per month)
         initial_settings = {
             "vip_plans": {
-                "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
-                "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
-                "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
-                "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
+                "monthly": {"price": 299.0, "duration_days": 28, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
+                "quarterly": {"price": 897.0, "duration_days": 84, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
+                "half_yearly": {"price": 1794.0, "duration_days": 168, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
+                "yearly": {"price": 3588.0, "duration_days": 336, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
             },
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
