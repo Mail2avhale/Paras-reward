@@ -629,8 +629,14 @@ async def login(
             except Exception:
                 pass
     
-    # Enforce PRC = 0 for free users
-    if user.get("membership_type") != "vip" and user.get("prc_balance", 0) > 0:
+    # Enforce PRC = 0 ONLY for truly free users (no paid subscription and no VIP)
+    # Paid plans: elite, growth, startup - these users should KEEP their PRC
+    user_plan = (user.get("subscription_plan") or "").lower()
+    is_paid_subscriber = user_plan in ["elite", "growth", "startup"]
+    is_vip = user.get("membership_type") == "vip"
+    
+    # Only reset PRC for free users who are not paid subscribers
+    if not is_paid_subscriber and not is_vip and user.get("prc_balance", 0) > 0:
         await db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
         user["prc_balance"] = 0
     
