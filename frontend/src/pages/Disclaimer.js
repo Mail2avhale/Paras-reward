@@ -35,7 +35,13 @@ const Disclaimer = () => {
   const lastUpdated = 'February 7, 2026';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
+    <>
+      <SEO 
+        title="Disclaimer"
+        description="Important legal disclaimers for PARAS REWARD platform users. Read our disclaimer policy carefully."
+        url="https://www.parasreward.com/disclaimer"
+      />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-900/50 to-red-900/50 border-b border-gray-800">
         <div className="container mx-auto px-4 py-8">
