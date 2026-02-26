@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen, Clock, User, ArrowRight } from 'lucide-react';
 import { blogArticles } from '@/data/blogData';
 import Footer from '@/components/Footer';
+import SEO from '@/components/SEO';
 
 const Blog = () => {
   const categories = [...new Set(blogArticles.map(article => article.category))];

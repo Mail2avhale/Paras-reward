@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Play, CheckCircle2, Star, Gift, Users, Zap, Crown } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const HowItWorks = () => {
   return (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, ArrowLeft, HelpCircle, Coins, Crown, Gift, Smartphone, Users, Shield } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const FAQ = () => {
   const navigate = useNavigate();
