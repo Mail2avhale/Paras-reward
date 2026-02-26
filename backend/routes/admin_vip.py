@@ -221,11 +221,11 @@ async def approve_payment(payment_id: str, request: Request):
         plan = correct_plan or payment.get("subscription_plan", "startup")
         duration = correct_duration or payment.get("plan_type", "monthly")
         
-        # Calculate expiry
+        # Calculate expiry (28 days per month)
         now = datetime.now(timezone.utc)
         duration_days = {
-            "monthly": 30
-        }.get(duration, 30)
+            "monthly": 28
+        }.get(duration, 28)
         
         # Check current user expiry with timeout
         try:
