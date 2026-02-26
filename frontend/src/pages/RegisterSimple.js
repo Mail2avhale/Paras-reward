@@ -379,6 +379,7 @@ const RegisterSimple = () => {
         </div>
       </Card>
     </div>
+    </>
   );
 };
 
