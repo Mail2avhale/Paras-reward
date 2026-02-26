@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Award, Users, TrendingUp, Heart, Shield, Zap } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const AboutUs = () => {
   const navigate = useNavigate();

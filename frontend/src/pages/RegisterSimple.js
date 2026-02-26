@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Mail, Lock, User, AlertCircle, CheckCircle, Gift, Phone, KeyRound, Loader2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PinInput from '@/components/PinInput';
+import SEO, { SEOConfigs } from '@/components/SEO';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
