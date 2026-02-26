@@ -593,6 +593,7 @@ const TermsConditions = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
