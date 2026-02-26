@@ -359,6 +359,7 @@ const Disclaimer = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

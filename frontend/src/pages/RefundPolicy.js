@@ -180,6 +180,7 @@ const RefundPolicy = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
