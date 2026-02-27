@@ -26027,7 +26027,8 @@ async def process_bill_payment_request(request: Request):
             }
     
     elif action == "complete":
-        if current_status not in ["pending", "processing"]:
+        # Allow completion from pending, processing, OR approved_manual status
+        if current_status not in ["pending", "processing", "approved_manual"]:
             raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {current_status}")
         
         now = datetime.now(timezone.utc)
