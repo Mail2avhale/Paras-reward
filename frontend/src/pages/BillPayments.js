@@ -1018,6 +1018,61 @@ const BillPayments = ({ user, onLogout }) => {
                   </div>
                 )}
 
+                {/* ==================== DTH PLANS SECTION ==================== */}
+                {selectedType === 'dish_recharge' && formData.operator && (
+                  <div className="bg-gradient-to-br from-purple-900/30 to-purple-900/10 rounded-2xl p-4 border border-purple-500/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-purple-300 text-sm font-semibold flex items-center gap-2">
+                        📺 DTH Plans
+                        {loadingPlans && <span className="text-amber-400 text-xs">(Loading...)</span>}
+                      </Label>
+                      {formData.selected_plan && (
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, selected_plan: null, amount_inr: '' })}
+                          className="text-xs text-gray-400 hover:text-white"
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                    
+                    {ekoPlans.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                        {ekoPlans.map((plan) => (
+                          <button
+                            key={plan.id}
+                            type="button"
+                            onClick={() => setFormData({ 
+                              ...formData, 
+                              amount_inr: plan.amount.toString(),
+                              selected_plan: plan
+                            })}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                              formData.selected_plan?.id === plan.id
+                                ? 'border-purple-500 bg-purple-500/20'
+                                : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                            }`}
+                          >
+                            <p className="text-lg font-bold text-purple-400">₹{plan.amount}</p>
+                            <p className="text-xs text-gray-300 line-clamp-2">{plan.description}</p>
+                            {plan.validity && (
+                              <p className="text-[10px] text-gray-500 mt-1">{plan.validity}</p>
+                            )}
+                            {plan.channels && (
+                              <span className="text-[10px] text-purple-400">{plan.channels} Channels</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : !loadingPlans ? (
+                      <p className="text-gray-500 text-sm text-center py-4">
+                        Select operator to see available plans
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+
                 {/* ==================== DMT BANK TRANSFER FIELDS ==================== */}
                 {selectedType === 'bank_transfer' && (
                   <div className="space-y-4">
