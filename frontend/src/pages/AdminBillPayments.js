@@ -957,35 +957,6 @@ const AdminBillPayments = ({ user }) => {
                             <XCircle className="w-3 h-3" />
                           </Button>
                         </div>
-                      ) : request.status === 'approved_manual' ? (
-                        /* Approved Manual - Needs Admin Manual Completion */
-                        <div className="flex flex-col items-end gap-1 mt-2">
-                          <span className="inline-block px-2 py-1 rounded text-xs bg-amber-500/20 text-amber-400">
-                            ⚠️ Manual Required
-                          </span>
-                          {request.eko_fail_reason && (
-                            <span className="text-[10px] text-red-400 max-w-[150px] text-right truncate" title={request.eko_fail_reason}>
-                              {request.eko_fail_reason}
-                            </span>
-                          )}
-                          <div className="flex gap-1 mt-1">
-                            <Button
-                              size="sm"
-                              onClick={() => setSelectedRequest(request)}
-                              className="h-6 px-2 text-xs bg-gray-700 hover:bg-gray-600"
-                            >
-                              <Eye className="w-3 h-3 mr-1" /> View
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleManualComplete(request.request_id)}
-                              disabled={processing}
-                              className="h-6 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" /> Complete
-                            </Button>
-                          </div>
-                        </div>
                       ) : (
                         <div className="flex flex-col items-end gap-1 mt-2">
                           <span className={`inline-block px-2 py-1 rounded text-xs ${
@@ -997,6 +968,18 @@ const AdminBillPayments = ({ user }) => {
                              request.status === 'rejected' ? '❌ Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </span>
+                          {/* Show reject reason for rejected */}
+                          {request.status === 'rejected' && request.reject_reason && (
+                            <span className="text-[10px] text-red-400 max-w-[150px] text-right truncate" title={request.reject_reason}>
+                              {request.reject_reason}
+                            </span>
+                          )}
+                          {/* Show Eko TXN for completed */}
+                          {request.status === 'completed' && request.txn_number && (
+                            <span className="text-[10px] text-emerald-400 font-mono">
+                              {request.txn_number}
+                            </span>
+                          )}
                           {/* View Details Button for completed/rejected */}
                           <Button
                             size="sm"
@@ -1008,6 +991,7 @@ const AdminBillPayments = ({ user }) => {
                           {/* Speed Badge for completed */}
                           {request.status === 'completed' && request.processing_time && (
                             <SpeedBadge processingTime={request.processing_time} />
+                          )}
                           )}
                           {/* Processing Time if no badge */}
                           {request.processing_time && !['completed'].includes(request.status) && (
