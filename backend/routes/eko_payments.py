@@ -37,16 +37,35 @@ def set_db(database):
 
 # ==================== HELPER FUNCTIONS ====================
 
-def generate_secret_key():
-    """Generate secret-key from authenticator key (base64 encoded)"""
+def generate_secret_key(timestamp: str):
+    """Generate secret-key using HMAC-SHA256 as per Eko documentation"""
     if not EKO_AUTHENTICATOR_KEY:
         return None
-    return base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    # Step 1: Base64 encode the authenticator key
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    # Step 2: HMAC-SHA256 the timestamp with encoded key
+    signature = hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+    # Step 3: Base64 encode the result
+    return base64.b64encode(signature).decode()
 
 
 def get_secret_key_timestamp():
     """Get current timestamp in milliseconds"""
     return str(int(time.time() * 1000))
+
+
+def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user_code: str):
+    """Generate request_hash for BBPS Pay Bill API"""
+    if not EKO_AUTHENTICATOR_KEY:
+        return None
+    # Step 1: Base64 encode the authenticator key
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    # Step 2: Concatenate parameters in specific order
+    concatenated_string = timestamp + utility_acc_no + amount + user_code
+    # Step 3: HMAC-SHA256 with encoded key
+    signature = hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
+    # Step 4: Base64 encode the result
+    return base64.b64encode(signature).decode()
 
 
 async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = False):
