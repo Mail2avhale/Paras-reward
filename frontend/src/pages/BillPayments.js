@@ -8,7 +8,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
   ArrowLeft, Smartphone, Tv, Zap, CreditCard, Building,
-  Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt, ChevronDown, ChevronUp, Info, ChevronRight
+  Send, Clock, CheckCircle, XCircle, AlertCircle, Receipt, ChevronDown, ChevronUp, Info, ChevronRight,
+  Loader2, Search, RefreshCw, Wallet, IndianRupee
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
@@ -21,6 +22,414 @@ import {
 import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// ==================== EKO LIVE PAYMENT COMPONENT ====================
+const EkoLivePayment = ({ user, currentUser, selectedService, onPaymentSuccess }) => {
+  const [loading, setLoading] = useState(false);
+  const [billers, setBillers] = useState([]);
+  const [selectedBiller, setSelectedBiller] = useState(null);
+  const [billInfo, setBillInfo] = useState(null);
+  const [fetchingBill, setFetchingBill] = useState(false);
+  const [paymentStep, setPaymentStep] = useState('form'); // form, confirm, processing, success
+  
+  const [formData, setFormData] = useState({
+    mobile_number: '',
+    consumer_number: '',
+    amount: '',
+    operator_id: ''
+  });
+
+  // Service type mapping for Eko API
+  const ekoServiceMap = {
+    'mobile_recharge': { category: 'mobile_prepaid', label: 'Mobile Recharge', requiresBillFetch: false },
+    'dish_recharge': { category: 'dth', label: 'DTH Recharge', requiresBillFetch: false },
+    'electricity_bill': { category: 'electricity', label: 'Electricity Bill', requiresBillFetch: true }
+  };
+
+  const currentService = ekoServiceMap[selectedService];
+
+  // Fetch operators/billers
+  useEffect(() => {
+    if (currentService) {
+      fetchBillers();
+    }
+  }, [selectedService]);
+
+  const fetchBillers = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/eko/bbps/billers/${currentService.category}`);
+      setBillers(response.data.billers || response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching billers:', error);
+      // Use static billers for common services
+      const staticBillers = getStaticBillers(selectedService);
+      setBillers(staticBillers);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStaticBillers = (service) => {
+    const billerMap = {
+      'mobile_recharge': [
+        { id: 'JIO_PREPAID', name: 'Jio Prepaid', icon: '📱' },
+        { id: 'AIRTEL_PREPAID', name: 'Airtel Prepaid', icon: '📱' },
+        { id: 'VI_PREPAID', name: 'Vi (Vodafone Idea) Prepaid', icon: '📱' },
+        { id: 'BSNL_PREPAID', name: 'BSNL Prepaid', icon: '📱' }
+      ],
+      'dish_recharge': [
+        { id: 'TATASKY', name: 'Tata Play (Tata Sky)', icon: '📺' },
+        { id: 'AIRTEL_DTH', name: 'Airtel Digital TV', icon: '📺' },
+        { id: 'DISHTV', name: 'Dish TV', icon: '📺' },
+        { id: 'VIDEOCON_D2H', name: 'D2H Videocon', icon: '📺' },
+        { id: 'SUNDIRECT', name: 'Sun Direct', icon: '📺' }
+      ],
+      'electricity_bill': [
+        { id: 'MSEDCL', name: 'MSEDCL - Maharashtra', icon: '⚡' },
+        { id: 'TATA_POWER_MUM', name: 'Tata Power Mumbai', icon: '⚡' },
+        { id: 'ADANI_MUM', name: 'Adani Electricity Mumbai', icon: '⚡' },
+        { id: 'BEST_MUM', name: 'BEST Mumbai', icon: '⚡' },
+        { id: 'MGVCL', name: 'MGVCL Gujarat', icon: '⚡' },
+        { id: 'UPPCL', name: 'UPPCL Uttar Pradesh', icon: '⚡' },
+        { id: 'TANGEDCO', name: 'TANGEDCO Tamil Nadu', icon: '⚡' },
+        { id: 'BESCOM', name: 'BESCOM Karnataka', icon: '⚡' }
+      ]
+    };
+    return billerMap[service] || [];
+  };
+
+  const handleFetchBill = async () => {
+    if (!selectedBiller || !formData.consumer_number) {
+      toast.error('Please select provider and enter consumer number');
+      return;
+    }
+    
+    try {
+      setFetchingBill(true);
+      const response = await axios.post(`${API}/eko/bbps/fetch-bill`, {
+        category: currentService.category,
+        biller_id: selectedBiller.id,
+        customer_params: { consumer_number: formData.consumer_number }
+      });
+      
+      setBillInfo(response.data);
+      if (response.data.data?.billAmount) {
+        setFormData(prev => ({ ...prev, amount: response.data.data.billAmount }));
+      }
+      toast.success('Bill details fetched successfully');
+    } catch (error) {
+      console.error('Bill fetch error:', error);
+      toast.error('Could not fetch bill. Please enter amount manually.');
+    } finally {
+      setFetchingBill(false);
+    }
+  };
+
+  const calculateCharges = (amount) => {
+    const baseAmount = parseFloat(amount) || 0;
+    const processingFee = 10; // Flat ₹10
+    const adminCharge = baseAmount * 0.20; // 20% admin charge
+    const total = baseAmount + processingFee + adminCharge;
+    const prcRequired = total * 10; // 10 PRC = ₹1
+    return { baseAmount, processingFee, adminCharge, total, prcRequired };
+  };
+
+  const handlePayment = async () => {
+    const charges = calculateCharges(formData.amount);
+    
+    if (currentUser.prc_balance < charges.prcRequired) {
+      toast.error(`Insufficient PRC balance. Required: ${charges.prcRequired.toFixed(0)} PRC`);
+      return;
+    }
+
+    if (!selectedBiller) {
+      toast.error('Please select a provider');
+      return;
+    }
+
+    const customerIdField = selectedService === 'mobile_recharge' ? formData.mobile_number : formData.consumer_number;
+    if (!customerIdField) {
+      toast.error('Please enter required details');
+      return;
+    }
+
+    setPaymentStep('confirm');
+  };
+
+  const confirmPayment = async () => {
+    try {
+      setPaymentStep('processing');
+      
+      const customerParams = selectedService === 'mobile_recharge' 
+        ? { mobile_number: formData.mobile_number }
+        : { consumer_number: formData.consumer_number };
+
+      const response = await axios.post(`${API}/eko/bbps/pay-bill`, {
+        user_id: user.uid,
+        category: currentService.category,
+        biller_id: selectedBiller.id,
+        customer_params: customerParams,
+        amount: parseFloat(formData.amount)
+      });
+
+      if (response.data.success) {
+        setPaymentStep('success');
+        toast.success('Payment initiated successfully!');
+        onPaymentSuccess && onPaymentSuccess(response.data);
+      } else {
+        throw new Error(response.data.message || 'Payment failed');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      setPaymentStep('form');
+      toast.error(error.response?.data?.detail || 'Payment failed. Please try again.');
+    }
+  };
+
+  const resetForm = () => {
+    setPaymentStep('form');
+    setSelectedBiller(null);
+    setBillInfo(null);
+    setFormData({ mobile_number: '', consumer_number: '', amount: '', operator_id: '' });
+  };
+
+  const charges = calculateCharges(formData.amount);
+
+  // Payment Success View
+  if (paymentStep === 'success') {
+    return (
+      <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-3xl p-8 border border-green-500/30 text-center">
+        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-6">
+          <CheckCircle className="h-10 w-10 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Payment Initiated!</h2>
+        <p className="text-gray-400 mb-6">Your payment is being processed. You will receive confirmation shortly.</p>
+        <Button onClick={resetForm} className="bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90">
+          Make Another Payment
+        </Button>
+      </div>
+    );
+  }
+
+  // Confirmation View
+  if (paymentStep === 'confirm') {
+    return (
+      <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
+        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <AlertCircle className="h-6 w-6 text-amber-400" />
+          Confirm Payment
+        </h2>
+        
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between text-gray-400">
+            <span>Service</span>
+            <span className="text-white">{currentService.label}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Provider</span>
+            <span className="text-white">{selectedBiller?.name}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>{selectedService === 'mobile_recharge' ? 'Mobile Number' : 'Consumer Number'}</span>
+            <span className="text-white">{selectedService === 'mobile_recharge' ? formData.mobile_number : formData.consumer_number}</span>
+          </div>
+          <hr className="border-gray-700" />
+          <div className="flex justify-between text-gray-400">
+            <span>Bill Amount</span>
+            <span className="text-white">₹{charges.baseAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Processing Fee</span>
+            <span className="text-orange-400">+₹{charges.processingFee.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Admin Charges (20%)</span>
+            <span className="text-orange-400">+₹{charges.adminCharge.toFixed(2)}</span>
+          </div>
+          <hr className="border-gray-700" />
+          <div className="flex justify-between text-lg font-bold">
+            <span className="text-amber-400">Total</span>
+            <span className="text-amber-400">₹{charges.total.toFixed(2)} = {charges.prcRequired.toFixed(0)} PRC</span>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <Button onClick={() => setPaymentStep('form')} variant="outline" className="flex-1 border-gray-600">
+            Cancel
+          </Button>
+          <Button onClick={confirmPayment} className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90">
+            <Send className="w-4 h-4 mr-2" /> Confirm & Pay
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Processing View
+  if (paymentStep === 'processing') {
+    return (
+      <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-8 border border-gray-800/50 text-center">
+        <Loader2 className="h-16 w-16 text-amber-400 animate-spin mx-auto mb-6" />
+        <h2 className="text-xl font-bold text-white mb-2">Processing Payment...</h2>
+        <p className="text-gray-400">Please wait, do not close this page.</p>
+      </div>
+    );
+  }
+
+  // Main Form View
+  return (
+    <div className="space-y-6">
+      {/* Provider Selection */}
+      <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Search className="h-5 w-5 text-amber-400" />
+          Select Provider
+        </h3>
+        
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+            {billers.map((biller) => (
+              <button
+                key={biller.id}
+                onClick={() => setSelectedBiller(biller)}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  selectedBiller?.id === biller.id
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-gray-700 hover:border-gray-600 bg-gray-800/30'
+                }`}
+              >
+                <span className="text-xl mb-2 block">{biller.icon || '📋'}</span>
+                <p className="text-sm font-medium text-white truncate">{biller.name}</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Payment Details Form */}
+      {selectedBiller && (
+        <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
+          <h3 className="text-lg font-bold text-white mb-4">Payment Details</h3>
+          
+          <div className="space-y-4">
+            {/* Mobile Number for Recharge */}
+            {selectedService === 'mobile_recharge' && (
+              <div>
+                <Label className="text-gray-300 mb-2 block">Mobile Number *</Label>
+                <Input
+                  type="tel"
+                  value={formData.mobile_number}
+                  onChange={(e) => setFormData({ ...formData, mobile_number: formatMobile(e.target.value) })}
+                  placeholder="10-digit mobile number"
+                  maxLength={10}
+                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                />
+              </div>
+            )}
+
+            {/* Consumer Number for DTH/Electricity */}
+            {(selectedService === 'dish_recharge' || selectedService === 'electricity_bill') && (
+              <div>
+                <Label className="text-gray-300 mb-2 block">
+                  {selectedService === 'dish_recharge' ? 'Customer ID / VC Number' : 'Consumer Number'} *
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.consumer_number}
+                    onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
+                    placeholder={selectedService === 'dish_recharge' ? 'Enter your Customer ID' : 'Enter Consumer Number'}
+                    className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl flex-1"
+                  />
+                  {selectedService === 'electricity_bill' && (
+                    <Button 
+                      onClick={handleFetchBill} 
+                      disabled={fetchingBill}
+                      className="h-12 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {fetchingBill ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Fetch Bill'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Bill Info Display */}
+            {billInfo && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <p className="text-blue-300 font-medium">Bill Details:</p>
+                <p className="text-white">Name: {billInfo.data?.customerName || 'N/A'}</p>
+                <p className="text-white">Due Amount: ₹{billInfo.data?.billAmount || 'N/A'}</p>
+                <p className="text-gray-400 text-sm">Due Date: {billInfo.data?.dueDate || 'N/A'}</p>
+              </div>
+            )}
+
+            {/* Amount */}
+            <div>
+              <Label className="text-gray-300 mb-2 block">Amount (₹) *</Label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</div>
+                <Input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0.00"
+                  min="1"
+                  className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                />
+              </div>
+            </div>
+
+            {/* Charge Breakdown */}
+            {formData.amount && parseFloat(formData.amount) > 0 && (
+              <div className="bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <IndianRupee className="h-4 w-4 text-amber-400" />
+                  <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Bill Amount</span>
+                    <span className="text-white">₹{charges.baseAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Processing Fee</span>
+                    <span className="text-orange-400">+₹{charges.processingFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Admin Charges (20%)</span>
+                    <span className="text-orange-400">+₹{charges.adminCharge.toFixed(2)}</span>
+                  </div>
+                  <hr className="border-gray-700" />
+                  <div className="flex justify-between pt-2">
+                    <span className="text-amber-400 font-bold">Total to Pay</span>
+                    <span className="text-amber-400 font-bold">₹{charges.total.toFixed(2)} = {charges.prcRequired.toFixed(0)} PRC</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pay Button */}
+            <Button 
+              onClick={handlePayment}
+              disabled={!formData.amount || parseFloat(formData.amount) <= 0}
+              className="w-full py-4 mt-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
+            >
+              <Send className="h-5 w-5 mr-2" />
+              Pay {charges.prcRequired > 0 ? `${charges.prcRequired.toFixed(0)} PRC` : 'Now'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== END EKO LIVE PAYMENT COMPONENT ====================
 
 const BillPayments = ({ user, onLogout }) => {
   const navigate = useNavigate();
