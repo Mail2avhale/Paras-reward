@@ -4,6 +4,7 @@ Users can save bank details and request PRC withdrawal to bank account
 - Weekly limit: 1 request per week
 - Fixed denominations: 100, 500, 1000, 5000, 10000, 25000
 - Processing fees + 20% admin charges
+- Eko DMT Integration for instant bank transfers
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,6 +12,10 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 import uuid
 import logging
+import os
+import httpx
+import base64
+import time
 
 # Create router
 router = APIRouter(tags=["Bank Redeem"])
