@@ -237,6 +237,224 @@ async def get_billers_by_category(category: str):
         return {"billers": sample_billers.get(category, []), "note": f"Sample data - {str(e)}"}
 
 
+# ==================== MOBILE RECHARGE APIs ====================
+
+@router.get("/recharge/operators")
+async def get_mobile_operators():
+    """Get list of mobile operators for prepaid recharge"""
+    try:
+        result = await make_eko_request(
+            "/v1/operators",
+            method="GET",
+            data={"service_type": "1"}  # 1 = Mobile prepaid
+        )
+        
+        # Parse Eko response format
+        operators = []
+        if result.get("data"):
+            for op in result.get("data", []):
+                operators.append({
+                    "id": op.get("operator_id"),
+                    "name": op.get("operator_name"),
+                    "code": op.get("operator_code"),
+                    "icon": "📱"
+                })
+        
+        return {"success": True, "operators": operators}
+        
+    except Exception as e:
+        logging.warning(f"Eko operators API failed: {e}")
+        # Fallback static operators
+        static_operators = [
+            {"id": "JIO", "name": "Jio", "code": "JIO", "icon": "📱"},
+            {"id": "AIRTEL", "name": "Airtel", "code": "AIRTEL", "icon": "📱"},
+            {"id": "VI", "name": "Vi (Vodafone Idea)", "code": "VI", "icon": "📱"},
+            {"id": "BSNL", "name": "BSNL", "code": "BSNL", "icon": "📱"}
+        ]
+        return {"success": True, "operators": static_operators, "source": "fallback"}
+
+
+@router.get("/recharge/circles")
+async def get_recharge_circles():
+    """Get list of telecom circles"""
+    try:
+        result = await make_eko_request(
+            "/v1/circles",
+            method="GET"
+        )
+        
+        circles = []
+        if result.get("data"):
+            for c in result.get("data", []):
+                circles.append({
+                    "id": c.get("circle_id"),
+                    "name": c.get("circle_name")
+                })
+        
+        return {"success": True, "circles": circles}
+        
+    except Exception as e:
+        logging.warning(f"Eko circles API failed: {e}")
+        # Fallback static circles
+        static_circles = [
+            {"id": "MH", "name": "Maharashtra"},
+            {"id": "MUM", "name": "Mumbai"},
+            {"id": "DL", "name": "Delhi"},
+            {"id": "KA", "name": "Karnataka"},
+            {"id": "TN", "name": "Tamil Nadu"},
+            {"id": "UP_E", "name": "UP East"},
+            {"id": "UP_W", "name": "UP West"},
+            {"id": "GJ", "name": "Gujarat"},
+            {"id": "RJ", "name": "Rajasthan"},
+            {"id": "AP", "name": "Andhra Pradesh"},
+            {"id": "WB", "name": "West Bengal"},
+            {"id": "KL", "name": "Kerala"},
+            {"id": "PB", "name": "Punjab"},
+            {"id": "HR", "name": "Haryana"},
+            {"id": "MP", "name": "Madhya Pradesh"},
+            {"id": "BH", "name": "Bihar"},
+            {"id": "OR", "name": "Orissa"},
+            {"id": "AS", "name": "Assam"},
+            {"id": "NE", "name": "North East"},
+            {"id": "HP", "name": "Himachal Pradesh"},
+            {"id": "JK", "name": "Jammu & Kashmir"},
+            {"id": "CHN", "name": "Chennai"},
+            {"id": "KOL", "name": "Kolkata"}
+        ]
+        return {"success": True, "circles": static_circles, "source": "fallback"}
+
+
+@router.get("/recharge/plans/{operator}/{circle}")
+async def get_recharge_plans(operator: str, circle: str):
+    """Get available recharge plans for an operator and circle"""
+    try:
+        result = await make_eko_request(
+            "/v1/recharge/plans",
+            method="GET",
+            data={
+                "operator_id": operator,
+                "circle_id": circle
+            }
+        )
+        
+        plans = []
+        if result.get("data"):
+            for p in result.get("data", []):
+                plans.append({
+                    "id": p.get("plan_id"),
+                    "amount": p.get("amount"),
+                    "description": p.get("description", p.get("talktime", "")),
+                    "validity": p.get("validity"),
+                    "plan_type": p.get("plan_type", ""),
+                    "data": p.get("data", ""),
+                    "talktime": p.get("talktime", "")
+                })
+        
+        return {"success": True, "plans": plans}
+        
+    except Exception as e:
+        logging.warning(f"Eko plans API failed: {e}")
+        # Fallback sample plans
+        sample_plans = [
+            {"id": "1", "amount": 199, "description": "Unlimited calls + 1.5GB/day", "validity": "28 days", "plan_type": "Data", "data": "1.5GB/day"},
+            {"id": "2", "amount": 299, "description": "Unlimited calls + 2GB/day", "validity": "28 days", "plan_type": "Data", "data": "2GB/day"},
+            {"id": "3", "amount": 399, "description": "Unlimited calls + 2.5GB/day", "validity": "56 days", "plan_type": "Data", "data": "2.5GB/day"},
+            {"id": "4", "amount": 599, "description": "Unlimited calls + 3GB/day", "validity": "84 days", "plan_type": "Data", "data": "3GB/day"},
+            {"id": "5", "amount": 49, "description": "Talktime ₹38.52", "validity": "28 days", "plan_type": "Talktime", "talktime": "₹38.52"},
+            {"id": "6", "amount": 99, "description": "Talktime ₹81.75", "validity": "28 days", "plan_type": "Talktime", "talktime": "₹81.75"},
+        ]
+        return {"success": True, "plans": sample_plans, "source": "fallback"}
+
+
+@router.post("/recharge/process")
+async def process_mobile_recharge(
+    mobile_number: str,
+    operator_id: str,
+    amount: float,
+    circle_id: str = None,
+    user_id: str = None
+):
+    """Process mobile prepaid recharge via Eko"""
+    try:
+        txn_ref = f"RCH{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile_number[-4:]}"
+        
+        result = await make_eko_request(
+            "/v1/recharge",
+            method="POST",
+            data={
+                "mobile_number": mobile_number,
+                "operator_id": operator_id,
+                "amount": str(int(amount)),
+                "circle_id": circle_id or "",
+                "client_ref_id": txn_ref,
+                "confirmation_mobile_no": EKO_INITIATOR_ID
+            }
+        )
+        
+        # Log transaction
+        if db is not None:
+            await db.eko_transactions.insert_one({
+                "type": "mobile_recharge",
+                "user_id": user_id,
+                "mobile_number": mobile_number,
+                "operator_id": operator_id,
+                "amount": amount,
+                "circle_id": circle_id,
+                "txn_ref": txn_ref,
+                "eko_response": result,
+                "status": result.get("status", "pending"),
+                "timestamp": datetime.now(timezone.utc)
+            })
+        
+        return {
+            "success": True,
+            "txn_ref": txn_ref,
+            "eko_txn_id": result.get("tid"),
+            "status": result.get("status"),
+            "message": result.get("message", "Recharge initiated")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Mobile recharge failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Recharge failed: {str(e)}")
+
+
+@router.get("/dth/operators")
+async def get_dth_operators():
+    """Get list of DTH operators"""
+    try:
+        result = await make_eko_request(
+            "/v1/operators",
+            method="GET",
+            data={"service_type": "2"}  # 2 = DTH
+        )
+        
+        operators = []
+        if result.get("data"):
+            for op in result.get("data", []):
+                operators.append({
+                    "id": op.get("operator_id"),
+                    "name": op.get("operator_name"),
+                    "code": op.get("operator_code"),
+                    "icon": "📺"
+                })
+        
+        return {"success": True, "operators": operators}
+        
+    except Exception as e:
+        logging.warning(f"Eko DTH operators API failed: {e}")
+        static_operators = [
+            {"id": "TATA_SKY", "name": "Tata Play (Tata Sky)", "code": "TATASKY", "icon": "📺"},
+            {"id": "AIRTEL_DTH", "name": "Airtel Digital TV", "code": "AIRTEL", "icon": "📺"},
+            {"id": "DISH_TV", "name": "Dish TV", "code": "DISHTV", "icon": "📺"},
+            {"id": "D2H", "name": "D2H Videocon", "code": "D2H", "icon": "📺"},
+            {"id": "SUN_DIRECT", "name": "Sun Direct", "code": "SUNDIRECT", "icon": "📺"}
+        ]
+        return {"success": True, "operators": static_operators, "source": "fallback"}
+
+
 @router.post("/bbps/fetch-bill")
 async def fetch_bill(request: BillFetchRequest):
     """Fetch bill details before payment"""
