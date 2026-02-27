@@ -58,11 +58,27 @@ const EkoLivePayment = ({ user, currentUser, selectedService, onPaymentSuccess }
   const fetchBillers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/eko/bbps/billers/${currentService.category}`);
-      setBillers(response.data.billers || response.data.data || []);
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      const response = await axios.get(`${API}/eko/bbps/billers/${currentService.category}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      const billersData = response.data.billers || response.data.data || [];
+      
+      // If no billers returned, use static fallback
+      if (billersData.length === 0) {
+        setBillers(getStaticBillers(selectedService));
+      } else {
+        setBillers(billersData);
+      }
     } catch (error) {
       console.error('Error fetching billers:', error);
-      // Use static billers for common services
+      // Use static billers for common services on any error (timeout, network, etc.)
       const staticBillers = getStaticBillers(selectedService);
       setBillers(staticBillers);
     } finally {
