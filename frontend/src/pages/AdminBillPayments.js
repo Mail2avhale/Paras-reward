@@ -1314,8 +1314,29 @@ const AdminBillPayments = ({ user }) => {
                 </div>
               )}
               
-              {/* Close button for non-pending */}
-              {selectedRequest.status !== 'pending' && (
+              {/* Actions for approved_manual - Manual completion needed */}
+              {selectedRequest.status === 'approved_manual' && (
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => handleManualComplete(selectedRequest.request_id)}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    Mark as Completed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-gray-700"
+                    onClick={() => setSelectedRequest(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              
+              {/* Close button for completed/rejected */}
+              {(selectedRequest.status === 'completed' || selectedRequest.status === 'rejected') && (
                 <Button
                   variant="outline"
                   className="w-full border-gray-700"
