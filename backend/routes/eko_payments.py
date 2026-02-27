@@ -76,8 +76,8 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     url = f"{EKO_BASE_URL}{endpoint}"
     
     # Generate authentication headers
-    secret_key = generate_secret_key()
     secret_key_timestamp = get_secret_key_timestamp()
+    secret_key = generate_secret_key(secret_key_timestamp)
     
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
@@ -89,6 +89,15 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     if data is None:
         data = {}
     data["initiator_id"] = data.get("initiator_id", EKO_INITIATOR_ID)
+    
+    # Generate request_hash for BBPS Pay Bill API
+    if "billpayments/paybill" in endpoint and method == "POST":
+        utility_acc_no = data.get("utility_acc_no", "")
+        amount = str(data.get("amount", ""))
+        user_code = data.get("user_code", EKO_INITIATOR_ID)
+        request_hash = generate_request_hash(secret_key_timestamp, utility_acc_no, amount, user_code)
+        if request_hash:
+            headers["request_hash"] = request_hash
     
     async with httpx.AsyncClient(timeout=60.0, verify=True) as client:
         try:
