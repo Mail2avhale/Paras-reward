@@ -26137,6 +26137,104 @@ async def process_bill_payment_request(request: Request):
         
         return {"message": "Request marked as completed", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
 
+
+@api_router.post("/admin/bill-payment/complete")
+async def complete_bill_payment_manually(request: Request):
+    """Manually mark a bill payment request as completed (for approved_manual status)"""
+    data = await request.json()
+    request_id = data.get("request_id")
+    admin_uid = data.get("admin_uid")
+    txn_reference = data.get("txn_reference", "")  # Optional external transaction reference
+    
+    # Get admin name
+    admin_name = "Admin"
+    if admin_uid:
+        admin_user = await db.users.find_one({"uid": admin_uid}, {"name": 1})
+        if admin_user:
+            admin_name = admin_user.get("name", "Admin")
+    
+    # Get request
+    bill_request = await db.bill_payment_requests.find_one({"request_id": request_id})
+    if not bill_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    current_status = bill_request.get("status")
+    user_id = bill_request.get("user_id")
+    
+    # Only allow completion from approved_manual or pending status
+    if current_status not in ["approved_manual", "pending", "processing"]:
+        raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {current_status}. Only 'approved_manual', 'pending', or 'processing' status can be completed.")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Calculate processing time
+    processing_time_str = None
+    created_at = bill_request.get("created_at")
+    if created_at:
+        try:
+            if isinstance(created_at, str):
+                created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            else:
+                created_dt = created_at
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            
+            time_diff = now - created_dt
+            hours = int(time_diff.total_seconds() // 3600)
+            minutes = int((time_diff.total_seconds() % 3600) // 60)
+            
+            if hours > 24:
+                days = hours // 24
+                hours = hours % 24
+                processing_time_str = f"{days}d {hours}h {minutes}m"
+            elif hours > 0:
+                processing_time_str = f"{hours}h {minutes}m"
+            else:
+                processing_time_str = f"{minutes}m"
+        except Exception as e:
+            print(f"Error calculating processing time: {e}")
+    
+    # Generate TXN number if not provided
+    txn_number = txn_reference if txn_reference else f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+    
+    await db.bill_payment_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "status": "completed",
+            "txn_number": txn_number,
+            "completed_at": now.isoformat(),
+            "processing_time": processing_time_str,
+            "processed_by": admin_name,
+            "processed_by_uid": admin_uid,
+            "payment_method": "manual_completion",
+            "manual_completion_notes": f"Manually completed by {admin_name} after Eko auto-pay failed"
+        }}
+    )
+    
+    # Notify user
+    service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
+    notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed!\n\n🧾 Transaction ID: {txn_number}"
+    if processing_time_str:
+        notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
+    
+    await create_notification(
+        user_id=user_id,
+        title="✅ Bill Payment Completed!",
+        message=notify_msg,
+        notification_type="bill_payment_completed",
+        related_id=request_id,
+        icon="✅",
+        action_url="/bill-payments"
+    )
+    
+    return {
+        "message": "Request marked as completed successfully", 
+        "status": "completed", 
+        "txn_number": txn_number, 
+        "processing_time": processing_time_str
+    }
+
+
 # ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
 
 @api_router.post("/gift-voucher/request")
