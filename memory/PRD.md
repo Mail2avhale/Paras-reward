@@ -16,7 +16,27 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 
 ## CHANGELOG
 
-### February 27, 2026
+### February 27, 2026 (Latest)
+
+#### 🎉 EKO BILL PAYMENTS FRONTEND UI - COMPLETED
+- **EkoLivePayment Component** - New React component for instant bill payments
+  - Provider/biller selection with static fallback (8-second timeout)
+  - Supports Mobile Recharge, DTH, Electricity
+  - Bill fetch for electricity bills
+  - Charge breakdown (Base + ₹10 processing + 20% admin)
+  - Multi-step flow: Form → Confirm → Processing → Success
+
+- **Payment Mode Selection**
+  - "Instant Pay" - Direct Eko API payments
+  - "Request Based" - Admin manual processing (24-48 hours)
+
+- **Files Modified:**
+  - `/app/frontend/src/pages/BillPayments.js` - Added EkoLivePayment component
+  - Added timeout handling with AbortController for API resilience
+
+#### 🔧 BUG FIX
+- Fixed loading spinner persistence when Eko billers API times out
+- Added 8-second timeout with automatic fallback to static billers
 
 #### 🎉 EKO API LIVE & WORKING
 - IP whitelisted by Eko team
