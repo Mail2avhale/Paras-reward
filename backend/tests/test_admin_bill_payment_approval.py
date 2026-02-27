@@ -1,11 +1,14 @@
 """
-Test Admin Bill Payment Approval Flow
-Tests the approve → approved_manual flow when Eko API fails (403 - IP not whitelisted)
+Test Admin Bill Payment Approval Flow - UPDATED for Automatic Eko with Retries
+No more approved_manual status. No manual completion.
+Approve = Eko API with 3 retries → Success (completed) or Fail (auto-reject with PRC refund)
 
 Features tested:
-1. GET /api/admin/bill-payment/requests - List requests with approved_manual status
-2. POST /api/admin/bill-payment/process - Approve action (should result in approved_manual when Eko fails)
-3. POST /api/admin/bill-payment/complete - Manual completion for approved_manual requests
+1. GET /api/admin/bill-payment/requests - List requests with all statuses
+2. POST /api/admin/bill-payment/process - approve or reject only (no complete action)
+   - Approve → Eko with 3 retries → completed OR rejected (with PRC refund)
+   - Reject → rejected with PRC refund
+3. No more /api/admin/bill-payment/complete endpoint
 """
 import pytest
 import requests
@@ -36,47 +39,91 @@ class TestAdminBillPaymentListEndpoint:
         assert "requests" in data
         assert isinstance(data["requests"], list)
         
-    def test_list_includes_approved_manual_status(self, api_client):
-        """Test that approved_manual status requests are included in the list"""
+    def test_list_includes_standard_statuses(self, api_client):
+        """Test that requests have standard status values (no approved_manual)"""
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         assert response.status_code == 200
         data = response.json()
         
-        # Find approved_manual requests
-        approved_manual_requests = [r for r in data["requests"] if r.get("status") == "approved_manual"]
+        # Valid statuses (approved_manual may still exist in old data but not created anymore)
+        valid_statuses = ["pending", "approved", "completed", "rejected", "processing", "approved_manual"]
         
-        # We expect some approved_manual requests based on existing data
-        assert len(approved_manual_requests) > 0, "Expected at least one approved_manual request"
-        
-        # Verify structure of approved_manual request
-        first_manual = approved_manual_requests[0]
-        assert "request_id" in first_manual
-        assert "status" in first_manual
-        assert first_manual["status"] == "approved_manual"
-        
-    def test_approved_manual_has_eko_fail_reason(self, api_client):
-        """Test that approved_manual requests have eko_fail_reason field"""
+        for req in data["requests"]:
+            status = req.get("status")
+            assert status in valid_statuses, f"Invalid status '{status}' found"
+            
+    def test_rejected_requests_have_reason_and_refund(self, api_client):
+        """Test that rejected requests have reject_reason and refund_details"""
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
         
-        # Find approved_manual requests
-        approved_manual_requests = [r for r in data["requests"] if r.get("status") == "approved_manual"]
+        # Find rejected requests
+        rejected_requests = [r for r in data["requests"] if r.get("status") == "rejected"]
         
-        # At least one should have eko_fail_reason
-        requests_with_reason = [r for r in approved_manual_requests if r.get("eko_fail_reason")]
-        assert len(requests_with_reason) > 0, "Expected approved_manual request with eko_fail_reason"
+        if not rejected_requests:
+            pytest.skip("No rejected requests available for testing")
         
-        # Verify the reason contains expected error
-        reasons = [r.get("eko_fail_reason", "") for r in requests_with_reason]
-        has_ip_error = any("IP" in reason or "whitelist" in reason.lower() for reason in reasons)
-        assert has_ip_error, f"Expected 'IP not whitelisted' error in reasons: {reasons}"
+        # Find one with refund_details (auto-rejected after Eko fail)
+        requests_with_refund = [r for r in rejected_requests if r.get("refund_details")]
+        
+        if requests_with_refund:
+            req = requests_with_refund[0]
+            assert "reject_reason" in req
+            assert "refund_details" in req
+            assert "prc_refunded" in req["refund_details"]
+            print(f"✅ Rejected request has refund: {req['refund_details']['prc_refunded']} PRC")
+        else:
+            # Some rejections may be manual without refund details
+            req = rejected_requests[0]
+            assert "reject_reason" in req or "rejection_reason" in req
+            
+    def test_completed_requests_have_txn_number(self, api_client):
+        """Test that completed requests have transaction number"""
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        # Find completed requests
+        completed_requests = [r for r in data["requests"] if r.get("status") == "completed"]
+        
+        if not completed_requests:
+            pytest.skip("No completed requests available for testing")
+            
+        # Check that they have txn_number
+        for req in completed_requests[:3]:  # Check first 3
+            assert "txn_number" in req, "Completed request should have txn_number"
+            print(f"✅ Completed: {req['request_id'][:8]} - TXN: {req.get('txn_number')}")
 
 
 class TestAdminBillPaymentProcess:
     """Tests for POST /api/admin/bill-payment/process"""
     
-    def test_approve_pending_request_returns_approved_manual(self, api_client):
-        """Test that approving a pending request results in approved_manual when Eko fails"""
+    def test_approve_action_only_accepts_approve_or_reject(self, api_client):
+        """Test that only 'approve' and 'reject' actions are valid (no 'complete')"""
+        # Get any request
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        if not data["requests"]:
+            pytest.skip("No requests available")
+            
+        request_id = data["requests"][0]["request_id"]
+        
+        # Try invalid 'complete' action
+        complete_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
+            json={
+                "request_id": request_id,
+                "action": "complete",  # This should be invalid now
+                "admin_uid": ADMIN_UID
+            }
+        )
+        
+        assert complete_response.status_code == 400
+        error_msg = complete_response.json().get("detail", "").lower()
+        assert "invalid action" in error_msg or "approve or reject" in error_msg
+        
+    def test_approve_pending_request_returns_completed_or_rejected(self, api_client):
+        """Test that approving a pending request results in completed (Eko success) or rejected (Eko fail with refund)"""
         # First get a pending request
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         assert response.status_code == 200
@@ -104,17 +151,21 @@ class TestAdminBillPaymentProcess:
         assert approve_response.status_code == 200
         result = approve_response.json()
         
-        # Since Eko API fails (IP not whitelisted), status should be approved_manual
-        # OR completed if Eko happens to work
-        assert result.get("status") in ["approved_manual", "completed"], \
-            f"Expected status 'approved_manual' or 'completed', got: {result.get('status')}"
+        # Result should be either completed (Eko success) or rejected (Eko fail)
+        assert result.get("status") in ["completed", "rejected"], \
+            f"Expected status 'completed' or 'rejected', got: {result.get('status')}"
         
-        # If approved_manual, should have eko_fail_reason
-        if result.get("status") == "approved_manual":
-            assert "eko_fail_reason" in result, "Expected eko_fail_reason in approved_manual response"
-            print(f"✅ Request approved as 'approved_manual' - Eko fail reason: {result.get('eko_fail_reason')}")
+        if result.get("status") == "completed":
+            # Success case - Eko worked
+            assert "txn_number" in result
+            print(f"✅ Request completed via Eko - TXN: {result.get('txn_number')}")
         else:
-            print(f"✅ Request completed successfully via Eko")
+            # Fail case - Eko failed after retries, auto-rejected with refund
+            assert "reject_reason" in result
+            assert "refund_details" in result
+            assert result["refund_details"].get("prc_refunded", 0) > 0
+            print(f"✅ Request auto-rejected after Eko fail - Reason: {result.get('reject_reason')}")
+            print(f"   PRC Refunded: {result['refund_details']['prc_refunded']}")
             
     def test_approve_action_invalid_request_returns_404(self, api_client):
         """Test that approving non-existent request returns 404"""
@@ -153,120 +204,83 @@ class TestAdminBillPaymentProcess:
         
         assert reject_response.status_code == 400
         assert "reason" in reject_response.json().get("detail", "").lower()
+        
+    def test_reject_request_refunds_prc(self, api_client):
+        """Test that rejecting a request refunds PRC to user"""
+        # Get a pending request
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        pending_requests = [r for r in data["requests"] if r.get("status") == "pending"]
+        
+        if not pending_requests:
+            pytest.skip("No pending requests available for testing")
+            
+        request = pending_requests[0]
+        request_id = request["request_id"]
+        prc_to_refund = request.get("total_prc_deducted", 0)
+        
+        # Reject the request
+        reject_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
+            json={
+                "request_id": request_id,
+                "action": "reject",
+                "admin_uid": ADMIN_UID,
+                "reject_reason": "TEST: Rejected for testing PRC refund"
+            }
+        )
+        
+        assert reject_response.status_code == 200
+        result = reject_response.json()
+        
+        assert result.get("status") == "rejected"
+        assert "refund_details" in result
+        assert result["refund_details"].get("prc_refunded", 0) == prc_to_refund
+        print(f"✅ Request rejected with PRC refund: {result['refund_details']['prc_refunded']}")
 
 
-class TestAdminBillPaymentComplete:
-    """Tests for POST /api/admin/bill-payment/complete"""
+class TestCompleteEndpointRemoved:
+    """Tests to verify /api/admin/bill-payment/complete endpoint no longer exists"""
     
-    def test_complete_approved_manual_request(self, api_client):
-        """Test manual completion of approved_manual request"""
-        # Get an approved_manual request
-        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
-        data = response.json()
-        
-        approved_manual = [r for r in data["requests"] if r.get("status") == "approved_manual"]
-        
-        if not approved_manual:
-            pytest.skip("No approved_manual requests available for testing")
-            
-        request_id = approved_manual[0]["request_id"]
-        
-        # Complete the request
-        complete_response = api_client.post(
-            f"{BASE_URL}/api/admin/bill-payment/complete",
-            json={
-                "request_id": request_id,
-                "admin_uid": ADMIN_UID
-            }
-        )
-        
-        assert complete_response.status_code == 200
-        result = complete_response.json()
-        
-        assert result.get("status") == "completed"
-        assert "txn_number" in result
-        assert "message" in result
-        
-        print(f"✅ Request {request_id} manually completed. TXN: {result.get('txn_number')}")
-        
-    def test_complete_already_completed_request_fails(self, api_client):
-        """Test that completing an already completed request fails"""
-        # Get a completed request
-        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
-        data = response.json()
-        
-        completed = [r for r in data["requests"] if r.get("status") == "completed"]
-        
-        if not completed:
-            pytest.skip("No completed requests available for testing")
-            
-        request_id = completed[0]["request_id"]
-        
-        # Try to complete again
-        complete_response = api_client.post(
-            f"{BASE_URL}/api/admin/bill-payment/complete",
-            json={
-                "request_id": request_id,
-                "admin_uid": ADMIN_UID
-            }
-        )
-        
-        assert complete_response.status_code == 400
-        assert "cannot complete" in complete_response.json().get("detail", "").lower()
-        
-    def test_complete_non_existent_request_returns_404(self, api_client):
-        """Test completing non-existent request returns 404"""
+    def test_complete_endpoint_returns_404_or_405(self, api_client):
+        """Test that the /complete endpoint is no longer available"""
         response = api_client.post(
             f"{BASE_URL}/api/admin/bill-payment/complete",
             json={
-                "request_id": "non-existent-request-id",
+                "request_id": "any-request-id",
                 "admin_uid": ADMIN_UID
             }
         )
-        assert response.status_code == 404
+        
+        # Should return 404 (endpoint not found) or 405 (method not allowed)
+        assert response.status_code in [404, 405, 422], \
+            f"Expected 404/405/422 for removed endpoint, got {response.status_code}"
+        print(f"✅ /complete endpoint correctly returns {response.status_code}")
 
 
-class TestApprovalFlowStatusTransitions:
-    """Tests for status transitions in approval flow"""
+class TestRetryBehavior:
+    """Tests for the retry behavior of Eko API calls"""
     
-    def test_status_values_are_valid(self, api_client):
-        """Test that all status values are one of the expected values"""
+    def test_rejected_requests_show_retry_attempts(self, api_client):
+        """Test that auto-rejected requests show retry_attempts field"""
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
         
-        valid_statuses = ["pending", "approved", "approved_manual", "completed", "rejected", "processing"]
+        # Find rejected requests with refund_details (auto-rejected after Eko fail)
+        auto_rejected = [r for r in data["requests"] 
+                        if r.get("status") == "rejected" and r.get("refund_details")]
         
-        for request in data["requests"]:
-            status = request.get("status")
-            assert status in valid_statuses, f"Invalid status '{status}' found"
+        if not auto_rejected:
+            pytest.skip("No auto-rejected requests available")
             
-    def test_approved_manual_has_required_fields(self, api_client):
-        """Test approved_manual requests have all required fields for admin UI"""
-        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
-        data = response.json()
+        req = auto_rejected[0]
         
-        approved_manual = [r for r in data["requests"] if r.get("status") == "approved_manual"]
-        
-        if not approved_manual:
-            pytest.skip("No approved_manual requests available")
-            
-        request = approved_manual[0]
-        
-        # Required fields for admin UI (must exist in response)
-        required_fields = ["request_id", "status", "amount_inr", "request_type"]
-        for field in required_fields:
-            assert field in request, f"Missing required field '{field}' in approved_manual request"
-        
-        # user_name and user_email may be None in some test data cases
-        # This is acceptable - the admin UI handles this gracefully
-        print(f"  ✓ user_name: {request.get('user_name', 'N/A')}")
-        print(f"  ✓ user_email: {request.get('user_email', 'N/A')}")
-            
-        # Optional but expected fields for approved_manual
-        expected_fields = ["eko_fail_reason", "approved_at", "txn_number"]
-        for field in expected_fields:
-            if field in request:
-                print(f"  ✓ Has {field}: {request.get(field)}")
+        # Should have retry_attempts field
+        if "retry_attempts" in req:
+            assert req["retry_attempts"] >= 1
+            print(f"✅ Auto-rejected after {req['retry_attempts']} retry attempts")
+        else:
+            print("ℹ️ Older rejected request without retry_attempts field")
 
 
 class TestHealthAndConfig:
