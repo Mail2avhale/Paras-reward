@@ -110,13 +110,13 @@ const AdminBillPayments = ({ user }) => {
 
     const calcStatusStats = (reqs) => ({
       pending: reqs.filter(r => r.status === 'pending').length,
-      approved: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).length,
+      approved: reqs.filter(r => ['approved', 'processing', 'completed', 'approved_manual'].includes(r.status)).length,
       rejected: reqs.filter(r => r.status === 'rejected').length,
       pendingPRC: reqs.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
-      approvedPRC: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
+      approvedPRC: reqs.filter(r => ['approved', 'processing', 'completed', 'approved_manual'].includes(r.status)).reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
       rejectedPRC: reqs.filter(r => r.status === 'rejected').reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
       pendingINR: reqs.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
-      approvedINR: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).reduce((sum, r) => sum + (r.amount_inr || 0), 0),
+      approvedINR: reqs.filter(r => ['approved', 'processing', 'completed', 'approved_manual'].includes(r.status)).reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       rejectedINR: reqs.filter(r => r.status === 'rejected').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
     });
 
@@ -127,7 +127,7 @@ const AdminBillPayments = ({ user }) => {
       byCategory[cat] = {
         total: catRequests.length,
         pending: catRequests.filter(r => r.status === 'pending').length,
-        approved: catRequests.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).length,
+        approved: catRequests.filter(r => ['approved', 'processing', 'completed', 'approved_manual'].includes(r.status)).length,
         rejected: catRequests.filter(r => r.status === 'rejected').length,
         totalINR: catRequests.reduce((sum, r) => sum + (r.amount_inr || 0), 0),
         totalPRC: catRequests.reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
