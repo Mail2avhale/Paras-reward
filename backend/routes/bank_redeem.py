@@ -975,11 +975,12 @@ async def get_admin_withdrawal_requests(
 
 @router.post("/admin/bank-redeem/{request_id}/approve")
 async def approve_withdrawal(request_id: str, request: Request):
-    """Approve a bank withdrawal request"""
+    """Approve a bank withdrawal request and initiate Eko DMT transfer"""
     data = await request.json()
     admin_id = data.get("admin_id")
     transaction_ref = data.get("transaction_ref", "")
     admin_notes = data.get("admin_notes", "")
+    use_eko_transfer = data.get("use_eko_transfer", True)  # Default to Eko transfer
     
     withdrawal = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
     if not withdrawal:
@@ -994,6 +995,52 @@ async def approve_withdrawal(request_id: str, request: Request):
     admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1, "email": 1})
     admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
     
+    # Get user's bank details
+    bank_account = withdrawal.get("bank_account_number")
+    bank_ifsc = withdrawal.get("bank_ifsc")
+    bank_holder = withdrawal.get("bank_account_holder_name", withdrawal.get("user_name", ""))
+    user_mobile = withdrawal.get("user_mobile", "9999999999")
+    amount_inr = withdrawal.get("amount_inr", 0)
+    
+    eko_transfer_result = None
+    eko_txn_id = None
+    transfer_status = "manual"
+    
+    # Try Eko DMT transfer if enabled and configured
+    if use_eko_transfer and bank_account and bank_ifsc and amount_inr > 0:
+        # Check Eko balance first
+        balance_check = await eko_check_balance()
+        
+        if balance_check.get("success") and balance_check.get("balance", 0) >= amount_inr:
+            # Initiate Eko DMT transfer
+            client_ref = f"PARAS-{request_id[-8:]}"
+            
+            eko_transfer_result = await eko_initiate_transfer(
+                recipient_mobile=user_mobile,
+                account_number=bank_account,
+                ifsc=bank_ifsc,
+                amount=amount_inr,
+                recipient_name=bank_holder,
+                client_ref_id=client_ref
+            )
+            
+            if eko_transfer_result.get("success"):
+                eko_txn_id = eko_transfer_result.get("txn_id")
+                transaction_ref = eko_txn_id or client_ref
+                transfer_status = "eko_dmt"
+                logging.info(f"Eko DMT transfer successful: {eko_txn_id} for {request_id}")
+            else:
+                # Eko transfer failed - continue with manual approval
+                logging.warning(f"Eko DMT transfer failed: {eko_transfer_result.get('error')} for {request_id}")
+                transfer_status = "manual"
+                admin_notes = f"Eko transfer failed: {eko_transfer_result.get('error')}. {admin_notes}"
+        else:
+            # Insufficient Eko balance
+            logging.warning(f"Insufficient Eko balance for transfer. Required: {amount_inr}, Available: {balance_check.get('balance', 0)}")
+            transfer_status = "manual"
+            admin_notes = f"Eko balance insufficient. Manual transfer required. {admin_notes}"
+    
+    # Update withdrawal request
     await db.bank_withdrawal_requests.update_one(
         {"request_id": request_id},
         {"$set": {
@@ -1005,24 +1052,39 @@ async def approve_withdrawal(request_id: str, request: Request):
             "processed_by_uid": admin_id,
             "processed_at": now.isoformat(),
             "transaction_ref": transaction_ref,
-            "admin_notes": admin_notes
+            "admin_notes": admin_notes,
+            "transfer_status": transfer_status,
+            "eko_txn_id": eko_txn_id,
+            "eko_response": eko_transfer_result
         }}
     )
     
     # Notify user
     if create_notification:
         try:
+            message = f"Your bank withdrawal of ₹{withdrawal['amount_inr']:,.0f} has been approved"
+            if transfer_status == "eko_dmt":
+                message += " and transferred to your bank account instantly!"
+            else:
+                message += ". Transfer will be processed within 24-48 hours."
+            
             await create_notification(
                 user_id=withdrawal["user_id"],
                 title="Payment Approved ✓",
-                message=f"Your bank withdrawal of ₹{withdrawal['amount_inr']:,.0f} has been approved and transferred to your bank account.",
+                message=message,
                 notification_type="payment_approved",
-                data={"amount_inr": withdrawal['amount_inr'], "payment_type": "bank_withdrawal"}
+                data={"amount_inr": withdrawal['amount_inr'], "payment_type": "bank_withdrawal", "transfer_status": transfer_status}
             )
         except Exception:
             pass
     
-    return {"success": True, "message": "Withdrawal approved"}
+    return {
+        "success": True, 
+        "message": "Withdrawal approved",
+        "transfer_status": transfer_status,
+        "eko_txn_id": eko_txn_id,
+        "eko_transfer_success": transfer_status == "eko_dmt"
+    }
 
 
 @router.post("/admin/bank-redeem/{request_id}/reject")
