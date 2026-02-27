@@ -501,6 +501,143 @@ async def toggle_plan_status(operator: str, amount: int):
     
     return {"success": True, "message": f"Plan ₹{amount} is now {'active' if new_status else 'inactive'}"}
 
+
+# ==================== DTH PLANS MANAGEMENT ====================
+
+@router.get("/dth/plans/{operator}")
+async def get_dth_plans(operator: str):
+    """Get DTH plans for an operator - from database or fallback"""
+    try:
+        # First try database
+        if db is not None:
+            db_plans = await db.dth_plans.find(
+                {"operator": operator.upper(), "is_active": True},
+                {"_id": 0}
+            ).sort("amount", 1).to_list(100)
+            
+            if db_plans and len(db_plans) > 0:
+                return {"success": True, "plans": db_plans, "source": "database"}
+        
+        # Fallback to hardcoded DTH plans
+        dth_plans = get_real_dth_plans(operator)
+        return {"success": True, "plans": dth_plans, "source": "cached"}
+        
+    except Exception as e:
+        logging.warning(f"DTH plans fetch failed: {e}")
+        dth_plans = get_real_dth_plans(operator)
+        return {"success": True, "plans": dth_plans, "source": "cached"}
+
+
+def get_real_dth_plans(operator: str):
+    """Get real DTH plans - updated periodically"""
+    operator_upper = operator.upper()
+    
+    # Tata Play (Tata Sky) Plans
+    tatasky_plans = [
+        {"id": "tata_220", "amount": 220, "description": "Hindi Lite HD", "validity": "1 Month", "channels": "200+"},
+        {"id": "tata_289", "amount": 289, "description": "Hindi Smart HD", "validity": "1 Month", "channels": "280+"},
+        {"id": "tata_349", "amount": 349, "description": "Hindi Value HD", "validity": "1 Month", "channels": "320+"},
+        {"id": "tata_449", "amount": 449, "description": "Hindi Premium HD", "validity": "1 Month", "channels": "400+"},
+        {"id": "tata_499", "amount": 499, "description": "Super Value Pack", "validity": "1 Month", "channels": "450+"},
+        {"id": "tata_599", "amount": 599, "description": "Ultra HD Pack", "validity": "1 Month", "channels": "500+"},
+    ]
+    
+    # Airtel Digital TV Plans
+    airtel_dth_plans = [
+        {"id": "airdth_195", "amount": 195, "description": "Value Lite HD", "validity": "1 Month", "channels": "180+"},
+        {"id": "airdth_260", "amount": 260, "description": "Value Sports HD", "validity": "1 Month", "channels": "220+"},
+        {"id": "airdth_325", "amount": 325, "description": "Value Prime HD", "validity": "1 Month", "channels": "280+"},
+        {"id": "airdth_410", "amount": 410, "description": "Premium HD", "validity": "1 Month", "channels": "350+"},
+        {"id": "airdth_499", "amount": 499, "description": "All Sports HD", "validity": "1 Month", "channels": "400+"},
+    ]
+    
+    # Dish TV Plans
+    dishtv_plans = [
+        {"id": "dish_216", "amount": 216, "description": "Super Family HD", "validity": "1 Month", "channels": "190+"},
+        {"id": "dish_296", "amount": 296, "description": "Diamond HD", "validity": "1 Month", "channels": "270+"},
+        {"id": "dish_350", "amount": 350, "description": "Diamond Sports HD", "validity": "1 Month", "channels": "300+"},
+        {"id": "dish_449", "amount": 449, "description": "Platinum HD", "validity": "1 Month", "channels": "380+"},
+        {"id": "dish_549", "amount": 549, "description": "Titanium HD", "validity": "1 Month", "channels": "450+"},
+    ]
+    
+    # D2H Plans
+    d2h_plans = [
+        {"id": "d2h_220", "amount": 220, "description": "Gold HD", "validity": "1 Month", "channels": "200+"},
+        {"id": "d2h_280", "amount": 280, "description": "Gold Sports HD", "validity": "1 Month", "channels": "250+"},
+        {"id": "d2h_350", "amount": 350, "description": "Diamond HD", "validity": "1 Month", "channels": "300+"},
+        {"id": "d2h_450", "amount": 450, "description": "Diamond Sports HD", "validity": "1 Month", "channels": "380+"},
+        {"id": "d2h_550", "amount": 550, "description": "Platinum HD", "validity": "1 Month", "channels": "450+"},
+    ]
+    
+    # Sun Direct Plans
+    sundirect_plans = [
+        {"id": "sun_199", "amount": 199, "description": "Bronze HD", "validity": "1 Month", "channels": "150+"},
+        {"id": "sun_299", "amount": 299, "description": "Silver HD", "validity": "1 Month", "channels": "220+"},
+        {"id": "sun_399", "amount": 399, "description": "Gold HD", "validity": "1 Month", "channels": "300+"},
+        {"id": "sun_499", "amount": 499, "description": "Platinum HD", "validity": "1 Month", "channels": "380+"},
+    ]
+    
+    if "TATA" in operator_upper or "SKY" in operator_upper:
+        return tatasky_plans
+    elif "AIRTEL" in operator_upper:
+        return airtel_dth_plans
+    elif "DISH" in operator_upper:
+        return dishtv_plans
+    elif "D2H" in operator_upper or "VIDEOCON" in operator_upper:
+        return d2h_plans
+    elif "SUN" in operator_upper:
+        return sundirect_plans
+    else:
+        return tatasky_plans  # Default
+
+
+@router.post("/admin/dth/plans/seed")
+async def seed_dth_plans():
+    """Admin: Seed database with DTH plans"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    operators = ["TATA_SKY", "AIRTEL_DTH", "DISH_TV", "D2H", "SUN_DIRECT"]
+    total_added = 0
+    
+    for operator in operators:
+        plans = get_real_dth_plans(operator)
+        for plan in plans:
+            plan_doc = {
+                "id": plan.get("id"),
+                "operator": operator,
+                "amount": plan["amount"],
+                "description": plan["description"],
+                "validity": plan["validity"],
+                "channels": plan.get("channels", ""),
+                "is_active": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.dth_plans.update_one(
+                {"operator": operator, "amount": plan["amount"]},
+                {"$set": plan_doc},
+                upsert=True
+            )
+            total_added += 1
+    
+    return {"success": True, "message": f"Seeded {total_added} DTH plans for {len(operators)} operators"}
+
+
+@router.get("/admin/dth/plans/{operator}")
+async def get_admin_dth_plans(operator: str):
+    """Admin: Get all DTH plans for an operator"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    plans = await db.dth_plans.find(
+        {"operator": operator.upper()},
+        {"_id": 0}
+    ).sort("amount", 1).to_list(100)
+    
+    return {"success": True, "operator": operator.upper(), "plans": plans, "count": len(plans)}
+
 # ==================== END ADMIN PLAN MANAGEMENT ====================
 
 
