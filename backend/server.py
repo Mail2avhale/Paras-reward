@@ -39026,6 +39026,10 @@ api_router.include_router(notifications_router)
 set_razorpay_db(db)
 api_router.include_router(razorpay_router)
 
+# Eko Bill Payment & DMT Router
+set_eko_db(db)
+api_router.include_router(eko_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
