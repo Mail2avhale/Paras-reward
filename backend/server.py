@@ -25734,6 +25734,75 @@ async def process_bill_payment_request(request: Request):
             raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
         
         now = datetime.now(timezone.utc)
+        request_type = bill_request.get("request_type", "")
+        details = bill_request.get("details", {})
+        amount_inr = bill_request.get("amount_inr", 0)
+        
+        # =====================================================
+        # EKO BBPS AUTO-PAY for Mobile, DTH, Electricity
+        # =====================================================
+        eko_supported_types = ["mobile_recharge", "dish_recharge", "electricity_bill"]
+        eko_payment_result = None
+        eko_payment_error = None
+        
+        if request_type in eko_supported_types:
+            try:
+                # Import Eko payment function
+                from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+                
+                # Map request type to Eko category
+                eko_category_map = {
+                    "mobile_recharge": "mobile_prepaid",
+                    "dish_recharge": "dth",
+                    "electricity_bill": "electricity"
+                }
+                
+                # Get customer identifier
+                if request_type == "mobile_recharge":
+                    customer_id = details.get("phone_number", "")
+                else:
+                    customer_id = details.get("consumer_number", "")
+                
+                # Get operator/biller
+                operator = details.get("operator", details.get("biller_name", ""))
+                
+                # Create unique transaction reference
+                eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                
+                print(f"🔄 Processing Eko BBPS Payment: {request_type} - ₹{amount_inr} for {customer_id}")
+                
+                # Call Eko BBPS Pay Bill API
+                eko_result = await make_eko_request(
+                    "/v2/billpayments/paybill",
+                    method="POST",
+                    data={
+                        "utility_acc_no": customer_id,
+                        "operator_id": operator,
+                        "amount": str(int(amount_inr)),
+                        "confirmation_mobile_no": EKO_INITIATOR_ID,
+                        "client_ref_id": eko_txn_ref,
+                        "latlong": "19.0760,72.8777",
+                        "source_ip": "34.170.12.145"
+                    }
+                )
+                
+                eko_payment_result = {
+                    "success": True,
+                    "eko_txn_id": eko_result.get("tid"),
+                    "eko_txn_ref": eko_txn_ref,
+                    "eko_status": eko_result.get("status"),
+                    "eko_message": eko_result.get("message", "Payment processed via Eko BBPS")
+                }
+                print(f"✅ Eko BBPS Payment Success: {eko_payment_result}")
+                
+            except Exception as eko_err:
+                eko_payment_error = str(eko_err)
+                print(f"⚠️ Eko BBPS Payment Failed: {eko_payment_error}")
+                print(f"   → Falling back to manual completion")
+        
+        # =====================================================
+        # END EKO BBPS AUTO-PAY
+        # =====================================================
         
         # Calculate processing time
         processing_time_str = None
