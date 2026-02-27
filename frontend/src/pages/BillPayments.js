@@ -998,6 +998,97 @@ const BillPayments = ({ user, onLogout }) => {
                   </div>
                 )}
 
+                {/* ==================== DMT BANK TRANSFER FIELDS ==================== */}
+                {selectedType === 'bank_transfer' && (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-900/10 rounded-2xl p-4 border border-emerald-500/30 mb-4">
+                      <p className="text-emerald-300 text-sm flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Instant Bank Transfer via IMPS/NEFT
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1">Money will be transferred directly to beneficiary's bank account after admin approval.</p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="beneficiary_name" className="text-gray-300 text-sm font-medium mb-2 block">
+                        Beneficiary Name * 
+                        <span className="text-gray-500 text-xs ml-2">(As per bank records)</span>
+                      </Label>
+                      <Input
+                        id="beneficiary_name"
+                        value={formData.beneficiary_name}
+                        onChange={(e) => setFormData({ ...formData, beneficiary_name: e.target.value.toUpperCase() })}
+                        placeholder="Enter name as per bank account"
+                        required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-emerald-500 uppercase"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="account_number" className="text-gray-300 text-sm font-medium mb-2 block">
+                        Bank Account Number *
+                      </Label>
+                      <Input
+                        id="account_number"
+                        value={formData.account_number}
+                        onChange={(e) => setFormData({ ...formData, account_number: formatBankAccount(e.target.value) })}
+                        placeholder="Enter account number"
+                        required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-emerald-500"
+                      />
+                      {formData.account_number && !validateBankAccount(formData.account_number).isValid && (
+                        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Account number should be 9-18 digits
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="ifsc_code" className="text-gray-300 text-sm font-medium mb-2 block">
+                        IFSC Code *
+                      </Label>
+                      <Input
+                        id="ifsc_code"
+                        value={formData.ifsc_code}
+                        onChange={(e) => setFormData({ ...formData, ifsc_code: formatIFSC(e.target.value) })}
+                        placeholder="e.g., HDFC0001234"
+                        maxLength={11}
+                        required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-emerald-500 uppercase"
+                      />
+                      {formData.ifsc_code && !validateIFSC(formData.ifsc_code).isValid && (
+                        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Invalid IFSC format (4 letters + 7 alphanumeric)
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="recipient_mobile" className="text-gray-300 text-sm font-medium mb-2 block">
+                        Beneficiary Mobile Number *
+                      </Label>
+                      <Input
+                        id="recipient_mobile"
+                        type="tel"
+                        value={formData.recipient_mobile}
+                        onChange={(e) => setFormData({ ...formData, recipient_mobile: formatMobile(e.target.value) })}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-emerald-500"
+                      />
+                      {formData.recipient_mobile && !validateMobile(formData.recipient_mobile).isValid && (
+                        <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Enter valid 10-digit mobile (starts with 6-9)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {currentType?.fields.includes('biller_name') && (
                   <div>
                     <Label htmlFor="biller" className="text-gray-300 text-sm font-medium mb-2 block">
