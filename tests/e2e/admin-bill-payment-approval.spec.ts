@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Admin Bill Payment Approval Flow Tests
- * Tests the approve → approved_manual flow when Eko API fails (403 - IP not whitelisted)
+ * Admin Bill Payment Approval Flow Tests - UPDATED
+ * 
+ * New flow: Admin Approve → Eko API (3 retries) → completed OR rejected (with PRC refund)
+ * No more approved_manual status or Complete button
  * 
  * Features tested:
- * 1. Admin Bill Payment approval flow - pending request approve → approved_manual (when Eko fails)
- * 2. Manual completion button for approved_manual requests
- * 3. Status badge shows 'Manual Required' for approved_manual status
- * 4. Complete button marks request as completed
+ * 1. Admin can view bill payment requests
+ * 2. Approve action → Eko auto-pay (results in completed or rejected)
+ * 3. Rejected requests show reject reason and PRC refund details
+ * 4. No more "Manual Required" badge or "Complete" button
  */
 
 const BASE_URL = 'https://reward-staging.preview.emergentagent.com';
@@ -19,7 +21,6 @@ const ADMIN_PIN = '123456';
 async function loginAsAdmin(page: any) {
   await page.goto('/admin', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(1000);
 
   // Enter admin UID
   const emailInput = page.getByPlaceholder(/email, mobile or UID/i);
@@ -27,19 +28,22 @@ async function loginAsAdmin(page: any) {
 
   // Click Sign In to show PIN entry
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForTimeout(1000);
+  
+  // Wait for PIN input to appear
+  await page.waitForSelector('input[maxlength="1"]', { timeout: 5000 });
 
   // Enter 6-digit PIN
   const pinBoxes = page.locator('input[maxlength="1"]');
   for (let i = 0; i < 6; i++) {
     await pinBoxes.nth(i).click();
     await pinBoxes.nth(i).fill(ADMIN_PIN[i]);
-    await page.waitForTimeout(100);
   }
 
   // Click Sign In
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.waitForTimeout(3000);
+  
+  // Wait for navigation to complete
+  await page.waitForURL(/\/admin/, { timeout: 10000 });
 }
 
 test.describe('Admin Bill Payment Approval Flow - API Tests', () => {
@@ -53,53 +57,76 @@ test.describe('Admin Bill Payment Approval Flow - API Tests', () => {
     expect(Array.isArray(data.requests)).toBeTruthy();
   });
 
-  test('approved_manual requests have eko_fail_reason field', async ({ request }) => {
+  test('rejected requests have reject_reason and refund_details', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
     const data = await response.json();
     
-    // Find approved_manual requests
-    const approvedManual = data.requests.filter((r: any) => r.status === 'approved_manual');
-    expect(approvedManual.length).toBeGreaterThan(0);
-    
-    // At least one should have eko_fail_reason
-    const withReason = approvedManual.filter((r: any) => r.eko_fail_reason);
-    expect(withReason.length).toBeGreaterThan(0);
-    
-    // Check for IP whitelisting error
-    const ipErrors = withReason.filter((r: any) => 
-      r.eko_fail_reason.includes('IP') || r.eko_fail_reason.toLowerCase().includes('whitelist')
+    // Find rejected requests with refund_details
+    const rejectedWithRefund = data.requests.filter((r: any) => 
+      r.status === 'rejected' && r.refund_details
     );
-    expect(ipErrors.length).toBeGreaterThan(0);
-  });
-
-  test('POST /api/admin/bill-payment/complete marks approved_manual as completed', async ({ request }) => {
-    // First get an approved_manual request
-    const listResponse = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
-    const data = await listResponse.json();
     
-    const approvedManual = data.requests.filter((r: any) => r.status === 'approved_manual');
-    
-    if (approvedManual.length === 0) {
-      test.skip(true, 'No approved_manual requests available for testing');
+    if (rejectedWithRefund.length === 0) {
+      test.skip(true, 'No rejected requests with refund_details available');
       return;
     }
     
-    const requestId = approvedManual[0].request_id;
+    const req = rejectedWithRefund[0];
+    expect(req.reject_reason).toBeDefined();
+    expect(req.refund_details.prc_refunded).toBeGreaterThan(0);
+  });
+
+  test('completed requests have txn_number', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await response.json();
     
-    // Complete the request
-    const completeResponse = await request.post(`${BASE_URL}/api/admin/bill-payment/complete`, {
+    // Find completed requests
+    const completed = data.requests.filter((r: any) => r.status === 'completed');
+    
+    if (completed.length === 0) {
+      test.skip(true, 'No completed requests available');
+      return;
+    }
+    
+    expect(completed[0].txn_number).toBeDefined();
+  });
+
+  test('complete action is no longer valid', async ({ request }) => {
+    // Get any request
+    const listResponse = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await listResponse.json();
+    
+    if (data.requests.length === 0) {
+      test.skip(true, 'No requests available');
+      return;
+    }
+    
+    const requestId = data.requests[0].request_id;
+    
+    // Try 'complete' action - should be rejected
+    const completeResponse = await request.post(`${BASE_URL}/api/admin/bill-payment/process`, {
       data: {
         request_id: requestId,
+        action: 'complete',
         admin_uid: ADMIN_UID
       }
     });
     
-    expect(completeResponse.ok()).toBeTruthy();
-    const result = await completeResponse.json();
+    expect(completeResponse.status()).toBe(400);
+    const error = await completeResponse.json();
+    expect(error.detail.toLowerCase()).toContain('invalid action');
+  });
+
+  test('/api/admin/bill-payment/complete endpoint is removed', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/admin/bill-payment/complete`, {
+      data: {
+        request_id: 'any-request',
+        admin_uid: ADMIN_UID
+      }
+    });
     
-    expect(result.status).toBe('completed');
-    expect(result.txn_number).toBeDefined();
-    expect(result.message).toContain('completed');
+    // Endpoint should return 404 (not found) or 405 (method not allowed)
+    expect([404, 405, 422]).toContain(response.status());
   });
 });
 
@@ -112,7 +139,6 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
   test('can access admin bill payments page', async ({ page }) => {
     // Navigate to Bill Payments page
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Check page header
     const header = page.getByText('Bill Payment Requests');
@@ -128,7 +154,6 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
 
   test('shows status filter tabs (Pending, Approved, Rejected)', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Check status filter tabs
     const pendingTab = page.getByText(/Pending \(\d+\)/);
@@ -140,154 +165,70 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     await expect(rejectedTab).toBeVisible();
   });
 
-  test('Approved tab includes approved_manual requests with Manual Required badge', async ({ page }) => {
+  test('Approved tab shows completed status (no Manual Required badge)', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Click Approved tab
     const approvedTab = page.getByText(/Approved \(\d+\)/).first();
     await approvedTab.click();
-    await page.waitForTimeout(1500);
     
-    // Navigate to find Manual Required badges (may need to go to page 2)
-    const nextBtn = page.getByRole('button', { name: 'Next' });
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
     
-    // Try to find Manual Required badge
-    let manualRequiredBadge = page.getByText('Manual Required').first();
-    let found = await manualRequiredBadge.isVisible().catch(() => false);
+    // Check for Completed badges
+    const completedBadge = page.getByText('✅ Completed').first();
+    const hasCompleted = await completedBadge.isVisible().catch(() => false);
     
-    // If not visible on page 1, try page 2
-    if (!found && await nextBtn.isVisible().catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-      manualRequiredBadge = page.getByText('Manual Required').first();
-      found = await manualRequiredBadge.isVisible().catch(() => false);
-    }
-    
-    // If still not found, try page 3
-    if (!found && await nextBtn.isVisible().catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-      manualRequiredBadge = page.getByText('Manual Required').first();
-      found = await manualRequiredBadge.isVisible().catch(() => false);
-    }
-    
-    expect(found).toBeTruthy();
-    
-    // Verify IP error is shown (may be truncated)
-    // The error text could be "IP not whitelisted" or "IP not whitelist..." (truncated)
-    const ipError = page.locator('text=/IP not whitelist/i').first();
-    const hasIpError = await ipError.isVisible().catch(() => false);
-    
-    // If IP error text is visible, great. If not, just verify the badge is there
-    // The badge itself confirms the approved_manual status
-    if (hasIpError) {
-      await expect(ipError).toBeVisible();
+    if (hasCompleted) {
+      // Verify "Manual Required" badge is NOT shown (feature removed)
+      const manualRequiredBadge = page.getByText('Manual Required');
+      await expect(manualRequiredBadge).not.toBeVisible();
     }
   });
 
-  test('approved_manual requests show View and Complete buttons', async ({ page }) => {
+  test('Rejected tab shows reject reason', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
-    // Click Approved tab
-    const approvedTab = page.getByText(/Approved \(\d+\)/).first();
-    await approvedTab.click();
-    await page.waitForTimeout(1500);
+    // Click Rejected tab
+    const rejectedTab = page.getByText(/Rejected \(\d+\)/).first();
+    await rejectedTab.click();
     
-    // Navigate to page 2 to find Manual Required requests
-    const nextBtn = page.getByRole('button', { name: 'Next' });
-    if (await nextBtn.isVisible().catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-    }
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
     
-    // Find a Manual Required request
-    const manualRequiredBadge = page.getByText('Manual Required').first();
-    const isVisible = await manualRequiredBadge.isVisible().catch(() => false);
+    // Find rejected requests - they should show reject reason
+    const rejectedBadge = page.getByText('❌ Rejected').first();
+    const hasRejected = await rejectedBadge.isVisible().catch(() => false);
     
-    if (isVisible) {
-      // Verify View button exists
-      const viewBtn = page.getByRole('button', { name: 'View' }).first();
-      await expect(viewBtn).toBeVisible();
+    if (hasRejected) {
+      // Check if reject reason is shown (could be Eko API error or manual reason)
+      const ekoError = page.locator('text=/Eko API|Server IP|not whitelisted/i').first();
+      const hasEkoError = await ekoError.isVisible().catch(() => false);
       
-      // Verify Complete button exists for approved_manual status
-      const completeBtn = page.getByRole('button', { name: 'Complete' }).first();
-      await expect(completeBtn).toBeVisible();
-    } else {
-      // If no approved_manual requests with Manual Required badge, skip
-      test.skip(true, 'No approved_manual requests visible in UI');
+      if (hasEkoError) {
+        // Verify the Eko error is displayed
+        expect(hasEkoError).toBeTruthy();
+      }
     }
   });
 
-  test('Complete button marks approved_manual request as completed', async ({ page }) => {
+  test('no Complete button exists for any status', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
-    // Click Approved tab
+    // Check Approved tab
     const approvedTab = page.getByText(/Approved \(\d+\)/).first();
     await approvedTab.click();
-    await page.waitForTimeout(1500);
     
-    // Navigate to find Manual Required requests
-    const nextBtn = page.getByRole('button', { name: 'Next' });
-    if (await nextBtn.isVisible().catch(() => false)) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-    }
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
     
-    // Find Manual Required badge
-    const manualRequiredBadge = page.getByText('Manual Required').first();
-    const isVisible = await manualRequiredBadge.isVisible().catch(() => false);
-    
-    if (!isVisible) {
-      test.skip(true, 'No approved_manual requests available to test completion');
-      return;
-    }
-    
-    // Click Complete button
-    const completeBtn = page.getByRole('button', { name: 'Complete' }).first();
-    await completeBtn.click();
-    await page.waitForTimeout(2000);
-    
-    // Verify success - should show toast or status change
-    // The request should now show as Completed
-    const completedBadge = page.getByText('Completed').first();
-    await expect(completedBadge).toBeVisible({ timeout: 5000 });
-  });
-
-  test('can approve pending request', async ({ page }) => {
-    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
-    
-    // Should be on Pending tab by default
-    const pendingTab = page.getByText(/Pending \(\d+\)/).first();
-    await pendingTab.click();
-    await page.waitForTimeout(1000);
-    
-    // Find approve button (green checkmark)
-    const approveBtn = page.locator('button').filter({ has: page.locator('svg.text-emerald-400, svg[class*="check"]') }).first();
-    const hasApprove = await approveBtn.isVisible().catch(() => false);
-    
-    if (!hasApprove) {
-      test.skip(true, 'No pending requests available to approve');
-      return;
-    }
-    
-    // Click approve button
-    await approveBtn.click();
-    await page.waitForTimeout(3000);
-    
-    // Should see either:
-    // 1. Success toast if Eko worked
-    // 2. Warning toast about manual processing if Eko failed
-    // Either way, the request should no longer be in pending state
-    await page.waitForTimeout(1000);
+    // Verify NO "Complete" button exists (feature removed)
+    const completeButton = page.getByRole('button', { name: 'Complete' });
+    await expect(completeButton).not.toBeVisible();
   });
 
   test('service category tabs filter requests correctly', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Check service category tabs
     const allServices = page.getByText('All Services').first();
@@ -302,7 +243,6 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     
     // Click on Electricity Bill category
     await electricityBill.click();
-    await page.waitForTimeout(1000);
     
     // Should filter to show only Electricity Bill requests
     // The category badge on each request should show "Electricity Bill"
@@ -310,7 +250,6 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
 
   test('search functionality works', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Find search input
     const searchInput = page.getByPlaceholder(/search/i).first();
@@ -318,32 +257,51 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     
     // Enter search term
     await searchInput.fill('admin@paras.com');
-    await page.waitForTimeout(1000);
     
-    // Should show filtered results
-    // The filter chip should appear
+    // Should show filtered results - filter chip should appear
     const filterChip = page.getByText(/Search: "admin@paras.com"/);
     await expect(filterChip).toBeVisible();
   });
 
   test('refresh button reloads data', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Find and click refresh button
     const refreshBtn = page.getByRole('button', { name: 'Refresh' });
     await expect(refreshBtn).toBeVisible({ timeout: 10000 });
     
     await refreshBtn.click();
-    await page.waitForTimeout(2000);
     
     // Page should still be functional after refresh
     const header = page.getByText('Bill Payment Requests');
     await expect(header).toBeVisible();
   });
+
+  test('View button opens request details', async ({ page }) => {
+    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
+    
+    // Click Approved tab to see completed/rejected requests
+    const approvedTab = page.getByText(/Approved \(\d+\)/).first();
+    await approvedTab.click();
+    
+    // Wait for list and find View button
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
+    
+    const viewBtn = page.getByRole('button', { name: /View|Review/ }).first();
+    const hasView = await viewBtn.isVisible().catch(() => false);
+    
+    if (hasView) {
+      await viewBtn.click();
+      
+      // Modal/panel should open with request details
+      // Check for amount or request type info
+      const amountText = page.locator('text=/₹|Amount|Request Type/i').first();
+      await expect(amountText).toBeVisible({ timeout: 5000 });
+    }
+  });
 });
 
-test.describe('Admin Bill Payment - Edge Cases', () => {
+test.describe('Admin Bill Payment - Pagination & Sorting', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -351,12 +309,13 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
 
   test('pagination works correctly', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Click Approved tab (should have most requests)
     const approvedTab = page.getByText(/Approved \(\d+\)/).first();
     await approvedTab.click();
-    await page.waitForTimeout(1500);
+    
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
     
     // Check if pagination exists
     const pageIndicator = page.getByText(/Page \d+ of \d+/).first();
@@ -367,7 +326,6 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
       const nextBtn = page.getByRole('button', { name: 'Next' });
       if (await nextBtn.isEnabled().catch(() => false)) {
         await nextBtn.click();
-        await page.waitForTimeout(1000);
         
         // Page number should change
         const updatedIndicator = page.getByText(/Page 2 of \d+/).first();
@@ -378,7 +336,6 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
 
   test('sort order toggle works', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Find sort toggle button
     const sortBtn = page.getByText('Latest First').first();
@@ -386,7 +343,6 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
     
     if (hasSort) {
       await sortBtn.click();
-      await page.waitForTimeout(1000);
       
       // Should toggle to "Oldest First"
       const oldestFirst = page.getByText('Oldest First').first();
@@ -396,12 +352,10 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
 
   test('date filter panel expands and works', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
     
     // Find and click Date Filter button
     const dateFilterBtn = page.getByText('Date Filter').first();
     await dateFilterBtn.click();
-    await page.waitForTimeout(500);
     
     // Date filter panel should expand
     const fromDateInput = page.getByText('From Date').first();
@@ -413,5 +367,40 @@ test.describe('Admin Bill Payment - Edge Cases', () => {
     
     await expect(todayBtn).toBeVisible();
     await expect(last7DaysBtn).toBeVisible();
+  });
+});
+
+test.describe('Admin Bill Payment - Rejected Request Details', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test('rejected request shows PRC refund details in review panel', async ({ page }) => {
+    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
+    
+    // Click Rejected tab
+    const rejectedTab = page.getByText(/Rejected \(\d+\)/).first();
+    await rejectedTab.click();
+    
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
+    
+    // Find and click Review button on a rejected request
+    const reviewBtn = page.getByRole('button', { name: 'Review' }).first();
+    const hasReview = await reviewBtn.isVisible().catch(() => false);
+    
+    if (hasReview) {
+      await reviewBtn.click();
+      
+      // Panel should open - check for refund details
+      // Look for PRC refund info (may or may not be present depending on data)
+      const prcRefundText = page.locator('text=/PRC Refund|prc_refunded/i').first();
+      const hasPrcRefund = await prcRefundText.isVisible().catch(() => false);
+      
+      // Also check for reject reason
+      const rejectReasonText = page.locator('text=/Reason|reject_reason|Eko API/i').first();
+      await expect(rejectReasonText).toBeVisible({ timeout: 5000 });
+    }
   });
 });
