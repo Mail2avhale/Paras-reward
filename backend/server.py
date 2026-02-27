@@ -25794,6 +25794,12 @@ async def process_bill_payment_request(request: Request):
                 operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
                 eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
                 
+                # Get user details for sender_name
+                user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
+                sender_name = "Customer"
+                if user_doc:
+                    sender_name = user_doc.get("full_name", user_doc.get("name", "Customer"))
+                
                 print(f"🔄 Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id}")
                 
                 eko_result = await make_eko_request(
@@ -25805,6 +25811,8 @@ async def process_bill_payment_request(request: Request):
                         "amount": str(int(amount_inr)),
                         "confirmation_mobile_no": EKO_INITIATOR_ID,
                         "client_ref_id": eko_txn_ref,
+                        "sender_name": sender_name,
+                        "user_code": EKO_INITIATOR_ID,  # Using initiator_id as user_code
                         "latlong": "19.0760,72.8777",
                         "source_ip": "34.170.12.145"
                     }
