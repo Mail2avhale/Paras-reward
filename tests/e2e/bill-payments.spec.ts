@@ -294,4 +294,33 @@ test.describe('Bill Payments Page - Authenticated', () => {
     const prcBalance = page.getByText(/PRC/i).first();
     await expect(prcBalance).toBeVisible({ timeout: 15000 });
   });
+
+  test('TIMEOUT FIX: loading spinner disappears and fallback billers show within 8 seconds', async ({ page }) => {
+    // This test verifies the fix for the loading spinner persistence issue
+    // The fix adds an 8 second timeout with AbortController, after which fallback billers are shown
+    
+    await page.goto('/bill-payments?type=mobile_recharge', { waitUntil: 'domcontentloaded' });
+    
+    // Record start time
+    const startTime = Date.now();
+    
+    // Wait for Select Provider section to appear
+    const providerSection = page.getByText('Select Provider').first();
+    await expect(providerSection).toBeVisible({ timeout: 15000 });
+    
+    // Wait for fallback billers to appear (8 second timeout + buffer)
+    const jioProvider = page.getByText('Jio Prepaid').first();
+    await expect(jioProvider).toBeVisible({ timeout: 12000 });
+    
+    // Verify loading spinner is NOT visible after providers load
+    const loadingSpinner = page.locator('[class*="animate-spin"]').first();
+    await expect(loadingSpinner).not.toBeVisible({ timeout: 2000 });
+    
+    // Calculate elapsed time - should be less than 12 seconds
+    const elapsedTime = Date.now() - startTime;
+    console.log(`[TIMEOUT FIX] Fallback billers loaded in ${elapsedTime}ms`);
+    
+    // Verify this completes within reasonable time (under 12 seconds including navigation)
+    expect(elapsedTime).toBeLessThan(12000);
+  });
 });
