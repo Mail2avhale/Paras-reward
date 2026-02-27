@@ -74,6 +74,7 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
         try:
             logging.info(f"Eko API Request: {method} {url}")
+            logging.info(f"Eko Headers: developer_key={EKO_DEVELOPER_KEY[:8]}..., secret-key={secret_key[:10]}...")
             
             if method == "GET":
                 response = await client.get(url, headers=headers, params=data)
@@ -95,7 +96,7 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
-            logging.info(f"Eko API Response: {response.status_code}")
+            logging.info(f"Eko API Response: {response.status_code} - {response.text[:200]}")
             
             # Try to parse JSON response
             try:
@@ -113,16 +114,19 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             return result
             
         except httpx.HTTPStatusError as e:
-            logging.error(f"Eko API error: {e.response.text}")
+            logging.error(f"Eko API HTTPStatusError: {e.response.text}")
             raise HTTPException(
                 status_code=e.response.status_code,
                 detail=f"Eko API error: {e.response.text}"
             )
+        except httpx.RequestError as e:
+            logging.error(f"Eko API RequestError: {type(e).__name__}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Connection error: {type(e).__name__}: {str(e)}")
         except HTTPException:
             raise
         except Exception as e:
-            logging.error(f"Eko request failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+            logging.error(f"Eko request failed: {type(e).__name__}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Request failed: {type(e).__name__}: {str(e)}")
 
 
 # ==================== PYDANTIC MODELS ====================
