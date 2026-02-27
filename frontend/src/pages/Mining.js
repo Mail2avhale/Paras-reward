@@ -775,32 +775,52 @@ const DailyRewards = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Collect Button - Gold Gradient */}
-                <Button 
-                  onClick={collectRewards}
-                  disabled={!canCollect || isCollecting}
-                  className={`mt-6 w-full py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] ${
-                    canCollect
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] border border-amber-400/50'
-                      : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
-                  }`}
-                >
-                  {isCollecting ? (
-                    <span className="flex items-center gap-2 justify-center">
-                      <motion.div 
-                        className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      {globalT('collecting')}
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2 justify-center">
-                      <CheckCircle className="w-5 h-5" />
-                      {globalT('collectRewards')} ({sessionPRC.toFixed(2)} PRC)
-                    </span>
-                  )}
-                </Button>
+                {/* FREE USER - Show upgrade prompt instead of collect button */}
+                {isFreeUser ? (
+                  <div className="mt-6 bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Crown className="w-6 h-6 text-amber-400" />
+                      <div>
+                        <p className="text-amber-400 font-semibold text-sm">Upgrade to Collect PRC!</p>
+                        <p className="text-gray-400 text-xs">तुमचे {sessionPRC.toFixed(2)} PRC collect करण्यासाठी plan upgrade करा</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => navigate('/subscription')}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
+                    >
+                      <Crown className="w-4 h-4 mr-2" />
+                      Upgrade Now
+                    </Button>
+                  </div>
+                ) : (
+                  /* Collect Button - Gold Gradient - PAID USERS ONLY */
+                  <Button 
+                    onClick={collectRewards}
+                    disabled={!canCollect || isCollecting}
+                    className={`mt-6 w-full py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] ${
+                      canCollect
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] border border-amber-400/50'
+                        : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
+                    }`}
+                  >
+                    {isCollecting ? (
+                      <span className="flex items-center gap-2 justify-center">
+                        <motion.div 
+                          className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        {globalT('collecting')}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 justify-center">
+                        <CheckCircle className="w-5 h-5" />
+                        {globalT('collectRewards')} ({sessionPRC.toFixed(2)} PRC)
+                      </span>
+                    )}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="text-center mb-6">
