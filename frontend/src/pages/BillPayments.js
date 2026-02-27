@@ -832,64 +832,7 @@ const BillPayments = ({ user, onLogout }) => {
               </div>
             </div>
 
-            {/* Payment Mode Tabs - For Mobile, DTH, Electricity */}
-            {['mobile_recharge', 'dish_recharge', 'electricity_bill'].includes(selectedType) && (
-              <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-4 border border-gray-800/50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Wallet className="h-5 w-5 text-amber-400" />
-                  <span className="text-white font-semibold">Payment Method</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setPaymentMode('eko_live')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      paymentMode === 'eko_live'
-                        ? 'border-green-500 bg-green-500/10'
-                        : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap className="h-5 w-5 text-green-400" />
-                      <span className={`font-semibold ${paymentMode === 'eko_live' ? 'text-green-400' : 'text-gray-300'}`}>
-                        Instant Pay
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">Direct payment via Eko. Instant processing.</p>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMode('manual')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      paymentMode === 'manual'
-                        ? 'border-amber-500 bg-amber-500/10'
-                        : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-5 w-5 text-amber-400" />
-                      <span className={`font-semibold ${paymentMode === 'manual' ? 'text-amber-400' : 'text-gray-300'}`}>
-                        Request Based
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">Admin will process. 24-48 hours.</p>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Eko Live Payment Component - For supported services */}
-            {['mobile_recharge', 'dish_recharge', 'electricity_bill'].includes(selectedType) && paymentMode === 'eko_live' && (
-              <EkoLivePayment 
-                user={user}
-                currentUser={currentUser}
-                selectedService={selectedType}
-                onPaymentSuccess={() => fetchRequests()}
-              />
-            )}
-
-            {/* Manual Payment Form - For other services or when manual mode selected */}
-            {(!['mobile_recharge', 'dish_recharge', 'electricity_bill'].includes(selectedType) || paymentMode === 'manual') && (
-            <>
-            {/* Payment Form - Premium Card */}
+            {/* Payment Form - Premium Card - All services use admin approval flow */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50 shadow-2xl">
               <div className="flex items-center gap-3 mb-5">
                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getServiceColor(currentType?.color || 'blue', true)} flex items-center justify-center`}>
