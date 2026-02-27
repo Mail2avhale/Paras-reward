@@ -1353,8 +1353,6 @@ const BillPayments = ({ user, onLogout }) => {
                 </button>
               </form>
             </div>
-            </>
-            )}
           </div>
 
           {/* Right: Balance & Previous Requests */}
