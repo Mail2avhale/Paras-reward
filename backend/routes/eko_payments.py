@@ -164,8 +164,9 @@ class DMTTransferRequest(BaseModel):
 async def get_eko_config():
     """Get Eko configuration status"""
     return {
-        "configured": bool(EKO_DEVELOPER_KEY and EKO_SECRET_KEY),
+        "configured": bool(EKO_DEVELOPER_KEY and EKO_AUTHENTICATOR_KEY),
         "base_url": EKO_BASE_URL,
+        "initiator_id": EKO_INITIATOR_ID,
         "environment": "sandbox" if "staging" in EKO_BASE_URL else "production"
     }
 
