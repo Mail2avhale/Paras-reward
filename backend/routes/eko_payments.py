@@ -71,18 +71,17 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
         data = {}
     data["initiator_id"] = data.get("initiator_id", EKO_INITIATOR_ID)
     
-    async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
+    async with httpx.AsyncClient(timeout=60.0, verify=True) as client:
         try:
             logging.info(f"Eko API Request: {method} {url}")
-            logging.info(f"Eko Headers: developer_key={EKO_DEVELOPER_KEY[:8]}..., secret-key={secret_key[:10]}...")
+            logging.info(f"Eko Data: {data}")
             
             if method == "GET":
                 response = await client.get(url, headers=headers, params=data)
             elif method == "POST":
                 # Eko uses form data for POST requests
-                if form_data:
-                    headers["Content-Type"] = "application/x-www-form-urlencoded"
-                    response = await client.post(url, headers=headers, data=data)
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
+                response = await client.post(url, headers=headers, data=data)
                 else:
                     headers["Content-Type"] = "application/json"
                     response = await client.post(url, headers=headers, json=data)
