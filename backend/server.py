@@ -26025,33 +26025,6 @@ async def process_bill_payment_request(request: Request):
                 "eko_error": eko_payment_error,
                 "action_required": "Admin needs to process this manually"
             }
-        if processing_time_str:
-            notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
-        
-        await create_notification(
-            user_id=user_id,
-            title="✅ Bill Payment Completed!",
-            message=notify_msg,
-            notification_type="bill_payment_approved",
-            related_id=request_id,
-            icon="✅",
-            action_url="/bill-payments"
-        )
-        
-        # Return with Eko details if available
-        response_data = {
-            "message": "Request approved and completed!", 
-            "status": "completed", 
-            "txn_number": txn_number, 
-            "processing_time": processing_time_str,
-            "payment_method": "eko_bbps" if eko_payment_result else "manual"
-        }
-        if eko_payment_result:
-            response_data["eko_payment"] = eko_payment_result
-        if eko_payment_error:
-            response_data["eko_error"] = eko_payment_error
-            
-        return response_data
     
     elif action == "complete":
         if current_status not in ["pending", "processing"]:
