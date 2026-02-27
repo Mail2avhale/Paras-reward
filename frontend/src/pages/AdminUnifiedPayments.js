@@ -546,7 +546,7 @@ const AdminUnifiedPayments = ({ user }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <p className="text-yellow-400 text-sm font-medium">Pending</p>
           <p className="text-3xl font-bold text-white">{stats.pending?.count || 0}</p>
@@ -566,6 +566,24 @@ const AdminUnifiedPayments = ({ user }) => {
           <p className="text-gray-400 text-sm font-medium">Total</p>
           <p className="text-3xl font-bold text-white">{stats.total}</p>
           <p className="text-gray-400 text-sm">Bank:{stats.bank} EMI:{stats.emi} RD:{stats.rd}</p>
+        </Card>
+        {/* Eko DMT Balance Card */}
+        <Card className={`p-4 ${ekoBalance?.configured ? 'bg-blue-500/10 border-blue-500/30' : 'bg-gray-800/50 border-gray-700'}`}>
+          <p className="text-blue-400 text-sm font-medium flex items-center gap-1">
+            <Banknote className="w-4 h-4" />
+            Eko DMT
+          </p>
+          {ekoBalance?.configured ? (
+            <>
+              <p className="text-2xl font-bold text-white">₹{(ekoBalance?.balance || 0).toLocaleString()}</p>
+              <p className="text-blue-300 text-xs">Auto-Transfer Balance</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xl font-bold text-gray-500">Not Configured</p>
+              <p className="text-gray-500 text-xs">Manual transfers only</p>
+            </>
+          )}
         </Card>
       </div>
 
