@@ -1179,6 +1179,42 @@ const AdminBillPayments = ({ user }) => {
                     className="bg-gray-800 border-gray-700"
                   />
                 </div>
+              ) : selectedRequest.status === 'approved_manual' ? (
+                /* Approved Manual - Needs Admin Manual Completion */
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-amber-400">
+                        ⚠️ Manual Completion Required
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 mt-2">
+                      Eko auto-pay failed. Please process this payment manually and click "Mark as Completed".
+                    </p>
+                    {selectedRequest.eko_fail_reason && (
+                      <div className="mt-2 pt-2 border-t border-amber-500/30">
+                        <span className="text-xs text-gray-500">Error Reason:</span>
+                        <p className="text-red-400 text-sm mt-1">{selectedRequest.eko_fail_reason}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Processing Info */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedRequest.approved_at && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Approved At</p>
+                        <p className="text-xs text-white">{new Date(selectedRequest.approved_at).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedRequest.processed_by && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Processed By</p>
+                        <p className="text-xs text-white">{selectedRequest.processed_by}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 /* Review Section for Completed/Rejected */
                 <div className="space-y-3">
