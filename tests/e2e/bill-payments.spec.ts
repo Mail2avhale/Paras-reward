@@ -150,8 +150,9 @@ test.describe('Bill Payments Page - Authenticated', () => {
   test('can access dashboard after login', async ({ page }) => {
     // After login, should be on dashboard
     await expect(page.getByText(/Good|Welcome/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('testmember')).toBeVisible();
-    await expect(page.getByText(/PRC|Balance/i)).toBeVisible();
+    // Use .first() to avoid strict mode violation when multiple elements match
+    await expect(page.getByText('testmember').first()).toBeVisible();
+    await expect(page.getByText(/PRC|Balance/i).first()).toBeVisible();
   });
 
   test('can navigate to Bill Payments page', async ({ page }) => {
