@@ -25946,15 +25946,29 @@ async def process_bill_payment_request(request: Request):
             }
         elif eko_payment_error:
             # Eko API FAILED - Mark as approved but needs manual processing
+            # Parse error for readable reason
+            error_str = str(eko_payment_error).lower()
+            if "403" in error_str:
+                fail_reason = "IP not whitelisted"
+            elif "401" in error_str:
+                fail_reason = "Invalid credentials"
+            elif "timeout" in error_str:
+                fail_reason = "API timeout"
+            elif "balance" in error_str:
+                fail_reason = "Insufficient balance"
+            else:
+                fail_reason = "API error"
+            
             update_data = {
                 "status": "approved_manual",  # NOT completed - needs manual action
                 "approved_at": now.isoformat(),
                 "processing_time": processing_time_str,
                 "txn_number": txn_number,
-                "admin_notes": f"{admin_notes}\n[Auto-pay failed, needs manual processing]" if admin_notes else "[Auto-pay failed, needs manual processing]",
+                "admin_notes": f"{admin_notes}\n[Eko failed: {fail_reason}]" if admin_notes else f"[Eko failed: {fail_reason}]",
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid,
                 "eko_error": eko_payment_error,
+                "eko_fail_reason": fail_reason,
                 "payment_method": "pending_manual"
             }
         else:
