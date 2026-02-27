@@ -6,7 +6,7 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 ## Core Features
 - PRC (Paras Reward Coin) earning and redemption system
 - VIP Subscription plans (Startup, Growth, Elite)
-- Bill Payment integration (Eko BBPS)
+- Bill Payment integration (Eko BBPS) - Admin Approval Flow
 - DMT (Domestic Money Transfer) - Instant bank transfers
 - Razorpay Payment Gateway
 - Referral system with multi-level rewards
@@ -16,99 +16,61 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 
 ## CHANGELOG
 
-### February 27, 2026 (Latest)
+### February 27, 2026 (Latest Session)
 
-#### 🎉 EKO AUTO-PAY for ALL SERVICES - COMPLETED
-- **सर्व Bill Payments:** Mobile, DTH, Electricity, Postpaid, Broadband, Water, Gas, LPG, Insurance, FASTag, Credit Card, Loan EMI, Municipal Tax
-- **DMT (Bank Transfer):** Automatic bank transfer via Eko DMT on admin approval
-- **Flow:** User Request → Admin Approve → Eko API Auto-Pay → User Notification
-
-#### Backend Integration:
-- Admin approve केल्यावर automatic Eko API call
-- BBPS: Bill payments (14+ categories)
-- DMT: Bank transfers with beneficiary management
-- Fallback: Manual completion if Eko fails
+#### ✅ ADMIN APPROVAL FLOW - VERIFIED & TESTED
+- **Problem Solved:** When admin approves a bill payment, if Eko API fails, status was incorrectly showing as "approved" on frontend
+- **Solution:** 
+  1. Backend now returns `approved_manual` status when Eko fails (403 IP not whitelisted)
+  2. Frontend updated to handle `approved_manual` status properly
+  3. "Manual Required" amber badge shows for such requests
+  4. "Complete" button added for manual finalization
+  5. Error reason (e.g., "IP not whitelisted") displayed to admin
 
 #### Files Modified:
-- `/app/backend/server.py` - Bill payment approval with Eko integration
-- `/app/frontend/src/pages/BillPayments.js` - Simplified UI (removed payment mode selector)
+- `/app/backend/server.py` - Added `/api/admin/bill-payment/complete` endpoint, expanded valid request types
+- `/app/frontend/src/pages/AdminBillPayments.js` - Added `approved_manual` status handling, Complete button, handleManualComplete function
 
-### February 26, 2026
-
-#### 🔴 CRITICAL BUG FIXES
-1. **PRC Balance Reset Bug - FIXED**
-   - Paid subscribers' PRC no longer resets on login
-   - File: `/app/backend/routes/auth.py`
-
-2. **Database Sync - COMPLETED**
-   - 73 paid users fixed (membership_type = "vip")
-   - 106/106 paid users now correct
-
-#### 🟢 FEATURE IMPLEMENTATIONS
-3. **Subscription Days: 30 → 28**
-   - Monthly: 28, Quarterly: 84, Half-yearly: 168, Yearly: 336
-
-4. **KYC Pending Card**
-   - Shows "Complete KYC" message for pending users
-   - Different colors for pending (amber) vs rejected (red)
-
-5. **SEO Implementation**
-   - react-helmet-async on 12 public pages
-   - Dynamic title, description, canonical URLs
-
-6. **Razorpay Payment Gateway ✅**
-   - Test mode configured
-   - APIs: create-order, verify-payment, webhook
-
-7. **Eko Integration ✅**
-   - BBPS Bill Payment APIs
-   - DMT Money Transfer APIs
-   - LIVE credentials configured
+#### Testing Status:
+- Backend Tests: 12/12 passed ✅
+- Frontend Tests: 15/15 passed ✅
+- Test files created:
+  - `/app/tests/e2e/admin-bill-payment-approval.spec.ts`
+  - `/app/backend/tests/test_admin_bill_payment_approval.py`
 
 ---
 
 ## COMPLETED INTEGRATIONS
 
+### ✅ Eko.in (Bill Payment & DMT)
+- **Status:** LIVE (IP whitelisting required for production)
+- **Services Supported:** Mobile Recharge, DTH, Electricity, Postpaid, Broadband, Water, Gas, LPG, Insurance, FASTag, Credit Card, Loan EMI, Municipal Tax, Bank Transfer (DMT)
+- **Admin Approval Flow:** User Request → Admin Approve → Eko Auto-Pay → Success OR → approved_manual (on failure) → Admin Manual Complete
+
 ### ✅ Razorpay (Payments)
 - **Status:** Working (Test Mode)
 - **Key ID:** rzp_test_SL4M5PYZu27Uqw
-- **APIs:** `/api/razorpay/*`
-
-### ✅ Eko.in (Bill Payment & DMT)
-- **Status:** LIVE & Working
-- **Developer Key:** 7c179a397b4710e71b2248d1f5892d19
-- **Initiator ID:** 9936606966
-- **Balance:** ₹0.00 (needs top-up)
-- **APIs:** `/api/eko/*`
-
-### ✅ MSG91 (SMS)
-- Configured for OTP
-
-### ✅ Redis (Cache)
-- Upstash Redis configured
 
 ---
 
 ## PENDING TASKS
 
-### P0 - Ready for Production
-- [x] All critical bugs fixed
-- [x] Payment integrations complete
-- [x] Bill Payments Frontend UI (Mobile, DTH, Electricity)
-- [ ] Eko wallet top-up (for DMT transfers)
-- [ ] Razorpay LIVE keys
+### P0 - Critical
+- [x] Admin approval flow - Eko fail handling ✅ COMPLETED
 
 ### P1 - Deployment
-- [ ] Production server setup (Indian VPS recommended for Eko IP whitelisting)
-- [ ] SSL certificate
-- [ ] Domain configuration
+- [ ] Production server setup (Indian VPS for Eko IP whitelisting)
 - [ ] AAB file for Play Store (via PWA Builder)
 
-### P2 - Enhancements
-- [ ] Admin performance optimization (Profit & Loss page timeout)
-- [ ] Push notifications (Firebase) - clarify vs in-app notifications
-- [ ] UPI Payment Gateway
+### P2 - Performance & UX
+- [ ] Admin page timeout optimization (Profit & Loss page)
 - [ ] Server-side search for admin
+- [ ] Team/Level members display fix
+
+### P3 - Future
+- [ ] `server.py` refactor (26,000+ lines - critical technical debt)
+- [ ] Push notifications (Firebase)
+- [ ] Email/Mobile OTP verification
 
 ---
 
@@ -122,58 +84,49 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 ### Frontend  
 - React 18 + Vite
 - TailwindCSS + Shadcn UI
-- react-helmet-async (SEO)
 
 ### Key Files
 ```
 /app/backend/
-├── server.py                    # Main server
+├── server.py                    # Main server (26k+ lines)
 ├── routes/
-│   ├── auth.py                  # Authentication (PRC bug fixed)
-│   ├── bank_redeem.py           # Bank withdrawals + Eko DMT
-│   ├── razorpay_payments.py     # Razorpay integration
-│   └── eko_payments.py          # Eko BBPS & DMT
+│   ├── auth.py                  # Authentication
+│   ├── eko_payments.py          # Eko BBPS & DMT helpers
 
 /app/frontend/src/pages/
-├── AdminUnifiedPayments.js      # Admin dashboard (Eko balance card)
-├── DashboardModern.js           # User dashboard (KYC card)
-└── BankRedeem.js                # Bank redemption
+├── AdminBillPayments.js         # Bill payment admin (approved_manual handling)
+├── BillPayments.js              # User bill payment form
 ```
 
 ---
 
-## CREDENTIALS REFERENCE
+## KEY API ENDPOINTS
+
+### Bill Payment Admin
+- `GET /api/admin/bill-payment/requests` - List all requests
+- `POST /api/admin/bill-payment/process` - Approve/Reject request (action: approve, reject)
+- `POST /api/admin/bill-payment/complete` - Manual completion for approved_manual status
+
+### Status Flow
+```
+pending → (approve) → completed (Eko success)
+                    → approved_manual (Eko failed) → (complete) → completed
+        → (reject) → rejected (PRC refunded)
+```
+
+---
+
+## CREDENTIALS
+
+### Admin Login
+- UID: 8175c02a-4fbd-409c-8d47-d864e979f59f
+- PIN: 123456
 
 ### Eko.in (LIVE)
-```
-Developer Key: 7c179a397b4710e71b2248d1f5892d19
-Authenticator Key: 7a2529f5-3587-4add-a2df-3d0606d62460
-Initiator ID: 9936606966
-Base URL: https://api.eko.in:25002/ekoicici
-```
-
-### Razorpay (Test)
-```
-Key ID: rzp_test_SL4M5PYZu27Uqw
-Key Secret: 3yN3xjFK9qDPOXa2W4ToaFLB
-```
-
-### Server
-```
-IP: 34.170.12.145 (whitelisted with Eko)
-Preview: https://reward-staging.preview.emergentagent.com
-```
+- Developer Key: 7c179a397b4710e71b2248d1f5892d19
+- Initiator ID: 9936606966
 
 ---
 
-## DEPLOYMENT
-
-See `/app/DEPLOYMENT_GUIDE.md` for complete deployment instructions.
-
----
-
-## CONTACTS
-
-- **Eko Support:** sales.engineer@eko.co.in
-- **Eko Portal:** https://developers.eko.in
-- **Razorpay:** https://dashboard.razorpay.com
+## USER COMMUNICATION LANGUAGE
+**Marathi (मराठी)** - All user communication must be in Marathi.
