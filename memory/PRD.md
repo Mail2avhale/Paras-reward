@@ -154,7 +154,7 @@ Key Secret: 3yN3xjFK9qDPOXa2W4ToaFLB
 ### Server
 ```
 IP: 34.170.12.145 (whitelisted with Eko)
-Preview: https://payment-merge-api.preview.emergentagent.com
+Preview: https://reward-bills.preview.emergentagent.com
 ```
 
 ---
