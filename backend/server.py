@@ -26004,6 +26004,34 @@ async def process_bill_payment_request(request: Request):
             }
         else:
             # FAILED or Manual - Needs admin action
+            
+            # Parse Eko error to get readable reason
+            eko_fail_reason = "Unknown error"
+            if eko_payment_error:
+                error_str = str(eko_payment_error).lower()
+                if "403" in error_str or "forbidden" in error_str:
+                    if "secret key" in error_str or "authentication" in error_str:
+                        eko_fail_reason = "IP Address not whitelisted by Eko (403 Forbidden)"
+                    else:
+                        eko_fail_reason = "Access denied by Eko API (403)"
+                elif "401" in error_str or "unauthorized" in error_str:
+                    eko_fail_reason = "Invalid Eko API credentials (401)"
+                elif "400" in error_str:
+                    eko_fail_reason = "Invalid request parameters (400)"
+                elif "415" in error_str:
+                    eko_fail_reason = "Content-Type mismatch (415)"
+                elif "500" in error_str:
+                    eko_fail_reason = "Eko server error (500)"
+                elif "timeout" in error_str or "timed out" in error_str:
+                    eko_fail_reason = "Eko API timeout - server not responding"
+                elif "connection" in error_str:
+                    eko_fail_reason = "Network connection error to Eko"
+                elif "insufficient" in error_str or "balance" in error_str:
+                    eko_fail_reason = "Insufficient Eko wallet balance"
+                else:
+                    # Extract meaningful part of error
+                    eko_fail_reason = eko_payment_error[:150] if len(eko_payment_error) > 150 else eko_payment_error
+            
             notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} request has been approved!\n\n🧾 Reference: {txn_number}\n⏳ Status: Processing by admin"
             
             await create_notification(
@@ -26017,13 +26045,14 @@ async def process_bill_payment_request(request: Request):
             )
             
             return {
-                "message": "Request approved - Eko auto-pay failed, needs manual processing!", 
+                "message": f"Eko auto-pay failed: {eko_fail_reason}", 
                 "status": "approved_manual", 
                 "txn_number": txn_number, 
                 "processing_time": processing_time_str,
                 "payment_method": "pending_manual",
                 "eko_error": eko_payment_error,
-                "action_required": "Admin needs to process this manually"
+                "eko_fail_reason": eko_fail_reason,
+                "action_required": "Admin needs to process this manually or retry when IP is whitelisted"
             }
     
     elif action == "complete":
