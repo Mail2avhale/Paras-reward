@@ -1,5 +1,5 @@
 """
-Eko.in API Integration
+Eko.in API Integration - LIVE
 - BBPS Bill Payments (Electricity, Gas, Water, Mobile, DTH, etc.)
 - DMT (Domestic Money Transfer)
 
@@ -15,16 +15,17 @@ import hashlib
 import hmac
 import base64
 import json
+import time
 from datetime import datetime, timezone
 import logging
 
 router = APIRouter(prefix="/eko", tags=["Eko Bill Payment & DMT"])
 
-# Eko API Configuration
+# Eko API Configuration - LIVE
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
-EKO_SECRET_KEY = os.environ.get("EKO_SECRET_KEY")
-EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")  # Your registered mobile
-EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://staging.eko.in")  # staging or api.eko.in for production
+EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
+EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
+EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
 
 # Database reference
 db = None
@@ -36,35 +37,41 @@ def set_db(database):
 
 # ==================== HELPER FUNCTIONS ====================
 
-def generate_eko_signature(secret_key: str, request_data: str) -> str:
-    """Generate HMAC signature for Eko API requests"""
-    signature = hmac.new(
-        secret_key.encode('utf-8'),
-        request_data.encode('utf-8'),
-        hashlib.sha256
-    ).digest()
-    return base64.b64encode(signature).decode('utf-8')
+def generate_secret_key():
+    """Generate secret-key from authenticator key (base64 encoded)"""
+    if not EKO_AUTHENTICATOR_KEY:
+        return None
+    return base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
 
 
-async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None):
+def get_secret_key_timestamp():
+    """Get current timestamp in milliseconds"""
+    return str(int(time.time() * 1000))
+
+
+async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = False):
     """Make authenticated request to Eko API"""
-    if not EKO_DEVELOPER_KEY:
-        raise HTTPException(status_code=500, detail="Eko API not configured")
+    if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
+        raise HTTPException(status_code=500, detail="Eko API credentials not configured")
     
     url = f"{EKO_BASE_URL}{endpoint}"
     
+    # Generate authentication headers
+    secret_key = generate_secret_key()
+    secret_key_timestamp = get_secret_key_timestamp()
+    
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
-        "secret-key": EKO_SECRET_KEY,
-        "secret-key-timestamp": str(int(datetime.now().timestamp() * 1000)),
-        "Content-Type": "application/json"
+        "secret-key": secret_key,
+        "secret-key-timestamp": secret_key_timestamp,
     }
     
     # Add initiator_id to data if not present
-    if data and EKO_INITIATOR_ID:
-        data["initiator_id"] = data.get("initiator_id", EKO_INITIATOR_ID)
+    if data is None:
+        data = {}
+    data["initiator_id"] = data.get("initiator_id", EKO_INITIATOR_ID)
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
         try:
             if method == "GET":
                 response = await client.get(url, headers=headers, params=data)
