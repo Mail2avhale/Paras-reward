@@ -171,7 +171,7 @@ const AdminBillPayments = ({ user }) => {
     if (statusFilter === 'pending') {
       filtered = filtered.filter(r => r.status === 'pending');
     } else if (statusFilter === 'approved') {
-      filtered = filtered.filter(r => ['approved', 'processing', 'completed', 'approved_manual'].includes(r.status));
+      filtered = filtered.filter(r => ['approved', 'processing', 'completed'].includes(r.status));
     } else if (statusFilter === 'rejected') {
       filtered = filtered.filter(r => r.status === 'rejected');
     }
