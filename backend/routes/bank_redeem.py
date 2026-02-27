@@ -1162,3 +1162,30 @@ async def get_pending_count():
     """Get count of pending bank withdrawal requests"""
     count = await db.bank_withdrawal_requests.count_documents({"status": "pending"})
     return {"pending_count": count}
+
+
+
+@router.get("/admin/bank-redeem/eko-balance")
+async def get_eko_balance_for_admin():
+    """Get Eko settlement account balance for admin dashboard"""
+    result = await eko_check_balance()
+    return {
+        "balance": result.get("balance", 0),
+        "currency": "INR",
+        "configured": bool(EKO_DEVELOPER_KEY and EKO_AUTHENTICATOR_KEY),
+        "error": result.get("error")
+    }
+
+
+@router.post("/admin/bank-redeem/verify-account")
+async def verify_bank_account_admin(request: Request):
+    """Verify bank account before transfer"""
+    data = await request.json()
+    ifsc = data.get("ifsc")
+    account_number = data.get("account_number")
+    
+    if not ifsc or not account_number:
+        raise HTTPException(status_code=400, detail="IFSC and account number required")
+    
+    result = await eko_verify_bank_account(ifsc, account_number)
+    return result
