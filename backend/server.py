@@ -25729,7 +25729,7 @@ async def process_bill_payment_request(request: Request):
         }
     
     elif action == "approve":
-        # APPROVE = COMPLETE - Direct completion on approval
+        # APPROVE = AUTOMATIC EKO PAYMENT with RETRY and AUTO-REJECT on failure
         if current_status != "pending":
             raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
         
@@ -25739,10 +25739,12 @@ async def process_bill_payment_request(request: Request):
         amount_inr = bill_request.get("amount_inr", 0)
         
         # =====================================================
-        # EKO AUTO-PAY for ALL Services (BBPS + DMT)
+        # EKO AUTO-PAY for ALL Services (BBPS + DMT) with RETRY
         # =====================================================
         eko_payment_result = None
         eko_payment_error = None
+        retry_count = 0
+        max_retries = 3
         
         # ALL bill payment types supported via Eko
         eko_bbps_types = [
@@ -25752,151 +25754,145 @@ async def process_bill_payment_request(request: Request):
             "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
         ]
         
-        try:
-            from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        import asyncio
+        
+        # Get user details for sender_name
+        user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
+        sender_name = "Customer"
+        if user_doc:
+            sender_name = user_doc.get("full_name", user_doc.get("name", "Customer"))
+        
+        # Retry loop for Eko API
+        while retry_count < max_retries and eko_payment_result is None:
+            retry_count += 1
+            eko_payment_error = None
             
-            if request_type in eko_bbps_types:
-                # ================== BBPS BILL PAYMENT ==================
-                # Map request type to Eko operator category
-                eko_category_map = {
-                    "mobile_recharge": "mobile_prepaid",
-                    "postpaid_mobile": "mobile_postpaid",
-                    "dish_recharge": "dth",
-                    "electricity_bill": "electricity",
-                    "broadband_bill": "broadband",
-                    "landline_bill": "landline",
-                    "water_bill": "water",
-                    "gas_bill": "piped_gas",
-                    "lpg_booking": "lpg",
-                    "insurance_premium": "insurance",
-                    "fastag_recharge": "fastag",
-                    "credit_card_bill": "credit_card",
-                    "loan_emi": "loan_repayment",
-                    "municipal_tax": "municipal_tax"
-                }
-                
-                # Get customer identifier based on service type
-                if request_type == "mobile_recharge":
-                    customer_id = details.get("phone_number", details.get("mobile_number", ""))
-                elif request_type == "postpaid_mobile":
-                    customer_id = details.get("phone_number", details.get("mobile_number", ""))
-                elif request_type == "dish_recharge":
-                    customer_id = details.get("customer_id", details.get("vc_number", details.get("consumer_number", "")))
-                elif request_type == "credit_card_bill":
-                    customer_id = details.get("card_number", details.get("consumer_number", ""))
-                elif request_type == "fastag_recharge":
-                    customer_id = details.get("vehicle_number", details.get("fastag_id", ""))
-                elif request_type == "lpg_booking":
-                    customer_id = details.get("lpg_id", details.get("consumer_number", ""))
-                else:
-                    customer_id = details.get("consumer_number", details.get("account_number", ""))
-                
-                operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
-                eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
-                
-                # Get user details for sender_name
-                user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
-                sender_name = "Customer"
-                if user_doc:
-                    sender_name = user_doc.get("full_name", user_doc.get("name", "Customer"))
-                
-                print(f"🔄 Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id}")
-                
-                eko_result = await make_eko_request(
-                    "/v2/billpayments/paybill",
-                    method="POST",
-                    data={
-                        "utility_acc_no": customer_id,
-                        "operator_id": operator,
-                        "amount": str(int(amount_inr)),
-                        "confirmation_mobile_no": EKO_INITIATOR_ID,
-                        "client_ref_id": eko_txn_ref,
-                        "sender_name": sender_name,
-                        "user_code": EKO_INITIATOR_ID,  # Using initiator_id as user_code
-                        "latlong": "19.0760,72.8777",
-                        "source_ip": "34.170.12.145"
-                    }
-                )
-                
-                eko_payment_result = {
-                    "success": True,
-                    "payment_type": "bbps",
-                    "eko_txn_id": eko_result.get("tid"),
-                    "eko_txn_ref": eko_txn_ref,
-                    "eko_status": eko_result.get("status"),
-                    "eko_message": eko_result.get("message", "Payment processed via Eko BBPS")
-                }
-                print(f"✅ Eko BBPS Success: {eko_payment_result}")
-                
-            elif request_type == "bank_transfer":
-                # ================== DMT - BANK TRANSFER ==================
-                # Get bank details from request
-                account_number = details.get("account_number", "")
-                ifsc_code = details.get("ifsc_code", "")
-                beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
-                recipient_mobile = details.get("recipient_mobile", details.get("mobile", EKO_INITIATOR_ID))
-                
-                if not account_number or not ifsc_code:
-                    raise Exception("Bank account number and IFSC code required for DMT")
-                
-                eko_txn_ref = f"DMT{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
-                
-                print(f"🔄 Processing Eko DMT: ₹{amount_inr} to {account_number}")
-                
-                # First add beneficiary if not exists
-                try:
-                    await make_eko_request(
-                        "/v1/customers/mobile_number:beneficiary",
-                        method="PUT",
+            try:
+                if request_type in eko_bbps_types:
+                    # ================== BBPS BILL PAYMENT ==================
+                    # Get customer identifier based on service type
+                    if request_type == "mobile_recharge":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "postpaid_mobile":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "dish_recharge":
+                        customer_id = details.get("customer_id", details.get("vc_number", details.get("consumer_number", "")))
+                    elif request_type == "credit_card_bill":
+                        customer_id = details.get("card_number", details.get("consumer_number", ""))
+                    elif request_type == "fastag_recharge":
+                        customer_id = details.get("vehicle_number", details.get("fastag_id", ""))
+                    elif request_type == "lpg_booking":
+                        customer_id = details.get("lpg_id", details.get("consumer_number", ""))
+                    else:
+                        customer_id = details.get("consumer_number", details.get("account_number", ""))
+                    
+                    operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
+                    eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id}")
+                    
+                    eko_result = await make_eko_request(
+                        "/v2/billpayments/paybill",
+                        method="POST",
                         data={
-                            "mobile": recipient_mobile,
-                            "name": beneficiary_name,
-                            "bank_ifsc": ifsc_code,
-                            "account": account_number
+                            "utility_acc_no": customer_id,
+                            "operator_id": operator,
+                            "amount": str(int(amount_inr)),
+                            "confirmation_mobile_no": EKO_INITIATOR_ID,
+                            "client_ref_id": eko_txn_ref,
+                            "sender_name": sender_name,
+                            "user_code": EKO_INITIATOR_ID,
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
                         }
                     )
-                except Exception as ben_err:
-                    print(f"   Beneficiary may already exist: {ben_err}")
-                
-                # Initiate DMT transfer
-                eko_result = await make_eko_request(
-                    "/v1/transactions",
-                    method="POST",
-                    data={
-                        "mobile": recipient_mobile,
-                        "amount": str(int(amount_inr)),
-                        "account": account_number,
-                        "ifsc": ifsc_code,
-                        "beneficiary_name": beneficiary_name,
-                        "client_ref_id": eko_txn_ref,
-                        "channel": "2",
-                        "latlong": "19.0760,72.8777",
-                        "source_ip": "34.170.12.145"
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "bbps",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Payment processed via Eko BBPS"),
+                        "retry_count": retry_count
                     }
-                )
+                    print(f"✅ Eko BBPS Success after {retry_count} attempt(s): TXN={eko_result.get('tid')}")
+                    
+                elif request_type == "bank_transfer":
+                    # ================== DMT - BANK TRANSFER ==================
+                    account_number = details.get("account_number", "")
+                    ifsc_code = details.get("ifsc_code", "")
+                    beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
+                    recipient_mobile = details.get("recipient_mobile", details.get("mobile", EKO_INITIATOR_ID))
+                    
+                    if not account_number or not ifsc_code:
+                        raise Exception("Bank account number and IFSC code required for DMT")
+                    
+                    eko_txn_ref = f"DMT{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko DMT: ₹{amount_inr} to {account_number}")
+                    
+                    # First add beneficiary if not exists
+                    try:
+                        await make_eko_request(
+                            "/v1/customers/mobile_number:beneficiary",
+                            method="PUT",
+                            data={
+                                "mobile": recipient_mobile,
+                                "name": beneficiary_name,
+                                "bank_ifsc": ifsc_code,
+                                "account": account_number
+                            }
+                        )
+                    except Exception as ben_err:
+                        print(f"   Beneficiary may already exist: {ben_err}")
+                    
+                    # Initiate DMT transfer
+                    eko_result = await make_eko_request(
+                        "/v1/transactions",
+                        method="POST",
+                        data={
+                            "mobile": recipient_mobile,
+                            "amount": str(int(amount_inr)),
+                            "account": account_number,
+                            "ifsc": ifsc_code,
+                            "beneficiary_name": beneficiary_name,
+                            "client_ref_id": eko_txn_ref,
+                            "channel": "2",
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
+                        }
+                    )
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "dmt",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Bank transfer processed via Eko DMT"),
+                        "utr": eko_result.get("utr", ""),
+                        "retry_count": retry_count
+                    }
+                    print(f"✅ Eko DMT Success after {retry_count} attempt(s): TXN={eko_result.get('tid')}")
+                    
+                else:
+                    # Unsupported type - reject with reason
+                    raise Exception(f"Service type '{request_type}' not supported for Eko auto-pay")
+                    
+            except Exception as eko_err:
+                eko_payment_error = str(eko_err)
+                print(f"⚠️ [{retry_count}/{max_retries}] Eko Payment Failed: {eko_payment_error}")
                 
-                eko_payment_result = {
-                    "success": True,
-                    "payment_type": "dmt",
-                    "eko_txn_id": eko_result.get("tid"),
-                    "eko_txn_ref": eko_txn_ref,
-                    "eko_status": eko_result.get("status"),
-                    "eko_message": eko_result.get("message", "Bank transfer processed via Eko DMT"),
-                    "utr": eko_result.get("utr", "")
-                }
-                print(f"✅ Eko DMT Success: {eko_payment_result}")
-                
-            else:
-                # Unsupported type - will be processed manually
-                print(f"ℹ️ Service type '{request_type}' not configured for Eko auto-pay")
-                
-        except Exception as eko_err:
-            eko_payment_error = str(eko_err)
-            print(f"⚠️ Eko Payment Failed: {eko_payment_error}")
-            print(f"   → Falling back to manual completion")
+                # Wait before retry (exponential backoff)
+                if retry_count < max_retries:
+                    wait_time = retry_count * 2  # 2s, 4s, 6s
+                    print(f"   ⏳ Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
         
         # =====================================================
-        # END EKO AUTO-PAY
+        # END EKO AUTO-PAY with RETRY
         # =====================================================
         
         # Calculate processing time
@@ -25926,12 +25922,15 @@ async def process_bill_payment_request(request: Request):
             except Exception as e:
                 print(f"Error calculating processing time: {e}")
         
-        # Generate TXN number
-        txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
         
-        # Prepare update data based on Eko result
         if eko_payment_result:
-            # Eko API SUCCESS - Mark as completed
+            # =====================================================
+            # SUCCESS - Eko payment completed
+            # =====================================================
+            # Use Eko TXN ID as the transaction number
+            txn_number = eko_payment_result.get("eko_txn_id") or f"EKO{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+            
             update_data = {
                 "status": "completed",
                 "approved_at": now.isoformat(),
@@ -25942,131 +25941,145 @@ async def process_bill_payment_request(request: Request):
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid,
                 "eko_payment": eko_payment_result,
-                "payment_method": "eko_auto"
+                "payment_method": "eko_auto",
+                "retry_attempts": retry_count
             }
-        elif eko_payment_error:
-            # Eko API FAILED - Mark as approved but needs manual processing
-            # Parse error for readable reason
-            error_str = str(eko_payment_error).lower()
-            if "403" in error_str:
-                fail_reason = "IP not whitelisted"
-            elif "401" in error_str:
-                fail_reason = "Invalid credentials"
-            elif "timeout" in error_str:
-                fail_reason = "API timeout"
-            elif "balance" in error_str:
-                fail_reason = "Insufficient balance"
-            else:
-                fail_reason = "API error"
             
-            update_data = {
-                "status": "approved_manual",  # NOT completed - needs manual action
-                "approved_at": now.isoformat(),
-                "processing_time": processing_time_str,
-                "txn_number": txn_number,
-                "admin_notes": f"{admin_notes}\n[Eko failed: {fail_reason}]" if admin_notes else f"[Eko failed: {fail_reason}]",
-                "processed_by": admin_name,
-                "processed_by_uid": admin_uid,
-                "eko_error": eko_payment_error,
-                "eko_fail_reason": fail_reason,
-                "payment_method": "pending_manual"
-            }
-        else:
-            # No Eko attempt (unsupported type) - Mark as approved for manual
-            update_data = {
-                "status": "approved_manual",
-                "approved_at": now.isoformat(),
-                "processing_time": processing_time_str,
-                "txn_number": txn_number,
-                "admin_notes": admin_notes,
-                "processed_by": admin_name,
-                "processed_by_uid": admin_uid,
-                "payment_method": "manual"
-            }
-        
-        await db.bill_payment_requests.update_one(
-            {"request_id": request_id},
-            {"$set": update_data}
-        )
-        
-        # Notify user based on actual status
-        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
-        
-        if eko_payment_result:
-            # SUCCESS - Eko processed
-            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed automatically!\n\n🧾 Transaction ID: {txn_number}\n✅ Payment Method: Instant BBPS"
-            if eko_payment_result.get("eko_txn_id"):
-                notify_msg += f"\n🔗 BBPS Ref: {eko_payment_result['eko_txn_id']}"
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": update_data}
+            )
+            
+            # Notify user - SUCCESS
+            notify_msg = f"Your ₹{amount_inr} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}\n✅ Payment Method: Instant BBPS"
+            if eko_payment_result.get("utr"):
+                notify_msg += f"\n🏦 UTR: {eko_payment_result['utr']}"
             
             await create_notification(
                 user_id=user_id,
                 title="✅ Bill Payment Completed!",
                 message=notify_msg,
-                notification_type="bill_payment_approved",
+                notification_type="bill_payment_completed",
                 related_id=request_id,
                 icon="✅",
                 action_url="/bill-payments"
             )
             
             return {
-                "message": "Request approved and completed via Eko!", 
+                "message": "✅ Request approved and completed via Eko!", 
                 "status": "completed", 
                 "txn_number": txn_number, 
                 "processing_time": processing_time_str,
                 "payment_method": "eko_auto",
-                "eko_payment": eko_payment_result
+                "eko_payment": eko_payment_result,
+                "retry_attempts": retry_count
             }
         else:
-            # FAILED or Manual - Needs admin action
-            
-            # Parse Eko error to get readable reason
-            eko_fail_reason = "Unknown error"
+            # =====================================================
+            # FAILED after all retries - REJECT and REFUND PRC
+            # =====================================================
+            # Parse error for user-friendly reason
+            reject_reason = "Eko API Error"
             if eko_payment_error:
                 error_str = str(eko_payment_error).lower()
                 if "403" in error_str or "forbidden" in error_str:
-                    if "secret key" in error_str or "authentication" in error_str:
-                        eko_fail_reason = "IP Address not whitelisted by Eko (403 Forbidden)"
-                    else:
-                        eko_fail_reason = "Access denied by Eko API (403)"
+                    reject_reason = "Eko API: Server IP not whitelisted (403)"
                 elif "401" in error_str or "unauthorized" in error_str:
-                    eko_fail_reason = "Invalid Eko API credentials (401)"
+                    reject_reason = "Eko API: Authentication failed (401)"
                 elif "400" in error_str:
-                    eko_fail_reason = "Invalid request parameters (400)"
-                elif "415" in error_str:
-                    eko_fail_reason = "Content-Type mismatch (415)"
+                    reject_reason = "Eko API: Invalid request parameters (400)"
                 elif "500" in error_str:
-                    eko_fail_reason = "Eko server error (500)"
+                    reject_reason = "Eko API: Server error (500)"
                 elif "timeout" in error_str or "timed out" in error_str:
-                    eko_fail_reason = "Eko API timeout - server not responding"
+                    reject_reason = "Eko API: Request timeout"
                 elif "connection" in error_str:
-                    eko_fail_reason = "Network connection error to Eko"
+                    reject_reason = "Eko API: Connection error"
                 elif "insufficient" in error_str or "balance" in error_str:
-                    eko_fail_reason = "Insufficient Eko wallet balance"
+                    reject_reason = "Eko API: Insufficient wallet balance"
+                elif "not supported" in error_str:
+                    reject_reason = f"Service type not supported: {request_type}"
                 else:
-                    # Extract meaningful part of error
-                    eko_fail_reason = eko_payment_error[:150] if len(eko_payment_error) > 150 else eko_payment_error
+                    reject_reason = f"Eko API Error: {eko_payment_error[:100]}"
             
-            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} request has been approved!\n\n🧾 Reference: {txn_number}\n⏳ Status: Processing by admin"
+            print(f"❌ Eko failed after {retry_count} retries. Auto-rejecting with PRC refund...")
             
+            # REFUND PRC to user
+            user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found for refund")
+            
+            balance_before = user.get("prc_balance", 0)
+            balance_after = balance_before + total_prc
+            
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"prc_balance": balance_after}}
+            )
+            
+            print(f"💰 PRC Refunded: {total_prc} PRC to user {user_id}. Balance: {balance_before} → {balance_after}")
+            
+            # Log refund transaction
+            await log_transaction(
+                user_id=user_id,
+                wallet_type="prc",
+                transaction_type="bill_payment_refund",
+                amount=total_prc,
+                description=f"Bill payment auto-rejected (Eko failed after {retry_count} retries) - PRC Refunded",
+                metadata={
+                    "request_id": request_id, 
+                    "reason": reject_reason,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                    "service_type": request_type,
+                    "amount_inr": amount_inr,
+                    "retry_attempts": retry_count,
+                    "eko_error": eko_payment_error
+                }
+            )
+            
+            # Update request status to REJECTED
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "rejected",
+                    "reject_reason": reject_reason,
+                    "processed_at": now.isoformat(),
+                    "admin_notes": f"Auto-rejected after {retry_count} Eko API retry attempts. {admin_notes}".strip(),
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_uid,
+                    "eko_error": eko_payment_error,
+                    "retry_attempts": retry_count,
+                    "refund_details": {
+                        "prc_refunded": total_prc,
+                        "balance_before": balance_before,
+                        "balance_after": balance_after,
+                        "refunded_at": now.isoformat()
+                    }
+                }}
+            )
+            
+            # Notify user about REJECTION with REFUND
             await create_notification(
                 user_id=user_id,
-                title="⏳ Request Approved - Processing",
-                message=notify_msg,
-                notification_type="bill_payment_approved",
+                title="❌ Bill Payment Failed - PRC Refunded",
+                message=f"Your ₹{amount_inr} {service_name} request could not be processed.\n\n❌ Reason: {reject_reason}\n\n💰 PRC Refund: {total_prc:.2f} PRC returned to your wallet.\n\n🔄 Please try again later.",
+                notification_type="bill_payment_rejected",
                 related_id=request_id,
-                icon="⏳",
+                icon="❌",
                 action_url="/bill-payments"
             )
             
             return {
-                "message": f"Eko auto-pay failed: {eko_fail_reason}", 
-                "status": "approved_manual", 
-                "txn_number": txn_number, 
-                "processing_time": processing_time_str,
-                "payment_method": "pending_manual",
+                "message": f"❌ Eko payment failed after {retry_count} retries. Request rejected and PRC refunded.", 
+                "status": "rejected", 
+                "reject_reason": reject_reason,
                 "eko_error": eko_payment_error,
-                "eko_fail_reason": eko_fail_reason,
-                "action_required": "Admin needs to process this manually or retry when IP is whitelisted"
+                "retry_attempts": retry_count,
+                "refund_details": {
+                    "prc_refunded": total_prc,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after
+                }
             }
     
     elif action == "complete":
