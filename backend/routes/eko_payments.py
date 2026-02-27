@@ -326,8 +326,19 @@ async def get_recharge_circles():
 
 @router.get("/recharge/plans/{operator}/{circle}")
 async def get_recharge_plans(operator: str, circle: str):
-    """Get available recharge plans for an operator and circle"""
+    """Get available recharge plans for an operator and circle - from database or fallback"""
     try:
+        # First try to get plans from database (admin managed)
+        if db is not None:
+            db_plans = await db.recharge_plans.find(
+                {"operator": operator.upper(), "is_active": True},
+                {"_id": 0}
+            ).sort("amount", 1).to_list(100)
+            
+            if db_plans and len(db_plans) > 0:
+                return {"success": True, "plans": db_plans, "source": "database"}
+        
+        # Fallback to Eko API
         result = await make_eko_request(
             "/v1/recharge/plans",
             method="GET",
@@ -354,9 +365,143 @@ async def get_recharge_plans(operator: str, circle: str):
         
     except Exception as e:
         logging.warning(f"Eko plans API failed: {e}")
-        # Return REAL operator plans (updated as of 2025)
+        # Return REAL operator plans from hardcoded fallback
         real_plans = get_real_operator_plans(operator)
         return {"success": True, "plans": real_plans, "source": "cached"}
+
+
+# ==================== ADMIN PLAN MANAGEMENT APIs ====================
+
+class RechargePlanModel(BaseModel):
+    operator: str
+    amount: int
+    description: str
+    validity: str
+    plan_type: str = "Data"
+    data: Optional[str] = ""
+    talktime: Optional[str] = ""
+    is_active: bool = True
+
+
+@router.post("/admin/plans/add")
+async def add_recharge_plan(plan: RechargePlanModel):
+    """Admin: Add a new recharge plan"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    plan_doc = {
+        "id": f"{plan.operator.lower()}_{plan.amount}",
+        "operator": plan.operator.upper(),
+        "amount": plan.amount,
+        "description": plan.description,
+        "validity": plan.validity,
+        "plan_type": plan.plan_type,
+        "data": plan.data,
+        "talktime": plan.talktime,
+        "is_active": plan.is_active,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Upsert - update if exists, insert if new
+    await db.recharge_plans.update_one(
+        {"operator": plan.operator.upper(), "amount": plan.amount},
+        {"$set": plan_doc},
+        upsert=True
+    )
+    
+    return {"success": True, "message": f"Plan ₹{plan.amount} added for {plan.operator}"}
+
+
+@router.get("/admin/plans/{operator}")
+async def get_admin_plans(operator: str):
+    """Admin: Get all plans for an operator"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    plans = await db.recharge_plans.find(
+        {"operator": operator.upper()},
+        {"_id": 0}
+    ).sort("amount", 1).to_list(100)
+    
+    return {"success": True, "operator": operator.upper(), "plans": plans, "count": len(plans)}
+
+
+@router.delete("/admin/plans/{operator}/{amount}")
+async def delete_recharge_plan(operator: str, amount: int):
+    """Admin: Delete a recharge plan"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    result = await db.recharge_plans.delete_one(
+        {"operator": operator.upper(), "amount": amount}
+    )
+    
+    if result.deleted_count > 0:
+        return {"success": True, "message": f"Plan ₹{amount} deleted for {operator}"}
+    else:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+
+@router.post("/admin/plans/seed")
+async def seed_default_plans():
+    """Admin: Seed database with default plans for all operators"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    operators = ["JIO", "AIRTEL", "VI", "BSNL"]
+    total_added = 0
+    
+    for operator in operators:
+        plans = get_real_operator_plans(operator)
+        for plan in plans:
+            plan_doc = {
+                "id": plan.get("id", f"{operator.lower()}_{plan['amount']}"),
+                "operator": operator,
+                "amount": plan["amount"],
+                "description": plan["description"],
+                "validity": plan["validity"],
+                "plan_type": plan.get("plan_type", "Data"),
+                "data": plan.get("data", ""),
+                "talktime": plan.get("talktime", ""),
+                "is_active": True,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.recharge_plans.update_one(
+                {"operator": operator, "amount": plan["amount"]},
+                {"$set": plan_doc},
+                upsert=True
+            )
+            total_added += 1
+    
+    return {"success": True, "message": f"Seeded {total_added} plans for {len(operators)} operators"}
+
+
+@router.put("/admin/plans/toggle/{operator}/{amount}")
+async def toggle_plan_status(operator: str, amount: int):
+    """Admin: Toggle plan active/inactive status"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    plan = await db.recharge_plans.find_one(
+        {"operator": operator.upper(), "amount": amount}
+    )
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    new_status = not plan.get("is_active", True)
+    
+    await db.recharge_plans.update_one(
+        {"operator": operator.upper(), "amount": amount},
+        {"$set": {"is_active": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "message": f"Plan ₹{amount} is now {'active' if new_status else 'inactive'}"}
+
+# ==================== END ADMIN PLAN MANAGEMENT ====================
 
 
 def get_real_operator_plans(operator: str):
