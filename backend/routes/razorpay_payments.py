@@ -96,7 +96,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
         order = razorpay_client.order.create(data=order_data)
         
         # Save order to database
-        if db:
+        if db is not None:
             await db.razorpay_orders.insert_one({
                 "order_id": order["id"],
                 "user_id": request.user_id,
