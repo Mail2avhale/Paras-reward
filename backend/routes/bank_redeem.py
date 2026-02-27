@@ -43,6 +43,138 @@ def set_helpers(helpers: dict):
     log_transaction = helpers.get('log_transaction')
     create_notification = helpers.get('create_notification')
 
+
+# ==================== EKO DMT FUNCTIONS ====================
+
+EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
+EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
+EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
+EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+
+
+def get_eko_headers():
+    """Generate Eko API headers with authentication"""
+    if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
+        return None
+    
+    secret_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    timestamp = str(int(time.time() * 1000))
+    
+    return {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp,
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+
+async def eko_verify_bank_account(ifsc: str, account_number: str):
+    """Verify bank account using Eko API"""
+    headers = get_eko_headers()
+    if not headers:
+        return {"success": False, "error": "Eko not configured"}
+    
+    url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}/accounts/{account_number}"
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.get(url, headers=headers, params={"initiator_id": EKO_INITIATOR_ID})
+            result = response.json()
+            
+            if result.get("status") == 0:
+                return {
+                    "success": True,
+                    "account_holder": result.get("data", {}).get("account_name"),
+                    "verified": True
+                }
+            else:
+                return {"success": False, "error": result.get("message", "Verification failed")}
+    except Exception as e:
+        logging.error(f"Eko bank verification error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def eko_initiate_transfer(
+    recipient_mobile: str,
+    account_number: str,
+    ifsc: str,
+    amount: float,
+    recipient_name: str,
+    client_ref_id: str
+):
+    """
+    Initiate bank transfer using Eko DMT
+    Returns: {success: bool, txn_id: str, message: str}
+    """
+    headers = get_eko_headers()
+    if not headers:
+        return {"success": False, "error": "Eko not configured", "txn_id": None}
+    
+    # Step 1: Check/Register sender (using initiator as sender)
+    sender_mobile = EKO_INITIATOR_ID
+    
+    # Step 2: Add recipient and initiate transfer
+    # For direct transfer without OTP (for merchant initiated transfers)
+    url = f"{EKO_BASE_URL}/v1/agent/user_code:user123/settlement"
+    
+    data = {
+        "initiator_id": EKO_INITIATOR_ID,
+        "recipient_name": recipient_name,
+        "account": account_number,
+        "ifsc": ifsc,
+        "amount": str(int(amount)),
+        "client_ref_id": client_ref_id,
+        "customer_id": recipient_mobile or "9999999999",
+        "latlong": "19.0760,72.8777",
+        "source_ip": "34.170.12.145"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(url, headers=headers, data=data)
+            result = response.json()
+            
+            logging.info(f"Eko transfer response: {result}")
+            
+            if result.get("status") == 0:
+                return {
+                    "success": True,
+                    "txn_id": result.get("data", {}).get("tid") or result.get("tid"),
+                    "message": result.get("message", "Transfer initiated"),
+                    "eko_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "txn_id": None,
+                    "error": result.get("message", "Transfer failed"),
+                    "eko_response": result
+                }
+    except Exception as e:
+        logging.error(f"Eko transfer error: {e}")
+        return {"success": False, "txn_id": None, "error": str(e)}
+
+
+async def eko_check_balance():
+    """Check Eko settlement account balance"""
+    headers = get_eko_headers()
+    if not headers:
+        return {"balance": 0, "error": "Eko not configured"}
+    
+    url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{EKO_INITIATOR_ID}/balance"
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=headers, params={"initiator_id": EKO_INITIATOR_ID})
+            result = response.json()
+            
+            if result.get("status") == 0:
+                return {"balance": float(result.get("data", {}).get("balance", 0)), "success": True}
+            return {"balance": 0, "error": result.get("message")}
+    except Exception as e:
+        return {"balance": 0, "error": str(e)}
+
+
 def get_current_week_monday():
     """Get Monday 00:00 of current week"""
     now = datetime.now(timezone.utc)
