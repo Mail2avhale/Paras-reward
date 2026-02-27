@@ -455,9 +455,6 @@ const BillPayments = ({ user, onLogout }) => {
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
   
-  // Payment mode: 'eko_live' for direct Eko API payments, 'manual' for request-based
-  const [paymentMode, setPaymentMode] = useState('eko_live');
-  
   // Get service type from URL query param or default to mobile_recharge
   const initialType = searchParams.get('type') || 'mobile_recharge';
   const [selectedType, setSelectedType] = useState(initialType);
