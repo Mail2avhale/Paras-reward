@@ -892,18 +892,102 @@ const BillPayments = ({ user, onLogout }) => {
                   </div>
                 )}
 
-                {/* DTH/Other Operator - Text Input */}
-                {currentType?.fields.includes('operator') && selectedType !== 'mobile_recharge' && (
+                {/* DTH Operator - Dropdown from Eko API */}
+                {currentType?.fields.includes('operator') && selectedType === 'dish_recharge' && (
+                  <div>
+                    <Label htmlFor="dth_operator" className="text-gray-300 text-sm font-medium mb-2 block">
+                      DTH Provider *
+                      {loadingOperators && <span className="text-amber-400 text-xs ml-2">(Loading...)</span>}
+                    </Label>
+                    <select
+                      id="dth_operator"
+                      value={formData.operator}
+                      onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                      required
+                      className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      data-testid="dth-operator-select"
+                    >
+                      <option value="">-- Select DTH Provider --</option>
+                      {(ekoDthOperators.length > 0 ? ekoDthOperators : [
+                        { id: 'TATA_SKY', name: 'Tata Play (Tata Sky)' },
+                        { id: 'AIRTEL_DTH', name: 'Airtel Digital TV' },
+                        { id: 'DISH_TV', name: 'Dish TV' },
+                        { id: 'D2H', name: 'D2H Videocon' },
+                        { id: 'SUN_DIRECT', name: 'Sun Direct' }
+                      ]).map(op => (
+                        <option key={op.id} value={op.name}>{op.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Other Operator (not mobile/DTH) - Text Input */}
+                {currentType?.fields.includes('operator') && !['mobile_recharge', 'dish_recharge'].includes(selectedType) && (
                   <div>
                     <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Operator/Provider *</Label>
                     <Input
                       id="operator"
                       value={formData.operator}
                       onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                      placeholder="e.g., Tata Sky, Airtel Digital TV, Dish TV"
+                      placeholder="e.g., Provider name"
                       required
                       className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
+                  </div>
+                )}
+
+                {/* ==================== RECHARGE PLANS SECTION ==================== */}
+                {selectedType === 'mobile_recharge' && formData.operator && formData.circle && (
+                  <div className="bg-gradient-to-br from-blue-900/30 to-blue-900/10 rounded-2xl p-4 border border-blue-500/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="text-blue-300 text-sm font-semibold flex items-center gap-2">
+                        📋 Available Plans
+                        {loadingPlans && <span className="text-amber-400 text-xs">(Loading...)</span>}
+                      </Label>
+                      {formData.selected_plan && (
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, selected_plan: null, amount_inr: '' })}
+                          className="text-xs text-gray-400 hover:text-white"
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                    
+                    {ekoPlans.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                        {ekoPlans.map((plan) => (
+                          <button
+                            key={plan.id}
+                            type="button"
+                            onClick={() => setFormData({ 
+                              ...formData, 
+                              amount_inr: plan.amount.toString(),
+                              selected_plan: plan
+                            })}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                              formData.selected_plan?.id === plan.id
+                                ? 'border-amber-500 bg-amber-500/20'
+                                : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                            }`}
+                          >
+                            <p className="text-lg font-bold text-amber-400">₹{plan.amount}</p>
+                            <p className="text-xs text-gray-300 line-clamp-2">{plan.description}</p>
+                            {plan.validity && (
+                              <p className="text-[10px] text-gray-500 mt-1">{plan.validity}</p>
+                            )}
+                            {plan.data && (
+                              <span className="text-[10px] text-blue-400">{plan.data}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : !loadingPlans ? (
+                      <p className="text-gray-500 text-sm text-center py-4">
+                        No plans available. Enter amount manually.
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
