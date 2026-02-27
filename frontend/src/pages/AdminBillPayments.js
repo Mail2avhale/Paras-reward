@@ -402,6 +402,34 @@ const AdminBillPayments = ({ user }) => {
     executeBulkAction('reject', rejectReason);
   };
 
+
+  // Handle manual completion for approved_manual requests
+  const handleManualComplete = async (requestId) => {
+    setProcessing(true);
+    try {
+      const response = await axios.post(`${API}/admin/bill-payment/complete`, {
+        request_id: requestId,
+        admin_uid: user.uid
+      });
+      
+      // Update local state
+      setRequests(prev => prev.map(r => 
+        r.request_id === requestId 
+          ? { ...r, status: 'completed', completed_at: new Date().toISOString() }
+          : r
+      ));
+      
+      toast.success(response.data?.message || 'Request completed successfully');
+      setSelectedRequest(null);
+      fetchRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to complete request');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+
   // Toggle request selection
   const toggleRequestSelection = (requestId) => {
     setSelectedRequests(prev =>
