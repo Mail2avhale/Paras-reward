@@ -229,7 +229,7 @@ async def fetch_bill(request: BillFetchRequest):
     try:
         # Eko API call to fetch bill
         result = await make_eko_request(
-            "/ekoicici/v2/billpayments/fetchbill",
+            "/v2/billpayments/fetchbill",
             method="POST",
             data={
                 "utility_acc_no": list(request.customer_params.values())[0],
@@ -266,7 +266,7 @@ async def pay_bill(request: BillPayRequest):
         
         # Eko API call to pay bill
         result = await make_eko_request(
-            "/ekoicici/v2/billpayments/paybill",
+            "/v2/billpayments/paybill",
             method="POST",
             data={
                 "utility_acc_no": list(request.customer_params.values())[0],
@@ -314,7 +314,7 @@ async def get_bill_transaction_status(txn_ref: str):
     """Get status of a bill payment transaction"""
     try:
         result = await make_eko_request(
-            f"/ekoicici/v2/billpayments/status",
+            f"/v2/billpayments/status",
             method="GET",
             data={"client_ref_id": txn_ref}
         )
@@ -338,7 +338,7 @@ async def register_dmt_sender(mobile: str, name: str):
     """Register a sender for DMT"""
     try:
         result = await make_eko_request(
-            "/ekoicici/v2/customers",
+            "/v2/customers",
             method="POST",
             data={
                 "mobile": mobile,
@@ -355,7 +355,7 @@ async def get_sender_details(mobile: str):
     """Get sender details and KYC status"""
     try:
         result = await make_eko_request(
-            f"/ekoicici/v2/customers/{mobile}",
+            f"/v2/customers/{mobile}",
             method="GET"
         )
         return result
@@ -368,7 +368,7 @@ async def add_dmt_recipient(request: DMTRecipientRequest):
     """Add a bank account recipient for DMT"""
     try:
         result = await make_eko_request(
-            f"/ekoicici/v2/customers/{request.customer_mobile}/recipients",
+            f"/v2/customers/{request.customer_mobile}/recipients",
             method="POST",
             data={
                 "recipient_name": request.recipient_name,
@@ -400,7 +400,7 @@ async def get_dmt_recipients(mobile: str):
     """Get list of recipients for a sender"""
     try:
         result = await make_eko_request(
-            f"/ekoicici/v2/customers/{mobile}/recipients",
+            f"/v2/customers/{mobile}/recipients",
             method="GET"
         )
         return result
@@ -413,7 +413,7 @@ async def verify_bank_account(ifsc: str, account_number: str):
     """Verify bank account before transfer"""
     try:
         result = await make_eko_request(
-            "/ekoicici/v2/banks/ifsc/accounts/verify",
+            "/v2/banks/ifsc/accounts/verify",
             method="POST",
             data={
                 "ifsc": ifsc,
@@ -430,7 +430,7 @@ async def send_dmt_otp(mobile: str, amount: float):
     """Send OTP for DMT transaction"""
     try:
         result = await make_eko_request(
-            f"/ekoicici/v2/customers/{mobile}/otp",
+            f"/v2/customers/{mobile}/otp",
             method="POST",
             data={"amount": str(int(amount))}
         )
@@ -447,7 +447,7 @@ async def initiate_dmt_transfer(request: DMTTransferRequest):
         txn_ref = f"DMT{datetime.now().strftime('%Y%m%d%H%M%S')}{request.user_id[-6:]}"
         
         result = await make_eko_request(
-            f"/ekoicici/v2/customers/{request.customer_mobile}/transfer",
+            f"/v2/customers/{request.customer_mobile}/transfer",
             method="POST",
             data={
                 "recipient_id": request.recipient_id,
@@ -493,7 +493,7 @@ async def get_dmt_transaction_status(txn_ref: str):
     """Get status of a DMT transaction"""
     try:
         result = await make_eko_request(
-            "/ekoicici/v2/transactions/status",
+            "/v2/transactions/status",
             method="GET",
             data={"client_ref_id": txn_ref}
         )
