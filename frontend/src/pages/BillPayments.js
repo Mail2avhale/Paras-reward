@@ -122,6 +122,23 @@ const BillPayments = ({ user, onLogout }) => {
     }
   };
   
+  // Load DTH plans from API
+  const fetchDthPlans = async (operator) => {
+    if (!operator) return;
+    try {
+      setLoadingPlans(true);
+      const response = await axios.get(`${API}/eko/dth/plans/${operator}`);
+      if (response.data.plans?.length > 0) {
+        setEkoPlans(response.data.plans);
+      }
+    } catch (error) {
+      console.error('Error fetching DTH plans:', error);
+      setEkoPlans([]);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+  
   // Load recharge plans from Eko API
   const fetchRechargePlans = async (operator, circle) => {
     if (!operator || !circle) return;
@@ -155,6 +172,9 @@ const BillPayments = ({ user, onLogout }) => {
   useEffect(() => {
     if (selectedType === 'mobile_recharge' && formData.operator && formData.circle) {
       fetchRechargePlans(formData.operator, formData.circle);
+    } else if (selectedType === 'dish_recharge' && formData.operator) {
+      // Fetch DTH plans when operator is selected
+      fetchDthPlans(formData.operator.replace(/\s+/g, '_').toUpperCase());
     }
   }, [formData.operator, formData.circle, selectedType]);
   
