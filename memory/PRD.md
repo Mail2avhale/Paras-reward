@@ -6,7 +6,7 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 ## Core Features
 - PRC (Paras Reward Coin) earning and redemption system
 - VIP Subscription plans (Startup, Growth, Elite)
-- Bill Payment integration (Eko BBPS) - Admin Approval Flow
+- Bill Payment integration (Eko BBPS) - Fully Automatic
 - DMT (Domestic Money Transfer) - Instant bank transfers
 - Razorpay Payment Gateway
 - Referral system with multi-level rewards
@@ -16,87 +16,76 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 
 ## CHANGELOG
 
-### February 27, 2026 (Latest Session)
+### February 27, 2026 (Session 2)
 
-#### ✅ ADMIN APPROVAL FLOW - VERIFIED & TESTED
-- **Problem Solved:** When admin approves a bill payment, if Eko API fails, status was incorrectly showing as "approved" on frontend
-- **Solution:** 
-  1. Backend now returns `approved_manual` status when Eko fails (403 IP not whitelisted)
-  2. Frontend updated to handle `approved_manual` status properly
-  3. "Manual Required" amber badge shows for such requests
-  4. "Complete" button added for manual finalization
-  5. Error reason (e.g., "IP not whitelisted") displayed to admin
+#### ✅ FULLY AUTOMATIC EKO PAYMENT FLOW - IMPLEMENTED
+**User Request:** "Manual काहीच नको - सर्व Eko API through झाले पाहिजे, retry करून, नाहीतर reject with reason"
 
-#### Files Modified:
-- `/app/backend/server.py` - Added `/api/admin/bill-payment/complete` endpoint, expanded valid request types
-- `/app/frontend/src/pages/AdminBillPayments.js` - Added `approved_manual` status handling, Complete button, handleManualComplete function
-
-#### Testing Status:
-- Backend Tests: 12/12 passed ✅
-- Frontend Tests: 15/15 passed ✅
-- Test files created:
-  - `/app/tests/e2e/admin-bill-payment-approval.spec.ts`
-  - `/app/backend/tests/test_admin_bill_payment_approval.py`
-
----
-
-## COMPLETED INTEGRATIONS
-
-### ✅ Eko.in (Bill Payment & DMT)
-- **Status:** LIVE (IP whitelisting required for production)
-- **Services Supported:** Mobile Recharge, DTH, Electricity, Postpaid, Broadband, Water, Gas, LPG, Insurance, FASTag, Credit Card, Loan EMI, Municipal Tax, Bank Transfer (DMT)
-- **Admin Approval Flow:** User Request → Admin Approve → Eko Auto-Pay → Success OR → approved_manual (on failure) → Admin Manual Complete
-
-### ✅ Razorpay (Payments)
-- **Status:** Working (Test Mode)
-- **Key ID:** rzp_test_SL4M5PYZu27Uqw
-
----
-
-## PENDING TASKS
-
-### P0 - Critical
-- [x] Admin approval flow - Eko fail handling ✅ COMPLETED
-
-### P1 - Deployment
-- [ ] Production server setup (Indian VPS for Eko IP whitelisting)
-- [ ] AAB file for Play Store (via PWA Builder)
-
-### P2 - Performance & UX
-- [ ] Admin page timeout optimization (Profit & Loss page)
-- [ ] Server-side search for admin
-- [ ] Team/Level members display fix
-
-### P3 - Future
-- [ ] `server.py` refactor (26,000+ lines - critical technical debt)
-- [ ] Push notifications (Firebase)
-- [ ] Email/Mobile OTP verification
-
----
-
-## TECHNICAL ARCHITECTURE
-
-### Backend
-- Python 3.11 + FastAPI
-- MongoDB (Motor async)
-- Redis Cache (Upstash)
-
-### Frontend  
-- React 18 + Vite
-- TailwindCSS + Shadcn UI
-
-### Key Files
+**New Flow:**
 ```
-/app/backend/
-├── server.py                    # Main server (26k+ lines)
-├── routes/
-│   ├── auth.py                  # Authentication
-│   ├── eko_payments.py          # Eko BBPS & DMT helpers
-
-/app/frontend/src/pages/
-├── AdminBillPayments.js         # Bill payment admin (approved_manual handling)
-├── BillPayments.js              # User bill payment form
+User Request → pending
+Admin Approve → Eko API Call (3 retries with exponential backoff: 2s, 4s, 6s)
+    ├─ SUCCESS → completed (Eko TXN number auto-saved)
+    └─ FAIL → rejected (reason + PRC auto-refunded)
 ```
+
+**Key Changes:**
+1. ❌ Removed `approved_manual` status completely
+2. ❌ Removed `/api/admin/bill-payment/complete` endpoint
+3. ❌ Removed "Complete" button from frontend
+4. ✅ Added 3x automatic retry with exponential backoff
+5. ✅ Auto-reject with clear error reason on Eko fail
+6. ✅ Auto-refund PRC to user on rejection
+7. ✅ Eko Transaction ID saved on success
+
+**Supported Services (via Eko):**
+- Mobile Recharge (Prepaid/Postpaid)
+- DTH Recharge
+- Electricity, Water, Gas Bills
+- Broadband, Landline Bills
+- LPG Booking
+- Insurance Premium
+- FASTag Recharge
+- Credit Card Bills
+- Loan EMI
+- Municipal Tax
+- **Bank Transfer (DMT)**
+
+### February 27, 2026 (Session 1)
+- Implemented initial admin approval flow
+- Added `approved_manual` status (now removed)
+- Fixed PRC mining for free users
+
+---
+
+## CURRENT STATUS
+
+### Bill Payment Flow (Production Ready)
+```
+┌─────────────────────────────────────────────────────────────┐
+│  USER: Submit Bill Payment Request                          │
+│         ↓                                                   │
+│  STATUS: pending (PRC deducted)                             │
+│         ↓                                                   │
+│  ADMIN: Click "Approve"                                     │
+│         ↓                                                   │
+│  SYSTEM: Call Eko API (3 retries)                          │
+│         ↓                                                   │
+│  ┌─────────────────┬─────────────────────────────────┐     │
+│  │ Eko SUCCESS     │ Eko FAIL (after 3 retries)     │     │
+│  │    ↓            │         ↓                       │     │
+│  │ completed       │ rejected                        │     │
+│  │ +Eko TXN ID     │ +Error Reason                   │     │
+│  │                 │ +PRC Refund                     │     │
+│  └─────────────────┴─────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### ⚠️ IMPORTANT: Eko IP Whitelisting Required
+- All Eko API calls currently fail with **403 Forbidden**
+- Reason: Preview environment IP not whitelisted by Eko
+- **Solution:** Deploy to Indian VPS and whitelist that IP with Eko
+- The auto-reject + PRC refund flow is working correctly
 
 ---
 
@@ -104,15 +93,48 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 
 ### Bill Payment Admin
 - `GET /api/admin/bill-payment/requests` - List all requests
-- `POST /api/admin/bill-payment/process` - Approve/Reject request (action: approve, reject)
-- `POST /api/admin/bill-payment/complete` - Manual completion for approved_manual status
+- `POST /api/admin/bill-payment/process` - Approve/Reject (action: approve, reject ONLY)
+  - approve → triggers Eko with 3 retries → completed OR rejected
 
-### Status Flow
-```
-pending → (approve) → completed (Eko success)
-                    → approved_manual (Eko failed) → (complete) → completed
-        → (reject) → rejected (PRC refunded)
-```
+### Status Values
+| Status | Description |
+|--------|-------------|
+| pending | User submitted, awaiting admin |
+| completed | Eko payment successful |
+| rejected | Eko failed / Admin rejected (PRC refunded) |
+
+---
+
+## TESTING STATUS
+
+**Latest Test Report: /app/test_reports/iteration_85.json**
+- Backend: 10/10 passed ✅
+- Frontend: 18/18 passed ✅
+- Total: 28/28 passed
+
+**Test Files:**
+- `/app/tests/e2e/admin-bill-payment-approval.spec.ts`
+- `/app/backend/tests/test_admin_bill_payment_approval.py`
+
+---
+
+## PENDING TASKS
+
+### P1 - Deployment (Blocking Eko Integration)
+- [ ] Indian VPS setup with static IP
+- [ ] Eko IP whitelisting (send IP to Eko support)
+- [ ] Production deployment
+
+### P1 - Play Store
+- [ ] AAB file generation (via PWA Builder)
+
+### P2 - Performance
+- [ ] Admin page timeout optimization
+- [ ] Server-side search
+
+### P3 - Future
+- [ ] `server.py` refactor (26k+ lines)
+- [ ] Push notifications (Firebase)
 
 ---
 
@@ -122,11 +144,11 @@ pending → (approve) → completed (Eko success)
 - UID: 8175c02a-4fbd-409c-8d47-d864e979f59f
 - PIN: 123456
 
-### Eko.in (LIVE)
+### Eko.in (LIVE - needs IP whitelisting)
 - Developer Key: 7c179a397b4710e71b2248d1f5892d19
 - Initiator ID: 9936606966
 
 ---
 
-## USER COMMUNICATION LANGUAGE
-**Marathi (मराठी)** - All user communication must be in Marathi.
+## USER LANGUAGE
+**Marathi (मराठी)** - All communication in Marathi.
