@@ -270,28 +270,42 @@ const AdminUnifiedPayments = ({ user }) => {
 
   // Individual approve
   const handleApprove = async (request) => {
-    if (!transactionRef.trim()) {
+    // For Eko DMT transfers, UTR is optional (will be auto-generated)
+    const isEkoTransfer = request._type === 'bank';
+    
+    if (!isEkoTransfer && !transactionRef.trim()) {
       toast.error('UTR/Reference number टाका');
       return;
     }
     setProcessing(request._id);
     try {
       if (request._type === 'bank') {
-        // Fixed: removed /requests/ from URL path to match backend route
-        await axios.post(`${API}/admin/bank-redeem/${request._id}/approve`, {
-          admin_uid: user.uid, transaction_ref: transactionRef, admin_name: user.name || user.email
+        // Bank redeem - Uses Eko DMT for instant transfer
+        const response = await axios.post(`${API}/admin/bank-redeem/${request._id}/approve`, {
+          admin_id: user.uid,
+          admin_uid: user.uid,
+          transaction_ref: transactionRef || 'EKO-AUTO',
+          admin_name: user.name || user.email,
+          use_eko_transfer: true  // Enable Eko DMT auto-transfer
         });
+        
+        // Show appropriate message based on transfer status
+        if (response.data.eko_transfer_success) {
+          toast.success(`✅ Approved & Transferred via Eko DMT! TXN: ${response.data.eko_txn_id || 'Processing'}`);
+        } else {
+          toast.success('✅ Approved! Manual transfer required.');
+        }
       } else if (request._type === 'rd') {
-        // Fixed: changed /redeem/ to /redeem-requests/ to match backend route
         await axios.post(`${API}/rd/admin/redeem-requests/${request._id}/approve`, {
           admin_uid: user.uid, transaction_ref: transactionRef
         });
+        toast.success('Approved!');
       } else if (request._type === 'emi') {
         await axios.post(`${API}/admin/bill-payment/requests/${request._id}/approve`, {
           admin_id: user.uid, transaction_ref: transactionRef
         });
+        toast.success('Approved!');
       }
-      toast.success('Approved!');
       setTransactionRef('');
       setExpandedRequest(null);
       fetchAllRequests();
