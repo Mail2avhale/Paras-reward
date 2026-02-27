@@ -965,7 +965,6 @@ const AdminBillPayments = ({ user }) => {
                           {request.status === 'completed' && request.processing_time && (
                             <SpeedBadge processingTime={request.processing_time} />
                           )}
-                          )}
                           {/* Processing Time if no badge */}
                           {request.processing_time && !['completed'].includes(request.status) && (
                             <span className="text-[10px] text-gray-500">
