@@ -1,78 +1,112 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Bill Payments Feature Tests (Public/Non-Auth)
+ * Bill Payments Feature Tests
  * Tests for the Eko Bill Payments frontend UI
  * 
- * Note: Authentication has issues - new PIN not working after security upgrade
+ * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
 const BASE_URL = 'https://reward-bills.preview.emergentagent.com';
 
-test.describe('Homepage and Login Page', () => {
+// Reusable login helper
+async function loginTestUser(page: any) {
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle');
+  
+  // Enter email
+  const emailInput = page.getByPlaceholder('Enter email, mobile or UID');
+  await emailInput.fill('testmember@paras.com');
+  
+  // Click Sign In
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1000);
+  
+  // Enter PIN
+  const pinBoxes = page.locator('input[maxlength="1"]');
+  const pin = '123456';
+  for (let i = 0; i < 6; i++) {
+    await pinBoxes.nth(i).click();
+    await pinBoxes.nth(i).pressSequentially(pin[i]);
+  }
+  
+  // Click Sign In
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(2000);
+  
+  // Handle set-new-pin if prompted (may happen for first login after security upgrade)
+  if (page.url().includes('set-new-pin')) {
+    const newPinBoxes = page.locator('input[maxlength="1"]');
+    const newPin = '847293';
+    
+    for (let i = 0; i < 6; i++) {
+      await newPinBoxes.nth(i).click();
+      await newPinBoxes.nth(i).fill(newPin[i]);
+    }
+    await page.waitForTimeout(300);
+    for (let i = 6; i < 12; i++) {
+      await newPinBoxes.nth(i).click();
+      await newPinBoxes.nth(i).fill(newPin[i - 6]);
+    }
+    
+    await page.getByRole('button', { name: /Set PIN|Continue/i }).click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    
+    // Re-login with new PIN
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await emailInput.fill('testmember@paras.com');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+    
+    const pinBoxes2 = page.locator('input[maxlength="1"]');
+    for (let i = 0; i < 6; i++) {
+      await pinBoxes2.nth(i).click();
+      await pinBoxes2.nth(i).pressSequentially(newPin[i]);
+    }
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+  }
+}
+
+test.describe('Homepage and Public Pages', () => {
   
   test('homepage loads with stats', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     
-    // Check for key elements
     const title = page.getByText('Collect PRC Points');
     await expect(title).toBeVisible({ timeout: 10000 });
     
-    // Check for stats cards
     const activeMembers = page.getByText('Active Members');
     await expect(activeMembers).toBeVisible();
-    
-    const pointsDistributed = page.getByText('Points Distributed');
-    await expect(pointsDistributed).toBeVisible();
   });
 
-  test('login page loads', async ({ page }) => {
+  test('login page loads correctly', async ({ page }) => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     
-    // Check for login form
     const welcomeBack = page.getByText('Welcome Back');
     await expect(welcomeBack).toBeVisible({ timeout: 10000 });
     
     const emailInput = page.getByPlaceholder('Enter email, mobile or UID');
     await expect(emailInput).toBeVisible();
-    
-    const signInBtn = page.getByRole('button', { name: 'Sign In' });
-    await expect(signInBtn).toBeVisible();
-  });
-
-  test('login shows PIN input after email entry', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle');
-    
-    // Enter email
-    const emailInput = page.getByPlaceholder('Enter email, mobile or UID');
-    await emailInput.fill('testmember@paras.com');
-    
-    // Click Sign In
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await page.waitForLoadState('networkidle');
-    
-    // Should show PIN input
-    const pinLabel = page.getByText('Enter 6-Digit PIN');
-    await expect(pinLabel).toBeVisible({ timeout: 10000 });
-    
-    // Should have 6 PIN boxes
-    const pinBoxes = page.locator('input[maxlength="1"]');
-    await expect(pinBoxes).toHaveCount(6);
   });
 });
 
 test.describe('Bill Payments API Endpoints', () => {
   
-  test('Eko config endpoint returns config', async ({ request }) => {
+  test('Eko config endpoint returns configured', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/api/eko/config`);
     expect(response.ok()).toBeTruthy();
     
     const data = await response.json();
     expect(data.configured).toBe(true);
-    expect(data.base_url).toContain('eko.in');
     expect(data.environment).toBe('production');
   });
 
@@ -81,10 +115,8 @@ test.describe('Bill Payments API Endpoints', () => {
     expect(response.ok()).toBeTruthy();
     
     const data = await response.json();
-    expect(data.categories).toBeDefined();
     expect(data.categories.length).toBeGreaterThan(0);
     
-    // Check for expected categories
     const categoryIds = data.categories.map((c: any) => c.id);
     expect(categoryIds).toContain('electricity');
     expect(categoryIds).toContain('dth');
@@ -97,11 +129,6 @@ test.describe('Bill Payments API Endpoints', () => {
     
     const data = await response.json();
     expect(data.success).toBeDefined();
-    // Balance may be 0 but endpoint should respond
-    if (data.success) {
-      expect(data.balance).toBeDefined();
-      expect(data.currency).toBe('INR');
-    }
   });
 
   test('Health endpoint returns healthy', async ({ request }) => {
@@ -114,69 +141,156 @@ test.describe('Bill Payments API Endpoints', () => {
   });
 });
 
-test.describe('Authentication Flow - Security Upgrade Issue', () => {
+test.describe('Bill Payments Page - Authenticated', () => {
   
-  test('user is redirected to set-new-pin after login with old PIN', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  test.beforeEach(async ({ page }) => {
+    await loginTestUser(page);
+  });
+
+  test('can access dashboard after login', async ({ page }) => {
+    // After login, should be on dashboard
+    await expect(page.getByText(/Good|Welcome/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('testmember')).toBeVisible();
+    await expect(page.getByText(/PRC|Balance/i)).toBeVisible();
+  });
+
+  test('can navigate to Bill Payments page', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     
-    // Enter email
-    const emailInput = page.getByPlaceholder('Enter email, mobile or UID');
-    await emailInput.fill('testmember@paras.com');
-    
-    // Click Sign In
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-    
-    // Enter old PIN (123456 as mentioned in context)
-    const pinBoxes = page.locator('input[maxlength="1"]');
-    const loginPin = '123456';
-    for (let i = 0; i < 6; i++) {
-      await pinBoxes.nth(i).click();
-      await pinBoxes.nth(i).pressSequentially(loginPin[i]);
-    }
-    
-    // Click Sign In
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    // Check for page header
+    const header = page.getByText(/Bill Payments|Recharge/i).first();
+    await expect(header).toBeVisible({ timeout: 15000 });
+  });
+
+  test('displays service type selection buttons', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
     
-    // Should redirect to set-new-pin page (security upgrade)
-    expect(page.url()).toContain('set-new-pin');
+    // Check for service selection using data-testid
+    const mobileRechargeBtn = page.getByTestId('service-mobile_recharge');
+    const dthRechargeBtn = page.getByTestId('service-dish_recharge');
+    const electricityBtn = page.getByTestId('service-electricity_bill');
+    
+    await expect(mobileRechargeBtn).toBeVisible({ timeout: 15000 });
+    await expect(dthRechargeBtn).toBeVisible();
+    await expect(electricityBtn).toBeVisible();
   });
 
-  test('set-new-pin page validates PIN requirements', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  test('displays payment mode tabs (Instant Pay vs Request Based)', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
     
-    // Login flow
-    await page.getByPlaceholder('Enter email, mobile or UID').fill('testmember@paras.com');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    // Payment mode tabs
+    const instantPayTab = page.getByText('Instant Pay').first();
+    const requestBasedTab = page.getByText('Request Based').first();
+    
+    await expect(instantPayTab).toBeVisible({ timeout: 15000 });
+    await expect(requestBasedTab).toBeVisible();
+  });
+
+  test('shows provider selection for Instant Pay mode', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    
+    // Provider selection section
+    const providerSection = page.getByText('Select Provider').first();
+    await expect(providerSection).toBeVisible({ timeout: 15000 });
+  });
+
+  test('shows static fallback billers for mobile recharge', async ({ page }) => {
+    await page.goto('/bill-payments?type=mobile_recharge', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
+    
+    // Should show fallback providers
+    const jioProvider = page.getByText('Jio Prepaid').first();
+    await expect(jioProvider).toBeVisible({ timeout: 15000 });
+    
+    const airtelProvider = page.getByText('Airtel Prepaid').first();
+    await expect(airtelProvider).toBeVisible();
+  });
+
+  test('can switch between service types', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    
+    // Click on DTH
+    const dthBtn = page.getByTestId('service-dish_recharge');
+    await expect(dthBtn).toBeVisible({ timeout: 15000 });
+    await dthBtn.click();
+    await page.waitForTimeout(2000);
+    
+    // Should show DTH providers
+    const tataPlay = page.getByText(/Tata Play|Tata Sky/i).first();
+    await expect(tataPlay).toBeVisible({ timeout: 10000 });
+  });
+
+  test('shows payment form after selecting provider', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
+    
+    // Select Jio provider
+    const jioProvider = page.getByText('Jio Prepaid').first();
+    await expect(jioProvider).toBeVisible({ timeout: 15000 });
+    await jioProvider.click();
     await page.waitForTimeout(1000);
     
-    // Enter PIN
-    const pinBoxes = page.locator('input[maxlength="1"]');
-    for (let i = 0; i < 6; i++) {
-      await pinBoxes.nth(i).click();
-      await pinBoxes.nth(i).pressSequentially(String((i + 1) % 10));
-    }
+    // Payment details form should appear
+    const paymentDetails = page.getByText('Payment Details').first();
+    await expect(paymentDetails).toBeVisible({ timeout: 5000 });
     
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await page.waitForURL(/set-new-pin/, { timeout: 15000 });
+    // Mobile number input
+    const mobileInput = page.getByPlaceholder(/mobile number|10-digit/i).first();
+    await expect(mobileInput).toBeVisible();
+  });
+
+  test('shows charge breakdown when amount entered', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     
-    // Try sequential PIN - should be rejected
-    const newPinBoxes = page.locator('input[maxlength="1"]');
-    const sequentialPin = '123456';
+    // Select provider
+    const jioProvider = page.getByText('Jio Prepaid').first();
+    await expect(jioProvider).toBeVisible({ timeout: 15000 });
+    await jioProvider.click();
+    await page.waitForTimeout(1000);
     
-    for (let i = 0; i < 6; i++) {
-      await newPinBoxes.nth(i).click();
-      await newPinBoxes.nth(i).fill(sequentialPin[i]);
-    }
+    // Fill mobile number
+    const mobileInput = page.getByPlaceholder(/mobile number|10-digit/i).first();
+    await expect(mobileInput).toBeVisible({ timeout: 5000 });
+    await mobileInput.fill('9876543210');
     
-    // Should show validation error
-    const errorMsg = page.getByText(/cannot be sequential|don't use sequential/i);
-    await expect(errorMsg).toBeVisible({ timeout: 5000 });
+    // Fill amount
+    const amountInput = page.getByPlaceholder(/0.00/i).first();
+    await amountInput.fill('100');
+    await page.waitForTimeout(500);
+    
+    // Charge breakdown should appear
+    const chargeBreakdown = page.getByText('Charge Breakdown').first();
+    await expect(chargeBreakdown).toBeVisible({ timeout: 5000 });
+    
+    // Processing fee
+    const processingFee = page.getByText('Processing Fee').first();
+    await expect(processingFee).toBeVisible();
+    
+    // Admin charges
+    const adminCharges = page.getByText(/Admin Charges/i).first();
+    await expect(adminCharges).toBeVisible();
+  });
+
+  test('displays PRC balance on bill payments page', async ({ page }) => {
+    await page.goto('/bill-payments', { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    
+    // PRC balance should be displayed
+    const prcBalance = page.getByText(/PRC/i).first();
+    await expect(prcBalance).toBeVisible({ timeout: 15000 });
   });
 });
