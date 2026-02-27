@@ -25777,11 +25777,11 @@ async def process_bill_payment_request(request: Request):
                 
                 # Get customer identifier based on service type
                 if request_type == "mobile_recharge":
-                    customer_id = details.get("phone_number", "")
+                    customer_id = details.get("phone_number", details.get("mobile_number", ""))
                 elif request_type == "postpaid_mobile":
                     customer_id = details.get("phone_number", details.get("mobile_number", ""))
                 elif request_type == "dish_recharge":
-                    customer_id = details.get("customer_id", details.get("vc_number", ""))
+                    customer_id = details.get("customer_id", details.get("vc_number", details.get("consumer_number", "")))
                 elif request_type == "credit_card_bill":
                     customer_id = details.get("card_number", details.get("consumer_number", ""))
                 elif request_type == "fastag_recharge":
