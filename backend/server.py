@@ -25834,23 +25834,43 @@ async def process_bill_payment_request(request: Request):
         # Generate TXN number
         txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
+        # Prepare update data with Eko result if available
+        update_data = {
+            "status": "completed",
+            "approved_at": now.isoformat(),
+            "completed_at": now.isoformat(),
+            "processing_time": processing_time_str,
+            "txn_number": txn_number,
+            "admin_notes": admin_notes,
+            "processed_by": admin_name,
+            "processed_by_uid": admin_uid
+        }
+        
+        # Add Eko payment details if processed via Eko
+        if eko_payment_result:
+            update_data["eko_payment"] = eko_payment_result
+            update_data["payment_method"] = "eko_bbps"
+        elif eko_payment_error:
+            update_data["eko_error"] = eko_payment_error
+            update_data["payment_method"] = "manual"
+        else:
+            update_data["payment_method"] = "manual"
+        
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
-            {"$set": {
-                "status": "completed",
-                "approved_at": now.isoformat(),
-                "completed_at": now.isoformat(),
-                "processing_time": processing_time_str,
-                "txn_number": txn_number,
-                "admin_notes": admin_notes,
-                "processed_by": admin_name,
-                "processed_by_uid": admin_uid
-            }}
+            {"$set": update_data}
         )
         
         # Notify user about completion with processing time
         service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
-        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
+        
+        # Different message based on payment method
+        if eko_payment_result:
+            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed automatically!\n\n🧾 Transaction ID: {txn_number}\n✅ Payment Method: Instant BBPS"
+            if eko_payment_result.get("eko_txn_id"):
+                notify_msg += f"\n🔗 BBPS Ref: {eko_payment_result['eko_txn_id']}"
+        else:
+            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
         if processing_time_str:
             notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
         
