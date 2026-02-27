@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260227_131213/results.json' }],
   ],
   use: {
-    baseURL: 'https://reward-bills.preview.emergentagent.com',
+    baseURL: 'https://reward-staging.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
