@@ -25929,27 +25929,46 @@ async def process_bill_payment_request(request: Request):
         # Generate TXN number
         txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
-        # Prepare update data with Eko result if available
-        update_data = {
-            "status": "completed",
-            "approved_at": now.isoformat(),
-            "completed_at": now.isoformat(),
-            "processing_time": processing_time_str,
-            "txn_number": txn_number,
-            "admin_notes": admin_notes,
-            "processed_by": admin_name,
-            "processed_by_uid": admin_uid
-        }
-        
-        # Add Eko payment details if processed via Eko
+        # Prepare update data based on Eko result
         if eko_payment_result:
-            update_data["eko_payment"] = eko_payment_result
-            update_data["payment_method"] = "eko_bbps"
+            # Eko API SUCCESS - Mark as completed
+            update_data = {
+                "status": "completed",
+                "approved_at": now.isoformat(),
+                "completed_at": now.isoformat(),
+                "processing_time": processing_time_str,
+                "txn_number": txn_number,
+                "admin_notes": admin_notes,
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid,
+                "eko_payment": eko_payment_result,
+                "payment_method": "eko_auto"
+            }
         elif eko_payment_error:
-            update_data["eko_error"] = eko_payment_error
-            update_data["payment_method"] = "manual"
+            # Eko API FAILED - Mark as approved but needs manual processing
+            update_data = {
+                "status": "approved_manual",  # NOT completed - needs manual action
+                "approved_at": now.isoformat(),
+                "processing_time": processing_time_str,
+                "txn_number": txn_number,
+                "admin_notes": f"{admin_notes}\n[Auto-pay failed, needs manual processing]" if admin_notes else "[Auto-pay failed, needs manual processing]",
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid,
+                "eko_error": eko_payment_error,
+                "payment_method": "pending_manual"
+            }
         else:
-            update_data["payment_method"] = "manual"
+            # No Eko attempt (unsupported type) - Mark as approved for manual
+            update_data = {
+                "status": "approved_manual",
+                "approved_at": now.isoformat(),
+                "processing_time": processing_time_str,
+                "txn_number": txn_number,
+                "admin_notes": admin_notes,
+                "processed_by": admin_name,
+                "processed_by_uid": admin_uid,
+                "payment_method": "manual"
+            }
         
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
