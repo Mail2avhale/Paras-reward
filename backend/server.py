@@ -25884,7 +25884,20 @@ async def process_bill_payment_request(request: Request):
             action_url="/bill-payments"
         )
         
-        return {"message": "Request approved and completed!", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
+        # Return with Eko details if available
+        response_data = {
+            "message": "Request approved and completed!", 
+            "status": "completed", 
+            "txn_number": txn_number, 
+            "processing_time": processing_time_str,
+            "payment_method": "eko_bbps" if eko_payment_result else "manual"
+        }
+        if eko_payment_result:
+            response_data["eko_payment"] = eko_payment_result
+        if eko_payment_error:
+            response_data["eko_error"] = eko_payment_error
+            
+        return response_data
     
     elif action == "complete":
         if current_status not in ["pending", "processing"]:
