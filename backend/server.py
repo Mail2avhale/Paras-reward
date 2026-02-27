@@ -25316,7 +25316,7 @@ async def create_bill_payment_request(request: Request):
     details = data.get("details", {})
     
     # Validate request type
-    valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi"]
+    valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi", "bank_transfer", "postpaid_mobile", "broadband_bill", "landline_bill", "water_bill", "gas_bill", "lpg_booking", "insurance_premium", "fastag_recharge", "municipal_tax"]
     if request_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid request type. Must be one of: {', '.join(valid_types)}")
     
