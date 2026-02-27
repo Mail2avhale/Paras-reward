@@ -804,35 +804,62 @@ const DailyRewards = ({ user }) => {
               </div>
             ) : (
               <div className="text-center mb-6">
-                <motion.div 
-                  className="w-24 h-24 mx-auto mb-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center"
-                  animate={{ scale: [1, 1.03, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Star className="w-12 h-12 text-amber-500" />
-                </motion.div>
-                <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
-                <Button 
-                  onClick={startSession}
-                  disabled={isStarting}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
-                >
-                  {isStarting ? (
-                    <span className="flex items-center gap-2 justify-center">
-                      <motion.div 
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      {globalT('processing')}...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2 justify-center">
-                      <Play className="w-5 h-5" />
-                      {globalT('startSession')}
-                    </span>
-                  )}
-                </Button>
+                {/* FREE USER BLOCK - Show upgrade prompt instead of start button */}
+                {isFreeUser ? (
+                  <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-6 border border-amber-500/30">
+                    <motion.div 
+                      className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-500/20 border-2 border-amber-500/50 flex items-center justify-center"
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Crown className="w-10 h-10 text-amber-400" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-amber-400 mb-2">Upgrade Required</h3>
+                    <p className="text-gray-400 text-sm mb-4">
+                      PRC Mining हे फक्त Paid subscribers साठी उपलब्ध आहे.<br/>
+                      Startup, Growth किंवा Elite plan घेऊन PRC earn करा!
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/subscription')}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-4 rounded-xl text-lg shadow-lg"
+                    >
+                      <Crown className="w-5 h-5 mr-2" />
+                      Upgrade Now
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <motion.div 
+                      className="w-24 h-24 mx-auto mb-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center"
+                      animate={{ scale: [1, 1.03, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Star className="w-12 h-12 text-amber-500" />
+                    </motion.div>
+                    <p className="text-zinc-400 mb-4">{globalT('startEarning')}</p>
+                    <Button 
+                      onClick={startSession}
+                      disabled={isStarting}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold py-4 rounded-xl text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-500/50 active:scale-[0.98] transition-all"
+                    >
+                      {isStarting ? (
+                        <span className="flex items-center gap-2 justify-center">
+                          <motion.div 
+                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          {globalT('processing')}...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2 justify-center">
+                          <Play className="w-5 h-5" />
+                          {globalT('startSession')}
+                        </span>
+                      )}
+                    </Button>
+                  </>
+                )}
               </div>
             )}
 
