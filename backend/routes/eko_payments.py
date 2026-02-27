@@ -73,17 +73,44 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     
     async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
         try:
+            logging.info(f"Eko API Request: {method} {url}")
+            
             if method == "GET":
                 response = await client.get(url, headers=headers, params=data)
             elif method == "POST":
-                response = await client.post(url, headers=headers, json=data)
+                # Eko uses form data for POST requests
+                if form_data:
+                    headers["Content-Type"] = "application/x-www-form-urlencoded"
+                    response = await client.post(url, headers=headers, data=data)
+                else:
+                    headers["Content-Type"] = "application/json"
+                    response = await client.post(url, headers=headers, json=data)
             elif method == "PUT":
-                response = await client.put(url, headers=headers, json=data)
+                if form_data:
+                    headers["Content-Type"] = "application/x-www-form-urlencoded"
+                    response = await client.put(url, headers=headers, data=data)
+                else:
+                    headers["Content-Type"] = "application/json"
+                    response = await client.put(url, headers=headers, json=data)
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
-            response.raise_for_status()
-            return response.json()
+            logging.info(f"Eko API Response: {response.status_code}")
+            
+            # Try to parse JSON response
+            try:
+                result = response.json()
+            except:
+                result = {"raw_response": response.text}
+            
+            # Check for Eko error responses
+            if response.status_code >= 400:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=result.get("message", result.get("error", str(result)))
+                )
+            
+            return result
             
         except httpx.HTTPStatusError as e:
             logging.error(f"Eko API error: {e.response.text}")
@@ -91,6 +118,8 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
                 status_code=e.response.status_code,
                 detail=f"Eko API error: {e.response.text}"
             )
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Eko request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
