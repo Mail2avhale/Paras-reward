@@ -5994,21 +5994,10 @@ async def get_user(uid: str):
 # ========== MINING ROUTES ==========
 @api_router.post("/mining/start/{uid}")
 async def start_mining(uid: str):
-    """Start 24-hour mining session - PAID USERS ONLY"""
+    """Start 24-hour mining session - All users can start, only paid can collect"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # ========== CHECK SUBSCRIPTION - BLOCK FREE/EXPLORER USERS ==========
-    subscription_plan = user.get("subscription_plan", "explorer").lower()
-    paid_plans = ["startup", "growth", "elite"]
-    
-    if subscription_plan not in paid_plans:
-        raise HTTPException(
-            status_code=403, 
-            detail="PRC Mining is available only for paid subscribers (Startup, Growth, Elite). Please upgrade your plan to start earning PRC."
-        )
-    # ====================================================================
     
     now = datetime.now(timezone.utc)
     session_end = now + timedelta(hours=24)
