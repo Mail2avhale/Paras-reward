@@ -289,14 +289,33 @@ const AdminBillPayments = ({ user }) => {
       
       const response = await axios.post(`${API}/admin/bill-payment/process`, payload);
       
-      // Update local state immediately for better UX
+      // Get actual status from API response (handles approved_manual, completed, etc.)
+      const actualStatus = response.data?.status || (action === 'reject' ? 'rejected' : 'completed');
+      const ekoFailReason = response.data?.eko_fail_reason;
+      
+      // Update local state with actual status from server
       setRequests(prev => prev.map(r => 
         r.request_id === requestId 
-          ? { ...r, status: action === 'reject' ? 'rejected' : (action === 'approve' ? 'approved' : 'completed'), reject_reason: action === 'reject' ? (reason || rejectReason) : undefined }
+          ? { 
+              ...r, 
+              status: actualStatus,
+              eko_fail_reason: ekoFailReason,
+              reject_reason: action === 'reject' ? (reason || rejectReason) : undefined 
+            }
           : r
       ));
       
-      toast.success(response.data?.message || `Request ${action}ed successfully`);
+      // Show appropriate message based on result
+      if (actualStatus === 'approved_manual') {
+        toast.warning(`⚠️ Eko auto-pay failed: ${ekoFailReason || 'Unknown error'}. Manual processing required.`, {
+          duration: 5000
+        });
+      } else if (actualStatus === 'completed') {
+        toast.success(response.data?.message || `Request ${action}ed successfully`);
+      } else {
+        toast.success(response.data?.message || `Request ${action}ed successfully`);
+      }
+      
       setSelectedRequest(null);
       setAdminNotes('');
       setRejectReason('');
