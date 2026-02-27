@@ -109,19 +109,21 @@ Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment in
 ### P0 - Ready for Production
 - [x] All critical bugs fixed
 - [x] Payment integrations complete
+- [x] Bill Payments Frontend UI (Mobile, DTH, Electricity)
 - [ ] Eko wallet top-up (for DMT transfers)
 - [ ] Razorpay LIVE keys
 
 ### P1 - Deployment
-- [ ] Production server setup
+- [ ] Production server setup (Indian VPS recommended for Eko IP whitelisting)
 - [ ] SSL certificate
 - [ ] Domain configuration
-- [ ] AAB file for Play Store
+- [ ] AAB file for Play Store (via PWA Builder)
 
 ### P2 - Enhancements
-- [ ] Admin performance optimization
-- [ ] Push notifications (Firebase)
+- [ ] Admin performance optimization (Profit & Loss page timeout)
+- [ ] Push notifications (Firebase) - clarify vs in-app notifications
 - [ ] UPI Payment Gateway
+- [ ] Server-side search for admin
 
 ---
 
