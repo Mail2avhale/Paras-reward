@@ -79,9 +79,9 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             if method == "GET":
                 response = await client.get(url, headers=headers, params=data)
             elif method == "POST":
-                # Eko uses form data for POST requests
-                headers["Content-Type"] = "application/x-www-form-urlencoded"
-                response = await client.post(url, headers=headers, data=data)
+                # Eko BBPS uses JSON for POST requests
+                headers["Content-Type"] = "application/json"
+                response = await client.post(url, headers=headers, json=data)
             elif method == "PUT":
                 headers["Content-Type"] = "application/x-www-form-urlencoded"
                 response = await client.put(url, headers=headers, data=data)
