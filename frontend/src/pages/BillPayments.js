@@ -855,18 +855,21 @@ const BillPayments = ({ user, onLogout }) => {
                 {/* Mobile Recharge - Operator Selection */}
                 {currentType?.fields.includes('operator') && selectedType === 'mobile_recharge' && (
                   <div>
-                    <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Mobile Operator *</Label>
+                    <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">
+                      Mobile Operator *
+                      {loadingOperators && <span className="text-amber-400 text-xs ml-2">(Loading...)</span>}
+                    </Label>
                     <select
                       id="operator"
                       value={formData.operator}
-                      onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, operator: e.target.value, selected_plan: null })}
                       required
                       className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                       data-testid="operator-select"
                     >
                       <option value="">-- Select Operator --</option>
                       {mobileOperators.map(op => (
-                        <option key={op.id} value={op.name}>{op.name}</option>
+                        <option key={op.id} value={op.id}>{op.name}</option>
                       ))}
                     </select>
                   </div>
@@ -879,14 +882,14 @@ const BillPayments = ({ user, onLogout }) => {
                     <select
                       id="circle"
                       value={formData.circle}
-                      onChange={(e) => setFormData({ ...formData, circle: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, circle: e.target.value, selected_plan: null })}
                       required
                       className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                       data-testid="circle-select"
                     >
                       <option value="">-- Select Circle --</option>
                       {telecomCircles.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                        <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
                   </div>
