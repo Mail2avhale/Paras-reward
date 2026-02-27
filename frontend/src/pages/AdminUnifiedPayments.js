@@ -22,6 +22,7 @@ const AdminUnifiedPayments = ({ user }) => {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
+  const [ekoBalance, setEkoBalance] = useState(null);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
