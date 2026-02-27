@@ -25975,16 +25975,56 @@ async def process_bill_payment_request(request: Request):
             {"$set": update_data}
         )
         
-        # Notify user about completion with processing time
+        # Notify user based on actual status
         service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
         
-        # Different message based on payment method
         if eko_payment_result:
+            # SUCCESS - Eko processed
             notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed automatically!\n\n🧾 Transaction ID: {txn_number}\n✅ Payment Method: Instant BBPS"
             if eko_payment_result.get("eko_txn_id"):
                 notify_msg += f"\n🔗 BBPS Ref: {eko_payment_result['eko_txn_id']}"
+            
+            await create_notification(
+                user_id=user_id,
+                title="✅ Bill Payment Completed!",
+                message=notify_msg,
+                notification_type="bill_payment_approved",
+                related_id=request_id,
+                icon="✅",
+                action_url="/bill-payments"
+            )
+            
+            return {
+                "message": "Request approved and completed via Eko!", 
+                "status": "completed", 
+                "txn_number": txn_number, 
+                "processing_time": processing_time_str,
+                "payment_method": "eko_auto",
+                "eko_payment": eko_payment_result
+            }
         else:
-            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
+            # FAILED or Manual - Needs admin action
+            notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} request has been approved!\n\n🧾 Reference: {txn_number}\n⏳ Status: Processing by admin"
+            
+            await create_notification(
+                user_id=user_id,
+                title="⏳ Request Approved - Processing",
+                message=notify_msg,
+                notification_type="bill_payment_approved",
+                related_id=request_id,
+                icon="⏳",
+                action_url="/bill-payments"
+            )
+            
+            return {
+                "message": "Request approved - Eko auto-pay failed, needs manual processing!", 
+                "status": "approved_manual", 
+                "txn_number": txn_number, 
+                "processing_time": processing_time_str,
+                "payment_method": "pending_manual",
+                "eko_error": eko_payment_error,
+                "action_required": "Admin needs to process this manually"
+            }
         if processing_time_str:
             notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
         
