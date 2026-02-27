@@ -170,6 +170,24 @@ async def get_eko_config():
     }
 
 
+@router.get("/balance")
+async def get_eko_balance():
+    """Get Eko settlement account balance"""
+    try:
+        result = await make_eko_request(
+            f"/v1/customers/mobile_number:{EKO_INITIATOR_ID}/balance",
+            method="GET"
+        )
+        return {
+            "success": True,
+            "balance": result.get("data", {}).get("balance", "0.0"),
+            "currency": result.get("data", {}).get("currency", "INR"),
+            "message": result.get("message")
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/bbps/categories")
 async def get_bill_categories():
     """Get available bill payment categories"""
