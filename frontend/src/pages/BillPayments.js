@@ -71,6 +71,9 @@ const BillPayments = ({ user, onLogout }) => {
     customer_id: '',
     loan_tenure: '',
     emi_amount: '',
+    // DMT Bank Transfer fields
+    beneficiary_name: '',
+    recipient_mobile: '',
     // Selected plan
     selected_plan: null
   });
