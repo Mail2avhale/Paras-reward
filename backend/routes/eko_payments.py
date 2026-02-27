@@ -198,13 +198,15 @@ async def get_billers_by_category(category: str):
     """Get list of billers for a category"""
     try:
         # Eko API endpoint for billers
+        # Base URL already contains /ekoicici, so just add the remaining path
         result = await make_eko_request(
-            f"/ekoicici/v2/billpayments/operators",
+            "/v2/billpayments/operators",
             method="GET",
             data={"category": category}
         )
         return result
     except Exception as e:
+        logging.warning(f"Eko billers API failed: {e}")
         # Return sample billers if API fails
         sample_billers = {
             "electricity": [
@@ -218,7 +220,7 @@ async def get_billers_by_category(category: str):
                 {"id": "VI", "name": "Vi Postpaid"},
             ]
         }
-        return {"billers": sample_billers.get(category, []), "note": "Sample data - API not connected"}
+        return {"billers": sample_billers.get(category, []), "note": f"Sample data - {str(e)}"}
 
 
 @router.post("/bbps/fetch-bill")
