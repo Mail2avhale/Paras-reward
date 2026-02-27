@@ -25739,39 +25739,63 @@ async def process_bill_payment_request(request: Request):
         amount_inr = bill_request.get("amount_inr", 0)
         
         # =====================================================
-        # EKO BBPS AUTO-PAY for Mobile, DTH, Electricity
+        # EKO AUTO-PAY for ALL Services (BBPS + DMT)
         # =====================================================
-        eko_supported_types = ["mobile_recharge", "dish_recharge", "electricity_bill"]
         eko_payment_result = None
         eko_payment_error = None
         
-        if request_type in eko_supported_types:
-            try:
-                # Import Eko payment function
-                from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
-                
-                # Map request type to Eko category
+        # ALL bill payment types supported via Eko
+        eko_bbps_types = [
+            "mobile_recharge", "dish_recharge", "electricity_bill",
+            "postpaid_mobile", "broadband_bill", "landline_bill",
+            "water_bill", "gas_bill", "lpg_booking", "insurance_premium",
+            "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
+        ]
+        
+        try:
+            from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+            
+            if request_type in eko_bbps_types:
+                # ================== BBPS BILL PAYMENT ==================
+                # Map request type to Eko operator category
                 eko_category_map = {
                     "mobile_recharge": "mobile_prepaid",
+                    "postpaid_mobile": "mobile_postpaid",
                     "dish_recharge": "dth",
-                    "electricity_bill": "electricity"
+                    "electricity_bill": "electricity",
+                    "broadband_bill": "broadband",
+                    "landline_bill": "landline",
+                    "water_bill": "water",
+                    "gas_bill": "piped_gas",
+                    "lpg_booking": "lpg",
+                    "insurance_premium": "insurance",
+                    "fastag_recharge": "fastag",
+                    "credit_card_bill": "credit_card",
+                    "loan_emi": "loan_repayment",
+                    "municipal_tax": "municipal_tax"
                 }
                 
-                # Get customer identifier
+                # Get customer identifier based on service type
                 if request_type == "mobile_recharge":
                     customer_id = details.get("phone_number", "")
+                elif request_type == "postpaid_mobile":
+                    customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                elif request_type == "dish_recharge":
+                    customer_id = details.get("customer_id", details.get("vc_number", ""))
+                elif request_type == "credit_card_bill":
+                    customer_id = details.get("card_number", details.get("consumer_number", ""))
+                elif request_type == "fastag_recharge":
+                    customer_id = details.get("vehicle_number", details.get("fastag_id", ""))
+                elif request_type == "lpg_booking":
+                    customer_id = details.get("lpg_id", details.get("consumer_number", ""))
                 else:
-                    customer_id = details.get("consumer_number", "")
+                    customer_id = details.get("consumer_number", details.get("account_number", ""))
                 
-                # Get operator/biller
-                operator = details.get("operator", details.get("biller_name", ""))
-                
-                # Create unique transaction reference
+                operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
                 eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
                 
-                print(f"🔄 Processing Eko BBPS Payment: {request_type} - ₹{amount_inr} for {customer_id}")
+                print(f"🔄 Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id}")
                 
-                # Call Eko BBPS Pay Bill API
                 eko_result = await make_eko_request(
                     "/v2/billpayments/paybill",
                     method="POST",
@@ -25788,20 +25812,83 @@ async def process_bill_payment_request(request: Request):
                 
                 eko_payment_result = {
                     "success": True,
+                    "payment_type": "bbps",
                     "eko_txn_id": eko_result.get("tid"),
                     "eko_txn_ref": eko_txn_ref,
                     "eko_status": eko_result.get("status"),
                     "eko_message": eko_result.get("message", "Payment processed via Eko BBPS")
                 }
-                print(f"✅ Eko BBPS Payment Success: {eko_payment_result}")
+                print(f"✅ Eko BBPS Success: {eko_payment_result}")
                 
-            except Exception as eko_err:
-                eko_payment_error = str(eko_err)
-                print(f"⚠️ Eko BBPS Payment Failed: {eko_payment_error}")
-                print(f"   → Falling back to manual completion")
+            elif request_type == "bank_transfer":
+                # ================== DMT - BANK TRANSFER ==================
+                # Get bank details from request
+                account_number = details.get("account_number", "")
+                ifsc_code = details.get("ifsc_code", "")
+                beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
+                recipient_mobile = details.get("recipient_mobile", details.get("mobile", EKO_INITIATOR_ID))
+                
+                if not account_number or not ifsc_code:
+                    raise Exception("Bank account number and IFSC code required for DMT")
+                
+                eko_txn_ref = f"DMT{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                
+                print(f"🔄 Processing Eko DMT: ₹{amount_inr} to {account_number}")
+                
+                # First add beneficiary if not exists
+                try:
+                    await make_eko_request(
+                        "/v1/customers/mobile_number:beneficiary",
+                        method="PUT",
+                        data={
+                            "mobile": recipient_mobile,
+                            "name": beneficiary_name,
+                            "bank_ifsc": ifsc_code,
+                            "account": account_number
+                        }
+                    )
+                except Exception as ben_err:
+                    print(f"   Beneficiary may already exist: {ben_err}")
+                
+                # Initiate DMT transfer
+                eko_result = await make_eko_request(
+                    "/v1/transactions",
+                    method="POST",
+                    data={
+                        "mobile": recipient_mobile,
+                        "amount": str(int(amount_inr)),
+                        "account": account_number,
+                        "ifsc": ifsc_code,
+                        "beneficiary_name": beneficiary_name,
+                        "client_ref_id": eko_txn_ref,
+                        "channel": "2",
+                        "latlong": "19.0760,72.8777",
+                        "source_ip": "34.170.12.145"
+                    }
+                )
+                
+                eko_payment_result = {
+                    "success": True,
+                    "payment_type": "dmt",
+                    "eko_txn_id": eko_result.get("tid"),
+                    "eko_txn_ref": eko_txn_ref,
+                    "eko_status": eko_result.get("status"),
+                    "eko_message": eko_result.get("message", "Bank transfer processed via Eko DMT"),
+                    "utr": eko_result.get("utr", "")
+                }
+                print(f"✅ Eko DMT Success: {eko_payment_result}")
+                
+            else:
+                # Unsupported type - will be processed manually
+                print(f"ℹ️ Service type '{request_type}' not configured for Eko auto-pay")
+                
+        except Exception as eko_err:
+            eko_payment_error = str(eko_err)
+            print(f"⚠️ Eko Payment Failed: {eko_payment_error}")
+            print(f"   → Falling back to manual completion")
         
         # =====================================================
-        # END EKO BBPS AUTO-PAY
+        # END EKO AUTO-PAY
         # =====================================================
         
         # Calculate processing time
