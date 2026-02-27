@@ -67,7 +67,17 @@ const AdminUnifiedPayments = ({ user }) => {
 
   useEffect(() => {
     fetchAllRequests();
+    fetchEkoBalance();
   }, []);
+
+  const fetchEkoBalance = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/bank-redeem/eko-balance`);
+      setEkoBalance(response.data);
+    } catch (error) {
+      console.error('Error fetching Eko balance:', error);
+    }
+  };
 
   const fetchAllRequests = async () => {
     setLoading(true);
