@@ -37,6 +37,15 @@ const BillPayments = ({ user, onLogout }) => {
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
   const itemsPerPage = 10;
+  
+  // Eko API loaded data
+  const [ekoOperators, setEkoOperators] = useState([]);
+  const [ekoCircles, setEkoCircles] = useState([]);
+  const [ekoDthOperators, setEkoDthOperators] = useState([]);
+  const [ekoPlans, setEkoPlans] = useState([]);
+  const [loadingOperators, setLoadingOperators] = useState(false);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  
   const [formData, setFormData] = useState({
     amount_inr: '',
     phone_number: '',
@@ -61,20 +70,101 @@ const BillPayments = ({ user, onLogout }) => {
     emi_due_date: '',
     customer_id: '',
     loan_tenure: '',
-    emi_amount: ''
+    emi_amount: '',
+    // Selected plan
+    selected_plan: null
   });
 
-  // Mobile Operators List
-  const mobileOperators = [
-    { id: 'jio', name: 'Jio' },
-    { id: 'airtel', name: 'Airtel' },
-    { id: 'vi', name: 'Vi (Vodafone Idea)' },
-    { id: 'bsnl', name: 'BSNL' },
-    { id: 'mtnl', name: 'MTNL' }
+  // ==================== EKO API DATA LOADING ====================
+  
+  // Load mobile operators from Eko API
+  const fetchMobileOperators = async () => {
+    try {
+      setLoadingOperators(true);
+      const response = await axios.get(`${API}/eko/recharge/operators`);
+      if (response.data.operators?.length > 0) {
+        setEkoOperators(response.data.operators);
+      }
+    } catch (error) {
+      console.error('Error fetching operators:', error);
+    } finally {
+      setLoadingOperators(false);
+    }
+  };
+  
+  // Load circles from Eko API
+  const fetchCircles = async () => {
+    try {
+      const response = await axios.get(`${API}/eko/recharge/circles`);
+      if (response.data.circles?.length > 0) {
+        setEkoCircles(response.data.circles);
+      }
+    } catch (error) {
+      console.error('Error fetching circles:', error);
+    }
+  };
+  
+  // Load DTH operators from Eko API
+  const fetchDthOperators = async () => {
+    try {
+      setLoadingOperators(true);
+      const response = await axios.get(`${API}/eko/dth/operators`);
+      if (response.data.operators?.length > 0) {
+        setEkoDthOperators(response.data.operators);
+      }
+    } catch (error) {
+      console.error('Error fetching DTH operators:', error);
+    } finally {
+      setLoadingOperators(false);
+    }
+  };
+  
+  // Load recharge plans from Eko API
+  const fetchRechargePlans = async (operator, circle) => {
+    if (!operator || !circle) return;
+    try {
+      setLoadingPlans(true);
+      const response = await axios.get(`${API}/eko/recharge/plans/${operator}/${circle}`);
+      if (response.data.plans?.length > 0) {
+        setEkoPlans(response.data.plans);
+      }
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+      setEkoPlans([]);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+  
+  // Load operators when service type changes
+  useEffect(() => {
+    if (selectedType === 'mobile_recharge') {
+      fetchMobileOperators();
+      fetchCircles();
+    } else if (selectedType === 'dish_recharge') {
+      fetchDthOperators();
+    }
+    // Reset plans when type changes
+    setEkoPlans([]);
+  }, [selectedType]);
+  
+  // Load plans when operator and circle are selected
+  useEffect(() => {
+    if (selectedType === 'mobile_recharge' && formData.operator && formData.circle) {
+      fetchRechargePlans(formData.operator, formData.circle);
+    }
+  }, [formData.operator, formData.circle, selectedType]);
+  
+  // Use Eko operators if available, else fallback to static
+  const mobileOperators = ekoOperators.length > 0 ? ekoOperators : [
+    { id: 'JIO', name: 'Jio' },
+    { id: 'AIRTEL', name: 'Airtel' },
+    { id: 'VI', name: 'Vi (Vodafone Idea)' },
+    { id: 'BSNL', name: 'BSNL' }
   ];
-
-  // Telecom Circles List
-  const telecomCircles = [
+  
+  // Use Eko circles if available, else fallback to static
+  const telecomCircles = ekoCircles.length > 0 ? ekoCircles : [
     { id: 'andhra_pradesh', name: 'Andhra Pradesh & Telangana' },
     { id: 'assam', name: 'Assam' },
     { id: 'bihar_jharkhand', name: 'Bihar & Jharkhand' },
