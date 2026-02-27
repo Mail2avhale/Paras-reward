@@ -290,7 +290,7 @@ async def razorpay_webhook(request: Request):
 @router.get("/payment-history/{user_id}")
 async def get_payment_history(user_id: str):
     """Get user's payment history"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     payments = await db.razorpay_orders.find(
