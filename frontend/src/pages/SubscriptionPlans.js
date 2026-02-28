@@ -58,6 +58,8 @@ const SubscriptionPlans = ({ user }) => {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
   });
+  const [subscriptionHistory, setSubscriptionHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Special Offer Prices
   const specialOffers = {
