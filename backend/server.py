@@ -17359,7 +17359,7 @@ async def admin_diagnose_user(uid: str):
     
     # Check subscription payment sync
     latest_payment = await db.vip_payments.find_one(
-        {"$or": [{"user_uid": uid}, {"user_id": uid}], "status": "approved"},
+        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}], "status": "approved"},
         sort=[("approved_at", -1)]
     )
     if latest_payment and is_free_user(user):
@@ -17370,6 +17370,21 @@ async def admin_diagnose_user(uid: str):
             "description": f"Payment approved but user is still 'free'. Plan: {latest_payment.get('plan')}",
             "can_auto_fix": True,
             "fix_action": "sync_subscription"
+        })
+    
+    # Check for Razorpay payment not synced
+    latest_razorpay = await db.razorpay_orders.find_one(
+        {"user_id": uid, "status": "paid"},
+        sort=[("paid_at", -1)]
+    )
+    if latest_razorpay and is_free_user(user):
+        issues.append({
+            "category": "Subscription",
+            "severity": "critical",
+            "issue": "Razorpay Payment Not Activated",
+            "description": f"Razorpay payment captured but subscription not active. Plan: {latest_razorpay.get('plan_name')}, Amount: ₹{latest_razorpay.get('amount')}",
+            "can_auto_fix": True,
+            "fix_action": "activate_razorpay_subscription"
         })
     
     # ========== 3. PRC BALANCE ISSUES ==========
