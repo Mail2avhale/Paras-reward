@@ -68,13 +68,50 @@ async def get_razorpay_config():
     if not RAZORPAY_KEY_ID:
         raise HTTPException(status_code=500, detail="Razorpay not configured")
     
+    # Check if Razorpay is enabled in settings
+    is_enabled = True
+    if db:
+        settings = await db.app_settings.find_one({"key": "razorpay_enabled"})
+        if settings:
+            is_enabled = settings.get("value", True)
+    
     return {
         "key_id": RAZORPAY_KEY_ID,
         "currency": "INR",
         "company_name": "PARAS REWARD",
         "code_version": CODE_VERSION,
-        "security": "DOUBLE_VERIFICATION_ENABLED"
+        "security": "DOUBLE_VERIFICATION_ENABLED",
+        "enabled": is_enabled
     }
+
+
+@router.post("/toggle")
+async def toggle_razorpay_gateway(request: Request):
+    """Enable or disable Razorpay payment gateway"""
+    try:
+        data = await request.json()
+        enabled = data.get("enabled", True)
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if db:
+            await db.app_settings.update_one(
+                {"key": "razorpay_enabled"},
+                {"$set": {"key": "razorpay_enabled", "value": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
+                upsert=True
+            )
+        
+        return {
+            "success": True,
+            "message": f"Razorpay gateway {'enabled' if enabled else 'disabled'}",
+            "enabled": enabled
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/create-order")
