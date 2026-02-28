@@ -931,6 +931,50 @@ const AdminBillPayments = ({ user }) => {
                             <XCircle className="w-3 h-3" />
                           </Button>
                         </div>
+                      ) : request.status === 'eko_failed' ? (
+                        /* Eko Failed - Admin decides: Retry, Complete, or Reject */
+                        <div className="flex flex-col items-end gap-1 mt-2">
+                          <span className="inline-block px-2 py-1 rounded text-xs bg-amber-500/20 text-amber-400">
+                            ⚠️ Eko Failed
+                          </span>
+                          {request.eko_fail_reason && (
+                            <span className="text-[10px] text-red-400 max-w-[150px] text-right truncate" title={request.eko_fail_reason}>
+                              {request.eko_fail_reason}
+                            </span>
+                          )}
+                          {request.retry_attempts && (
+                            <span className="text-[10px] text-gray-500">
+                              Attempts: {request.retry_attempts}
+                            </span>
+                          )}
+                          <div className="flex gap-1 mt-1 flex-wrap justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleProcess(request.request_id, 'retry')}
+                              disabled={processing}
+                              className="h-6 px-2 text-xs bg-blue-600 hover:bg-blue-700"
+                            >
+                              🔄 Retry
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleProcess(request.request_id, 'complete')}
+                              disabled={processing}
+                              className="h-6 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              ✅ Complete
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleProcess(request.request_id, 'reject')}
+                              disabled={processing}
+                              className="h-6 px-2 text-xs"
+                            >
+                              ❌ Reject
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-end gap-1 mt-2">
                           <span className={`inline-block px-2 py-1 rounded text-xs ${
