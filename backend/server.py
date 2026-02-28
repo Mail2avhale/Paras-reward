@@ -7683,7 +7683,7 @@ async def get_admin_razorpay_subscriptions(
         })
     
     paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
-    total_revenue = sum(o.get("amount", 0) for o in paid_orders) / 100
+    total_revenue = sum(o.get("amount", 0) for o in paid_orders)  # Already in INR
     
     return {
         "orders": result,
