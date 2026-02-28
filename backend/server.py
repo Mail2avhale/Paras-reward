@@ -17625,6 +17625,9 @@ async def update_payment_config(request: Request):
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     
+    # CRITICAL: Clear public_settings cache so users see updated UPI/QR immediately
+    await cache.delete("public_settings")
+    
     return {"message": "Payment configuration updated successfully"}
 
 @api_router.post("/vip/payment/submit")
