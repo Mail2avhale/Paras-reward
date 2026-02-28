@@ -21,10 +21,40 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [showFraudModal, setShowFraudModal] = useState(false);
   const [fraudPreview, setFraudPreview] = useState(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [razorpayEnabled, setRazorpayEnabled] = useState(true);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchRazorpayConfig();
   }, [statusFilter]);
+
+  const fetchRazorpayConfig = async () => {
+    try {
+      const res = await axios.get(`${API}/razorpay/config`);
+      setRazorpayEnabled(res.data.enabled !== false);
+    } catch (error) {
+      console.error('Error fetching config:', error);
+    }
+  };
+
+  const toggleRazorpay = async () => {
+    try {
+      setToggleLoading(true);
+      const newState = !razorpayEnabled;
+      await axios.post(`${API}/razorpay/toggle`, {
+        enabled: newState,
+        admin_pin: '123456'
+      });
+      setRazorpayEnabled(newState);
+      toast.success(`Razorpay gateway ${newState ? 'ENABLED' : 'DISABLED'}`);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to toggle gateway');
+    } finally {
+      setToggleLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
