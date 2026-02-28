@@ -333,12 +333,14 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             "plan_name": plan_name,
             "plan_type": plan_type,
             "duration_days": duration_days,
+            "remaining_days_added": remaining_days,
+            "total_days": total_days,
             "payment_status": payment_status,
             "payment_captured": payment_captured,
             "timestamp": now
         })
         
-        logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}")
+        logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}, total days: {total_days}")
         
         return {
             "success": True,
@@ -347,7 +349,9 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                 "plan": plan_name,
                 "type": plan_type,
                 "expires": expiry_date.isoformat(),
-                "duration_days": duration_days
+                "duration_days": duration_days,
+                "remaining_days_added": remaining_days,
+                "total_days": total_days
             }
         }
         
