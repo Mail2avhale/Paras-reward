@@ -1061,17 +1061,38 @@ const SubscriptionPlans = ({ user }) => {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6"
+            className={`w-24 h-24 ${paymentSuccess ? 'bg-emerald-500/20' : 'bg-amber-500/20'} rounded-full flex items-center justify-center mx-auto mb-6`}
           >
-            <CheckCircle className="w-12 h-12 text-emerald-500" />
+            <CheckCircle className={`w-12 h-12 ${paymentSuccess ? 'text-emerald-500' : 'text-amber-500'}`} />
           </motion.div>
-          <h2 className="text-2xl font-bold text-white mb-2">{t('paymentSubmitted')}</h2>
-          <p className="text-gray-400 mb-8">
-            {t('verifyAndActivate').replace('{plan}', selectedPlan?.name)}
-          </p>
+          
+          {paymentSuccess ? (
+            <>
+              {/* Razorpay Success - Instant Activation */}
+              <h2 className="text-2xl font-bold text-emerald-400 mb-2">🎉 Payment Successful!</h2>
+              <p className="text-white text-lg mb-2">Your subscription is now <span className="text-emerald-400 font-bold">ACTIVE!</span></p>
+              <p className="text-gray-400 mb-8">
+                {selectedPlan?.name} Plan activated. Enjoy all premium benefits!
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Manual Payment - Pending Verification */}
+              <h2 className="text-2xl font-bold text-white mb-2">{t('paymentSubmitted')}</h2>
+              <p className="text-gray-400 mb-8">
+                {t('verifyAndActivate').replace('{plan}', selectedPlan?.name)}
+              </p>
+              <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/30 mb-6">
+                <p className="text-amber-400 text-sm">
+                  ⏳ तुमचे payment verification साठी pending आहे. 24 तासात activate होईल.
+                </p>
+              </div>
+            </>
+          )}
+          
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold rounded-xl"
+            className={`px-8 py-3 ${paymentSuccess ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-amber-500 to-amber-600'} text-black font-bold rounded-xl`}
           >
             {t('backToDashboard')}
           </button>
