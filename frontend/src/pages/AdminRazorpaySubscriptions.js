@@ -306,46 +306,13 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         </div>
       )}
 
-      {/* Fraud Cleanup Button */}
-      {stats.paid_orders > 0 && (
-        <div className="px-5 mt-4">
-          <button
-            onClick={previewFraudCleanup}
-            disabled={cleanupLoading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-all"
-          >
-            <AlertTriangle className="w-5 h-5" />
-            <span className="font-medium">
-              {cleanupLoading ? 'Loading...' : `Cleanup Fraud Subscriptions (${stats.paid_orders} paid)`}
-            </span>
-          </button>
-        </div>
-      )}
-
-      {/* Delete Buttons */}
-      <div className="px-5 mt-3 flex gap-2">
-        {stats.pending_orders > 0 && (
-          <button
-            onClick={deletePendingOrders}
-            disabled={cleanupLoading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all text-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Pending ({stats.pending_orders})</span>
-          </button>
-        )}
-        
-        {stats.total_orders > 0 && (
-          <button
-            onClick={deleteAllOrders}
-            disabled={cleanupLoading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 transition-all text-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete All ({stats.total_orders})</span>
-          </button>
-        )}
-      </div>
+      {/* REMOVED: Fraud Cleanup, Delete Pending, Delete All buttons
+          These are dangerous and can cause data loss.
+          Use API directly if needed:
+          - POST /api/admin/razorpay-cleanup-fraudulent
+          - POST /api/admin/razorpay-delete-pending
+          - POST /api/admin/razorpay-delete-all
+      */}
 
       {/* Filters */}
       <div className="px-5 mt-4 space-y-3">
