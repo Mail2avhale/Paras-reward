@@ -8136,14 +8136,14 @@ async def restore_users_from_vip_payments(request: Request):
                 duration = vip_payment.get("duration", "monthly")
                 approved_at = vip_payment.get("approved_at")
                 
-                # Calculate expiry based on duration
+                # Calculate expiry based on duration (28 days per month)
                 duration_days_map = {
-                    "monthly": 30,
-                    "quarterly": 90,
-                    "half_yearly": 180,
-                    "yearly": 365
+                    "monthly": 28,
+                    "quarterly": 84,
+                    "half_yearly": 168,
+                    "yearly": 336
                 }
-                duration_days = duration_days_map.get(duration, 30)
+                duration_days = duration_days_map.get(duration, 28)
                 
                 # Calculate expiry from approval date
                 if approved_at:
