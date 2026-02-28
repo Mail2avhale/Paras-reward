@@ -480,7 +480,7 @@ async def razorpay_webhook(request: Request):
             payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
             order_id = payment.get("order_id")
             
-            if db and order_id:
+            if db is not None and order_id:
                 await db.razorpay_orders.update_one(
                     {"order_id": order_id},
                     {
