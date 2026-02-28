@@ -170,7 +170,7 @@ const AdminBillPayments = ({ user }) => {
 
     // Filter by status
     if (statusFilter === 'pending') {
-      filtered = filtered.filter(r => r.status === 'pending');
+      filtered = filtered.filter(r => ['pending', 'eko_failed'].includes(r.status));
     } else if (statusFilter === 'approved') {
       filtered = filtered.filter(r => ['approved', 'processing', 'completed'].includes(r.status));
     } else if (statusFilter === 'rejected') {
