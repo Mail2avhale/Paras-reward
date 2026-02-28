@@ -1363,9 +1363,12 @@ async def auto_sync_razorpay_payments():
                         # Check for existing subscription and add remaining days
                         user = await db.users.find_one({"uid": user_id})
                         remaining_days = 0
+                        old_plan = None
                         
                         if user:
-                            existing_expiry = user.get("subscription_expires")
+                            old_plan = user.get("subscription_plan")
+                            # Check BOTH field names
+                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
                             if existing_expiry:
                                 if isinstance(existing_expiry, str):
                                     try:
@@ -1373,13 +1376,16 @@ async def auto_sync_razorpay_payments():
                                     except:
                                         existing_expiry = None
                                 
-                                if existing_expiry and existing_expiry > now:
-                                    remaining_days = (existing_expiry - now).days
+                                if existing_expiry:
+                                    if existing_expiry.tzinfo is None:
+                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                    if existing_expiry > now:
+                                        remaining_days = (existing_expiry - now).days
                         
                         total_days = duration_days + remaining_days
                         expiry_date = now + timedelta(days=total_days)
                         
-                        # Update user subscription
+                        # Update user subscription (set BOTH expiry fields)
                         await db.users.update_one(
                             {"uid": user_id},
                             {
@@ -1387,10 +1393,13 @@ async def auto_sync_razorpay_payments():
                                     "subscription_plan": plan_name,
                                     "subscription_start": now,
                                     "subscription_expires": expiry_date,
+                                    "subscription_expiry": expiry_date.isoformat(),
                                     "membership_type": "vip",
                                     "subscription_status": "active",
                                     "last_payment_id": payment_id,
                                     "last_payment_date": now,
+                                    "previous_plan": old_plan,
+                                    "previous_remaining_days_added": remaining_days,
                                     "activated_via": "auto_sync"
                                 }
                             }
