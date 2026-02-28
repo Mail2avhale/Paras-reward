@@ -1878,7 +1878,7 @@ SUBSCRIPTION_PLANS = {
 }
 
 SUBSCRIPTION_DURATIONS = {
-    "monthly": 30
+    "monthly": 28
 }
 
 async def get_subscription_pricing():
