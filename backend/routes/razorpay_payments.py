@@ -120,6 +120,12 @@ async def create_razorpay_order(request: CreateOrderRequest):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay not configured")
     
+    # Check if Razorpay is enabled
+    if db:
+        settings = await db.app_settings.find_one({"key": "razorpay_enabled"})
+        if settings and settings.get("value") == False:
+            raise HTTPException(status_code=403, detail="Online payment is currently disabled. Please use manual payment.")
+    
     try:
         # Convert amount to paise (Razorpay uses smallest currency unit)
         amount_paise = int(request.amount * 100)
