@@ -280,7 +280,31 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         duration_days = PLAN_DURATIONS.get(plan_type, 28)
         
         now = datetime.now(timezone.utc)
-        expiry_date = now + timedelta(days=duration_days)
+        
+        # Check if user has existing active subscription - ADD remaining days
+        user = await db.users.find_one({"uid": request.user_id})
+        remaining_days = 0
+        
+        if user:
+            existing_expiry = user.get("subscription_expires")
+            if existing_expiry:
+                # Handle both datetime object and string
+                if isinstance(existing_expiry, str):
+                    try:
+                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                    except:
+                        existing_expiry = None
+                
+                if existing_expiry and existing_expiry > now:
+                    # User has active subscription - calculate remaining days
+                    remaining_days = (existing_expiry - now).days
+                    logging.info(f"[RAZORPAY] User {request.user_id} has {remaining_days} days remaining, will be added to new plan")
+        
+        # New expiry = today + new plan duration + remaining days
+        total_days = duration_days + remaining_days
+        expiry_date = now + timedelta(days=total_days)
+        
+        logging.info(f"[RAZORPAY] User {request.user_id}: New plan {duration_days} days + Remaining {remaining_days} days = Total {total_days} days")
         
         # Update user subscription
         await db.users.update_one(
@@ -293,7 +317,8 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "membership_type": "vip",
                     "subscription_status": "active",
                     "last_payment_id": request.razorpay_payment_id,
-                    "last_payment_date": now
+                    "last_payment_date": now,
+                    "previous_remaining_days_added": remaining_days
                 }
             }
         )
