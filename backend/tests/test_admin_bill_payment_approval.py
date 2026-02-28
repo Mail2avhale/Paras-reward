@@ -1,14 +1,17 @@
 """
-Test Admin Bill Payment Approval Flow - UPDATED for Automatic Eko with Retries
-No more approved_manual status. No manual completion.
-Approve = Eko API with 3 retries → Success (completed) or Fail (auto-reject with PRC refund)
+Test Admin Bill Payment Approval Flow - UPDATED for Admin Control Flow
+No auto-reject. When Eko fails, status becomes 'eko_failed'.
+Admin gets 3 options: 1) Retry Eko, 2) Complete Manually, 3) Reject with PRC refund.
+Only admin can reject - no auto-reject.
 
 Features tested:
-1. GET /api/admin/bill-payment/requests - List requests with all statuses
-2. POST /api/admin/bill-payment/process - approve or reject only (no complete action)
-   - Approve → Eko with 3 retries → completed OR rejected (with PRC refund)
-   - Reject → rejected with PRC refund
-3. No more /api/admin/bill-payment/complete endpoint
+1. GET /api/admin/bill-payment/requests - List requests with all statuses including eko_failed
+2. POST /api/admin/bill-payment/process - approve, reject, retry, complete actions
+   - Approve (pending) → Eko with 3 retries → completed (success) OR eko_failed (fail - admin decides)
+   - Retry (eko_failed) → Try Eko again → completed (success) OR stays eko_failed
+   - Complete (eko_failed/pending) → Manually mark as completed
+   - Reject (any except completed) → rejected with PRC refund
+3. No auto-reject - admin makes all decisions on failed Eko requests
 """
 import pytest
 import requests
@@ -39,14 +42,14 @@ class TestAdminBillPaymentListEndpoint:
         assert "requests" in data
         assert isinstance(data["requests"], list)
         
-    def test_list_includes_standard_statuses(self, api_client):
-        """Test that requests have standard status values (no approved_manual)"""
+    def test_list_includes_all_valid_statuses(self, api_client):
+        """Test that requests have valid status values including eko_failed"""
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         assert response.status_code == 200
         data = response.json()
         
-        # Valid statuses (approved_manual may still exist in old data but not created anymore)
-        valid_statuses = ["pending", "approved", "completed", "rejected", "processing", "approved_manual"]
+        # Valid statuses now include eko_failed
+        valid_statuses = ["pending", "approved", "completed", "rejected", "processing", "approved_manual", "eko_failed"]
         
         for req in data["requests"]:
             status = req.get("status")
@@ -63,7 +66,7 @@ class TestAdminBillPaymentListEndpoint:
         if not rejected_requests:
             pytest.skip("No rejected requests available for testing")
         
-        # Find one with refund_details (auto-rejected after Eko fail)
+        # Find one with refund_details (rejected by admin)
         requests_with_refund = [r for r in rejected_requests if r.get("refund_details")]
         
         if requests_with_refund:
@@ -94,11 +97,11 @@ class TestAdminBillPaymentListEndpoint:
             print(f"✅ Completed: {req['request_id'][:8]} - TXN: {req.get('txn_number')}")
 
 
-class TestAdminBillPaymentProcess:
-    """Tests for POST /api/admin/bill-payment/process"""
+class TestValidActions:
+    """Test valid actions for bill payment processing"""
     
-    def test_approve_action_only_accepts_approve_or_reject(self, api_client):
-        """Test that only 'approve' and 'reject' actions are valid (no 'complete')"""
+    def test_valid_actions_list(self, api_client):
+        """Test that the valid actions include approve, reject, retry, complete"""
         # Get any request
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
@@ -108,22 +111,27 @@ class TestAdminBillPaymentProcess:
             
         request_id = data["requests"][0]["request_id"]
         
-        # Try invalid 'complete' action
-        complete_response = api_client.post(
+        # Try invalid action
+        invalid_response = api_client.post(
             f"{BASE_URL}/api/admin/bill-payment/process",
             json={
                 "request_id": request_id,
-                "action": "complete",  # This should be invalid now
+                "action": "invalid_action",
                 "admin_uid": ADMIN_UID
             }
         )
         
-        assert complete_response.status_code == 400
-        error_msg = complete_response.json().get("detail", "").lower()
-        assert "invalid action" in error_msg or "approve or reject" in error_msg
-        
-    def test_approve_pending_request_returns_completed_or_rejected(self, api_client):
-        """Test that approving a pending request results in completed (Eko success) or rejected (Eko fail with refund)"""
+        assert invalid_response.status_code == 400
+        error_msg = invalid_response.json().get("detail", "").lower()
+        # Check that valid actions are mentioned in error message
+        assert "approve" in error_msg or "reject" in error_msg or "retry" in error_msg or "complete" in error_msg
+
+
+class TestAdminBillPaymentProcess:
+    """Tests for POST /api/admin/bill-payment/process"""
+    
+    def test_approve_pending_request_returns_completed_or_eko_failed(self, api_client):
+        """Test that approving a pending request results in completed (Eko success) or eko_failed (Eko fail - admin decides)"""
         # First get a pending request
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         assert response.status_code == 200
@@ -151,21 +159,21 @@ class TestAdminBillPaymentProcess:
         assert approve_response.status_code == 200
         result = approve_response.json()
         
-        # Result should be either completed (Eko success) or rejected (Eko fail)
-        assert result.get("status") in ["completed", "rejected"], \
-            f"Expected status 'completed' or 'rejected', got: {result.get('status')}"
+        # Result should be either completed (Eko success) or eko_failed (Eko fail - NO auto-reject)
+        assert result.get("status") in ["completed", "eko_failed"], \
+            f"Expected status 'completed' or 'eko_failed', got: {result.get('status')}"
         
         if result.get("status") == "completed":
             # Success case - Eko worked
             assert "txn_number" in result
             print(f"✅ Request completed via Eko - TXN: {result.get('txn_number')}")
         else:
-            # Fail case - Eko failed after retries, auto-rejected with refund
-            assert "reject_reason" in result
-            assert "refund_details" in result
-            assert result["refund_details"].get("prc_refunded", 0) > 0
-            print(f"✅ Request auto-rejected after Eko fail - Reason: {result.get('reject_reason')}")
-            print(f"   PRC Refunded: {result['refund_details']['prc_refunded']}")
+            # Fail case - Eko failed after retries, now eko_failed (admin decides)
+            assert "eko_fail_reason" in result
+            assert "admin_options" in result
+            assert result["admin_options"] == ["retry", "complete", "reject"]
+            print(f"✅ Request set to eko_failed - Reason: {result.get('eko_fail_reason')}")
+            print(f"   Admin options: {result.get('admin_options')}")
             
     def test_approve_action_invalid_request_returns_404(self, api_client):
         """Test that approving non-existent request returns 404"""
@@ -181,15 +189,15 @@ class TestAdminBillPaymentProcess:
         
     def test_reject_action_requires_reason(self, api_client):
         """Test that reject action requires a reason"""
-        # Get a pending request
+        # Get a pending or eko_failed request
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
-        pending_requests = [r for r in data["requests"] if r.get("status") == "pending"]
+        rejectable_requests = [r for r in data["requests"] if r.get("status") in ["pending", "eko_failed"]]
         
-        if not pending_requests:
-            pytest.skip("No pending requests available for testing")
+        if not rejectable_requests:
+            pytest.skip("No pending/eko_failed requests available for testing")
             
-        request_id = pending_requests[0]["request_id"]
+        request_id = rejectable_requests[0]["request_id"]
         
         # Try to reject without reason
         reject_response = api_client.post(
@@ -207,15 +215,15 @@ class TestAdminBillPaymentProcess:
         
     def test_reject_request_refunds_prc(self, api_client):
         """Test that rejecting a request refunds PRC to user"""
-        # Get a pending request
+        # Get a pending or eko_failed request
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
-        pending_requests = [r for r in data["requests"] if r.get("status") == "pending"]
+        rejectable_requests = [r for r in data["requests"] if r.get("status") in ["pending", "eko_failed"]]
         
-        if not pending_requests:
-            pytest.skip("No pending requests available for testing")
+        if not rejectable_requests:
+            pytest.skip("No pending/eko_failed requests available for testing")
             
-        request = pending_requests[0]
+        request = rejectable_requests[0]
         request_id = request["request_id"]
         prc_to_refund = request.get("total_prc_deducted", 0)
         
@@ -239,48 +247,170 @@ class TestAdminBillPaymentProcess:
         print(f"✅ Request rejected with PRC refund: {result['refund_details']['prc_refunded']}")
 
 
-class TestCompleteEndpointRemoved:
-    """Tests to verify /api/admin/bill-payment/complete endpoint no longer exists"""
+class TestRetryAction:
+    """Tests for retry action on eko_failed requests"""
     
-    def test_complete_endpoint_returns_404_or_405(self, api_client):
-        """Test that the /complete endpoint is no longer available"""
-        response = api_client.post(
-            f"{BASE_URL}/api/admin/bill-payment/complete",
+    def test_retry_only_works_on_eko_failed_status(self, api_client):
+        """Test that retry action only works on eko_failed requests"""
+        # Get requests
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        # Find a non-eko_failed request
+        non_eko_failed = [r for r in data["requests"] if r.get("status") not in ["eko_failed"]]
+        
+        if not non_eko_failed:
+            pytest.skip("No non-eko_failed requests available")
+            
+        request_id = non_eko_failed[0]["request_id"]
+        
+        # Try retry on wrong status
+        retry_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
             json={
-                "request_id": "any-request-id",
+                "request_id": request_id,
+                "action": "retry",
                 "admin_uid": ADMIN_UID
             }
         )
         
-        # Should return 404 (endpoint not found) or 405 (method not allowed)
-        assert response.status_code in [404, 405, 422], \
-            f"Expected 404/405/422 for removed endpoint, got {response.status_code}"
-        print(f"✅ /complete endpoint correctly returns {response.status_code}")
-
-
-class TestRetryBehavior:
-    """Tests for the retry behavior of Eko API calls"""
-    
-    def test_rejected_requests_show_retry_attempts(self, api_client):
-        """Test that auto-rejected requests show retry_attempts field"""
+        assert retry_response.status_code == 400
+        print(f"✅ Retry correctly rejected for status '{non_eko_failed[0]['status']}'")
+        
+    def test_retry_on_eko_failed_request(self, api_client):
+        """Test that retry action works on eko_failed requests"""
+        # Get eko_failed requests
         response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
         data = response.json()
         
-        # Find rejected requests with refund_details (auto-rejected after Eko fail)
-        auto_rejected = [r for r in data["requests"] 
-                        if r.get("status") == "rejected" and r.get("refund_details")]
+        eko_failed_requests = [r for r in data["requests"] if r.get("status") == "eko_failed"]
         
-        if not auto_rejected:
-            pytest.skip("No auto-rejected requests available")
+        if not eko_failed_requests:
+            pytest.skip("No eko_failed requests available for retry test")
             
-        req = auto_rejected[0]
+        request_id = eko_failed_requests[0]["request_id"]
         
-        # Should have retry_attempts field
+        # Retry
+        retry_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
+            json={
+                "request_id": request_id,
+                "action": "retry",
+                "admin_uid": ADMIN_UID
+            }
+        )
+        
+        assert retry_response.status_code == 200
+        result = retry_response.json()
+        
+        # Result should be either completed (Eko success on retry) or stays eko_failed
+        assert result.get("status") in ["completed", "eko_failed"], \
+            f"Expected 'completed' or 'eko_failed', got: {result.get('status')}"
+        
+        if result.get("status") == "completed":
+            print(f"✅ Retry succeeded - TXN: {result.get('txn_number')}")
+        else:
+            print(f"✅ Retry still failed - Reason: {result.get('eko_fail_reason')}")
+
+
+class TestCompleteAction:
+    """Tests for manual completion action"""
+    
+    def test_complete_action_works_on_pending_and_eko_failed(self, api_client):
+        """Test that complete action works on pending and eko_failed requests"""
+        # Get requests
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        # Find pending or eko_failed request
+        completable_requests = [r for r in data["requests"] if r.get("status") in ["pending", "eko_failed"]]
+        
+        if not completable_requests:
+            pytest.skip("No pending/eko_failed requests available for complete test")
+            
+        request_id = completable_requests[0]["request_id"]
+        
+        # Complete manually
+        complete_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
+            json={
+                "request_id": request_id,
+                "action": "complete",
+                "admin_uid": ADMIN_UID,
+                "admin_notes": "TEST: Manually completed via test",
+                "txn_reference": f"TESTMANUAL{uuid.uuid4().hex[:8].upper()}"
+            }
+        )
+        
+        assert complete_response.status_code == 200
+        result = complete_response.json()
+        
+        assert result.get("status") == "completed"
+        assert "txn_number" in result
+        print(f"✅ Request manually completed - TXN: {result.get('txn_number')}")
+        
+    def test_complete_action_fails_on_completed_request(self, api_client):
+        """Test that complete action fails on already completed requests"""
+        # Get completed requests
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        completed_requests = [r for r in data["requests"] if r.get("status") == "completed"]
+        
+        if not completed_requests:
+            pytest.skip("No completed requests available")
+            
+        request_id = completed_requests[0]["request_id"]
+        
+        # Try to complete again
+        complete_response = api_client.post(
+            f"{BASE_URL}/api/admin/bill-payment/process",
+            json={
+                "request_id": request_id,
+                "action": "complete",
+                "admin_uid": ADMIN_UID
+            }
+        )
+        
+        assert complete_response.status_code == 400
+        print("✅ Complete correctly rejected for already completed request")
+
+
+class TestEkoFailedStatus:
+    """Tests specific to eko_failed status handling"""
+    
+    def test_eko_failed_requests_have_fail_reason(self, api_client):
+        """Test that eko_failed requests have eko_fail_reason field"""
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        eko_failed_requests = [r for r in data["requests"] if r.get("status") == "eko_failed"]
+        
+        if not eko_failed_requests:
+            pytest.skip("No eko_failed requests available")
+            
+        req = eko_failed_requests[0]
+        
+        # Should have eko_fail_reason
+        assert "eko_fail_reason" in req, "eko_failed request should have eko_fail_reason"
+        print(f"✅ eko_failed request has fail reason: {req['eko_fail_reason']}")
+        
+    def test_eko_failed_requests_have_retry_attempts(self, api_client):
+        """Test that eko_failed requests show retry_attempts field"""
+        response = api_client.get(f"{BASE_URL}/api/admin/bill-payment/requests")
+        data = response.json()
+        
+        eko_failed_requests = [r for r in data["requests"] if r.get("status") == "eko_failed"]
+        
+        if not eko_failed_requests:
+            pytest.skip("No eko_failed requests available")
+            
+        req = eko_failed_requests[0]
+        
+        # Should have retry_attempts
         if "retry_attempts" in req:
             assert req["retry_attempts"] >= 1
-            print(f"✅ Auto-rejected after {req['retry_attempts']} retry attempts")
-        else:
-            print("ℹ️ Older rejected request without retry_attempts field")
+            print(f"✅ eko_failed request has {req['retry_attempts']} retry attempts")
 
 
 class TestHealthAndConfig:
