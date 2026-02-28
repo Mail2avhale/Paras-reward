@@ -7553,6 +7553,132 @@ async def get_user_subscription(uid: str):
         }
     }
 
+
+@api_router.get("/subscription/history/{uid}")
+async def get_user_subscription_history(uid: str):
+    """Get user's complete subscription history"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get Razorpay payments (instant activations)
+    razorpay_payments = await db.razorpay_orders.find(
+        {"user_id": uid, "status": "paid"}
+    ).sort("paid_at", -1).to_list(100)
+    
+    # Get manual subscription payments
+    manual_payments = await db.subscription_payments.find(
+        {"user_id": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    history = []
+    
+    # Process Razorpay payments
+    for payment in razorpay_payments:
+        paid_at = payment.get("paid_at")
+        if paid_at and isinstance(paid_at, str):
+            paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+        
+        history.append({
+            "id": payment.get("order_id"),
+            "type": "razorpay",
+            "plan_name": payment.get("plan_name", "").title(),
+            "plan_type": payment.get("plan_type", "monthly"),
+            "amount": payment.get("amount", 0) / 100,
+            "status": "completed",
+            "payment_method": "Online (Razorpay)",
+            "payment_id": payment.get("payment_id"),
+            "activated_at": paid_at.isoformat() if paid_at else None,
+            "created_at": payment.get("created_at"),
+            "instant_activation": True
+        })
+    
+    # Process manual payments
+    for payment in manual_payments:
+        created_at = payment.get("created_at")
+        if created_at and isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        
+        approved_at = payment.get("approved_at") or payment.get("verified_at")
+        if approved_at and isinstance(approved_at, str):
+            approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+        
+        history.append({
+            "id": str(payment.get("_id", "")),
+            "type": "manual",
+            "plan_name": payment.get("plan_name", payment.get("plan", "")).title(),
+            "plan_type": payment.get("plan_type", payment.get("duration", "monthly")),
+            "amount": payment.get("amount", 0),
+            "status": payment.get("status", "pending"),
+            "payment_method": "UPI/Bank Transfer",
+            "utr_number": payment.get("utr_number"),
+            "created_at": created_at.isoformat() if created_at else None,
+            "activated_at": approved_at.isoformat() if approved_at and payment.get("status") == "approved" else None,
+            "instant_activation": False
+        })
+    
+    # Sort by created_at descending
+    history.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    
+    return {
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "current_plan": user.get("subscription_plan", "explorer"),
+        "total_payments": len(history),
+        "history": history
+    }
+
+
+@api_router.get("/admin/razorpay-subscriptions")
+async def get_admin_razorpay_subscriptions(
+    status: str = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Get all Razorpay subscription payments for admin dashboard"""
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.razorpay_orders.count_documents(query)
+    
+    result = []
+    for order in orders:
+        user_id = order.get("user_id")
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1})
+        
+        result.append({
+            "order_id": order.get("order_id"),
+            "user_id": user_id,
+            "user_name": user.get("name") if user else "Unknown",
+            "user_email": user.get("email") if user else None,
+            "user_mobile": user.get("mobile") if user else None,
+            "plan_name": order.get("plan_name", "").title(),
+            "plan_type": order.get("plan_type", "monthly"),
+            "amount": order.get("amount", 0) / 100,
+            "status": order.get("status", "created"),
+            "payment_id": order.get("payment_id"),
+            "created_at": order.get("created_at"),
+            "paid_at": order.get("paid_at")
+        })
+    
+    paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+    total_revenue = sum(o.get("amount", 0) for o in paid_orders) / 100
+    
+    return {
+        "orders": result,
+        "total": total,
+        "stats": {
+            "total_orders": total,
+            "paid_orders": len(paid_orders),
+            "total_revenue": total_revenue,
+            "pending_orders": await db.razorpay_orders.count_documents({"status": "created"})
+        }
+    }
+
+
 @api_router.post("/subscription/payment/{uid}")
 async def submit_subscription_payment(uid: str, request: Request):
     """Submit subscription payment for verification with fraud prevention"""
