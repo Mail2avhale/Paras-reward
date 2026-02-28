@@ -26045,13 +26045,13 @@ async def update_vip_plan(request: Request):
     # Get or create settings
     settings = await db.settings.find_one({})
     if not settings:
-        # Create initial settings with default VIP plans (28 days per month)
+        # Create initial settings with default VIP plans (standard months)
         initial_settings = {
             "vip_plans": {
-                "monthly": {"price": 299.0, "duration_days": 28, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
-                "quarterly": {"price": 897.0, "duration_days": 84, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
-                "half_yearly": {"price": 1794.0, "duration_days": 168, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
-                "yearly": {"price": 3588.0, "duration_days": 336, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
+                "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
+                "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
+                "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
+                "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
             },
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
