@@ -361,9 +361,11 @@ const AdminRazorpaySubscriptions = ({ user }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
               className={`p-4 rounded-2xl border ${
-                order.status === 'paid'
-                  ? 'bg-emerald-500/5 border-emerald-500/20'
-                  : 'bg-gray-900/50 border-gray-800'
+                order.status === 'paid' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                order.status === 'failed' ? 'bg-red-500/5 border-red-500/20' :
+                order.status === 'cancelled' ? 'bg-gray-800/50 border-gray-700' :
+                order.status === 'error' ? 'bg-orange-500/5 border-orange-500/20' :
+                'bg-gray-900/50 border-gray-800'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
@@ -372,13 +374,28 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   <p className="text-sm text-gray-400">{order.user_email || order.user_mobile}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                  order.status === 'paid'
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-amber-500/20 text-amber-400'
+                  order.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                  order.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                  order.status === 'cancelled' ? 'bg-gray-700 text-gray-400' :
+                  order.status === 'error' ? 'bg-orange-500/20 text-orange-400' :
+                  order.status === 'fraudulent' ? 'bg-purple-500/20 text-purple-400' :
+                  'bg-amber-500/20 text-amber-400'
                 }`}>
-                  {order.status === 'paid' ? '✅ Paid' : '⏳ Pending'}
+                  {order.status === 'paid' ? '✅ Paid' : 
+                   order.status === 'failed' ? '❌ Failed' :
+                   order.status === 'cancelled' ? '🚫 Cancelled' :
+                   order.status === 'error' ? '⚠️ Error' :
+                   order.status === 'fraudulent' ? '🚨 Fraudulent' :
+                   '⏳ Pending'}
                 </span>
               </div>
+              
+              {/* Show failure reason if exists */}
+              {order.failure_reason && (
+                <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-red-400 text-xs">Reason: {order.failure_reason}</p>
+                </div>
+              )}
               
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
