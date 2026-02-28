@@ -163,7 +163,14 @@ const SubscriptionPlans = ({ user }) => {
         order_id: order_id,
         handler: async function (response) {
           try {
-            // Verify payment
+            // Only proceed if we have all required response fields
+            if (!response.razorpay_order_id || !response.razorpay_payment_id || !response.razorpay_signature) {
+              toast.error('Payment incomplete. Please try again.');
+              setRazorpayLoading(false);
+              return;
+            }
+            
+            // Verify payment with backend
             const verifyRes = await axios.post(`${API}/razorpay/verify-payment`, {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -171,17 +178,21 @@ const SubscriptionPlans = ({ user }) => {
               user_id: user.uid
             });
             
-            if (verifyRes.data.success) {
+            if (verifyRes.data.success === true) {
               toast.success('🎉 Payment Successful! Your subscription is now ACTIVE!', {
                 duration: 5000,
               });
               setCurrentStep(5);
               // Refresh user data
               fetchData();
+            } else {
+              toast.error(verifyRes.data.message || 'Payment verification failed. Please contact support.');
+              setRazorpayLoading(false);
             }
           } catch (error) {
             console.error('Payment verification failed:', error);
-            toast.error('Payment verification failed. Please contact support.');
+            toast.error('Payment verification failed. Please contact support if amount was deducted.');
+            setRazorpayLoading(false);
           }
         },
         prefill: {
