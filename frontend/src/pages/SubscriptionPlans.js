@@ -643,7 +643,132 @@ const SubscriptionPlans = ({ user }) => {
             </div>
           </div>
 
-          {/* UPI Payment Info */}
+          {/* Payment Method Selection */}
+          <div className="space-y-3">
+            <h3 className="text-white font-semibold">Choose Payment Method</h3>
+            
+            {/* Razorpay - Instant Activation (Recommended) */}
+            <button
+              onClick={() => setPaymentMethod('razorpay')}
+              className={`w-full p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'razorpay'
+                  ? 'border-emerald-500 bg-emerald-500/10'
+                  : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  paymentMethod === 'razorpay' ? 'bg-emerald-500/20' : 'bg-gray-800'
+                }`}>
+                  <CreditCard className={`w-6 h-6 ${paymentMethod === 'razorpay' ? 'text-emerald-400' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <p className={`font-semibold ${paymentMethod === 'razorpay' ? 'text-emerald-400' : 'text-white'}`}>
+                      Online Payment
+                    </p>
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
+                      ⚡ Instant
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm">UPI, Cards, Net Banking - Instant Activation</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  paymentMethod === 'razorpay' ? 'border-emerald-500 bg-emerald-500' : 'border-gray-600'
+                }`}>
+                  {paymentMethod === 'razorpay' && <Check className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+            </button>
+
+            {/* Manual UPI/Bank - 24hr Activation */}
+            <button
+              onClick={() => setPaymentMethod('manual')}
+              className={`w-full p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'manual'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  paymentMethod === 'manual' ? 'bg-amber-500/20' : 'bg-gray-800'
+                }`}>
+                  <Wallet className={`w-6 h-6 ${paymentMethod === 'manual' ? 'text-amber-400' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <p className={`font-semibold ${paymentMethod === 'manual' ? 'text-amber-400' : 'text-white'}`}>
+                      Manual UPI/Bank Transfer
+                    </p>
+                  </div>
+                  <p className="text-gray-400 text-sm">Pay & upload screenshot - 24hr activation</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  paymentMethod === 'manual' ? 'border-amber-500 bg-amber-500' : 'border-gray-600'
+                }`}>
+                  {paymentMethod === 'manual' && <Check className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Razorpay Pay Now Button */}
+          {paymentMethod === 'razorpay' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/30">
+                <div className="flex items-center gap-3 mb-3">
+                  <Zap className="w-5 h-5 text-emerald-400" />
+                  <p className="text-emerald-400 font-semibold">Instant Activation Benefits</p>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    Subscription activates immediately after payment
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    All payment methods: UPI, Cards, Net Banking, Wallets
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    Secure payment via Razorpay
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={handleRazorpayPayment}
+                disabled={razorpayLoading}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/30 disabled:opacity-50"
+              >
+                {razorpayLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    Pay ₹{getPrice()} Now
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">⚡ Instant</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
+
+          {/* Manual Payment Info (existing UPI/Bank) */}
+          {paymentMethod === 'manual' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
           <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30">
             <h3 className="text-amber-400 font-semibold mb-3 flex items-center gap-2">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
