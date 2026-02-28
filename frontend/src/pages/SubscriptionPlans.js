@@ -4,13 +4,30 @@ import axios from 'axios';
 import { 
   Crown, CheckCircle, Upload, ArrowLeft, Star, Zap, ShoppingBag, 
   Gift, Clock, Shield, CreditCard, ChevronRight, Calendar,
-  AlertCircle, Check, Rocket, TrendingUp, Award, Users
+  AlertCircle, Check, Rocket, TrendingUp, Award, Users, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Load Razorpay script
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
