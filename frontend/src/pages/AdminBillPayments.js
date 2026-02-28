@@ -1180,6 +1180,54 @@ const AdminBillPayments = ({ user }) => {
                     className="bg-gray-800 border-gray-700"
                   />
                 </div>
+              ) : selectedRequest.status === 'eko_failed' ? (
+                /* Eko Failed - Admin decides: Retry, Complete, or Reject */
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-amber-400">
+                        ⚠️ Eko API Failed
+                      </span>
+                      {selectedRequest.retry_attempts && (
+                        <span className="text-sm text-gray-400">
+                          Attempts: {selectedRequest.retry_attempts}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {selectedRequest.eko_fail_reason && (
+                      <div className="mt-2 pt-2 border-t border-amber-500/30">
+                        <span className="text-xs text-gray-500">Error:</span>
+                        <p className="text-red-400 text-sm mt-1">{selectedRequest.eko_fail_reason}</p>
+                      </div>
+                    )}
+                    
+                    <div className="mt-3 p-2 bg-gray-800 rounded-lg">
+                      <p className="text-xs text-gray-400 mb-2">Admin Options:</p>
+                      <ul className="text-xs text-gray-300 space-y-1">
+                        <li>🔄 <strong>Retry:</strong> Try Eko API again</li>
+                        <li>✅ <strong>Complete:</strong> Mark as done (processed manually)</li>
+                        <li>❌ <strong>Reject:</strong> Reject request & refund PRC</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Processing Info */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedRequest.approved_at && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">First Attempt</p>
+                        <p className="text-xs text-white">{new Date(selectedRequest.approved_at).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedRequest.last_retry_at && (
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <p className="text-[10px] text-gray-500">Last Retry</p>
+                        <p className="text-xs text-white">{new Date(selectedRequest.last_retry_at).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 /* Review Section for Completed/Rejected */
                 <div className="space-y-3">
