@@ -17653,8 +17653,8 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
         plan_type = latest_payment.get("plan_type", "monthly")
         approved_at = latest_payment.get("approved_at")
         
-        duration_mapping = {"monthly": 30, "quarterly": 90, "half_yearly": 180, "yearly": 365}
-        duration_days = duration_mapping.get(plan_type, 30)
+        duration_mapping = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 336}
+        duration_days = duration_mapping.get(plan_type, 28)
         
         if approved_at:
             if isinstance(approved_at, str):
