@@ -7831,6 +7831,102 @@ async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/admin/razorpay-delete-pending")
+async def delete_pending_razorpay_orders(request: Request):
+    """
+    Delete all pending (status='created') Razorpay orders.
+    These are orders where user started payment but never completed.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Count pending orders
+        pending_count = await db.razorpay_orders.count_documents({"status": "created"})
+        
+        if pending_count == 0:
+            return {
+                "success": True,
+                "message": "No pending orders to delete",
+                "deleted_count": 0
+            }
+        
+        # Delete all pending orders
+        result = await db.razorpay_orders.delete_many({"status": "created"})
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_delete_pending",
+            "deleted_count": result.deleted_count,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Deleted {result.deleted_count} pending orders",
+            "deleted_count": result.deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Delete pending error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay-delete-all")
+async def delete_all_razorpay_orders(request: Request):
+    """
+    Delete ALL Razorpay orders (both paid and pending).
+    Use this to completely reset Razorpay data.
+    WARNING: This is irreversible!
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        confirm = data.get("confirm", False)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not confirm:
+            raise HTTPException(status_code=400, detail="Please set confirm=true to proceed")
+        
+        # Get counts before deletion
+        total_count = await db.razorpay_orders.count_documents({})
+        paid_count = await db.razorpay_orders.count_documents({"status": "paid"})
+        pending_count = await db.razorpay_orders.count_documents({"status": "created"})
+        
+        # Delete all orders
+        result = await db.razorpay_orders.delete_many({})
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_delete_all",
+            "total_deleted": result.deleted_count,
+            "paid_deleted": paid_count,
+            "pending_deleted": pending_count,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Deleted ALL {result.deleted_count} orders ({paid_count} paid, {pending_count} pending)",
+            "deleted_count": result.deleted_count,
+            "paid_deleted": paid_count,
+            "pending_deleted": pending_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Delete all error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/admin/razorpay-fraud-preview")
 async def preview_fraudulent_subscriptions():
     """
