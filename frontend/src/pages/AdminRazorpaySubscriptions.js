@@ -282,6 +282,82 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           ))
         )}
       </div>
+
+      {/* Fraud Cleanup Modal */}
+      {showFraudModal && fraudPreview && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="p-5 border-b border-gray-800">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <h2 className="text-lg font-bold text-white">Fraud Cleanup Preview</h2>
+              </div>
+            </div>
+            
+            <div className="p-5 overflow-y-auto max-h-[50vh]">
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                <p className="text-red-400 font-medium">
+                  {fraudPreview.total_will_reset} users will be reset to FREE
+                </p>
+                <p className="text-green-400 text-sm mt-1">
+                  {fraudPreview.total_will_skip} legitimate users will be SKIPPED
+                </p>
+              </div>
+              
+              {fraudPreview.users_to_reset?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-white font-medium mb-2">Users to Reset:</p>
+                  <div className="space-y-2">
+                    {fraudPreview.users_to_reset.slice(0, 10).map((u, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-red-500/5 border border-red-500/20 text-sm">
+                        <p className="text-white">{u.name}</p>
+                        <p className="text-gray-400 text-xs">{u.email || u.mobile}</p>
+                        <p className="text-red-400 text-xs">{u.current_plan} → explorer</p>
+                      </div>
+                    ))}
+                    {fraudPreview.users_to_reset.length > 10 && (
+                      <p className="text-gray-400 text-sm">
+                        +{fraudPreview.users_to_reset.length - 10} more...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {fraudPreview.users_to_skip?.length > 0 && (
+                <div>
+                  <p className="text-white font-medium mb-2">Users to SKIP (have legitimate payments):</p>
+                  <div className="space-y-2">
+                    {fraudPreview.users_to_skip.slice(0, 5).map((u, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-green-500/5 border border-green-500/20 text-sm">
+                        <p className="text-white">{u.name}</p>
+                        <p className="text-green-400 text-xs">Will keep: {u.current_plan}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-5 border-t border-gray-800 flex gap-3">
+              <button
+                onClick={() => setShowFraudModal(false)}
+                className="flex-1 px-4 py-3 rounded-xl bg-gray-800 text-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeFraudCleanup}
+                disabled={cleanupLoading}
+                className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {cleanupLoading ? 'Processing...' : 'Execute Cleanup'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
