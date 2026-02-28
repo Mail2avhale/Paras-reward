@@ -1295,12 +1295,12 @@ async def auto_sync_razorpay_payments():
         
         razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
         
-        # Plan durations
+        # Plan durations (28 days per month)
         PLAN_DURATIONS = {
-            "monthly": 30,
-            "quarterly": 90,
-            "half_yearly": 180,
-            "yearly": 365
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
         }
         
         # Get all pending orders
