@@ -375,6 +375,121 @@ const SubscriptionPlans = ({ user }) => {
         </div>
       )}
 
+      {/* Subscription History Button */}
+      {currentStep === 1 && subscriptionHistory.length > 0 && (
+        <div className="mx-5 mt-4">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-800 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-gray-400" />
+              <span className="text-gray-300">Subscription History</span>
+              <span className="px-2 py-0.5 bg-gray-800 rounded-full text-xs text-gray-400">
+                {subscriptionHistory.length}
+              </span>
+            </div>
+            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showHistory ? 'rotate-90' : ''}`} />
+          </button>
+          
+          {/* History List */}
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 space-y-3">
+                  {subscriptionHistory.map((item, index) => (
+                    <motion.div
+                      key={item.id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`p-4 rounded-xl border ${
+                        item.status === 'completed' || item.status === 'approved'
+                          ? 'bg-emerald-500/5 border-emerald-500/20'
+                          : item.status === 'pending'
+                          ? 'bg-amber-500/5 border-amber-500/20'
+                          : 'bg-gray-900/50 border-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`font-semibold ${
+                              item.plan_name?.toLowerCase().includes('elite') ? 'text-amber-400' :
+                              item.plan_name?.toLowerCase().includes('startup') ? 'text-blue-400' :
+                              'text-white'
+                            }`}>
+                              {item.plan_name || 'Unknown Plan'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({item.plan_type || 'monthly'})
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <span>₹{item.amount}</span>
+                            <span>•</span>
+                            <span>{item.payment_method}</span>
+                            {item.instant_activation && (
+                              <>
+                                <span>•</span>
+                                <span className="text-emerald-400 text-xs">⚡ Instant</span>
+                              </>
+                            )}
+                          </div>
+                          
+                          {item.created_at && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(item.created_at).toLocaleDateString('en-IN', {
+                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="text-right">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                            item.status === 'completed' || item.status === 'approved'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : item.status === 'pending'
+                              ? 'bg-amber-500/20 text-amber-400'
+                              : item.status === 'rejected'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-gray-800 text-gray-400'
+                          }`}>
+                            {item.status === 'completed' ? '✅ Completed' :
+                             item.status === 'approved' ? '✅ Approved' :
+                             item.status === 'pending' ? '⏳ Pending' :
+                             item.status === 'rejected' ? '❌ Rejected' :
+                             item.status}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {item.payment_id && (
+                        <p className="text-[10px] text-gray-600 mt-2 font-mono">
+                          ID: {item.payment_id}
+                        </p>
+                      )}
+                      {item.utr_number && (
+                        <p className="text-[10px] text-gray-600 mt-1 font-mono">
+                          UTR: {item.utr_number}
+                        </p>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Step 1: Select Plan */}
       {currentStep === 1 && (
         <div className="px-5 mt-6 space-y-6">
