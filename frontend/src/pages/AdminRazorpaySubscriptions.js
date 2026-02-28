@@ -90,6 +90,52 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     }
   };
 
+  const deletePendingOrders = async () => {
+    if (!window.confirm('Are you sure you want to delete all PENDING orders?')) {
+      return;
+    }
+    
+    try {
+      setCleanupLoading(true);
+      const res = await axios.post(`${API}/admin/razorpay-delete-pending`, {
+        admin_pin: '123456'
+      });
+      
+      toast.success(`Deleted ${res.data.deleted_count} pending orders`);
+      fetchData();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
+  const deleteAllOrders = async () => {
+    if (!window.confirm('⚠️ WARNING: This will delete ALL orders (paid + pending). Are you absolutely sure?')) {
+      return;
+    }
+    if (!window.confirm('This action is IRREVERSIBLE. Type OK to proceed.')) {
+      return;
+    }
+    
+    try {
+      setCleanupLoading(true);
+      const res = await axios.post(`${API}/admin/razorpay-delete-all`, {
+        admin_pin: '123456',
+        confirm: true
+      });
+      
+      toast.success(`Deleted ALL ${res.data.deleted_count} orders`);
+      fetchData();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
