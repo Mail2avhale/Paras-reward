@@ -26346,28 +26346,6 @@ async def process_bill_payment_request(request: Request):
             "processing_time": processing_time_str,
             "payment_method": "manual"
         }
-            await create_notification(
-                user_id=user_id,
-                title="❌ Bill Payment Failed - PRC Refunded",
-                message=f"Your ₹{amount_inr} {service_name} request could not be processed.\n\n❌ Reason: {reject_reason}\n\n💰 PRC Refund: {total_prc:.2f} PRC returned to your wallet.\n\n🔄 Please try again later.",
-                notification_type="bill_payment_rejected",
-                related_id=request_id,
-                icon="❌",
-                action_url="/bill-payments"
-            )
-            
-            return {
-                "message": f"❌ Eko payment failed after {retry_count} retries. Request rejected and PRC refunded.", 
-                "status": "rejected", 
-                "reject_reason": reject_reason,
-                "eko_error": eko_payment_error,
-                "retry_attempts": retry_count,
-                "refund_details": {
-                    "prc_refunded": total_prc,
-                    "balance_before": balance_before,
-                    "balance_after": balance_after
-                }
-            }
 
 # ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
 
