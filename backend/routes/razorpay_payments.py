@@ -320,7 +320,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         
         logging.info(f"[RAZORPAY] User {request.user_id}: New plan {duration_days} days + Remaining {remaining_days} days = Total {total_days} days")
         
-        # Update user subscription
+        # Update user subscription (set BOTH expiry field names for consistency)
         await db.users.update_one(
             {"uid": request.user_id},
             {
@@ -328,11 +328,14 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "subscription_plan": plan_name,
                     "subscription_start": now,
                     "subscription_expires": expiry_date,
+                    "subscription_expiry": expiry_date.isoformat(),  # Also set this field
                     "membership_type": "vip",
                     "subscription_status": "active",
                     "last_payment_id": request.razorpay_payment_id,
                     "last_payment_date": now,
-                    "previous_remaining_days_added": remaining_days
+                    "previous_plan": old_plan,
+                    "previous_remaining_days_added": remaining_days,
+                    "previous_expiry": old_expiry_str
                 }
             }
         )
