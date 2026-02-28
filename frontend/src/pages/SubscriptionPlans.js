@@ -129,6 +129,90 @@ const SubscriptionPlans = ({ user }) => {
     setCurrentStep(3);
   };
 
+  // Razorpay Online Payment - Instant Activation
+  const handleRazorpayPayment = async () => {
+    try {
+      setRazorpayLoading(true);
+      
+      // Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error('Failed to load payment gateway. Please try again.');
+        return;
+      }
+      
+      // Get Razorpay config
+      const configRes = await axios.get(`${API}/razorpay/config`);
+      const { key_id } = configRes.data;
+      
+      // Create order
+      const orderRes = await axios.post(`${API}/razorpay/create-order`, {
+        user_id: user.uid,
+        plan_type: selectedDuration,
+        plan_name: selectedPlan.id,
+        amount: getPrice()
+      });
+      
+      const { order_id, amount, currency } = orderRes.data;
+      
+      // Razorpay options
+      const options = {
+        key: key_id,
+        amount: amount,
+        currency: currency,
+        name: 'PARAS REWARD',
+        description: `${selectedPlan.name} - ${selectedDuration} Subscription`,
+        order_id: order_id,
+        handler: async function (response) {
+          try {
+            // Verify payment
+            const verifyRes = await axios.post(`${API}/razorpay/verify-payment`, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              user_id: user.uid
+            });
+            
+            if (verifyRes.data.success) {
+              toast.success('🎉 Payment Successful! Your subscription is now ACTIVE!', {
+                duration: 5000,
+              });
+              setCurrentStep(5);
+              // Refresh user data
+              fetchData();
+            }
+          } catch (error) {
+            console.error('Payment verification failed:', error);
+            toast.error('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: userData?.full_name || userData?.name || '',
+          email: userData?.email || '',
+          contact: userData?.mobile || ''
+        },
+        theme: {
+          color: '#F59E0B'
+        },
+        modal: {
+          ondismiss: function() {
+            setRazorpayLoading(false);
+            toast.info('Payment cancelled');
+          }
+        }
+      };
+      
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+      
+    } catch (error) {
+      console.error('Razorpay error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to initiate payment');
+    } finally {
+      setRazorpayLoading(false);
+    }
+  };
+
   const getPrice = () => {
     if (!selectedPlan || !selectedPlan.pricing) return 0;
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
