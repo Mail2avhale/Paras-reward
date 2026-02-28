@@ -7675,7 +7675,7 @@ async def get_admin_razorpay_subscriptions(
             "user_mobile": user.get("mobile") if user else None,
             "plan_name": order.get("plan_name", "").title(),
             "plan_type": order.get("plan_type", "monthly"),
-            "amount": order.get("amount", 0) / 100,
+            "amount": order.get("amount", 0),  # Already in INR, don't divide by 100
             "status": order.get("status", "created"),
             "payment_id": order.get("payment_id"),
             "created_at": order.get("created_at"),
