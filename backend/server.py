@@ -7697,6 +7697,141 @@ async def get_admin_razorpay_subscriptions(
     }
 
 
+@api_router.post("/admin/razorpay-cleanup-fraudulent")
+async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
+    """
+    CLEANUP API: Reset all fraudulent Razorpay subscriptions.
+    This will:
+    1. Find all users who got subscriptions via Razorpay "paid" orders
+    2. Reset their subscription to "explorer" (free plan)
+    3. Mark the orders as "fraudulent"
+    
+    Use this when Razorpay payments failed but subscriptions were activated.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        # Security check - require admin PIN
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all "paid" Razorpay orders
+        paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+        
+        if not paid_orders:
+            return {
+                "success": True,
+                "message": "No paid orders found to cleanup",
+                "affected_users": 0
+            }
+        
+        affected_users = []
+        
+        for order in paid_orders:
+            user_id = order.get("user_id")
+            payment_id = order.get("payment_id")
+            
+            # Get user details before reset
+            user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1})
+            
+            if user:
+                # Reset user subscription to explorer (free)
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "subscription_plan": "explorer",
+                            "membership_type": "free",
+                            "subscription_status": "inactive",
+                            "fraudulent_activation_reverted": True,
+                            "reverted_at": datetime.now(timezone.utc).isoformat()
+                        },
+                        "$unset": {
+                            "subscription_start": "",
+                            "subscription_expires": "",
+                            "last_payment_id": "",
+                            "last_payment_date": ""
+                        }
+                    }
+                )
+                
+                affected_users.append({
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "previous_plan": user.get("subscription_plan"),
+                    "payment_id": payment_id
+                })
+            
+            # Mark order as fraudulent
+            await db.razorpay_orders.update_one(
+                {"order_id": order.get("order_id")},
+                {
+                    "$set": {
+                        "status": "fraudulent",
+                        "original_status": "paid",
+                        "marked_fraudulent_at": datetime.now(timezone.utc).isoformat(),
+                        "reason": "Payment failed on Razorpay but subscription was activated"
+                    }
+                }
+            )
+        
+        # Log the cleanup action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_fraud_cleanup",
+            "affected_users_count": len(affected_users),
+            "affected_users": affected_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Cleaned up {len(affected_users)} fraudulent subscriptions",
+            "affected_users": len(affected_users),
+            "details": affected_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Fraud cleanup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/razorpay-fraud-preview")
+async def preview_fraudulent_subscriptions():
+    """
+    Preview: List all users who will be affected by fraud cleanup.
+    Call this before running the actual cleanup.
+    """
+    paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+    
+    affected_users = []
+    for order in paid_orders:
+        user_id = order.get("user_id")
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1, "mobile": 1})
+        
+        if user:
+            affected_users.append({
+                "user_id": user_id,
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "current_plan": user.get("subscription_plan"),
+                "order_id": order.get("order_id"),
+                "payment_id": order.get("payment_id"),
+                "amount": order.get("amount"),
+                "created_at": order.get("created_at")
+            })
+    
+    return {
+        "total_affected": len(affected_users),
+        "users": affected_users,
+        "warning": "These users will be reset to 'explorer' (free) plan"
+    }
+
+
 @api_router.post("/subscription/payment/{uid}")
 async def submit_subscription_payment(uid: str, request: Request):
     """Submit subscription payment for verification with fraud prevention"""
