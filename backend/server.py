@@ -7803,32 +7803,70 @@ async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
 async def preview_fraudulent_subscriptions():
     """
     Preview: List all users who will be affected by fraud cleanup.
-    Call this before running the actual cleanup.
+    SMART VERSION: Only shows users whose subscription came from Razorpay (not manual/UPI)
     """
     paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
     
     affected_users = []
+    skipped_users = []  # Users with legitimate subscriptions
+    
     for order in paid_orders:
         user_id = order.get("user_id")
-        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1, "mobile": 1})
+        order_created = order.get("created_at")
+        razorpay_payment_id = order.get("payment_id")
         
-        if user:
-            affected_users.append({
-                "user_id": user_id,
-                "name": user.get("name"),
-                "email": user.get("email"),
-                "mobile": user.get("mobile"),
-                "current_plan": user.get("subscription_plan"),
-                "order_id": order.get("order_id"),
-                "payment_id": order.get("payment_id"),
-                "amount": order.get("amount"),
-                "created_at": order.get("created_at")
-            })
+        user = await db.users.find_one(
+            {"uid": user_id}, 
+            {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1, "mobile": 1, 
+             "subscription_start": 1, "last_payment_id": 1}
+        )
+        
+        if not user:
+            continue
+        
+        # Check if user has an APPROVED manual VIP payment (legitimate subscription)
+        legitimate_payment = await db.vip_payments.find_one({
+            "uid": user_id,
+            "status": "approved"
+        }, sort=[("approved_at", -1)])
+        
+        user_info = {
+            "user_id": user_id,
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "mobile": user.get("mobile"),
+            "current_plan": user.get("subscription_plan"),
+            "order_id": order.get("order_id"),
+            "payment_id": razorpay_payment_id,
+            "amount": order.get("amount"),
+            "razorpay_order_date": str(order_created) if order_created else None
+        }
+        
+        # If user has legitimate manual payment, skip them
+        if legitimate_payment:
+            user_info["legitimate_payment"] = {
+                "payment_id": str(legitimate_payment.get("_id")),
+                "plan": legitimate_payment.get("plan"),
+                "approved_at": str(legitimate_payment.get("approved_at"))
+            }
+            user_info["reason"] = "Has legitimate manual payment - WILL BE SKIPPED"
+            skipped_users.append(user_info)
+        else:
+            # Check if subscription came from this Razorpay payment
+            if user.get("last_payment_id") == razorpay_payment_id:
+                user_info["reason"] = "Subscription from fraudulent Razorpay - WILL BE RESET"
+                affected_users.append(user_info)
+            else:
+                # Extra check: if no last_payment_id but has razorpay order
+                user_info["reason"] = "Razorpay order exists - WILL BE RESET"
+                affected_users.append(user_info)
     
     return {
-        "total_affected": len(affected_users),
-        "users": affected_users,
-        "warning": "These users will be reset to 'explorer' (free) plan"
+        "total_will_reset": len(affected_users),
+        "total_will_skip": len(skipped_users),
+        "users_to_reset": affected_users,
+        "users_to_skip": skipped_users,
+        "warning": "Only 'users_to_reset' will be converted to FREE. Users with legitimate payments will be SKIPPED."
     }
 
 
