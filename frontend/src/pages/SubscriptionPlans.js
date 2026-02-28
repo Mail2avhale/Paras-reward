@@ -239,6 +239,18 @@ const SubscriptionPlans = ({ user }) => {
               duration: 8000
             });
             setRazorpayLoading(false);
+            
+            // Update order status to error
+            try {
+              await axios.post(`${API}/razorpay/update-order-status`, {
+                order_id: response.razorpay_order_id,
+                status: 'error',
+                reason: errorMsg,
+                payment_id: response.razorpay_payment_id || ''
+              });
+            } catch (e) {
+              console.log('Could not update order status');
+            }
           }
         },
         prefill: {
