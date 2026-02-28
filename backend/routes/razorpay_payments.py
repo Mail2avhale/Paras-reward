@@ -70,7 +70,7 @@ async def get_razorpay_config():
     
     # Check if Razorpay is enabled in settings
     is_enabled = True
-    if db:
+    if db is not None:
         settings = await db.app_settings.find_one({"key": "razorpay_enabled"})
         if settings:
             is_enabled = settings.get("value", True)
@@ -121,7 +121,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
         raise HTTPException(status_code=500, detail="Razorpay not configured")
     
     # Check if Razorpay is enabled
-    if db:
+    if db is not None:
         settings = await db.app_settings.find_one({"key": "razorpay_enabled"})
         if settings and settings.get("value") == False:
             raise HTTPException(status_code=403, detail="Online payment is currently disabled. Please use manual payment.")
@@ -215,7 +215,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             logging.warning(f"[RAZORPAY] BLOCKED - Payment {request.razorpay_payment_id} has invalid status: {payment_status}")
             
             # Log the blocked attempt
-            if db:
+            if db is not None:
                 await db.blocked_payment_attempts.insert_one({
                     "payment_id": request.razorpay_payment_id,
                     "order_id": request.razorpay_order_id,
