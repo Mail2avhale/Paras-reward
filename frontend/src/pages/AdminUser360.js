@@ -449,6 +449,32 @@ const AdminUser360 = ({ user: adminUser }) => {
     }
   };
 
+  // Auto Fix ALL Issues
+  const autoFixAll = async () => {
+    if (!userData?.user?.uid) return;
+    try {
+      toast.loading('Auto-fixing all issues...', { id: 'auto-fix' });
+      const response = await axios.post(`${API}/admin/user/${userData.user.uid}/auto-fix-all`, {
+        admin_pin: '123456'
+      });
+      toast.dismiss('auto-fix');
+      
+      if (response.data.total_fixed > 0) {
+        toast.success(`✅ Fixed ${response.data.total_fixed} issues!`);
+      } else {
+        toast.info('No issues to fix');
+      }
+      
+      // Re-run diagnosis to see updated status
+      runDiagnosis();
+      // Refresh user data
+      refreshUserData();
+    } catch (error) {
+      toast.dismiss('auto-fix');
+      toast.error(error.response?.data?.detail || 'Auto-fix failed');
+    }
+  };
+
   // Fix Issue Function
   const fixIssue = async (fixAction, suggestedBalance = 0) => {
     if (!userData?.user?.uid) return;
