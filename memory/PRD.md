@@ -1,140 +1,90 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-Financial rewards platform "Paras Reward" - stabilization, bug fixes, payment integrations, and Google Play Store preparation.
-
-## Core Features
-- PRC (Paras Reward Coin) earning and redemption system
-- VIP Subscription plans (Startup, Growth, Elite)
-- Bill Payment integration (Eko BBPS) - Fully Automatic
-- DMT (Domestic Money Transfer) - Instant bank transfers
-- Razorpay Payment Gateway
-- Referral system with multi-level rewards
-- Admin dashboard for user management
+Financial rewards platform "Paras Reward" with bill payment integration via Eko API.
 
 ---
 
 ## CHANGELOG
 
-### February 27, 2026 (Session 2)
+### February 28, 2026 (Current Session)
 
-#### ✅ FULLY AUTOMATIC EKO PAYMENT FLOW - IMPLEMENTED
-**User Request:** "Manual काहीच नको - सर्व Eko API through झाले पाहिजे, retry करून, नाहीतर reject with reason"
+#### ✅ ADMIN CONTROL FLOW - NO AUTO-REJECT
+**User Request:** "Direct reject नको - Admin manually reject करेल. Manual approval पण करता आली पाहिजे."
 
 **New Flow:**
 ```
-User Request → pending
-Admin Approve → Eko API Call (3 retries with exponential backoff: 2s, 4s, 6s)
-    ├─ SUCCESS → completed (Eko TXN number auto-saved)
-    └─ FAIL → rejected (reason + PRC auto-refunded)
+pending → Admin Approve → Eko API (3 retries)
+    ├─ SUCCESS: completed (auto + Eko TXN)
+    └─ FAIL: eko_failed (Admin decides)
+         ├─ 🔄 Retry: Try Eko again
+         ├─ ✅ Complete: Manual completion
+         └─ ❌ Reject: Reject + PRC refund
 ```
 
 **Key Changes:**
-1. ❌ Removed `approved_manual` status completely
-2. ❌ Removed `/api/admin/bill-payment/complete` endpoint
-3. ❌ Removed "Complete" button from frontend
-4. ✅ Added 3x automatic retry with exponential backoff
-5. ✅ Auto-reject with clear error reason on Eko fail
-6. ✅ Auto-refund PRC to user on rejection
-7. ✅ Eko Transaction ID saved on success
+- ❌ Removed auto-reject on Eko failure
+- ✅ New `eko_failed` status (instead of rejected)
+- ✅ Admin gets full control: Retry / Complete / Reject
+- ✅ PRC refund only on manual reject
 
-**Supported Services (via Eko):**
-- Mobile Recharge (Prepaid/Postpaid)
-- DTH Recharge
-- Electricity, Water, Gas Bills
-- Broadband, Landline Bills
-- LPG Booking
-- Insurance Premium
-- FASTag Recharge
-- Credit Card Bills
-- Loan EMI
-- Municipal Tax
-- **Bank Transfer (DMT)**
-
-### February 27, 2026 (Session 1)
-- Implemented initial admin approval flow
-- Added `approved_manual` status (now removed)
-- Fixed PRC mining for free users
+**Admin Actions:**
+| Action | From Status | To Status | Description |
+|--------|-------------|-----------|-------------|
+| approve | pending | completed / eko_failed | Try Eko API |
+| retry | eko_failed | completed / eko_failed | Retry Eko |
+| complete | pending / eko_failed | completed | Manual completion |
+| reject | any (not completed) | rejected | Reject + refund |
 
 ---
 
 ## CURRENT STATUS
 
-### Bill Payment Flow (Production Ready)
-```
-┌─────────────────────────────────────────────────────────────┐
-│  USER: Submit Bill Payment Request                          │
-│         ↓                                                   │
-│  STATUS: pending (PRC deducted)                             │
-│         ↓                                                   │
-│  ADMIN: Click "Approve"                                     │
-│         ↓                                                   │
-│  SYSTEM: Call Eko API (3 retries)                          │
-│         ↓                                                   │
-│  ┌─────────────────┬─────────────────────────────────┐     │
-│  │ Eko SUCCESS     │ Eko FAIL (after 3 retries)     │     │
-│  │    ↓            │         ↓                       │     │
-│  │ completed       │ rejected                        │     │
-│  │ +Eko TXN ID     │ +Error Reason                   │     │
-│  │                 │ +PRC Refund                     │     │
-│  └─────────────────┴─────────────────────────────────┘     │
-└─────────────────────────────────────────────────────────────┘
+### Production IP Issue
+**⚠️ IMPORTANT:** Eko कडून email आला की IP whitelist केला. पण preview server IP (`34.170.12.145`) वापरला जात आहे. 
+
+**Action Required:** 
+1. Production server चा actual IP check करा
+2. Eko ला योग्य IP पाठवा किंवा code मध्ये IP update करा
+
+Code location: `/app/backend/server.py` - line 25808, 25865
+```python
+"source_ip": "34.170.12.145"  # ← Change to production IP
 ```
 
-### ⚠️ IMPORTANT: Eko IP Whitelisting Required
-- All Eko API calls currently fail with **403 Forbidden**
-- Reason: Preview environment IP not whitelisted by Eko
-- **Solution:** Deploy to Indian VPS and whitelist that IP with Eko
-- The auto-reject + PRC refund flow is working correctly
+---
+
+## TESTING STATUS
+
+**Test Report:** `/app/test_reports/iteration_86.json`
+- Backend: 10/10 passed ✅
+- Frontend: 17/17 passed ✅
 
 ---
 
 ## KEY API ENDPOINTS
 
 ### Bill Payment Admin
-- `GET /api/admin/bill-payment/requests` - List all requests
-- `POST /api/admin/bill-payment/process` - Approve/Reject (action: approve, reject ONLY)
-  - approve → triggers Eko with 3 retries → completed OR rejected
+```
+POST /api/admin/bill-payment/process
+Body: {
+    "request_id": "...",
+    "action": "approve" | "retry" | "complete" | "reject",
+    "admin_uid": "...",
+    "reject_reason": "..." (for reject),
+    "txn_reference": "..." (for complete)
+}
+```
 
-### Status Values
-| Status | Description |
-|--------|-------------|
-| pending | User submitted, awaiting admin |
-| completed | Eko payment successful |
-| rejected | Eko failed / Admin rejected (PRC refunded) |
-
----
-
-## TESTING STATUS
-
-**Latest Test Report: /app/test_reports/iteration_85.json**
-- Backend: 10/10 passed ✅
-- Frontend: 18/18 passed ✅
-- Total: 28/28 passed
-
-**Test Files:**
-- `/app/tests/e2e/admin-bill-payment-approval.spec.ts`
-- `/app/backend/tests/test_admin_bill_payment_approval.py`
-
----
-
-## PENDING TASKS
-
-### P1 - Deployment (Blocking Eko Integration)
-- [ ] Indian VPS setup with static IP
-- [ ] Eko IP whitelisting (send IP to Eko support)
-- [ ] Production deployment
-
-### P1 - Play Store
-- [ ] AAB file generation (via PWA Builder)
-
-### P2 - Performance
-- [ ] Admin page timeout optimization
-- [ ] Server-side search
-
-### P3 - Future
-- [ ] `server.py` refactor (26k+ lines)
-- [ ] Push notifications (Firebase)
+### Status Flow
+```
+pending ──approve──> completed (Eko success)
+                └──> eko_failed (Eko fail)
+                         │
+                         ├──retry──> completed / eko_failed
+                         ├──complete──> completed
+                         └──reject──> rejected (PRC refund)
+```
 
 ---
 
@@ -144,11 +94,12 @@ Admin Approve → Eko API Call (3 retries with exponential backoff: 2s, 4s, 6s)
 - UID: 8175c02a-4fbd-409c-8d47-d864e979f59f
 - PIN: 123456
 
-### Eko.in (LIVE - needs IP whitelisting)
+### Eko.in
 - Developer Key: 7c179a397b4710e71b2248d1f5892d19
 - Initiator ID: 9936606966
+- Base URL: https://api.eko.in:25002/ekoicici
 
 ---
 
 ## USER LANGUAGE
-**Marathi (मराठी)** - All communication in Marathi.
+**Marathi (मराठी)**
