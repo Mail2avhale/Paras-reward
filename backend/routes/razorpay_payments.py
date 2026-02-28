@@ -188,6 +188,11 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
         
+        # ==================== STEP 4.1: CHECK ORDER NOT ALREADY USED ====================
+        if order.get("status") == "paid":
+            logging.warning(f"[RAZORPAY] Order already paid: {request.razorpay_order_id}")
+            raise HTTPException(status_code=400, detail="This order has already been completed")
+        
         # ==================== STEP 5: CHECK FOR DUPLICATE ACTIVATION ====================
         # Prevent same payment from being used multiple times
         existing_payment = await db.razorpay_orders.find_one({
