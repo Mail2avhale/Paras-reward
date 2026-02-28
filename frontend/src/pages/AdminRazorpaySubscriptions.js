@@ -287,6 +287,25 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         </div>
       </div>
 
+      {/* SYNC Button - Most Important */}
+      {stats.pending_orders > 0 && (
+        <div className="px-5 mt-4">
+          <button
+            onClick={syncPayments}
+            disabled={cleanupLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-all"
+          >
+            <RefreshCw className={`w-5 h-5 ${cleanupLoading ? 'animate-spin' : ''}`} />
+            <span>
+              {cleanupLoading ? 'Syncing...' : `🔄 Sync Payments from Razorpay (${stats.pending_orders} pending)`}
+            </span>
+          </button>
+          <p className="text-center text-xs text-gray-500 mt-2">
+            This will check Razorpay API and auto-activate captured payments
+          </p>
+        </div>
+      )}
+
       {/* Fraud Cleanup Button */}
       {stats.paid_orders > 0 && (
         <div className="px-5 mt-4">
