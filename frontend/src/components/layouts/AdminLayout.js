@@ -184,6 +184,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       subItems: [
         { id: 'kyc', label: 'KYC', icon: Shield, path: '/admin/kyc', pendingCount: pendingCounts.kyc },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
+        { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'unified-payments', label: 'All Payments', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
         { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
