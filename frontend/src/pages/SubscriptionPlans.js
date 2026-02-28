@@ -224,6 +224,16 @@ const SubscriptionPlans = ({ user }) => {
       };
       
       const razorpay = new window.Razorpay(options);
+      
+      // Handle payment failures from Razorpay
+      razorpay.on('payment.failed', function (response) {
+        console.error('Razorpay payment failed:', response.error);
+        toast.error(`Payment failed: ${response.error.description || 'Please try again'}`, {
+          duration: 5000,
+        });
+        setRazorpayLoading(false);
+      });
+      
       razorpay.open();
       
     } catch (error) {
