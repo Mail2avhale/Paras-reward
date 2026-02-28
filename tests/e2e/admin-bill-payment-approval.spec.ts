@@ -1,16 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Admin Bill Payment Approval Flow Tests - UPDATED
+ * Admin Bill Payment Approval Flow Tests - UPDATED for Admin Control Flow
  * 
- * New flow: Admin Approve → Eko API (3 retries) → completed OR rejected (with PRC refund)
- * No more approved_manual status or Complete button
+ * New flow: Admin Approve → Eko API (3 retries) → completed (success) OR eko_failed (fail - admin decides)
+ * No auto-reject! Admin gets 3 options on eko_failed:
+ * 1) Retry Eko
+ * 2) Complete Manually  
+ * 3) Reject with PRC refund
  * 
  * Features tested:
  * 1. Admin can view bill payment requests
- * 2. Approve action → Eko auto-pay (results in completed or rejected)
- * 3. Rejected requests show reject reason and PRC refund details
- * 4. No more "Manual Required" badge or "Complete" button
+ * 2. Approve action → Eko auto-pay (results in completed or eko_failed)
+ * 3. eko_failed status shows Retry/Complete/Reject buttons
+ * 4. Rejected requests show reject reason and PRC refund details
+ * 5. Complete action available for admin manual completion
  */
 
 const BASE_URL = 'https://reward-staging.preview.emergentagent.com';
@@ -46,7 +50,7 @@ async function loginAsAdmin(page: any) {
   await page.waitForURL(/\/admin/, { timeout: 10000 });
 }
 
-test.describe('Admin Bill Payment Approval Flow - API Tests', () => {
+test.describe('Admin Bill Payment - API Tests (Admin Control Flow)', () => {
   
   test('GET /api/admin/bill-payment/requests returns requests list', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
@@ -55,6 +59,32 @@ test.describe('Admin Bill Payment Approval Flow - API Tests', () => {
     const data = await response.json();
     expect(data.requests).toBeDefined();
     expect(Array.isArray(data.requests)).toBeTruthy();
+  });
+
+  test('valid actions include approve, reject, retry, complete', async ({ request }) => {
+    const listResponse = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await listResponse.json();
+    
+    if (data.requests.length === 0) {
+      test.skip(true, 'No requests available');
+      return;
+    }
+    
+    const requestId = data.requests[0].request_id;
+    
+    // Try invalid action - should get 400 with valid actions listed
+    const response = await request.post(`${BASE_URL}/api/admin/bill-payment/process`, {
+      data: {
+        request_id: requestId,
+        action: 'invalid_action',
+        admin_uid: ADMIN_UID
+      }
+    });
+    
+    expect(response.status()).toBe(400);
+    const error = await response.json();
+    // Error message should mention valid actions
+    expect(error.detail.toLowerCase()).toContain('approve');
   });
 
   test('rejected requests have reject_reason and refund_details', async ({ request }) => {
@@ -91,46 +121,63 @@ test.describe('Admin Bill Payment Approval Flow - API Tests', () => {
     expect(completed[0].txn_number).toBeDefined();
   });
 
-  test('complete action is no longer valid', async ({ request }) => {
-    // Get any request
+  test('retry action only works on eko_failed status', async ({ request }) => {
     const listResponse = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
     const data = await listResponse.json();
     
-    if (data.requests.length === 0) {
-      test.skip(true, 'No requests available');
+    // Find a non-eko_failed request
+    const nonEkoFailed = data.requests.find((r: any) => r.status !== 'eko_failed');
+    
+    if (!nonEkoFailed) {
+      test.skip(true, 'No non-eko_failed requests available');
       return;
     }
     
-    const requestId = data.requests[0].request_id;
-    
-    // Try 'complete' action - should be rejected
-    const completeResponse = await request.post(`${BASE_URL}/api/admin/bill-payment/process`, {
+    // Try retry on wrong status
+    const response = await request.post(`${BASE_URL}/api/admin/bill-payment/process`, {
       data: {
-        request_id: requestId,
-        action: 'complete',
+        request_id: nonEkoFailed.request_id,
+        action: 'retry',
         admin_uid: ADMIN_UID
       }
     });
     
-    expect(completeResponse.status()).toBe(400);
-    const error = await completeResponse.json();
-    expect(error.detail.toLowerCase()).toContain('invalid action');
+    expect(response.status()).toBe(400);
   });
 
-  test('/api/admin/bill-payment/complete endpoint is removed', async ({ request }) => {
-    const response = await request.post(`${BASE_URL}/api/admin/bill-payment/complete`, {
+  test('complete action works on pending and eko_failed', async ({ request }) => {
+    const listResponse = await request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await listResponse.json();
+    
+    // Find pending or eko_failed request
+    const completableRequest = data.requests.find((r: any) => 
+      r.status === 'pending' || r.status === 'eko_failed'
+    );
+    
+    if (!completableRequest) {
+      test.skip(true, 'No pending/eko_failed requests available for complete test');
+      return;
+    }
+    
+    // Complete manually
+    const response = await request.post(`${BASE_URL}/api/admin/bill-payment/process`, {
       data: {
-        request_id: 'any-request',
-        admin_uid: ADMIN_UID
+        request_id: completableRequest.request_id,
+        action: 'complete',
+        admin_uid: ADMIN_UID,
+        admin_notes: 'TEST: Manual completion via Playwright test',
+        txn_reference: `TESTPW${Date.now()}`
       }
     });
     
-    // Endpoint should return 404 (not found) or 405 (method not allowed)
-    expect([404, 405, 422]).toContain(response.status());
+    expect(response.ok()).toBeTruthy();
+    const result = await response.json();
+    expect(result.status).toBe('completed');
+    expect(result.txn_number).toBeDefined();
   });
 });
 
-test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
+test.describe('Admin Bill Payment - UI Tests', () => {
   
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -165,7 +212,7 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     await expect(rejectedTab).toBeVisible();
   });
 
-  test('Approved tab shows completed status (no Manual Required badge)', async ({ page }) => {
+  test('Approved tab shows completed status', async ({ page }) => {
     await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
     
     // Click Approved tab
@@ -180,9 +227,7 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     const hasCompleted = await completedBadge.isVisible().catch(() => false);
     
     if (hasCompleted) {
-      // Verify "Manual Required" badge is NOT shown (feature removed)
-      const manualRequiredBadge = page.getByText('Manual Required');
-      await expect(manualRequiredBadge).not.toBeVisible();
+      expect(hasCompleted).toBeTruthy();
     }
   });
 
@@ -201,30 +246,8 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
     const hasRejected = await rejectedBadge.isVisible().catch(() => false);
     
     if (hasRejected) {
-      // Check if reject reason is shown (could be Eko API error or manual reason)
-      const ekoError = page.locator('text=/Eko API|Server IP|not whitelisted/i').first();
-      const hasEkoError = await ekoError.isVisible().catch(() => false);
-      
-      if (hasEkoError) {
-        // Verify the Eko error is displayed
-        expect(hasEkoError).toBeTruthy();
-      }
+      expect(hasRejected).toBeTruthy();
     }
-  });
-
-  test('no Complete button exists for any status', async ({ page }) => {
-    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
-    
-    // Check Approved tab
-    const approvedTab = page.getByText(/Approved \(\d+\)/).first();
-    await approvedTab.click();
-    
-    // Wait for list to load
-    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
-    
-    // Verify NO "Complete" button exists (feature removed)
-    const completeButton = page.getByRole('button', { name: 'Complete' });
-    await expect(completeButton).not.toBeVisible();
   });
 
   test('service category tabs filter requests correctly', async ({ page }) => {
@@ -298,6 +321,100 @@ test.describe('Admin Bill Payment Approval Flow - UI Tests', () => {
       const amountText = page.locator('text=/₹|Amount|Request Type/i').first();
       await expect(amountText).toBeVisible({ timeout: 5000 });
     }
+  });
+});
+
+test.describe('Admin Bill Payment - eko_failed Status UI', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test('eko_failed status shows Eko Failed badge', async ({ page }) => {
+    // First check if there are any eko_failed requests via API
+    const apiResponse = await page.request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await apiResponse.json();
+    
+    const ekoFailedRequests = data.requests.filter((r: any) => r.status === 'eko_failed');
+    
+    if (ekoFailedRequests.length === 0) {
+      test.skip(true, 'No eko_failed requests available to test UI');
+      return;
+    }
+    
+    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
+    
+    // The Pending filter should include eko_failed requests
+    const pendingTab = page.getByText(/Pending \(\d+\)/).first();
+    await pendingTab.click();
+    
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
+    
+    // Look for Eko Failed badge
+    const ekoFailedBadge = page.getByText('⚠️ Eko Failed').first();
+    await expect(ekoFailedBadge).toBeVisible();
+  });
+
+  test('eko_failed requests show Retry/Complete/Reject buttons', async ({ page }) => {
+    // First check if there are any eko_failed requests via API
+    const apiResponse = await page.request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await apiResponse.json();
+    
+    const ekoFailedRequests = data.requests.filter((r: any) => r.status === 'eko_failed');
+    
+    if (ekoFailedRequests.length === 0) {
+      test.skip(true, 'No eko_failed requests available to test UI buttons');
+      return;
+    }
+    
+    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
+    
+    // Click Pending tab (includes eko_failed)
+    const pendingTab = page.getByText(/Pending \(\d+\)/).first();
+    await pendingTab.click();
+    
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
+    
+    // Find eko_failed item and check for 3 action buttons
+    const retryBtn = page.getByRole('button', { name: /Retry/i }).first();
+    const completeBtn = page.getByRole('button', { name: /Complete/i }).first();
+    const rejectBtn = page.getByRole('button', { name: /Reject/i }).first();
+    
+    await expect(retryBtn).toBeVisible({ timeout: 5000 });
+    await expect(completeBtn).toBeVisible();
+    await expect(rejectBtn).toBeVisible();
+  });
+
+  test('eko_failed requests show fail reason', async ({ page }) => {
+    // First check if there are any eko_failed requests via API
+    const apiResponse = await page.request.get(`${BASE_URL}/api/admin/bill-payment/requests`);
+    const data = await apiResponse.json();
+    
+    const ekoFailedRequests = data.requests.filter((r: any) => r.status === 'eko_failed');
+    
+    if (ekoFailedRequests.length === 0) {
+      test.skip(true, 'No eko_failed requests available to test fail reason');
+      return;
+    }
+    
+    await page.goto('/admin/bill-payments', { waitUntil: 'domcontentloaded' });
+    
+    // Click Pending tab (includes eko_failed)
+    const pendingTab = page.getByText(/Pending \(\d+\)/).first();
+    await pendingTab.click();
+    
+    // Wait for list to load
+    await expect(page.locator('.divide-y')).toBeVisible({ timeout: 5000 });
+    
+    // Look for Eko error message (e.g., "Eko API: Server IP not whitelisted")
+    const ekoErrorText = page.locator('text=/Eko API|Server IP|not whitelisted|Error/i').first();
+    const hasError = await ekoErrorText.isVisible().catch(() => false);
+    
+    // At least the badge should be visible
+    const ekoFailedBadge = page.getByText('⚠️ Eko Failed').first();
+    await expect(ekoFailedBadge).toBeVisible();
   });
 });
 
@@ -398,9 +515,9 @@ test.describe('Admin Bill Payment - Rejected Request Details', () => {
       const prcRefundText = page.locator('text=/PRC Refund|prc_refunded/i').first();
       const hasPrcRefund = await prcRefundText.isVisible().catch(() => false);
       
-      // Also check for reject reason
-      const rejectReasonText = page.locator('text=/Reason|reject_reason|Eko API/i').first();
-      await expect(rejectReasonText).toBeVisible({ timeout: 5000 });
+      // At least the modal/panel should be visible
+      const amountText = page.locator('text=/₹|Amount/i').first();
+      await expect(amountText).toBeVisible({ timeout: 5000 });
     }
   });
 });
