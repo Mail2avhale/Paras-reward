@@ -110,12 +110,13 @@ const AdminBillPayments = ({ user }) => {
 
     const calcStatusStats = (reqs) => ({
       pending: reqs.filter(r => r.status === 'pending').length,
+      ekoFailed: reqs.filter(r => r.status === 'eko_failed').length,
       approved: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).length,
       rejected: reqs.filter(r => r.status === 'rejected').length,
-      pendingPRC: reqs.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
+      pendingPRC: reqs.filter(r => ['pending', 'eko_failed'].includes(r.status)).reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
       approvedPRC: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
       rejectedPRC: reqs.filter(r => r.status === 'rejected').reduce((sum, r) => sum + (r.total_prc_deducted || 0), 0),
-      pendingINR: reqs.filter(r => r.status === 'pending').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
+      pendingINR: reqs.filter(r => ['pending', 'eko_failed'].includes(r.status)).reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       approvedINR: reqs.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).reduce((sum, r) => sum + (r.amount_inr || 0), 0),
       rejectedINR: reqs.filter(r => r.status === 'rejected').reduce((sum, r) => sum + (r.amount_inr || 0), 0),
     });
@@ -126,7 +127,7 @@ const AdminBillPayments = ({ user }) => {
       const catRequests = nonEmiRequests.filter(r => r.request_type === cat);
       byCategory[cat] = {
         total: catRequests.length,
-        pending: catRequests.filter(r => r.status === 'pending').length,
+        pending: catRequests.filter(r => ['pending', 'eko_failed'].includes(r.status)).length,
         approved: catRequests.filter(r => ['approved', 'processing', 'completed'].includes(r.status)).length,
         rejected: catRequests.filter(r => r.status === 'rejected').length,
         totalINR: catRequests.reduce((sum, r) => sum + (r.amount_inr || 0), 0),
