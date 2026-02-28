@@ -18559,12 +18559,12 @@ async def submit_vip_payment_new(request: Request):
     plan_type = data.get("plan_type", "monthly")
     amount = float(data.get("amount", 299))
     
-    # Duration mapping based on plan type (standard months)
+    # Duration mapping based on plan type (28 days per month)
     plan_details = {
-        "monthly": {"days": 30, "name": "Monthly VIP"},
-        "quarterly": {"days": 90, "name": "Quarterly VIP"},
-        "half_yearly": {"days": 180, "name": "Half-Yearly VIP"},
-        "yearly": {"days": 365, "name": "Yearly VIP"}
+        "monthly": {"days": 28, "name": "Monthly VIP"},
+        "quarterly": {"days": 84, "name": "Quarterly VIP"},
+        "half_yearly": {"days": 168, "name": "Half-Yearly VIP"},
+        "yearly": {"days": 336, "name": "Yearly VIP"}
     }
     
     plan_info = plan_details.get(plan_type, plan_details["monthly"])
