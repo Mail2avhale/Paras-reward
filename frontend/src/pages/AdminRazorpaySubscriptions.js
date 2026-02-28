@@ -181,10 +181,42 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           <button onClick={() => navigate(-1)} className="text-gray-400">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-white">Razorpay Subscriptions</h1>
             <p className="text-xs text-gray-500">Live payment gateway transactions</p>
           </div>
+        </div>
+      </div>
+
+      {/* Gateway Toggle */}
+      <div className="px-5 mt-4">
+        <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+          razorpayEnabled 
+            ? 'bg-emerald-500/10 border-emerald-500/30' 
+            : 'bg-red-500/10 border-red-500/30'
+        }`}>
+          <div className="flex items-center gap-3">
+            <CreditCard className={`w-6 h-6 ${razorpayEnabled ? 'text-emerald-400' : 'text-red-400'}`} />
+            <div>
+              <p className="font-medium text-white">
+                Online Payment Gateway
+              </p>
+              <p className={`text-xs ${razorpayEnabled ? 'text-emerald-400' : 'text-red-400'}`}>
+                {razorpayEnabled ? '✅ ENABLED - Users can pay online' : '❌ DISABLED - Only manual payment available'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleRazorpay}
+            disabled={toggleLoading}
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+              razorpayEnabled
+                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+            }`}
+          >
+            {toggleLoading ? '...' : razorpayEnabled ? 'Disable' : 'Enable'}
+          </button>
         </div>
       </div>
 
