@@ -284,21 +284,35 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         # Check if user has existing active subscription - ADD remaining days
         user = await db.users.find_one({"uid": request.user_id})
         remaining_days = 0
+        old_plan = None
+        old_expiry_str = None
         
         if user:
-            existing_expiry = user.get("subscription_expires")
+            old_plan = user.get("subscription_plan")
+            
+            # Check BOTH field names for expiry (subscription_expires AND subscription_expiry)
+            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            
             if existing_expiry:
+                old_expiry_str = str(existing_expiry)
+                
                 # Handle both datetime object and string
                 if isinstance(existing_expiry, str):
                     try:
                         existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                    except:
+                    except Exception as e:
+                        logging.warning(f"[RAZORPAY] Could not parse expiry date: {existing_expiry}, error: {e}")
                         existing_expiry = None
                 
-                if existing_expiry and existing_expiry > now:
-                    # User has active subscription - calculate remaining days
-                    remaining_days = (existing_expiry - now).days
-                    logging.info(f"[RAZORPAY] User {request.user_id} has {remaining_days} days remaining, will be added to new plan")
+                # Make sure existing_expiry is timezone aware
+                if existing_expiry:
+                    if existing_expiry.tzinfo is None:
+                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                    
+                    if existing_expiry > now:
+                        # User has active subscription - calculate remaining days
+                        remaining_days = (existing_expiry - now).days
+                        logging.info(f"[RAZORPAY] User {request.user_id} has {remaining_days} days remaining from {old_plan}, will be added to new plan")
         
         # New expiry = today + new plan duration + remaining days
         total_days = duration_days + remaining_days
