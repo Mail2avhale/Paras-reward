@@ -7733,52 +7733,80 @@ async def get_user_subscription(uid: str):
 
 @api_router.get("/subscription/history/{uid}")
 async def get_user_subscription_history(uid: str):
-    """Get user's complete subscription history"""
+    """Get user's complete subscription history including expired ones"""
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Get Razorpay payments (instant activations)
+    # Get Razorpay payments (ALL statuses to show history)
     razorpay_payments = await db.razorpay_orders.find(
-        {"user_id": uid, "status": "paid"}
-    ).sort("paid_at", -1).to_list(100)
+        {"user_id": uid}
+    ).sort("created_at", -1).to_list(100)
     
-    # Get manual subscription payments
+    # Get VIP payments (manual payments with screenshot)
+    vip_payments = await db.vip_payments.find(
+        {"uid": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get manual subscription payments (legacy)
     manual_payments = await db.subscription_payments.find(
         {"user_id": uid}
     ).sort("created_at", -1).to_list(100)
     
     history = []
     
-    # Process Razorpay payments
+    # Process Razorpay payments (ALL statuses)
     for payment in razorpay_payments:
         paid_at = payment.get("paid_at")
         if paid_at and isinstance(paid_at, str):
-            paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+            try:
+                paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+            except:
+                paid_at = None
+        
+        created_at = payment.get("created_at")
+        status = payment.get("status", "created")
         
         history.append({
             "id": payment.get("order_id"),
             "type": "razorpay",
             "plan_name": payment.get("plan_name", "").title(),
             "plan_type": payment.get("plan_type", "monthly"),
-            "amount": payment.get("amount", 0) / 100,
-            "status": "completed",
+            "amount": payment.get("amount", 0),
+            "status": "completed" if status == "paid" else status,
             "payment_method": "Online (Razorpay)",
             "payment_id": payment.get("payment_id"),
             "activated_at": paid_at.isoformat() if paid_at else None,
-            "created_at": payment.get("created_at"),
-            "instant_activation": True
+            "created_at": str(created_at) if created_at else None,
+            "instant_activation": True,
+            "duration_days": payment.get("duration_days"),
+            "remaining_days_added": payment.get("remaining_days_added", 0)
         })
     
-    # Process manual payments
+    # Process VIP payments (manual with screenshot)
+    for payment in vip_payments:
+        created_at = payment.get("created_at")
+        approved_at = payment.get("approved_at")
+        
+        history.append({
+            "id": str(payment.get("_id", "")),
+            "type": "vip_payment",
+            "plan_name": payment.get("plan", "").title(),
+            "plan_type": payment.get("plan_type", "monthly"),
+            "amount": payment.get("amount", 0),
+            "status": payment.get("status", "pending"),
+            "payment_method": "UPI/Bank Transfer",
+            "utr_number": payment.get("utr_number"),
+            "created_at": str(created_at) if created_at else None,
+            "activated_at": str(approved_at) if approved_at and payment.get("status") == "approved" else None,
+            "instant_activation": False,
+            "duration_days": payment.get("duration_days")
+        })
+    
+    # Process legacy manual payments
     for payment in manual_payments:
         created_at = payment.get("created_at")
-        if created_at and isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-        
         approved_at = payment.get("approved_at") or payment.get("verified_at")
-        if approved_at and isinstance(approved_at, str):
-            approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
         
         history.append({
             "id": str(payment.get("_id", "")),
@@ -7789,8 +7817,8 @@ async def get_user_subscription_history(uid: str):
             "status": payment.get("status", "pending"),
             "payment_method": "UPI/Bank Transfer",
             "utr_number": payment.get("utr_number"),
-            "created_at": created_at.isoformat() if created_at else None,
-            "activated_at": approved_at.isoformat() if approved_at and payment.get("status") == "approved" else None,
+            "created_at": str(created_at) if created_at else None,
+            "activated_at": str(approved_at) if approved_at and payment.get("status") == "approved" else None,
             "instant_activation": False
         })
     
