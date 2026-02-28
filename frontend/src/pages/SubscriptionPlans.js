@@ -250,9 +250,19 @@ const SubscriptionPlans = ({ user }) => {
           color: '#F59E0B'
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: async function() {
             setRazorpayLoading(false);
             toast.info('Payment cancelled');
+            // Update order status to cancelled
+            try {
+              await axios.post(`${API}/razorpay/update-order-status`, {
+                order_id: order_id,
+                status: 'cancelled',
+                reason: 'User closed payment modal'
+              });
+            } catch (e) {
+              console.log('Could not update order status');
+            }
           }
         }
       };
@@ -260,12 +270,25 @@ const SubscriptionPlans = ({ user }) => {
       const razorpay = new window.Razorpay(options);
       
       // Handle payment failures from Razorpay
-      razorpay.on('payment.failed', function (response) {
+      razorpay.on('payment.failed', async function (response) {
         console.error('Razorpay payment failed:', response.error);
         toast.error(`Payment failed: ${response.error.description || 'Please try again'}`, {
           duration: 5000,
         });
         setRazorpayLoading(false);
+        
+        // Update order status to failed
+        try {
+          await axios.post(`${API}/razorpay/update-order-status`, {
+            order_id: order_id,
+            status: 'failed',
+            reason: response.error.description || 'Payment failed',
+            error_code: response.error.code || '',
+            payment_id: response.error.metadata?.payment_id || ''
+          });
+        } catch (e) {
+          console.log('Could not update order status');
+        }
       });
       
       razorpay.open();
