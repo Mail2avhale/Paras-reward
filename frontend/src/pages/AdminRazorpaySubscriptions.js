@@ -147,6 +147,22 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         </div>
       </div>
 
+      {/* Fraud Cleanup Button */}
+      {stats.paid_orders > 0 && (
+        <div className="px-5 mt-4">
+          <button
+            onClick={previewFraudCleanup}
+            disabled={cleanupLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-all"
+          >
+            <AlertTriangle className="w-5 h-5" />
+            <span className="font-medium">
+              {cleanupLoading ? 'Loading...' : `Cleanup Fraud Subscriptions (${stats.paid_orders} orders)`}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="px-5 mt-4 space-y-3">
         {/* Search */}
