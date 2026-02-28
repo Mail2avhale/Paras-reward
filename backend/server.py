@@ -1277,6 +1277,156 @@ async def root():
 # Create scheduler for automated tasks
 scheduler = AsyncIOScheduler()
 
+# ========== AUTO SYNC RAZORPAY PAYMENTS FUNCTION ==========
+async def auto_sync_razorpay_payments():
+    """
+    Automatically sync pending Razorpay payments every 10 minutes.
+    Checks Razorpay API and activates subscriptions for captured payments.
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            print("[AUTO-SYNC] Razorpay not configured, skipping...")
+            return
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Plan durations
+        PLAN_DURATIONS = {
+            "monthly": 30,
+            "quarterly": 90,
+            "half_yearly": 180,
+            "yearly": 365
+        }
+        
+        # Get all pending orders
+        pending_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["created", "pending"]}
+        }).to_list(100)
+        
+        if not pending_orders:
+            print(f"[AUTO-SYNC] No pending orders to sync")
+            return
+        
+        synced_count = 0
+        
+        for order in pending_orders:
+            order_id = order.get("order_id")
+            user_id = order.get("user_id")
+            
+            try:
+                # Fetch order from Razorpay API
+                razorpay_order = razorpay_client.order.fetch(order_id)
+                razorpay_status = razorpay_order.get("status")
+                
+                if razorpay_status == "paid":
+                    # Order is paid - fetch payment details
+                    payments = razorpay_client.order.payments(order_id)
+                    
+                    # Find captured payment
+                    captured_payment = None
+                    for payment in payments.get("items", []):
+                        if payment.get("status") == "captured":
+                            captured_payment = payment
+                            break
+                    
+                    if captured_payment:
+                        payment_id = captured_payment.get("id")
+                        amount = captured_payment.get("amount", 0) / 100
+                        
+                        # Update order status
+                        await db.razorpay_orders.update_one(
+                            {"order_id": order_id},
+                            {
+                                "$set": {
+                                    "status": "paid",
+                                    "payment_id": payment_id,
+                                    "payment_captured": True,
+                                    "verified_amount": amount,
+                                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                                    "synced_via": "auto_sync"
+                                }
+                            }
+                        )
+                        
+                        # ACTIVATE SUBSCRIPTION
+                        plan_type = order.get("plan_type", "monthly")
+                        plan_name = order.get("plan_name", "startup")
+                        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                        
+                        now = datetime.now(timezone.utc)
+                        
+                        # Check for existing subscription and add remaining days
+                        user = await db.users.find_one({"uid": user_id})
+                        remaining_days = 0
+                        
+                        if user:
+                            existing_expiry = user.get("subscription_expires")
+                            if existing_expiry:
+                                if isinstance(existing_expiry, str):
+                                    try:
+                                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                    except:
+                                        existing_expiry = None
+                                
+                                if existing_expiry and existing_expiry > now:
+                                    remaining_days = (existing_expiry - now).days
+                        
+                        total_days = duration_days + remaining_days
+                        expiry_date = now + timedelta(days=total_days)
+                        
+                        # Update user subscription
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {
+                                "$set": {
+                                    "subscription_plan": plan_name,
+                                    "subscription_start": now,
+                                    "subscription_expires": expiry_date,
+                                    "membership_type": "vip",
+                                    "subscription_status": "active",
+                                    "last_payment_id": payment_id,
+                                    "last_payment_date": now,
+                                    "activated_via": "auto_sync"
+                                }
+                            }
+                        )
+                        
+                        # Log transaction
+                        await db.transactions.insert_one({
+                            "user_id": user_id,
+                            "type": "subscription_payment",
+                            "amount": amount,
+                            "payment_id": payment_id,
+                            "order_id": order_id,
+                            "plan_name": plan_name,
+                            "plan_type": plan_type,
+                            "duration_days": duration_days,
+                            "remaining_days_added": remaining_days,
+                            "total_days": total_days,
+                            "activated_via": "auto_sync",
+                            "timestamp": now
+                        })
+                        
+                        synced_count += 1
+                        print(f"[AUTO-SYNC] ✅ Activated subscription for user {user_id}, plan: {plan_name}")
+                        
+            except Exception as e:
+                print(f"[AUTO-SYNC] Error syncing order {order_id}: {e}")
+        
+        if synced_count > 0:
+            print(f"[AUTO-SYNC] ✅ Completed - Activated {synced_count} subscriptions")
+        else:
+            print(f"[AUTO-SYNC] No new payments to activate")
+            
+    except Exception as e:
+        print(f"[AUTO-SYNC] ❌ Error: {e}")
+
+
 # ========== AUTO LOCKOUT CLEAR FUNCTION ==========
 async def auto_clear_all_lockouts():
     """
