@@ -17319,7 +17319,20 @@ async def admin_diagnose_user(uid: str):
     
     # ========== 2. SUBSCRIPTION ISSUES ==========
     subscription_plan = user.get("subscription_plan", "explorer")
-    subscription_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+    previous_plan = user.get("previous_plan")
+    remaining_days_added = user.get("previous_remaining_days_added", 0)
+    
+    # Check if old plan info exists
+    if previous_plan:
+        issues.append({
+            "category": "Subscription History",
+            "severity": "info",
+            "issue": "Previous Plan Found",
+            "description": f"User upgraded from '{previous_plan}' to '{subscription_plan}'. Remaining days added: {remaining_days_added}",
+            "can_auto_fix": False,
+            "fix_action": "none"
+        })
     
     # Check for expired subscription
     if subscription_expiry:
