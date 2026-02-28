@@ -994,6 +994,8 @@ const SubscriptionPlans = ({ user }) => {
               </>
             )}
           </button>
+            </motion.div>
+          )}
         </div>
       )}
 
