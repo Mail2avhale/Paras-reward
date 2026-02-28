@@ -29,8 +29,6 @@ const loadRazorpayScript = () => {
   });
 };
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
 const SubscriptionPlans = ({ user }) => {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
