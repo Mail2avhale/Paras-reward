@@ -443,3 +443,53 @@ async def get_payment_history(user_id: str):
     ).sort("created_at", -1).to_list(50)
     
     return {"payments": payments}
+
+
+@router.post("/update-order-status")
+async def update_order_status(request: Request):
+    """
+    Update order status when payment fails, cancelled, or has error.
+    Called from frontend to track payment outcomes.
+    """
+    try:
+        data = await request.json()
+        order_id = data.get("order_id")
+        status = data.get("status")  # failed, cancelled, error
+        reason = data.get("reason", "")
+        error_code = data.get("error_code", "")
+        payment_id = data.get("payment_id", "")
+        
+        if not order_id or not status:
+            raise HTTPException(status_code=400, detail="order_id and status required")
+        
+        valid_statuses = ["failed", "cancelled", "error", "timeout", "dismissed"]
+        if status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+        
+        if db is not None:
+            await db.razorpay_orders.update_one(
+                {"order_id": order_id},
+                {
+                    "$set": {
+                        "status": status,
+                        "failure_reason": reason,
+                        "error_code": error_code,
+                        "payment_id": payment_id if payment_id else None,
+                        "status_updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            logging.info(f"[RAZORPAY] Order {order_id} status updated to: {status}, reason: {reason}")
+        
+        return {
+            "success": True,
+            "message": f"Order status updated to {status}",
+            "order_id": order_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Update order status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
