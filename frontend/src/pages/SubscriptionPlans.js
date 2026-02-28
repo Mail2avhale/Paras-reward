@@ -658,18 +658,27 @@ const SubscriptionPlans = ({ user }) => {
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                   paymentMethod === 'razorpay' ? 'bg-emerald-500/20' : 'bg-gray-800'
                 }`}>
-                  <CreditCard className={`w-6 h-6 ${paymentMethod === 'razorpay' ? 'text-emerald-400' : 'text-gray-400'}`} />
+                  {/* Razorpay Icon */}
+                  <svg className={`w-6 h-6 ${paymentMethod === 'razorpay' ? 'text-emerald-400' : 'text-gray-400'}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4zm0 10.99h6c-.53 4.12-3.28 7.79-6 8.94V12H6V7.07l6-3.07v8.99z"/>
+                  </svg>
                 </div>
                 <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className={`font-semibold ${paymentMethod === 'razorpay' ? 'text-emerald-400' : 'text-white'}`}>
                       Online Payment
                     </p>
                     <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full">
                       ⚡ Instant
                     </span>
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full flex items-center gap-1">
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      </svg>
+                      Secure
+                    </span>
                   </div>
-                  <p className="text-gray-400 text-sm">UPI, Cards, Net Banking - Instant Activation</p>
+                  <p className="text-gray-400 text-sm">UPI, Cards, Net Banking via Razorpay</p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                   paymentMethod === 'razorpay' ? 'border-emerald-500 bg-emerald-500' : 'border-gray-600'
