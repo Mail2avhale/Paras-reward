@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://reward-staging.preview.emergentagent.com/setup
+   https://subscription-hub-115.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

@@ -11,7 +11,7 @@ from datetime import datetime
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://reward-staging.preview.emergentagent.com'
+    BASE_URL = 'https://subscription-hub-115.preview.emergentagent.com'
 
 
 class TestRazorpayConfig:
