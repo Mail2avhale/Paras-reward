@@ -17586,6 +17586,154 @@ async def admin_fix_user_issue(uid: str, request: Request):
     }
 
 
+@api_router.post("/admin/user/{uid}/auto-fix-all")
+async def admin_auto_fix_all_issues(uid: str, request: Request):
+    """
+    Automatically fix ALL issues for a user that can be auto-fixed.
+    Runs diagnosis first, then fixes all issues with can_auto_fix=True.
+    """
+    data = await request.json()
+    admin_pin = data.get("admin_pin")
+    
+    if admin_pin != "123456":
+        raise HTTPException(status_code=403, detail="Invalid admin PIN")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    fixed_issues = []
+    
+    # ========== 1. Fix KYC sync issues ==========
+    kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+    kyc_status = user.get("kyc_status", "not_submitted")
+    
+    if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+        fixed_issues.append("KYC status synced to 'verified'")
+    
+    if kyc_status == "pending" and not kyc_doc:
+        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+        fixed_issues.append("Orphaned KYC status reset")
+    
+    # ========== 2. Fix expired subscription ==========
+    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+    subscription_plan = user.get("subscription_plan", "explorer")
+    
+    if subscription_expiry:
+        try:
+            if isinstance(subscription_expiry, str):
+                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            else:
+                expiry_date = subscription_expiry
+            
+            if expiry_date < datetime.now(timezone.utc) and subscription_plan not in ["explorer", "free", ""]:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
+                )
+                fixed_issues.append(f"Expired subscription ({subscription_plan}) reset to explorer")
+        except:
+            pass
+    
+    # ========== 3. Fix membership type mismatch ==========
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    if subscription_plan in paid_plans and user.get("membership_type") == "free":
+        await db.users.update_one({"uid": uid}, {"$set": {"membership_type": "vip"}})
+        fixed_issues.append("Membership type synced to 'vip'")
+    
+    # ========== 4. Fix subscription not synced from approved payment ==========
+    latest_payment = await db.vip_payments.find_one(
+        {"uid": uid, "status": "approved"},
+        sort=[("approved_at", -1)]
+    )
+    
+    if latest_payment and subscription_plan in ["explorer", "free", ""]:
+        plan = latest_payment.get("plan", "startup")
+        plan_type = latest_payment.get("plan_type", "monthly")
+        approved_at = latest_payment.get("approved_at")
+        
+        duration_mapping = {"monthly": 30, "quarterly": 90, "half_yearly": 180, "yearly": 365}
+        duration_days = duration_mapping.get(plan_type, 30)
+        
+        if approved_at:
+            if isinstance(approved_at, str):
+                try:
+                    approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                except:
+                    approved_at = datetime.now(timezone.utc)
+        else:
+            approved_at = datetime.now(timezone.utc)
+        
+        expiry_date = approved_at + timedelta(days=duration_days)
+        
+        if expiry_date > datetime.now(timezone.utc):
+            await db.users.update_one(
+                {"uid": uid},
+                {
+                    "$set": {
+                        "subscription_plan": plan,
+                        "membership_type": "vip",
+                        "subscription_status": "active",
+                        "subscription_expires": expiry_date
+                    }
+                }
+            )
+            fixed_issues.append(f"Subscription restored from approved payment: {plan}")
+    
+    # ========== 5. Fix PRC balance (recalculate from transactions) ==========
+    prc_balance = user.get("prc_balance", 0)
+    
+    # Calculate expected balance
+    total_credits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    
+    total_debits = await db.transactions.aggregate([
+        {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]).to_list(1)
+    
+    credits = total_credits[0]["total"] if total_credits else 0
+    debits = total_debits[0]["total"] if total_debits else 0
+    expected_balance = round(credits - debits, 2)
+    
+    # Fix if balance is 0 but expected is > 0 (bug victim)
+    if prc_balance == 0 and expected_balance > 10:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"prc_balance": max(0, expected_balance)}}
+        )
+        fixed_issues.append(f"PRC balance restored: 0 → {expected_balance}")
+    
+    # ========== 6. Generate referral code if missing ==========
+    if not user.get("referral_code"):
+        import random
+        import string
+        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
+        fixed_issues.append(f"Generated referral code: {new_code}")
+    
+    # Log the auto-fix action
+    await db.admin_audit_logs.insert_one({
+        "action": "auto_fix_user_issues",
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "fixed_issues": fixed_issues,
+        "performed_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "success": True,
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "total_fixed": len(fixed_issues),
+        "fixed_issues": fixed_issues,
+        "message": f"Auto-fixed {len(fixed_issues)} issues" if fixed_issues else "No issues to fix"
+    }
+
+
 @api_router.post("/admin/fix-membership-types")
 async def fix_all_membership_types():
     """
