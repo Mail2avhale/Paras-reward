@@ -314,8 +314,11 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[
             { id: 'all', label: 'All', count: stats.total_orders },
-            { id: 'paid', label: 'Paid', count: stats.paid_orders },
-            { id: 'created', label: 'Pending', count: stats.pending_orders },
+            { id: 'paid', label: 'Paid', count: stats.paid_orders, color: 'emerald' },
+            { id: 'created', label: 'Pending', count: stats.pending_orders, color: 'amber' },
+            { id: 'failed', label: 'Failed', color: 'red' },
+            { id: 'cancelled', label: 'Cancelled', color: 'gray' },
+            { id: 'error', label: 'Error', color: 'orange' },
           ].map(filter => (
             <button
               key={filter.id}
@@ -326,7 +329,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {filter.label} ({filter.count || 0})
+              {filter.label} {filter.count !== undefined ? `(${filter.count})` : ''}
             </button>
           ))}
           
