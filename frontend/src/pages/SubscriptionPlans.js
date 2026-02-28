@@ -47,6 +47,7 @@ const SubscriptionPlans = ({ user }) => {
   const [utrValidationResult, setUtrValidationResult] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'manual'
   const [razorpayLoading, setRazorpayLoading] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false); // true = instant activation, false = pending verification
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
