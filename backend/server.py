@@ -17096,11 +17096,25 @@ async def get_user_360_view(query: str):
     all_subscriptions = subscriptions + vip_subscriptions
     all_subscriptions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
     
+    # Get VIP payments history
+    vip_payments = await db.vip_payments.find(
+        {"uid": uid},
+        {"_id": 0, "payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Get Razorpay orders
+    razorpay_orders = await db.razorpay_orders.find(
+        {"user_id": uid},
+        {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
     transactions = {
         "orders": orders,
         "bill_payments": bill_payments,
         "gift_vouchers": gift_vouchers,
         "subscriptions": all_subscriptions[:20],
+        "vip_payments": vip_payments,
+        "razorpay_orders": razorpay_orders,
         "redemptions": [],
         "mining_history": [],
         "prc_ledger": []
