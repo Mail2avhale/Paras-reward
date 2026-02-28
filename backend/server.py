@@ -8097,6 +8097,98 @@ async def get_users_needing_restore():
     }
 
 
+@api_router.post("/admin/recalculate-prc-balance")
+async def recalculate_prc_balance(request: Request):
+    """
+    Recalculate PRC balance for affected users from transaction history.
+    This will fix PRC balances that became 0 incorrectly.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        user_ids = data.get("user_ids", [])  # Optional: specific users to recalculate
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # If no specific users, find users with 0 PRC who might need fixing
+        if not user_ids:
+            users_to_fix = await db.users.find({
+                "prc_balance": {"$lte": 0}
+            }).to_list(500)
+        else:
+            users_to_fix = await db.users.find({
+                "uid": {"$in": user_ids}
+            }).to_list(500)
+        
+        fixed_users = []
+        
+        for user in users_to_fix:
+            uid = user.get("uid")
+            old_balance = user.get("prc_balance", 0)
+            
+            # Get all transactions for this user
+            transactions = await db.transactions.find({"user_id": uid}).to_list(10000)
+            
+            # Calculate PRC earned (positive)
+            prc_earned = sum(
+                t.get("amount", 0) for t in transactions 
+                if t.get("type") in ["mining", "tap_game", "referral", "signup_bonus", "daily_bonus", "prc_credit", "admin_credit"]
+            )
+            
+            # Calculate PRC spent (negative)
+            prc_spent = sum(
+                abs(t.get("amount", 0)) for t in transactions 
+                if t.get("type") in ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", "prc_debit"]
+            )
+            
+            # Correct balance
+            correct_balance = prc_earned - prc_spent
+            
+            if correct_balance != old_balance:
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": max(0, correct_balance),
+                            "prc_balance_recalculated": True,
+                            "prc_recalculated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                )
+                
+                fixed_users.append({
+                    "uid": uid,
+                    "name": user.get("name"),
+                    "old_balance": old_balance,
+                    "new_balance": max(0, correct_balance),
+                    "prc_earned": prc_earned,
+                    "prc_spent": prc_spent
+                })
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "prc_balance_recalculation",
+            "fixed_count": len(fixed_users),
+            "fixed_users": fixed_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Recalculated PRC balance for {len(fixed_users)} users",
+            "fixed_count": len(fixed_users),
+            "fixed_users": fixed_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"PRC recalculation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.get("/admin/razorpay-fraud-preview")
 async def preview_fraudulent_subscriptions():
     """
