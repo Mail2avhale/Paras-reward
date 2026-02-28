@@ -82,10 +82,12 @@ async def create_razorpay_order(request: CreateOrderRequest):
         amount_paise = int(request.amount * 100)
         
         # Create Razorpay order
+        # Receipt must be <= 40 chars
+        receipt_id = f"sub_{request.user_id[-8:]}_{datetime.now().strftime('%m%d%H%M%S')}"
         order_data = {
             "amount": amount_paise,
             "currency": "INR",
-            "receipt": f"order_{request.user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "receipt": receipt_id,
             "notes": {
                 "user_id": request.user_id,
                 "plan_type": request.plan_type,
