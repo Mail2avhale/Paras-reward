@@ -52,6 +52,44 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     );
   });
 
+  // Fraud cleanup functions
+  const previewFraudCleanup = async () => {
+    try {
+      setCleanupLoading(true);
+      const res = await axios.get(`${API}/admin/razorpay-fraud-preview`);
+      setFraudPreview(res.data);
+      setShowFraudModal(true);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to load fraud preview');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
+  const executeFraudCleanup = async () => {
+    if (!window.confirm('Are you sure? This will reset all fraudulent subscriptions to FREE plan.')) {
+      return;
+    }
+    
+    try {
+      setCleanupLoading(true);
+      const res = await axios.post(`${API}/admin/razorpay-cleanup-fraudulent`, {
+        admin_pin: '123456'
+      });
+      
+      toast.success(`Cleanup complete! Reset ${res.data.reset_count} users, Skipped ${res.data.skipped_count} legitimate users`);
+      setShowFraudModal(false);
+      setFraudPreview(null);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to cleanup');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
