@@ -388,21 +388,93 @@ async def razorpay_webhook(request: Request):
             payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
             order_id = payment.get("order_id")
             payment_id = payment.get("id")
+            amount = payment.get("amount", 0) / 100  # Convert paise to INR
             
-            # Update order status
-            if db and order_id:
-                await db.razorpay_orders.update_one(
-                    {"order_id": order_id},
-                    {
-                        "$set": {
-                            "status": "captured",
-                            "webhook_payment_id": payment_id,
-                            "captured_at": datetime.now(timezone.utc)
+            if db is not None and order_id:
+                # Get order details
+                order = await db.razorpay_orders.find_one({"order_id": order_id})
+                
+                if order and order.get("status") != "paid":
+                    # Update order status
+                    await db.razorpay_orders.update_one(
+                        {"order_id": order_id},
+                        {
+                            "$set": {
+                                "status": "paid",
+                                "payment_id": payment_id,
+                                "webhook_payment_id": payment_id,
+                                "captured_at": datetime.now(timezone.utc),
+                                "payment_captured": True,
+                                "verified_amount": amount
+                            }
                         }
-                    }
-                )
+                    )
+                    
+                    # ACTIVATE SUBSCRIPTION - Same logic as verify-payment
+                    user_id = order.get("user_id")
+                    plan_type = order.get("plan_type", "monthly")
+                    plan_name = order.get("plan_name", "startup")
+                    duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                    
+                    now = datetime.now(timezone.utc)
+                    
+                    # Check for existing subscription and add remaining days
+                    user = await db.users.find_one({"uid": user_id})
+                    remaining_days = 0
+                    
+                    if user:
+                        existing_expiry = user.get("subscription_expires")
+                        if existing_expiry:
+                            if isinstance(existing_expiry, str):
+                                try:
+                                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                except:
+                                    existing_expiry = None
+                            
+                            if existing_expiry and existing_expiry > now:
+                                remaining_days = (existing_expiry - now).days
+                    
+                    total_days = duration_days + remaining_days
+                    expiry_date = now + timedelta(days=total_days)
+                    
+                    # Update user subscription
+                    await db.users.update_one(
+                        {"uid": user_id},
+                        {
+                            "$set": {
+                                "subscription_plan": plan_name,
+                                "subscription_start": now,
+                                "subscription_expires": expiry_date,
+                                "membership_type": "vip",
+                                "subscription_status": "active",
+                                "last_payment_id": payment_id,
+                                "last_payment_date": now,
+                                "activated_via": "webhook"
+                            }
+                        }
+                    )
+                    
+                    # Log transaction
+                    await db.transactions.insert_one({
+                        "user_id": user_id,
+                        "type": "subscription_payment",
+                        "amount": amount,
+                        "payment_id": payment_id,
+                        "order_id": order_id,
+                        "plan_name": plan_name,
+                        "plan_type": plan_type,
+                        "duration_days": duration_days,
+                        "remaining_days_added": remaining_days,
+                        "total_days": total_days,
+                        "activated_via": "webhook",
+                        "timestamp": now
+                    })
+                    
+                    logging.info(f"[WEBHOOK] Subscription activated for user {user_id}, plan: {plan_name}, total days: {total_days}")
+                else:
+                    logging.info(f"[WEBHOOK] Order {order_id} already paid, skipping activation")
             
-            logging.info(f"Payment captured: {payment_id}")
+            logging.info(f"Payment captured via webhook: {payment_id}")
         
         elif event == "payment.failed":
             payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
