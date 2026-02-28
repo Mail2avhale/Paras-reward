@@ -1340,6 +1340,39 @@ const AdminBillPayments = ({ user }) => {
                 </div>
               )}
               
+              {/* Actions for eko_failed - Retry, Complete, Reject */}
+              {selectedRequest.status === 'eko_failed' && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => handleProcess(selectedRequest.request_id, 'retry')}
+                      disabled={processing}
+                    >
+                      {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : '🔄'}
+                      Retry Eko
+                    </Button>
+                    <Button
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => handleProcess(selectedRequest.request_id, 'complete')}
+                      disabled={processing}
+                    >
+                      {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                      Complete Manually
+                    </Button>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => handleProcess(selectedRequest.request_id, 'reject')}
+                    disabled={processing}
+                  >
+                    {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                    Reject & Refund PRC
+                  </Button>
+                </div>
+              )}
+              
               {/* Close button for completed/rejected */}
               {(selectedRequest.status === 'completed' || selectedRequest.status === 'rejected') && (
                 <Button
