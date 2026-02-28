@@ -1356,7 +1356,7 @@ async def auto_sync_razorpay_payments():
                         # ACTIVATE SUBSCRIPTION
                         plan_type = order.get("plan_type", "monthly")
                         plan_name = order.get("plan_name", "startup")
-                        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                        duration_days = PLAN_DURATIONS.get(plan_type, 30)  # Default 30 days
                         
                         now = datetime.now(timezone.utc)
                         
