@@ -53,12 +53,12 @@ class VerifyPaymentRequest(BaseModel):
     user_id: str
 
 
-# Plan duration mapping (standard months)
+# Plan duration mapping (28 days per month)
 PLAN_DURATIONS = {
-    "monthly": 30,      # 30 days (1 month)
-    "quarterly": 90,    # 90 days (3 months)
-    "half_yearly": 180, # 180 days (6 months)
-    "yearly": 365       # 365 days (1 year)
+    "monthly": 28,      # 28 days (1 month)
+    "quarterly": 84,    # 84 days (3 months)
+    "half_yearly": 168, # 168 days (6 months)
+    "yearly": 336       # 336 days (1 year)
 }
 
 
