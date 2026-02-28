@@ -181,6 +181,9 @@ const SubscriptionPlans = ({ user }) => {
               return;
             }
             
+            // Show processing message
+            toast.loading('Verifying payment...', { id: 'verify-payment' });
+            
             // Verify payment with backend
             const verifyRes = await axios.post(`${API}/razorpay/verify-payment`, {
               razorpay_order_id: response.razorpay_order_id,
@@ -188,6 +191,8 @@ const SubscriptionPlans = ({ user }) => {
               razorpay_signature: response.razorpay_signature,
               user_id: user.uid
             });
+            
+            toast.dismiss('verify-payment');
             
             if (verifyRes.data.success === true) {
               toast.success('🎉 Payment Successful! Your subscription is now ACTIVE!', {
@@ -202,8 +207,14 @@ const SubscriptionPlans = ({ user }) => {
               setRazorpayLoading(false);
             }
           } catch (error) {
+            toast.dismiss('verify-payment');
             console.error('Payment verification failed:', error);
-            toast.error('Payment verification failed. Please contact support if amount was deducted.');
+            
+            // Show specific error from backend
+            const errorMsg = error.response?.data?.detail || 'Payment verification failed';
+            toast.error(errorMsg + '. If amount was deducted, please contact support.', {
+              duration: 8000
+            });
             setRazorpayLoading(false);
           }
         },
