@@ -71,7 +71,9 @@ async def get_razorpay_config():
     return {
         "key_id": RAZORPAY_KEY_ID,
         "currency": "INR",
-        "company_name": "PARAS REWARD"
+        "company_name": "PARAS REWARD",
+        "code_version": CODE_VERSION,
+        "security": "DOUBLE_VERIFICATION_ENABLED"
     }
 
 
