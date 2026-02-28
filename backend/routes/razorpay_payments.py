@@ -124,18 +124,12 @@ async def create_razorpay_order(request: CreateOrderRequest):
 
 @router.post("/verify-payment")
 async def verify_razorpay_payment(request: VerifyPaymentRequest):
-    """Verify payment signature and activate subscription"""
+    """Verify payment signature and activate subscription - WITH DOUBLE VERIFICATION"""
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay not configured")
     
     try:
-        # Verify signature
-        params_dict = {
-            'razorpay_order_id': request.razorpay_order_id,
-            'razorpay_payment_id': request.razorpay_payment_id,
-            'razorpay_signature': request.razorpay_signature
-        }
-        
+        # ==================== STEP 1: SIGNATURE VERIFICATION ====================
         # Generate signature to verify
         message = f"{request.razorpay_order_id}|{request.razorpay_payment_id}"
         generated_signature = hmac.new(
@@ -145,14 +139,72 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         ).hexdigest()
         
         if generated_signature != request.razorpay_signature:
+            logging.warning(f"[RAZORPAY] Invalid signature for payment {request.razorpay_payment_id}")
             raise HTTPException(status_code=400, detail="Invalid payment signature")
         
-        # Get order details from database
+        # ==================== STEP 2: FETCH PAYMENT FROM RAZORPAY API ====================
+        # CRITICAL: Verify payment status directly from Razorpay
+        try:
+            payment_details = razorpay_client.payment.fetch(request.razorpay_payment_id)
+            logging.info(f"[RAZORPAY] Payment details: {payment_details}")
+        except Exception as e:
+            logging.error(f"[RAZORPAY] Failed to fetch payment {request.razorpay_payment_id}: {e}")
+            raise HTTPException(status_code=400, detail="Failed to verify payment with Razorpay")
+        
+        # ==================== STEP 3: VERIFY PAYMENT STATUS ====================
+        # CRITICAL: Only activate if payment is actually captured/authorized
+        payment_status = payment_details.get("status", "")
+        payment_amount = payment_details.get("amount", 0) / 100  # Convert paise to INR
+        payment_captured = payment_details.get("captured", False)
+        
+        logging.info(f"[RAZORPAY] Payment {request.razorpay_payment_id}: status={payment_status}, captured={payment_captured}, amount={payment_amount}")
+        
+        # Valid payment statuses for activation
+        VALID_PAYMENT_STATUSES = ["captured", "authorized"]
+        
+        if payment_status not in VALID_PAYMENT_STATUSES:
+            logging.warning(f"[RAZORPAY] BLOCKED - Payment {request.razorpay_payment_id} has invalid status: {payment_status}")
+            
+            # Log the blocked attempt
+            if db:
+                await db.blocked_payment_attempts.insert_one({
+                    "payment_id": request.razorpay_payment_id,
+                    "order_id": request.razorpay_order_id,
+                    "user_id": request.user_id,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "payment_amount": payment_amount,
+                    "reason": f"Invalid payment status: {payment_status}",
+                    "blocked_at": datetime.now(timezone.utc)
+                })
+            
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Payment not successful. Status: {payment_status}. Please try again."
+            )
+        
+        # ==================== STEP 4: VERIFY ORDER EXISTS ====================
         order = await db.razorpay_orders.find_one({"order_id": request.razorpay_order_id})
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        # Update order status
+        # ==================== STEP 5: CHECK FOR DUPLICATE ACTIVATION ====================
+        # Prevent same payment from being used multiple times
+        existing_payment = await db.razorpay_orders.find_one({
+            "payment_id": request.razorpay_payment_id,
+            "status": "paid"
+        })
+        if existing_payment:
+            logging.warning(f"[RAZORPAY] Duplicate payment attempt: {request.razorpay_payment_id}")
+            raise HTTPException(status_code=400, detail="This payment has already been processed")
+        
+        # ==================== STEP 6: VERIFY AMOUNT MATCHES ====================
+        expected_amount = order.get("amount", 0)
+        if abs(payment_amount - expected_amount) > 1:  # Allow ₹1 tolerance
+            logging.warning(f"[RAZORPAY] Amount mismatch: expected {expected_amount}, got {payment_amount}")
+            raise HTTPException(status_code=400, detail="Payment amount mismatch")
+        
+        # ==================== STEP 7: UPDATE ORDER STATUS ====================
         await db.razorpay_orders.update_one(
             {"order_id": request.razorpay_order_id},
             {
@@ -160,12 +212,15 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "status": "paid",
                     "payment_id": request.razorpay_payment_id,
                     "signature": request.razorpay_signature,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "verified_amount": payment_amount,
                     "paid_at": datetime.now(timezone.utc)
                 }
             }
         )
         
-        # Activate user subscription
+        # ==================== STEP 8: ACTIVATE USER SUBSCRIPTION ====================
         plan_type = order.get("plan_type", "monthly")
         plan_name = order.get("plan_name", "startup")
         duration_days = PLAN_DURATIONS.get(plan_type, 28)
@@ -189,18 +244,22 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             }
         )
         
-        # Log transaction
+        # ==================== STEP 9: LOG TRANSACTION ====================
         await db.transactions.insert_one({
             "user_id": request.user_id,
             "type": "subscription_payment",
-            "amount": order.get("amount"),
+            "amount": payment_amount,  # Use verified amount from Razorpay
             "payment_id": request.razorpay_payment_id,
             "order_id": request.razorpay_order_id,
             "plan_name": plan_name,
             "plan_type": plan_type,
             "duration_days": duration_days,
+            "payment_status": payment_status,
+            "payment_captured": payment_captured,
             "timestamp": now
         })
+        
+        logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}")
         
         return {
             "success": True,
@@ -216,7 +275,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Payment verification failed: {e}")
+        logging.error(f"[RAZORPAY] Payment verification failed: {e}")
         raise HTTPException(status_code=500, detail=f"Payment verification failed: {str(e)}")
 
 
