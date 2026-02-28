@@ -7927,6 +7927,176 @@ async def delete_all_razorpay_orders(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/admin/audit-logs/fraud-cleanup")
+async def get_fraud_cleanup_logs():
+    """Get all fraud cleanup audit logs to review what was reset"""
+    logs = await db.admin_audit_logs.find({
+        "action": {"$in": ["razorpay_fraud_cleanup", "razorpay_delete_pending", "razorpay_delete_all"]}
+    }).sort("performed_at", -1).to_list(50)
+    
+    result = []
+    for log in logs:
+        # Remove MongoDB _id for JSON serialization
+        log_data = {
+            "action": log.get("action"),
+            "performed_at": log.get("performed_at"),
+            "reset_count": log.get("reset_count", 0),
+            "skipped_count": log.get("skipped_count", 0),
+            "deleted_count": log.get("deleted_count", 0),
+            "reset_users": log.get("reset_users", []),
+            "skipped_users": log.get("skipped_users", [])
+        }
+        result.append(log_data)
+    
+    return {"logs": result, "total": len(result)}
+
+
+@api_router.post("/admin/restore-users-from-vip-payments")
+async def restore_users_from_vip_payments(request: Request):
+    """
+    Restore users who had legitimate VIP payments.
+    This will check vip_payments collection and restore their subscription.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all users who were marked as fraudulent but have legitimate vip_payments
+        affected_users = await db.users.find({
+            "fraudulent_activation_reverted": True
+        }).to_list(1000)
+        
+        restored_users = []
+        
+        for user in affected_users:
+            uid = user.get("uid")
+            
+            # Check if user has approved vip_payments
+            vip_payment = await db.vip_payments.find_one({
+                "uid": uid,
+                "status": "approved"
+            }, sort=[("approved_at", -1)])
+            
+            if vip_payment:
+                # Restore from VIP payment
+                plan = vip_payment.get("plan", "startup")
+                duration = vip_payment.get("duration", "monthly")
+                approved_at = vip_payment.get("approved_at")
+                
+                # Calculate expiry based on duration
+                duration_days_map = {
+                    "monthly": 30,
+                    "quarterly": 90,
+                    "half_yearly": 180,
+                    "yearly": 365
+                }
+                duration_days = duration_days_map.get(duration, 30)
+                
+                # Calculate expiry from approval date
+                if approved_at:
+                    if isinstance(approved_at, str):
+                        try:
+                            approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                        except:
+                            approved_at = datetime.now(timezone.utc)
+                    expiry_date = approved_at + timedelta(days=duration_days)
+                else:
+                    expiry_date = datetime.now(timezone.utc) + timedelta(days=duration_days)
+                
+                # Restore subscription
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_plan": plan,
+                            "membership_type": "vip",
+                            "subscription_status": "active",
+                            "subscription_expires": expiry_date,
+                            "restored_from": "vip_payments",
+                            "restored_at": datetime.now(timezone.utc).isoformat()
+                        },
+                        "$unset": {
+                            "fraudulent_activation_reverted": ""
+                        }
+                    }
+                )
+                
+                restored_users.append({
+                    "uid": uid,
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "restored_plan": plan,
+                    "restored_expiry": expiry_date.isoformat()
+                })
+        
+        # Log the restoration
+        await db.admin_audit_logs.insert_one({
+            "action": "restore_from_vip_payments",
+            "restored_count": len(restored_users),
+            "restored_users": restored_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Restored {len(restored_users)} users from VIP payments",
+            "restored_count": len(restored_users),
+            "restored_users": restored_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Restore error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/users-needing-restore")
+async def get_users_needing_restore():
+    """
+    Preview: List all users who were reset but have legitimate vip_payments.
+    These users can be restored.
+    """
+    # Find users marked as fraudulent
+    affected_users = await db.users.find({
+        "$or": [
+            {"fraudulent_activation_reverted": True},
+            {"subscription_plan": "explorer", "membership_type": "free"}
+        ]
+    }).to_list(1000)
+    
+    can_restore = []
+    
+    for user in affected_users:
+        uid = user.get("uid")
+        
+        # Check if has approved vip_payments
+        vip_payment = await db.vip_payments.find_one({
+            "uid": uid,
+            "status": "approved"
+        }, sort=[("approved_at", -1)])
+        
+        if vip_payment:
+            can_restore.append({
+                "uid": uid,
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "current_plan": user.get("subscription_plan"),
+                "prc_balance": user.get("prc_balance", 0),
+                "can_restore_to": vip_payment.get("plan"),
+                "vip_payment_approved_at": str(vip_payment.get("approved_at"))
+            })
+    
+    return {
+        "total_can_restore": len(can_restore),
+        "users": can_restore
+    }
+
+
 @api_router.get("/admin/razorpay-fraud-preview")
 async def preview_fraudulent_subscriptions():
     """
