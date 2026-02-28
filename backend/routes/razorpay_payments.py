@@ -96,7 +96,7 @@ async def toggle_razorpay_gateway(request: Request):
         if admin_pin != "123456":
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
-        if db:
+        if db is not None:
             await db.app_settings.update_one(
                 {"key": "razorpay_enabled"},
                 {"$set": {"key": "razorpay_enabled", "value": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
