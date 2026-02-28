@@ -183,6 +183,7 @@ const SubscriptionPlans = ({ user }) => {
               toast.success('🎉 Payment Successful! Your subscription is now ACTIVE!', {
                 duration: 5000,
               });
+              setPaymentSuccess(true); // Instant activation
               setCurrentStep(5);
               // Refresh user data
               fetchData();
