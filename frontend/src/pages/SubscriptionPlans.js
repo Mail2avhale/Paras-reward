@@ -153,7 +153,15 @@ const SubscriptionPlans = ({ user }) => {
       
       // Get Razorpay config
       const configRes = await axios.get(`${API}/razorpay/config`);
-      const { key_id } = configRes.data;
+      const { key_id, enabled } = configRes.data;
+      
+      // Check if gateway is enabled
+      if (enabled === false) {
+        toast.error('Online payment is currently disabled. Please use manual payment option.');
+        setRazorpayLoading(false);
+        setPaymentMethod('manual');
+        return;
+      }
       
       // Create order
       const orderRes = await axios.post(`${API}/razorpay/create-order`, {
