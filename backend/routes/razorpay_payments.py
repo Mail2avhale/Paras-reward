@@ -1,8 +1,9 @@
 """
 Razorpay Payment Gateway Integration
 - Create orders for VIP subscriptions
-- Verify payments
+- Verify payments with DOUBLE VERIFICATION
 - Handle webhooks
+VERSION: 2.0 - With payment status verification from Razorpay API
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -16,6 +17,9 @@ from datetime import datetime, timezone, timedelta
 import logging
 
 router = APIRouter(prefix="/razorpay", tags=["Razorpay Payments"])
+
+# Code version for deployment verification
+CODE_VERSION = "2.0-SECURE"
 
 # Initialize Razorpay client
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
