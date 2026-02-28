@@ -739,6 +739,42 @@ const SubscriptionPlans = ({ user }) => {
                 </ul>
               </div>
 
+              {/* Razorpay Trust Badge */}
+              <div className="flex flex-col items-center gap-3 py-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4"/>
+                  </svg>
+                  <span className="text-sm text-gray-400">100% Secure Payments</span>
+                </div>
+                
+                {/* Razorpay Logo */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-gray-700">
+                  <span className="text-xs text-gray-500">Powered by</span>
+                  <svg className="h-5" viewBox="0 0 120 28" fill="none">
+                    <path d="M16.5 0L0 28h8.5l4-7h12l-4-7H12l4.5-7.5L16.5 0z" fill="#3395FF"/>
+                    <path d="M24.5 0L20.5 7h8.5l4 7h-12l-4 7H25l8.5-14L24.5 0z" fill="#072654"/>
+                    <text x="42" y="20" fill="#ffffff" fontSize="14" fontWeight="600">Razorpay</text>
+                  </svg>
+                </div>
+
+                {/* Payment Methods Icons */}
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center text-[10px] font-bold text-white">VISA</div>
+                    <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center">
+                      <div className="flex">
+                        <div className="w-2.5 h-2.5 bg-red-500 rounded-full -mr-1"></div>
+                        <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full"></div>
+                      </div>
+                    </div>
+                    <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center text-[10px] font-bold text-green-400">UPI</div>
+                    <div className="w-8 h-5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold text-blue-400">NET</div>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleRazorpayPayment}
                 disabled={razorpayLoading}
