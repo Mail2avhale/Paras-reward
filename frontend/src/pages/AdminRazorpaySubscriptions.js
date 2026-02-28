@@ -166,6 +166,38 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     }
   };
 
+  // SYNC payments from Razorpay API
+  const syncPayments = async () => {
+    try {
+      setCleanupLoading(true);
+      toast.loading('Syncing with Razorpay...', { id: 'sync' });
+      
+      const res = await axios.post(`${API}/razorpay/sync-payments`, {
+        admin_pin: '123456'
+      });
+      
+      toast.dismiss('sync');
+      
+      if (res.data.synced_count > 0) {
+        toast.success(`✅ Activated ${res.data.synced_count} subscriptions!`, { duration: 5000 });
+      } else {
+        toast.info('No pending payments to sync');
+      }
+      
+      if (res.data.failed_count > 0) {
+        toast.error(`${res.data.failed_count} payments could not be synced`);
+      }
+      
+      fetchData();
+    } catch (error) {
+      toast.dismiss('sync');
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Sync failed');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
