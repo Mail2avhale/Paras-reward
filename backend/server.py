@@ -25618,17 +25618,25 @@ async def get_all_bill_payment_requests(
 
 @api_router.post("/admin/bill-payment/process")
 async def process_bill_payment_request(request: Request):
-    """Process a bill payment request - approve or reject (Admin only). 
-    Approve = Automatic Eko payment with 3 retries. Fail = Auto-reject with PRC refund."""
+    """Process a bill payment request - approve, reject, retry, or complete manually (Admin only).
+    
+    Actions:
+    - approve: Try Eko API (3 retries). Success=completed, Fail=eko_failed (pending for admin)
+    - retry: Retry Eko API for eko_failed requests
+    - complete: Manually mark as completed (admin processed offline)
+    - reject: Reject with PRC refund (admin decision only)
+    """
     data = await request.json()
     request_id = data.get("request_id")
-    action = data.get("action")  # approve or reject only (no manual complete)
+    action = data.get("action")  # approve, reject, retry, complete
     admin_notes = data.get("admin_notes", "")
     admin_uid = data.get("admin_uid")
     reject_reason = data.get("reject_reason", "")
+    txn_reference = data.get("txn_reference", "")  # For manual completion
     
-    if action not in ["approve", "reject"]:
-        raise HTTPException(status_code=400, detail="Invalid action. Must be: approve or reject")
+    valid_actions = ["approve", "reject", "retry", "complete"]
+    if action not in valid_actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {', '.join(valid_actions)}")
     
     # Get admin name
     admin_name = "Admin"
