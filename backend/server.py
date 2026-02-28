@@ -40840,6 +40840,16 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Auto-sync Razorpay payments every 10 minutes
+        scheduler.add_job(
+            auto_sync_razorpay_payments,
+            'interval',
+            minutes=10,
+            id='auto_sync_razorpay',
+            name='Auto sync Razorpay payments every 10 minutes',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -40850,6 +40860,7 @@ async def startup_db():
         print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
         print("   - Account hard delete: Daily at 3:30 AM")
         print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
+        print("   - 🔄 Razorpay auto-sync: Every 10 minutes")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
