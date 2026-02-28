@@ -4,7 +4,7 @@ import axios from 'axios';
 import { 
   ArrowLeft, CreditCard, CheckCircle, Clock, XCircle, 
   TrendingUp, Users, IndianRupee, RefreshCw, Search,
-  Filter, Calendar, ChevronDown
+  Filter, Calendar, ChevronDown, AlertTriangle, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -18,6 +18,9 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [stats, setStats] = useState({});
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFraudModal, setShowFraudModal] = useState(false);
+  const [fraudPreview, setFraudPreview] = useState(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
