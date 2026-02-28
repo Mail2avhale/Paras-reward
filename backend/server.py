@@ -1177,7 +1177,8 @@ async def clear_admin_cache():
             "chart:subscriptions:7d",
             "admin_vip_payments:pending:p1:l50",
             "admin_vip_payments:all:p1:l50",
-            "pending_payments_count"
+            "pending_payments_count",
+            "public_settings"  # Added public settings cache
         ]
         
         cleared = []
@@ -1192,6 +1193,23 @@ async def clear_admin_cache():
             "success": True,
             "message": "Admin cache cleared successfully",
             "cleared_keys": cleared,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/clear-public-settings-cache")
+async def clear_public_settings_cache():
+    """
+    Clear public settings cache immediately.
+    Use after updating UPI/QR code to make it visible to users instantly.
+    """
+    try:
+        await cache.delete("public_settings")
+        return {
+            "success": True,
+            "message": "Public settings cache cleared. Users will now see updated UPI/QR code.",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
