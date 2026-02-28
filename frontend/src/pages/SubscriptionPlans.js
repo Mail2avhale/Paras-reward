@@ -108,6 +108,14 @@ const SubscriptionPlans = ({ user }) => {
       const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
       
+      // Fetch subscription history
+      try {
+        const historyRes = await axios.get(`${API}/subscription/history/${user.uid}`);
+        setSubscriptionHistory(historyRes.data.history || []);
+      } catch (err) {
+        console.log('No subscription history');
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load subscription plans');
