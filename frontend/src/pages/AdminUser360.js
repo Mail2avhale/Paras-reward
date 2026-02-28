@@ -3233,7 +3233,16 @@ const AdminUser360 = ({ user: adminUser }) => {
                   )}
 
                   {/* Re-run Button */}
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-6 flex justify-center gap-3">
+                    {diagnoseModal.data?.issues?.length > 0 && (
+                      <Button 
+                        onClick={autoFixAll} 
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Zap className="w-4 h-4 mr-2" />
+                        Auto Fix All Issues
+                      </Button>
+                    )}
                     <Button onClick={runDiagnosis} variant="outline" className="border-purple-500/50 text-purple-400">
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Re-run Diagnosis
