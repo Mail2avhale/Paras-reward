@@ -2,6 +2,20 @@
 
 ## Latest Updates (March 1, 2026)
 
+### ✅ ADVANCED SORTING & FILTERING - COMPLETE
+- **Admin Subscriptions Page (AdminSubscriptionManagement.js):** Enhanced with comprehensive filtering
+  - Sort By: Submit Date, Process Date, Amount
+  - Sort Order: Latest First / Oldest First toggle
+  - Plan Filter: All Plans, Startup, Growth, Elite
+  - Subscription Type Filter: New, Renewal, Upgrade, Downgrade
+  - Amount Range Filter: Min/Max inputs with presets (≤₹999, ₹1K-3K, ≥₹3K)
+  - Processed By Filter: Shows for Approved/Rejected tabs only
+  - Active Filters Summary: Shows filter badges with remove option
+  - Clear All Filters button
+- **Admin Bill Payments Page (AdminBillPayments.js):** Already has advanced filtering
+  - Status, Date Range, Amount, Admin filters
+  - Sorting by created_at, approved_at, rejected_at, amount
+
 ### ✅ EKO INTEGRATION COMPLETE - STANDARDIZED
 - **New Eko Service Module:** `/app/backend/services/eko_service.py`
 - **Proper HMAC SHA256 Authentication:** As per Eko documentation
