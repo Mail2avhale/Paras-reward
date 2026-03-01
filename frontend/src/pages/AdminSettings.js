@@ -137,6 +137,17 @@ const AdminSettings = ({ user }) => {
     } catch (error) {
       console.error('Error fetching redemption charges:', error);
     }
+
+    // Fetch payment gateway toggle status
+    try {
+      const publicSettings = await axios.get(`${API}/settings/public`);
+      if (publicSettings.data) {
+        setRazorpayEnabled(publicSettings.data.razorpay_enabled !== false);
+        setManualPaymentEnabled(publicSettings.data.manual_subscription_enabled !== false);
+      }
+    } catch (error) {
+      console.error('Error fetching gateway status:', error);
+    }
   };
 
   const handleSaveRedemptionCharges = async () => {
