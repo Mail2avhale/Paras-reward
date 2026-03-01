@@ -204,6 +204,41 @@ const AdminBillPayments = ({ user }) => {
       filtered = filtered.filter(r => new Date(r.created_at) <= toDate);
     }
 
+    // ========== NEW ADVANCED FILTERS ==========
+    
+    // Filter by Approved By (admin name)
+    if (approvedByFilter && statusFilter === 'approved') {
+      const search = approvedByFilter.toLowerCase();
+      filtered = filtered.filter(r => 
+        (r.processed_by || '').toLowerCase().includes(search) ||
+        (r.processed_by_name || '').toLowerCase().includes(search) ||
+        (r.approved_by || '').toLowerCase().includes(search)
+      );
+    }
+    
+    // Filter by Rejected By (admin name)
+    if (rejectedByFilter && statusFilter === 'rejected') {
+      const search = rejectedByFilter.toLowerCase();
+      filtered = filtered.filter(r => 
+        (r.processed_by || '').toLowerCase().includes(search) ||
+        (r.processed_by_name || '').toLowerCase().includes(search) ||
+        (r.rejected_by || '').toLowerCase().includes(search)
+      );
+    }
+    
+    // Filter by Amount Range
+    if (amountMin) {
+      filtered = filtered.filter(r => (r.amount_inr || 0) >= parseFloat(amountMin));
+    }
+    if (amountMax) {
+      filtered = filtered.filter(r => (r.amount_inr || 0) <= parseFloat(amountMax));
+    }
+    
+    // Filter only Manually Approved
+    if (manualOnlyFilter) {
+      filtered = filtered.filter(r => r.manually_approved === true);
+    }
+
     // Advanced search filter - search across ALL fields
     if (searchTerm) {
       const search = searchTerm.toLowerCase().trim();
@@ -244,29 +279,40 @@ const AdminBillPayments = ({ user }) => {
       });
     }
 
-    // Sort - For approved/completed, sort by processed_at (latest first)
-    // For pending, sort by created_at (oldest first to process first)
+    // ========== ADVANCED SORTING ==========
     filtered.sort((a, b) => {
-      // Approved/Completed requests: latest processed on top
-      if ((a.status === 'approved' || a.status === 'completed') && 
-          (b.status === 'approved' || b.status === 'completed')) {
-        return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
+      let dateA, dateB;
+      
+      // Determine which date field to sort by
+      switch (sortBy) {
+        case 'approved_at':
+          dateA = a.completed_at || a.processed_at || a.approved_at || a.created_at;
+          dateB = b.completed_at || b.processed_at || b.approved_at || b.created_at;
+          break;
+        case 'rejected_at':
+          dateA = a.rejected_at || a.processed_at || a.created_at;
+          dateB = b.rejected_at || b.processed_at || b.created_at;
+          break;
+        case 'amount':
+          // Sort by amount
+          const amtA = a.amount_inr || 0;
+          const amtB = b.amount_inr || 0;
+          return sortOrder === 'newest' ? amtB - amtA : amtA - amtB;
+        case 'created_at':
+        default:
+          dateA = a.created_at;
+          dateB = b.created_at;
       }
-      // Pending requests: oldest first (FIFO)
-      if (a.status === 'pending' && b.status === 'pending') {
-        return sortOrder === 'newest' 
-          ? new Date(b.created_at) - new Date(a.created_at)
-          : new Date(a.created_at) - new Date(b.created_at);
-      }
-      // Default sorting
+      
+      // Sort by date
       if (sortOrder === 'newest') {
-        return new Date(b.created_at) - new Date(a.created_at);
+        return new Date(dateB) - new Date(dateA);
       }
-      return new Date(a.created_at) - new Date(b.created_at);
+      return new Date(dateA) - new Date(dateB);
     });
 
     return filtered;
-  }, [requests, activeCategory, statusFilter, searchTerm, dateFrom, dateTo, sortOrder]);
+  }, [requests, activeCategory, statusFilter, searchTerm, dateFrom, dateTo, sortOrder, sortBy, approvedByFilter, rejectedByFilter, amountMin, amountMax, manualOnlyFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRequests.length / ITEMS_PER_PAGE);
