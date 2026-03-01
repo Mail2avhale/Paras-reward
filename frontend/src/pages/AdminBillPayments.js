@@ -1797,11 +1797,17 @@ const AdminBillPayments = ({ user }) => {
                       toast.error('Please enter UTR/Reference number');
                       return;
                     }
-                    setShowCompleteDialog(false);
-                    await executeProcess(pendingCompleteId, 'complete', '', manualTxnRef);
-                    setPendingCompleteId(null);
-                    setPendingCompleteRequest(null);
-                    setManualTxnRef('');
+                    try {
+                      setShowCompleteDialog(false);
+                      await executeProcess(pendingCompleteId, 'complete', '', manualTxnRef);
+                    } catch (err) {
+                      console.error('Manual complete error:', err);
+                      toast.error('Failed to complete. Please try again.');
+                    } finally {
+                      setPendingCompleteId(null);
+                      setPendingCompleteRequest(null);
+                      setManualTxnRef('');
+                    }
                   }}
                   disabled={processing || !manualTxnRef.trim()}
                 >
