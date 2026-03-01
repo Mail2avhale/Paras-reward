@@ -75,6 +75,7 @@ const AdminBillPayments = ({ user }) => {
   // Manual Complete Dialog
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [pendingCompleteId, setPendingCompleteId] = useState(null);
+  const [pendingCompleteRequest, setPendingCompleteRequest] = useState(null);
   const [manualTxnRef, setManualTxnRef] = useState('');
   
   // Date Range Filter States
