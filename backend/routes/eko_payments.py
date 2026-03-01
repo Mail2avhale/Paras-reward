@@ -126,7 +126,7 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             # Try to parse JSON response
             try:
                 result = response.json()
-            except:
+            except (ValueError, json.JSONDecodeError):
                 result = {"raw_response": response.text}
             
             # Check for Eko error responses
