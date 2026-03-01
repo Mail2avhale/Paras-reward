@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Crown, Users, TrendingUp, Rocket, Clock, CheckCircle, XCircle,
-  Search, RefreshCw, Eye, Edit, Trash2, X, Calendar, CreditCard, AlertCircle
+  Search, RefreshCw, Eye, Edit, Trash2, X, Calendar, CreditCard, AlertCircle,
+  ArrowUpDown, Filter, SlidersHorizontal, ChevronDown
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -23,6 +24,16 @@ const AdminSubscriptionManagement = () => {
   // Date filter
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  
+  // Advanced Sorting & Filtering
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [sortBy, setSortBy] = useState('created_at'); // created_at, processed_at, amount
+  const [sortOrder, setSortOrder] = useState('newest'); // newest, oldest
+  const [processedByFilter, setProcessedByFilter] = useState(''); // Filter by admin who processed
+  const [planFilter, setPlanFilter] = useState('all'); // all, startup, growth, elite
+  const [amountMin, setAmountMin] = useState('');
+  const [amountMax, setAmountMax] = useState('');
+  const [subscriptionTypeFilter, setSubscriptionTypeFilter] = useState('all'); // all, new, renewal, upgrade
   
   // Modals
   const [viewModal, setViewModal] = useState({ show: false, payment: null });
