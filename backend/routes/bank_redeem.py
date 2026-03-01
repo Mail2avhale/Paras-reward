@@ -1127,7 +1127,107 @@ async def approve_withdrawal(request_id: str, request: Request):
         "message": "Withdrawal approved",
         "transfer_status": transfer_status,
         "eko_txn_id": eko_txn_id,
-        "eko_transfer_success": transfer_status == "eko_dmt"
+        "eko_transfer_success": transfer_status == "eko_dmt",
+        "manually_approved": manually_approved
+    }
+
+
+@router.post("/admin/bank-redeem/{request_id}/manual-complete")
+async def manual_complete_withdrawal(request_id: str, request: Request):
+    """
+    Manually complete a bank withdrawal request without Eko API.
+    Use when Eko is down or admin has processed payment offline.
+    
+    Required: txn_reference (UTR/Reference number)
+    """
+    data = await request.json()
+    admin_id = data.get("admin_id") or data.get("admin_uid")
+    txn_reference = data.get("txn_reference", "")
+    admin_notes = data.get("admin_notes", "Manually completed by admin")
+    
+    if not txn_reference:
+        raise HTTPException(status_code=400, detail="UTR/Reference number is required for manual completion")
+    
+    withdrawal = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    current_status = withdrawal.get("status")
+    if current_status not in ["pending", "approved", "eko_failed", "processing"]:
+        raise HTTPException(status_code=400, detail=f"Cannot manually complete request with status: {current_status}")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Get admin details
+    admin_user = await db.users.find_one({"uid": admin_id}, {"_id": 0, "name": 1})
+    admin_name = admin_user.get("name", "Admin") if admin_user else "Admin"
+    
+    # Calculate processing time
+    processing_time_str = None
+    created_at = withdrawal.get("created_at")
+    if created_at:
+        try:
+            if isinstance(created_at, str):
+                created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            else:
+                created_dt = created_at
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            time_diff = now - created_dt
+            hours = int(time_diff.total_seconds() // 3600)
+            minutes = int((time_diff.total_seconds() % 3600) // 60)
+            if hours > 24:
+                days = hours // 24
+                processing_time_str = f"{days}d {hours % 24}h {minutes}m"
+            elif hours > 0:
+                processing_time_str = f"{hours}h {minutes}m"
+            else:
+                processing_time_str = f"{minutes}m"
+        except:
+            pass
+    
+    # Update request as manually completed
+    await db.bank_withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "status": "completed",
+            "completed_at": now.isoformat(),
+            "processed_at": now.isoformat(),
+            "processed_by": admin_name,
+            "processed_by_uid": admin_id,
+            "processing_time": processing_time_str,
+            "transaction_ref": txn_reference,
+            "transfer_status": "manual",
+            "manually_approved": True,
+            "manual_txn_reference": txn_reference,
+            "admin_notes": admin_notes
+        }}
+    )
+    
+    # Notify user
+    if create_notification:
+        try:
+            await create_notification(
+                user_id=withdrawal["user_id"],
+                title="✅ Bank Withdrawal Completed",
+                message=f"Your withdrawal of ₹{withdrawal['amount_inr']:,.0f} has been transferred to your bank account.\n🧾 Reference: {txn_reference}",
+                notification_type="payment_completed",
+                data={
+                    "amount_inr": withdrawal['amount_inr'],
+                    "payment_type": "bank_withdrawal",
+                    "txn_reference": txn_reference
+                }
+            )
+        except Exception:
+            pass
+    
+    return {
+        "success": True,
+        "message": "✅ Withdrawal manually completed",
+        "status": "completed",
+        "txn_reference": txn_reference,
+        "processing_time": processing_time_str,
+        "manually_approved": True
     }
 
 
