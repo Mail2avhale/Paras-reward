@@ -517,6 +517,56 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         )}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-5 mt-4 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 bg-gray-800 rounded-lg text-white disabled:opacity-50"
+          >
+            Previous
+          </button>
+          
+          <div className="flex gap-1">
+            {[...Array(Math.min(5, totalPages))].map((_, i) => {
+              let page;
+              if (totalPages <= 5) {
+                page = i + 1;
+              } else if (currentPage <= 3) {
+                page = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                page = totalPages - 4 + i;
+              } else {
+                page = currentPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-10 h-10 rounded-lg font-medium ${
+                    currentPage === page
+                      ? 'bg-amber-500 text-black'
+                      : 'bg-gray-800 text-white hover:bg-gray-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 bg-gray-800 rounded-lg text-white disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       {/* Fraud Cleanup Modal */}
       {showFraudModal && fraudPreview && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
