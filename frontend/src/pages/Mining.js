@@ -340,9 +340,9 @@ const DailyRewards = ({ user }) => {
   // Get global translation function
   const { t: globalT } = useLanguage();
   
-  // Check if user is free user
+  // Check if user is free user (explorer, free, or no plan)
   const subscriptionPlan = userData?.subscription_plan || 'explorer';
-  const isFreeUser = subscriptionPlan === 'explorer';
+  const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
 
   // Fetch user data and mining status
   const fetchUserData = useCallback(async () => {
