@@ -919,6 +919,7 @@ const SubscriptionPlans = ({ user }) => {
             </button>
 
             {/* Manual UPI/Bank - 24hr Activation */}
+            {manualEnabled && (
             <button
               onClick={() => setPaymentMethod('manual')}
               className={`w-full p-4 rounded-2xl border-2 transition-all ${
@@ -926,6 +927,7 @@ const SubscriptionPlans = ({ user }) => {
                   ? 'border-amber-500 bg-amber-500/10'
                   : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
               }`}
+              data-testid="manual-payment-option"
             >
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -948,6 +950,7 @@ const SubscriptionPlans = ({ user }) => {
                 </div>
               </div>
             </button>
+            )}
           </div>
 
           {/* Razorpay Pay Now Button */}
