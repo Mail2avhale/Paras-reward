@@ -58,6 +58,12 @@ const AdminSettings = ({ user }) => {
   });
   const [savingRedemption, setSavingRedemption] = useState(false);
 
+  // Payment Gateway Toggles State
+  const [razorpayEnabled, setRazorpayEnabled] = useState(true);
+  const [manualPaymentEnabled, setManualPaymentEnabled] = useState(true);
+  const [togglingRazorpay, setTogglingRazorpay] = useState(false);
+  const [togglingManual, setTogglingManual] = useState(false);
+
   useEffect(() => {
     // Check if user is admin
     if (!user || user.role !== 'admin') {
