@@ -210,6 +210,44 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     });
   };
 
+  // Apply sorting
+  const sortedOrders = [...orders].sort((a, b) => {
+    const dateA = new Date(a.created_at || 0);
+    const dateB = new Date(b.created_at || 0);
+    
+    switch (sortBy) {
+      case 'latest':
+        return dateB - dateA;
+      case 'oldest':
+        return dateA - dateB;
+      case 'status':
+        return (a.status || '').localeCompare(b.status || '');
+      case 'amount_high':
+        return (b.amount || 0) - (a.amount || 0);
+      case 'amount_low':
+        return (a.amount || 0) - (b.amount || 0);
+      default:
+        return dateB - dateA;
+    }
+  });
+
+  // Apply search filter
+  const filteredOrders = sortedOrders.filter(order => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      order.user_name?.toLowerCase().includes(query) ||
+      order.user_email?.toLowerCase().includes(query) ||
+      order.order_id?.toLowerCase().includes(query) ||
+      order.payment_id?.toLowerCase().includes(query)
+    );
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="min-h-screen bg-gray-950 pb-24">
       {/* Header */}
