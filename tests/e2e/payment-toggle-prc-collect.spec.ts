@@ -162,13 +162,18 @@ test.describe('Subscription Page - Manual UPI Option Visibility', () => {
     await page.goto('/subscription', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 10000 }).catch(() => {});
     
-    // Wait for plans to load - need to select a PAID plan (not Explorer/free) to see payment options
-    // Look for Startup or Elite plan
+    // Step 1: Select a PAID plan (not Explorer/free) - click on Startup
     const startupPlan = page.getByTestId('plan-startup');
     await expect(startupPlan).toBeVisible({ timeout: 10000 });
     await startupPlan.click();
     
-    // Wait for payment options to appear
+    // Step 2: Select duration - click on Monthly
+    const monthlyDuration = page.getByTestId('duration-monthly');
+    await expect(monthlyDuration).toBeVisible({ timeout: 10000 });
+    await monthlyDuration.click();
+    
+    // Step 3: Now payment options should be visible
+    // Wait a moment for the step transition
     await page.waitForLoadState('domcontentloaded');
     
     // Check if Manual UPI option is visible
