@@ -1482,6 +1482,90 @@ const AdminBillPayments = ({ user }) => {
           </Card>
         </div>
       )}
+
+      {/* Manual Complete Dialog */}
+      {showCompleteDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+                Manual Complete
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowCompleteDialog(false);
+                  setPendingCompleteId(null);
+                  setManualTxnRef('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 mb-4">
+              <p className="text-amber-300 text-sm flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>Use this when Eko API fails or you have processed the payment offline. Enter the UTR/Transaction Reference for records.</span>
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">UTR / Transaction Reference *</label>
+                <Input
+                  placeholder="e.g., UTR123456789, TXN-2024-0001"
+                  value={manualTxnRef}
+                  onChange={(e) => setManualTxnRef(e.target.value.toUpperCase())}
+                  className="bg-gray-800 border-gray-700 text-white uppercase"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">Admin Notes (Optional)</label>
+                <Input
+                  placeholder="e.g., Processed via bank portal"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700"
+                  onClick={() => {
+                    setShowCompleteDialog(false);
+                    setPendingCompleteId(null);
+                    setManualTxnRef('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={async () => {
+                    if (!manualTxnRef.trim()) {
+                      toast.error('Please enter UTR/Reference number');
+                      return;
+                    }
+                    setShowCompleteDialog(false);
+                    await executeProcess(pendingCompleteId, 'complete', '', manualTxnRef);
+                    setPendingCompleteId(null);
+                    setManualTxnRef('');
+                  }}
+                  disabled={processing || !manualTxnRef.trim()}
+                >
+                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                  Complete Manually
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
