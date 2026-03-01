@@ -27783,6 +27783,8 @@ async def process_bill_payment_request(request: Request):
                 "processing_time": processing_time_str,
                 "txn_number": txn_number,
                 "payment_method": "manual",
+                "manually_approved": True,
+                "manual_txn_reference": txn_reference or "",
                 "admin_notes": admin_notes or "Manually completed by admin",
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid
