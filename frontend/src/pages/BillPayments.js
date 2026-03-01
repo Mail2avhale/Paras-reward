@@ -272,31 +272,23 @@ const BillPayments = ({ user, onLogout }) => {
 
   const currentType = requestTypes.find(t => t.id === selectedType);
   
-  // New charge calculation: Amount + Processing Fee + 20% Admin
+  // Bill Payment Charges:
+  // Platform Fee: ₹10 (Fixed)
+  // Admin Charge: 20% of amount
   const amountINR = formData.amount_inr ? parseFloat(formData.amount_inr) : 0;
   
-  // EMI Special Processing Fee Logic:
-  // - For loan_emi with amount <= 499: Processing Fee = 50% of amount
-  // - For loan_emi with amount > 499: Flat ₹10
-  // - For all other services: Flat ₹10
-  let processingFeeINR = 10; // Default flat ₹10
-  if (selectedType === 'loan_emi') {
-    if (amountINR <= 499) {
-      processingFeeINR = amountINR * 0.50; // 50% of amount
-    } else {
-      processingFeeINR = 10; // Flat ₹10 for amounts > 499
-    }
-  }
-  
-  const adminChargePercent = 20; // 20%
-  const adminChargeINR = amountINR * (adminChargePercent / 100);
-  const totalINR = amountINR + processingFeeINR + adminChargeINR;
+  const platformFeeINR = 10; // ₹10 fixed platform fee
+  const adminChargePercent = 20; // 20% admin charge
+  const adminChargeINR = Math.round(amountINR * (adminChargePercent / 100));
+  const totalChargesINR = platformFeeINR + adminChargeINR;
+  const totalINR = amountINR + totalChargesINR;
   
   // Convert to PRC (10 PRC = ₹1)
   const prcRate = 10;
   const amountPRC = amountINR * prcRate;
-  const processingFeePRC = processingFeeINR * prcRate;
+  const platformFeePRC = platformFeeINR * prcRate;
   const adminChargePRC = adminChargeINR * prcRate;
+  const totalChargesPRC = totalChargesINR * prcRate;
   const totalPRC = totalINR * prcRate;
 
   const handleSubmit = async (e) => {
