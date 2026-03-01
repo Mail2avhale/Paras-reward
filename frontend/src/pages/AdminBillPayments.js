@@ -1524,16 +1524,17 @@ const AdminBillPayments = ({ user }) => {
       {/* Manual Complete Dialog */}
       {showCompleteDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md bg-gray-900 border-gray-700 p-6">
+          <Card className="w-full max-w-lg bg-gray-900 border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                Manual Complete
+                <CheckCircle className="w-5 h-5 text-amber-400" />
+                Manual Complete (Without Eko)
               </h3>
               <button 
                 onClick={() => {
                   setShowCompleteDialog(false);
                   setPendingCompleteId(null);
+                  setPendingCompleteRequest(null);
                   setManualTxnRef('');
                 }}
                 className="text-gray-400 hover:text-white"
@@ -1541,6 +1542,55 @@ const AdminBillPayments = ({ user }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+            
+            {/* Request Details */}
+            {pendingCompleteRequest && (
+              <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-500">Request Type</p>
+                    <p className="text-white font-medium capitalize flex items-center gap-2">
+                      {pendingCompleteRequest.request_type === 'mobile_recharge' && '📱'}
+                      {pendingCompleteRequest.request_type === 'dish_recharge' && '📺'}
+                      {pendingCompleteRequest.request_type === 'electricity_bill' && '⚡'}
+                      {pendingCompleteRequest.request_type === 'credit_card_payment' && '💳'}
+                      {pendingCompleteRequest.request_type === 'loan_emi' && '🏦'}
+                      {pendingCompleteRequest.request_type?.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Amount</p>
+                    <p className="text-emerald-400 font-bold text-lg">₹{pendingCompleteRequest.amount_inr?.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">User</p>
+                    <p className="text-white">{pendingCompleteRequest.user_name || pendingCompleteRequest.user_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Request ID</p>
+                    <p className="text-gray-400 font-mono text-xs">{pendingCompleteRequest.request_id}</p>
+                  </div>
+                  {pendingCompleteRequest.phone_number && (
+                    <div>
+                      <p className="text-gray-500">Phone Number</p>
+                      <p className="text-white">{pendingCompleteRequest.phone_number}</p>
+                    </div>
+                  )}
+                  {pendingCompleteRequest.operator && (
+                    <div>
+                      <p className="text-gray-500">Operator</p>
+                      <p className="text-white">{pendingCompleteRequest.operator}</p>
+                    </div>
+                  )}
+                  {pendingCompleteRequest.consumer_number && (
+                    <div className="col-span-2">
+                      <p className="text-gray-500">Consumer/Account Number</p>
+                      <p className="text-white font-mono">{pendingCompleteRequest.consumer_number}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 mb-4">
               <p className="text-amber-300 text-sm flex items-start gap-2">
@@ -1556,7 +1606,7 @@ const AdminBillPayments = ({ user }) => {
                   placeholder="e.g., UTR123456789, TXN-2024-0001"
                   value={manualTxnRef}
                   onChange={(e) => setManualTxnRef(e.target.value.toUpperCase())}
-                  className="bg-gray-800 border-gray-700 text-white uppercase"
+                  className="bg-gray-800 border-gray-700 text-white uppercase h-12"
                 />
               </div>
               
@@ -1577,13 +1627,14 @@ const AdminBillPayments = ({ user }) => {
                   onClick={() => {
                     setShowCompleteDialog(false);
                     setPendingCompleteId(null);
+                    setPendingCompleteRequest(null);
                     setManualTxnRef('');
                   }}
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700"
                   onClick={async () => {
                     if (!manualTxnRef.trim()) {
                       toast.error('Please enter UTR/Reference number');
@@ -1592,12 +1643,13 @@ const AdminBillPayments = ({ user }) => {
                     setShowCompleteDialog(false);
                     await executeProcess(pendingCompleteId, 'complete', '', manualTxnRef);
                     setPendingCompleteId(null);
+                    setPendingCompleteRequest(null);
                     setManualTxnRef('');
                   }}
                   disabled={processing || !manualTxnRef.trim()}
                 >
                   {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  Complete Manually
+                  ✅ Complete Manually
                 </Button>
               </div>
             </div>
