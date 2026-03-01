@@ -735,9 +735,9 @@ class EkoStatusUpdater:
         
         Should be called periodically (every 5-10 minutes)
         """
-        if not self.db:
+        if self.db is None:
             logger.error("Database not configured")
-            return {"updated": 0, "errors": []}
+            return {"updated": 0, "errors": [], "checked": 0}
         
         # Find pending transactions with Eko TID
         pending = await self.db[collection_name].find({
