@@ -180,6 +180,42 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
 
 # ==================== PYDANTIC MODELS ====================
 
+# ==================== BILL PAYMENT CHARGES ====================
+BILL_PLATFORM_FEE = 10  # ₹10 fixed platform fee
+BILL_ADMIN_CHARGE_PERCENT = 20  # 20% admin charge
+PRC_RATE = 10  # 10 PRC = ₹1
+
+def calculate_bill_payment_charges(amount: float) -> dict:
+    """
+    Calculate charges for bill payment
+    
+    Platform Fee: ₹10 fixed
+    Admin Charge: 20% of amount
+    
+    Returns dict with all charge breakdowns
+    """
+    amount_inr = float(amount)
+    platform_fee = BILL_PLATFORM_FEE
+    admin_charge = int(amount_inr * (BILL_ADMIN_CHARGE_PERCENT / 100))
+    total_charges = platform_fee + admin_charge
+    total_amount = amount_inr + total_charges
+    
+    return {
+        "amount_inr": amount_inr,
+        "platform_fee_inr": platform_fee,
+        "admin_charge_inr": admin_charge,
+        "admin_charge_percent": BILL_ADMIN_CHARGE_PERCENT,
+        "total_charges_inr": total_charges,
+        "total_amount_inr": total_amount,
+        # PRC equivalents
+        "amount_prc": int(amount_inr * PRC_RATE),
+        "platform_fee_prc": platform_fee * PRC_RATE,
+        "admin_charge_prc": admin_charge * PRC_RATE,
+        "total_charges_prc": total_charges * PRC_RATE,
+        "total_prc_required": int(total_amount * PRC_RATE)
+    }
+
+
 class BillFetchRequest(BaseModel):
     category: str  # electricity, water, gas, mobile_postpaid, dth, broadband, etc.
     biller_id: str
