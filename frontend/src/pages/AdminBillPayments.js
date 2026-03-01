@@ -922,31 +922,52 @@ const AdminBillPayments = ({ user }) => {
                       <p className="text-xs text-gray-500">{formatPRC(request.total_prc_deducted)}</p>
                       
                       {request.status === 'pending' ? (
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-col gap-2 mt-2">
+                          {/* View Details Button */}
                           <Button
                             size="sm"
                             onClick={() => setSelectedRequest(request)}
-                            className="h-7 px-2 bg-gray-700 hover:bg-gray-600"
+                            className="h-7 w-full px-2 bg-gray-700 hover:bg-gray-600"
                           >
-                            <Eye className="w-3 h-3 mr-1" /> View
+                            <Eye className="w-3 h-3 mr-1" /> View Details
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleProcess(request.request_id, 'approve')}
-                            disabled={processing}
-                            className="h-7 px-2 bg-emerald-600 hover:bg-emerald-700"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleProcess(request.request_id, 'reject')}
-                            disabled={processing}
-                            className="h-7 px-2"
-                          >
-                            <XCircle className="w-3 h-3" />
-                          </Button>
+                          
+                          {/* Action Buttons Row */}
+                          <div className="flex gap-1">
+                            {/* Eko Auto Approve */}
+                            <Button
+                              size="sm"
+                              onClick={() => handleProcess(request.request_id, 'approve')}
+                              disabled={processing}
+                              className="h-7 px-2 bg-emerald-600 hover:bg-emerald-700 flex-1"
+                              title="Approve via Eko API"
+                            >
+                              ⚡ Eko
+                            </Button>
+                            
+                            {/* Manual Complete */}
+                            <Button
+                              size="sm"
+                              onClick={() => handleProcess(request.request_id, 'complete')}
+                              disabled={processing}
+                              className="h-7 px-2 bg-amber-600 hover:bg-amber-700 flex-1"
+                              title="Manual Complete (Without Eko)"
+                            >
+                              🔧 Manual
+                            </Button>
+                            
+                            {/* Reject */}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleProcess(request.request_id, 'reject')}
+                              disabled={processing}
+                              className="h-7 px-2"
+                              title="Reject + PRC Refund"
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       ) : request.status === 'eko_failed' ? (
                         /* Eko Failed - Admin decides: Retry, Complete, or Reject */
