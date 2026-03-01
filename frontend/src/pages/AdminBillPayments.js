@@ -81,8 +81,17 @@ const AdminBillPayments = ({ user }) => {
   // Date Range Filter States
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [sortOrder, setSortOrder] = useState('newest'); // Sorting options
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Advanced Sorting & Filter States
+  const [sortBy, setSortBy] = useState('created_at'); // created_at, approved_at, rejected_at, amount
+  const [approvedByFilter, setApprovedByFilter] = useState(''); // Filter by who approved
+  const [rejectedByFilter, setRejectedByFilter] = useState(''); // Filter by who rejected
+  const [amountMin, setAmountMin] = useState('');
+  const [amountMax, setAmountMax] = useState('');
+  const [manualOnlyFilter, setManualOnlyFilter] = useState(false); // Show only manually approved
+  
   const [stats, setStats] = useState({
     today: { pending: 0, approved: 0, rejected: 0, pendingPRC: 0, approvedPRC: 0, rejectedPRC: 0, pendingINR: 0, approvedINR: 0, rejectedINR: 0 },
     allTime: { pending: 0, approved: 0, rejected: 0, pendingPRC: 0, approvedPRC: 0, rejectedPRC: 0, pendingINR: 0, approvedINR: 0, rejectedINR: 0 },
