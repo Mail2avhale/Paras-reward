@@ -17746,31 +17746,64 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
             )
             fixed_issues.append(f"Subscription restored from approved payment: {plan}")
     
-    # ========== 5. Fix PRC balance (recalculate from transactions) ==========
+    # ========== 5. Fix PRC balance (recalculate from ALL transactions) ==========
     prc_balance = user.get("prc_balance", 0)
     
-    # Calculate expected balance
-    total_credits = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]).to_list(1)
+    # Credit types (add to balance)
+    credit_types = ["mining", "tap_game", "referral", "signup_bonus", "daily_bonus", 
+                    "prc_credit", "admin_credit", "adjustment_credit", "bonus", "reward"]
     
-    total_debits = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
+    # Debit types (subtract from balance)
+    debit_types = ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", 
+                   "prc_debit", "adjustment_debit", "deduction", "withdrawal"]
+    
+    # Calculate credits (positive amounts for credit types OR all positive amounts)
+    credit_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "$or": [
+                {"type": {"$in": credit_types}},
+                {"type": {"$regex": "credit|bonus|reward", "$options": "i"}},
+                {"amount": {"$gt": 0}, "type": {"$nin": debit_types}}
+            ]
+        }},
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
-    ]).to_list(1)
+    ]
+    total_credits = await db.transactions.aggregate(credit_pipeline).to_list(1)
+    
+    # Calculate debits (negative amounts for debit types OR all negative amounts)
+    debit_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "$or": [
+                {"type": {"$in": debit_types}},
+                {"type": {"$regex": "burn|debit|deduction|order", "$options": "i"}},
+                {"amount": {"$lt": 0}}
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]
+    total_debits = await db.transactions.aggregate(debit_pipeline).to_list(1)
     
     credits = total_credits[0]["total"] if total_credits else 0
     debits = total_debits[0]["total"] if total_debits else 0
     expected_balance = round(credits - debits, 2)
     
-    # Fix if balance is 0 but expected is > 0 (bug victim)
-    if prc_balance == 0 and expected_balance > 10:
+    # Fix if balance is significantly different (difference > 10 PRC)
+    balance_diff = abs(prc_balance - expected_balance)
+    if balance_diff > 10:
+        new_balance = max(0, expected_balance)
         await db.users.update_one(
             {"uid": uid},
-            {"$set": {"prc_balance": max(0, expected_balance)}}
+            {
+                "$set": {
+                    "prc_balance": new_balance,
+                    "prc_balance_recalculated": True,
+                    "prc_recalculated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
         )
-        fixed_issues.append(f"PRC balance restored: 0 → {expected_balance}")
+        fixed_issues.append(f"PRC balance corrected: {prc_balance} → {new_balance} (credits: {credits}, debits: {debits})")
     
     # ========== 6. Generate referral code if missing ==========
     if not user.get("referral_code"):
