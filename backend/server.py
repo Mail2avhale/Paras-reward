@@ -41210,6 +41210,16 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Eko transaction status update every 5 minutes
+        scheduler.add_job(
+            eko_update_pending_transactions,
+            'interval',
+            minutes=5,
+            id='eko_status_update',
+            name='Update Eko pending transaction statuses',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -41221,6 +41231,7 @@ async def startup_db():
         print("   - Account hard delete: Daily at 3:30 AM")
         print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
         print("   - 🔄 Razorpay auto-sync: Every 10 minutes")
+        print("   - 🏦 Eko status update: Every 5 minutes")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
