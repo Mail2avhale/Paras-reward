@@ -1081,6 +1081,8 @@ async def approve_withdrawal(request_id: str, request: Request):
             admin_notes = f"Eko balance insufficient. Manual transfer required. {admin_notes}"
     
     # Update withdrawal request
+    manually_approved = transfer_status == "manual"
+    
     await db.bank_withdrawal_requests.update_one(
         {"request_id": request_id},
         {"$set": {
@@ -1094,6 +1096,8 @@ async def approve_withdrawal(request_id: str, request: Request):
             "transaction_ref": transaction_ref,
             "admin_notes": admin_notes,
             "transfer_status": transfer_status,
+            "manually_approved": manually_approved,
+            "manual_txn_reference": transaction_ref if manually_approved else "",
             "eko_txn_id": eko_txn_id,
             "eko_response": eko_transfer_result
         }}
