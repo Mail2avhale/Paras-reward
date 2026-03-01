@@ -8104,6 +8104,158 @@ async def delete_pending_razorpay_orders(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/admin/razorpay/sync-pending")
+async def manual_sync_razorpay_payments():
+    """
+    Manually trigger sync of pending Razorpay payments.
+    Checks Razorpay API and activates subscriptions for captured payments.
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            return {"success": False, "error": "Razorpay not configured"}
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Plan durations (28 days per month)
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Get all pending orders
+        pending_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["created", "pending"]}
+        }).to_list(100)
+        
+        if not pending_orders:
+            return {"success": True, "message": "No pending orders to sync", "synced": 0, "total_pending": 0}
+        
+        synced_count = 0
+        errors = []
+        results = []
+        
+        for order in pending_orders:
+            order_id = order.get("order_id")
+            user_id = order.get("user_id")
+            
+            try:
+                # Fetch order from Razorpay API
+                razorpay_order = razorpay_client.order.fetch(order_id)
+                razorpay_status = razorpay_order.get("status")
+                
+                if razorpay_status == "paid":
+                    # Order is paid - fetch payment details
+                    payments = razorpay_client.order.payments(order_id)
+                    
+                    # Find captured payment
+                    captured_payment = None
+                    for payment in payments.get("items", []):
+                        if payment.get("status") == "captured":
+                            captured_payment = payment
+                            break
+                    
+                    if captured_payment:
+                        payment_id = captured_payment.get("id")
+                        amount = captured_payment.get("amount", 0) / 100
+                        
+                        # Update order status
+                        await db.razorpay_orders.update_one(
+                            {"order_id": order_id},
+                            {
+                                "$set": {
+                                    "status": "paid",
+                                    "payment_id": payment_id,
+                                    "payment_captured": True,
+                                    "verified_amount": amount,
+                                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                                    "synced_via": "manual_sync"
+                                }
+                            }
+                        )
+                        
+                        # ACTIVATE SUBSCRIPTION
+                        plan_type = order.get("plan_type", "monthly")
+                        plan_name = order.get("plan_name", "startup")
+                        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                        
+                        now = datetime.now(timezone.utc)
+                        
+                        # Check for existing subscription
+                        user = await db.users.find_one({"uid": user_id})
+                        remaining_days = 0
+                        
+                        if user:
+                            expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+                            if expiry:
+                                try:
+                                    exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                                    if exp_date.tzinfo is None:
+                                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                                    if exp_date > now:
+                                        remaining_days = (exp_date - now).days
+                                except:
+                                    pass
+                        
+                        total_days = duration_days + remaining_days
+                        new_expiry = now + timedelta(days=total_days)
+                        
+                        # Update user subscription
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {
+                                "$set": {
+                                    "subscription_plan": plan_name,
+                                    "subscription_type": plan_type,
+                                    "subscription_status": "active",
+                                    "subscription_start": now.isoformat(),
+                                    "subscription_expires": new_expiry.isoformat(),
+                                    "subscription_expiry": new_expiry.isoformat(),
+                                    "razorpay_subscription_id": order_id,
+                                    "membership_type": plan_name,
+                                    "last_payment_id": payment_id,
+                                    "last_payment_amount": amount,
+                                    "last_payment_date": now.isoformat()
+                                }
+                            }
+                        )
+                        
+                        synced_count += 1
+                        results.append({
+                            "order_id": order_id,
+                            "user_id": user_id,
+                            "status": "activated",
+                            "plan": plan_name,
+                            "days": total_days
+                        })
+                else:
+                    results.append({
+                        "order_id": order_id,
+                        "user_id": user_id,
+                        "status": f"still_{razorpay_status}"
+                    })
+                    
+            except Exception as e:
+                errors.append({"order_id": order_id, "error": str(e)})
+        
+        return {
+            "success": True,
+            "synced": synced_count,
+            "total_pending": len(pending_orders),
+            "results": results,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @api_router.post("/admin/razorpay-delete-all")
 async def delete_all_razorpay_orders(request: Request):
     """
