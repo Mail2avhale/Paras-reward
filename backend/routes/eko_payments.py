@@ -38,15 +38,27 @@ def set_db(database):
 # ==================== HELPER FUNCTIONS ====================
 
 def generate_secret_key(timestamp: str):
-    """Generate secret-key using HMAC-SHA256 as per Eko documentation"""
+    """
+    Generate secret-key using HMAC-SHA256 as per Eko documentation
+    
+    Algorithm (from https://developers.eko.in/docs/authentication):
+    1. Get current timestamp in milliseconds
+    2. Use authenticator key directly (NOT base64 encoded)
+    3. Compute HMAC-SHA256 of timestamp using authenticator key
+    4. Base64 encode the signature
+    """
     if not EKO_AUTHENTICATOR_KEY:
         return None
-    # Step 1: Base64 encode the authenticator key
-    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
-    # Step 2: HMAC-SHA256 the timestamp with encoded key
-    signature = hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-    # Step 3: Base64 encode the result
-    return base64.b64encode(signature).decode()
+    
+    # Key bytes - use authenticator key directly
+    key_bytes = EKO_AUTHENTICATOR_KEY.encode('utf-8')
+    
+    # HMAC SHA256 of timestamp
+    message = timestamp.encode('utf-8')
+    signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
+    
+    # Base64 encode the signature
+    return base64.b64encode(signature).decode('utf-8')
 
 
 def get_secret_key_timestamp():
