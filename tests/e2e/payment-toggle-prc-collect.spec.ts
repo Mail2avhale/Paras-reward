@@ -269,26 +269,22 @@ test.describe('Mining Page - PRC Collect for Free Users', () => {
     // Wait for mining page to load
     await page.waitForLoadState('domcontentloaded');
     
-    // Check for upgrade prompt text (free users see "Upgrade to Collect PRC!")
-    const upgradePrompt = page.getByText('Upgrade to Collect PRC!');
-    const isUpgradeVisible = await upgradePrompt.isVisible().catch(() => false);
+    // Check for "Free User" indicator showing user is on free plan
+    const freeUserIndicator = page.getByText(/Free User/i);
+    const hasFreeUserIndicator = await freeUserIndicator.isVisible().catch(() => false);
     
-    // Also check for Upgrade Now button
-    const upgradeButton = page.getByRole('button', { name: /Upgrade Now/i });
-    const isUpgradeButtonVisible = await upgradeButton.isVisible().catch(() => false);
+    // Check for "Upgrade to VIP" link
+    const upgradeLink = page.getByText(/Upgrade to VIP/i);
+    const hasUpgradeLink = await upgradeLink.isVisible().catch(() => false);
     
     await page.screenshot({ path: 'mining-page-free-user.jpeg', quality: 20 });
     
-    // Either upgrade prompt or upgrade button should be visible for free users
-    // Note: If session is not active, they see "Start Session" instead
-    // The key test is that they do NOT see a "Collect" button that's enabled
-    const collectButton = page.getByRole('button', { name: /Collect.*PRC/i });
-    const collectEnabled = await collectButton.isEnabled().catch(() => false);
+    // For free user, we should see either:
+    // 1. "Free User" indicator at the bottom
+    // 2. "Start Session" button (if no session active)
+    // 3. "Upgrade to Collect PRC!" prompt (if session active with PRC to collect)
     
-    // For a free user, collect button should either not exist or be part of an upgrade prompt
-    // This test validates the UI structure
-    console.log('Upgrade prompt visible:', isUpgradeVisible);
-    console.log('Upgrade button visible:', isUpgradeButtonVisible);
-    console.log('Collect button enabled:', collectEnabled);
+    // Verify the page shows free user status
+    expect(hasFreeUserIndicator || hasUpgradeLink).toBeTruthy();
   });
 });
