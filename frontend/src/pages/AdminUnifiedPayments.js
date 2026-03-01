@@ -1153,6 +1153,53 @@ const AdminUnifiedPayments = ({ user }) => {
               </button>
             </div>
             
+            {/* Request Details */}
+            {(() => {
+              const request = allRequests.find(r => r._id === manualCompleteId);
+              if (!request) return null;
+              return (
+                <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Type</p>
+                      <p className="text-white font-medium">
+                        {request._type === 'bank' ? '🏦 Bank Redeem' : 
+                         request._type === 'rd' ? '💰 PRC Vault' : '📝 EMI'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Amount</p>
+                      <p className="text-emerald-400 font-bold text-lg">₹{request.amount?.toLocaleString() || request.amount_inr?.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">User</p>
+                      <p className="text-white">{request.user_name || request.user_id}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Request ID</p>
+                      <p className="text-gray-400 font-mono text-xs truncate">{request.request_id || request._id}</p>
+                    </div>
+                    {request.bank_details && (
+                      <>
+                        <div>
+                          <p className="text-gray-500">Account</p>
+                          <p className="text-white font-mono">{request.bank_details.account_number}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">IFSC</p>
+                          <p className="text-white font-mono">{request.bank_details.ifsc_code}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-gray-500">Account Holder</p>
+                          <p className="text-white">{request.bank_details.account_holder}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+            
             <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 mb-4">
               <p className="text-amber-300 text-sm">
                 ⚠️ Use when Eko API fails or you have processed the payment offline (NEFT/IMPS manually). 
