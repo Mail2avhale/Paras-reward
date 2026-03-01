@@ -23,6 +23,11 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [razorpayEnabled, setRazorpayEnabled] = useState(true);
   const [toggleLoading, setToggleLoading] = useState(false);
+  
+  // Advanced filters
+  const [sortBy, setSortBy] = useState('latest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchData();
