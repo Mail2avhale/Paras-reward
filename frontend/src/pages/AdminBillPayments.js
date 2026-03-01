@@ -1003,14 +1003,26 @@ const AdminBillPayments = ({ user }) => {
                              request.status === 'rejected' ? '❌ Rejected' :
                              request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </span>
+                          {/* Manually Approved Badge */}
+                          {request.manually_approved && (
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                              🔧 Manually Approved
+                            </span>
+                          )}
                           {/* Show reject reason for rejected */}
                           {request.status === 'rejected' && request.reject_reason && (
                             <span className="text-[10px] text-red-400 max-w-[150px] text-right truncate" title={request.reject_reason}>
                               {request.reject_reason}
                             </span>
                           )}
-                          {/* Show Eko TXN for completed */}
-                          {request.status === 'completed' && request.txn_number && (
+                          {/* Show Manual TXN Reference */}
+                          {request.manually_approved && request.manual_txn_reference && (
+                            <span className="text-[10px] text-amber-400 font-mono">
+                              Ref: {request.manual_txn_reference}
+                            </span>
+                          )}
+                          {/* Show Eko TXN for completed (non-manual) */}
+                          {request.status === 'completed' && request.txn_number && !request.manually_approved && (
                             <span className="text-[10px] text-emerald-400 font-mono">
                               {request.txn_number}
                             </span>
