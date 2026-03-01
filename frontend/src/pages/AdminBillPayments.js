@@ -354,11 +354,14 @@ const AdminBillPayments = ({ user }) => {
   const executeProcess = async (requestId, action, reason = '', txnRef = '') => {
     setProcessing(true);
     try {
+      // For retry action, use approve action on backend
+      const backendAction = action === 'retry' ? 'approve' : action;
+      
       const payload = {
         request_id: requestId,
-        action,
+        action: backendAction,
         admin_notes: adminNotes,
-        admin_uid: user.uid
+        admin_uid: user?.uid || ''
       };
       
       // Add reject reason if rejecting
@@ -390,7 +393,7 @@ const AdminBillPayments = ({ user }) => {
       ));
       
       // Show appropriate message based on result
-      if (actualStatus === 'approved_manual') {
+      if (actualStatus === 'approved_manual' || actualStatus === 'eko_failed') {
         toast.warning(`⚠️ Eko auto-pay failed: ${ekoFailReason || 'Unknown error'}. Manual processing required.`, {
           duration: 5000
         });
@@ -409,7 +412,9 @@ const AdminBillPayments = ({ user }) => {
       // Also refresh from server to ensure data consistency
       fetchRequests();
     } catch (error) {
-      toast.error(error.response?.data?.detail || `Failed to ${action} request`);
+      console.error('Process error:', error);
+      const errorMsg = error.response?.data?.detail || error.message || `Failed to ${action} request`;
+      toast.error(errorMsg);
     } finally {
       setProcessing(false);
     }
