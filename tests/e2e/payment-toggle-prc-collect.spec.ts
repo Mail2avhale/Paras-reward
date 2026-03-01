@@ -134,14 +134,14 @@ test.describe('Subscription Page - Manual UPI Option Visibility', () => {
     });
     expect(enableResponse.ok()).toBeTruthy();
     
-    // Login as a test user (or view subscription page)
+    // Login as a regular test user (not admin)
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 15000 }).catch(() => {});
     
     // Fill in test user email
     const identifierInput = page.getByTestId('login-identifier-input');
     await expect(identifierInput).toBeVisible({ timeout: 10000 });
-    await identifierInput.fill('admin@parasreward.com');
+    await identifierInput.fill('testuser@paras.com');
     
     // Wait for PIN input and enter PIN
     await page.waitForSelector('[data-testid="login-pin-0"]', { timeout: 10000 });
@@ -155,12 +155,17 @@ test.describe('Subscription Page - Manual UPI Option Visibility', () => {
     const signInBtn = page.getByTestId('login-submit-btn');
     await signInBtn.click();
     
-    // Wait for login to complete
-    await page.waitForURL(/\/admin|\/dashboard/, { timeout: 15000 });
+    // Wait for login to complete (regular user goes to dashboard)
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
     
     // Navigate to subscription page
     await page.goto('/subscription', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 10000 }).catch(() => {});
+    
+    // Wait for plans to load - select a plan first to see payment options
+    const planCard = page.locator('[data-testid^="plan-"]').first();
+    await expect(planCard).toBeVisible({ timeout: 10000 });
+    await planCard.click();
     
     // Check if Manual UPI option is visible
     const manualOption = page.getByTestId('manual-payment-option');
@@ -176,13 +181,13 @@ test.describe('Subscription Page - Manual UPI Option Visibility', () => {
     });
     expect(disableResponse.ok()).toBeTruthy();
     
-    // Login
+    // Login as regular test user
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 15000 }).catch(() => {});
     
     const identifierInput = page.getByTestId('login-identifier-input');
     await expect(identifierInput).toBeVisible({ timeout: 10000 });
-    await identifierInput.fill('admin@parasreward.com');
+    await identifierInput.fill('testuser@paras.com');
     
     await page.waitForSelector('[data-testid="login-pin-0"]', { timeout: 10000 });
     for (let i = 0; i < 6; i++) {
@@ -193,14 +198,16 @@ test.describe('Subscription Page - Manual UPI Option Visibility', () => {
     
     const signInBtn = page.getByTestId('login-submit-btn');
     await signInBtn.click();
-    await page.waitForURL(/\/admin|\/dashboard/, { timeout: 15000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
     
     // Navigate to subscription page
     await page.goto('/subscription', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 10000 }).catch(() => {});
     
-    // Wait for page content to load
-    await page.waitForLoadState('domcontentloaded');
+    // Wait for plans to load - select a plan first to see payment options
+    const planCard = page.locator('[data-testid^="plan-"]').first();
+    await expect(planCard).toBeVisible({ timeout: 10000 });
+    await planCard.click();
     
     // Manual UPI option should NOT be visible
     const manualOption = page.getByTestId('manual-payment-option');
