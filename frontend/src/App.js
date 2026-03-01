@@ -43,7 +43,7 @@ axios.interceptors.response.use(
 
 // Helper function to check if user can access admin pages
 const canAccessAdmin = (user) => {
-  return user && (user.role === "admin" || user.role === "manager");
+  return user && (user.role === "admin" || user.role === "sub_admin" || user.role === "manager");
 };
 
 // Helper function to check if user is admin/manager (should not access user pages)
