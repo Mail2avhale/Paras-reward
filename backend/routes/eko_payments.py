@@ -249,6 +249,40 @@ class DMTTransferRequest(BaseModel):
 
 # ==================== BBPS BILL PAYMENT APIs ====================
 
+@router.get("/charges/calculate")
+async def calculate_charges_api(amount: float):
+    """
+    Calculate service charges for bill payment
+    
+    Platform Fee: ₹10 (fixed)
+    Admin Charge: 20% of amount
+    
+    Example: ₹199 recharge
+    - Platform Fee: ₹10
+    - Admin Charge: ₹40 (20% of 199)
+    - Total: ₹249 = 2490 PRC
+    """
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+    
+    charges = calculate_bill_payment_charges(amount)
+    return {
+        "success": True,
+        "charges": charges
+    }
+
+
+@router.get("/charges/config")
+async def get_charges_config():
+    """Get current charges configuration"""
+    return {
+        "platform_fee_inr": BILL_PLATFORM_FEE,
+        "admin_charge_percent": BILL_ADMIN_CHARGE_PERCENT,
+        "prc_rate": PRC_RATE,
+        "description": f"Platform Fee: ₹{BILL_PLATFORM_FEE} + Admin: {BILL_ADMIN_CHARGE_PERCENT}% of amount"
+    }
+
+
 @router.get("/config")
 async def get_eko_config():
     """Get Eko configuration status"""
