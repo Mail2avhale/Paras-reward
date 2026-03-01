@@ -556,10 +556,10 @@ const BillPayments = ({ user, onLogout }) => {
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-400">Processing Fee</span>
+                          <span className="text-gray-400">Platform Fee</span>
                           <div className="text-right">
-                            <span className="text-orange-400 font-medium">+₹{processingFeeINR.toFixed(2)}</span>
-                            <span className="text-gray-500 text-xs ml-2">({processingFeePRC.toFixed(0)} PRC)</span>
+                            <span className="text-orange-400 font-medium">+₹{platformFeeINR.toFixed(2)}</span>
+                            <span className="text-gray-500 text-xs ml-2">({platformFeePRC.toFixed(0)} PRC)</span>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
