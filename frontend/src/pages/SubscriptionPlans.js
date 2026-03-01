@@ -49,6 +49,7 @@ const SubscriptionPlans = ({ user }) => {
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false); // true = instant activation, false = pending verification
   const [razorpayEnabled, setRazorpayEnabled] = useState(true); // Gateway enabled status
+  const [manualEnabled, setManualEnabled] = useState(true); // Manual subscription enabled status
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
