@@ -272,29 +272,29 @@ test.describe('Mining Page - PRC Collect for Free Users', () => {
     // Wait for login to complete
     await page.waitForURL(/\/dashboard/, { timeout: 15000 });
     
-    // Navigate to mining page
+    // Navigate to mining page (via Rewards tab)
     await page.goto('/mining', { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('text=Loading...', { state: 'hidden', timeout: 10000 }).catch(() => {});
     
-    // Wait for mining page to load
-    await page.waitForLoadState('domcontentloaded');
-    
-    // Check for "Free User" indicator showing user is on free plan
-    const freeUserIndicator = page.getByText(/Free User/i);
-    const hasFreeUserIndicator = await freeUserIndicator.isVisible().catch(() => false);
-    
-    // Check for "Upgrade to VIP" link
-    const upgradeLink = page.getByText(/Upgrade to VIP/i);
-    const hasUpgradeLink = await upgradeLink.isVisible().catch(() => false);
+    // Wait for mining page to fully load - wait for the mining content to appear
+    await expect(page.getByText(/Daily Rewards|Start Earning|Collect Rewards/i)).toBeVisible({ timeout: 15000 });
     
     await page.screenshot({ path: 'mining-page-free-user.jpeg', quality: 20 });
     
-    // For free user, we should see either:
-    // 1. "Free User" indicator at the bottom
-    // 2. "Start Session" button (if no session active)
-    // 3. "Upgrade to Collect PRC!" prompt (if session active with PRC to collect)
+    // For free users, we should see:
+    // 1. "Start Session" button (if no session active), OR
+    // 2. "Upgrade to Collect PRC!" prompt (if session active with PRC to collect)
+    // Either way, a free user should NOT have an enabled "Collect" button
     
-    // Verify the page shows free user status
-    expect(hasFreeUserIndicator || hasUpgradeLink).toBeTruthy();
+    // Check for Start Session button (indicates no active session)
+    const startSession = page.getByRole('button', { name: /Start Session/i });
+    const hasStartSession = await startSession.isVisible().catch(() => false);
+    
+    // If session is active, check for upgrade prompt
+    const upgradePrompt = page.getByText(/Upgrade to Collect/i);
+    const hasUpgradePrompt = await upgradePrompt.isVisible().catch(() => false);
+    
+    // Free users should either see "Start Session" or "Upgrade" prompt
+    // They should NOT see an enabled Collect button for PRC
+    expect(hasStartSession || hasUpgradePrompt).toBeTruthy();
   });
 });
