@@ -13,9 +13,6 @@ from typing import Optional
 import uuid
 import logging
 import os
-import httpx
-import base64
-import time
 
 # Create router
 router = APIRouter(tags=["Bank Redeem"])
@@ -30,9 +27,18 @@ cache = None
 log_transaction = None
 create_notification = None
 
+# Eko Service
+eko_service = None
+
 def set_db(database):
-    global db
+    global db, eko_service
     db = database
+    # Initialize Eko service with database
+    try:
+        from services.eko_service import EkoService
+        eko_service = EkoService(db)
+    except ImportError:
+        logging.warning("Eko service not available")
 
 def set_cache(cache_manager):
     global cache
@@ -44,27 +50,127 @@ def set_helpers(helpers: dict):
     create_notification = helpers.get('create_notification')
 
 
-# ==================== EKO DMT FUNCTIONS ====================
+# ==================== EKO DMT FUNCTIONS (Using New Service) ====================
 
-EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
-EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
-EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
-EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+async def get_eko_service():
+    """Get Eko service instance"""
+    global eko_service
+    if eko_service is None:
+        try:
+            from services.eko_service import EkoService
+            eko_service = EkoService(db)
+        except ImportError:
+            return None
+    return eko_service
 
 
-def get_eko_headers():
-    """Generate Eko API headers with authentication"""
-    if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
-        return None
+async def eko_verify_bank_account(ifsc: str, account_number: str):
+    """Verify bank account using Eko API"""
+    service = await get_eko_service()
+    if not service:
+        return {"success": False, "error": "Eko service not available"}
     
-    secret_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
-    timestamp = str(int(time.time() * 1000))
+    response = await service.verify_bank_account(ifsc, account_number)
+    
+    if response.success:
+        return {
+            "success": True,
+            "account_holder": response.data.get("account_holder", ""),
+            "verified": True,
+            "raw_response": response.raw_response
+        }
+    else:
+        return {
+            "success": False,
+            "error": response.message,
+            "error_code": response.error_code
+        }
+
+
+async def eko_initiate_transfer(
+    recipient_mobile: str,
+    account_number: str,
+    ifsc: str,
+    amount: float,
+    recipient_name: str,
+    client_ref_id: str
+):
+    """
+    Initiate bank transfer using Eko DMT
+    Returns: {success: bool, txn_id: str, message: str}
+    """
+    service = await get_eko_service()
+    if not service:
+        return {"success": False, "error": "Eko service not available", "txn_id": None}
+    
+    try:
+        from services.eko_service import EkoChannel
+        
+        response = await service.direct_transfer(
+            account_number=account_number,
+            ifsc=ifsc,
+            amount=int(amount),
+            recipient_name=recipient_name,
+            recipient_mobile=recipient_mobile or "9999999999",
+            client_ref_id=client_ref_id,
+            channel=EkoChannel.IMPS
+        )
+        
+        if response.success:
+            return {
+                "success": True,
+                "txn_id": response.eko_tid,
+                "utr_number": response.utr_number,
+                "message": response.message,
+                "tx_status": response.tx_status.value if response.tx_status else None,
+                "tx_status_desc": response.tx_status.description if response.tx_status else None,
+                "eko_response": response.raw_response
+            }
+        else:
+            return {
+                "success": False,
+                "txn_id": None,
+                "error": response.message,
+                "error_code": response.error_code,
+                "eko_response": response.raw_response
+            }
+    except Exception as e:
+        logging.error(f"Eko transfer error: {e}")
+        return {"success": False, "txn_id": None, "error": str(e)}
+
+
+async def eko_check_balance():
+    """Check Eko settlement account balance"""
+    service = await get_eko_service()
+    if not service:
+        return {"balance": 0, "error": "Eko service not available"}
+    
+    response = await service.check_wallet_balance()
+    
+    if response.success:
+        return {
+            "balance": response.data.get("balance", 0),
+            "success": True
+        }
+    return {"balance": 0, "error": response.message}
+
+
+async def eko_check_transaction_status(transaction_id: str, use_client_ref: bool = False):
+    """Check transaction status from Eko"""
+    service = await get_eko_service()
+    if not service:
+        return {"success": False, "error": "Eko service not available"}
+    
+    response = await service.check_transaction_status(transaction_id, use_client_ref)
     
     return {
-        "developer_key": EKO_DEVELOPER_KEY,
-        "secret-key": secret_key,
-        "secret-key-timestamp": timestamp,
-        "Content-Type": "application/x-www-form-urlencoded"
+        "success": response.success,
+        "tx_status": response.tx_status.value if response.tx_status else None,
+        "tx_status_desc": response.tx_status.description if response.tx_status else None,
+        "utr_number": response.utr_number,
+        "eko_tid": response.eko_tid,
+        "message": response.message,
+        "data": response.data
     }
 
 
