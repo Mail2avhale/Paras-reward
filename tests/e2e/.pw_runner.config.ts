@@ -2,13 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260301_082700/test-results',
+  outputDir: '/root/.emergent/automation_output/20260301_084852/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260301_082700/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260301_084852/results.json' }],
   ],
   use: {
     baseURL: 'https://payment-hub-fix-1.preview.emergentagent.com',
