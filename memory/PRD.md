@@ -1,6 +1,18 @@
 # PARAS REWARD - Product Requirements Document
 
-## Latest Updates (February 28, 2026)
+## Latest Updates (March 1, 2026)
+
+### ✅ PAYMENT GATEWAY TOGGLE FEATURE - COMPLETE
+- **Admin Settings Page:** Added Payment Gateway Controls section
+- **Razorpay Toggle:** Enable/Disable Razorpay online payments
+- **Manual UPI Toggle:** Enable/Disable Manual UPI/Bank Transfer option
+- **Admin PIN Required:** Both toggles require PIN (123456) for security
+- **Frontend Integration:** SubscriptionPlans.js shows/hides options based on toggle status
+
+### ✅ PRC COLLECT BUTTON FIX - COMPLETE
+- **Free Users:** explorer, free, empty, null plan types cannot collect PRC
+- **Upgrade Prompt:** Shows "Upgrade to Collect PRC!" message instead of collect button
+- **Mining Page:** Properly handles all free user types
 
 ### ✅ RAZORPAY LIVE INTEGRATION - COMPLETE
 - **Live Key:** `rzp_live_SLaUMsGWw4ga78`
