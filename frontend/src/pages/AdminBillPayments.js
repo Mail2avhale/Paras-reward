@@ -1331,32 +1331,39 @@ const AdminBillPayments = ({ user }) => {
               {/* Service Details */}
               <div className="p-3 bg-gray-800 rounded-xl">
                 <p className="text-xs text-gray-500 mb-2">Service Details</p>
-                {selectedRequest.details && Object.entries(selectedRequest.details).map(([key, value]) => {
-                  // Custom labels for better readability
-                  const labelMap = {
-                    'phone_number': 'Mobile Number',
-                    'recharge_type': 'Recharge Type',
-                    'operator': 'Operator',
-                    'circle': 'Telecom Circle',
-                    'consumer_number': 'Consumer Number',
-                    'biller_name': 'Provider',
-                    'card_last4': 'Card Last 4 Digits',
-                    'cardholder_name': 'Cardholder Name',
-                    'bank_name': 'Bank Name',
-                    'loan_account': 'Loan Account',
-                    'borrower_name': 'Borrower Name',
-                    'loan_type': 'Loan Type',
-                    'emi_amount': 'EMI Amount',
-                    'emi_due_date': 'EMI Due Date'
-                  };
-                  const label = labelMap[key] || key.replace(/_/g, ' ');
-                  return (
-                    <div key={key} className="flex justify-between py-1 border-b border-gray-700 last:border-0">
-                      <span className="text-gray-400 text-sm capitalize">{label}</span>
-                      <span className="text-white text-sm">{value || '-'}</span>
-                    </div>
-                  );
-                })}
+                {selectedRequest.details && typeof selectedRequest.details === 'object' && !Array.isArray(selectedRequest.details) ? (
+                  Object.entries(selectedRequest.details).map(([key, value]) => {
+                    // Custom labels for better readability
+                    const labelMap = {
+                      'phone_number': 'Mobile Number',
+                      'mobile_number': 'Mobile Number',
+                      'recharge_type': 'Recharge Type',
+                      'operator': 'Operator',
+                      'circle': 'Telecom Circle',
+                      'consumer_number': 'Consumer Number',
+                      'biller_name': 'Provider',
+                      'card_last4': 'Card Last 4 Digits',
+                      'cardholder_name': 'Cardholder Name',
+                      'bank_name': 'Bank Name',
+                      'loan_account': 'Loan Account',
+                      'borrower_name': 'Borrower Name',
+                      'loan_type': 'Loan Type',
+                      'emi_amount': 'EMI Amount',
+                      'emi_due_date': 'EMI Due Date'
+                    };
+                    const label = labelMap[key] || key.replace(/_/g, ' ');
+                    // Handle nested objects or arrays safely
+                    const displayValue = typeof value === 'object' ? JSON.stringify(value) : (value || '-');
+                    return (
+                      <div key={key} className="flex justify-between py-1 border-b border-gray-700 last:border-0">
+                        <span className="text-gray-400 text-sm capitalize">{label}</span>
+                        <span className="text-white text-sm">{displayValue}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-400 text-sm">No details available</p>
+                )}
               </div>
 
               {/* Admin Notes */}
