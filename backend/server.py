@@ -9125,6 +9125,50 @@ async def get_public_settings():
     
     return result
 
+
+@api_router.post("/admin/toggle-manual-subscription")
+async def toggle_manual_subscription(request: Request):
+    """Enable or disable manual subscription (UPI/Bank Transfer) payment method"""
+    try:
+        data = await request.json()
+        enabled = data.get("enabled", True)
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        await db.app_settings.update_one(
+            {"key": "manual_subscription_enabled"},
+            {"$set": {"key": "manual_subscription_enabled", "value": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True
+        )
+        
+        # Clear public settings cache
+        await cache.delete("public_settings")
+        
+        return {
+            "success": True,
+            "message": f"Manual subscription {'enabled' if enabled else 'disabled'}",
+            "enabled": enabled
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/payment-gateways-status")
+async def get_payment_gateways_status():
+    """Get status of all payment gateways"""
+    razorpay_setting = await db.app_settings.find_one({"key": "razorpay_enabled"})
+    manual_setting = await db.app_settings.find_one({"key": "manual_subscription_enabled"})
+    
+    return {
+        "razorpay_enabled": razorpay_setting.get("value", True) if razorpay_setting else True,
+        "manual_subscription_enabled": manual_setting.get("value", True) if manual_setting else True
+    }
+
+
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
 
 async def send_renewal_notifications():
