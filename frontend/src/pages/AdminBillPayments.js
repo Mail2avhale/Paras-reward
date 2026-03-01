@@ -285,7 +285,7 @@ const AdminBillPayments = ({ user }) => {
   };
 
   // Execute the actual process after getting reject reason
-  const executeProcess = async (requestId, action, reason = '') => {
+  const executeProcess = async (requestId, action, reason = '', txnRef = '') => {
     setProcessing(true);
     try {
       const payload = {
@@ -298,6 +298,11 @@ const AdminBillPayments = ({ user }) => {
       // Add reject reason if rejecting
       if (action === 'reject') {
         payload.reject_reason = reason || rejectReason;
+      }
+      
+      // Add txn reference for manual complete
+      if (action === 'complete') {
+        payload.txn_reference = txnRef || manualTxnRef;
       }
       
       const response = await axios.post(`${API}/admin/bill-payment/process`, payload);
