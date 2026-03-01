@@ -45,6 +45,9 @@ const AdminUnifiedPayments = ({ user }) => {
   // Confirmation dialogs
   const [showBulkApproveConfirm, setShowBulkApproveConfirm] = useState(false);
   const [showBulkRejectConfirm, setShowBulkRejectConfirm] = useState(false);
+  const [showManualCompleteDialog, setShowManualCompleteDialog] = useState(false);
+  const [manualCompleteId, setManualCompleteId] = useState(null);
+  const [manualTxnRef, setManualTxnRef] = useState('');
   
   // Detail modal
   const [viewDetailRequest, setViewDetailRequest] = useState(null);
