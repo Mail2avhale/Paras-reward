@@ -1,196 +1,203 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to stabilize their financial rewards platform, Paras Reward, by fixing critical payment-related bugs and enhancing administrative controls.
+The user's primary goal is to stabilize their financial rewards platform, Paras Reward, by fixing critical payment-related bugs and enhancing administrative controls. The user wants to improve the Eko payment integration with proper error handling and real-time status updates, add service charges, refine withdrawal limits, and implement a manual override system for payment approvals. Additionally, the user requested advanced sorting and filtering capabilities on admin pages and guidance on deploying the application to their production environment with the correct configurations for third-party services like Eko.
 
-The main requests addressed in this session were:
-1.  **Fix Critical Razorpay Bug:** A major bug allowed users to get free subscriptions. The system was activating subscriptions based on a successful frontend redirect without server-side verification of the actual payment status, leading to fraudulent activations when payments failed or were not completed.
-2.  **Fix Subscription Amount Display Bug:** Subscription amounts were incorrectly displayed in the admin panel (e.g., ₹2.99 instead of ₹299) due to a redundant division-by-100 error.
-3.  **Data Cleanup and Restoration:** The user requested tools to identify and clean up the fraudulent subscriptions created by the bug and to restore legitimate plans and balances for affected users.
-4.  **Improve Subscription Logic:**
-    *   Ensure remaining days from an old subscription are carried over when a user renews.
-    *   Standardize all subscription plan durations to 28 days.
-5.  **Enhance Admin Controls & Automation:**
-    *   Add enable/disable toggles for both Razorpay and Manual UPI payment gateways.
-    *   Create a mechanism to automatically sync pending Razorpay payments that are later confirmed as captured by Razorpay's webhook or a manual sync.
-    *   Implement an Auto-Fix tool to diagnose and correct data inconsistencies for users.
-    *   Add filtering, sorting, and pagination to the admin's Razorpay payments view.
-6.  **Address Deployment Issues:** The user was confused about why fixes weren't appearing on their production site (), which was discovered to be running old code with test keys.
+**PRODUCT REQUIREMENTS:**
+1.  **Fix Critical Payment Bugs:** Secure Razorpay and fix display errors.
+2.  **Enhance Admin Controls:**
+    *   Implement enable/disable toggles for payment gateways.
+    *   Add a manual approval/rejection system for Eko transactions (Bill Pay & Bank Redeem) for cases where the API fails. This system must include the ability to add a UTR/reference number and display a Manually Approved badge.
+    *   Add advanced sorting and filtering to admin transaction pages.
+3.  **Improve Eko Integration:**
+    *   Refactor to use proper HMAC-SHA256 authentication.
+    -   Implement a background job to sync transaction statuses.
+    *   Verify and configure correct LIVE credentials.
+    *   Remove the Bank Transfer option from the Bill Pay section to avoid confusion with the Redeem to Bank feature.
+4.  **Refine Business Logic:**
+    *   Implement service charges for bill payments (₹10 flat fee + 20% of the amount).
+    *   Change the weekly withdrawal limit from a fixed Mon-Sun week to a 7-day rolling window.
+5.  **Stabilize and Deploy:**
+    *   Fix scheduler and background job issues (e.g., Razorpay auto-sync).
+    *   Provide guidance for production deployment, specifically regarding Eko IP whitelisting.
 
 **User's preferred language**: The user communicates in **Marathi**. The next agent **MUST** continue to respond in Marathi.
 
 **what currently exists?**
-The platform's payment system has been significantly hardened.
--   **Razorpay Double Verification:** A critical server-side verification step has been added. The backend now directly calls the Razorpay API to confirm a payment is  before activating any subscription. This prevents the free subscription bug.
--   **Subscription Logic:** The logic now correctly carries over remaining days on renewal. All plan durations are standardized to 28 days. Inconsistencies between  and  fields have been resolved.
--   **Admin Controls:**
-    -   Admins can enable/disable the Razorpay gateway. The manual payment toggle backend is complete, but the UI switch is pending.
-    -   The admin Razorpay page has filters (by status), sorting (date, status), and pagination.
-    -   A Sync with Razorpay button allows admins to manually reconcile pending orders.
--   **Automation & Diagnostics:**
-    -   A background job runs every 10 minutes to auto-sync pending Razorpay payments.
-    -   A Razorpay webhook handler is implemented to activate subscriptions if a pending payment is later captured.
-    -   An Auto Fix feature is available in the User 360 modal to correct user data inconsistencies (PRC balance, plan status).
--   **Data Management:** APIs exist to restore user plans () and recalculate PRC balances () from historical data.
+The platform's payment and administrative systems have been significantly enhanced.
+-   **Payment Gateway Toggles:** Admins can enable or disable both Razorpay and Manual UPI payments from the admin settings page.
+-   **Eko Integration Overhaul:**
+    -   A new centralized  module has been created with correct HMAC-SHA256 authentication.
+    -   LIVE Eko credentials have been verified and configured in the  file.
+    -   Both the Bill Payments and Bank Redeem features now use this new, secure service.
+    -   A background job to sync pending Eko transactions is configured.
+    -   The Bank Transfer option has been removed from the Bill Payments UI to prevent redundancy.
+-   **Manual Approval System:** Admins now have robust controls for Eko transactions:
+    -   On the Bill Payments and Bank Redeem admin pages, there are separate buttons for Eko Approve (uses the API) and Manual Complete (bypasses the API).
+    -   The Manual Complete action opens a dialog for the admin to enter a UTR/Transaction Reference number.
+    -   Completed requests display a Manually Approved badge in the UI.
+    -   Rejection automatically refunds the user's PRC.
+-   **Business Logic Updates:**
+    -   A service charge (₹10 fixed fee + 20% of the bill amount) is now calculated and applied to all bill payments.
+    -   The weekly withdrawal limit has been changed from a fixed week (Monday-Sunday) to a 7-day rolling window based on the user's last request date.
+-   **Bug Fixes:** The Razorpay auto-sync scheduler, which was failing to start due to missing functions, has been fixed. The manual sync API is confirmed to be working.
 
 **Last working item**:
--   **Last item agent was working:**
-    1.  Fixing a bug where the PRC Collect button was not disabled for all types of free/unsubscribed users.
-    2.  Implementing a feature to allow admins to enable/disable the Manual UPI/Bank Transfer payment option.
+-   **Last item agent was working:** Adding advanced sorting and filtering capabilities to the Admin Bill Payments page (). The agent was in the process of replacing the existing search/filter UI with a more comprehensive panel including filters for status, admin user, and date range, as well as advanced sorting options.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. The test should verify:
-    1.  The PRC Collect button on the Mining page is disabled for users with  as 'explorer', null, or undefined.
-    2.  An admin can see and use a new toggle on the payment settings page to enable/disable Manual UPI payments.
-    3.  When disabled, the Pay with UPI/Bank Transfer option disappears for users on the subscription page. When enabled, it reappears.
+-   **Which testing method agent to use?** Frontend testing agent. The tests should cover:
+    1.  Logging in as an admin and navigating to the Request Approvals -> Bill Payments page.
+    2.  Verifying that the new advanced filter panel is visible.
+    3.  Testing each filter (e.g., Status: approved, Date Range) to ensure the list updates correctly.
+    4.  Testing each sorting option (e.g., Latest Approved, Amount High-Low) to ensure the list re-orders correctly.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete Manual Subscription Toggle UI (P0)**
+-   **Issue 1: Complete Advanced Sorting/Filtering UI for Bill Payments (P0)**
 -   **Issue 2: Admin Pages Timeout in Production (P1)**
 -   **Issue 3: Search Not Working Reliably (P2)**
 -   **Issue 4: Team and Level Members Not Displaying (P2)**
 
 **Issues Detail:**
--   **Issue 1: Complete Manual Subscription Toggle UI**
-    -   **Attempted fixes:** The backend API () and the logic on the user-facing  page are complete.
+-   **Issue 1: Complete Advanced Sorting/Filtering UI for Bill Payments**
+    -   **Attempted fixes:** The agent started implementing a new UI panel in  and the corresponding state management logic. The last  command was not fully completed.
     -   **Next debug checklist:**
-        1.  Edit .
-        2.  Add a new state for the manual payment toggle status.
-        3.  Fetch the current status from the  endpoint.
-        4.  Add a toggle switch UI component.
-        5.  Implement the  handler to call the  API and update the state.
-    -   **Why fix this issue and what will be achieved with the fix?** To give the admin full control over which payment methods are available to users.
+        1.  Resume the  operation on  to complete the new filter panel UI.
+        2.  Ensure the state variables (, ) are correctly linked to the UI elements (dropdowns, date pickers).
+        3.  Verify the  logic correctly applies all new filters (approved by, rejected by, date range) and sorting criteria.
+        4.  Test thoroughly to ensure no functionality was broken.
+    -   **Why fix this issue and what will be achieved with the fix?** To provide admins with powerful tools to manage and audit a large volume of bill payment requests efficiently.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Frontend.
     -   **Blocked on other issue:** None.
 
--   **Issue 2, 3, 4:** (Details carried over from previous handoff, as they were not worked on).
+-   **Issue 2, 3, 4:** (Details carried over as they were not worked on).
     -   **Attempted fixes:** None.
-    -   **Next debug checklist:** See  from the previous session. These involve refactoring Python loops to MongoDB aggregations, moving search server-side, and investigating dashboard APIs.
+    -   **Next debug checklist:** These issues likely require backend optimization. Investigations should focus on switching from inefficient Python loops to MongoDB aggregation pipelines for dashboard queries and search functionality.
     -   **Status:** NOT STARTED
 
 **In progress Task List**:
--   **Task 1: Add Manual Subscription Enable/Disable Toggle**
-    -   **Where to resume:** .
-    -   **What will be achieved with this?** Admins will be able to turn the manual UPI payment flow on or off for all users.
+-   **Task 1: Add Advanced Sorting & Filtering to Admin Bill Payments Page**
+    -   **Where to resume:** . The agent needs to complete the UI and logic for the new filter/sort panel. The last command was an incomplete .
+    -   **What will be achieved with this?** Admins will be able to filter requests by status, processor (admin user), date range, and sort by various criteria like approval/rejection date.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Frontend.
     -   **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
-
 **Upcoming Tasks:**
--   **P0: Guide Production Deployment:** The user needs to redeploy the application to their production environment () to apply all the critical security fixes. This involves ensuring the correct  with LIVE keys is used.
--   **P1: Guide User on Data Restoration:** Provide clear, step-by-step instructions for the user on how to run the PRC and Plan restoration APIs for affected users.
--   **P1: Update Eko Production IP:** Still pending from the previous session.
--   **P2:** Guide the user on generating the AAB file for Play Store submission.
+-   **P0: Eko Production Verification:** Once the user confirms IP whitelisting is complete, perform a full test of all Eko-dependent features (Bank Redeem, Bill Payments) in the preview environment to ensure they work before deployment.
+-   **P0: Guide Production Deployment:** Guide the user to deploy the application to their production environment () to make all security and feature updates live.
+-   **P1: Guide User on Data Restoration:** Provide clear instructions on using the data restoration APIs (, ) for users impacted by previous bugs.
 
 **Future Tasks:**
--   **P0:** Refactor the monolithic  file.
+-   **P0: Refactor :** Break the monolithic  file into smaller, domain-specific modules (e.g., , ) to improve maintainability.
+-   **P2:** Guide the user on generating an AAB file for Play Store submission.
 -   **P3:** Add Email/Mobile OTP verification on signup.
--   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
+-   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution (e.g., S3).
 
 **Completed work in this session**
--   **CRITICAL: Fixed Razorpay Free Subscription Bug:** Implemented server-side double verification by fetching payment status directly from the Razorpay API before activating a subscription.
--   **CRITICAL: Fixed Subscription Amount Display Bug:** Corrected the admin panel UI to show correct amounts (e.g., ₹299 instead of ₹2.99).
--   **Added Fraud & Data Cleanup/Restore Tools:**
-    -   Created intelligent cleanup and restoration APIs (, ) to revert fraudulent subscriptions without harming legitimate ones.
-    -   Initially added, then hid, Cleanup and Delete buttons from the admin UI to prevent accidental data loss.
--   **Improved Subscription Logic:**
-    -   Fixed a bug to ensure remaining subscription days are carried over on renewal.
-    -   Standardized all plan durations to 28 days across the codebase.
-    -   Resolved inconsistencies between  and  database fields.
--   **Enhanced Admin Controls:**
-    -   Added an enable/disable toggle for the Razorpay payment gateway.
-    -   Added a Sync with Razorpay button and a 10-minute auto-sync background job.
-    -   Added sorting and pagination to the Razorpay admin page.
--   **Enhanced Diagnostics:**
-    -   Created an Auto-Fix All feature to diagnose and repair data inconsistencies.
-    -   Added an Auto Fix button to the user diagnosis modal.
--   **Fixed Cache Invalidation:** Ensured QR/UPI settings cache is cleared on update.
--   **Resolved Deployment Mystery:** Identified that the user's production server was running old code with test keys and clarified the deployment process.
+-   **Manual Payment Toggle UI:** Implemented and tested the UI toggle in  for enabling/disabling manual UPI payments.
+-   **Eko Integration Overhaul:** Created a new  with correct HMAC-SHA256 authentication, updated live credentials, and refactored all Eko-related features (, ) to use it.
+-   **Manual Approval System:** Implemented a full-featured manual approval flow for both Bill Payments and Bank Redeem requests, including separate Eko and Manual approve buttons, a dialog to input a UTR/reference number, and a Manually Approved badge in the UI.
+-   **Bill Payment Charges:** Added a service charge (₹10 fixed + 20% of amount) to all bill payment transactions.
+-   **Withdrawal Limit Logic:** Updated the weekly withdrawal limit to be a 7-day rolling window instead of a fixed calendar week. Verified the existing monthly limit formula.
+-   **Bug Fixes:** Fixed the Razorpay auto-sync scheduler by defining missing functions () that were causing it to crash on startup.
+-   **UI Cleanup:** Removed the redundant Bank Transfer option from the Bill Payments page.
+-   **Testing:** Used the testing agent to successfully verify the manual approval flow and login (22/22 tests passed). Manually tested Eko APIs and service charges.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Admin Pages Timeout in Production (P1)**
+    -   **Debug checklist:** Analyze slow dashboard queries in . Convert Python loops that process large datasets into efficient MongoDB aggregation pipelines.
+    -   **Why to solve this issue and what will be achieved with this?** The admin panel is unusable in production for large datasets, blocking administrative tasks.
+    -   **Should Test frontend/backend/both after fix:** Backend.
+-   **Issue 2: Search Not Working Reliably (P2)**
+    -   **Debug checklist:** Move the search logic from frontend filtering to a dedicated backend API endpoint that uses indexed database queries.
+    -   **Why to solve this issue and what will be achieved with this?** Admins cannot reliably find users or transactions.
+    -   **Should Test frontend/backend/both after fix:** Both.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork:** Admin page performance (), unreliable search, and issues with Team and Level Members Not Displaying were mentioned in the previous handoff but were not addressed in this session.
+-   **Recurrence count:** 2
+-   **Status:** NOT STARTED
 
 **Code Architecture**
-isFreeUser
+
 
 **Key Technical Concepts**
--   **Server-Side Payment Verification:** The most critical concept. Never trust the client; always verify payment status with the payment provider's API before granting service.
--   **Background Jobs (APScheduler):** Used for the 10-minute auto-sync of Razorpay payments.
--   **Feature Toggles/Flags:** Implemented for enabling/disabling payment gateways, allowing for controlled rollouts and quick disabling of features.
--   **Data Reconciliation & Auditing:** Creating scripts and APIs to find, report on, and correct inconsistent or fraudulent data, while logging changes for reversibility.
--   **Defensive Programming:** Fixing bugs caused by inconsistent data field names ( vs. ).
+-   **Third-Party API Authentication:** Correct implementation of HMAC-SHA256 for securing requests to the Eko API.
+-   **Manual Override Systems:** Designing UI/API flows that allow administrators to manually bypass or complete automated processes (like Eko payments) when they fail, ensuring business continuity.
+-   **Service-Oriented Refactoring:** Abstracting third-party integration logic into a dedicated service module () to improve code reuse and maintainability.
+-   **Background Job Debugging:** Diagnosing and fixing scheduler startup failures by identifying missing function definitions.
+-   **Rolling Time Windows:** Implementing rate limiting (weekly withdrawal limit) based on a moving time window from the last action, rather than a fixed calendar period.
 
 **key DB schema**
--   **settings:** New boolean fields  and .
--   **subscription_orders:** Can now have statuses like , . An  field was added to track changes.
--   **audit_log:** Collection created to store snapshots of user data before cleanup operations for potential restoration.
--   **users:** Logic now handles both  and  fields for consistency.
+-   **bill_payment_requests:** Added ,  to support the manual completion flow.
+-   **withdrawal_requests:** Added ,  for the same purpose.
 
 **All files of reference**
--   : The central hub for almost all new logic.
--   : The main admin UI for managing payments.
--   : The main user-facing subscription purchase page.
--   : For the user-specific Auto Fix feature.
--   : For gateway toggles.
--   : For subscription renewal logic.
+-   : New central service for all Eko API interactions.
+-   : Core application file, modified for scheduler fixes.
+-   : Handles bank withdrawal logic.
+-   : Handles all bill payment logic.
+-   : Admin UI for managing bill payment requests.
+-   : Admin UI for managing bank withdrawal requests.
+-   : Admin UI for gateway toggles.
+-   : Contains the updated .
 
 **Areas that need refactoring**:
--   **CRITICAL:**  is extremely large and brittle. It urgently needs to be broken down into smaller, manageable modules (e.g., , , ).
--    contains a lot of state and logic; it could be broken down into smaller components for filters, the order list, and pagination.
+-   **CRITICAL:**  remains a massive monolith. The scheduler bugs found in this session highlight the brittleness of this file. It must be broken down into smaller modules.
+-   The admin pages  and  share similar logic for modals, state management, and API calls. This could be abstracted into reusable components and custom hooks to reduce code duplication.
 
 **key api endpoints**
--   : Enables/disables the Razorpay gateway.
--   : Enables/disables the manual payment gateway.
--   : Manually triggers a sync with Razorpay for pending orders.
--   : Fetches Razorpay orders with new pagination/sorting.
--   : Runs all auto-fix diagnostics for a user.
--   : Restores a user's plan from the audit log.
--   : Recalculates a user's PRC balance from their transaction history.
--   : Handles events from Razorpay, including activating subscriptions on .
--   : Allows frontend to mark an order as failed/cancelled.
+-   : New endpoint to calculate charges for bill payments.
+-   : Updated to handle the  action with a .
+-   : New endpoint to manually complete a bank redeem request without calling Eko.
+-   : New endpoint to manually trigger a sync of pending Razorpay orders.
+-   : Verifies Eko credentials and fetches wallet balance.
 
 **Critical Info for New Agent**
--   **Production Deployment is #1 Priority:** The user's live site () is still vulnerable. The immediate next step is to guide the user to redeploy the app to ensure all security fixes are live. The agent has confirmed the  file in the Emergent environment has the correct LIVE keys.
--   **Data Restoration:** After deployment, the user will need help running the data restoration APIs (, ) for users who were incorrectly set to the explorer plan by the old cleanup scripts.
--   **Handle Dangerous Actions with Care:** The user was concerned about accidental data deletion. When implementing any destructive actions in the future, ensure they are behind a two-step confirmation modal.
+-   **Eko IP Whitelisting is IN PROGRESS.** The user has provided the production server IPs (, ) to Eko for whitelisting. Do not attempt to test Eko features that require whitelisting (like transfers) until the user confirms it's done. The Eko wallet balance check API *is* working and can be used to verify credentials.
+-   **Production Deployment is the next major step.** Once Eko whitelisting is confirmed, the top priority is to guide the user through deploying the application to production to get all the security fixes and new features live.
+-   **The  monolith is a risk.** Be aware that many unrelated features are intertwined in this file, and changes can have unintended consequences. Fixing the scheduler required adding placeholder functions that were defined elsewhere in the same file, highlighting the fragility.
 
 **documents and test reports created in this job**
--   None.
+-   Updated  with completed tasks.
+-   Generated multiple test reports, with the final one at  showing **22/22 tests passing** (13 backend, 9 frontend) for the manual approval flow.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asks for  to also be triggered by . Asks for balance to be updated correctly in diagnosis and for old plans to be diagnosed.
-9.  **User:** Asks for all plan durations to be set to 28 days, not 30.
-8.  **User:** Reports that when an admin manually updates a subscription, it's setting it to 31 days instead of 28, and that logs/history should be saved and visible.
-7.  **User:** Asks for  of Razorpay payments to happen every 10 minutes.
-6.  **User:** Asks for the dangerous Delete All, Delete Pending, and Cleanup Fraud buttons to be removed or put behind a 2-step verification.
-5.  **User:** Reports that even after a Razorpay payment shows Captured, the admin panel still shows Pending and asks why it's not auto-approved.
-4.  **User:** Asks how to handle statuses for pending, failed, or cancelled payments.
-3.  **User:** Asks how to use the restore APIs after deploying.
-2.  **User:** Reports that the fraud cleanup and pending delete actions caused legitimate users to lose their plans and PRC balance and asks if they can be restored from logs.
-1.  **User:** Asks if renewing a subscription online will add the remaining days from the old plan.
+10. **User:** Asks to add advanced sorting and filtering to the bill payment admin page. (IN PROGRESS)
+9.  **User:** Shares a screen recording showing an IP not whitelisted error and that request details are missing from the manual complete dialog. Asks for separate Eko and Manual approve buttons. (COMPLETED)
+8.  **User:** Asks to add a Manually Approved badge and an input for a UTR/Reference number for manual approvals. (COMPLETED)
+7.  **User:** Requests a manual override system for Eko payments in case of API failure, with options to manually approve or reject with a refund. (COMPLETED)
+6.  **User:** Reports that Razorpay auto-sync doesn't seem to be working. (COMPLETED - Fixed scheduler bug)
+5.  **User:** Informs that they have received the static IPs for the production server and have sent them to Eko for whitelisting. (ACKNOWLEDGED)
+4.  **User:** Asks for clarification on the weekly and monthly redeem limits and if they are working. (COMPLETED - Explained and updated weekly limit logic)
+3.  **User:** Specifies the service charges for bill payments: ₹10 fixed platform fee + 20% admin charge. (COMPLETED)
+2.  **User:** Asks if service charges are applied to bill payments. (COMPLETED)
+1.  **User:** Asks for an explanation of how the Eko bill payment and bank redeem services will work after the changes. (COMPLETED)
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Production Environment:** Running old, insecure code with **TEST** Razorpay keys. This is the highest priority risk.
-    -   Admin Page Performance: Still unresolved.
-    -   Admin Search: Still unreliable.
+    -   **Admin Page Performance:** Still unresolved and will likely be a major issue in production.
+    -   **Production Eko Integration:** Functionality is blocked pending the completion of IP whitelisting by Eko.
 -   **Mocked:**
-    -   Eko Payment Success Path: Still blocked by IP whitelisting.
+    -   None.
 
 **3rd Party Integrations**
--   **Razorpay:** (LIVE) Integration is using LIVE keys in the preview environment, but the PRODUCTION environment was found to be using TEST keys. Security has been hardened significantly.
--   **Eko:** (LIVE but BLOCKED in Preview) No changes.
+-   **Razorpay:** (LIVE) Secure, with a working auto-sync scheduler configured.
+-   **Eko:** (LIVE but BLOCKED) Credentials and authentication logic have been corrected and verified. Functionality is pending IP whitelisting.
 -   **MongoDB Atlas:** (LIVE) No changes.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO. Most fixes were tested manually with  or by checking logs and database entries.
--   **Troubleshoot agent used after agent stuck in loop:** YES, used to analyze the Razorpay payment flow.
--   **Test files created:** None.
--   **Known regressions:** Admin page performance.
+-   **Testing agent used after significant changes:** YES. Used to test the full manual approval flow, including login, navigation, and modal interactions. Result: 22/22 tests passed.
+-   **Troubleshoot agent used after agent stuck in loop:** NO.
+-   **Test files created:** Test files were created/updated by the testing agent in  and .
+-   **Known regressions:** Admin page performance on large datasets remains a known, unaddressed issue.
 
 **Credentials to test flow:**
--   Razorpay Live keys are in .
--   Admin credentials can be found in the database.
+-   Admin credentials can be found by querying the  collection in the database for a user with .
+-   Razorpay and Eko API keys (LIVE) are stored in .
 
 **What agent forgot to execute**
--   The UI toggle switch for enabling/disabling the Manual UPI payment method on the  admin page was not implemented, even though the backend API and frontend logic were completed.</analysis>
+-   The agent was in the middle of a  operation to add an advanced filtering and sorting panel to . The tool output Continue indicates the operation was not finished, and the implementation is incomplete. The next agent must resume this task.</analysis>
