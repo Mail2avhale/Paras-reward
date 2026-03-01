@@ -17746,6 +17746,48 @@ async def admin_auto_fix_all_issues(uid: str, request: Request):
             )
             fixed_issues.append(f"Subscription restored from approved payment: {plan}")
     
+    # ========== 4.5. Fix Razorpay subscription not synced ==========
+    if subscription_plan in ["explorer", "free", ""] or not subscription_plan:
+        razorpay_payment = await db.razorpay_orders.find_one(
+            {"user_id": uid, "status": "paid"},
+            sort=[("paid_at", -1)]
+        )
+        
+        if razorpay_payment:
+            plan = razorpay_payment.get("plan_name", "startup")
+            plan_type = razorpay_payment.get("plan_type", "monthly")
+            paid_at = razorpay_payment.get("paid_at")
+            
+            duration_mapping = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 336}
+            duration_days = duration_mapping.get(plan_type, 28)
+            
+            if paid_at:
+                if isinstance(paid_at, str):
+                    try:
+                        paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+                    except:
+                        paid_at = datetime.now(timezone.utc)
+            else:
+                paid_at = datetime.now(timezone.utc)
+            
+            expiry_date = paid_at + timedelta(days=duration_days)
+            
+            if expiry_date > datetime.now(timezone.utc):
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_plan": plan,
+                            "subscription_start": paid_at,
+                            "subscription_expires": expiry_date,
+                            "subscription_expiry": expiry_date.isoformat(),
+                            "membership_type": "vip",
+                            "subscription_status": "active"
+                        }
+                    }
+                )
+                fixed_issues.append(f"Razorpay subscription restored: {plan} (expires: {expiry_date.date()})")
+    
     # ========== 5. Fix PRC balance (recalculate from ALL transactions) ==========
     prc_balance = user.get("prc_balance", 0)
     
