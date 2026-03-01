@@ -266,7 +266,6 @@ const BillPayments = ({ user, onLogout }) => {
     { id: 'mobile_recharge', label: 'Mobile Recharge', icon: Smartphone, color: 'blue', fields: ['phone_number', 'recharge_type', 'operator', 'circle'] },
     { id: 'dish_recharge', label: 'DTH/Dish Recharge', icon: Tv, color: 'purple', fields: ['consumer_number', 'operator'] },
     { id: 'electricity_bill', label: 'Electricity Bill', icon: Zap, color: 'yellow', fields: ['consumer_number', 'biller_name'] },
-    { id: 'bank_transfer', label: 'Bank Transfer', sublabel: 'Instant Money Transfer', icon: Building, color: 'emerald', fields: ['beneficiary_name', 'account_number', 'ifsc_code', 'recipient_mobile'] },
     { id: 'credit_card_payment', label: 'Credit Card', icon: CreditCard, color: 'green', fields: ['card_last4', 'cardholder_name', 'bank_name', 'linked_mobile', 'card_type'] },
     { id: 'loan_emi', label: 'Pay EMI', sublabel: 'Pay your existing loan EMIs', icon: Building, color: 'red', fields: ['loan_account', 'bank_lender_name', 'ifsc_code', 'borrower_name', 'registered_mobile', 'loan_type', 'emi_amount', 'emi_due_date'] }
   ];
