@@ -364,6 +364,39 @@ const AdminUnifiedPayments = ({ user }) => {
     }
   };
 
+  // Manual Complete - complete without Eko API
+  const handleManualComplete = async (request) => {
+    if (!manualTxnRef.trim()) {
+      toast.error('UTR/Reference number required');
+      return;
+    }
+    setProcessing(request._id);
+    try {
+      if (request._type === 'bank') {
+        await axios.post(`${API}/admin/bank-redeem/${request._id}/manual-complete`, {
+          admin_id: user.uid,
+          txn_reference: manualTxnRef,
+          admin_notes: `Manually completed by ${user.name || user.email}`
+        });
+      } else if (request._type === 'rd') {
+        await axios.post(`${API}/rd/admin/redeem-requests/${request._id}/manual-complete`, {
+          admin_uid: user.uid,
+          txn_reference: manualTxnRef
+        });
+      }
+      toast.success('✅ Manually completed successfully');
+      setManualTxnRef('');
+      setShowManualCompleteDialog(false);
+      setManualCompleteId(null);
+      setExpandedRequest(null);
+      fetchAllRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to complete');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   // Revert status
   const handleRevertStatus = async (request) => {
     if (!window.confirm(`Revert ${request._typeLabel} request back to Pending?`)) return;
