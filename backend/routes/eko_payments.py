@@ -930,12 +930,12 @@ async def get_bill_transaction_status(txn_ref: str):
     """Get status of a bill payment transaction"""
     try:
         result = await make_eko_request(
-            f"/v2/billpayments/status",
+            "/v2/billpayments/status",
             method="GET",
             data={"client_ref_id": txn_ref}
         )
         return result
-    except Exception as e:
+    except Exception:
         # Check local database
         if db is not None:
             txn = await db.eko_transactions.find_one(
@@ -1114,7 +1114,7 @@ async def get_dmt_transaction_status(txn_ref: str):
             data={"client_ref_id": txn_ref}
         )
         return result
-    except Exception as e:
+    except Exception:
         # Check local database
         if db is not None:
             txn = await db.eko_transactions.find_one(
