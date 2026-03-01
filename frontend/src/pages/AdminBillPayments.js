@@ -268,6 +268,9 @@ const AdminBillPayments = ({ user }) => {
 
   // Handle single request process
   const handleProcess = async (requestId, action) => {
+    // Find the request for displaying details in dialog
+    const request = requests.find(r => r.request_id === requestId);
+    
     // If rejecting, show dialog to get reason
     if (action === 'reject') {
       setPendingRejectId(requestId);
@@ -278,6 +281,7 @@ const AdminBillPayments = ({ user }) => {
     // If completing manually, show dialog to get UTR/Reference
     if (action === 'complete') {
       setPendingCompleteId(requestId);
+      setPendingCompleteRequest(request);
       setShowCompleteDialog(true);
       return;
     }
