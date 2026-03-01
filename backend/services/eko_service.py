@@ -697,7 +697,7 @@ class EkoService:
         response: EkoResponse
     ):
         """Log transaction for audit trail"""
-        if not self.db:
+        if self.db is None:
             return
         
         try:
