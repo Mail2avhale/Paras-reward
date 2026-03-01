@@ -429,13 +429,13 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : paginatedOrders.length === 0 ? (
           <div className="text-center py-12">
             <CreditCard className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">No orders found</p>
           </div>
         ) : (
-          filteredOrders.map((order, index) => (
+          paginatedOrders.map((order, index) => (
             <motion.div
               key={order.order_id}
               initial={{ opacity: 0, y: 10 }}
