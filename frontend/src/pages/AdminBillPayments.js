@@ -72,6 +72,11 @@ const AdminBillPayments = ({ user }) => {
   const [processing, setProcessing] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
   
+  // Manual Complete Dialog
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [pendingCompleteId, setPendingCompleteId] = useState(null);
+  const [manualTxnRef, setManualTxnRef] = useState('');
+  
   // Date Range Filter States
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
