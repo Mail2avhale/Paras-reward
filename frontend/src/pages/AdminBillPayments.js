@@ -1692,7 +1692,7 @@ const AdminBillPayments = ({ user }) => {
             </div>
             
             {/* Request Details */}
-            {pendingCompleteRequest && (
+            {pendingCompleteRequest ? (
               <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -1703,40 +1703,44 @@ const AdminBillPayments = ({ user }) => {
                       {pendingCompleteRequest.request_type === 'electricity_bill' && '⚡'}
                       {pendingCompleteRequest.request_type === 'credit_card_payment' && '💳'}
                       {pendingCompleteRequest.request_type === 'loan_emi' && '🏦'}
-                      {pendingCompleteRequest.request_type?.replace(/_/g, ' ')}
+                      {(pendingCompleteRequest.request_type || 'Unknown')?.replace(/_/g, ' ')}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Amount</p>
-                    <p className="text-emerald-400 font-bold text-lg">₹{pendingCompleteRequest.amount_inr?.toLocaleString()}</p>
+                    <p className="text-emerald-400 font-bold text-lg">₹{(pendingCompleteRequest.amount_inr || 0)?.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">User</p>
-                    <p className="text-white">{pendingCompleteRequest.user_name || pendingCompleteRequest.user_id}</p>
+                    <p className="text-white">{pendingCompleteRequest.user_name || pendingCompleteRequest.user_id || 'Unknown'}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Request ID</p>
-                    <p className="text-gray-400 font-mono text-xs">{pendingCompleteRequest.request_id}</p>
+                    <p className="text-gray-400 font-mono text-xs">{pendingCompleteRequest.request_id || 'N/A'}</p>
                   </div>
-                  {pendingCompleteRequest.phone_number && (
+                  {(pendingCompleteRequest.phone_number || pendingCompleteRequest.details?.phone_number || pendingCompleteRequest.details?.mobile_number) && (
                     <div>
                       <p className="text-gray-500">Phone Number</p>
-                      <p className="text-white">{pendingCompleteRequest.phone_number}</p>
+                      <p className="text-white">{pendingCompleteRequest.phone_number || pendingCompleteRequest.details?.phone_number || pendingCompleteRequest.details?.mobile_number}</p>
                     </div>
                   )}
-                  {pendingCompleteRequest.operator && (
+                  {(pendingCompleteRequest.operator || pendingCompleteRequest.details?.operator) && (
                     <div>
                       <p className="text-gray-500">Operator</p>
-                      <p className="text-white">{pendingCompleteRequest.operator}</p>
+                      <p className="text-white">{pendingCompleteRequest.operator || pendingCompleteRequest.details?.operator}</p>
                     </div>
                   )}
-                  {pendingCompleteRequest.consumer_number && (
+                  {(pendingCompleteRequest.consumer_number || pendingCompleteRequest.details?.consumer_number || pendingCompleteRequest.details?.subscriber_id || pendingCompleteRequest.details?.dth_number) && (
                     <div className="col-span-2">
                       <p className="text-gray-500">Consumer/Account Number</p>
-                      <p className="text-white font-mono">{pendingCompleteRequest.consumer_number}</p>
+                      <p className="text-white font-mono">{pendingCompleteRequest.consumer_number || pendingCompleteRequest.details?.consumer_number || pendingCompleteRequest.details?.subscriber_id || pendingCompleteRequest.details?.dth_number}</p>
                     </div>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700 text-center">
+                <p className="text-gray-400">Loading request details...</p>
               </div>
             )}
             
