@@ -598,6 +598,155 @@ const AdminSettings = ({ user }) => {
           </div>
         </Card>
 
+        {/* Payment Gateway Toggles */}
+        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800" data-testid="payment-gateway-toggles">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+              <CreditCard className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-100">Payment Gateway Controls</h2>
+              <p className="text-gray-400">Enable or disable payment methods for subscriptions</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Razorpay Toggle */}
+            <div className={`p-5 rounded-xl border-2 transition-all ${
+              razorpayEnabled 
+                ? 'bg-emerald-500/10 border-emerald-500/50' 
+                : 'bg-red-500/10 border-red-500/50'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${razorpayEnabled ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                    <CreditCard className={`w-6 h-6 ${razorpayEnabled ? 'text-emerald-400' : 'text-red-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">Razorpay Online</h3>
+                    <p className="text-gray-400 text-xs">UPI, Cards, Net Banking</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {razorpayEnabled ? (
+                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Disabled
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                {razorpayEnabled 
+                  ? 'Users can pay via Razorpay for instant subscription activation.' 
+                  : 'Online payment is disabled. Users cannot use Razorpay.'}
+              </p>
+              <Button
+                onClick={handleToggleRazorpay}
+                disabled={togglingRazorpay}
+                className={`w-full ${
+                  razorpayEnabled
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                }`}
+                data-testid="toggle-razorpay-btn"
+              >
+                {togglingRazorpay ? (
+                  'Processing...'
+                ) : razorpayEnabled ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Disable Razorpay
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Enable Razorpay
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Manual UPI/Bank Toggle */}
+            <div className={`p-5 rounded-xl border-2 transition-all ${
+              manualPaymentEnabled 
+                ? 'bg-amber-500/10 border-amber-500/50' 
+                : 'bg-red-500/10 border-red-500/50'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${manualPaymentEnabled ? 'bg-amber-500/20' : 'bg-red-500/20'}`}>
+                    <IndianRupee className={`w-6 h-6 ${manualPaymentEnabled ? 'text-amber-400' : 'text-red-400'}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">Manual UPI/Bank</h3>
+                    <p className="text-gray-400 text-xs">Screenshot Upload</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {manualPaymentEnabled ? (
+                    <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Disabled
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                {manualPaymentEnabled 
+                  ? 'Users can pay manually via UPI/Bank transfer with screenshot upload.' 
+                  : 'Manual payment is disabled. Users cannot use UPI/Bank transfer.'}
+              </p>
+              <Button
+                onClick={handleToggleManualPayment}
+                disabled={togglingManual}
+                className={`w-full ${
+                  manualPaymentEnabled
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white'
+                }`}
+                data-testid="toggle-manual-payment-btn"
+              >
+                {togglingManual ? (
+                  'Processing...'
+                ) : manualPaymentEnabled ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Disable Manual Payment
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Enable Manual Payment
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Warning Box */}
+          <div className="mt-6 bg-amber-900/30 border border-amber-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-semibold text-amber-300 mb-1">Important</h3>
+                <ul className="text-xs text-amber-200 space-y-1">
+                  <li>• Admin PIN (123456) required to toggle payment gateways</li>
+                  <li>• Disabling both gateways will block all subscription purchases</li>
+                  <li>• Changes take effect immediately for new transactions</li>
+                  <li>• Existing pending payments will still be processed</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* VIP Payment Settings */}
         <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
           <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 VIP Payment Settings</h2>
