@@ -1156,7 +1156,13 @@ const AdminUnifiedPayments = ({ user }) => {
             {/* Request Details */}
             {(() => {
               const request = allRequests.find(r => r._id === manualCompleteId);
-              if (!request) return null;
+              if (!request) {
+                return (
+                  <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700 text-center">
+                    <p className="text-gray-400">Loading request details...</p>
+                  </div>
+                );
+              }
               return (
                 <div className="bg-gray-800/50 rounded-lg p-4 mb-4 border border-gray-700">
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -1169,25 +1175,25 @@ const AdminUnifiedPayments = ({ user }) => {
                     </div>
                     <div>
                       <p className="text-gray-500">Amount</p>
-                      <p className="text-emerald-400 font-bold text-lg">₹{request.amount?.toLocaleString() || request.amount_inr?.toLocaleString()}</p>
+                      <p className="text-emerald-400 font-bold text-lg">₹{(request.amount || request.amount_inr || 0)?.toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">User</p>
-                      <p className="text-white">{request.user_name || request.user_id}</p>
+                      <p className="text-white">{request.user_name || request.user_id || 'Unknown'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Request ID</p>
-                      <p className="text-gray-400 font-mono text-xs truncate">{request.request_id || request._id}</p>
+                      <p className="text-gray-400 font-mono text-xs truncate">{request.request_id || request._id || 'N/A'}</p>
                     </div>
                     {request.bank_details && (
                       <>
                         <div>
                           <p className="text-gray-500">Account</p>
-                          <p className="text-white font-mono">{request.bank_details.account_number}</p>
+                          <p className="text-white font-mono">{request.bank_details.account_number || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500">IFSC</p>
-                          <p className="text-white font-mono">{request.bank_details.ifsc_code}</p>
+                          <p className="text-white font-mono">{request.bank_details.ifsc_code || 'N/A'}</p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-gray-500">Account Holder</p>
