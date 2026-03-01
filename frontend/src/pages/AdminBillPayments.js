@@ -274,6 +274,13 @@ const AdminBillPayments = ({ user }) => {
       return;
     }
     
+    // If completing manually, show dialog to get UTR/Reference
+    if (action === 'complete') {
+      setPendingCompleteId(requestId);
+      setShowCompleteDialog(true);
+      return;
+    }
+    
     await executeProcess(requestId, action);
   };
 
