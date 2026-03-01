@@ -1191,7 +1191,7 @@ const AdminUnifiedPayments = ({ user }) => {
                         </div>
                         <div className="col-span-2">
                           <p className="text-gray-500">Account Holder</p>
-                          <p className="text-white">{request.bank_details.account_holder}</p>
+                          <p className="text-white">{request.bank_details.account_holder || request.bank_details.account_holder_name || request.bank_details.holder_name || 'N/A'}</p>
                         </div>
                       </>
                     )}
