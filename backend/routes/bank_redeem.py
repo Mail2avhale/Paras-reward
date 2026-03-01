@@ -175,29 +175,89 @@ async def eko_check_transaction_status(transaction_id: str, use_client_ref: bool
 
 
 def get_current_week_monday():
-    """Get Monday 00:00 of current week"""
+    """
+    DEPRECATED: Now using 7-day rolling window from last request
+    Kept for backward compatibility
+    """
     now = datetime.now(timezone.utc)
     days_since_monday = now.weekday()
     monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
     next_monday = monday + timedelta(days=7)
     return monday, next_monday
 
-async def check_loan_emi_this_week(user_id: str) -> dict:
-    """Check if user has done loan_emi this week"""
-    monday, next_monday = get_current_week_monday()
-    monday_str = monday.isoformat()
+
+def get_7_days_ago():
+    """Get datetime from 7 days ago (rolling window)"""
+    now = datetime.now(timezone.utc)
+    seven_days_ago = now - timedelta(days=7)
+    return seven_days_ago
+
+
+async def get_last_request_date(user_id: str, collection: str, request_type: str = None) -> dict:
+    """
+    Get user's last request date and calculate next eligible date
     
-    loan_emi_request = await db.bill_payment_requests.find_one({
-        "user_id": user_id,
-        "request_type": "loan_emi",
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled"]}
-    })
+    Returns:
+    - last_request: datetime of last request
+    - next_eligible: datetime when user can request again (last + 7 days)
+    - days_remaining: days until next eligible
+    - can_request: True if 7 days have passed
+    """
+    query = {"user_id": user_id, "status": {"$nin": ["rejected", "cancelled"]}}
+    if request_type:
+        query["request_type"] = request_type
+    
+    last_request = await db[collection].find_one(
+        query,
+        sort=[("created_at", -1)]
+    )
+    
+    if not last_request:
+        return {
+            "has_request": False,
+            "can_request": True,
+            "last_request": None,
+            "next_eligible": None,
+            "days_remaining": 0
+        }
+    
+    # Parse last request date
+    last_date_str = last_request.get("created_at")
+    if isinstance(last_date_str, str):
+        last_date = datetime.fromisoformat(last_date_str.replace('Z', '+00:00'))
+        if last_date.tzinfo is None:
+            last_date = last_date.replace(tzinfo=timezone.utc)
+    else:
+        last_date = last_date_str
+    
+    # Calculate next eligible date (7 days from last request)
+    next_eligible = last_date + timedelta(days=7)
+    now = datetime.now(timezone.utc)
+    
+    days_remaining = (next_eligible - now).days
+    can_request = now >= next_eligible
     
     return {
-        "has_loan_emi": loan_emi_request is not None,
-        "loan_emi_request": loan_emi_request,
-        "next_monday": next_monday.isoformat()
+        "has_request": True,
+        "can_request": can_request,
+        "last_request": last_date.isoformat(),
+        "next_eligible": next_eligible.isoformat(),
+        "days_remaining": max(0, days_remaining + 1) if not can_request else 0,
+        "request_id": last_request.get("request_id")
+    }
+
+
+async def check_loan_emi_this_week(user_id: str) -> dict:
+    """Check if user has done loan_emi in last 7 days (rolling window)"""
+    result = await get_last_request_date(user_id, "bill_payment_requests", "loan_emi")
+    
+    return {
+        "has_loan_emi": result["has_request"] and not result["can_request"],
+        "loan_emi_request": result.get("request_id"),
+        "next_eligible": result.get("next_eligible", ""),
+        "days_remaining": result.get("days_remaining", 0),
+        # Backward compatibility
+        "next_monday": result.get("next_eligible", "")
     }
 
 # Processing fees - EMI style
