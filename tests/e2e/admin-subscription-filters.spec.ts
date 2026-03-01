@@ -164,8 +164,9 @@ test.describe('Admin Subscription Management - Sorting & Filtering', () => {
     // Select a specific plan
     await planSelect.selectOption('startup');
     
-    // Verify active filter appears
-    await expect(page.locator('text=Plan: startup').or(page.locator('text=Active Filters'))).toBeVisible({ timeout: 3000 });
+    // Verify active filter appears - use first() for strict mode
+    await expect(page.getByText('Active Filters').first()).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Plan: startup')).toBeVisible();
   });
 
   test('Subscription Type filter dropdown works', async ({ page }) => {
