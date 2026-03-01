@@ -1183,7 +1183,7 @@ async def manual_complete_withdrawal(request_id: str, request: Request):
                 processing_time_str = f"{hours}h {minutes}m"
             else:
                 processing_time_str = f"{minutes}m"
-        except:
+        except Exception:
             pass
     
     # Update request as manually completed
