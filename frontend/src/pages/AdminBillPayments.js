@@ -1301,8 +1301,8 @@ const AdminBillPayments = ({ user }) => {
                   <User className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">{selectedRequest.user_name}</p>
-                  <p className="text-xs text-gray-400">{selectedRequest.user_email}</p>
+                  <p className="font-medium text-white">{selectedRequest.user_name || 'Unknown User'}</p>
+                  <p className="text-xs text-gray-400">{selectedRequest.user_email || 'No email'}</p>
                 </div>
               </div>
 
@@ -1311,20 +1311,20 @@ const AdminBillPayments = ({ user }) => {
                 <div className="p-3 bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-500">Service Type</p>
                   <p className="text-white font-medium">
-                    {SERVICE_CATEGORIES[selectedRequest.request_type]?.name || selectedRequest.request_type}
+                    {SERVICE_CATEGORIES[selectedRequest.request_type]?.name || selectedRequest.request_type || 'Unknown'}
                   </p>
                 </div>
                 <div className="p-3 bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-500">Amount</p>
-                  <p className="text-white font-medium">{formatINR(selectedRequest.amount_inr)}</p>
+                  <p className="text-white font-medium">{formatINR(selectedRequest.amount_inr || 0)}</p>
                 </div>
                 <div className="p-3 bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-500">PRC Deducted</p>
-                  <p className="text-white font-medium">{formatPRC(selectedRequest.total_prc_deducted)}</p>
+                  <p className="text-white font-medium">{formatPRC(selectedRequest.total_prc_deducted || selectedRequest.prc_required || 0)}</p>
                 </div>
                 <div className="p-3 bg-gray-800 rounded-xl">
                   <p className="text-xs text-gray-500">Requested</p>
-                  <p className="text-white font-medium">{getTimeAgo(selectedRequest.created_at)}</p>
+                  <p className="text-white font-medium">{selectedRequest.created_at ? getTimeAgo(selectedRequest.created_at) : '-'}</p>
                 </div>
               </div>
 
