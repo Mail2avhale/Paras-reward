@@ -1131,6 +1131,73 @@ const AdminUnifiedPayments = ({ user }) => {
           </Card>
         </div>
       )}
+
+      {/* Manual Complete Dialog */}
+      {showManualCompleteDialog && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-gray-900 border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-amber-400" />
+                Manual Complete (Without Eko)
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowManualCompleteDialog(false);
+                  setManualCompleteId(null);
+                  setManualTxnRef('');
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 mb-4">
+              <p className="text-amber-300 text-sm">
+                ⚠️ Use when Eko API fails or you have processed the payment offline (NEFT/IMPS manually). 
+                Enter the UTR/Transaction Reference for records.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">UTR / Transaction Reference *</label>
+                <Input
+                  placeholder="e.g., UTR123456789, IMPS/12345/..."
+                  value={manualTxnRef}
+                  onChange={(e) => setManualTxnRef(e.target.value.toUpperCase())}
+                  className="bg-gray-800 border-gray-700 text-white uppercase h-12 text-base"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-700 h-11"
+                  onClick={() => {
+                    setShowManualCompleteDialog(false);
+                    setManualCompleteId(null);
+                    setManualTxnRef('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 h-11"
+                  onClick={() => {
+                    const request = allRequests.find(r => r._id === manualCompleteId);
+                    if (request) handleManualComplete(request);
+                  }}
+                  disabled={processing || !manualTxnRef.trim()}
+                >
+                  {processing ? 'Processing...' : '✅ Complete Manually'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
