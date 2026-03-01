@@ -76,17 +76,6 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      order.user_name?.toLowerCase().includes(query) ||
-      order.user_email?.toLowerCase().includes(query) ||
-      order.order_id?.toLowerCase().includes(query) ||
-      order.payment_id?.toLowerCase().includes(query)
-    );
-  });
-
   // Fraud cleanup functions
   const previewFraudCleanup = async () => {
     try {
