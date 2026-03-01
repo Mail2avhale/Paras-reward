@@ -1472,6 +1472,96 @@ async def auto_clear_all_lockouts():
         print(f"[AUTO LOCKOUT CLEAR ERROR] {e}")
 
 
+# ========== DAILY WALLET RECONCILIATION ==========
+async def daily_wallet_reconciliation():
+    """
+    Daily wallet reconciliation and profit calculation.
+    Runs at 3 AM daily.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        
+        # Calculate today's transactions
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        
+        # Get subscription payments
+        subscription_revenue = await db.subscription_orders.aggregate([
+            {"$match": {"status": "paid", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        
+        # Get bill payments
+        bill_payments = await db.bill_payment_requests.aggregate([
+            {"$match": {"status": "completed", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_inr"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Get bank redeems
+        bank_redeems = await db.bank_withdrawal_requests.aggregate([
+            {"$match": {"status": "completed", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Save daily summary
+        summary = {
+            "date": today,
+            "subscription_revenue": subscription_revenue[0]["total"] if subscription_revenue else 0,
+            "bill_payments_total": bill_payments[0]["total"] if bill_payments else 0,
+            "bill_payments_count": bill_payments[0]["count"] if bill_payments else 0,
+            "bank_redeems_total": bank_redeems[0]["total"] if bank_redeems else 0,
+            "bank_redeems_count": bank_redeems[0]["count"] if bank_redeems else 0,
+            "generated_at": now.isoformat()
+        }
+        
+        await db.daily_reconciliation.update_one(
+            {"date": today},
+            {"$set": summary},
+            upsert=True
+        )
+        
+        print(f"[WALLET RECONCILIATION] {today} - Revenue: ₹{summary['subscription_revenue']}, Bills: {summary['bill_payments_count']}, Redeems: {summary['bank_redeems_count']}")
+    except Exception as e:
+        print(f"[WALLET RECONCILIATION ERROR] {e}")
+
+
+# ========== DAILY SUMMARY GENERATION ==========
+async def generate_daily_summary():
+    """
+    Generate daily system summary.
+    Runs at 12:05 AM daily.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        # Get user stats
+        total_users = await db.users.count_documents({})
+        active_subscriptions = await db.users.count_documents({"subscription_status": "active"})
+        
+        # Get yesterday's new users
+        yesterday_start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        new_users = await db.users.count_documents({"created_at": {"$gte": yesterday_start}})
+        
+        summary = {
+            "date": yesterday,
+            "total_users": total_users,
+            "active_subscriptions": active_subscriptions,
+            "new_users_yesterday": new_users,
+            "generated_at": now.isoformat()
+        }
+        
+        await db.daily_summaries.update_one(
+            {"date": yesterday},
+            {"$set": summary},
+            upsert=True
+        )
+        
+        print(f"[DAILY SUMMARY] {yesterday} - Total Users: {total_users}, Active: {active_subscriptions}, New: {new_users}")
+    except Exception as e:
+        print(f"[DAILY SUMMARY ERROR] {e}")
+
+
 # ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
 async def eko_update_pending_transactions():
     """
