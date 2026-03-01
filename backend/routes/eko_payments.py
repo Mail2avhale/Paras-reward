@@ -1175,3 +1175,218 @@ async def eko_webhook(request: Request):
     except Exception as e:
         logging.error(f"Eko webhook error: {e}")
         return {"status": "error", "message": str(e)}
+
+
+
+# ==================== ADMIN ENDPOINTS ====================
+
+@router.get("/admin/status")
+async def get_eko_integration_status():
+    """Get Eko integration status and configuration"""
+    try:
+        from services.eko_service import EkoConfig
+        
+        config_status = EkoConfig.get_config_status()
+        
+        # Try to get balance if configured
+        balance_info = {"balance": 0, "error": None}
+        if config_status["configured"]:
+            try:
+                from services.eko_service import EkoService
+                service = EkoService(db)
+                balance_response = await service.check_wallet_balance()
+                if balance_response.success:
+                    balance_info = {
+                        "balance": balance_response.data.get("balance", 0),
+                        "currency": "INR"
+                    }
+                else:
+                    balance_info["error"] = balance_response.message
+            except Exception as e:
+                balance_info["error"] = str(e)
+        
+        return {
+            "success": True,
+            "configuration": config_status,
+            "wallet": balance_info,
+            "status": "operational" if config_status["configured"] else "not_configured"
+        }
+    except ImportError:
+        return {
+            "success": False,
+            "configuration": {"configured": False},
+            "wallet": {"balance": 0},
+            "status": "service_unavailable"
+        }
+
+
+@router.get("/admin/transaction/{transaction_id}")
+async def get_transaction_status_admin(transaction_id: str, use_client_ref: bool = False):
+    """
+    Admin endpoint to check transaction status from Eko
+    
+    Args:
+        transaction_id: Eko TID or client reference ID
+        use_client_ref: If true, treat transaction_id as client reference
+    """
+    try:
+        from services.eko_service import EkoService
+        
+        service = EkoService(db)
+        response = await service.check_transaction_status(transaction_id, use_client_ref)
+        
+        return {
+            "success": response.success,
+            "transaction_id": transaction_id,
+            "eko_tid": response.eko_tid,
+            "tx_status": response.tx_status.value if response.tx_status else None,
+            "tx_status_desc": response.tx_status.description if response.tx_status else None,
+            "utr_number": response.utr_number,
+            "message": response.message,
+            "data": response.data
+        }
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Eko service not available")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/sync-pending")
+async def sync_pending_eko_transactions():
+    """
+    Manually trigger sync of all pending Eko transactions
+    Updates status from Eko API for transactions in pending/processing state
+    """
+    try:
+        from services.eko_service import EkoService, EkoStatusUpdater
+        
+        service = EkoService(db)
+        updater = EkoStatusUpdater(db, service)
+        
+        # Sync bank withdrawal requests
+        bank_result = await updater.update_pending_transactions("bank_withdrawal_requests")
+        
+        # Sync bill payment requests
+        bill_result = await updater.update_pending_transactions("bill_payment_requests")
+        
+        return {
+            "success": True,
+            "results": {
+                "bank_withdrawals": bank_result,
+                "bill_payments": bill_result
+            },
+            "total_updated": bank_result.get("updated", 0) + bill_result.get("updated", 0),
+            "total_checked": bank_result.get("checked", 0) + bill_result.get("checked", 0)
+        }
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Eko service not available")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/verify-account")
+async def verify_bank_account_admin(request: Request):
+    """
+    Admin endpoint to verify bank account details
+    
+    Request body:
+    {
+        "ifsc": "HDFC0001234",
+        "account_number": "1234567890"
+    }
+    """
+    try:
+        from services.eko_service import EkoService
+        
+        data = await request.json()
+        ifsc = data.get("ifsc")
+        account_number = data.get("account_number")
+        
+        if not ifsc or not account_number:
+            raise HTTPException(status_code=400, detail="IFSC and account number required")
+        
+        service = EkoService(db)
+        response = await service.verify_bank_account(ifsc, account_number)
+        
+        return {
+            "success": response.success,
+            "verified": response.success,
+            "account_holder": response.data.get("account_holder") if response.data else None,
+            "message": response.message
+        }
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Eko service not available")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/logs")
+async def get_eko_transaction_logs(
+    page: int = 1,
+    limit: int = 50,
+    status: str = None
+):
+    """
+    Get Eko transaction logs for admin monitoring
+    """
+    try:
+        query = {}
+        if status:
+            query["success"] = status.lower() == "success"
+        
+        skip = (page - 1) * limit
+        
+        logs = await db.eko_transaction_logs.find(
+            query, {"_id": 0}
+        ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+        
+        total = await db.eko_transaction_logs.count_documents(query)
+        
+        return {
+            "success": True,
+            "logs": logs,
+            "total": total,
+            "page": page,
+            "total_pages": (total + limit - 1) // limit
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== STATUS CODES REFERENCE ====================
+@router.get("/status-codes")
+async def get_eko_status_codes():
+    """Get reference for Eko transaction status codes"""
+    return {
+        "transaction_status": {
+            "0": "Success - Transaction completed successfully",
+            "1": "Failed - Transaction failed",
+            "2": "Initiated/Response Awaited - NEFT pending or awaiting bank response",
+            "3": "Refund Pending - Transaction failed, refund in process",
+            "4": "Refunded - Amount has been refunded",
+            "5": "Hold - Transaction on hold, inquiry required"
+        },
+        "error_codes": {
+            "44": "Customer not found",
+            "45": "Recipient not found",
+            "131": "Invalid OTP",
+            "302": "Insufficient balance",
+            "303": "Daily limit exceeded",
+            "304": "Monthly limit exceeded",
+            "305": "Invalid amount",
+            "306": "Invalid IFSC",
+            "307": "Invalid account number",
+            "308": "Account verification failed",
+            "309": "Transfer failed - bank error",
+            "310": "Transfer timeout",
+            "311": "Duplicate transaction",
+            "312": "Invalid recipient",
+            "403": "Access denied - IP not whitelisted",
+            "500": "Internal server error",
+            "503": "Service temporarily unavailable"
+        },
+        "channels": {
+            "1": "NEFT - National Electronic Funds Transfer (batch, slower)",
+            "2": "IMPS - Immediate Payment Service (instant)"
+        }
+    }
