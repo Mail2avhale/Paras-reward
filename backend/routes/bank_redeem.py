@@ -1168,10 +1168,15 @@ async def get_pending_count():
 async def get_eko_balance_for_admin():
     """Get Eko settlement account balance for admin dashboard"""
     result = await eko_check_balance()
+    
+    # Check if service is configured
+    service = await get_eko_service()
+    is_configured = service is not None
+    
     return {
         "balance": result.get("balance", 0),
         "currency": "INR",
-        "configured": bool(EKO_DEVELOPER_KEY and EKO_AUTHENTICATOR_KEY),
+        "configured": is_configured,
         "error": result.get("error")
     }
 
