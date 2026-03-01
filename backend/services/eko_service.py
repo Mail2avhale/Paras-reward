@@ -674,7 +674,7 @@ class EkoService:
         """
         Check Eko wallet/settlement balance
         """
-        endpoint = f"/customers/mobile_number:{EkoConfig.INITIATOR_ID}/balance"
+        endpoint = f"/v1/customers/mobile_number:{EkoConfig.INITIATOR_ID}/balance"
         params = {
             "initiator_id": EkoConfig.INITIATOR_ID,
             "user_code": EkoConfig.USER_CODE
