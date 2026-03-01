@@ -326,6 +326,12 @@ const AdminBillPayments = ({ user }) => {
     // Find the request for displaying details in dialog
     const request = requests.find(r => r.request_id === requestId);
     
+    // Safety check - if request not found, show error
+    if (!request) {
+      toast.error('Request not found. Please refresh the page.');
+      return;
+    }
+    
     // If rejecting, show dialog to get reason
     if (action === 'reject') {
       setPendingRejectId(requestId);
