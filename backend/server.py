@@ -1471,6 +1471,46 @@ async def auto_clear_all_lockouts():
     except Exception as e:
         print(f"[AUTO LOCKOUT CLEAR ERROR] {e}")
 
+
+# ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
+async def eko_update_pending_transactions():
+    """
+    Automatically update pending Eko DMT transaction statuses.
+    Runs every 5 minutes to check status of initiated transfers.
+    
+    Eko Transaction Status:
+    - 0: Success (Final)
+    - 1: Failed (Final)
+    - 2: Initiated/Response Awaited (Needs check)
+    - 3: Refund Pending
+    - 4: Refunded (Final)
+    - 5: Hold (Needs inquiry)
+    """
+    try:
+        from services.eko_service import EkoService, EkoStatusUpdater
+        
+        eko_service = EkoService(db)
+        status_updater = EkoStatusUpdater(db, eko_service)
+        
+        # Update bank withdrawal requests
+        bank_result = await status_updater.update_pending_transactions("bank_withdrawal_requests")
+        
+        # Update bill payment requests (for DMT type)
+        bill_result = await status_updater.update_pending_transactions("bill_payment_requests")
+        
+        total_updated = bank_result.get("updated", 0) + bill_result.get("updated", 0)
+        total_checked = bank_result.get("checked", 0) + bill_result.get("checked", 0)
+        
+        if total_updated > 0:
+            print(f"[EKO-SYNC] ✅ Updated {total_updated}/{total_checked} transactions")
+        elif total_checked > 0:
+            print(f"[EKO-SYNC] Checked {total_checked} transactions - no updates needed")
+            
+    except ImportError:
+        print("[EKO-SYNC] ⚠️ Eko service not available")
+    except Exception as e:
+        print(f"[EKO-SYNC] ❌ Error: {e}")
+
 # ========== MODELS ==========
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
