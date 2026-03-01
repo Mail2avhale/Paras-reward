@@ -25,8 +25,15 @@ async function loginAsAdmin(page: any) {
   await page.goto('/admin', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('domcontentloaded');
 
+  // Check if already logged in
+  const alreadyLoggedIn = await page.getByText('Admin Dashboard').isVisible({ timeout: 2000 }).catch(() => false);
+  if (alreadyLoggedIn) {
+    return; // Already logged in
+  }
+
   // Enter admin UID
   const emailInput = page.getByPlaceholder(/email|mobile|UID/i);
+  await expect(emailInput).toBeVisible({ timeout: 10000 });
   await emailInput.fill(ADMIN_UID);
 
   // Click Sign In to show PIN entry
