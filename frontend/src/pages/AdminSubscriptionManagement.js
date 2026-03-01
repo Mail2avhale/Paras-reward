@@ -145,15 +145,68 @@ const AdminSubscriptionManagement = () => {
     }
   };
 
-  // Sorting for display (approved latest on top)
-  const filteredPayments = [...payments].sort((a, b) => {
-    if (a.status === 'approved' && b.status === 'approved') {
-      return new Date(b.processed_at || b.created_at) - new Date(a.processed_at || a.created_at);
+  // Advanced filtering and sorting
+  const filteredPayments = useMemo(() => {
+    let filtered = [...payments];
+    
+    // Filter by plan
+    if (planFilter !== 'all') {
+      filtered = filtered.filter(p => 
+        (p.subscription_plan || p.plan || '').toLowerCase() === planFilter.toLowerCase()
+      );
     }
-    if (a.status === 'pending' && b.status !== 'pending') return -1;
-    if (a.status !== 'pending' && b.status === 'pending') return 1;
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
+    
+    // Filter by subscription type (new, renewal, upgrade)
+    if (subscriptionTypeFilter !== 'all') {
+      filtered = filtered.filter(p => p.subscription_type === subscriptionTypeFilter);
+    }
+    
+    // Filter by processed by (admin name)
+    if (processedByFilter && (activeTab === 'approved' || activeTab === 'rejected')) {
+      const search = processedByFilter.toLowerCase();
+      filtered = filtered.filter(p => 
+        (p.processed_by || '').toLowerCase().includes(search) ||
+        (p.processed_by_name || '').toLowerCase().includes(search) ||
+        (p.approved_by || '').toLowerCase().includes(search) ||
+        (p.rejected_by || '').toLowerCase().includes(search)
+      );
+    }
+    
+    // Filter by amount range
+    if (amountMin) {
+      filtered = filtered.filter(p => (p.amount || 0) >= parseFloat(amountMin));
+    }
+    if (amountMax) {
+      filtered = filtered.filter(p => (p.amount || 0) <= parseFloat(amountMax));
+    }
+    
+    // Advanced sorting
+    filtered.sort((a, b) => {
+      let dateA, dateB;
+      
+      switch (sortBy) {
+        case 'processed_at':
+          dateA = a.processed_at || a.approved_at || a.rejected_at || a.created_at;
+          dateB = b.processed_at || b.approved_at || b.rejected_at || b.created_at;
+          break;
+        case 'amount':
+          const amtA = a.amount || 0;
+          const amtB = b.amount || 0;
+          return sortOrder === 'newest' ? amtB - amtA : amtA - amtB;
+        case 'created_at':
+        default:
+          dateA = a.created_at || a.submitted_at;
+          dateB = b.created_at || b.submitted_at;
+      }
+      
+      if (sortOrder === 'newest') {
+        return new Date(dateB) - new Date(dateA);
+      }
+      return new Date(dateA) - new Date(dateB);
+    });
+    
+    return filtered;
+  }, [payments, planFilter, subscriptionTypeFilter, processedByFilter, amountMin, amountMax, sortBy, sortOrder, activeTab]);
 
   const planCounts = stats?.plan_counts || {};
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
