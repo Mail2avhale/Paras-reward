@@ -203,8 +203,10 @@ test.describe('Admin Subscription Management - Sorting & Filtering', () => {
     // Fill max amount
     await maxInput.fill('500');
     
-    // Verify active filter shows amount range
-    await expect(page.locator('text=/₹100|₹500|Active Filters/i')).toBeVisible({ timeout: 3000 });
+    // Verify active filter shows amount range - use first() for strict mode
+    await expect(page.getByText('Active Filters').first()).toBeVisible({ timeout: 3000 });
+    // Verify amount range badge shows
+    await expect(page.locator('span', { hasText: /₹100/ }).first()).toBeVisible();
   });
 
   test('Amount preset buttons work', async ({ page }) => {
