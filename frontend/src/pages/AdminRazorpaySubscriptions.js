@@ -366,9 +366,28 @@ const AdminRazorpaySubscriptions = ({ user }) => {
             type="text"
             placeholder="Search by name, email, order ID..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-xl text-white placeholder-gray-500"
           />
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex gap-2 items-center">
+          <span className="text-gray-400 text-sm">Sort:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
+            className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-white text-sm"
+          >
+            <option value="latest">Latest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="status">By Status</option>
+            <option value="amount_high">Amount (High to Low)</option>
+            <option value="amount_low">Amount (Low to High)</option>
+          </select>
+          <span className="text-gray-500 text-sm ml-auto">
+            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredOrders.length)} of {filteredOrders.length}
+          </span>
         </div>
 
         {/* Status Filter */}
@@ -383,6 +402,7 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           ].map(filter => (
             <button
               key={filter.id}
+              onClick={() => { setStatusFilter(filter.id); setCurrentPage(1); }}
               onClick={() => setStatusFilter(filter.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                 statusFilter === filter.id
