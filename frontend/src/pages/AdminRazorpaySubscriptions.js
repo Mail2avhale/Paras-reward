@@ -166,20 +166,18 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       setCleanupLoading(true);
       toast.loading('Syncing with Razorpay...', { id: 'sync' });
       
-      const res = await axios.post(`${API}/razorpay/sync-payments`, {
-        admin_pin: '123456'
-      });
+      const res = await axios.post(`${API}/admin/razorpay/sync-pending`);
       
       toast.dismiss('sync');
       
-      if (res.data.synced_count > 0) {
-        toast.success(`✅ Activated ${res.data.synced_count} subscriptions!`, { duration: 5000 });
+      if (res.data.synced > 0) {
+        toast.success(`✅ Activated ${res.data.synced} subscriptions!`, { duration: 5000 });
       } else {
-        toast.info('No pending payments to sync');
+        toast.info(`No payments to activate (${res.data.total_pending} pending orders checked)`);
       }
       
-      if (res.data.failed_count > 0) {
-        toast.error(`${res.data.failed_count} payments could not be synced`);
+      if (res.data.errors && res.data.errors.length > 0) {
+        toast.error(`${res.data.errors.length} orders had errors`);
       }
       
       fetchData();
