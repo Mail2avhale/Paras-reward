@@ -897,27 +897,49 @@ const AdminUnifiedPayments = ({ user }) => {
                           placeholder="UTR / Reference Number" className="h-10 text-base bg-gray-800 border-gray-700 mb-2" />
                         <Button onClick={() => handleApprove(req)} disabled={processing === req._id}
                           className="w-full h-10 bg-green-600 hover:bg-green-700 text-base font-semibold gap-2">
-                          <CheckCircle className="w-5 h-5" />{processing === req._id ? 'Processing...' : 'Approve'}
+                          <CheckCircle className="w-5 h-5" />{processing === req._id ? 'Processing...' : 'Approve (Eko Auto)'}
                         </Button>
                       </div>
+                      
+                      {/* Manual Complete Button */}
+                      {req._type === 'bank' && (
+                        <Button 
+                          onClick={() => {
+                            setManualCompleteId(req._id);
+                            setShowManualCompleteDialog(true);
+                          }} 
+                          disabled={processing === req._id}
+                          className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-base font-semibold gap-2"
+                        >
+                          <CheckCircle className="w-5 h-5" />Manual Complete (Without Eko)
+                        </Button>
+                      )}
+                      
                       <div>
                         <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
                           placeholder="Rejection Reason" className="h-10 text-base bg-gray-800 border-gray-700 mb-2" />
                         <Button onClick={() => handleReject(req)} disabled={processing === req._id}
                           variant="destructive" className="w-full h-10 text-base font-semibold gap-2">
-                          <XCircle className="w-5 h-5" />Reject
+                          <XCircle className="w-5 h-5" />Reject + PRC Refund
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className={`p-4 rounded-lg ${req.status === 'approved' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                        <div className={`text-lg font-semibold mb-2 ${req.status === 'approved' ? 'text-green-400' : 'text-red-400'}`}>
-                          {req.status === 'approved' ? '✓ Payment Approved' : '✗ Payment Rejected'}
+                      <div className={`p-4 rounded-lg ${req.status === 'approved' || req.status === 'completed' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                        <div className={`text-lg font-semibold mb-2 ${req.status === 'approved' || req.status === 'completed' ? 'text-green-400' : 'text-red-400'}`}>
+                          {req.status === 'approved' || req.status === 'completed' ? '✓ Payment Approved' : '✗ Payment Rejected'}
                         </div>
                         
+                        {/* Manually Approved Badge */}
+                        {req.manually_approved && (
+                          <div className="inline-block px-3 py-1 mb-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm border border-amber-500/30">
+                            🔧 Manually Approved
+                          </div>
+                        )}
+                        
                         {/* Approved/Rejected By */}
-                        {(req.approved_by || req.approved_by_name || req.processed_by || req.processed_by_name) && req.status === 'approved' && (
+                        {(req.approved_by || req.approved_by_name || req.processed_by || req.processed_by_name) && (req.status === 'approved' || req.status === 'completed') && (
                           <p className="text-green-300 text-sm mb-2">
                             <span className="text-gray-500">Approved by:</span>{' '}
                             <span className="font-semibold">{req.approved_by_name || req.processed_by_name || req.approved_by || req.processed_by}</span>
@@ -930,7 +952,14 @@ const AdminUnifiedPayments = ({ user }) => {
                           </p>
                         )}
                         
-                        {req.transaction_ref && (
+                        {/* Manual TXN Reference */}
+                        {req.manually_approved && req.manual_txn_reference && (
+                          <p className="text-amber-300 text-base mb-1">
+                            <span className="text-gray-500">Manual Ref:</span> {req.manual_txn_reference}
+                          </p>
+                        )}
+                        
+                        {req.transaction_ref && !req.manually_approved && (
                           <p className="text-gray-300 text-base">
                             <span className="text-gray-500">UTR:</span> {req.transaction_ref}
                           </p>
