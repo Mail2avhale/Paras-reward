@@ -1130,10 +1130,26 @@ const AdminUser360 = ({ user: adminUser }) => {
                     <span className="text-gray-400 text-sm">Subscription</span>
                     <span className="text-white capitalize">{userData.user.subscription_plan || 'Explorer'}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Expiry</span>
-                    <span className="text-white">{formatDate(userData.user.subscription_expiry)}</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm">Activation Date</span>
+                    <span className="text-white">{formatDate(userData.user.subscription_start)}</span>
                   </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm">Expiry</span>
+                    <span className="text-white">{formatDate(userData.user.subscription_expiry || userData.user.subscription_expires)}</span>
+                  </div>
+                  {userData.user.previous_plan && (
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-400 text-sm">Previous Plan</span>
+                      <span className="text-amber-400 capitalize">{userData.user.previous_plan}</span>
+                    </div>
+                  )}
+                  {userData.user.previous_remaining_days_added > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">Days Carried Forward</span>
+                      <span className="text-green-400">+{userData.user.previous_remaining_days_added} days</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
