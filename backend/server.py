@@ -1525,43 +1525,6 @@ async def daily_wallet_reconciliation():
         print(f"[WALLET RECONCILIATION ERROR] {e}")
 
 
-# ========== DAILY SUMMARY GENERATION ==========
-async def generate_daily_summary():
-    """
-    Generate daily system summary.
-    Runs at 12:05 AM daily.
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-        
-        # Get user stats
-        total_users = await db.users.count_documents({})
-        active_subscriptions = await db.users.count_documents({"subscription_status": "active"})
-        
-        # Get yesterday's new users
-        yesterday_start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-        new_users = await db.users.count_documents({"created_at": {"$gte": yesterday_start}})
-        
-        summary = {
-            "date": yesterday,
-            "total_users": total_users,
-            "active_subscriptions": active_subscriptions,
-            "new_users_yesterday": new_users,
-            "generated_at": now.isoformat()
-        }
-        
-        await db.daily_summaries.update_one(
-            {"date": yesterday},
-            {"$set": summary},
-            upsert=True
-        )
-        
-        print(f"[DAILY SUMMARY] {yesterday} - Total Users: {total_users}, Active: {active_subscriptions}, New: {new_users}")
-    except Exception as e:
-        print(f"[DAILY SUMMARY ERROR] {e}")
-
-
 # ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
 async def eko_update_pending_transactions():
     """
