@@ -1864,9 +1864,9 @@ const AdminBillPayments = ({ user }) => {
 };
 
 // Wrap with Error Boundary
-const AdminBillPaymentsWithErrorBoundary = () => (
+const AdminBillPaymentsWithErrorBoundary = (props) => (
   <ErrorBoundary>
-    <AdminBillPayments />
+    <AdminBillPayments {...props} />
   </ErrorBoundary>
 );
 
