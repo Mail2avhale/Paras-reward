@@ -456,7 +456,14 @@ async def get_denominations():
 
 @router.get("/bank-redeem/check-eligibility/{user_id}")
 async def check_withdrawal_eligibility(user_id: str):
-    """Check if user can make a withdrawal request this week"""
+    """
+    Check if user can make a withdrawal request
+    
+    NEW: 7-day rolling window from last request date
+    OLD: Monday to Sunday week
+    
+    Rule: Only 1 of (Bank Redeem / Pay EMI / PRC Vault Redeem) allowed per 7 days
+    """
     user = await db.users.find_one({"uid": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -477,51 +484,38 @@ async def check_withdrawal_eligibility(user_id: str):
             "message": "KYC verification required for bank withdrawals"
         }
     
-    # STRICT: Check if user has done loan_emi this week
-    emi_check = await check_loan_emi_this_week(user_id)
-    if emi_check["has_loan_emi"]:
+    # Check 1: Loan EMI in last 7 days
+    emi_check = await get_last_request_date(user_id, "bill_payment_requests", "loan_emi")
+    if emi_check["has_request"] and not emi_check["can_request"]:
         return {
             "eligible": False,
-            "reason": "emi_done_this_week",
-            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done Pay EMI this week. Try again from Monday ({emi_check['next_monday'][:10]})."
+            "reason": "emi_done_recently",
+            "message": f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 7 days. You did Pay EMI recently. Try again after {emi_check['next_eligible'][:10]} ({emi_check['days_remaining']} days remaining).",
+            "next_eligible_date": emi_check["next_eligible"],
+            "days_remaining": emi_check["days_remaining"]
         }
     
-    # Check for existing bank withdrawal request this week
-    monday, next_monday = get_current_week_monday()
-    monday_str = monday.isoformat()
-    recent_request = await db.bank_withdrawal_requests.find_one({
-        "user_id": user_id,
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled"]}
-    })
-    
-    if recent_request:
+    # Check 2: Bank Withdrawal in last 7 days
+    bank_check = await get_last_request_date(user_id, "bank_withdrawal_requests")
+    if bank_check["has_request"] and not bank_check["can_request"]:
         return {
             "eligible": False,
-            "reason": "weekly_limit",
-            "message": f"Weekly limit: Only 1 Bank Redeem allowed per week. Try again from Monday ({next_monday.isoformat()[:10]}).",
-            "next_eligible_date": next_monday.isoformat(),
+            "reason": "bank_redeem_recently",
+            "message": f"7-day limit: Only 1 Bank Redeem allowed per 7 days. Try again after {bank_check['next_eligible'][:10]} ({bank_check['days_remaining']} days remaining).",
+            "next_eligible_date": bank_check["next_eligible"],
+            "days_remaining": bank_check["days_remaining"],
             "existing_request": {
-                "request_id": recent_request.get("request_id"),
-                "amount": recent_request.get("amount_inr"),
-                "status": recent_request.get("status"),
-                "created_at": recent_request.get("created_at")
+                "request_id": bank_check.get("request_id")
             }
         }
     
-    # STRICT: Check if user has done RD (PRC Savings Vault) redeem this week
-    rd_redeem_request = await db.bank_redeem_requests.find_one({
-        "user_id": user_id,
-        "request_type": "rd_redeem",
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled"]}
-    })
-    
-    if rd_redeem_request:
+    # Check 3: PRC Vault (RD) Redeem in last 7 days
+    rd_check = await get_last_request_date(user_id, "bank_redeem_requests", "rd_redeem")
+    if rd_check["has_request"] and not rd_check["can_request"]:
         return {
             "eligible": False,
-            "reason": "rd_redeem_done_this_week",
-            "message": f"Weekly limit: Only ONE of Pay EMI or Bank Redeem or PRC Savings Vault Redeem allowed per week. You have already done PRC Savings Vault Redeem this week. Try again from Monday ({next_monday.isoformat()[:10]})."
+            "reason": "rd_redeem_recently",
+            "message": f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 7 days. You did PRC Vault Redeem recently. Try again after {rd_check['next_eligible'][:10]} ({rd_check['days_remaining']} days remaining)."
         }
     
     return {
