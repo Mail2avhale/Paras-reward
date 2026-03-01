@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260228_153920/results.json' }],
   ],
   use: {
-    baseURL: 'https://subscription-hub-115.preview.emergentagent.com',
+    baseURL: 'https://paras-payment-fix.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

@@ -1,193 +1,190 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to stabilize their financial rewards platform, Paras Reward. This session focused on completely overhauling payment and subscription flows.
+The user's primary goal is to stabilize their financial rewards platform, Paras Reward, by fixing critical payment-related bugs and enhancing administrative controls.
 
-The main requests were:
-1.  **Refine Eko Bill Payment Flow:** The user requested multiple changes to the admin approval flow for bill payments, finally settling on a system where a failed Eko API call (after 3 retries) puts the request into a new  state. This allows an admin to manually Retry, Complete, or Reject the request.
-2.  **Integrate Live Razorpay Payments:** The user provided live Razorpay keys and requested that the subscription purchase flow be updated to use Razorpay for instant, automatic subscription activation. The manual UPI/Bank Transfer option was to be kept as a secondary choice.
-3.  **Investigate Payment Bug:** The user reported a critical bug where subscriptions were allegedly being activated even after a payment failed.
-4.  **Add Subscription History:** The user requested a feature for customers to see their past and present subscription history.
-5.  **Add Admin View for Razorpay:** The user asked for an admin dashboard to view all subscriptions activated via Razorpay.
-6.  **Plan Production Deployment:** The user asked for advice on choosing a production server (decided on DigitalOcean) and how to migrate from the Emergent environment.
+The main requests addressed in this session were:
+1.  **Fix Critical Razorpay Bug:** A major bug allowed users to get free subscriptions. The system was activating subscriptions based on a successful frontend redirect without server-side verification of the actual payment status, leading to fraudulent activations when payments failed or were not completed.
+2.  **Fix Subscription Amount Display Bug:** Subscription amounts were incorrectly displayed in the admin panel (e.g., ₹2.99 instead of ₹299) due to a redundant division-by-100 error.
+3.  **Data Cleanup and Restoration:** The user requested tools to identify and clean up the fraudulent subscriptions created by the bug and to restore legitimate plans and balances for affected users.
+4.  **Improve Subscription Logic:**
+    *   Ensure remaining days from an old subscription are carried over when a user renews.
+    *   Standardize all subscription plan durations to 28 days.
+5.  **Enhance Admin Controls & Automation:**
+    *   Add enable/disable toggles for both Razorpay and Manual UPI payment gateways.
+    *   Create a mechanism to automatically sync pending Razorpay payments that are later confirmed as captured by Razorpay's webhook or a manual sync.
+    *   Implement an Auto-Fix tool to diagnose and correct data inconsistencies for users.
+    *   Add filtering, sorting, and pagination to the admin's Razorpay payments view.
+6.  **Address Deployment Issues:** The user was confused about why fixes weren't appearing on their production site (), which was discovered to be running old code with test keys.
 
 **User's preferred language**: The user communicates in **Marathi**. The next agent **MUST** continue to respond in Marathi.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI platform with live payment capabilities.
-
--   **Subscription Flow:** Users can purchase subscriptions via two methods on the  page:
-    1.  **Online Payment (Razorpay):** A new, primary flow. Payment is processed instantly by Razorpay, and on success, the user's subscription is activated automatically by the backend. This uses LIVE Razorpay keys.
-    2.  **Manual UPI/Bank Transfer:** The old flow. Users upload a payment screenshot, creating a  request for an admin to approve manually.
--   **Bill Payment Flow:** The Eko bill payment system follows a robust admin-approval workflow. When an admin approves a request, the backend attempts to process it via the Eko API with 3 retries.
-    -   **On Success:** The request is marked . (This path cannot be tested in preview).
-    -   **On Failure:** The request status is changed to . The admin is then presented with options to Retry the Eko transaction, Complete Manually, or Reject it.
--   **New Features:**
-    -   A Subscription History view is available to users on the subscription page.
-    -   An admin dashboard exists at  to track all successful Razorpay transactions.
-    -   Razorpay trust branding has been added to the subscription page.
+The platform's payment system has been significantly hardened.
+-   **Razorpay Double Verification:** A critical server-side verification step has been added. The backend now directly calls the Razorpay API to confirm a payment is  before activating any subscription. This prevents the free subscription bug.
+-   **Subscription Logic:** The logic now correctly carries over remaining days on renewal. All plan durations are standardized to 28 days. Inconsistencies between  and  fields have been resolved.
+-   **Admin Controls:**
+    -   Admins can enable/disable the Razorpay gateway. The manual payment toggle backend is complete, but the UI switch is pending.
+    -   The admin Razorpay page has filters (by status), sorting (date, status), and pagination.
+    -   A Sync with Razorpay button allows admins to manually reconcile pending orders.
+-   **Automation & Diagnostics:**
+    -   A background job runs every 10 minutes to auto-sync pending Razorpay payments.
+    -   A Razorpay webhook handler is implemented to activate subscriptions if a pending payment is later captured.
+    -   An Auto Fix feature is available in the User 360 modal to correct user data inconsistencies (PRC balance, plan status).
+-   **Data Management:** APIs exist to restore user plans () and recalculate PRC balances () from historical data.
 
 **Last working item**:
--   **Last item agent was working:** Investigating the critical bug reported by the user where a subscription was apparently activated even when a payment failed. The agent analyzed a video from the user and concluded the issue was likely user confusion. The video showed a user who *already had an active subscription* (318 days remaining) using the *Manual UPI flow*. The Payment Submitted success screen is the correct behavior for the manual flow (which creates a pending request) and does not indicate a new subscription was activated.
+-   **Last item agent was working:**
+    1.  Fixing a bug where the PRC Collect button was not disabled for all types of free/unsubscribed users.
+    2.  Implementing a feature to allow admins to enable/disable the Manual UPI/Bank Transfer payment option.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N (for this specific bug diagnosis).
--   **Which testing method agent to use?** Frontend testing agent. The agent should create a test to replicate the user's scenario and confirm the agent's diagnosis. The test should:
-    1.  Log in as a user with an existing active subscription.
-    2.  Attempt to purchase a new plan using the Manual UPI method.
-    3.  Submit the form and verify the UI shows the Payment Submitted screen.
-    4.  Crucially, verify that the user's existing subscription status and expiry date have **not** changed.
-    5.  Check the database to confirm a new  record was created with .
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Frontend testing agent. The test should verify:
+    1.  The PRC Collect button on the Mining page is disabled for users with  as 'explorer', null, or undefined.
+    2.  An admin can see and use a new toggle on the payment settings page to enable/disable Manual UPI payments.
+    3.  When disabled, the Pay with UPI/Bank Transfer option disappears for users on the subscription page. When enabled, it reappears.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Investigate Payment Failed, Subscription Active Bug (P0)**
+-   **Issue 1: Complete Manual Subscription Toggle UI (P0)**
 -   **Issue 2: Admin Pages Timeout in Production (P1)**
 -   **Issue 3: Search Not Working Reliably (P2)**
 -   **Issue 4: Team and Level Members Not Displaying (P2)**
 
 **Issues Detail:**
--   **Issue 1: Investigate Payment Failed, Subscription Active Bug**
-    -   **Attempted fixes:** The agent analyzed the user's video and reviewed the backend code (). The backend code correctly creates a  request and does not activate the subscription.
+-   **Issue 1: Complete Manual Subscription Toggle UI**
+    -   **Attempted fixes:** The backend API () and the logic on the user-facing  page are complete.
     -   **Next debug checklist:**
-        1.  Clearly explain to the user in Marathi that the video shows a user who already has an active plan and that the Payment Submitted screen for the manual flow is expected behavior and does not mean a new subscription was activated.
-        2.  Use the testing agent (as described in Last working item) to create a definitive test that proves the manual flow does not incorrectly activate subscriptions.
-        3.  Ask the user to provide a video of the same issue happening with a **brand new user** who has no active subscription.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical financial bug report. Resolving it (or confirming it's a misunderstanding) is essential for user trust and platform integrity.
+        1.  Edit .
+        2.  Add a new state for the manual payment toggle status.
+        3.  Fetch the current status from the  endpoint.
+        4.  Add a toggle switch UI component.
+        5.  Implement the  handler to call the  API and update the state.
+    -   **Why fix this issue and what will be achieved with the fix?** To give the admin full control over which payment methods are available to users.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y (User has reported it multiple times).
-    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: Admin Pages Timeout in Production**
+-   **Issue 2, 3, 4:** (Details carried over from previous handoff, as they were not worked on).
     -   **Attempted fixes:** None.
-    -   **Next debug checklist:** Profile slow API endpoints in  and . Refactor Python loops into efficient MongoDB aggregation pipelines.
-    -   **Why fix this issue and what will be achieved with the fix?** Core admin pages are unusable in production.
+    -   **Next debug checklist:** See  from the previous session. These involve refactoring Python loops to MongoDB aggregations, moving search server-side, and investigating dashboard APIs.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-
--   **Issue 3: Search Not Working Reliably**
-    -   **Attempted fixes:** None.
-    -   **Next debug checklist:** Move search logic to be fully server-side.
-    -   **Why fix this issue and what will be achieved with the fix?** Admins cannot find user requests.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both.
-
--   **Issue 4: Team/Level Members Not Displaying**
-    -   **Attempted fixes:** None.
-    -   **Next debug checklist:** Investigate the APIs populating these components.
-    -   **Why fix this issue and what will be achieved with the fix?** Degrades dashboard experience.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both.
 
 **In progress Task List**:
--   None.
+-   **Task 1: Add Manual Subscription Enable/Disable Toggle**
+    -   **Where to resume:** .
+    -   **What will be achieved with this?** Admins will be able to turn the manual UPI payment flow on or off for all users.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend.
+    -   **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
 
 **Upcoming Tasks:**
--   **P0: Guide Production Deployment to DigitalOcean:** The user has decided to move to a DigitalOcean server in Bangalore for better performance. The agent needs to prepare deployment assets (, , Nginx config) and a step-by-step guide for the user to follow once they create the droplet and provide the IP address.
--   **P1: Update Eko Production IP:** The Eko integration is failing due to a hardcoded preview IP in . Once the user provides the static IP from their new DigitalOcean server, the agent must update the code to use this new IP (ideally via an environment variable).
--   **P1:** Guide the user on generating the AAB file for Play Store submission.
--   **P2:** Clarify with the user if Push notifications are still required.
+-   **P0: Guide Production Deployment:** The user needs to redeploy the application to their production environment () to apply all the critical security fixes. This involves ensuring the correct  with LIVE keys is used.
+-   **P1: Guide User on Data Restoration:** Provide clear, step-by-step instructions for the user on how to run the PRC and Plan restoration APIs for affected users.
+-   **P1: Update Eko Production IP:** Still pending from the previous session.
+-   **P2:** Guide the user on generating the AAB file for Play Store submission.
 
 **Future Tasks:**
--   **P0:** Refactor the monolithic  file (>26,000 lines).
+-   **P0:** Refactor the monolithic  file.
 -   **P3:** Add Email/Mobile OTP verification on signup.
--   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution (e.g., S3 or DigitalOcean Spaces).
--   **P3:** Refactor the codebase to remove the redundant  field and use only .
+-   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
 
 **Completed work in this session**
--   **Finalized Eko Admin Approval Flow:** Implemented the robust  ->  ->  workflow.
--   **Integrated Razorpay Live Payments:** Activated live Razorpay keys and built the frontend UI for instant, automatic subscription activation.
--   **Added User Subscription History:** Created an API and UI for users to view their subscription history.
--   **Added Admin Razorpay Dashboard:** Created a new admin page to see all successful Razorpay payments.
--   **Added Razorpay Branding:** Added trust badges to the payment page.
--   **Diagnosed Eko 403 Error:** Correctly identified the cause as a hardcoded preview IP address.
--   **Guided on Production Hosting:** Helped the user select DigitalOcean as the preferred VPS provider for production.
-
-**Earlier issues found/mentioned but not fixed**
--   See All Pending/In progress Issue list.
-
-**Known issue recurrence from previous fork**
--   The performance of admin pages continues to be a recurring problem that causes timeouts. This has not been addressed.
+-   **CRITICAL: Fixed Razorpay Free Subscription Bug:** Implemented server-side double verification by fetching payment status directly from the Razorpay API before activating a subscription.
+-   **CRITICAL: Fixed Subscription Amount Display Bug:** Corrected the admin panel UI to show correct amounts (e.g., ₹299 instead of ₹2.99).
+-   **Added Fraud & Data Cleanup/Restore Tools:**
+    -   Created intelligent cleanup and restoration APIs (, ) to revert fraudulent subscriptions without harming legitimate ones.
+    -   Initially added, then hid, Cleanup and Delete buttons from the admin UI to prevent accidental data loss.
+-   **Improved Subscription Logic:**
+    -   Fixed a bug to ensure remaining subscription days are carried over on renewal.
+    -   Standardized all plan durations to 28 days across the codebase.
+    -   Resolved inconsistencies between  and  database fields.
+-   **Enhanced Admin Controls:**
+    -   Added an enable/disable toggle for the Razorpay payment gateway.
+    -   Added a Sync with Razorpay button and a 10-minute auto-sync background job.
+    -   Added sorting and pagination to the Razorpay admin page.
+-   **Enhanced Diagnostics:**
+    -   Created an Auto-Fix All feature to diagnose and repair data inconsistencies.
+    -   Added an Auto Fix button to the user diagnosis modal.
+-   **Fixed Cache Invalidation:** Ensured QR/UPI settings cache is cleared on update.
+-   **Resolved Deployment Mystery:** Identified that the user's production server was running old code with test keys and clarified the deployment process.
 
 **Code Architecture**
-
+isFreeUser
 
 **Key Technical Concepts**
--   **Dual Payment Flows:** Managing both an instant automated gateway (Razorpay) and a manual admin-approved flow (UPI transfer) within a single user journey.
--   **Financial State Machine:** Implementing a robust state machine for bill payments ( ->  -> /) to handle API failures without losing request state.
--   **Live Payment Gateway Integration:** Successfully transitioning from test to live API keys for Razorpay and understanding the associated requirements (domain whitelisting).
--   **Asynchronous Bug Diagnosis:** Analyzing user-provided screen recordings to debug issues happening in a different environment (production).
+-   **Server-Side Payment Verification:** The most critical concept. Never trust the client; always verify payment status with the payment provider's API before granting service.
+-   **Background Jobs (APScheduler):** Used for the 10-minute auto-sync of Razorpay payments.
+-   **Feature Toggles/Flags:** Implemented for enabling/disabling payment gateways, allowing for controlled rollouts and quick disabling of features.
+-   **Data Reconciliation & Auditing:** Creating scripts and APIs to find, report on, and correct inconsistent or fraudulent data, while logging changes for reversibility.
+-   **Defensive Programming:** Fixing bugs caused by inconsistent data field names ( vs. ).
 
 **key DB schema**
--   **requests:** A new  value  has been added.
--   **users:** A  array field has been added to log all subscription changes.
--   **subscription_orders:** This collection now tracks both Razorpay () and Manual () orders.
+-   **settings:** New boolean fields  and .
+-   **subscription_orders:** Can now have statuses like , . An  field was added to track changes.
+-   **audit_log:** Collection created to store snapshots of user data before cleanup operations for potential restoration.
+-   **users:** Logic now handles both  and  fields for consistency.
 
 **All files of reference**
--   : Core logic for all payment and subscription flows.
--   : The main user-facing page for buying subscriptions.
--   : The admin UI for handling Eko payment requests.
--   : The new admin dashboard for Razorpay.
--   : Contains the live Razorpay keys.
+-   : The central hub for almost all new logic.
+-   : The main admin UI for managing payments.
+-   : The main user-facing subscription purchase page.
+-   : For the user-specific Auto Fix feature.
+-   : For gateway toggles.
+-   : For subscription renewal logic.
 
 **Areas that need refactoring**:
--   **CRITICAL:**  is a massive technical debt and must be broken down.
--    has grown significantly and should be split into smaller components (e.g., PlanSelection, PaymentMethod, SubscriptionHistory).
--   The hardcoded IP in  must be replaced with an environment variable.
+-   **CRITICAL:**  is extremely large and brittle. It urgently needs to be broken down into smaller, manageable modules (e.g., , , ).
+-    contains a lot of state and logic; it could be broken down into smaller components for filters, the order list, and pagination.
 
 **key api endpoints**
--   : Creates a Razorpay order.
--   : Verifies the Razorpay signature and activates the user's subscription.
--   : Creates a  order for manual UPI payments.
--   : Fetches a user's subscription history.
--   : Fetches successful Razorpay transactions for the admin dashboard.
--   : Handles , , and  actions for Eko payments.
+-   : Enables/disables the Razorpay gateway.
+-   : Enables/disables the manual payment gateway.
+-   : Manually triggers a sync with Razorpay for pending orders.
+-   : Fetches Razorpay orders with new pagination/sorting.
+-   : Runs all auto-fix diagnostics for a user.
+-   : Restores a user's plan from the audit log.
+-   : Recalculates a user's PRC balance from their transaction history.
+-   : Handles events from Razorpay, including activating subscriptions on .
+-   : Allows frontend to mark an order as failed/cancelled.
 
 **Critical Info for New Agent**
--   **The #1 priority is the payment failed but subscription active bug.** Your first action should be to communicate the previous agent's findings to the user (that it's likely confusion with an existing subscription) and run a definitive test to prove the manual flow is safe. This is a trust-destroying bug if real, so it must be handled with urgency and care.
--   **The user wants to deploy to DigitalOcean.** Be prepared to create deployment scripts and a guide. This is the user's next big goal after fixing the payment bug.
--   **The Eko API will continue to fail in the preview environment.** This is expected. The correct behavior is for the status to become . Do not try to fix the 403 error. The fix is to deploy to production with the correct whitelisted IP.
--   Remember that the production database is a MongoDB Atlas instance, which will make the migration to DigitalOcean much simpler (no data migration needed, just updating the connection string).
+-   **Production Deployment is #1 Priority:** The user's live site () is still vulnerable. The immediate next step is to guide the user to redeploy the app to ensure all security fixes are live. The agent has confirmed the  file in the Emergent environment has the correct LIVE keys.
+-   **Data Restoration:** After deployment, the user will need help running the data restoration APIs (, ) for users who were incorrectly set to the explorer plan by the old cleanup scripts.
+-   **Handle Dangerous Actions with Care:** The user was concerned about accidental data deletion. When implementing any destructive actions in the future, ensure they are behind a two-step confirmation modal.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_3.json
--   /app/test_reports/iteration_4.json
--   /app/test_reports/iteration_5.json
--   /app/memory/PRD.md (Updated)
--   User provided artifact:  (contains live keys).
--   User provided artifacts: screen recordings of the payment bug.
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asks for guidance on getting the production IP address.
-9.  **User:** Asks if an India-based server would improve speed.
-8.  **User:** Asks for the previous VPS options again.
-7.  **User:** Asks for a comparison between Hostinger and DigitalOcean, prioritizing speed over cost.
-6.  **User:** Asks if the agent can handle the entire migration to DigitalOcean and what the potential challenges are.
-5.  **User:** States that their MongoDB Atlas is handled by Emergent and asks the agent to check.
-4.  **User:** Mentions they have a dedicated M10 Atlas instance from Emergent.
-3.  **User:** Confirms they need to create a DigitalOcean account.
-2.  **User:** Reports their Razorpay gateway is now active and wants to accept live subscription payments with immediate activation, removing the manual process. Provides live keys.
-1.  **User:** Reports a critical bug: a subscription is activating even when the payment fails/is not made. Provides a screen recording. (THIS IS THE CURRENT HIGHEST PRIORITY).
+10. **User:** Asks for  to also be triggered by . Asks for balance to be updated correctly in diagnosis and for old plans to be diagnosed.
+9.  **User:** Asks for all plan durations to be set to 28 days, not 30.
+8.  **User:** Reports that when an admin manually updates a subscription, it's setting it to 31 days instead of 28, and that logs/history should be saved and visible.
+7.  **User:** Asks for  of Razorpay payments to happen every 10 minutes.
+6.  **User:** Asks for the dangerous Delete All, Delete Pending, and Cleanup Fraud buttons to be removed or put behind a 2-step verification.
+5.  **User:** Reports that even after a Razorpay payment shows Captured, the admin panel still shows Pending and asks why it's not auto-approved.
+4.  **User:** Asks how to handle statuses for pending, failed, or cancelled payments.
+3.  **User:** Asks how to use the restore APIs after deploying.
+2.  **User:** Reports that the fraud cleanup and pending delete actions caused legitimate users to lose their plans and PRC balance and asks if they can be restored from logs.
+1.  **User:** Asks if renewing a subscription online will add the remaining days from the old plan.
 
 **Project Health Check:**
 -   **Broken:**
-    -   Admin Page Performance: Unresolved performance issues causing timeouts.
-    -   Admin Search: Unreliable.
-    -   **Critical Bug Report:** The user has reported that subscriptions are activating without successful payment. While initial analysis suggests user confusion, this must be treated as a real, critical bug until proven otherwise.
+    -   **Production Environment:** Running old, insecure code with **TEST** Razorpay keys. This is the highest priority risk.
+    -   Admin Page Performance: Still unresolved.
+    -   Admin Search: Still unreliable.
 -   **Mocked:**
-    -   **Eko Payment Success Path:** This can only be tested in production with a whitelisted IP.
+    -   Eko Payment Success Path: Still blocked by IP whitelisting.
 
 **3rd Party Integrations**
--   **Eko:** (LIVE but BLOCKED in Preview) Integration logic is complete, but all calls are blocked by Eko's firewall (403 error) due to the preview environment's IP not being whitelisted.
--   **Razorpay:** (LIVE) The integration is using **live keys**. The user has confirmed their production domain is whitelisted in the Razorpay dashboard.
--   **MongoDB Atlas:** (LIVE) The production environment uses a dedicated M10 cluster managed by Emergent. The connection string is available in .
+-   **Razorpay:** (LIVE) Integration is using LIVE keys in the preview environment, but the PRODUCTION environment was found to be using TEST keys. Security has been hardened significantly.
+-   **Eko:** (LIVE but BLOCKED in Preview) No changes.
+-   **MongoDB Atlas:** (LIVE) No changes.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used multiple times to validate the evolving Eko payment flow.
--   **Troubleshoot agent used after agent stuck in loop:** NO.
+-   **Testing agent used after significant changes:** NO. Most fixes were tested manually with  or by checking logs and database entries.
+-   **Troubleshoot agent used after agent stuck in loop:** YES, used to analyze the Razorpay payment flow.
 -   **Test files created:** None.
 -   **Known regressions:** Admin page performance.
 
@@ -196,4 +193,4 @@ The application is a full-stack React/FastAPI platform with live payment capabil
 -   Admin credentials can be found in the database.
 
 **What agent forgot to execute**
--   The tasks from the initial handoff (AAB file generation, push notification clarification) were deferred to handle the user's urgent requests for payment system overhauls.</analysis>
+-   The UI toggle switch for enabling/disabling the Manual UPI payment method on the  admin page was not implemented, even though the backend API and frontend logic were completed.</analysis>
