@@ -713,89 +713,169 @@ const AdminBillPayments = ({ user }) => {
           <button
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-              showAdvancedFilters || dateFrom || dateTo
+              showAdvancedFilters || dateFrom || dateTo || approvedByFilter || rejectedByFilter || amountMin || amountMax || manualOnlyFilter
                 ? 'bg-purple-500/20 border-purple-500/40 text-purple-400'
                 : 'bg-gray-800 border-gray-700 text-gray-400'
             }`}
           >
             <Filter className="w-4 h-4" />
-            <span className="text-sm">Date Filter</span>
-            {(dateFrom || dateTo) && <span className="w-2 h-2 bg-purple-500 rounded-full"></span>}
+            <span className="text-sm">Advanced Filters</span>
+            {(dateFrom || dateTo || approvedByFilter || rejectedByFilter || amountMin || amountMax || manualOnlyFilter) && 
+              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+            }
           </button>
         </div>
 
-        {/* Advanced Date Filter Panel */}
+        {/* ========== ADVANCED FILTERS PANEL ========== */}
         {showAdvancedFilters && (
-          <div className="flex flex-wrap items-end gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700">
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs text-gray-400 mb-1.5">From Date</label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-gray-900 border-gray-600 text-white"
-              />
-            </div>
-            <div className="flex-1 min-w-[150px]">
-              <label className="block text-xs text-gray-400 mb-1.5">To Date</label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="bg-gray-900 border-gray-600 text-white"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
+          <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700 space-y-4">
+            
+            {/* Row 1: Date Range */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-xs text-gray-400 mb-1.5">From Date</label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-xs text-gray-400 mb-1.5">To Date</label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => {
                   const today = new Date().toISOString().split('T')[0];
-                  setDateFrom(today);
-                  setDateTo(today);
-                }}
-                className="text-blue-400 hover:text-blue-300"
-              >
-                Today
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
+                  setDateFrom(today); setDateTo(today);
+                }} className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">Today</Button>
+                <Button size="sm" variant="ghost" onClick={() => {
                   const today = new Date();
                   const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                  setDateFrom(weekAgo.toISOString().split('T')[0]);
-                  setDateTo(today.toISOString().split('T')[0]);
-                }}
-                className="text-blue-400 hover:text-blue-300"
-              >
-                Last 7 Days
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
+                  setDateFrom(weekAgo.toISOString().split('T')[0]); setDateTo(today.toISOString().split('T')[0]);
+                }} className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">7 Days</Button>
+                <Button size="sm" variant="ghost" onClick={() => {
                   const today = new Date();
                   const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-                  setDateFrom(monthAgo.toISOString().split('T')[0]);
-                  setDateTo(today.toISOString().split('T')[0]);
-                }}
-                className="text-blue-400 hover:text-blue-300"
-              >
-                Last 30 Days
-              </Button>
-              {(dateFrom || dateTo) && (
+                  setDateFrom(monthAgo.toISOString().split('T')[0]); setDateTo(today.toISOString().split('T')[0]);
+                }} className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">30 Days</Button>
+              </div>
+            </div>
+
+            {/* Row 2: Sort By & Order */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[160px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full h-9 px-3 bg-gray-900 border border-gray-600 text-white rounded-lg text-sm"
+                >
+                  <option value="created_at">Request Date</option>
+                  <option value="approved_at">Approved Date</option>
+                  <option value="rejected_at">Rejected Date</option>
+                  <option value="amount">Amount (₹)</option>
+                </select>
+              </div>
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Sort Order</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="w-full h-9 px-3 bg-gray-900 border border-gray-600 text-white rounded-lg text-sm"
+                >
+                  <option value="newest">Latest First ↓</option>
+                  <option value="oldest">Oldest First ↑</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 3: Amount Range */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Min Amount (₹)</label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={amountMin}
+                  onChange={(e) => setAmountMin(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Max Amount (₹)</label>
+                <Input
+                  type="number"
+                  placeholder="100000"
+                  value={amountMax}
+                  onChange={(e) => setAmountMax(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+            </div>
+
+            {/* Row 4: Admin Filters (Show based on status) */}
+            {statusFilter === 'approved' && (
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs text-gray-400 mb-1.5">Approved By (Admin Name)</label>
+                  <Input
+                    placeholder="Search by admin name..."
+                    value={approvedByFilter}
+                    onChange={(e) => setApprovedByFilter(e.target.value)}
+                    className="bg-gray-900 border-gray-600 text-white h-9"
+                  />
+                </div>
+                <label className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={manualOnlyFilter}
+                    onChange={(e) => setManualOnlyFilter(e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600"
+                  />
+                  <span className="text-amber-400 text-sm">🔧 Manual Only</span>
+                </label>
+              </div>
+            )}
+            
+            {statusFilter === 'rejected' && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Rejected By (Admin Name)</label>
+                <Input
+                  placeholder="Search by admin name..."
+                  value={rejectedByFilter}
+                  onChange={(e) => setRejectedByFilter(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+            )}
+
+            {/* Clear All Filters */}
+            {(dateFrom || dateTo || approvedByFilter || rejectedByFilter || amountMin || amountMax || manualOnlyFilter || sortBy !== 'created_at') && (
+              <div className="pt-2 border-t border-gray-700">
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => { setDateFrom(''); setDateTo(''); }}
+                  onClick={() => {
+                    setDateFrom(''); setDateTo('');
+                    setApprovedByFilter(''); setRejectedByFilter('');
+                    setAmountMin(''); setAmountMax('');
+                    setManualOnlyFilter(false);
+                    setSortBy('created_at'); setSortOrder('newest');
+                  }}
                   className="text-red-400 hover:text-red-300"
                 >
                   <X className="w-4 h-4 mr-1" />
-                  Clear
+                  Clear All Filters
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
