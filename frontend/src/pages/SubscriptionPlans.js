@@ -110,17 +110,16 @@ const SubscriptionPlans = ({ user }) => {
       const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
       
-      // Fetch Razorpay config to check if enabled
-      try {
-        const razorpayConfigRes = await axios.get(`${API}/razorpay/config`);
-        const isEnabled = razorpayConfigRes.data.enabled !== false;
-        setRazorpayEnabled(isEnabled);
-        if (!isEnabled) {
-          setPaymentMethod('manual'); // Default to manual if Razorpay disabled
-        }
-      } catch (err) {
-        console.log('Could not fetch Razorpay config');
-        setRazorpayEnabled(false);
+      // Get gateway statuses from public settings
+      const isManualEnabled = configRes.data.manual_subscription_enabled !== false;
+      const isRazorpayEnabled = configRes.data.razorpay_enabled !== false;
+      setManualEnabled(isManualEnabled);
+      setRazorpayEnabled(isRazorpayEnabled);
+      
+      // Set default payment method based on what's enabled
+      if (isRazorpayEnabled) {
+        setPaymentMethod('razorpay');
+      } else if (isManualEnabled) {
         setPaymentMethod('manual');
       }
       
