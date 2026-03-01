@@ -78,7 +78,7 @@ class TestPaymentGatewayToggles:
     def test_toggle_razorpay_requires_pin(self):
         """Test: Toggle Razorpay fails without correct admin PIN"""
         response = requests.post(
-            f"{BASE_URL}/api/razorpay/toggle-razorpay",
+            f"{BASE_URL}/api/razorpay/toggle",
             json={"enabled": False, "admin_pin": "wrong_pin"}
         )
         assert response.status_code == 403, f"Expected 403 for wrong PIN, got {response.status_code}"
@@ -92,7 +92,7 @@ class TestPaymentGatewayToggles:
         # Toggle to opposite state
         new_state = not current_state
         response = requests.post(
-            f"{BASE_URL}/api/razorpay/toggle-razorpay",
+            f"{BASE_URL}/api/razorpay/toggle",
             json={"enabled": new_state, "admin_pin": "123456"}
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
@@ -103,7 +103,7 @@ class TestPaymentGatewayToggles:
         
         # Restore original state
         requests.post(
-            f"{BASE_URL}/api/razorpay/toggle-razorpay",
+            f"{BASE_URL}/api/razorpay/toggle",
             json={"enabled": current_state, "admin_pin": "123456"}
         )
 
