@@ -63,17 +63,26 @@ User → Select Plan → Select Duration → Payment Options:
 
 ## PENDING TASKS
 
-### P0 - Deployment
-- [ ] DigitalOcean account create
-- [ ] Droplet setup (Mumbai BLR1)
-- [ ] Get production IP
-- [ ] Eko IP whitelisting
+### P0 - Production Deployment
+- [ ] Guide user to deploy latest code to parasreward.com
+- [ ] Ensure LIVE Razorpay keys are used in production
+- [ ] Data restoration for affected users (PRC balance, plans)
 
-### P1 - Production Checklist
-- [x] Razorpay Live keys ✅
-- [x] Auto subscription activation ✅
+### P1 - Post-Deployment
+- [ ] Eko IP whitelisting (production server IP needed)
 - [ ] Domain SSL setup
-- [ ] MongoDB Atlas connection
+- [ ] MongoDB Atlas connection verification
+- [ ] Generate AAB file for Play Store submission
+
+### P2 - Performance
+- [ ] Admin pages timeout issue - refactor Python loops to MongoDB aggregations
+- [ ] Server-side search implementation
+- [ ] Team/Level members display fix
+
+### P3 - Future Enhancements
+- [ ] Email/Mobile OTP verification on signup
+- [ ] KYC/Receipt image migration to file storage
+- [ ] Refactor backend/server.py into modules
 
 ---
 
