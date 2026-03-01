@@ -2,6 +2,14 @@
 
 ## Latest Updates (March 1, 2026)
 
+### ✅ EKO INTEGRATION COMPLETE - STANDARDIZED
+- **New Eko Service Module:** `/app/backend/services/eko_service.py`
+- **Proper HMAC SHA256 Authentication:** As per Eko documentation
+- **Transaction Status Codes:** 0=Success, 1=Failed, 2=Initiated, 3=Refund Pending, 4=Refunded, 5=Hold
+- **Real-time Status Updates:** Background job every 5 minutes
+- **Admin APIs:** Status check, Sync pending, Verify account, Transaction logs
+- **Error Handling:** Comprehensive error codes and retry mechanism
+
 ### ✅ PAYMENT GATEWAY TOGGLE FEATURE - COMPLETE
 - **Admin Settings Page:** Added Payment Gateway Controls section
 - **Razorpay Toggle:** Enable/Disable Razorpay online payments
@@ -23,6 +31,39 @@
 - **No Auto-Reject:** Eko fails → `eko_failed` status
 - **Admin Options:** Retry / Complete Manually / Reject
 - **PRC Refund:** Only on admin reject
+
+---
+
+## EKO INTEGRATION ARCHITECTURE
+
+### Service Module: `/app/backend/services/eko_service.py`
+```
+EkoConfig      - Configuration management
+EkoAuth        - HMAC SHA256 authentication
+EkoService     - Main API service class
+EkoStatusUpdater - Background status sync
+```
+
+### API Endpoints:
+- `GET /api/eko/admin/status` - Integration status & wallet balance
+- `GET /api/eko/admin/transaction/{id}` - Check transaction status
+- `POST /api/eko/admin/sync-pending` - Manual sync of pending transactions
+- `POST /api/eko/admin/verify-account` - Verify bank account
+- `GET /api/eko/admin/logs` - Transaction audit logs
+- `GET /api/eko/status-codes` - Status codes reference
+
+### Transaction Status Flow:
+```
+Initiate → tx_status=2 (Initiated)
+    ↓
+Poll Status (every 5 min)
+    ↓
+tx_status=0 (Success) → Complete
+tx_status=1 (Failed) → Refund Process
+tx_status=3 → Refund Pending
+tx_status=4 → Refunded
+tx_status=5 → Manual Review
+```
 
 ---
 
@@ -56,8 +97,9 @@ User → Select Plan → Select Duration → Payment Options:
 - Status: ✅ Production Ready
 
 ### Eko.in (BBPS + DMT)
-- Status: ⚠️ Needs IP Whitelisting
-- Production IP required from DigitalOcean
+- Status: ⚠️ Needs **Production Server IP** Whitelisting
+- Integration: ✅ Complete with proper authentication
+- Note: Will work only when IP is whitelisted by Eko
 
 ---
 
@@ -67,9 +109,10 @@ User → Select Plan → Select Duration → Payment Options:
 - [ ] Guide user to deploy latest code to parasreward.com
 - [ ] Ensure LIVE Razorpay keys are used in production
 - [ ] Data restoration for affected users (PRC balance, plans)
+- [ ] **Get Emergent/Production Server IP for Eko whitelisting**
 
 ### P1 - Post-Deployment
-- [ ] Eko IP whitelisting (production server IP needed)
+- [ ] Eko IP whitelisting with production IP
 - [ ] Domain SSL setup
 - [ ] MongoDB Atlas connection verification
 - [ ] Generate AAB file for Play Store submission
