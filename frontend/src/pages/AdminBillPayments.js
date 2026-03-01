@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -14,6 +14,46 @@ import {
   ArrowUpDown, X, Receipt, Timer
 } from 'lucide-react';
 import { LiveTimer, SpeedBadge } from '../components/BillPaymentJourney';
+
+// Error Boundary to prevent white screen crashes
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('AdminBillPayments Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+          <Card className="bg-gray-900 border-red-500 p-8 max-w-md text-center">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+            <p className="text-gray-400 mb-4">An error occurred while loading this page.</p>
+            <p className="text-xs text-red-400 bg-gray-800 p-2 rounded mb-4 break-all">
+              {this.state.error?.message || 'Unknown error'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              Reload Page
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ITEMS_PER_PAGE = 10;
