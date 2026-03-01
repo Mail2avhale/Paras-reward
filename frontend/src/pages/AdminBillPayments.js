@@ -1863,4 +1863,11 @@ const AdminBillPayments = ({ user }) => {
   );
 };
 
-export default AdminBillPayments;
+// Wrap with Error Boundary
+const AdminBillPaymentsWithErrorBoundary = () => (
+  <ErrorBoundary>
+    <AdminBillPayments />
+  </ErrorBoundary>
+);
+
+export default AdminBillPaymentsWithErrorBoundary;
