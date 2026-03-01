@@ -275,8 +275,8 @@ test.describe('Mining Page - PRC Collect for Free Users', () => {
     // Navigate to mining page (via Rewards tab)
     await page.goto('/mining', { waitUntil: 'domcontentloaded' });
     
-    // Wait for mining page to fully load - wait for the mining content to appear
-    await expect(page.getByText(/Daily Rewards|Start Earning|Collect Rewards/i)).toBeVisible({ timeout: 15000 });
+    // Wait for mining page to fully load - use role-based selector
+    await expect(page.getByRole('heading', { name: 'Daily Rewards' })).toBeVisible({ timeout: 15000 });
     
     await page.screenshot({ path: 'mining-page-free-user.jpeg', quality: 20 });
     
