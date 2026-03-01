@@ -1,0 +1,58 @@
+{
+  "summary": "Testing complete for PRC Collect button fix and Manual UPI Payment toggle feature. All 15 tests pass (10 backend API + 5 frontend E2E).",
+  "mode": "generate",
+  "baseline_commit": "82e83e939505f65b489296d62d49efe040d1bf55",
+  "head_commit": "62e31cba7b35a401dd417816761a247d3c0afdf6",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_payment_toggle_prc_collect.py",
+    "/app/tests/e2e/payment-toggle-prc-collect.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_payment_toggle_prc_collect.py",
+    "/app/test_reports/pytest/payment_toggle_prc_collect.xml",
+    "/app/tests/e2e/payment-toggle-prc-collect.spec.ts"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_payment_toggle_prc_collect.py",
+    "/app/tests/e2e/payment-toggle-prc-collect.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% - 10 passed",
+    "frontend": "100% - 5 passed"
+  },
+  "seed_data_creation": "Created test user (testuser@paras.com, PIN: 123456) with explorer plan for testing free user behavior",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Features tested successfully:\n\n## 1. PRC Collect Button for Free Users\n- Mining.js: Line 345 defines isFreeUser check (explorer, free, empty, null)\n- Lines 778-823: Shows upgrade prompt for free users instead of collect button\n- Test confirms free users see 'Start Session' button, not enabled 'Collect' button\n\n## 2. Manual UPI Payment Toggle\n- AdminSettings.js: Payment Gateway Toggles section (lines 600-750)\n- data-testids: payment-gateway-toggles, toggle-razorpay-btn, toggle-manual-payment-btn\n- API: POST /api/admin/toggle-manual-subscription requires admin_pin=123456\n- API: POST /api/razorpay/toggle requires admin_pin=123456\n- API: GET /api/admin/payment-gateways-status returns both toggle states\n\n## 3. Subscription Page Visibility\n- SubscriptionPlans.js: Lines 921-951 wrap manual option in {manualEnabled && ...}\n- data-testid: manual-payment-option\n- When manual payment disabled, option is not visible\n- When enabled, option appears in Step 3 (Payment) after selecting plan and duration\n\n## Test Credentials:\n- Admin: admin@parasreward.com, PIN: 123456\n- Test User: testuser@paras.com, PIN: 123456 (explorer plan)",
+  "features_tested": [
+    "Payment gateway status API returns correct toggle states",
+    "Manual payment toggle requires admin PIN",
+    "Manual payment can be disabled and enabled via API",
+    "Razorpay toggle requires admin PIN",
+    "Razorpay can be toggled via API",
+    "Admin Settings page shows Payment Gateway Toggles section",
+    "Manual UPI toggle button is visible and clickable",
+    "Subscription page shows Manual UPI option when enabled",
+    "Subscription page hides Manual UPI option when disabled",
+    "Mining page shows Start Session for free users (no active session)",
+    "Mining page shows upgrade prompt structure for free users"
+  ]
+}
