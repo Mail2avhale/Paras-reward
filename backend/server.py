@@ -9096,6 +9096,18 @@ async def get_public_settings():
     if not payment_upi and settings:
         payment_upi = settings.get("payment_upi_id", "paras@upi")
     
+    # Check if manual subscription is enabled
+    manual_subscription_enabled = True
+    manual_sub_setting = await db.app_settings.find_one({"key": "manual_subscription_enabled"})
+    if manual_sub_setting:
+        manual_subscription_enabled = manual_sub_setting.get("value", True)
+    
+    # Check if Razorpay is enabled
+    razorpay_enabled = True
+    razorpay_setting = await db.app_settings.find_one({"key": "razorpay_enabled"})
+    if razorpay_setting:
+        razorpay_enabled = razorpay_setting.get("value", True)
+    
     result = {
         "payment_upi_id": payment_upi or "paras@upi",
         "qr_code_url": qr_code_url,
@@ -9103,7 +9115,9 @@ async def get_public_settings():
         "payment_instructions": payment_instructions,
         "company_name": settings.get("company_name", "PARAS REWARD") if settings else "PARAS REWARD",
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
-        "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
+        "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210",
+        "manual_subscription_enabled": manual_subscription_enabled,
+        "razorpay_enabled": razorpay_enabled
     }
     
     # Cache for 10 minutes (settings rarely change)
