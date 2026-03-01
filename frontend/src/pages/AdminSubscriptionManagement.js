@@ -264,52 +264,245 @@ const AdminSubscriptionManagement = () => {
       </div>
 
       {/* Search & Date Filter */}
-      <div className="flex flex-col md:flex-row gap-3 mb-4">
-        {/* Text Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <Input
-            placeholder="Search by name, email, UTR..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-gray-800 border-gray-700 text-white"
-          />
-        </div>
-        
-        {/* Date From */}
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-gray-500" />
-          <Input
-            type="date"
-            placeholder="From Date"
-            value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            className="bg-gray-800 border-gray-700 text-white w-40"
-          />
-        </div>
-        
-        {/* Date To */}
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500">to</span>
-          <Input
-            type="date"
-            placeholder="To Date"
-            value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            className="bg-gray-800 border-gray-700 text-white w-40"
-          />
-        </div>
-        
-        {/* Clear Filters */}
-        {(dateFrom || dateTo || searchQuery) && (
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Text Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Search by name, email, UTR..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-gray-800 border-gray-700 text-white"
+            />
+          </div>
+          
+          {/* Date From */}
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-500" />
+            <Input
+              type="date"
+              placeholder="From Date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="bg-gray-800 border-gray-700 text-white w-40"
+            />
+          </div>
+          
+          {/* Date To */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">to</span>
+            <Input
+              type="date"
+              placeholder="To Date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="bg-gray-800 border-gray-700 text-white w-40"
+            />
+          </div>
+          
+          {/* Sort Toggle */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setPage(1); }}
-            className="border-gray-700 text-gray-400 hover:text-white"
+            onClick={() => setSortOrder(sortOrder === 'newest' ? 'oldest' : 'newest')}
+            className={`h-10 px-4 text-sm font-medium ${
+              sortOrder === 'newest' 
+                ? 'bg-purple-500/20 border-purple-500/40 text-purple-400'
+                : 'bg-gray-800 border-gray-700 text-gray-400'
+            }`}
           >
-            <X className="w-4 h-4 mr-1" /> Clear
+            <ArrowUpDown className="w-4 h-4 mr-2" />
+            {sortOrder === 'newest' ? 'Latest First' : 'Oldest First'}
           </Button>
+          
+          {/* Advanced Filters Toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`h-10 px-4 ${
+              showAdvancedFilters || processedByFilter || planFilter !== 'all' || amountMin || amountMax || subscriptionTypeFilter !== 'all'
+                ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400'
+                : 'border-gray-700 text-gray-400'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 mr-2" />
+            Filters
+            {(processedByFilter || planFilter !== 'all' || amountMin || amountMax || subscriptionTypeFilter !== 'all') && 
+              <span className="w-2 h-2 bg-cyan-500 rounded-full ml-2"></span>
+            }
+          </Button>
+          
+          {/* Clear Filters */}
+          {(dateFrom || dateTo || searchQuery) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setPage(1); }}
+              className="border-gray-700 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4 mr-1" /> Clear
+            </Button>
+          )}
+        </div>
+        
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="p-4 bg-gray-800/50 rounded-xl border border-gray-700 space-y-4">
+            {/* Row 1: Sort By & Plan Filter */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[160px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full h-9 px-3 bg-gray-900 border border-gray-600 text-white rounded-lg text-sm"
+                >
+                  <option value="created_at">Submit Date</option>
+                  <option value="processed_at">Process Date</option>
+                  <option value="amount">Amount (₹)</option>
+                </select>
+              </div>
+              
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Plan</label>
+                <select
+                  value={planFilter}
+                  onChange={(e) => setPlanFilter(e.target.value)}
+                  className="w-full h-9 px-3 bg-gray-900 border border-gray-600 text-white rounded-lg text-sm"
+                >
+                  <option value="all">All Plans</option>
+                  <option value="startup">Startup</option>
+                  <option value="growth">Growth</option>
+                  <option value="elite">Elite</option>
+                </select>
+              </div>
+              
+              <div className="flex-1 min-w-[160px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Subscription Type</label>
+                <select
+                  value={subscriptionTypeFilter}
+                  onChange={(e) => setSubscriptionTypeFilter(e.target.value)}
+                  className="w-full h-9 px-3 bg-gray-900 border border-gray-600 text-white rounded-lg text-sm"
+                >
+                  <option value="all">All Types</option>
+                  <option value="new">🆕 New</option>
+                  <option value="renewal">🔄 Renewal</option>
+                  <option value="upgrade">⬆️ Upgrade</option>
+                  <option value="downgrade">⬇️ Downgrade</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Amount Range */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Min Amount (₹)</label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={amountMin}
+                  onChange={(e) => setAmountMin(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-gray-400 mb-1.5">Max Amount (₹)</label>
+                <Input
+                  type="number"
+                  placeholder="10000"
+                  value={amountMax}
+                  onChange={(e) => setAmountMax(e.target.value)}
+                  className="bg-gray-900 border-gray-600 text-white h-9"
+                />
+              </div>
+              
+              {/* Quick Amount Presets */}
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => { setAmountMin(''); setAmountMax('999'); }} 
+                  className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">≤₹999</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setAmountMin('1000'); setAmountMax('2999'); }} 
+                  className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">₹1K-3K</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setAmountMin('3000'); setAmountMax(''); }} 
+                  className="text-blue-400 hover:text-blue-300 h-9 px-2 text-xs">≥₹3K</Button>
+              </div>
+            </div>
+
+            {/* Row 3: Admin Filter (Show based on status) */}
+            {(activeTab === 'approved' || activeTab === 'rejected') && (
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs text-gray-400 mb-1.5">
+                    {activeTab === 'approved' ? 'Approved By (Admin)' : 'Rejected By (Admin)'}
+                  </label>
+                  <Input
+                    placeholder="Search by admin name..."
+                    value={processedByFilter}
+                    onChange={(e) => setProcessedByFilter(e.target.value)}
+                    className="bg-gray-900 border-gray-600 text-white h-9"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Clear All Filters */}
+            {(processedByFilter || planFilter !== 'all' || amountMin || amountMax || subscriptionTypeFilter !== 'all' || sortBy !== 'created_at') && (
+              <div className="pt-2 border-t border-gray-700">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setProcessedByFilter('');
+                    setPlanFilter('all');
+                    setSubscriptionTypeFilter('all');
+                    setAmountMin('');
+                    setAmountMax('');
+                    setSortBy('created_at');
+                    setSortOrder('newest');
+                  }}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Active Filters Summary */}
+        {(planFilter !== 'all' || subscriptionTypeFilter !== 'all' || processedByFilter || amountMin || amountMax) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-gray-500">Active Filters:</span>
+            {planFilter !== 'all' && (
+              <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full flex items-center gap-1">
+                Plan: {planFilter}
+                <button onClick={() => setPlanFilter('all')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {subscriptionTypeFilter !== 'all' && (
+              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full flex items-center gap-1">
+                Type: {subscriptionTypeFilter}
+                <button onClick={() => setSubscriptionTypeFilter('all')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {processedByFilter && (
+              <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
+                By: {processedByFilter}
+                <button onClick={() => setProcessedByFilter('')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {(amountMin || amountMax) && (
+              <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full flex items-center gap-1">
+                ₹{amountMin || '0'} - ₹{amountMax || '∞'}
+                <button onClick={() => { setAmountMin(''); setAmountMax(''); }}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            <span className="text-gray-400 ml-2">
+              Showing {filteredPayments.length} of {payments.length} payments
+            </span>
+          </div>
         )}
       </div>
 
