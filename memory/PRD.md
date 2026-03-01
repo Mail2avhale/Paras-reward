@@ -125,16 +125,17 @@ User → Select Plan → Select Duration → Payment Options:
 - [ ] Data restoration for affected users (PRC balance, plans)
 - [ ] **Get Emergent/Production Server IP for Eko whitelisting**
 
-### P1 - Post-Deployment
+### P1 - Post-Deployment & Performance
 - [ ] Eko IP whitelisting with production IP
 - [ ] Domain SSL setup
 - [ ] MongoDB Atlas connection verification
 - [ ] Generate AAB file for Play Store submission
-
-### P2 - Performance
 - [ ] Admin pages timeout issue - refactor Python loops to MongoDB aggregations
-- [ ] Server-side search implementation
+- [ ] Server-side search implementation (Currently frontend filtering)
+
+### P2 - Known Issues
 - [ ] Team/Level members display fix
+- [ ] Search functionality reliability improvement
 
 ### P3 - Future Enhancements
 - [ ] Email/Mobile OTP verification on signup
