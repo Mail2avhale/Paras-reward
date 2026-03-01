@@ -163,6 +163,48 @@ const AdminSettings = ({ user }) => {
     }
   };
 
+  // Toggle Razorpay Gateway
+  const handleToggleRazorpay = async () => {
+    const adminPin = prompt('Enter Admin PIN to confirm:');
+    if (!adminPin) return;
+    
+    setTogglingRazorpay(true);
+    try {
+      await axios.post(`${API}/admin/razorpay/toggle`, {
+        enabled: !razorpayEnabled,
+        admin_pin: adminPin
+      });
+      setRazorpayEnabled(!razorpayEnabled);
+      toast.success(`Razorpay ${!razorpayEnabled ? 'enabled' : 'disabled'} successfully!`);
+    } catch (error) {
+      console.error('Error toggling Razorpay:', error);
+      toast.error(error.response?.data?.detail || 'Failed to toggle Razorpay');
+    } finally {
+      setTogglingRazorpay(false);
+    }
+  };
+
+  // Toggle Manual Payment Gateway
+  const handleToggleManualPayment = async () => {
+    const adminPin = prompt('Enter Admin PIN to confirm:');
+    if (!adminPin) return;
+    
+    setTogglingManual(true);
+    try {
+      await axios.post(`${API}/admin/toggle-manual-subscription`, {
+        enabled: !manualPaymentEnabled,
+        admin_pin: adminPin
+      });
+      setManualPaymentEnabled(!manualPaymentEnabled);
+      toast.success(`Manual UPI/Bank ${!manualPaymentEnabled ? 'enabled' : 'disabled'} successfully!`);
+    } catch (error) {
+      console.error('Error toggling Manual Payment:', error);
+      toast.error(error.response?.data?.detail || 'Failed to toggle Manual Payment');
+    } finally {
+      setTogglingManual(false);
+    }
+  };
+
   const handleChange = (field, value) => {
     setSocialMedia(prev => ({ ...prev, [field]: value }));
   };
