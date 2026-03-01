@@ -177,11 +177,12 @@ test.describe('Admin Subscription Management - Sorting & Filtering', () => {
     const typeSelect = page.locator('select').filter({ hasText: /All Types/i }).first();
     await expect(typeSelect).toBeVisible();
     
-    // Check options exist
-    await expect(page.locator('option', { hasText: 'All Types' })).toBeAttached();
-    await expect(page.locator('option', { hasText: /New/i })).toBeAttached();
-    await expect(page.locator('option', { hasText: /Renewal/i })).toBeAttached();
-    await expect(page.locator('option', { hasText: /Upgrade/i })).toBeAttached();
+    // Check options exist - use nth for multiple matches
+    await expect(page.locator('option', { hasText: 'All Types' }).first()).toBeAttached();
+    // New option has emoji, use more specific text
+    await expect(page.locator('option[value="new"]')).toBeAttached();
+    await expect(page.locator('option[value="renewal"]')).toBeAttached();
+    await expect(page.locator('option[value="upgrade"]')).toBeAttached();
   });
 
   test('Amount range filter works', async ({ page }) => {
