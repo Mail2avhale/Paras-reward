@@ -114,11 +114,11 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     secret_key = generate_secret_key(secret_key_timestamp)
     
     # DEBUG: Log authentication values
-    logging.info(f"=== EKO AUTH DEBUG ===")
+    logging.info("=== EKO AUTH DEBUG ===")
     logging.info(f"Timestamp (ms): {secret_key_timestamp}")
     logging.info(f"Auth Key (first 8 chars): {EKO_AUTHENTICATOR_KEY[:8]}...")
     logging.info(f"Generated Secret-Key (first 20 chars): {secret_key[:20] if secret_key else 'None'}...")
-    logging.info(f"=== END AUTH DEBUG ===")
+    logging.info("=== END AUTH DEBUG ===")
     
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
