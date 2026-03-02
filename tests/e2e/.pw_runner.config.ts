@@ -2,13 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260301_115006/test-results',
-  timeout: 48000,
+  outputDir: '/root/.emergent/automation_output/20260302_085552/test-results',
+  timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260301_115006/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260302_085552/results.json' }],
   ],
   use: {
     baseURL: 'https://paras-reward-fix-1.preview.emergentagent.com',
