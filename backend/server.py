@@ -19233,12 +19233,12 @@ async def submit_vip_payment(request: Request):
     # Get plan type and validate amount
     plan_type = data.get("plan_type", "monthly")
     
-    # Duration mapping based on plan type
+    # Duration mapping based on plan type (1 month = 28 days)
     plan_details = {
-        "monthly": {"days": 30, "price": 299},
-        "quarterly": {"days": 90, "price": 897},
-        "half_yearly": {"days": 180, "price": 1794},
-        "yearly": {"days": 365, "price": 3588}
+        "monthly": {"days": 28, "price": 299},
+        "quarterly": {"days": 84, "price": 897},
+        "half_yearly": {"days": 168, "price": 1794},
+        "yearly": {"days": 336, "price": 3588}
     }
     
     if plan_type not in plan_details:
