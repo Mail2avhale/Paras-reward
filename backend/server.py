@@ -41232,6 +41232,10 @@ api_router.include_router(razorpay_router)
 set_eko_db(db)
 api_router.include_router(eko_router)
 
+# Unified Redeem v2 Router
+set_redeem_v2_db(db)
+api_router.include_router(redeem_v2_router)
+
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
