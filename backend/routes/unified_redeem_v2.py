@@ -1017,6 +1017,9 @@ async def admin_complete_request(data: AdminCompleteRequest):
             "eko_status": "FAILED",
             "eko_error_code": eko_result.get("error_code"),
             "eko_message": eko_result.get("message"),
+            "error_message": eko_result.get("message"),  # User-friendly error message
+            "failure_reason": eko_result.get("message"),  # Alias for frontend
+            "failed_at": now.isoformat(),
             "admin_notes": data.completion_notes,
             "prc_refunded": True,
             "refund_amount": refund_amount,

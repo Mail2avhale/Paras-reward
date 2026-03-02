@@ -860,6 +860,19 @@ const Orders = ({ user, onLogout }) => {
                         )}
                       </div>
                       
+                      {/* Failure Reason for failed requests */}
+                      {request.status === 'failed' && (request.error_message || request.eko_message || request.failure_reason) && (
+                        <div className="mt-2 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                          <p className="text-red-400 text-xs font-semibold mb-1">❌ Failure Reason:</p>
+                          <p className="text-red-300 text-sm">{request.error_message || request.eko_message || request.failure_reason}</p>
+                          {request.prc_refunded && (
+                            <p className="text-green-400 text-xs mt-2">
+                              ✓ {request.refund_amount || request.total_prc_deducted || request.amount_prc} PRC has been refunded to your account
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
                       {/* Admin Notes if rejected */}
                       {request.status === 'rejected' && (request.admin_notes || request.reject_reason || request.rejection_reason) && (
                         <div className="mt-2 p-3 bg-red-500/10 rounded-lg border border-red-500/30">

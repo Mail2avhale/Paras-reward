@@ -643,7 +643,21 @@ const AdminRedeemDashboard = ({ user }) => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {getStatusBadge(req.status)}
+                          <div className="flex flex-col gap-1">
+                            {getStatusBadge(req.status)}
+                            {/* Show failure reason for failed requests */}
+                            {req.status === 'failed' && (req.error_message || req.eko_message || req.failure_reason) && (
+                              <span className="text-red-400 text-[10px] max-w-[150px] truncate" title={req.error_message || req.eko_message || req.failure_reason}>
+                                ⚠️ {req.error_message || req.eko_message || req.failure_reason}
+                              </span>
+                            )}
+                            {/* Show refund info */}
+                            {req.status === 'failed' && req.prc_refunded && (
+                              <span className="text-green-400 text-[10px]">
+                                ✓ {req.refund_amount || req.total_prc_deducted} PRC Refunded
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-gray-400 text-sm">
