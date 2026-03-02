@@ -162,6 +162,12 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
+            print(f"=== EKO API DEBUG ===")
+            print(f"Status: {response.status_code}")
+            print(f"Headers: {dict(response.headers)}")
+            print(f"Body: {response.text[:1000]}")
+            print(f"=== END DEBUG ===")
+            
             logging.info(f"Eko API Response Status: {response.status_code}")
             logging.info(f"Eko API Response Headers: {dict(response.headers)}")
             logging.info(f"Eko API Response Raw: {response.text[:500]}")
