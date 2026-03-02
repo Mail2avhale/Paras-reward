@@ -27403,39 +27403,123 @@ async def process_bill_payment_request(request: Request):
         import asyncio
         
         # Eko Operator ID mapping (operator_name -> eko_operator_id)
+        # Updated with actual Eko API operator IDs
         EKO_OPERATOR_MAP = {
-            # Mobile Prepaid
+            # ============ MOBILE PREPAID (Category 5) ============
             "airtel": "1", "airtel prepaid": "1",
             "bsnl": "5", "bsnl prepaid": "5",
             "jio": "90", "jio prepaid": "90", "reliance jio": "90",
             "vi": "400", "vi prepaid": "400", "vodafone": "400", "idea": "400", "vodafone idea": "400",
             "mtnl delhi": "91", "mtnl delhi prepaid": "91",
             "mtnl mumbai": "508", "mtnl mumbai prepaid": "508",
-            # Mobile Postpaid
+            
+            # ============ MOBILE POSTPAID ============
             "airtel postpaid": "2",
             "bsnl postpaid": "6", "bsnl landline": "6",
             "jio postpaid": "93",
             "vi postpaid": "401", "vodafone postpaid": "401",
-            # DTH
-            "tata sky": "107", "tatasky": "107",
-            "airtel dth": "108", "airtel digital tv": "108",
-            "dish tv": "109", "dishtv": "109",
+            
+            # ============ DTH (Category 4) ============
+            "dish tv": "16", "dishtv": "16",
+            "big tv": "17", "big tv dth": "17",
+            "tata sky": "20", "tatasky": "20", "tata play": "20",
+            "airtel dth": "21", "airtel digital tv": "21",
+            "d2h": "95", "videocon d2h": "95",
             "sun direct": "111", "sundirect": "111",
-            "d2h": "110", "videocon d2h": "110",
-            # Electricity - will use operator_id from details if available
-            "electricity": "0",
-            # Gas
-            "indane": "301", "hp gas": "302", "bharat gas": "303",
+            
+            # ============ ELECTRICITY (Category 0) ============
+            # Delhi
+            "bses rajdhani": "22", "bses yamuna": "23",
+            "tata power delhi": "24", "tata power - delhi": "24",
+            "ndmc electricity": "178", "ndmc": "178",
+            
+            # Maharashtra
+            "msedcl": "62", "mahadiscom": "62", "maharashtra state electricity": "62",
+            "tata power mumbai": "139", "tata power - mumbai": "139",
+            "adani electricity mumbai": "200",
+            "torrent power": "63",
+            
+            # Karnataka
+            "bescom": "56", "bangalore electricity": "56",
+            "gescom": "148", "gulbarga electricity": "148",
+            "hescom": "156", "hubli electricity": "156",
+            "cescom": "155", "chamundeshwari electricity": "155",
+            "mescom": "161", "mangalore electricity": "161",
+            
+            # Tamil Nadu
+            "tneb": "149", "tamil nadu electricity": "149", "tangedco": "149",
+            
+            # Gujarat
+            "torrent power ahmedabad": "63",
+            "pgvcl": "77", "paschim gujarat": "77",
+            "ugvcl": "78", "uttar gujarat": "78",
+            "mgvcl": "79", "madhya gujarat": "79",
+            "dgvcl": "80", "dakshin gujarat": "80",
+            
+            # Uttar Pradesh
+            "uppcl": "131", "uppcl urban": "131",
+            "uppcl rural": "190",
+            "kesco": "195", "kanpur electricity": "195",
+            "pvvnl": "131", "meerut electricity": "131",
+            
+            # Bihar
+            "nbpdcl": "81", "north bihar power": "81",
+            "sbpdcl": "82", "south bihar power": "82",
+            
+            # Rajasthan
+            "jvvnl": "121", "jaipur vidyut": "121",
+            "avvnl": "122", "ajmer vidyut": "122",
+            "bkesl": "141", "bikaner electricity": "141",
+            "kedl": "121", "kota electricity": "121",
+            
+            # Andhra Pradesh & Telangana
+            "apspdcl": "55", "southern power": "55",
+            "apepdcl": "164", "eastern power": "164",
+            "tsspdcl": "165", "telangana southern power": "165",
+            
+            # Other States
+            "cspdcl": "61", "chattisgarh electricity": "61",
+            "apdcl": "96", "assam power": "96",
+            "hpseb": "166", "himachal electricity": "166",
+            "upcl": "133", "uttarakhand power": "133",
+            "goa electricity": "198",
+            "dnh power": "76", "daman electricity": "76",
+            "dd electricity": "142", "daman diu": "142",
+            
+            # ============ GAS (Category 2) ============
+            "mahanagar gas": "28", "mgl": "28",
+            "gujarat gas": "50",
+            "adani gas": "51",
+            "indraprastha gas": "65", "igl": "65",
+            "sabarmati gas": "132",
+            "mngl": "176", "maharashtra natural gas": "176",
+            "gail gas": "196",
+            "bhagyanagar gas": "341",
+            "green gas": "396",
+            
+            # ============ LPG ============
+            "indane": "301", "indian oil": "301",
+            "hp gas": "302", "hindustan petroleum": "302",
+            "bharat gas": "303", "bpcl": "303",
         }
         
         def get_eko_operator_id(operator_name, details_operator_id=None):
             """Convert operator name to Eko operator ID"""
+            # If numeric ID already provided, use it
             if details_operator_id and str(details_operator_id).isdigit():
                 return str(details_operator_id)
             if not operator_name:
                 return "0"
+            # Try exact match first
             op_lower = operator_name.lower().strip()
-            return EKO_OPERATOR_MAP.get(op_lower, operator_name)
+            if op_lower in EKO_OPERATOR_MAP:
+                return EKO_OPERATOR_MAP[op_lower]
+            # Try partial match
+            for key, value in EKO_OPERATOR_MAP.items():
+                if key in op_lower or op_lower in key:
+                    return value
+            # Return original if no match (might be operator_id already)
+            return operator_name
         
         # Get user details for sender_name
         user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
