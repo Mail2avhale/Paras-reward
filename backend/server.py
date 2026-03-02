@@ -13384,6 +13384,7 @@ PRC is the digital reward currency of Paras Reward Platform.
 | 10000 PRC | ₹1000 |
 
 **📊 SUBSCRIPTION PLANS:**
+**IMPORTANT: 1 Month = 28 Days on this platform**
 
 1. **EXPLORER (Free)**
    - Basic access to app
@@ -13391,19 +13392,25 @@ PRC is the digital reward currency of Paras Reward Platform.
    - Weekly redeem limit: 1
    - No bill payment or vouchers
 
-2. **STARTUP (₹299/month)**
+2. **STARTUP (₹299/28 days)**
    - 1.5x earning rate
    - Weekly redeem limit: 2
    - Access to gift vouchers
    - Basic bill payments
 
-3. **ELITE (₹799/month)**
+3. **ELITE (₹799/28 days)**
    - 3x earning rate
    - Weekly redeem limit: 5
    - All gift vouchers (Amazon, Flipkart, etc.)
    - All bill payments
    - Shopping access
    - Priority support
+
+**📅 SUBSCRIPTION DURATION:**
+- Monthly = 28 days
+- Quarterly = 84 days (3 × 28)
+- Half-Yearly = 168 days (6 × 28)
+- Yearly = 336 days (12 × 28)
 
 **⛏️ HOW TO EARN PRC:**
 
