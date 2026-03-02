@@ -60,6 +60,10 @@ from routes.admin_misc import router as admin_misc_router, set_db as set_admin_m
 from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_redeem_db, set_cache as set_bank_redeem_cache, set_helpers as set_bank_redeem_helpers
 from routes.recurring_deposit import router as rd_router, set_db as set_rd_db, set_cache as set_rd_cache
 from routes.user_logs import router as user_logs_router, set_db as set_user_logs_db, set_cache as set_user_logs_cache
+from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
+from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
+from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
+from routes.eko_payments import router as eko_router, set_db as set_eko_db
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -1173,7 +1177,8 @@ async def clear_admin_cache():
             "chart:subscriptions:7d",
             "admin_vip_payments:pending:p1:l50",
             "admin_vip_payments:all:p1:l50",
-            "pending_payments_count"
+            "pending_payments_count",
+            "public_settings"  # Added public settings cache
         ]
         
         cleared = []
@@ -1188,6 +1193,23 @@ async def clear_admin_cache():
             "success": True,
             "message": "Admin cache cleared successfully",
             "cleared_keys": cleared,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/clear-public-settings-cache")
+async def clear_public_settings_cache():
+    """
+    Clear public settings cache immediately.
+    Use after updating UPI/QR code to make it visible to users instantly.
+    """
+    try:
+        await cache.delete("public_settings")
+        return {
+            "success": True,
+            "message": "Public settings cache cleared. Users will now see updated UPI/QR code.",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
@@ -1255,6 +1277,165 @@ async def root():
 # Create scheduler for automated tasks
 scheduler = AsyncIOScheduler()
 
+# ========== AUTO SYNC RAZORPAY PAYMENTS FUNCTION ==========
+async def auto_sync_razorpay_payments():
+    """
+    Automatically sync pending Razorpay payments every 10 minutes.
+    Checks Razorpay API and activates subscriptions for captured payments.
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            print("[AUTO-SYNC] Razorpay not configured, skipping...")
+            return
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Plan durations (28 days per month)
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Get all pending orders
+        pending_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["created", "pending"]}
+        }).to_list(100)
+        
+        if not pending_orders:
+            print(f"[AUTO-SYNC] No pending orders to sync")
+            return
+        
+        synced_count = 0
+        
+        for order in pending_orders:
+            order_id = order.get("order_id")
+            user_id = order.get("user_id")
+            
+            try:
+                # Fetch order from Razorpay API
+                razorpay_order = razorpay_client.order.fetch(order_id)
+                razorpay_status = razorpay_order.get("status")
+                
+                if razorpay_status == "paid":
+                    # Order is paid - fetch payment details
+                    payments = razorpay_client.order.payments(order_id)
+                    
+                    # Find captured payment
+                    captured_payment = None
+                    for payment in payments.get("items", []):
+                        if payment.get("status") == "captured":
+                            captured_payment = payment
+                            break
+                    
+                    if captured_payment:
+                        payment_id = captured_payment.get("id")
+                        amount = captured_payment.get("amount", 0) / 100
+                        
+                        # Update order status
+                        await db.razorpay_orders.update_one(
+                            {"order_id": order_id},
+                            {
+                                "$set": {
+                                    "status": "paid",
+                                    "payment_id": payment_id,
+                                    "payment_captured": True,
+                                    "verified_amount": amount,
+                                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                                    "synced_via": "auto_sync"
+                                }
+                            }
+                        )
+                        
+                        # ACTIVATE SUBSCRIPTION
+                        plan_type = order.get("plan_type", "monthly")
+                        plan_name = order.get("plan_name", "startup")
+                        duration_days = PLAN_DURATIONS.get(plan_type, 28)  # Default 28 days
+                        
+                        now = datetime.now(timezone.utc)
+                        
+                        # Check for existing subscription and add remaining days
+                        user = await db.users.find_one({"uid": user_id})
+                        remaining_days = 0
+                        old_plan = None
+                        
+                        if user:
+                            old_plan = user.get("subscription_plan")
+                            # Check BOTH field names
+                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                            if existing_expiry:
+                                if isinstance(existing_expiry, str):
+                                    try:
+                                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                    except:
+                                        existing_expiry = None
+                                
+                                if existing_expiry:
+                                    if existing_expiry.tzinfo is None:
+                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                    if existing_expiry > now:
+                                        remaining_days = (existing_expiry - now).days
+                        
+                        total_days = duration_days + remaining_days
+                        expiry_date = now + timedelta(days=total_days)
+                        
+                        # Update user subscription (set BOTH expiry fields)
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {
+                                "$set": {
+                                    "subscription_plan": plan_name,
+                                    "subscription_start": now,
+                                    "subscription_expires": expiry_date,
+                                    "subscription_expiry": expiry_date.isoformat(),
+                                    "membership_type": "vip",
+                                    "subscription_status": "active",
+                                    "last_payment_id": payment_id,
+                                    "last_payment_date": now,
+                                    "previous_plan": old_plan,
+                                    "previous_remaining_days_added": remaining_days,
+                                    "activated_via": "auto_sync"
+                                }
+                            }
+                        )
+                        
+                        # Log transaction
+                        await db.transactions.insert_one({
+                            "user_id": user_id,
+                            "type": "subscription_payment",
+                            "amount": amount,
+                            "payment_id": payment_id,
+                            "order_id": order_id,
+                            "plan_name": plan_name,
+                            "plan_type": plan_type,
+                            "duration_days": duration_days,
+                            "remaining_days_added": remaining_days,
+                            "total_days": total_days,
+                            "activated_via": "auto_sync",
+                            "timestamp": now
+                        })
+                        
+                        synced_count += 1
+                        print(f"[AUTO-SYNC] ✅ Activated subscription for user {user_id}, plan: {plan_name}")
+                        
+            except Exception as e:
+                print(f"[AUTO-SYNC] Error syncing order {order_id}: {e}")
+        
+        if synced_count > 0:
+            print(f"[AUTO-SYNC] ✅ Completed - Activated {synced_count} subscriptions")
+        else:
+            print(f"[AUTO-SYNC] No new payments to activate")
+            
+    except Exception as e:
+        print(f"[AUTO-SYNC] ❌ Error: {e}")
+
+
 # ========== AUTO LOCKOUT CLEAR FUNCTION ==========
 async def auto_clear_all_lockouts():
     """
@@ -1289,6 +1470,99 @@ async def auto_clear_all_lockouts():
         print(f"[AUTO LOCKOUT CLEAR] {datetime.now(timezone.utc).isoformat()} - Cleared {db_result.deleted_count} login attempts, {user_result.modified_count} users unlocked")
     except Exception as e:
         print(f"[AUTO LOCKOUT CLEAR ERROR] {e}")
+
+
+# ========== DAILY WALLET RECONCILIATION ==========
+async def daily_wallet_reconciliation():
+    """
+    Daily wallet reconciliation and profit calculation.
+    Runs at 3 AM daily.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        
+        # Calculate today's transactions
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        
+        # Get subscription payments
+        subscription_revenue = await db.subscription_orders.aggregate([
+            {"$match": {"status": "paid", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        
+        # Get bill payments
+        bill_payments = await db.bill_payment_requests.aggregate([
+            {"$match": {"status": "completed", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_inr"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Get bank redeems
+        bank_redeems = await db.bank_withdrawal_requests.aggregate([
+            {"$match": {"status": "completed", "created_at": {"$gte": today_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount_inr"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Save daily summary
+        summary = {
+            "date": today,
+            "subscription_revenue": subscription_revenue[0]["total"] if subscription_revenue else 0,
+            "bill_payments_total": bill_payments[0]["total"] if bill_payments else 0,
+            "bill_payments_count": bill_payments[0]["count"] if bill_payments else 0,
+            "bank_redeems_total": bank_redeems[0]["total"] if bank_redeems else 0,
+            "bank_redeems_count": bank_redeems[0]["count"] if bank_redeems else 0,
+            "generated_at": now.isoformat()
+        }
+        
+        await db.daily_reconciliation.update_one(
+            {"date": today},
+            {"$set": summary},
+            upsert=True
+        )
+        
+        print(f"[WALLET RECONCILIATION] {today} - Revenue: ₹{summary['subscription_revenue']}, Bills: {summary['bill_payments_count']}, Redeems: {summary['bank_redeems_count']}")
+    except Exception as e:
+        print(f"[WALLET RECONCILIATION ERROR] {e}")
+
+
+# ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
+async def eko_update_pending_transactions():
+    """
+    Automatically update pending Eko DMT transaction statuses.
+    Runs every 5 minutes to check status of initiated transfers.
+    
+    Eko Transaction Status:
+    - 0: Success (Final)
+    - 1: Failed (Final)
+    - 2: Initiated/Response Awaited (Needs check)
+    - 3: Refund Pending
+    - 4: Refunded (Final)
+    - 5: Hold (Needs inquiry)
+    """
+    try:
+        from services.eko_service import EkoService, EkoStatusUpdater
+        
+        eko_service = EkoService(db)
+        status_updater = EkoStatusUpdater(db, eko_service)
+        
+        # Update bank withdrawal requests
+        bank_result = await status_updater.update_pending_transactions("bank_withdrawal_requests")
+        
+        # Update bill payment requests (for DMT type)
+        bill_result = await status_updater.update_pending_transactions("bill_payment_requests")
+        
+        total_updated = bank_result.get("updated", 0) + bill_result.get("updated", 0)
+        total_checked = bank_result.get("checked", 0) + bill_result.get("checked", 0)
+        
+        if total_updated > 0:
+            print(f"[EKO-SYNC] ✅ Updated {total_updated}/{total_checked} transactions")
+        elif total_checked > 0:
+            print(f"[EKO-SYNC] Checked {total_checked} transactions - no updates needed")
+            
+    except ImportError:
+        print("[EKO-SYNC] ⚠️ Eko service not available")
+    except Exception as e:
+        print(f"[EKO-SYNC] ❌ Error: {e}")
 
 # ========== MODELS ==========
 class User(BaseModel):
@@ -1605,7 +1879,7 @@ class BillPaymentRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
-    request_type: str  # mobile_recharge, dish_recharge, electricity_bill, credit_card_payment, loan_emi
+    request_type: str  # mobile_recharge, dish_recharge, electricity_bill, gas_bill, lpg_booking, credit_card_payment, loan_emi
     amount_inr: float  # Amount in INR
     prc_required: float  # PRC required (amount * 10)
     service_charge_amount: float  # Service charge in PRC
@@ -1706,7 +1980,7 @@ SUBSCRIPTION_PLANS = {
 }
 
 SUBSCRIPTION_DURATIONS = {
-    "monthly": 30
+    "monthly": 28
 }
 
 async def get_subscription_pricing():
@@ -1772,6 +2046,8 @@ WEEKLY_SERVICE_LIMITS = {
         "mobile_recharge": 1,
         "dish_recharge": 1,  # DTH
         "electricity_bill": 1,
+        "gas_bill": 1,
+        "lpg_booking": 1,
         "credit_card_payment": 1,
         "loan_emi": 1,
         "gift_voucher": 1,
@@ -1781,6 +2057,8 @@ WEEKLY_SERVICE_LIMITS = {
         "mobile_recharge": 2,
         "dish_recharge": 2,
         "electricity_bill": 1,
+        "gas_bill": 1,
+        "lpg_booking": 2,
         "credit_card_payment": 1,
         "loan_emi": 1,
         "gift_voucher": 2,
@@ -1790,6 +2068,8 @@ WEEKLY_SERVICE_LIMITS = {
         "mobile_recharge": 3,
         "dish_recharge": 3,
         "electricity_bill": 2,
+        "gas_bill": 2,
+        "lpg_booking": 3,
         "credit_card_payment": 2,
         "loan_emi": 2,
         "gift_voucher": 3,
@@ -1799,6 +2079,8 @@ WEEKLY_SERVICE_LIMITS = {
         "mobile_recharge": 5,
         "dish_recharge": 5,
         "electricity_bill": 3,
+        "gas_bill": 3,
+        "lpg_booking": 5,
         "credit_card_payment": 3,
         "loan_emi": 3,
         "gift_voucher": 5,
@@ -3196,525 +3478,6 @@ async def check_withdrawal_eligibility(user_id: str, amount: float, wallet_type:
     
     return {"eligible": True, "reason": "Eligible for withdrawal", "lien_amount": lien_amount}
 
-# ==================== PRC BURN SYSTEM ====================
-
-async def burn_expired_prc_for_explorer_users():
-    """
-    Burn PRC for Explorer (demo/free) users after 2 days of inactivity.
-    Rule: If Last_Active_Mining_Date + 2 days < Current_Date THEN Burn 100% PRC
-    
-    SAFETY: Only burns for users who:
-    1. subscription_plan is explorer/free/null/empty
-    2. Have NO active subscription (subscription_expiry is null OR in the past)
-    3. Have NEVER had a paid subscription (no subscription_start, no vip_activated_at)
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        burn_threshold = now - timedelta(days=2)
-        
-        # ULTRA-SAFE QUERY: Only target TRUE free users
-        # Explicitly exclude anyone with ANY paid plan indicator
-        explorer_users = db.users.find({
-            "$and": [
-                # Plan must be explorer, free, null, or empty string
-                {"$or": [
-                    {"subscription_plan": "explorer"},
-                    {"subscription_plan": "free"},
-                    {"subscription_plan": None},
-                    {"subscription_plan": ""},
-                    {"subscription_plan": {"$exists": False}}
-                ]},
-                # Must NOT have startup/growth/elite as plan
-                {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
-                # Must NOT have active subscription expiry
-                {"$or": [
-                    {"subscription_expiry": {"$exists": False}},
-                    {"subscription_expiry": None},
-                    {"subscription_expiry": ""}
-                ]},
-                # Must NOT have subscription start date (never paid)
-                {"$or": [
-                    {"subscription_start": {"$exists": False}},
-                    {"subscription_start": None}
-                ]},
-                # Must NOT have vip_activated_at (never was VIP)
-                {"$or": [
-                    {"vip_activated_at": {"$exists": False}},
-                    {"vip_activated_at": None}
-                ]},
-                # Must NOT have vip_expiry (never was VIP)
-                {"$or": [
-                    {"vip_expiry": {"$exists": False}},
-                    {"vip_expiry": None}
-                ]},
-                # Must have some PRC to burn
-                {"prc_balance": {"$gt": 0}}
-            ]
-        })
-        
-        burn_count = 0
-        total_burned = 0.0
-        total_checked = 0
-        skipped_users_list = []
-        burned_users_list = []
-        
-        async for user in explorer_users:
-            total_checked += 1
-            uid = user.get("uid")
-            prc_balance = user.get("prc_balance", 0)
-            email = user.get("email", "")
-            
-            # ============ CRITICAL FINAL SAFETY CHECK ============
-            # This is the ULTIMATE protection - MUST be called before any burn
-            if await is_protected_from_burn(db, uid):
-                logging.warning(f"[EXPLORER BURN BLOCKED] {uid} ({email}) is PROTECTED from burn - skipping")
-                skipped_users_list.append({"user_id": uid, "user_email": email, "reason": "is_protected_from_burn=True"})
-                continue
-            # =====================================================
-            
-            # TRIPLE CHECK: Skip if ANY paid indicator exists
-            subscription_plan = (user.get("subscription_plan") or "explorer").lower()
-            if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
-                logging.info(f"[PRC BURN SKIP] {uid} has paid plan: {subscription_plan}")
-                skipped_users_list.append({"user_id": uid, "user_email": email, "reason": f"paid_plan:{subscription_plan}"})
-                continue
-            
-            # Skip if has subscription expiry (even in past - means was paid)
-            sub_expiry = user.get("subscription_expiry")
-            if sub_expiry:
-                logging.info(f"[PRC BURN SKIP] {uid} has subscription_expiry (was paid user)")
-                continue
-            
-            # Skip if ever had a subscription start date
-            if user.get("subscription_start"):
-                logging.info(f"[PRC BURN SKIP] {uid} has subscription_start (was paid user)")
-                continue
-            
-            # Skip if ever had VIP activation (was paid user)
-            if user.get("vip_activated_at"):
-                logging.info(f"[PRC BURN SKIP] {uid} has vip_activated_at (was paid user)")
-                continue
-            
-            # Skip if has vip_expiry (was VIP)
-            if user.get("vip_expiry"):
-                logging.info(f"[PRC BURN SKIP] {uid} has vip_expiry (was paid user)")
-                continue
-            
-            # Check last mining activity
-            last_mining = user.get("mining_session_end") or user.get("mining_start_time")
-            if not last_mining:
-                last_txn = await db.transactions.find_one(
-                    {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
-                    sort=[("timestamp", -1)]
-                )
-                if last_txn:
-                    last_mining = last_txn.get("timestamp")
-            
-            if not last_mining:
-                continue
-            
-            # Parse last mining date
-            try:
-                if isinstance(last_mining, str):
-                    last_mining_dt = datetime.fromisoformat(last_mining.replace('Z', '+00:00'))
-                elif isinstance(last_mining, datetime):
-                    last_mining_dt = last_mining
-                else:
-                    continue
-                
-                if last_mining_dt.tzinfo is None:
-                    last_mining_dt = last_mining_dt.replace(tzinfo=timezone.utc)
-            except:
-                continue
-            
-            # Check if inactive for 2+ days
-            if last_mining_dt + timedelta(days=2) < now:
-                burned_amount = prc_balance
-                balance_before = prc_balance
-                
-                await db.users.update_one(
-                    {"uid": uid},
-                    {"$set": {"prc_balance": 0}}
-                )
-                
-                await db.transactions.insert_one({
-                    "transaction_id": str(uuid.uuid4()),
-                    "user_id": uid,
-                    "type": "prc_burn",
-                    "amount": -burned_amount,
-                    "description": "Explorer user inactivity burn (2 days inactive)",
-                    "timestamp": now.isoformat(),
-                    "status": "completed",
-                    "burn_reason": "EXPLORER_INACTIVITY_BURN"
-                })
-                
-                # ============ DETAILED PRC BALANCE LOG ============
-                from routes.user_logs import log_prc_balance_change
-                await log_prc_balance_change(
-                    user_id=uid,
-                    user_email=email,
-                    action="burn",
-                    amount=burned_amount,
-                    balance_before=balance_before,
-                    balance_after=0,
-                    reason="Explorer user 2-day inactivity burn",
-                    source_function="burn_expired_prc_for_explorer_users",
-                    metadata={
-                        "burn_reason": "EXPLORER_INACTIVITY_BURN",
-                        "last_mining": str(last_mining_dt),
-                        "subscription_plan": subscription_plan
-                    }
-                )
-                # ================================================
-                
-                await log_activity(
-                    user_id=uid,
-                    action_type="prc_burn",
-                    description=f"Explorer user PRC burned due to 2-day inactivity: {burned_amount} PRC",
-                    metadata={"burn_reason": "EXPLORER_INACTIVITY_BURN", "burned_amount": burned_amount}
-                )
-                
-                burn_count += 1
-                total_burned += burned_amount
-                burned_users_list.append({
-                    "user_id": uid,
-                    "user_email": email,
-                    "amount_burned": burned_amount,
-                    "reason": "2-day inactivity"
-                })
-                logging.info(f"[PRC BURN] Burned {burned_amount} PRC for explorer user {uid} (inactive since {last_mining_dt})")
-        
-        # ============ LOG BURN OPERATION SUMMARY ============
-        from routes.user_logs import log_burn_operation
-        await log_burn_operation(
-            operation_type="explorer_burn",
-            total_users_checked=total_checked,
-            users_burned=burn_count,
-            users_skipped=len(skipped_users_list),
-            total_prc_burned=total_burned,
-            skipped_users_details=skipped_users_list,
-            burned_users_details=burned_users_list
-        )
-        # ===================================================
-        
-        logging.info(f"[PRC BURN] Explorer burn complete: {burn_count} users, {total_burned} PRC burned")
-        return {"users_affected": burn_count, "total_burned": total_burned}
-        
-    except Exception as e:
-        logging.error(f"[PRC BURN ERROR] Explorer burn failed: {e}")
-        return {"error": str(e), "users_affected": 0, "total_burned": 0.0}
-
-async def burn_expired_prc_for_free_users():
-    """
-    Burn PRC earned by FREE users after 48 hours (2 days) - FIFO method.
-    
-    SAFETY: Only burns for users who:
-    1. subscription_plan is NOT startup/growth/elite/vip/pro
-    2. Have NO active subscription (subscription_expiry null OR in past)
-    3. Have mining_history with unburned entries older than 48 hours
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        burn_threshold = now - timedelta(days=2)
-        
-        # SAFE QUERY: Only target TRUE free users with mining history
-        # Explicitly check for NO paid subscription
-        free_users = db.users.find({
-            "$and": [
-                # Must NOT have paid subscription plan
-                {"$or": [
-                    {"subscription_plan": {"$exists": False}},
-                    {"subscription_plan": None},
-                    {"subscription_plan": ""},
-                    {"subscription_plan": "explorer"},
-                    {"subscription_plan": "free"}
-                ]},
-                {"subscription_plan": {"$nin": ["startup", "growth", "elite", "vip", "pro"]}},
-                # Must NOT have active subscription (expiry in future)
-                {"$or": [
-                    {"subscription_expiry": {"$exists": False}},
-                    {"subscription_expiry": None},
-                    {"subscription_expiry": {"$lt": now.isoformat()}}
-                ]},
-                {"mining_history": {"$exists": True, "$ne": []}}
-            ]
-        })
-        
-        burn_count = 0
-        total_burned = 0.0
-        
-        async for user in free_users:
-            uid = user.get("uid")
-            mining_history = user.get("mining_history", [])
-            prc_balance = user.get("prc_balance", 0)
-            
-            # ============ CRITICAL FINAL SAFETY CHECK ============
-            # This is the ULTIMATE protection - MUST be called before any burn
-            if await is_protected_from_burn(db, uid):
-                logging.warning(f"[FREE BURN BLOCKED] {uid} is PROTECTED from burn - skipping")
-                continue
-            # =====================================================
-            
-            # SAFETY CHECK: Skip if user has paid plan
-            subscription_plan = (user.get("subscription_plan") or "explorer").lower()
-            if subscription_plan in ["startup", "growth", "elite", "vip", "pro"]:
-                logging.info(f"[FREE BURN SKIP] {uid} has paid plan: {subscription_plan}")
-                continue
-            
-            # SAFETY CHECK: Skip if subscription is active
-            sub_expiry = user.get("subscription_expiry")
-            if sub_expiry:
-                try:
-                    expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
-                    if expiry_dt > now:
-                        logging.info(f"[FREE BURN SKIP] {uid} has active subscription until {expiry_dt}")
-                        continue
-                except:
-                    pass
-            
-            if not mining_history or prc_balance <= 0:
-                continue
-            
-            # Find expired PRC (older than 48 hours) using FIFO
-            burned_amount = 0.0
-            updated_history = []
-            
-            for entry in mining_history:
-                timestamp_str = entry.get("timestamp")
-                amount = entry.get("amount", 0)
-                is_burned = entry.get("burned", False)
-                
-                if is_burned:
-                    updated_history.append(entry)
-                    continue
-                
-                try:
-                    if isinstance(timestamp_str, str):
-                        mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                    else:
-                        mining_time = now
-                except:
-                    mining_time = now
-                
-                # Check if expired (older than 48 hours)
-                if mining_time < burn_threshold and not is_burned:
-                    burned_amount += amount
-                    entry["burned"] = True
-                    entry["burned_at"] = now.isoformat()
-                    entry["burn_reason"] = "FREE_USER_48HR_EXPIRY"
-                
-                updated_history.append(entry)
-            
-            if burned_amount > 0:
-                logging.info(f"[FREE BURN] User {uid}: burning {burned_amount:.2f} PRC, old_balance={prc_balance}")
-                
-                await db.users.update_one(
-                    {"uid": uid},
-                    {"$set": {"mining_history": updated_history}}
-                )
-                
-                await log_transaction(
-                    user_id=uid,
-                    wallet_type="prc",
-                    transaction_type="prc_burn",
-                    amount=burned_amount,
-                    description=f"Burned {burned_amount:.2f} PRC (expired after 48 hours - Free user)",
-                    metadata={"burn_reason": "FREE_USER_48HR_EXPIRY", "burn_threshold_hours": 48}
-                )
-                
-                burn_count += 1
-                total_burned += burned_amount
-        
-        logging.info(f"[PRC BURN] Free user burn complete: {burn_count} users, {total_burned:.2f} PRC burned")
-        return {"users_affected": burn_count, "total_burned": total_burned}
-        
-    except Exception as e:
-        logging.error(f"[PRC BURN ERROR] Free user burn failed: {e}")
-        return {"users_affected": 0, "total_burned": 0.0, "error": str(e)}
-
-async def burn_expired_subscription_prc():
-    """
-    Burn PRC for EXPIRED subscription users - ONLY PRC mined AFTER expiry that is older than 5 days.
-    
-    Logic: When subscription expires and user doesn't renew:
-    - User can still mine but at explorer rate
-    - That PRC earned AFTER expiry will be burned after 5 days
-    - PRC earned BEFORE expiry is safe and won't be burned
-    
-    SAFETY: Only burns for users who:
-    1. HAD a paid subscription (subscription_plan = startup/growth/elite)
-    2. Subscription has EXPIRED (subscription_expiry < now)
-    3. Have NOT renewed (checked by expiry date being in past)
-    """
-    try:
-        now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
-        
-        # Find users with EXPIRED subscriptions only
-        # These are users who HAD paid plan but it's now expired
-        expired_subs = db.users.find({
-            "$and": [
-                # Must have/had a paid plan
-                {"subscription_plan": {"$in": ["startup", "growth", "elite"]}},
-                # Subscription must be EXPIRED (expiry in the past)
-                {"subscription_expiry": {"$exists": True, "$ne": None, "$lt": now_iso}},
-                # Must have mining history
-                {"mining_history": {"$exists": True, "$ne": []}}
-            ]
-        })
-        
-        burn_count = 0
-        total_burned = 0.0
-        
-        async for user in expired_subs:
-            uid = user.get("uid")
-            mining_history = user.get("mining_history", [])
-            prc_balance = user.get("prc_balance", 0)
-            sub_expiry_str = user.get("subscription_expiry")
-            
-            if not mining_history or prc_balance <= 0 or not sub_expiry_str:
-                continue
-            
-            # Parse subscription expiry
-            try:
-                sub_expiry = datetime.fromisoformat(sub_expiry_str.replace('Z', '+00:00'))
-                if sub_expiry.tzinfo is None:
-                    sub_expiry = sub_expiry.replace(tzinfo=timezone.utc)
-            except:
-                logging.warning(f"[SUB BURN] Could not parse expiry for {uid}: {sub_expiry_str}")
-                continue
-            
-            # SAFETY CHECK: Skip if subscription is still active (expiry in future)
-            if sub_expiry > now:
-                logging.info(f"[SUB BURN SKIP] {uid} subscription still active until {sub_expiry}")
-                continue
-            
-            # Burn ONLY PRC mined AFTER expiry AND older than 5 days
-            burned_amount = 0.0
-            updated_history = []
-            
-            for entry in mining_history:
-                amount = entry.get("amount", 0)
-                is_burned = entry.get("burned", False)
-                timestamp_str = entry.get("timestamp") or entry.get("mined_at")
-                
-                if is_burned:
-                    updated_history.append(entry)
-                    continue
-                
-                # Parse mining timestamp
-                try:
-                    if isinstance(timestamp_str, str):
-                        mining_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                        if mining_time.tzinfo is None:
-                            mining_time = mining_time.replace(tzinfo=timezone.utc)
-                    else:
-                        updated_history.append(entry)
-                        continue
-                except:
-                    updated_history.append(entry)
-                    continue
-                
-                # Check if this PRC was mined AFTER subscription expiry
-                if mining_time > sub_expiry:
-                    # Check if 5 days have passed since mining
-                    burn_threshold = mining_time + timedelta(days=5)
-                    if now >= burn_threshold:
-                        burned_amount += amount
-                        entry["burned"] = True
-                        entry["burned_at"] = now.isoformat()
-                        entry["burn_reason"] = "EXPIRED_SUB_5DAY_BURN"
-                
-                updated_history.append(entry)
-            
-            if burned_amount > 0:
-                logging.info(f"[SUB BURN] User {uid}: burning {burned_amount:.2f} PRC (mined after expiry), old_balance={prc_balance}")
-                
-                await db.users.update_one(
-                    {"uid": uid},
-                    {"$set": {"mining_history": updated_history}}
-                )
-                
-                await log_transaction(
-                    user_id=uid,
-                    wallet_type="prc",
-                    transaction_type="prc_burn",
-                    amount=burned_amount,
-                    description=f"Burned {burned_amount:.2f} PRC (mined after subscription expiry, 5 days old)",
-                    metadata={
-                        "burn_reason": "EXPIRED_SUB_5DAY_BURN", 
-                        "subscription_expiry": sub_expiry_str,
-                        "subscription_plan": user.get("subscription_plan")
-                    }
-                )
-                
-                burn_count += 1
-                total_burned += burned_amount
-        
-        logging.info(f"[PRC BURN] Expired subscription burn complete: {burn_count} users, {total_burned:.2f} PRC burned")
-        return {"users_affected": burn_count, "total_burned": total_burned}
-        
-    except Exception as e:
-        logging.error(f"[PRC BURN ERROR] Expired subscription burn failed: {e}")
-        return {"users_affected": 0, "total_burned": 0.0, "error": str(e)}
-
-async def get_vip_plan_pricing(plan_type: str = "monthly"):
-    """
-    Get VIP plan pricing with discounts applied
-    Returns: {
-        "plan_type": "monthly",
-        "base_price": 299.0,
-        "discount_percentage": 10,
-        "discount_amount": 29.9,
-        "final_price": 269.1,
-        "duration_days": 30,
-        "label": "Monthly Plan"
-    }
-    """
-    # Default pricing for each plan type (monthly only)
-    default_prices = {
-        "monthly": 299.0
-    }
-    
-    settings = await db.settings.find_one({})
-    if not settings or "vip_plans" not in settings:
-        # Return default plans if not in database (monthly only)
-        default_plans = {
-            "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"}
-        }
-        plan = default_plans.get(plan_type, default_plans["monthly"])
-    else:
-        plan = settings["vip_plans"].get(plan_type, settings["vip_plans"].get("monthly", {"price": 299.0, "duration_days": 30}))
-    
-    # Handle missing price field by using default
-    base_price = plan.get("price", default_prices.get(plan_type, 299.0))
-    discount_percentage = plan.get("discount_percentage", 0)
-    discount_fixed = plan.get("discount_fixed", 0)
-    
-    # Calculate total discount (percentage + fixed)
-    discount_from_percentage = (base_price * discount_percentage) / 100
-    total_discount = discount_from_percentage + discount_fixed
-    final_price = max(0, base_price - total_discount)
-    
-    return {
-        "plan_type": plan_type,
-        "base_price": base_price,
-        "discount_percentage": discount_percentage,
-        "discount_fixed": discount_fixed,
-        "discount_amount": round(total_discount, 2),
-        "final_price": round(final_price, 2),
-        "duration_days": plan["duration_days"],
-        "label": plan["label"],
-        "savings": round(total_discount, 2) if total_discount > 0 else 0
-    }
-
-async def get_all_vip_plans():
-    """Get all VIP plans with pricing"""
-    plans = []
-    for plan_type in ["monthly", "quarterly", "half_yearly", "yearly"]:
-        plan_data = await get_vip_plan_pricing(plan_type)
-        plans.append(plan_data)
-    return plans
 
 async def check_vip_service_access(uid: str, service_name: str = "service") -> Dict:
     """
@@ -3761,6 +3524,7 @@ async def check_vip_service_access(uid: str, service_name: str = "service") -> D
         return {"allowed": True, "reason": ""}
     except:
         return {"allowed": True, "reason": ""}
+
 
 # Keep old function name for backward compatibility
 async def check_vip_marketplace_access(uid: str) -> Dict:
@@ -4526,16 +4290,22 @@ async def register_user(request: Request):
         referrer = await db.users.find_one({"uid": referrer_uid}, {"_id": 0, "name": 1})
         new_user_name = user_dict.get("name", "Someone")
         
-        # Create notification for the referrer
+        # Create notification for the referrer (old system)
         await create_social_notification(
             user_uid=referrer_uid,
             notification_type="new_referral",
-            title="🎉 New Referral Joined!",
+            title="New Referral Joined!",
             message=f"{new_user_name} just joined using your referral link! Help them get started.",
             from_uid=user.uid,
             from_name=new_user_name,
             icon="👋",
             action_url=f"/messages/{user.uid}"
+        )
+        
+        # Create in-app notification (new bell system)
+        await notify_referral_joined(
+            user_id=referrer_uid,
+            referral_name=new_user_name
         )
         
         # Log to activity
@@ -6502,7 +6272,7 @@ async def get_user(uid: str):
 # ========== MINING ROUTES ==========
 @api_router.post("/mining/start/{uid}")
 async def start_mining(uid: str):
-    """Start 24-hour mining session"""
+    """Start 24-hour mining session - All users can start, only paid can collect"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -8061,6 +7831,875 @@ async def get_user_subscription(uid: str):
         }
     }
 
+
+@api_router.get("/subscription/history/{uid}")
+async def get_user_subscription_history(uid: str):
+    """Get user's complete subscription history including expired ones"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get Razorpay payments (ALL statuses to show history)
+    razorpay_payments = await db.razorpay_orders.find(
+        {"user_id": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get VIP payments (manual payments with screenshot)
+    vip_payments = await db.vip_payments.find(
+        {"uid": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get manual subscription payments (legacy)
+    manual_payments = await db.subscription_payments.find(
+        {"user_id": uid}
+    ).sort("created_at", -1).to_list(100)
+    
+    history = []
+    
+    # Process Razorpay payments (ALL statuses)
+    for payment in razorpay_payments:
+        paid_at = payment.get("paid_at")
+        if paid_at and isinstance(paid_at, str):
+            try:
+                paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+            except:
+                paid_at = None
+        
+        created_at = payment.get("created_at")
+        status = payment.get("status", "created")
+        
+        history.append({
+            "id": payment.get("order_id"),
+            "type": "razorpay",
+            "plan_name": payment.get("plan_name", "").title(),
+            "plan_type": payment.get("plan_type", "monthly"),
+            "amount": payment.get("amount", 0),
+            "status": "completed" if status == "paid" else status,
+            "payment_method": "Online (Razorpay)",
+            "payment_id": payment.get("payment_id"),
+            "activated_at": paid_at.isoformat() if paid_at else None,
+            "created_at": str(created_at) if created_at else None,
+            "instant_activation": True,
+            "duration_days": payment.get("duration_days"),
+            "remaining_days_added": payment.get("remaining_days_added", 0)
+        })
+    
+    # Process VIP payments (manual with screenshot)
+    for payment in vip_payments:
+        created_at = payment.get("created_at")
+        approved_at = payment.get("approved_at")
+        
+        history.append({
+            "id": str(payment.get("_id", "")),
+            "type": "vip_payment",
+            "plan_name": payment.get("plan", "").title(),
+            "plan_type": payment.get("plan_type", "monthly"),
+            "amount": payment.get("amount", 0),
+            "status": payment.get("status", "pending"),
+            "payment_method": "UPI/Bank Transfer",
+            "utr_number": payment.get("utr_number"),
+            "created_at": str(created_at) if created_at else None,
+            "activated_at": str(approved_at) if approved_at and payment.get("status") == "approved" else None,
+            "instant_activation": False,
+            "duration_days": payment.get("duration_days")
+        })
+    
+    # Process legacy manual payments
+    for payment in manual_payments:
+        created_at = payment.get("created_at")
+        approved_at = payment.get("approved_at") or payment.get("verified_at")
+        
+        history.append({
+            "id": str(payment.get("_id", "")),
+            "type": "manual",
+            "plan_name": payment.get("plan_name", payment.get("plan", "")).title(),
+            "plan_type": payment.get("plan_type", payment.get("duration", "monthly")),
+            "amount": payment.get("amount", 0),
+            "status": payment.get("status", "pending"),
+            "payment_method": "UPI/Bank Transfer",
+            "utr_number": payment.get("utr_number"),
+            "created_at": str(created_at) if created_at else None,
+            "activated_at": str(approved_at) if approved_at and payment.get("status") == "approved" else None,
+            "instant_activation": False
+        })
+    
+    # Sort by created_at descending
+    history.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    
+    return {
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "current_plan": user.get("subscription_plan", "explorer"),
+        "total_payments": len(history),
+        "history": history
+    }
+
+
+@api_router.get("/admin/razorpay-subscriptions")
+async def get_admin_razorpay_subscriptions(
+    status: str = None,
+    limit: int = 100,
+    skip: int = 0
+):
+    """Get all Razorpay subscription payments for admin dashboard"""
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.razorpay_orders.count_documents(query)
+    
+    result = []
+    for order in orders:
+        user_id = order.get("user_id")
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1})
+        
+        result.append({
+            "order_id": order.get("order_id"),
+            "user_id": user_id,
+            "user_name": user.get("name") if user else "Unknown",
+            "user_email": user.get("email") if user else None,
+            "user_mobile": user.get("mobile") if user else None,
+            "plan_name": order.get("plan_name", "").title(),
+            "plan_type": order.get("plan_type", "monthly"),
+            "amount": order.get("amount", 0),  # Already in INR, don't divide by 100
+            "status": order.get("status", "created"),
+            "payment_id": order.get("payment_id"),
+            "created_at": order.get("created_at"),
+            "paid_at": order.get("paid_at")
+        })
+    
+    paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+    total_revenue = sum(o.get("amount", 0) for o in paid_orders)  # Already in INR
+    
+    return {
+        "orders": result,
+        "total": total,
+        "stats": {
+            "total_orders": total,
+            "paid_orders": len(paid_orders),
+            "total_revenue": total_revenue,
+            "pending_orders": await db.razorpay_orders.count_documents({"status": "created"})
+        }
+    }
+
+
+@api_router.post("/admin/razorpay-cleanup-fraudulent")
+async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
+    """
+    SMART CLEANUP: Reset only fraudulent Razorpay subscriptions.
+    - SKIPS users who have legitimate manual/UPI approved payments
+    - ONLY resets users whose subscription came from fraudulent Razorpay
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        # Security check - require admin PIN
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all "paid" Razorpay orders
+        paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+        
+        if not paid_orders:
+            return {
+                "success": True,
+                "message": "No paid orders found to cleanup",
+                "reset_count": 0,
+                "skipped_count": 0
+            }
+        
+        reset_users = []
+        skipped_users = []
+        
+        for order in paid_orders:
+            user_id = order.get("user_id")
+            razorpay_payment_id = order.get("payment_id")
+            
+            # Get user details
+            user = await db.users.find_one(
+                {"uid": user_id}, 
+                {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1, "last_payment_id": 1}
+            )
+            
+            if not user:
+                continue
+            
+            # Check if user has legitimate manual payment
+            legitimate_payment = await db.vip_payments.find_one({
+                "uid": user_id,
+                "status": "approved"
+            }, sort=[("approved_at", -1)])
+            
+            if legitimate_payment:
+                # SKIP this user - they have legitimate subscription
+                skipped_users.append({
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "reason": "Has legitimate manual payment",
+                    "legitimate_plan": legitimate_payment.get("plan")
+                })
+                
+                # Still mark the Razorpay order as fraudulent
+                await db.razorpay_orders.update_one(
+                    {"order_id": order.get("order_id")},
+                    {"$set": {
+                        "status": "fraudulent",
+                        "reason": "Payment failed but user has legitimate subscription elsewhere"
+                    }}
+                )
+                continue
+            
+            # Reset this user - no legitimate payment found
+            await db.users.update_one(
+                {"uid": user_id},
+                {
+                    "$set": {
+                        "subscription_plan": "explorer",
+                        "membership_type": "free",
+                        "subscription_status": "inactive",
+                        "fraudulent_activation_reverted": True,
+                        "reverted_at": datetime.now(timezone.utc).isoformat()
+                    },
+                    "$unset": {
+                        "subscription_start": "",
+                        "subscription_expires": "",
+                        "last_payment_id": "",
+                        "last_payment_date": ""
+                    }
+                }
+            )
+            
+            reset_users.append({
+                "user_id": user_id,
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "previous_plan": user.get("subscription_plan"),
+                "payment_id": razorpay_payment_id
+            })
+            
+            # Mark order as fraudulent
+            await db.razorpay_orders.update_one(
+                {"order_id": order.get("order_id")},
+                {
+                    "$set": {
+                        "status": "fraudulent",
+                        "original_status": "paid",
+                        "marked_fraudulent_at": datetime.now(timezone.utc).isoformat(),
+                        "reason": "Payment failed - user reset to free"
+                    }
+                }
+            )
+        
+        # Log the cleanup action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_fraud_cleanup",
+            "reset_count": len(reset_users),
+            "skipped_count": len(skipped_users),
+            "reset_users": reset_users,
+            "skipped_users": skipped_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Cleanup complete! Reset {len(reset_users)} users, Skipped {len(skipped_users)} legitimate users",
+            "reset_count": len(reset_users),
+            "skipped_count": len(skipped_users),
+            "reset_users": reset_users,
+            "skipped_users": skipped_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Fraud cleanup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay-delete-pending")
+async def delete_pending_razorpay_orders(request: Request):
+    """
+    Delete all pending (status='created') Razorpay orders.
+    These are orders where user started payment but never completed.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Count pending orders
+        pending_count = await db.razorpay_orders.count_documents({"status": "created"})
+        
+        if pending_count == 0:
+            return {
+                "success": True,
+                "message": "No pending orders to delete",
+                "deleted_count": 0
+            }
+        
+        # Delete all pending orders
+        result = await db.razorpay_orders.delete_many({"status": "created"})
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_delete_pending",
+            "deleted_count": result.deleted_count,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Deleted {result.deleted_count} pending orders",
+            "deleted_count": result.deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Delete pending error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay/sync-pending")
+async def manual_sync_razorpay_payments():
+    """
+    Manually trigger sync of pending Razorpay payments.
+    Checks Razorpay API and activates subscriptions for captured payments.
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            return {"success": False, "error": "Razorpay not configured"}
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Plan durations (28 days per month)
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Get all pending orders
+        pending_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["created", "pending"]}
+        }).to_list(100)
+        
+        if not pending_orders:
+            return {"success": True, "message": "No pending orders to sync", "synced": 0, "total_pending": 0}
+        
+        synced_count = 0
+        errors = []
+        results = []
+        
+        for order in pending_orders:
+            order_id = order.get("order_id")
+            user_id = order.get("user_id")
+            
+            try:
+                # Fetch order from Razorpay API
+                razorpay_order = razorpay_client.order.fetch(order_id)
+                razorpay_status = razorpay_order.get("status")
+                
+                if razorpay_status == "paid":
+                    # Order is paid - fetch payment details
+                    payments = razorpay_client.order.payments(order_id)
+                    
+                    # Find captured payment
+                    captured_payment = None
+                    for payment in payments.get("items", []):
+                        if payment.get("status") == "captured":
+                            captured_payment = payment
+                            break
+                    
+                    if captured_payment:
+                        payment_id = captured_payment.get("id")
+                        amount = captured_payment.get("amount", 0) / 100
+                        
+                        # Update order status
+                        await db.razorpay_orders.update_one(
+                            {"order_id": order_id},
+                            {
+                                "$set": {
+                                    "status": "paid",
+                                    "payment_id": payment_id,
+                                    "payment_captured": True,
+                                    "verified_amount": amount,
+                                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                                    "synced_via": "manual_sync"
+                                }
+                            }
+                        )
+                        
+                        # ACTIVATE SUBSCRIPTION
+                        plan_type = order.get("plan_type", "monthly")
+                        plan_name = order.get("plan_name", "startup")
+                        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                        
+                        now = datetime.now(timezone.utc)
+                        
+                        # Check for existing subscription
+                        user = await db.users.find_one({"uid": user_id})
+                        remaining_days = 0
+                        
+                        if user:
+                            expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+                            if expiry:
+                                try:
+                                    exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                                    if exp_date.tzinfo is None:
+                                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                                    if exp_date > now:
+                                        remaining_days = (exp_date - now).days
+                                except:
+                                    pass
+                        
+                        total_days = duration_days + remaining_days
+                        new_expiry = now + timedelta(days=total_days)
+                        
+                        # Update user subscription
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {
+                                "$set": {
+                                    "subscription_plan": plan_name,
+                                    "subscription_type": plan_type,
+                                    "subscription_status": "active",
+                                    "subscription_start": now.isoformat(),
+                                    "subscription_expires": new_expiry.isoformat(),
+                                    "subscription_expiry": new_expiry.isoformat(),
+                                    "razorpay_subscription_id": order_id,
+                                    "membership_type": plan_name,
+                                    "last_payment_id": payment_id,
+                                    "last_payment_amount": amount,
+                                    "last_payment_date": now.isoformat()
+                                }
+                            }
+                        )
+                        
+                        synced_count += 1
+                        results.append({
+                            "order_id": order_id,
+                            "user_id": user_id,
+                            "status": "activated",
+                            "plan": plan_name,
+                            "days": total_days
+                        })
+                else:
+                    results.append({
+                        "order_id": order_id,
+                        "user_id": user_id,
+                        "status": f"still_{razorpay_status}"
+                    })
+                    
+            except Exception as e:
+                errors.append({"order_id": order_id, "error": str(e)})
+        
+        return {
+            "success": True,
+            "synced": synced_count,
+            "total_pending": len(pending_orders),
+            "results": results,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@api_router.post("/admin/razorpay-delete-all")
+async def delete_all_razorpay_orders(request: Request):
+    """
+    Delete ALL Razorpay orders (both paid and pending).
+    Use this to completely reset Razorpay data.
+    WARNING: This is irreversible!
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        confirm = data.get("confirm", False)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not confirm:
+            raise HTTPException(status_code=400, detail="Please set confirm=true to proceed")
+        
+        # Get counts before deletion
+        total_count = await db.razorpay_orders.count_documents({})
+        paid_count = await db.razorpay_orders.count_documents({"status": "paid"})
+        pending_count = await db.razorpay_orders.count_documents({"status": "created"})
+        
+        # Delete all orders
+        result = await db.razorpay_orders.delete_many({})
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "razorpay_delete_all",
+            "total_deleted": result.deleted_count,
+            "paid_deleted": paid_count,
+            "pending_deleted": pending_count,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Deleted ALL {result.deleted_count} orders ({paid_count} paid, {pending_count} pending)",
+            "deleted_count": result.deleted_count,
+            "paid_deleted": paid_count,
+            "pending_deleted": pending_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Delete all error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/audit-logs/fraud-cleanup")
+async def get_fraud_cleanup_logs():
+    """Get all fraud cleanup audit logs to review what was reset"""
+    logs = await db.admin_audit_logs.find({
+        "action": {"$in": ["razorpay_fraud_cleanup", "razorpay_delete_pending", "razorpay_delete_all"]}
+    }).sort("performed_at", -1).to_list(50)
+    
+    result = []
+    for log in logs:
+        # Remove MongoDB _id for JSON serialization
+        log_data = {
+            "action": log.get("action"),
+            "performed_at": log.get("performed_at"),
+            "reset_count": log.get("reset_count", 0),
+            "skipped_count": log.get("skipped_count", 0),
+            "deleted_count": log.get("deleted_count", 0),
+            "reset_users": log.get("reset_users", []),
+            "skipped_users": log.get("skipped_users", [])
+        }
+        result.append(log_data)
+    
+    return {"logs": result, "total": len(result)}
+
+
+@api_router.post("/admin/restore-users-from-vip-payments")
+async def restore_users_from_vip_payments(request: Request):
+    """
+    Restore users who had legitimate VIP payments.
+    This will check vip_payments collection and restore their subscription.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all users who were marked as fraudulent but have legitimate vip_payments
+        affected_users = await db.users.find({
+            "fraudulent_activation_reverted": True
+        }).to_list(1000)
+        
+        restored_users = []
+        
+        for user in affected_users:
+            uid = user.get("uid")
+            
+            # Check if user has approved vip_payments
+            vip_payment = await db.vip_payments.find_one({
+                "uid": uid,
+                "status": "approved"
+            }, sort=[("approved_at", -1)])
+            
+            if vip_payment:
+                # Restore from VIP payment
+                plan = vip_payment.get("plan", "startup")
+                duration = vip_payment.get("duration", "monthly")
+                approved_at = vip_payment.get("approved_at")
+                
+                # Calculate expiry based on duration (28 days per month)
+                duration_days_map = {
+                    "monthly": 28,
+                    "quarterly": 84,
+                    "half_yearly": 168,
+                    "yearly": 336
+                }
+                duration_days = duration_days_map.get(duration, 28)
+                
+                # Calculate expiry from approval date
+                if approved_at:
+                    if isinstance(approved_at, str):
+                        try:
+                            approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                        except:
+                            approved_at = datetime.now(timezone.utc)
+                    expiry_date = approved_at + timedelta(days=duration_days)
+                else:
+                    expiry_date = datetime.now(timezone.utc) + timedelta(days=duration_days)
+                
+                # Restore subscription
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_plan": plan,
+                            "membership_type": "vip",
+                            "subscription_status": "active",
+                            "subscription_expires": expiry_date,
+                            "restored_from": "vip_payments",
+                            "restored_at": datetime.now(timezone.utc).isoformat()
+                        },
+                        "$unset": {
+                            "fraudulent_activation_reverted": ""
+                        }
+                    }
+                )
+                
+                restored_users.append({
+                    "uid": uid,
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "restored_plan": plan,
+                    "restored_expiry": expiry_date.isoformat()
+                })
+        
+        # Log the restoration
+        await db.admin_audit_logs.insert_one({
+            "action": "restore_from_vip_payments",
+            "restored_count": len(restored_users),
+            "restored_users": restored_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Restored {len(restored_users)} users from VIP payments",
+            "restored_count": len(restored_users),
+            "restored_users": restored_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Restore error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/users-needing-restore")
+async def get_users_needing_restore():
+    """
+    Preview: List all users who were reset but have legitimate vip_payments.
+    These users can be restored.
+    """
+    # Find users marked as fraudulent
+    affected_users = await db.users.find({
+        "$or": [
+            {"fraudulent_activation_reverted": True},
+            {"subscription_plan": "explorer", "membership_type": "free"}
+        ]
+    }).to_list(1000)
+    
+    can_restore = []
+    
+    for user in affected_users:
+        uid = user.get("uid")
+        
+        # Check if has approved vip_payments
+        vip_payment = await db.vip_payments.find_one({
+            "uid": uid,
+            "status": "approved"
+        }, sort=[("approved_at", -1)])
+        
+        if vip_payment:
+            can_restore.append({
+                "uid": uid,
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "current_plan": user.get("subscription_plan"),
+                "prc_balance": user.get("prc_balance", 0),
+                "can_restore_to": vip_payment.get("plan"),
+                "vip_payment_approved_at": str(vip_payment.get("approved_at"))
+            })
+    
+    return {
+        "total_can_restore": len(can_restore),
+        "users": can_restore
+    }
+
+
+@api_router.post("/admin/recalculate-prc-balance")
+async def recalculate_prc_balance(request: Request):
+    """
+    Recalculate PRC balance for affected users from transaction history.
+    This will fix PRC balances that became 0 incorrectly.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        user_ids = data.get("user_ids", [])  # Optional: specific users to recalculate
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # If no specific users, find users with 0 PRC who might need fixing
+        if not user_ids:
+            users_to_fix = await db.users.find({
+                "prc_balance": {"$lte": 0}
+            }).to_list(500)
+        else:
+            users_to_fix = await db.users.find({
+                "uid": {"$in": user_ids}
+            }).to_list(500)
+        
+        fixed_users = []
+        
+        for user in users_to_fix:
+            uid = user.get("uid")
+            old_balance = user.get("prc_balance", 0)
+            
+            # Get all transactions for this user
+            transactions = await db.transactions.find({"user_id": uid}).to_list(10000)
+            
+            # Calculate PRC earned (positive)
+            prc_earned = sum(
+                t.get("amount", 0) for t in transactions 
+                if t.get("type") in ["mining", "tap_game", "referral", "signup_bonus", "daily_bonus", "prc_credit", "admin_credit"]
+            )
+            
+            # Calculate PRC spent (negative)
+            prc_spent = sum(
+                abs(t.get("amount", 0)) for t in transactions 
+                if t.get("type") in ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", "prc_debit"]
+            )
+            
+            # Correct balance
+            correct_balance = prc_earned - prc_spent
+            
+            if correct_balance != old_balance:
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": max(0, correct_balance),
+                            "prc_balance_recalculated": True,
+                            "prc_recalculated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                )
+                
+                fixed_users.append({
+                    "uid": uid,
+                    "name": user.get("name"),
+                    "old_balance": old_balance,
+                    "new_balance": max(0, correct_balance),
+                    "prc_earned": prc_earned,
+                    "prc_spent": prc_spent
+                })
+        
+        # Log the action
+        await db.admin_audit_logs.insert_one({
+            "action": "prc_balance_recalculation",
+            "fixed_count": len(fixed_users),
+            "fixed_users": fixed_users,
+            "performed_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Recalculated PRC balance for {len(fixed_users)} users",
+            "fixed_count": len(fixed_users),
+            "fixed_users": fixed_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"PRC recalculation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/razorpay-fraud-preview")
+async def preview_fraudulent_subscriptions():
+    """
+    Preview: List all users who will be affected by fraud cleanup.
+    SMART VERSION: Only shows users whose subscription came from Razorpay (not manual/UPI)
+    """
+    paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
+    
+    affected_users = []
+    skipped_users = []  # Users with legitimate subscriptions
+    
+    for order in paid_orders:
+        user_id = order.get("user_id")
+        order_created = order.get("created_at")
+        razorpay_payment_id = order.get("payment_id")
+        
+        user = await db.users.find_one(
+            {"uid": user_id}, 
+            {"_id": 0, "name": 1, "email": 1, "subscription_plan": 1, "mobile": 1, 
+             "subscription_start": 1, "last_payment_id": 1}
+        )
+        
+        if not user:
+            continue
+        
+        # Check if user has an APPROVED manual VIP payment (legitimate subscription)
+        legitimate_payment = await db.vip_payments.find_one({
+            "uid": user_id,
+            "status": "approved"
+        }, sort=[("approved_at", -1)])
+        
+        user_info = {
+            "user_id": user_id,
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "mobile": user.get("mobile"),
+            "current_plan": user.get("subscription_plan"),
+            "order_id": order.get("order_id"),
+            "payment_id": razorpay_payment_id,
+            "amount": order.get("amount"),
+            "razorpay_order_date": str(order_created) if order_created else None
+        }
+        
+        # If user has legitimate manual payment, skip them
+        if legitimate_payment:
+            user_info["legitimate_payment"] = {
+                "payment_id": str(legitimate_payment.get("_id")),
+                "plan": legitimate_payment.get("plan"),
+                "approved_at": str(legitimate_payment.get("approved_at"))
+            }
+            user_info["reason"] = "Has legitimate manual payment - WILL BE SKIPPED"
+            skipped_users.append(user_info)
+        else:
+            # Check if subscription came from this Razorpay payment
+            if user.get("last_payment_id") == razorpay_payment_id:
+                user_info["reason"] = "Subscription from fraudulent Razorpay - WILL BE RESET"
+                affected_users.append(user_info)
+            else:
+                # Extra check: if no last_payment_id but has razorpay order
+                user_info["reason"] = "Razorpay order exists - WILL BE RESET"
+                affected_users.append(user_info)
+    
+    return {
+        "total_will_reset": len(affected_users),
+        "total_will_skip": len(skipped_users),
+        "users_to_reset": affected_users,
+        "users_to_skip": skipped_users,
+        "warning": "Only 'users_to_reset' will be converted to FREE. Users with legitimate payments will be SKIPPED."
+    }
+
+
 @api_router.post("/subscription/payment/{uid}")
 async def submit_subscription_payment(uid: str, request: Request):
     """Submit subscription payment for verification with fraud prevention"""
@@ -8574,9 +9213,12 @@ async def get_admin_subscription_pricing():
     return {"pricing": pricing}
 
 async def run_explorer_burn_job():
-    """Admin: Manually trigger Explorer user PRC burn job"""
-    result = await burn_expired_prc_for_explorer_users()
-    return {"success": True, "result": result}
+    """
+    DEPRECATED: Free users cannot collect PRC anymore.
+    This function is kept for backward compatibility.
+    """
+    logging.info("[ADMIN] Explorer burn job called - SKIPPED (new policy: free users cannot collect PRC)")
+    return {"success": True, "result": {"status": "skipped", "reason": "Free users cannot collect PRC"}}
 
 async def cleanup_database(request: Request):
     """
@@ -8707,6 +9349,18 @@ async def get_public_settings():
     if not payment_upi and settings:
         payment_upi = settings.get("payment_upi_id", "paras@upi")
     
+    # Check if manual subscription is enabled
+    manual_subscription_enabled = True
+    manual_sub_setting = await db.app_settings.find_one({"key": "manual_subscription_enabled"})
+    if manual_sub_setting:
+        manual_subscription_enabled = manual_sub_setting.get("value", True)
+    
+    # Check if Razorpay is enabled
+    razorpay_enabled = True
+    razorpay_setting = await db.app_settings.find_one({"key": "razorpay_enabled"})
+    if razorpay_setting:
+        razorpay_enabled = razorpay_setting.get("value", True)
+    
     result = {
         "payment_upi_id": payment_upi or "paras@upi",
         "qr_code_url": qr_code_url,
@@ -8714,13 +9368,59 @@ async def get_public_settings():
         "payment_instructions": payment_instructions,
         "company_name": settings.get("company_name", "PARAS REWARD") if settings else "PARAS REWARD",
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
-        "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210"
+        "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210",
+        "manual_subscription_enabled": manual_subscription_enabled,
+        "razorpay_enabled": razorpay_enabled
     }
     
     # Cache for 10 minutes (settings rarely change)
     await cache.set(cache_key, result, ttl=600)
     
     return result
+
+
+@api_router.post("/admin/toggle-manual-subscription")
+async def toggle_manual_subscription(request: Request):
+    """Enable or disable manual subscription (UPI/Bank Transfer) payment method"""
+    try:
+        data = await request.json()
+        enabled = data.get("enabled", True)
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        await db.app_settings.update_one(
+            {"key": "manual_subscription_enabled"},
+            {"$set": {"key": "manual_subscription_enabled", "value": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True
+        )
+        
+        # Clear public settings cache
+        await cache.delete("public_settings")
+        
+        return {
+            "success": True,
+            "message": f"Manual subscription {'enabled' if enabled else 'disabled'}",
+            "enabled": enabled
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/payment-gateways-status")
+async def get_payment_gateways_status():
+    """Get status of all payment gateways"""
+    razorpay_setting = await db.app_settings.find_one({"key": "razorpay_enabled"})
+    manual_setting = await db.app_settings.find_one({"key": "manual_subscription_enabled"})
+    
+    return {
+        "razorpay_enabled": razorpay_setting.get("value", True) if razorpay_setting else True,
+        "manual_subscription_enabled": manual_setting.get("value", True) if manual_setting else True
+    }
+
 
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
 
@@ -8890,9 +9590,9 @@ async def upgrade_subscription(uid: str, request: Request):
             # Extend from current expiry
             new_expiry = (expiry_dt + timedelta(days=extend_days)).isoformat() if extend_days > 0 else current_expiry
         except:
-            new_expiry = (now + timedelta(days=30)).isoformat()
+            new_expiry = (now + timedelta(days=28)).isoformat()
     else:
-        new_expiry = (now + timedelta(days=30)).isoformat()
+        new_expiry = (now + timedelta(days=28)).isoformat()
     
     # Update user subscription
     await db.users.update_one(
@@ -9399,6 +10099,105 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@api_router.get("/admin/subscription/fraud-check/{user_id}")
+async def check_subscription_fraud(user_id: str, days: int = 10):
+    """
+    Check if user has recent subscription activity that might indicate fraud.
+    Used by admin before approving a new subscription request.
+    """
+    try:
+        from datetime import timedelta
+        
+        now = datetime.now(timezone.utc)
+        check_date = now - timedelta(days=days)
+        
+        # Find recently approved subscriptions
+        recent_subscriptions = await db.vip_payments.find({
+            "$or": [{"user_id": user_id}, {"user_uid": user_id}],
+            "status": "approved",
+            "approved_at": {"$gte": check_date.isoformat()}
+        }).sort("approved_at", -1).to_list(length=10)
+        
+        # Get user info
+        user = await db.users.find_one({"uid": user_id})
+        
+        warnings = []
+        
+        if recent_subscriptions:
+            for sub in recent_subscriptions:
+                approved_at = sub.get("approved_at", "")
+                if approved_at:
+                    try:
+                        approved_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                        days_ago = (now - approved_date).days
+                    except:
+                        days_ago = 0
+                else:
+                    days_ago = 0
+                
+                warnings.append({
+                    "type": "RECENT_SUBSCRIPTION",
+                    "severity": "high" if days_ago <= 3 else "medium",
+                    "message": f"User activated {sub.get('subscription_plan', 'N/A')} plan {days_ago} days ago",
+                    "payment_id": sub.get("payment_id"),
+                    "plan": sub.get("subscription_plan"),
+                    "amount": sub.get("amount"),
+                    "approved_at": approved_at,
+                    "days_ago": days_ago
+                })
+        
+        # Check total subscription count
+        total_subscriptions = user.get("subscription_count", 0) if user else 0
+        if total_subscriptions > 5:
+            warnings.append({
+                "type": "HIGH_SUBSCRIPTION_COUNT",
+                "severity": "medium",
+                "message": f"User has {total_subscriptions} total subscriptions",
+                "count": total_subscriptions
+            })
+        
+        # Check if current subscription is still active
+        if user:
+            current_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+            if current_expiry:
+                try:
+                    if isinstance(current_expiry, str):
+                        expiry_date = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                    else:
+                        expiry_date = current_expiry
+                    
+                    if expiry_date > now:
+                        remaining_days = (expiry_date - now).days
+                        warnings.append({
+                            "type": "ACTIVE_SUBSCRIPTION",
+                            "severity": "high",
+                            "message": f"User already has active subscription with {remaining_days} days remaining",
+                            "current_plan": user.get("subscription_plan"),
+                            "expiry": current_expiry if isinstance(current_expiry, str) else current_expiry.isoformat(),
+                            "remaining_days": remaining_days
+                        })
+                except:
+                    pass
+        
+        has_fraud_risk = len(warnings) > 0
+        
+        return {
+            "user_id": user_id,
+            "has_fraud_risk": has_fraud_risk,
+            "risk_level": "high" if any(w.get("severity") == "high" for w in warnings) else ("medium" if warnings else "low"),
+            "warnings": warnings,
+            "checked_period_days": days,
+            "user_info": {
+                "name": user.get("name") if user else None,
+                "current_plan": user.get("subscription_plan") if user else None,
+                "total_subscriptions": total_subscriptions
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention and timeout handling"""
     try:
@@ -9447,11 +10246,11 @@ async def approve_vip_payment(payment_id: str, request: Request):
         # Calculate duration days
         now = datetime.now(timezone.utc)
         duration_days = {
-            "monthly": 30,
-            "quarterly": 90,
-            "half_yearly": 180,
-            "yearly": 365
-        }.get(plan_type, 30)
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }.get(plan_type, 28)
         
         # Get current user to check existing subscription with timeout
         try:
@@ -9461,6 +10260,36 @@ async def approve_vip_payment(payment_id: str, request: Request):
             )
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
+        
+        # ========== FRAUD PREVENTION: Check recent subscription activity ==========
+        fraud_warning = None
+        recent_days = 10  # Check for subscriptions in last 10 days
+        check_date = now - timedelta(days=recent_days)
+        
+        # Find recently approved subscriptions for this user
+        recent_subscriptions = await db.vip_payments.find({
+            "$or": [{"user_id": user_id}, {"user_uid": user_id}],
+            "status": "approved",
+            "approved_at": {"$gte": check_date.isoformat()}
+        }).to_list(length=10)
+        
+        if recent_subscriptions and len(recent_subscriptions) > 0:
+            last_sub = recent_subscriptions[0]
+            last_approved = last_sub.get("approved_at", "")
+            last_plan = last_sub.get("subscription_plan", "")
+            days_since = (now - datetime.fromisoformat(last_approved.replace('Z', '+00:00'))).days if last_approved else 0
+            
+            fraud_warning = {
+                "type": "RECENT_SUBSCRIPTION_EXISTS",
+                "message": f"⚠️ WARNING: This user already activated a subscription ({last_plan}) {days_since} days ago!",
+                "last_subscription": {
+                    "plan": last_plan,
+                    "approved_at": last_approved,
+                    "days_ago": days_since,
+                    "payment_id": last_sub.get("payment_id")
+                },
+                "recommendation": "Please verify if this is a legitimate renewal or potential fraud."
+            }
         
         # ========== DETERMINE IF NEW SUBSCRIPTION OR RENEWAL ==========
         is_renewal = False
@@ -9646,7 +10475,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         except:
             pass
         
-        return {"success": True, "message": message, "new_expiry": new_expiry}
+        return {"success": True, "message": message, "new_expiry": new_expiry, "fraud_warning": fraud_warning}
     except HTTPException:
         raise
     except Exception as e:
@@ -9716,8 +10545,8 @@ async def migrate_vip_users_to_subscription(request: Request):
             # Preserve existing expiry if set
             expiry = user.get("vip_expiry") or user.get("membership_expiry") or user.get("subscription_expiry")
             if not expiry:
-                # Set 30 days from now if no expiry
-                expiry = (now + timedelta(days=30)).isoformat()
+                # Set 28 days from now if no expiry (1 month = 28 days)
+                expiry = (now + timedelta(days=28)).isoformat()
             
             await db.users.update_one(
                 {"uid": user["uid"]},
@@ -12490,7 +13319,9 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
 # Chatbot system message with platform context
-CHATBOT_SYSTEM_MESSAGE = """You are the Paras Reward Platform AI Assistant with SMART DIAGNOSTIC capabilities. You can communicate in English, Hindi, and Marathi.
+CHATBOT_SYSTEM_MESSAGE = """You are PARAS AI - the friendly AI Assistant for Paras Reward Platform! 🎉
+
+You can communicate in English, Hindi, and Marathi. Be helpful, friendly, and encouraging!
 
 LANGUAGE INSTRUCTIONS:
 - Detect the user's language from their message
@@ -12499,216 +13330,197 @@ LANGUAGE INSTRUCTIONS:
 - If user writes in Hindi, respond in Hindi
 - If user writes in English, respond in English
 
-IMPORTANT DISCLAIMER (Include at start of first message in user's language):
-- English: "Note: I provide general information only. This is not financial advice."
-- Hindi: "नोट: मैं केवल सामान्य जानकारी प्रदान करता हूं। यह वित्तीय सलाह नहीं है।"
-- Marathi: "टीप: मी फक्त सामान्य माहिती देतो. ही आर्थिक सल्ला नाही."
+=== PERSONALITY & GREETING STYLE ===
+
+🌟 BE FRIENDLY & ENGAGING:
+- Use emojis appropriately
+- Be encouraging and positive
+- Celebrate user achievements
+- Make users feel valued
+
+🎉 GREETING RESPONSES:
+When user says Hi/Hello/Hey:
+- English: "Hey there! 👋 Welcome to Paras Reward! I'm PARAS AI, your personal assistant. How can I help you earn & redeem PRC today?"
+- Hindi: "नमस्ते! 👋 Paras Reward में स्वागत है! मैं PARAS AI हूं, आपका सहायक। आज आपकी क्या मदद कर सकता हूं?"
+- Marathi: "नमस्कार! 👋 Paras Reward मध्ये स्वागत! मी PARAS AI, तुमचा सहाय्यक. आज PRC कमवायला किंवा redeem करायला मदत करू?"
+
+🙏 THANK YOU RESPONSES:
+When user says Thanks/Thank you:
+- "You're welcome! 😊 Happy to help. Keep earning PRC! 💰"
+- "धन्यवाद! 😊 तुमचा दिवस शुभ असो!"
+- "आभार मानतो! 😊 अजून काही मदत हवी असल्यास विचारा!"
+
+=== DO NOT INCLUDE ===
+❌ DO NOT add "I don't give financial advice" disclaimer in every message
+❌ DO NOT be formal or robotic
+❌ DO NOT discourage users from using the platform
+❌ Simply help users with their queries directly!
 
 === SMART DIAGNOSTIC MODE ===
 
-When user asks about a problem or issue, you have access to their REAL-TIME data from database.
-Use this data to provide SPECIFIC, ACCURATE diagnosis.
+When user asks about a problem, use their REAL-TIME data for diagnosis:
 
 **Diagnosis Format:**
-1. ❌ **Problem Found:** [Specific issue with data]
-2. ✅ **What's Working:** [Positive aspects]
+1. ❌ **Problem:** [Issue found]
+2. ✅ **Good News:** [What's working]
 3. 🔧 **Solution:** [Step-by-step fix]
 
-**Example Response (Marathi):**
-User: "माझी bank redeem का fail झाली?"
+=== 📱 MOBILE RECHARGE - STEP BY STEP ===
 
-Response:
-"तुमच्या account चे analysis केले:
+**How to do Mobile Recharge:**
+1. Dashboard → "Bill Payments" section
+2. Select "📱 Mobile Recharge"
+3. Enter mobile number
+4. Select operator (Jio, Airtel, Vi, BSNL)
+5. Select prepaid/postpaid
+6. Enter recharge amount
+7. Review PRC required (₹10 recharge = 100 PRC)
+8. Click "Submit Request"
+9. Admin will process within 24 hours
+10. Done! You'll receive recharge confirmation
 
-❌ **समस्या सापडली:**
-- तुमचे KYC status: PENDING
-- Bank Redeem साठी KYC verification आवश्यक आहे
+**Note:** VIP subscription (Startup/Elite) required for bill payments.
 
-✅ **ठीक आहे:**
-- PRC Balance: 500 PRC (पुरेसे)
-- Weekly Limit: 1/2 (limit मध्ये)
+=== 💳 EMI PAYMENT - STEP BY STEP ===
 
-🔧 **Solution:**
-1. Profile → KYC वर जा
-2. Aadhaar आणि PAN upload करा
-3. 24-48 तासात verification होईल
-4. त्यानंतर Bank Redeem काम करेल"
+**How to Pay EMI (Loan EMI Payment):**
+1. Dashboard → "Bill Payments"
+2. Select "🏦 Pay EMI"
+3. Select your Bank/Lender:
+   - Banks: HDFC, ICICI, SBI, Axis, Kotak
+   - NBFCs: Bajaj Finance, Tata Capital, Mahindra Finance
+   - Housing: LIC HFL, Indiabulls Housing
+4. Enter Loan Account Number
+5. Select Loan Type (Home/Personal/Vehicle/Gold)
+6. Enter EMI Amount
+7. Enter Borrower Name
+8. Review and Submit
+9. Admin processes via Eko BBPS
+10. EMI credited to your loan account!
 
-=== DETAILED PLATFORM INFORMATION ===
+**Available Lenders:** Bajaj Finance, HDFC, ICICI, Tata Capital, Mahindra Finance, LIC Housing, Muthoot, TVS Credit, Hero FinCorp, and 50+ more!
 
-**🏢 ABOUT PARAS REWARD PLATFORM:**
-- **Company:** PARAS REWARD TECHNOLOGIES PVT LTD
-- **Type:** Private Limited Company (Legally Registered in India)
-- **Global Database:** Registered ✅
-- **Platform:** Paras Reward - India's No.1 Rewards Platform
+=== 🏦 REDEEM TO BANK - WHAT & HOW ===
 
-Paras Reward is a legitimate, ad-revenue based rewards platform where users earn PRC (Paras Reward Coins) through daily activities. The platform generates revenue through Google AdMob and Unity Ads, and shares a portion with users as PRC rewards.
+**What is Redeem to Bank?**
+- Convert your PRC to real money (₹)
+- Transfer directly to your bank account
+- 10 PRC = ₹1 INR
 
-**💰 WHAT IS PRC (Paras Reward Coin)?**
-PRC is the digital reward currency of Paras Reward Platform.
-- **Conversion Rate: 10 PRC = ₹1 INR**
-- Earn through activities, redeem for real rewards
-- Backed by actual ad revenue
-- No expiry for VIP members
+**How to Redeem PRC to Bank:**
+1. Go to "Redeem" section
+2. Select "🏦 Bank Redeem"
+3. Enter amount to redeem (min ₹100)
+4. Confirm your bank details:
+   - Account Number
+   - IFSC Code
+   - Account Holder Name
+5. Submit request
+6. Admin processes within 24-48 hours
+7. Money transferred to your bank!
 
-**📊 PRC VALUE TABLE:**
-| PRC Amount | INR Value |
-|------------|-----------|
-| 10 PRC | ₹1 |
-| 50 PRC | ₹5 |
+**Requirements:**
+- ✅ KYC Verified (Aadhaar + PAN)
+- ✅ Minimum 1000 PRC (₹100)
+- ✅ Bank account in your name
+- ✅ Weekly limit: Based on subscription plan
+
+**Weekly Redeem Limits:**
+| Plan | Weekly Limit |
+|------|-------------|
+| Explorer | 1 time |
+| Startup | 2 times |
+| Elite | 5 times |
+
+=== 🔥 GAS BILL PAYMENT ===
+
+**How to Pay Gas Bill (PNG):**
+1. Bill Payments → "🔥 Gas Bill (PNG)"
+2. Select Gas Provider:
+   - Mumbai: Mahanagar Gas (MGL)
+   - Delhi: Indraprastha Gas (IGL)
+   - Gujarat: Gujarat Gas, Adani Gas
+3. Enter Consumer Number
+4. Enter Bill Amount
+5. Submit - Processed via Eko BBPS!
+
+=== ⛽ LPG CYLINDER BOOKING ===
+
+**How to Book LPG Cylinder:**
+1. Bill Payments → "🔴 LPG Cylinder"
+2. Select Provider: Indane, HP Gas, Bharat Gas
+3. Enter LPG Consumer ID / Mobile
+4. Enter Amount (Cylinder price)
+5. Submit Request!
+
+=== 📺 DTH RECHARGE ===
+
+**How to Recharge DTH:**
+1. Bill Payments → "📺 DTH Recharge"
+2. Select Operator: Tata Sky, Airtel DTH, Dish TV, D2H, Sun Direct
+3. Enter Subscriber ID
+4. Enter Amount
+5. Submit!
+
+=== ⚡ ELECTRICITY BILL ===
+
+**How to Pay Electricity Bill:**
+1. Bill Payments → "⚡ Electricity Bill"
+2. Select your Discom:
+   - Delhi: BSES, Tata Power, NDMC
+   - Mumbai: MSEDCL, Tata Power, Adani
+   - Karnataka: BESCOM, HESCOM
+   - And 100+ more!
+3. Enter Consumer Number
+4. Enter Bill Amount
+5. Submit!
+
+=== 🏢 ABOUT PARAS REWARD ===
+
+**Company:** PARAS REWARD TECHNOLOGIES PVT LTD
+**Type:** Private Limited Company (Legally Registered in India)
+**Platform:** India's No.1 Rewards Platform
+
+**💰 PRC (Paras Reward Coin):**
+- Platform's digital reward currency
+- **10 PRC = ₹1 INR**
+- Earn through activities
+- Redeem for real rewards
+
+**📊 PRC VALUE:**
+| PRC | Value |
+|-----|-------|
 | 100 PRC | ₹10 |
 | 500 PRC | ₹50 |
 | 1000 PRC | ₹100 |
 | 5000 PRC | ₹500 |
-| 10000 PRC | ₹1000 |
 
 **📊 SUBSCRIPTION PLANS:**
+(1 Month = 28 Days)
 
-1. **EXPLORER (Free)**
-   - Basic access to app
-   - Limited earning features
-   - Weekly redeem limit: 1
-   - No bill payment or vouchers
+1. **EXPLORER (Free)** - Basic access, 1 weekly redeem
+2. **STARTUP (₹299/28 days)** - 1.5x earning, 2 weekly redeems
+3. **ELITE (₹799/28 days)** - 3x earning, 5 weekly redeems, all features!
 
-2. **STARTUP (₹299/month)**
-   - 1.5x earning rate
-   - Weekly redeem limit: 2
-   - Access to gift vouchers
-   - Basic bill payments
+**⛏️ EARNING METHODS:**
+1. Daily Mining Sessions
+2. Referral Program (5 Levels - Up to 21%!)
+3. Daily Check-in Bonus
+4. Tap Game
+5. Special Events
 
-3. **ELITE (₹799/month)**
-   - 3x earning rate
-   - Weekly redeem limit: 5
-   - All gift vouchers (Amazon, Flipkart, etc.)
-   - All bill payments
-   - Shopping access
-   - Priority support
+**🎁 REDEEM OPTIONS:**
+1. Bank Transfer (KYC required)
+2. Gift Vouchers (Amazon, Flipkart, etc.)
+3. Bill Payments (Mobile, DTH, Electricity, Gas, LPG, EMI)
+4. Shopping
 
-**⛏️ HOW TO EARN PRC:**
-
-1. **Daily Check-in Bonus**
-   - Login daily and claim bonus
-   - Streak bonus for consecutive days
-
-2. **Mining Session (Most Important!)**
-   - Start session from Dashboard
-   - Earn PRC every hour while active
-   - Mining rate depends on subscription plan:
-     - Explorer: 0.1 PRC/hour
-     - Startup: 0.5 PRC/hour (1.5x)
-     - Elite: 2.0 PRC/hour (3x)
-
-3. **Referral Program (5 Levels)**
-   - Level 1 (Direct): 10% of referral's earnings
-   - Level 2: 5%
-   - Level 3: 3%
-   - Level 4: 2%
-   - Level 5: 1%
-   - Total: Up to 21% passive income!
-
-4. **Tap Game**
-   - Play in "Play" section
-   - Tap to earn bonus PRC
-   - Daily limits apply
-
-5. **Special Events & Bonuses**
-   - Festival bonuses
-   - Promotional rewards
-   - Achievement badges
-
-**🎁 HOW TO USE PRC (Redeem Options):**
-
-1. **Bank Redeem (EMI Pay)**
-   - Convert PRC to real money
-   - Transfer to bank account
-   - KYC required
-   - Weekly limits apply
-
-2. **Gift Vouchers**
-   - Amazon, Flipkart, Myntra, Swiggy, Zomato
-   - Instant voucher codes
-   - VIP plans only
-
-3. **Bill Payments**
-   - Mobile Recharge (all operators)
-   - DTH Recharge
-   - Electricity Bill
-   - Water Bill
-   - Gas Bill
-   - VIP plans only
-
-4. **Shopping (Marketplace)**
-   - Buy products using PRC
-   - Electronics, fashion, home items
-   - VIP plans only
-
-**🏦 PRC SAVINGS VAULT (RD - Recurring Deposit):**
-- Save PRC and earn interest
-- Interest rate: 5-10% annually
-- Lock-in period options
-- Redeem anytime after maturity
-- Great for long-term savings
-
-**🔐 KYC VERIFICATION:**
-- Required for: Bank Redeem, high-value transactions
-- Documents needed: Aadhaar + PAN
-- Verification time: 24-48 hours
-- One-time process
-
-**👥 REFERRAL SYSTEM DETAILS:**
-- Each user gets unique referral code
-- Share code with friends
-- When friend joins & earns, you earn %
-- 5-level deep network
-- Passive income potential
-
-**📱 APP FEATURES:**
-1. **Dashboard** - PRC balance, session control, quick actions
-2. **Rewards** - Daily rewards, bonuses, achievements
-3. **Tap Game** - Fun earning game
-4. **Profile** - Account settings, KYC, security
-5. **Referrals** - Network, earnings, invite friends
-6. **Marketplace** - Shopping with PRC
-7. **Bill Payments** - Utility payments
-8. **Gift Vouchers** - Brand vouchers
-9. **PRC Vault** - Savings with interest
-10. **Support** - AI Chatbot, contact admin
-
-**🔒 SECURITY FEATURES:**
-- 6-digit PIN login
-- Security Question for PIN reset
-- Biometric login (optional)
-- Session timeout
-- Login attempt limits
-- Account lock protection
-
-**📞 SUPPORT OPTIONS:**
-- AI Chatbot (24/7)
+**📞 SUPPORT:**
+- AI Chatbot (24/7) - That's me! 🤖
 - Email: support@parasreward.com
-- WhatsApp: +91-9999999999
-- Working Hours: Mon-Sat, 10 AM - 7 PM
+- Hours: Mon-Sat, 10 AM - 7 PM
 
-=== ⚠️ IMPORTANT DISCLAIMER - PRC काय आहे आणि काय नाही ===
-
-**🏢 COMPANY INFORMATION:**
-- Company Name: **PARAS REWARD TECHNOLOGIES PVT LTD**
-- Type: Private Limited Company (Legally Registered)
-- Registered with: Ministry of Corporate Affairs, India
-- Global Database: Registered ✅
-- Platform: Paras Reward - India's Rewards Platform
-
-**✅ PRC काय आहे (What PRC IS):**
-- PRC = **Paras Reward Coin** - Platform ची Digital Reward Currency
-- **10 PRC = ₹1 INR** (Redemption Value)
-- Platform वर activities करून कमावता येते
-- Gift Vouchers, Bill Payments, Shopping साठी redeem करता येते
-- Legitimate reward points system backed by real revenue
-
-**💰 PRC VALUE CONVERSION:**
-| PRC | INR Value |
-|-----|-----------|
-| 10 PRC | ₹1 |
-| 100 PRC | ₹10 |
+Remember: Be helpful, friendly, and make users feel valued! Help them maximize their PRC earnings and enjoy the platform! 🚀"""
 | 500 PRC | ₹50 |
 | 1000 PRC | ₹100 |
 | 5000 PRC | ₹500 |
@@ -16008,7 +16820,10 @@ async def admin_delete_user_subscription(uid: str, payment_id: str):
     """
     Admin endpoint to delete a specific subscription record.
     Searches across multiple collections: vip_payments, subscriptions, vip_subscriptions
+    Supports both payment_id and MongoDB _id for deletion
     """
+    from bson import ObjectId
+    
     # Find user
     user = await db.users.find_one({"uid": uid})
     if not user:
@@ -16016,35 +16831,67 @@ async def admin_delete_user_subscription(uid: str, payment_id: str):
     
     deleted = False
     
+    # Check if payment_id is a valid ObjectId
+    is_object_id = False
+    try:
+        obj_id = ObjectId(payment_id)
+        is_object_id = True
+    except:
+        pass
+    
     # Try deleting from vip_payments collection
-    result = await db.vip_payments.delete_one({
-        "$and": [
-            {"$or": [{"user_uid": uid}, {"user_id": uid}]},
-            {"payment_id": payment_id}
-        ]
-    })
+    if is_object_id:
+        result = await db.vip_payments.delete_one({
+            "$and": [
+                {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+                {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+            ]
+        })
+    else:
+        result = await db.vip_payments.delete_one({
+            "$and": [
+                {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+                {"payment_id": payment_id}
+            ]
+        })
     if result.deleted_count > 0:
         deleted = True
     
     # Try deleting from subscriptions collection
     if not deleted:
-        result = await db.subscriptions.delete_one({
-            "$and": [
-                {"user_id": uid},
-                {"payment_id": payment_id}
-            ]
-        })
+        if is_object_id:
+            result = await db.subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+                ]
+            })
+        else:
+            result = await db.subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"payment_id": payment_id}
+                ]
+            })
         if result.deleted_count > 0:
             deleted = True
     
     # Try deleting from vip_subscriptions collection
     if not deleted:
-        result = await db.vip_subscriptions.delete_one({
-            "$and": [
-                {"user_id": uid},
-                {"payment_id": payment_id}
-            ]
-        })
+        if is_object_id:
+            result = await db.vip_subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+                ]
+            })
+        else:
+            result = await db.vip_subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"payment_id": payment_id}
+                ]
+            })
         if result.deleted_count > 0:
             deleted = True
     
@@ -16744,11 +17591,25 @@ async def get_user_360_view(query: str):
     all_subscriptions = subscriptions + vip_subscriptions
     all_subscriptions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
     
+    # Get VIP payments history
+    vip_payments = await db.vip_payments.find(
+        {"uid": uid},
+        {"_id": 0, "payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Get Razorpay orders
+    razorpay_orders = await db.razorpay_orders.find(
+        {"user_id": uid},
+        {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
     transactions = {
         "orders": orders,
         "bill_payments": bill_payments,
         "gift_vouchers": gift_vouchers,
         "subscriptions": all_subscriptions[:20],
+        "vip_payments": vip_payments,
+        "razorpay_orders": razorpay_orders,
         "redemptions": [],
         "mining_history": [],
         "prc_ledger": []
@@ -16916,7 +17777,20 @@ async def admin_diagnose_user(uid: str):
     
     # ========== 2. SUBSCRIPTION ISSUES ==========
     subscription_plan = user.get("subscription_plan", "explorer")
-    subscription_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+    previous_plan = user.get("previous_plan")
+    remaining_days_added = user.get("previous_remaining_days_added", 0)
+    
+    # Check if old plan info exists
+    if previous_plan:
+        issues.append({
+            "category": "Subscription History",
+            "severity": "info",
+            "issue": "Previous Plan Found",
+            "description": f"User upgraded from '{previous_plan}' to '{subscription_plan}'. Remaining days added: {remaining_days_added}",
+            "can_auto_fix": False,
+            "fix_action": "none"
+        })
     
     # Check for expired subscription
     if subscription_expiry:
@@ -16943,7 +17817,7 @@ async def admin_diagnose_user(uid: str):
     
     # Check subscription payment sync
     latest_payment = await db.vip_payments.find_one(
-        {"$or": [{"user_uid": uid}, {"user_id": uid}], "status": "approved"},
+        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}], "status": "approved"},
         sort=[("approved_at", -1)]
     )
     if latest_payment and is_free_user(user):
@@ -16954,6 +17828,21 @@ async def admin_diagnose_user(uid: str):
             "description": f"Payment approved but user is still 'free'. Plan: {latest_payment.get('plan')}",
             "can_auto_fix": True,
             "fix_action": "sync_subscription"
+        })
+    
+    # Check for Razorpay payment not synced
+    latest_razorpay = await db.razorpay_orders.find_one(
+        {"user_id": uid, "status": "paid"},
+        sort=[("paid_at", -1)]
+    )
+    if latest_razorpay and is_free_user(user):
+        issues.append({
+            "category": "Subscription",
+            "severity": "critical",
+            "issue": "Razorpay Payment Not Activated",
+            "description": f"Razorpay payment captured but subscription not active. Plan: {latest_razorpay.get('plan_name')}, Amount: ₹{latest_razorpay.get('amount')}",
+            "can_auto_fix": True,
+            "fix_action": "activate_razorpay_subscription"
         })
     
     # ========== 3. PRC BALANCE ISSUES ==========
@@ -17220,6 +18109,229 @@ async def admin_fix_user_issue(uid: str, request: Request):
     }
 
 
+@api_router.post("/admin/user/{uid}/auto-fix-all")
+async def admin_auto_fix_all_issues(uid: str, request: Request):
+    """
+    Automatically fix ALL issues for a user that can be auto-fixed.
+    Runs diagnosis first, then fixes all issues with can_auto_fix=True.
+    """
+    data = await request.json()
+    admin_pin = data.get("admin_pin")
+    
+    if admin_pin != "123456":
+        raise HTTPException(status_code=403, detail="Invalid admin PIN")
+    
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    fixed_issues = []
+    
+    # ========== 1. Fix KYC sync issues ==========
+    kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+    kyc_status = user.get("kyc_status", "not_submitted")
+    
+    if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+        fixed_issues.append("KYC status synced to 'verified'")
+    
+    if kyc_status == "pending" and not kyc_doc:
+        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+        fixed_issues.append("Orphaned KYC status reset")
+    
+    # ========== 2. Fix expired subscription ==========
+    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+    subscription_plan = user.get("subscription_plan", "explorer")
+    
+    if subscription_expiry:
+        try:
+            if isinstance(subscription_expiry, str):
+                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            else:
+                expiry_date = subscription_expiry
+            
+            if expiry_date < datetime.now(timezone.utc) and subscription_plan not in ["explorer", "free", ""]:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
+                )
+                fixed_issues.append(f"Expired subscription ({subscription_plan}) reset to explorer")
+        except:
+            pass
+    
+    # ========== 3. Fix membership type mismatch ==========
+    paid_plans = ["startup", "growth", "elite", "vip", "pro"]
+    if subscription_plan in paid_plans and user.get("membership_type") == "free":
+        await db.users.update_one({"uid": uid}, {"$set": {"membership_type": "vip"}})
+        fixed_issues.append("Membership type synced to 'vip'")
+    
+    # ========== 4. Fix subscription not synced from approved payment ==========
+    latest_payment = await db.vip_payments.find_one(
+        {"uid": uid, "status": "approved"},
+        sort=[("approved_at", -1)]
+    )
+    
+    if latest_payment and subscription_plan in ["explorer", "free", ""]:
+        plan = latest_payment.get("plan", "startup")
+        plan_type = latest_payment.get("plan_type", "monthly")
+        approved_at = latest_payment.get("approved_at")
+        
+        duration_mapping = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 336}
+        duration_days = duration_mapping.get(plan_type, 28)
+        
+        if approved_at:
+            if isinstance(approved_at, str):
+                try:
+                    approved_at = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                except:
+                    approved_at = datetime.now(timezone.utc)
+        else:
+            approved_at = datetime.now(timezone.utc)
+        
+        expiry_date = approved_at + timedelta(days=duration_days)
+        
+        if expiry_date > datetime.now(timezone.utc):
+            await db.users.update_one(
+                {"uid": uid},
+                {
+                    "$set": {
+                        "subscription_plan": plan,
+                        "membership_type": "vip",
+                        "subscription_status": "active",
+                        "subscription_expires": expiry_date
+                    }
+                }
+            )
+            fixed_issues.append(f"Subscription restored from approved payment: {plan}")
+    
+    # ========== 4.5. Fix Razorpay subscription not synced ==========
+    if subscription_plan in ["explorer", "free", ""] or not subscription_plan:
+        razorpay_payment = await db.razorpay_orders.find_one(
+            {"user_id": uid, "status": "paid"},
+            sort=[("paid_at", -1)]
+        )
+        
+        if razorpay_payment:
+            plan = razorpay_payment.get("plan_name", "startup")
+            plan_type = razorpay_payment.get("plan_type", "monthly")
+            paid_at = razorpay_payment.get("paid_at")
+            
+            duration_mapping = {"monthly": 28, "quarterly": 84, "half_yearly": 168, "yearly": 336}
+            duration_days = duration_mapping.get(plan_type, 28)
+            
+            if paid_at:
+                if isinstance(paid_at, str):
+                    try:
+                        paid_at = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
+                    except:
+                        paid_at = datetime.now(timezone.utc)
+            else:
+                paid_at = datetime.now(timezone.utc)
+            
+            expiry_date = paid_at + timedelta(days=duration_days)
+            
+            if expiry_date > datetime.now(timezone.utc):
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_plan": plan,
+                            "subscription_start": paid_at,
+                            "subscription_expires": expiry_date,
+                            "subscription_expiry": expiry_date.isoformat(),
+                            "membership_type": "vip",
+                            "subscription_status": "active"
+                        }
+                    }
+                )
+                fixed_issues.append(f"Razorpay subscription restored: {plan} (expires: {expiry_date.date()})")
+    
+    # ========== 5. Fix PRC balance (recalculate from ALL transactions) ==========
+    prc_balance = user.get("prc_balance", 0)
+    
+    # Credit types (add to balance)
+    credit_types = ["mining", "tap_game", "referral", "signup_bonus", "daily_bonus", 
+                    "prc_credit", "admin_credit", "adjustment_credit", "bonus", "reward"]
+    
+    # Debit types (subtract from balance)
+    debit_types = ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", 
+                   "prc_debit", "adjustment_debit", "deduction", "withdrawal"]
+    
+    # Calculate credits (positive amounts for credit types OR all positive amounts)
+    credit_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "$or": [
+                {"type": {"$in": credit_types}},
+                {"type": {"$regex": "credit|bonus|reward", "$options": "i"}},
+                {"amount": {"$gt": 0}, "type": {"$nin": debit_types}}
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]
+    total_credits = await db.transactions.aggregate(credit_pipeline).to_list(1)
+    
+    # Calculate debits (negative amounts for debit types OR all negative amounts)
+    debit_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "$or": [
+                {"type": {"$in": debit_types}},
+                {"type": {"$regex": "burn|debit|deduction|order", "$options": "i"}},
+                {"amount": {"$lt": 0}}
+            ]
+        }},
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]
+    total_debits = await db.transactions.aggregate(debit_pipeline).to_list(1)
+    
+    credits = total_credits[0]["total"] if total_credits else 0
+    debits = total_debits[0]["total"] if total_debits else 0
+    expected_balance = round(credits - debits, 2)
+    
+    # Fix if balance is significantly different (difference > 10 PRC)
+    balance_diff = abs(prc_balance - expected_balance)
+    if balance_diff > 10:
+        new_balance = max(0, expected_balance)
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {
+                    "prc_balance": new_balance,
+                    "prc_balance_recalculated": True,
+                    "prc_recalculated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        fixed_issues.append(f"PRC balance corrected: {prc_balance} → {new_balance} (credits: {credits}, debits: {debits})")
+    
+    # ========== 6. Generate referral code if missing ==========
+    if not user.get("referral_code"):
+        import random
+        import string
+        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
+        fixed_issues.append(f"Generated referral code: {new_code}")
+    
+    # Log the auto-fix action
+    await db.admin_audit_logs.insert_one({
+        "action": "auto_fix_user_issues",
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "fixed_issues": fixed_issues,
+        "performed_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "success": True,
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "total_fixed": len(fixed_issues),
+        "fixed_issues": fixed_issues,
+        "message": f"Auto-fixed {len(fixed_issues)} issues" if fixed_issues else "No issues to fix"
+    }
+
+
 @api_router.post("/admin/fix-membership-types")
 async def fix_all_membership_types():
     """
@@ -17469,7 +18581,7 @@ async def bulk_restore_prc(request: Request):
 async def user_360_quick_action(request: Request):
     """
     Perform quick admin actions on a user from the 360° view.
-    Actions: pause_mining, resume_mining, adjust_balance, set_cap, reset_password, send_notification, block_user, save_notes
+    Actions: pause_mining, resume_mining, adjust_balance, set_cap, reset_password, send_notification, block_user, unblock_user, save_notes
     """
     data = await request.json()
     user_id = data.get("user_id")
@@ -17747,6 +18859,19 @@ async def user_360_quick_action(request: Request):
             }}
         )
         result_message = "User has been blocked"
+    
+    elif action == "unblock_user":
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "is_active": True,
+                "is_blocked": False,
+                "unblocked_at": now.isoformat(),
+                "unblocked_by": admin_id,
+                "updated_at": now.isoformat()
+            }}
+        )
+        result_message = "User has been unblocked"
         
     elif action == "save_notes":
         notes = data.get("notes", "")
@@ -17991,6 +19116,9 @@ async def update_payment_config(request: Request):
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     
+    # CRITICAL: Clear public_settings cache so users see updated UPI/QR immediately
+    await cache.delete("public_settings")
+    
     return {"message": "Payment configuration updated successfully"}
 
 @api_router.post("/vip/payment/submit")
@@ -18029,12 +19157,12 @@ async def submit_vip_payment_new(request: Request):
     plan_type = data.get("plan_type", "monthly")
     amount = float(data.get("amount", 299))
     
-    # Duration mapping based on plan type
+    # Duration mapping based on plan type (28 days per month)
     plan_details = {
-        "monthly": {"days": 30, "name": "Monthly VIP"},
-        "quarterly": {"days": 90, "name": "Quarterly VIP"},
-        "half_yearly": {"days": 180, "name": "Half-Yearly VIP"},
-        "yearly": {"days": 365, "name": "Yearly VIP"}
+        "monthly": {"days": 28, "name": "Monthly VIP"},
+        "quarterly": {"days": 84, "name": "Quarterly VIP"},
+        "half_yearly": {"days": 168, "name": "Half-Yearly VIP"},
+        "yearly": {"days": 336, "name": "Yearly VIP"}
     }
     
     plan_info = plan_details.get(plan_type, plan_details["monthly"])
@@ -18096,12 +19224,12 @@ async def submit_vip_payment(request: Request):
     # Get plan type and validate amount
     plan_type = data.get("plan_type", "monthly")
     
-    # Duration mapping based on plan type
+    # Duration mapping based on plan type (1 month = 28 days)
     plan_details = {
-        "monthly": {"days": 30, "price": 299},
-        "quarterly": {"days": 90, "price": 897},
-        "half_yearly": {"days": 180, "price": 1794},
-        "yearly": {"days": 365, "price": 3588}
+        "monthly": {"days": 28, "price": 299},
+        "quarterly": {"days": 84, "price": 897},
+        "half_yearly": {"days": 168, "price": 1794},
+        "yearly": {"days": 336, "price": 3588}
     }
     
     if plan_type not in plan_details:
@@ -18218,25 +19346,25 @@ async def handle_payment_action(payment_id: str, request: Request):
         # Get plan type from payment - IMPORTANT: default to "monthly" NOT "yearly"
         plan_type = payment.get("plan_type", "monthly")
         
-        # Duration mapping based on plan type
+        # Duration mapping based on plan type (28 days per month)
         duration_mapping = {
-            "monthly": 30,
-            "quarterly": 90,
-            "half_yearly": 180,
-            "yearly": 365
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
         }
         
         # Get duration days from payment record first, then from mapping
         # CRITICAL: Always use the correct duration based on what user paid for
         duration_days = payment.get("duration_days")
         if duration_days is None:
-            duration_days = duration_mapping.get(plan_type, 30)  # Default to 30 days (monthly)
+            duration_days = duration_mapping.get(plan_type, 28)  # Default to 28 days (monthly)
         
         # Validate duration_days is a valid number
         try:
             duration_days = int(duration_days)
         except (TypeError, ValueError):
-            duration_days = duration_mapping.get(plan_type, 30)
+            duration_days = duration_mapping.get(plan_type, 28)
         
         # Calculate validity dates
         validity_start = now
@@ -25677,13 +26805,13 @@ async def update_vip_plan(request: Request):
     # Get or create settings
     settings = await db.settings.find_one({})
     if not settings:
-        # Create initial settings with default VIP plans
+        # Create initial settings with default VIP plans (28 days per month)
         initial_settings = {
             "vip_plans": {
-                "monthly": {"price": 299.0, "duration_days": 30, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
-                "quarterly": {"price": 897.0, "duration_days": 90, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
-                "half_yearly": {"price": 1794.0, "duration_days": 180, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
-                "yearly": {"price": 3588.0, "duration_days": 365, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
+                "monthly": {"price": 299.0, "duration_days": 28, "discount_percentage": 0, "discount_fixed": 0, "label": "Monthly Plan"},
+                "quarterly": {"price": 897.0, "duration_days": 84, "discount_percentage": 0, "discount_fixed": 0, "label": "Quarterly Plan"},
+                "half_yearly": {"price": 1794.0, "duration_days": 168, "discount_percentage": 0, "discount_fixed": 0, "label": "Half-Yearly Plan"},
+                "yearly": {"price": 3588.0, "duration_days": 336, "discount_percentage": 0, "discount_fixed": 0, "label": "Yearly Plan"}
             },
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
@@ -25808,7 +26936,7 @@ async def create_bill_payment_request(request: Request):
     details = data.get("details", {})
     
     # Validate request type
-    valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi"]
+    valid_types = ["mobile_recharge", "dish_recharge", "electricity_bill", "credit_card_payment", "loan_emi", "bank_transfer", "postpaid_mobile", "broadband_bill", "landline_bill", "water_bill", "gas_bill", "lpg_booking", "insurance_premium", "fastag_recharge", "municipal_tax"]
     if request_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid request type. Must be one of: {', '.join(valid_types)}")
     
@@ -25993,7 +27121,9 @@ async def get_user_bill_payment_requests(user_id: str):
 async def get_all_bill_payment_requests(
     status: Optional[str] = None,
     request_type: Optional[str] = None,
-    search: Optional[str] = None
+    payment_type: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 500
 ):
     """Get all bill payment requests (Admin only) with enriched user data"""
     query = {}
@@ -26003,17 +27133,32 @@ async def get_all_bill_payment_requests(
     if request_type:
         query["request_type"] = request_type
     
-    # Search by user_id, mobile, or request_id
+    # Filter by payment_type (for EMI requests)
+    if payment_type:
+        if payment_type.lower() in ['emi', 'loan_emi']:
+            query["$or"] = [
+                {"payment_type": {"$regex": "emi", "$options": "i"}},
+                {"request_type": "loan_emi"}
+            ]
+        else:
+            query["payment_type"] = payment_type
+    
+    # Search by user_id, mobile, name, email or request_id
     if search:
-        query["$or"] = [
+        search_query = [
             {"user_id": {"$regex": search, "$options": "i"}},
             {"user_mobile": {"$regex": search, "$options": "i"}},
             {"user_email": {"$regex": search, "$options": "i"}},
             {"user_name": {"$regex": search, "$options": "i"}},
             {"request_id": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            # Combine with existing $or
+            query = {"$and": [{"$or": query["$or"]}, {"$or": search_query}]}
+        else:
+            query["$or"] = search_query
     
-    requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    requests = await db.bill_payment_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     
     # Batch fetch all unique user IDs to avoid N+1 queries
     user_ids = list(set(req.get("user_id") for req in requests if req.get("user_id")))
@@ -26093,16 +27238,25 @@ async def get_all_bill_payment_requests(
 
 @api_router.post("/admin/bill-payment/process")
 async def process_bill_payment_request(request: Request):
-    """Process a bill payment request - approve, reject, or mark complete (Admin only)"""
+    """Process a bill payment request - approve, reject, retry, or complete manually (Admin only).
+    
+    Actions:
+    - approve: Try Eko API (3 retries). Success=completed, Fail=eko_failed (pending for admin)
+    - retry: Retry Eko API for eko_failed requests
+    - complete: Manually mark as completed (admin processed offline)
+    - reject: Reject with PRC refund (admin decision only)
+    """
     data = await request.json()
     request_id = data.get("request_id")
-    action = data.get("action")  # approve, reject, complete
+    action = data.get("action")  # approve, reject, retry, complete
     admin_notes = data.get("admin_notes", "")
     admin_uid = data.get("admin_uid")
     reject_reason = data.get("reject_reason", "")
+    txn_reference = data.get("txn_reference", "")  # For manual completion
     
-    if action not in ["approve", "reject", "complete"]:
-        raise HTTPException(status_code=400, detail="Invalid action. Must be: approve, reject, or complete")
+    valid_actions = ["approve", "reject", "retry", "complete"]
+    if action not in valid_actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {', '.join(valid_actions)}")
     
     # Get admin name
     admin_name = "Admin"
@@ -26204,11 +27358,366 @@ async def process_bill_payment_request(request: Request):
         }
     
     elif action == "approve":
-        # APPROVE = COMPLETE - Direct completion on approval
+        # APPROVE = AUTOMATIC EKO PAYMENT with RETRY and AUTO-REJECT on failure
         if current_status != "pending":
             raise HTTPException(status_code=400, detail=f"Cannot approve request with status: {current_status}")
         
         now = datetime.now(timezone.utc)
+        request_type = bill_request.get("request_type", "")
+        details = bill_request.get("details", {})
+        amount_inr = bill_request.get("amount_inr", 0)
+        
+        # =====================================================
+        # EKO AUTO-PAY for ALL Services (BBPS + DMT) with RETRY
+        # =====================================================
+        eko_payment_result = None
+        eko_payment_error = None
+        retry_count = 0
+        max_retries = 3
+        
+        # ALL bill payment types supported via Eko
+        eko_bbps_types = [
+            "mobile_recharge", "dish_recharge", "electricity_bill",
+            "postpaid_mobile", "broadband_bill", "landline_bill",
+            "water_bill", "gas_bill", "lpg_booking", "insurance_premium",
+            "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
+        ]
+        
+        from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        import asyncio
+        
+        # Eko Operator ID mapping (operator_name -> eko_operator_id)
+        # Updated with actual Eko API operator IDs
+        EKO_OPERATOR_MAP = {
+            # ============ MOBILE PREPAID (Category 5) ============
+            "airtel": "1", "airtel prepaid": "1",
+            "bsnl": "5", "bsnl prepaid": "5",
+            "jio": "90", "jio prepaid": "90", "reliance jio": "90",
+            "vi": "400", "vi prepaid": "400", "vodafone": "400", "idea": "400", "vodafone idea": "400",
+            "mtnl delhi": "91", "mtnl delhi prepaid": "91",
+            "mtnl mumbai": "508", "mtnl mumbai prepaid": "508",
+            
+            # ============ MOBILE POSTPAID ============
+            "airtel postpaid": "2",
+            "bsnl postpaid": "6", "bsnl landline": "6",
+            "jio postpaid": "93",
+            "vi postpaid": "401", "vodafone postpaid": "401",
+            
+            # ============ DTH (Category 4) ============
+            "dish tv": "16", "dishtv": "16",
+            "big tv": "17", "big tv dth": "17",
+            "tata sky": "20", "tatasky": "20", "tata play": "20",
+            "airtel dth": "21", "airtel digital tv": "21",
+            "d2h": "95", "videocon d2h": "95",
+            "sun direct": "111", "sundirect": "111",
+            
+            # ============ ELECTRICITY (Category 0) ============
+            # Delhi
+            "bses rajdhani": "22", "bses yamuna": "23",
+            "tata power delhi": "24", "tata power - delhi": "24",
+            "ndmc electricity": "178", "ndmc": "178",
+            
+            # Maharashtra
+            "msedcl": "62", "mahadiscom": "62", "maharashtra state electricity": "62",
+            "tata power mumbai": "139", "tata power - mumbai": "139",
+            "adani electricity mumbai": "200",
+            "torrent power": "63",
+            
+            # Karnataka
+            "bescom": "56", "bangalore electricity": "56",
+            "gescom": "148", "gulbarga electricity": "148",
+            "hescom": "156", "hubli electricity": "156",
+            "cescom": "155", "chamundeshwari electricity": "155",
+            "mescom": "161", "mangalore electricity": "161",
+            
+            # Tamil Nadu
+            "tneb": "149", "tamil nadu electricity": "149", "tangedco": "149",
+            
+            # Gujarat
+            "torrent power ahmedabad": "63",
+            "pgvcl": "77", "paschim gujarat": "77",
+            "ugvcl": "78", "uttar gujarat": "78",
+            "mgvcl": "79", "madhya gujarat": "79",
+            "dgvcl": "80", "dakshin gujarat": "80",
+            
+            # Uttar Pradesh
+            "uppcl": "131", "uppcl urban": "131",
+            "uppcl rural": "190",
+            "kesco": "195", "kanpur electricity": "195",
+            "pvvnl": "131", "meerut electricity": "131",
+            
+            # Bihar
+            "nbpdcl": "81", "north bihar power": "81",
+            "sbpdcl": "82", "south bihar power": "82",
+            
+            # Rajasthan
+            "jvvnl": "121", "jaipur vidyut": "121",
+            "avvnl": "122", "ajmer vidyut": "122",
+            "bkesl": "141", "bikaner electricity": "141",
+            "kedl": "121", "kota electricity": "121",
+            
+            # Andhra Pradesh & Telangana
+            "apspdcl": "55", "southern power": "55",
+            "apepdcl": "164", "eastern power": "164",
+            "tsspdcl": "165", "telangana southern power": "165",
+            
+            # Other States
+            "cspdcl": "61", "chattisgarh electricity": "61",
+            "apdcl": "96", "assam power": "96",
+            "hpseb": "166", "himachal electricity": "166",
+            "upcl": "133", "uttarakhand power": "133",
+            "goa electricity": "198",
+            "dnh power": "76", "daman electricity": "76",
+            "dd electricity": "142", "daman diu": "142",
+            
+            # ============ GAS (Category 2) ============
+            "mahanagar gas": "28", "mgl": "28",
+            "gujarat gas": "50",
+            "adani gas": "51",
+            "indraprastha gas": "65", "igl": "65",
+            "sabarmati gas": "132",
+            "mngl": "176", "maharashtra natural gas": "176",
+            "gail gas": "196",
+            "bhagyanagar gas": "341",
+            "green gas": "396",
+            
+            # ============ LPG ============
+            "indane": "301", "indian oil": "301",
+            "hp gas": "302", "hindustan petroleum": "302",
+            "bharat gas": "303", "bpcl": "303",
+            
+            # ============ LOAN/EMI PAYMENT ============
+            # HDFC
+            "hdfc bank credit card": "230", "hdfc credit card": "5303",
+            "hdfc bank loan": "5622", "hdfc home loan": "5324",
+            
+            # ICICI
+            "icici credit card": "5299", "icici bank credit card": "5299",
+            "icici home loan": "2794", "icici retail loan": "2795",
+            "icici home finance": "5324",
+            
+            # Axis Bank
+            "axis bank credit card": "5304", "axis credit card": "5304",
+            "axis bank loan": "328", "axis retail loan": "328",
+            "axis finance": "329",
+            
+            # Bajaj
+            "bajaj finance": "340", "bajaj finserv": "340",
+            "bajaj auto finance": "336",
+            "bajaj housing finance": "334",
+            
+            # Tata
+            "tata capital": "280", "tata capital finance": "280",
+            "tata motors finance": "588",
+            "tata housing finance": "2699",
+            
+            # Mahindra
+            "mahindra finance": "2822", "mahindra home finance": "488",
+            
+            # IDFC
+            "idfc first bank credit card": "5293", "idfc credit card": "5293",
+            
+            # Kotak
+            "kotak mahindra loan": "2681", "kotak loan": "2681",
+            
+            # Yes Bank
+            "yes bank credit card": "5306", "yes credit card": "5306",
+            
+            # SBI
+            "sbi loan": "5622", "sbi home loan": "5622",
+            "state bank loan": "5622",
+            
+            # LIC Housing
+            "lic housing finance": "476", "lic hfl": "476",
+            
+            # Muthoot
+            "muthoot finance": "5066", "muthoot gold loan": "5066",
+            "muthoot housing finance": "516",
+            
+            # Manappuram
+            "manappuram finance": "2823", "manappuram gold loan": "2823",
+            "manappuram vehicle loan": "490",
+            
+            # Home Credit
+            "home credit": "425", "home credit india": "425",
+            
+            # L&T Finance
+            "l&t finance": "5483", "l and t finance": "5483",
+            
+            # TVS Credit
+            "tvs credit": "2700", "tvs finance": "2700",
+            
+            # Indiabulls
+            "indiabulls housing": "439", "indiabulls home loan": "439",
+            "indiabulls consumer finance": "436",
+            
+            # Fullerton
+            "fullerton india": "2672", "fullerton housing": "2673",
+            
+            # AU Bank
+            "au bank loan": "321", "au small finance loan": "321",
+            
+            # Hero FinCorp
+            "hero fincorp": "419", "hero finance": "419",
+        }
+        
+        def get_eko_operator_id(operator_name, details_operator_id=None):
+            """Convert operator name to Eko operator ID"""
+            # If numeric ID already provided, use it
+            if details_operator_id and str(details_operator_id).isdigit():
+                return str(details_operator_id)
+            if not operator_name:
+                return "0"
+            # Try exact match first
+            op_lower = operator_name.lower().strip()
+            if op_lower in EKO_OPERATOR_MAP:
+                return EKO_OPERATOR_MAP[op_lower]
+            # Try partial match
+            for key, value in EKO_OPERATOR_MAP.items():
+                if key in op_lower or op_lower in key:
+                    return value
+            # Return original if no match (might be operator_id already)
+            return operator_name
+        
+        # Get user details for sender_name
+        user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
+        sender_name = "Customer"
+        if user_doc:
+            sender_name = user_doc.get("full_name", user_doc.get("name", "Customer"))
+        
+        # Retry loop for Eko API
+        while retry_count < max_retries and eko_payment_result is None:
+            retry_count += 1
+            eko_payment_error = None
+            
+            try:
+                if request_type in eko_bbps_types:
+                    # ================== BBPS BILL PAYMENT ==================
+                    # Get customer identifier based on service type
+                    if request_type == "mobile_recharge":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "postpaid_mobile":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "dish_recharge":
+                        customer_id = details.get("customer_id", details.get("vc_number", details.get("consumer_number", "")))
+                    elif request_type == "credit_card_bill":
+                        customer_id = details.get("card_number", details.get("consumer_number", ""))
+                    elif request_type == "fastag_recharge":
+                        customer_id = details.get("vehicle_number", details.get("fastag_id", ""))
+                    elif request_type == "lpg_booking":
+                        customer_id = details.get("lpg_id", details.get("consumer_number", ""))
+                    else:
+                        customer_id = details.get("consumer_number", details.get("account_number", ""))
+                    
+                    operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
+                    operator_id_from_details = details.get("operator_id", details.get("eko_operator_id", None))
+                    eko_operator_id = get_eko_operator_id(operator, operator_id_from_details)
+                    eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id} (operator: {operator} -> {eko_operator_id})")
+                    
+                    eko_result = await make_eko_request(
+                        "/v2/billpayments/paybill",
+                        method="POST",
+                        data={
+                            "utility_acc_no": customer_id,
+                            "operator_id": eko_operator_id,
+                            "amount": str(int(amount_inr)),
+                            "confirmation_mobile_no": EKO_INITIATOR_ID,
+                            "client_ref_id": eko_txn_ref,
+                            "sender_name": sender_name,
+                            "user_code": EKO_INITIATOR_ID,
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
+                        }
+                    )
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "bbps",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Payment processed via Eko BBPS"),
+                        "retry_count": retry_count
+                    }
+                    print(f"✅ Eko BBPS Success after {retry_count} attempt(s): TXN={eko_result.get('tid')}")
+                    
+                elif request_type == "bank_transfer":
+                    # ================== DMT - BANK TRANSFER ==================
+                    account_number = details.get("account_number", "")
+                    ifsc_code = details.get("ifsc_code", "")
+                    beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
+                    recipient_mobile = details.get("recipient_mobile", details.get("mobile", EKO_INITIATOR_ID))
+                    
+                    if not account_number or not ifsc_code:
+                        raise Exception("Bank account number and IFSC code required for DMT")
+                    
+                    eko_txn_ref = f"DMT{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko DMT: ₹{amount_inr} to {account_number}")
+                    
+                    # First add beneficiary if not exists
+                    try:
+                        await make_eko_request(
+                            "/v1/customers/mobile_number:beneficiary",
+                            method="PUT",
+                            data={
+                                "mobile": recipient_mobile,
+                                "name": beneficiary_name,
+                                "bank_ifsc": ifsc_code,
+                                "account": account_number
+                            }
+                        )
+                    except Exception as ben_err:
+                        print(f"   Beneficiary may already exist: {ben_err}")
+                    
+                    # Initiate DMT transfer
+                    eko_result = await make_eko_request(
+                        "/v1/transactions",
+                        method="POST",
+                        data={
+                            "mobile": recipient_mobile,
+                            "amount": str(int(amount_inr)),
+                            "account": account_number,
+                            "ifsc": ifsc_code,
+                            "beneficiary_name": beneficiary_name,
+                            "client_ref_id": eko_txn_ref,
+                            "channel": "2",
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
+                        }
+                    )
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "dmt",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Bank transfer processed via Eko DMT"),
+                        "utr": eko_result.get("utr", ""),
+                        "retry_count": retry_count
+                    }
+                    print(f"✅ Eko DMT Success after {retry_count} attempt(s): TXN={eko_result.get('tid')}")
+                    
+                else:
+                    # Unsupported type - reject with reason
+                    raise Exception(f"Service type '{request_type}' not supported for Eko auto-pay")
+                    
+            except Exception as eko_err:
+                eko_payment_error = str(eko_err)
+                print(f"⚠️ [{retry_count}/{max_retries}] Eko Payment Failed: {eko_payment_error}")
+                
+                # Wait before retry (exponential backoff)
+                if retry_count < max_retries:
+                    wait_time = retry_count * 2  # 2s, 4s, 6s
+                    print(f"   ⏳ Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
+        
+        # =====================================================
+        # END EKO AUTO-PAY with RETRY
+        # =====================================================
         
         # Calculate processing time
         processing_time_str = None
@@ -26237,12 +27746,16 @@ async def process_bill_payment_request(request: Request):
             except Exception as e:
                 print(f"Error calculating processing time: {e}")
         
-        # Generate TXN number
-        txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
         
-        await db.bill_payment_requests.update_one(
-            {"request_id": request_id},
-            {"$set": {
+        if eko_payment_result:
+            # =====================================================
+            # SUCCESS - Eko payment completed
+            # =====================================================
+            # Use Eko TXN ID as the transaction number
+            txn_number = eko_payment_result.get("eko_txn_id") or f"EKO{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+            
+            update_data = {
                 "status": "completed",
                 "approved_at": now.isoformat(),
                 "completed_at": now.isoformat(),
@@ -26250,33 +27763,343 @@ async def process_bill_payment_request(request: Request):
                 "txn_number": txn_number,
                 "admin_notes": admin_notes,
                 "processed_by": admin_name,
-                "processed_by_uid": admin_uid
-            }}
-        )
-        
-        # Notify user about completion with processing time
-        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
-        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
-        if processing_time_str:
-            notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
-        
-        await create_notification(
-            user_id=user_id,
-            title="✅ Bill Payment Completed!",
-            message=notify_msg,
-            notification_type="bill_payment_approved",
-            related_id=request_id,
-            icon="✅",
-            action_url="/bill-payments"
-        )
-        
-        return {"message": "Request approved and completed!", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
+                "processed_by_uid": admin_uid,
+                "eko_payment": eko_payment_result,
+                "payment_method": "eko_auto",
+                "retry_attempts": retry_count
+            }
+            
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": update_data}
+            )
+            
+            # Notify user - SUCCESS
+            notify_msg = f"Your ₹{amount_inr} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}\n✅ Payment Method: Instant BBPS"
+            if eko_payment_result.get("utr"):
+                notify_msg += f"\n🏦 UTR: {eko_payment_result['utr']}"
+            
+            await create_notification(
+                user_id=user_id,
+                title="✅ Bill Payment Completed!",
+                message=notify_msg,
+                notification_type="bill_payment_completed",
+                related_id=request_id,
+                icon="✅",
+                action_url="/bill-payments"
+            )
+            
+            return {
+                "message": "✅ Request approved and completed via Eko!", 
+                "status": "completed", 
+                "txn_number": txn_number, 
+                "processing_time": processing_time_str,
+                "payment_method": "eko_auto",
+                "eko_payment": eko_payment_result,
+                "retry_attempts": retry_count
+            }
+        else:
+            # =====================================================
+            # FAILED after all retries - SET eko_failed (NO AUTO-REJECT)
+            # Admin will decide: Retry / Complete Manually / Reject
+            # =====================================================
+            # Parse error for user-friendly reason
+            eko_fail_reason = "Eko API Error"
+            if eko_payment_error:
+                error_str = str(eko_payment_error).lower()
+                if "403" in error_str or "forbidden" in error_str:
+                    eko_fail_reason = "Eko API: Server IP not whitelisted (403)"
+                elif "401" in error_str or "unauthorized" in error_str:
+                    eko_fail_reason = "Eko API: Authentication failed (401)"
+                elif "400" in error_str:
+                    eko_fail_reason = "Eko API: Invalid request parameters (400)"
+                elif "500" in error_str:
+                    eko_fail_reason = "Eko API: Server error (500)"
+                elif "timeout" in error_str or "timed out" in error_str:
+                    eko_fail_reason = "Eko API: Request timeout"
+                elif "connection" in error_str:
+                    eko_fail_reason = "Eko API: Connection error"
+                elif "insufficient" in error_str or "balance" in error_str:
+                    eko_fail_reason = "Eko API: Insufficient wallet balance"
+                elif "not supported" in error_str:
+                    eko_fail_reason = f"Service type not supported: {request_type}"
+                else:
+                    eko_fail_reason = f"Eko API Error: {eko_payment_error[:100]}"
+            
+            print(f"⚠️ Eko failed after {retry_count} retries. Setting eko_failed status for admin action...")
+            
+            # Update request status to eko_failed (NOT rejected - admin decides)
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "eko_failed",
+                    "eko_fail_reason": eko_fail_reason,
+                    "eko_error": eko_payment_error,
+                    "approved_at": now.isoformat(),
+                    "admin_notes": f"Eko API failed after {retry_count} attempts. {admin_notes}".strip(),
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_uid,
+                    "retry_attempts": retry_count,
+                    "last_retry_at": now.isoformat()
+                }}
+            )
+            
+            # Notify admin about failure (no user notification yet - wait for admin decision)
+            return {
+                "message": f"⚠️ Eko API failed after {retry_count} retries. Request pending for admin action.", 
+                "status": "eko_failed",
+                "eko_fail_reason": eko_fail_reason,
+                "eko_error": eko_payment_error,
+                "retry_attempts": retry_count,
+                "admin_options": ["retry", "complete", "reject"],
+                "next_steps": "Admin can: 1) Retry Eko, 2) Complete Manually, 3) Reject with PRC refund"
+            }
     
-    elif action == "complete":
-        if current_status not in ["pending", "processing"]:
-            raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {current_status}")
+    elif action == "retry":
+        # =====================================================
+        # RETRY - Try Eko API again for eko_failed requests
+        # =====================================================
+        if current_status != "eko_failed":
+            raise HTTPException(status_code=400, detail=f"Can only retry requests with status 'eko_failed'. Current: {current_status}")
         
         now = datetime.now(timezone.utc)
+        request_type = bill_request.get("request_type", "")
+        details = bill_request.get("details", {})
+        amount_inr = bill_request.get("amount_inr", 0)
+        previous_retries = bill_request.get("retry_attempts", 0)
+        
+        # Eko retry logic (same as approve)
+        eko_payment_result = None
+        eko_payment_error = None
+        retry_count = 0
+        max_retries = 3
+        
+        eko_bbps_types = [
+            "mobile_recharge", "dish_recharge", "electricity_bill",
+            "postpaid_mobile", "broadband_bill", "landline_bill",
+            "water_bill", "gas_bill", "lpg_booking", "insurance_premium",
+            "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
+        ]
+        
+        from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        import asyncio
+        
+        user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
+        sender_name = user_doc.get("full_name", user_doc.get("name", "Customer")) if user_doc else "Customer"
+        
+        while retry_count < max_retries and eko_payment_result is None:
+            retry_count += 1
+            eko_payment_error = None
+            
+            try:
+                if request_type in eko_bbps_types:
+                    if request_type == "mobile_recharge":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "postpaid_mobile":
+                        customer_id = details.get("phone_number", details.get("mobile_number", ""))
+                    elif request_type == "dish_recharge":
+                        customer_id = details.get("customer_id", details.get("vc_number", details.get("consumer_number", "")))
+                    elif request_type == "credit_card_bill":
+                        customer_id = details.get("card_number", details.get("consumer_number", ""))
+                    elif request_type == "fastag_recharge":
+                        customer_id = details.get("vehicle_number", details.get("fastag_id", ""))
+                    elif request_type == "lpg_booking":
+                        customer_id = details.get("lpg_id", details.get("consumer_number", ""))
+                    else:
+                        customer_id = details.get("consumer_number", details.get("account_number", ""))
+                    
+                    operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
+                    eko_txn_ref = f"RETRY{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [RETRY {retry_count}/{max_retries}] Eko BBPS: {request_type} - ₹{amount_inr}")
+                    
+                    eko_result = await make_eko_request(
+                        "/v2/billpayments/paybill",
+                        method="POST",
+                        data={
+                            "utility_acc_no": customer_id,
+                            "operator_id": operator,
+                            "amount": str(int(amount_inr)),
+                            "confirmation_mobile_no": EKO_INITIATOR_ID,
+                            "client_ref_id": eko_txn_ref,
+                            "sender_name": sender_name,
+                            "user_code": EKO_INITIATOR_ID,
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
+                        }
+                    )
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "bbps",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Payment processed via Eko BBPS"),
+                        "retry_count": previous_retries + retry_count
+                    }
+                    
+                elif request_type == "bank_transfer":
+                    account_number = details.get("account_number", "")
+                    ifsc_code = details.get("ifsc_code", "")
+                    beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
+                    recipient_mobile = details.get("recipient_mobile", details.get("mobile", EKO_INITIATOR_ID))
+                    
+                    eko_txn_ref = f"DMTRETRY{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [RETRY {retry_count}/{max_retries}] Eko DMT: ₹{amount_inr}")
+                    
+                    try:
+                        await make_eko_request(
+                            "/v1/customers/mobile_number:beneficiary",
+                            method="PUT",
+                            data={
+                                "mobile": recipient_mobile,
+                                "name": beneficiary_name,
+                                "bank_ifsc": ifsc_code,
+                                "account": account_number
+                            }
+                        )
+                    except:
+                        pass
+                    
+                    eko_result = await make_eko_request(
+                        "/v1/transactions",
+                        method="POST",
+                        data={
+                            "mobile": recipient_mobile,
+                            "amount": str(int(amount_inr)),
+                            "account": account_number,
+                            "ifsc": ifsc_code,
+                            "beneficiary_name": beneficiary_name,
+                            "client_ref_id": eko_txn_ref,
+                            "channel": "2",
+                            "latlong": "19.0760,72.8777",
+                            "source_ip": "34.170.12.145"
+                        }
+                    )
+                    
+                    eko_payment_result = {
+                        "success": True,
+                        "payment_type": "dmt",
+                        "eko_txn_id": eko_result.get("tid"),
+                        "eko_txn_ref": eko_txn_ref,
+                        "eko_status": eko_result.get("status"),
+                        "eko_message": eko_result.get("message", "Bank transfer processed"),
+                        "utr": eko_result.get("utr", ""),
+                        "retry_count": previous_retries + retry_count
+                    }
+                else:
+                    raise Exception(f"Service type '{request_type}' not supported")
+                    
+            except Exception as eko_err:
+                eko_payment_error = str(eko_err)
+                print(f"⚠️ [RETRY {retry_count}/{max_retries}] Failed: {eko_payment_error}")
+                if retry_count < max_retries:
+                    await asyncio.sleep(retry_count * 2)
+        
+        if eko_payment_result:
+            # SUCCESS on retry
+            txn_number = eko_payment_result.get("eko_txn_id") or f"EKO{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+            
+            # Calculate processing time
+            processing_time_str = None
+            created_at = bill_request.get("created_at")
+            if created_at:
+                try:
+                    if isinstance(created_at, str):
+                        created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    else:
+                        created_dt = created_at
+                    if created_dt.tzinfo is None:
+                        created_dt = created_dt.replace(tzinfo=timezone.utc)
+                    time_diff = now - created_dt
+                    hours = int(time_diff.total_seconds() // 3600)
+                    minutes = int((time_diff.total_seconds() % 3600) // 60)
+                    if hours > 24:
+                        days = hours // 24
+                        processing_time_str = f"{days}d {hours % 24}h {minutes}m"
+                    elif hours > 0:
+                        processing_time_str = f"{hours}h {minutes}m"
+                    else:
+                        processing_time_str = f"{minutes}m"
+                except:
+                    pass
+            
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "completed",
+                    "completed_at": now.isoformat(),
+                    "processing_time": processing_time_str,
+                    "txn_number": txn_number,
+                    "eko_payment": eko_payment_result,
+                    "payment_method": "eko_retry",
+                    "retry_attempts": previous_retries + retry_count,
+                    "retry_success_at": now.isoformat()
+                }}
+            )
+            
+            service_name = request_type.replace('_', ' ').title()
+            await create_notification(
+                user_id=user_id,
+                title="✅ Bill Payment Completed!",
+                message=f"Your ₹{amount_inr} {service_name} completed!\n🧾 TXN: {txn_number}",
+                notification_type="bill_payment_completed",
+                related_id=request_id,
+                icon="✅",
+                action_url="/bill-payments"
+            )
+            
+            return {
+                "message": "✅ Retry successful! Payment completed via Eko.",
+                "status": "completed",
+                "txn_number": txn_number,
+                "retry_attempts": previous_retries + retry_count
+            }
+        else:
+            # Still failing
+            eko_fail_reason = "Eko API Error"
+            if eko_payment_error:
+                error_str = str(eko_payment_error).lower()
+                if "403" in error_str:
+                    eko_fail_reason = "Eko API: Server IP not whitelisted (403)"
+                elif "401" in error_str:
+                    eko_fail_reason = "Eko API: Authentication failed (401)"
+                elif "500" in error_str:
+                    eko_fail_reason = "Eko API: Server error (500)"
+                else:
+                    eko_fail_reason = f"Eko Error: {eko_payment_error[:80]}"
+            
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "eko_fail_reason": eko_fail_reason,
+                    "eko_error": eko_payment_error,
+                    "retry_attempts": previous_retries + retry_count,
+                    "last_retry_at": now.isoformat()
+                }}
+            )
+            
+            return {
+                "message": f"⚠️ Retry failed. Total attempts: {previous_retries + retry_count}",
+                "status": "eko_failed",
+                "eko_fail_reason": eko_fail_reason,
+                "retry_attempts": previous_retries + retry_count,
+                "admin_options": ["retry", "complete", "reject"]
+            }
+    
+    elif action == "complete":
+        # =====================================================
+        # MANUAL COMPLETION - Admin processed payment offline
+        # =====================================================
+        if current_status not in ["pending", "eko_failed"]:
+            raise HTTPException(status_code=400, detail=f"Can only complete 'pending' or 'eko_failed' requests. Current: {current_status}")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Generate or use provided TXN number
+        txn_number = txn_reference if txn_reference else f"MANUAL{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
         
         # Calculate processing time
         processing_time_str = None
@@ -26289,55 +28112,57 @@ async def process_bill_payment_request(request: Request):
                     created_dt = created_at
                 if created_dt.tzinfo is None:
                     created_dt = created_dt.replace(tzinfo=timezone.utc)
-                
                 time_diff = now - created_dt
                 hours = int(time_diff.total_seconds() // 3600)
                 minutes = int((time_diff.total_seconds() % 3600) // 60)
-                
                 if hours > 24:
                     days = hours // 24
-                    hours = hours % 24
-                    processing_time_str = f"{days}d {hours}h {minutes}m"
+                    processing_time_str = f"{days}d {hours % 24}h {minutes}m"
                 elif hours > 0:
                     processing_time_str = f"{hours}h {minutes}m"
                 else:
                     processing_time_str = f"{minutes}m"
-            except Exception as e:
-                print(f"Error calculating processing time: {e}")
-        
-        # Generate TXN number
-        txn_number = f"BP{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+            except:
+                pass
         
         await db.bill_payment_requests.update_one(
             {"request_id": request_id},
             {"$set": {
                 "status": "completed",
-                "txn_number": txn_number,
                 "completed_at": now.isoformat(),
                 "processing_time": processing_time_str,
-                "admin_notes": admin_notes,
+                "txn_number": txn_number,
+                "payment_method": "manual",
+                "manually_approved": True,
+                "manual_txn_reference": txn_reference or "",
+                "admin_notes": admin_notes or "Manually completed by admin",
                 "processed_by": admin_name,
                 "processed_by_uid": admin_uid
             }}
         )
         
-        # Notify user with processing time
-        service_name = bill_request.get('request_type', 'bill payment').replace('_', ' ').title()
-        notify_msg = f"Your ₹{bill_request.get('amount_inr')} {service_name} has been completed successfully!\n\n🧾 Transaction ID: {txn_number}"
-        if processing_time_str:
-            notify_msg += f"\n⏱️ Processed in: {processing_time_str}"
+        # Notify user
+        request_type = bill_request.get("request_type", "bill payment")
+        amount_inr = bill_request.get("amount_inr", 0)
+        service_name = request_type.replace('_', ' ').title()
         
         await create_notification(
             user_id=user_id,
             title="✅ Bill Payment Completed!",
-            message=notify_msg,
+            message=f"Your ₹{amount_inr} {service_name} has been completed!\n🧾 Reference: {txn_number}",
             notification_type="bill_payment_completed",
             related_id=request_id,
             icon="✅",
             action_url="/bill-payments"
         )
         
-        return {"message": "Request marked as completed", "status": "completed", "txn_number": txn_number, "processing_time": processing_time_str}
+        return {
+            "message": "✅ Request manually completed.",
+            "status": "completed",
+            "txn_number": txn_number,
+            "processing_time": processing_time_str,
+            "payment_method": "manual"
+        }
 
 # ==================== GIFT VOUCHER REDEMPTION ENDPOINTS ====================
 
@@ -30684,32 +32509,105 @@ async def get_ai_referral_suggestions(uid: str):
 
 
 # ========== NOTIFICATION SYSTEM ==========
+
+# Notification Types with icons and colors
+NOTIFICATION_TYPES_INFO = {
+    "payment_approved": {"icon": "✓", "color": "green"},
+    "payment_rejected": {"icon": "✗", "color": "red"},
+    "withdrawal": {"icon": "💰", "color": "green"},
+    "referral_joined": {"icon": "👤", "color": "blue"},
+    "prc_credited": {"icon": "💎", "color": "purple"},
+    "subscription_expiry": {"icon": "⚠️", "color": "yellow"},
+    "kyc_approved": {"icon": "✓", "color": "green"},
+    "kyc_rejected": {"icon": "✗", "color": "red"},
+    "general": {"icon": "🔔", "color": "gray"}
+}
+
 async def create_notification(
     user_id: str,
     title: str,
     message: str,
-    notification_type: str,
+    notification_type: str = "general",
     related_id: Optional[str] = None,
     icon: Optional[str] = None,
-    action_url: Optional[str] = None
+    action_url: Optional[str] = None,
+    data: Optional[dict] = None
 ):
-    """Helper function to create notifications"""
+    """
+    Create a notification for a user
+    Stores in notifications collection for in-app notification bell
+    """
+    type_info = NOTIFICATION_TYPES_INFO.get(notification_type, NOTIFICATION_TYPES_INFO["general"])
+    
     notification = {
         "notification_id": str(uuid.uuid4()),
         "user_id": user_id,
-        "user_uid": user_id,  # For compatibility with API queries
+        "user_uid": user_id,
         "title": title,
         "message": message,
         "type": notification_type,
+        "icon": type_info.get("icon", icon or "🔔"),
+        "color": type_info.get("color", "gray"),
         "related_id": related_id,
-        "icon": icon or "🔔",
         "action_url": action_url,
+        "data": data or {},
         "read": False,
         "is_read": False,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc)
     }
-    await db.notifications.insert_one(notification)
+    
+    try:
+        await db.notifications.insert_one(notification)
+        logging.info(f"[NOTIFICATION] Created for user {user_id}: {notification_type} - {title}")
+    except Exception as e:
+        logging.error(f"Error creating notification: {e}")
+    
     return notification
+
+
+# Helper functions for common notification types
+async def notify_payment_approved(user_id: str, amount_inr: float, payment_type: str = "withdrawal"):
+    """Notify user when payment is approved"""
+    await create_notification(
+        user_id=user_id,
+        title="Payment Approved ✓",
+        message=f"Your {payment_type} request of ₹{amount_inr:,.0f} has been approved and processed.",
+        notification_type="payment_approved",
+        data={"amount_inr": amount_inr, "payment_type": payment_type}
+    )
+
+
+async def notify_payment_rejected(user_id: str, amount_inr: float, reason: str, payment_type: str = "withdrawal"):
+    """Notify user when payment is rejected"""
+    await create_notification(
+        user_id=user_id,
+        title="Payment Rejected",
+        message=f"Your {payment_type} request of ₹{amount_inr:,.0f} was rejected. Reason: {reason}. PRC refunded.",
+        notification_type="payment_rejected",
+        data={"amount_inr": amount_inr, "reason": reason, "payment_type": payment_type}
+    )
+
+
+async def notify_referral_joined(user_id: str, referral_name: str):
+    """Notify user when a referral joins"""
+    await create_notification(
+        user_id=user_id,
+        title="New Team Member!",
+        message=f"{referral_name} joined using your referral code. Earn more rewards!",
+        notification_type="referral_joined",
+        data={"referral_name": referral_name}
+    )
+
+
+async def notify_prc_credited(user_id: str, amount: float, reason: str):
+    """Notify user when PRC is credited"""
+    await create_notification(
+        user_id=user_id,
+        title=f"+{amount:,.0f} PRC Credited",
+        message=f"You received {amount:,.0f} PRC. Reason: {reason}",
+        notification_type="prc_credited",
+        data={"amount": amount, "reason": reason}
+    )
 
 
 # ========== GAMIFICATION SYSTEM ==========
@@ -33078,11 +34976,13 @@ async def update_accounting_settings(request: Request):
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
 # Default permissions for manager role
-DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers"]
+DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers", "unified-payments"]
 
 # All available admin pages/permissions
 ALL_ADMIN_PERMISSIONS = [
     {"id": "dashboard", "label": "Dashboard", "category": "General"},
+    {"id": "members", "label": "Members Dashboard", "category": "General"},
+    {"id": "user-360", "label": "User 360° View", "category": "General"},
     {"id": "users", "label": "Users Management", "category": "General"},
     {"id": "analytics", "label": "Analytics", "category": "General"},
     {"id": "kyc", "label": "KYC Verification", "category": "General"},
@@ -33091,24 +34991,41 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "video_ads", "label": "Video Ads", "category": "Operations"},
     {"id": "prc_rain", "label": "PRC Rain Drop", "category": "Operations"},
     {"id": "support", "label": "Support Tickets", "category": "Operations"},
+    {"id": "contact-submissions", "label": "Contact Inquiries", "category": "Operations"},
     {"id": "fraud", "label": "Fraud Alerts", "category": "Security"},
+    {"id": "fraud-dashboard", "label": "Fraud Dashboard", "category": "Security"},
+    {"id": "security", "label": "Security Dashboard", "category": "Security"},
     {"id": "company_wallets", "label": "Company Wallets", "category": "Finance"},
+    {"id": "company-wallets", "label": "Company Wallets", "category": "Finance"},
     {"id": "ads_income", "label": "Ads Income", "category": "Finance"},
     {"id": "fixed_expenses", "label": "Fixed Expenses", "category": "Finance"},
     {"id": "user_ledger", "label": "User Ledger", "category": "Finance"},
+    {"id": "user-ledger", "label": "User Ledger", "category": "Finance"},
     {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
     {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
     {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
-    {"id": "subscription_payment", "label": "Subscription Payment Verification", "category": "Payments"},
+    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
+    {"id": "subscription_payment", "label": "Subscription Payment", "category": "Payments"},
+    {"id": "subscriptions", "label": "Subscriptions", "category": "Payments"},
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
-    {"id": "bank-withdrawals", "label": "Redeem to Bank", "category": "Payments"},
-    {"id": "gift_vouchers", "label": "Gift Voucher Requests", "category": "Payments"},
-    {"id": "bill_payments", "label": "Bill Payment Requests", "category": "Payments"},
+    {"id": "unified-payments", "label": "Unified Payments (All)", "category": "Payments"},
+    {"id": "bank-withdrawals", "label": "Bank Withdrawals", "category": "Payments"},
+    {"id": "gift_vouchers", "label": "Gift Vouchers", "category": "Payments"},
+    {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
+    {"id": "bill_payments", "label": "Bill Payments", "category": "Payments"},
+    {"id": "bill-payments", "label": "Bill Payments", "category": "Payments"},
+    {"id": "recurring-deposits", "label": "PRC Savings Vault", "category": "Payments"},
+    {"id": "prc-burn-control", "label": "PRC Burn Control", "category": "Controls"},
     {"id": "system_settings", "label": "System Settings", "category": "Settings"},
+    {"id": "settings-hub", "label": "Settings Hub", "category": "Settings"},
     {"id": "audit", "label": "Audit Service", "category": "Settings"},
+    {"id": "data-backup", "label": "Data Backup", "category": "Settings"},
     {"id": "prc_analytics", "label": "PRC Analytics", "category": "Analytics"},
+    {"id": "prc-analytics", "label": "PRC Analytics", "category": "Analytics"},
     {"id": "profit_loss", "label": "Profit & Loss", "category": "Analytics"},
-    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"}
+    {"id": "profit-loss", "label": "Profit & Loss", "category": "Analytics"},
+    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"},
+    {"id": "performance-report", "label": "Admin Performance", "category": "Analytics"}
 ]
 
 @api_router.get("/admin/permissions/list")
@@ -38881,6 +40798,361 @@ async def get_luxury_settings():
     }
 
 
+# ========== SIMPLE PRC BURN CONTROL (Manager/Admin) ==========
+
+@api_router.get("/admin/prc-burn-control/settings")
+async def get_prc_burn_control_settings():
+    """Get PRC burn control settings"""
+    try:
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        if not settings:
+            return {
+                "enabled": False,
+                "burn_percentage": 1.0,
+                "min_balance": 100,
+                "target_type": "all_users",
+                "last_executed": None
+            }
+        return {
+            "enabled": settings.get("enabled", False),
+            "burn_percentage": settings.get("burn_percentage", 1.0),
+            "min_balance": settings.get("min_balance", 100),
+            "target_type": settings.get("target_type", "all_users"),
+            "last_executed": settings.get("last_executed"),
+            "last_burn_stats": settings.get("last_burn_stats")
+        }
+    except Exception as e:
+        logging.error(f"Error getting PRC burn control settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-burn-control/settings")
+async def save_prc_burn_control_settings(request: Request):
+    """Save PRC burn control settings - Manager/Admin only"""
+    try:
+        data = await request.json()
+        
+        # Validate percentage
+        burn_pct = float(data.get("burn_percentage", 1.0))
+        if burn_pct < 0.1 or burn_pct > 50:
+            raise HTTPException(status_code=400, detail="Burn percentage must be between 0.1% and 50%")
+        
+        await db.system_settings.update_one(
+            {"type": "prc_burn_control"},
+            {"$set": {
+                "type": "prc_burn_control",
+                "enabled": data.get("enabled", False),
+                "burn_percentage": burn_pct,
+                "min_balance": int(data.get("min_balance", 100)),
+                "target_type": data.get("target_type", "all_users"),
+                "updated_by": data.get("updated_by"),
+                "updated_at": datetime.now(timezone.utc)
+            }},
+            upsert=True
+        )
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": data.get("updated_by"),
+            "action": "prc_burn_settings_update",
+            "details": {
+                "enabled": data.get("enabled"),
+                "burn_percentage": burn_pct,
+                "target_type": data.get("target_type")
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        return {"success": True, "message": "Settings saved"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error saving PRC burn control settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-burn-control/stats")
+async def get_prc_burn_control_stats():
+    """Get stats for PRC burn control page"""
+    try:
+        # Get burn settings
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        burn_pct = settings.get("burn_percentage", 1.0) if settings else 1.0
+        min_balance = settings.get("min_balance", 100) if settings else 100
+        target_type = settings.get("target_type", "all_users") if settings else "all_users"
+        
+        # Build user query based on target type
+        user_query = {"prc_balance": {"$gte": min_balance}}
+        if target_type == "free_only":
+            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
+        elif target_type == "inactive":
+            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+            user_query["last_active"] = {"$lt": thirty_days_ago}
+        
+        # Get total PRC in circulation
+        total_prc_pipeline = [
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]
+        total_result = await db.users.aggregate(total_prc_pipeline).to_list(1)
+        total_prc = total_result[0]["total"] if total_result else 0
+        
+        # Get total users
+        total_users = await db.users.count_documents({})
+        
+        # Get eligible users count
+        eligible_users = await db.users.count_documents(user_query)
+        
+        # Calculate estimated burn
+        eligible_prc_pipeline = [
+            {"$match": user_query},
+            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
+        ]
+        eligible_result = await db.users.aggregate(eligible_prc_pipeline).to_list(1)
+        eligible_prc = eligible_result[0]["total"] if eligible_result else 0
+        estimated_burn = eligible_prc * burn_pct / 100
+        
+        return {
+            "total_prc_circulation": round(total_prc, 2),
+            "total_users": total_users,
+            "eligible_users": eligible_users,
+            "estimated_burn": round(estimated_burn, 2)
+        }
+    except Exception as e:
+        logging.error(f"Error getting PRC burn control stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-burn-control/execute")
+async def execute_prc_burn_control(request: Request):
+    """Execute PRC burn on all eligible users - Manager/Admin only"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        
+        # Get settings
+        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
+        if not settings or not settings.get("enabled"):
+            raise HTTPException(status_code=400, detail="PRC Burn is not enabled")
+        
+        burn_pct = settings.get("burn_percentage", 1.0)
+        min_balance = settings.get("min_balance", 100)
+        target_type = settings.get("target_type", "all_users")
+        
+        # Build user query
+        user_query = {"prc_balance": {"$gte": min_balance}}
+        if target_type == "free_only":
+            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
+        elif target_type == "inactive":
+            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+            user_query["last_active"] = {"$lt": thirty_days_ago}
+        
+        # Get eligible users
+        users = await db.users.find(user_query, {"uid": 1, "email": 1, "prc_balance": 1}).to_list(None)
+        
+        total_burned = 0
+        users_affected = 0
+        
+        for user in users:
+            try:
+                current_balance = user.get("prc_balance", 0)
+                burn_amount = current_balance * burn_pct / 100
+                
+                if burn_amount < 0.01:
+                    continue
+                
+                new_balance = current_balance - burn_amount
+                
+                # Update user balance
+                await db.users.update_one(
+                    {"uid": user["uid"]},
+                    {"$set": {"prc_balance": round(new_balance, 2)}}
+                )
+                
+                # Log transaction
+                await db.transactions.insert_one({
+                    "user_id": user["uid"],
+                    "type": "prc_burn_control",
+                    "prc_amount": round(burn_amount, 2),
+                    "prc_balance_before": round(current_balance, 2),
+                    "prc_balance_after": round(new_balance, 2),
+                    "description": f"PRC Burn Control ({burn_pct}%)",
+                    "burn_percentage": burn_pct,
+                    "admin_id": admin_id,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                
+                # Log to PRC balance logs
+                await db.prc_balance_logs.insert_one({
+                    "user_email": user.get("email"),
+                    "user_id": user["uid"],
+                    "change_amount": -round(burn_amount, 2),
+                    "new_balance": round(new_balance, 2),
+                    "reason": f"PRC Burn Control ({burn_pct}%)",
+                    "admin_id": admin_id,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                
+                total_burned += burn_amount
+                users_affected += 1
+                
+            except Exception as e:
+                logging.error(f"Error burning PRC for user {user.get('uid')}: {e}")
+                continue
+        
+        # Update settings with last execution
+        await db.system_settings.update_one(
+            {"type": "prc_burn_control"},
+            {"$set": {
+                "last_executed": datetime.now(timezone.utc),
+                "last_burn_stats": {
+                    "total_burned": round(total_burned, 2),
+                    "users_affected": users_affected,
+                    "burn_percentage": burn_pct,
+                    "executed_by": admin_id
+                }
+            }}
+        )
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": admin_id,
+            "action": "prc_burn_executed",
+            "details": {
+                "total_burned": round(total_burned, 2),
+                "users_affected": users_affected,
+                "burn_percentage": burn_pct,
+                "target_type": target_type
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        logging.info(f"[PRC BURN CONTROL] Executed by {admin_id}: {users_affected} users, {total_burned:.2f} PRC burned")
+        
+        return {
+            "success": True,
+            "total_burned": round(total_burned, 2),
+            "users_affected": users_affected,
+            "burn_percentage": burn_pct
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error executing PRC burn control: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== REVERT PAYMENT REQUEST STATUS ==========
+
+@api_router.post("/admin/payment-request/revert-status")
+async def revert_payment_request_status(request: Request):
+    """
+    Revert an approved/rejected payment request back to pending status.
+    This allows admin to undo a mistaken approval or rejection.
+    """
+    try:
+        data = await request.json()
+        request_id = data.get("request_id")
+        request_type = data.get("request_type")  # 'bank', 'rd', 'emi'
+        admin_uid = data.get("admin_uid")
+        admin_name = data.get("admin_name", "Admin")
+        
+        if not request_id or not request_type:
+            raise HTTPException(status_code=400, detail="request_id and request_type are required")
+        
+        # Get the collection based on type
+        if request_type == 'bank':
+            collection = db.bank_withdrawal_requests  # Fixed: bank requests are in bank_withdrawal_requests
+            id_field = "request_id"
+        elif request_type == 'rd':
+            collection = db.bank_redeem_requests  # RD redeem requests are stored in bank_redeem_requests with request_type=rd_redeem
+            id_field = "request_id"
+        elif request_type == 'emi':
+            collection = db.bill_payments
+            id_field = "_id"
+            # Convert to ObjectId for EMI
+            from bson import ObjectId
+            try:
+                request_id = ObjectId(request_id)
+            except:
+                pass
+        else:
+            raise HTTPException(status_code=400, detail="Invalid request_type. Must be 'bank', 'rd', or 'emi'")
+        
+        # Find the request
+        existing = await collection.find_one({id_field: request_id})
+        if not existing:
+            # Try with _id
+            existing = await collection.find_one({"_id": request_id})
+            if not existing:
+                raise HTTPException(status_code=404, detail="Request not found")
+        
+        old_status = existing.get("status")
+        
+        # Only allow reverting approved or rejected requests
+        if old_status not in ['approved', 'rejected', 'completed']:
+            raise HTTPException(status_code=400, detail=f"Cannot revert request with status '{old_status}'. Only approved/rejected can be reverted.")
+        
+        # Update to pending
+        update_data = {
+            "status": "pending",
+            "reverted_from": old_status,
+            "reverted_at": datetime.now(timezone.utc),
+            "reverted_by": admin_name,
+            "reverted_by_uid": admin_uid
+        }
+        
+        # Clear old approval/rejection data but keep history
+        if old_status in ['approved', 'completed']:
+            update_data["previous_transaction_ref"] = existing.get("transaction_ref")
+            update_data["transaction_ref"] = None
+            update_data["approved_at"] = None
+            update_data["approved_by"] = None
+        elif old_status == 'rejected':
+            update_data["previous_rejection_reason"] = existing.get("rejection_reason")
+            update_data["rejection_reason"] = None
+            update_data["rejected_at"] = None
+            update_data["rejected_by"] = None
+        
+        # Update the document
+        if id_field == "_id":
+            result = await collection.update_one({"_id": request_id}, {"$set": update_data})
+        else:
+            result = await collection.update_one({id_field: request_id}, {"$set": update_data})
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=500, detail="Failed to update request status")
+        
+        # Log admin action
+        await db.admin_action_logs.insert_one({
+            "admin_id": admin_uid,
+            "admin_name": admin_name,
+            "action": "payment_request_revert",
+            "details": {
+                "request_id": str(request_id),
+                "request_type": request_type,
+                "old_status": old_status,
+                "new_status": "pending"
+            },
+            "timestamp": datetime.now(timezone.utc)
+        })
+        
+        logging.info(f"[REVERT STATUS] {request_type} request {request_id} reverted from {old_status} to pending by {admin_name}")
+        
+        return {
+            "success": True,
+            "message": f"Request reverted from {old_status} to pending",
+            "request_id": str(request_id),
+            "old_status": old_status,
+            "new_status": "pending"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error reverting payment request status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include all API routes (must be after all route definitions)
 # Include referral router (refactored)
 set_referral_db(db)
@@ -39041,6 +41313,22 @@ api_router.include_router(rd_router)
 set_user_logs_db(db)
 set_user_logs_cache(cache)
 api_router.include_router(user_logs_router)
+
+# HDFC Bulk Export Router - Excel export for bulk payments
+set_hdfc_export_db(db)
+api_router.include_router(hdfc_export_router)
+
+# Notifications Router - In-app notifications
+set_notifications_db(db)
+api_router.include_router(notifications_router)
+
+# Razorpay Payments Router
+set_razorpay_db(db)
+api_router.include_router(razorpay_router)
+
+# Eko Bill Payment & DMT Router
+set_eko_db(db)
+api_router.include_router(eko_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
@@ -39451,23 +41739,9 @@ async def startup_db():
     print("⏰ Starting scheduled tasks...")
     
     try:
-        # Schedule PRC burn for free users - runs every hour
-        scheduler.add_job(
-            burn_expired_prc_for_free_users,
-            CronTrigger(hour='*'),  # Every hour
-            id='burn_free_user_prc',
-            name='Burn expired PRC for free users (48 hour expiry)',
-            replace_existing=True
-        )
-        
-        # Schedule PRC burn for expired subscription users - runs daily at 2 AM
-        scheduler.add_job(
-            burn_expired_subscription_prc,
-            CronTrigger(hour=2, minute=0),  # Daily at 2 AM
-            id='burn_expired_subscription_prc',
-            name='Burn PRC for expired subscription users (5 day grace period)',
-            replace_existing=True
-        )
+        # NOTE: PRC burn jobs REMOVED (Feb 2026)
+        # Free users cannot collect PRC anymore, so no burning needed.
+        # Old jobs: burn_free_user_prc, burn_expired_subscription_prc - REMOVED
         
         # Schedule daily wallet reconciliation - runs at 3 AM
         scheduler.add_job(
@@ -39523,6 +41797,26 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Auto-sync Razorpay payments every 10 minutes
+        scheduler.add_job(
+            auto_sync_razorpay_payments,
+            'interval',
+            minutes=10,
+            id='auto_sync_razorpay',
+            name='Auto sync Razorpay payments every 10 minutes',
+            replace_existing=True
+        )
+        
+        # Eko transaction status update every 5 minutes
+        scheduler.add_job(
+            eko_update_pending_transactions,
+            'interval',
+            minutes=5,
+            id='eko_status_update',
+            name='Update Eko pending transaction statuses',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -39533,6 +41827,8 @@ async def startup_db():
         print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
         print("   - Account hard delete: Daily at 3:30 AM")
         print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
+        print("   - 🔄 Razorpay auto-sync: Every 10 minutes")
+        print("   - 🏦 Eko status update: Every 5 minutes")
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
 
