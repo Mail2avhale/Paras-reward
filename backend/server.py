@@ -27468,16 +27468,18 @@ async def process_bill_payment_request(request: Request):
                         customer_id = details.get("consumer_number", details.get("account_number", ""))
                     
                     operator = details.get("operator", details.get("biller_name", details.get("provider", "")))
+                    operator_id_from_details = details.get("operator_id", details.get("eko_operator_id", None))
+                    eko_operator_id = get_eko_operator_id(operator, operator_id_from_details)
                     eko_txn_ref = f"PARAS{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
                     
-                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id}")
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko BBPS: {request_type} - ₹{amount_inr} for {customer_id} (operator: {operator} -> {eko_operator_id})")
                     
                     eko_result = await make_eko_request(
                         "/v2/billpayments/paybill",
                         method="POST",
                         data={
                             "utility_acc_no": customer_id,
-                            "operator_id": operator,
+                            "operator_id": eko_operator_id,
                             "amount": str(int(amount_inr)),
                             "confirmation_mobile_no": EKO_INITIATOR_ID,
                             "client_ref_id": eko_txn_ref,
