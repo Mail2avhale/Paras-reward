@@ -128,15 +128,17 @@ test.describe('Unified Redeem System v2 - Page Navigation', () => {
   test('/redeem redirects to login when not authenticated', async ({ page }) => {
     await page.goto('/redeem', { waitUntil: 'domcontentloaded' });
     
-    // Should redirect to login page
-    await expect(page.locator('text=Welcome Back').or(page.locator('text=Sign in'))).toBeVisible({ timeout: 10000 });
+    // Should redirect to login page - use heading to be specific
+    await expect(page.getByRole('heading', { name: 'Welcome Back' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-submit-btn')).toBeVisible();
   });
 
   test('/admin/redeem redirects to login when not authenticated', async ({ page }) => {
     await page.goto('/admin/redeem', { waitUntil: 'domcontentloaded' });
     
-    // Should redirect to login page
-    await expect(page.locator('text=Welcome Back').or(page.locator('text=Sign in'))).toBeVisible({ timeout: 10000 });
+    // Should redirect to login page - use heading to be specific
+    await expect(page.getByRole('heading', { name: 'Welcome Back' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-submit-btn')).toBeVisible();
   });
 
   test('Login page has correct elements', async ({ page }) => {
