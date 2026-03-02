@@ -52,7 +52,7 @@ const SERVICE_CONFIG = {
     fields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount']
   },
   dmt: { 
-    name: 'Bank Transfer', 
+    name: 'Redeem to Bank Account', 
     icon: Banknote, 
     color: 'green',
     gradient: 'from-green-500 to-emerald-500',
