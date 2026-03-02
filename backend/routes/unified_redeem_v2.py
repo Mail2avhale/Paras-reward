@@ -13,6 +13,7 @@ Features:
 - Admin approval workflow for all transactions
 - New charging logic: Eko charge + ₹10 flat + 20% admin charge
 - Advanced admin dashboard with filters & pagination
+- Eko API integration for actual payments
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -22,6 +23,11 @@ from datetime import datetime, timezone
 from bson import ObjectId
 import logging
 import uuid
+import os
+import httpx
+import hashlib
+import hmac
+import base64
 
 router = APIRouter(prefix="/redeem", tags=["Unified Redeem v2"])
 
@@ -31,6 +37,37 @@ db = None
 def set_db(database):
     global db
     db = database
+
+# ==================== EKO CONFIGURATION ====================
+
+EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
+EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
+EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
+EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
+
+def generate_eko_secret_key(timestamp: str) -> str:
+    """Generate secret key for Eko API authentication"""
+    key = EKO_AUTHENTICATOR_KEY
+    encoded_key = base64.b64encode(key.encode()).decode()
+    signature = hmac.new(
+        encoded_key.encode(),
+        timestamp.encode(),
+        hashlib.sha256
+    ).digest()
+    return base64.b64encode(signature).decode()
+
+def generate_eko_request_hash(timestamp: str, utility_acc_no: str, amount: str, user_code: str) -> str:
+    """Generate request hash for Eko API"""
+    key = EKO_AUTHENTICATOR_KEY
+    encoded_key = base64.b64encode(key.encode()).decode()
+    data = f"{timestamp}{utility_acc_no}{amount}{user_code}"
+    signature = hmac.new(
+        encoded_key.encode(),
+        data.encode(),
+        hashlib.sha256
+    ).digest()
+    return base64.b64encode(signature).decode()
 
 # ==================== CONSTANTS ====================
 
@@ -56,6 +93,187 @@ STATUS_PROCESSING = "processing"
 STATUS_COMPLETED = "completed"
 STATUS_FAILED = "failed"
 STATUS_REJECTED = "rejected"
+
+
+# ==================== EKO API FUNCTIONS ====================
+
+async def get_eko_balance() -> dict:
+    """Get Eko wallet balance"""
+    try:
+        timestamp = str(int(datetime.now().timestamp() * 1000))
+        secret_key = generate_eko_secret_key(timestamp)
+        
+        url = f"{EKO_BASE_URL}/v1/user/balance"
+        params = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/json"
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, params=params, headers=headers)
+            data = response.json()
+            
+            if data.get("status") == 0 or data.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "balance": data.get("data", {}).get("balance", 0),
+                    "locked_amount": data.get("data", {}).get("locked_amount", 0)
+                }
+            else:
+                return {
+                    "success": False,
+                    "balance": 0,
+                    "error": data.get("message", "Failed to get balance")
+                }
+    except Exception as e:
+        logging.error(f"Eko balance error: {str(e)}")
+        return {"success": False, "balance": 0, "error": str(e)}
+
+
+async def execute_eko_recharge(request_doc: dict) -> dict:
+    """Execute mobile/DTH recharge via Eko BBPS API"""
+    try:
+        from routes.eko_payments import make_eko_request, EKO_USER_CODE as EKO_UC
+        
+        details = request_doc.get("details", {})
+        amount = str(int(request_doc["amount_inr"]))
+        utility_acc_no = details.get("mobile_number") or details.get("consumer_number") or ""
+        operator_id = details.get("operator", "")
+        
+        body = {
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": details.get("mobile", details.get("mobile_number", EKO_INITIATOR_ID)),
+            "sender_name": request_doc.get("user_name", "Customer"),
+            "operator_id": str(operator_id),
+            "user_code": EKO_UC,
+            "client_ref_id": request_doc["request_id"],
+            "source_ip": "127.0.0.1",
+            "latlong": "19.0760,72.8777",
+            "amount": amount
+        }
+        
+        logging.info(f"Eko Recharge Request: {body}")
+        
+        result = await make_eko_request(
+            "/v2/billpayments/paybill",
+            method="POST",
+            data=body,
+            use_request_hash=True,
+            utility_acc_no=utility_acc_no,
+            amount=amount
+        )
+        
+        logging.info(f"Eko Recharge Response: {result}")
+        
+        status_code = str(result.get("status", result.get("response_status_id", -1)))
+        
+        if status_code == "0":
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
+                "utr": result.get("data", {}).get("bbpstrxnrefid") or result.get("utr"),
+                "message": "Recharge successful"
+            }
+        elif status_code == "2":
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
+                "message": "Transaction processing (NEFT)"
+            }
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": status_code,
+                "message": result.get("message", "Transaction failed")
+            }
+            
+    except Exception as e:
+        logging.error(f"Eko recharge error: {str(e)}")
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
+        }
+
+
+async def execute_eko_dmt(request_doc: dict) -> dict:
+    """Execute DMT (Bank Transfer) via Eko API"""
+    try:
+        from routes.eko_payments import make_eko_request, EKO_USER_CODE as EKO_UC
+        
+        details = request_doc.get("details", {})
+        amount = str(int(request_doc["amount_inr"]))
+        account_no = details.get("account_number", "")
+        ifsc = details.get("ifsc_code", "")
+        
+        body = {
+            "recipient_name": details.get("account_holder", "Customer"),
+            "account": account_no,
+            "ifsc": ifsc,
+            "amount": amount,
+            "user_code": EKO_UC,
+            "client_ref_id": request_doc["request_id"],
+            "sender_mobile": details.get("mobile", EKO_INITIATOR_ID),
+            "channel": "2",  # IMPS
+            "source_ip": "127.0.0.1",
+            "latlong": "19.0760,72.8777"
+        }
+        
+        logging.info(f"Eko DMT Request: {body}")
+        
+        result = await make_eko_request(
+            "/v1/dmt/transaction",
+            method="POST",
+            data=body,
+            use_request_hash=True,
+            utility_acc_no=account_no,
+            amount=amount
+        )
+        
+        logging.info(f"Eko DMT Response: {result}")
+        
+        status_code = str(result.get("status", result.get("response_status_id", -1)))
+        
+        if status_code == "0":
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
+                "utr": result.get("data", {}).get("utr"),
+                "message": "Transfer successful"
+            }
+        elif status_code == "2":
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
+                "message": "Transfer processing"
+            }
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": status_code,
+                "message": result.get("message", "Transfer failed")
+            }
+            
+    except Exception as e:
+        logging.error(f"Eko DMT error: {str(e)}")
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
+        }
 
 
 # ==================== MODELS ====================
@@ -197,6 +415,36 @@ async def calculate_charges_api(amount: float = Query(..., gt=0)):
     }
 
 
+@router.get("/admin/eko-balance")
+async def get_admin_eko_balance():
+    """Get Eko wallet balance for admin dashboard - uses existing Eko balance endpoint"""
+    try:
+        # Use existing make_eko_request from eko_payments
+        from routes.eko_payments import make_eko_request
+        
+        result = await make_eko_request(
+            f"/v1/customers/mobile_number:{EKO_INITIATOR_ID}/balance",
+            method="GET"
+        )
+        
+        balance_str = result.get("data", {}).get("balance", "0")
+        try:
+            balance = float(balance_str)
+        except (ValueError, TypeError):
+            balance = 0
+            
+        return {
+            "success": True,
+            "balance": balance,
+            "currency": result.get("data", {}).get("currency", "INR"),
+            "locked_amount": 0,
+            "message": result.get("message")
+        }
+    except Exception as e:
+        logging.error(f"Eko balance error: {str(e)}")
+        return {"success": False, "balance": 0, "error": str(e)}
+
+
 @router.post("/request")
 async def create_redeem_request(request: RedeemRequestCreate):
     """
@@ -309,7 +557,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
     
     return {
         "success": True,
-        "message": f"Request submitted successfully! Admin will process within 24-48 hours.",
+        "message": "Request submitted successfully! Admin will process within 24-48 hours.",
         "request_id": request_id,
         "charges": charges,
         "prc_deducted": total_prc_required,
@@ -654,7 +902,8 @@ async def admin_approve_request(data: AdminApproveRequest):
 @router.post("/admin/complete")
 async def admin_complete_request(data: AdminCompleteRequest):
     """
-    Admin: Mark request as completed (manual completion after Eko processing)
+    Admin: Execute Eko payment and complete request
+    This actually calls Eko API to do the recharge/payment
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
@@ -671,37 +920,129 @@ async def admin_complete_request(data: AdminCompleteRequest):
         )
     
     now = datetime.now(timezone.utc)
+    service_type = request_doc.get("service_type", "")
     
-    update_data = {
-        "status": STATUS_COMPLETED,
-        "eko_tid": data.eko_tid,
-        "utr_number": data.utr_number,
-        "admin_notes": data.completion_notes,
-        "completed_at": now.isoformat(),
-        "completed_by": data.admin_id,
-        "updated_at": now.isoformat()
-    }
-    
+    # Update status to processing
     await db.redeem_requests.update_one(
         {"request_id": data.request_id},
         {
-            "$set": update_data,
+            "$set": {"status": STATUS_PROCESSING, "updated_at": now.isoformat()},
             "$push": {
                 "status_history": {
-                    "status": STATUS_COMPLETED,
+                    "status": STATUS_PROCESSING,
                     "timestamp": now.isoformat(),
                     "by": data.admin_id,
-                    "note": data.completion_notes or "Completed by admin"
+                    "note": "Processing Eko transaction"
                 }
             }
         }
     )
     
-    return {
-        "success": True,
-        "message": "Request marked as completed",
-        "status": STATUS_COMPLETED
-    }
+    # Execute Eko API based on service type
+    if service_type == "dmt":
+        eko_result = await execute_eko_dmt(request_doc)
+    else:
+        # Mobile, DTH, Electricity, Gas, EMI - all use BBPS
+        eko_result = await execute_eko_recharge(request_doc)
+    
+    if eko_result.get("success"):
+        # SUCCESS or PROCESSING
+        final_status = STATUS_COMPLETED if eko_result.get("status") == "SUCCESS" else STATUS_PROCESSING
+        
+        update_data = {
+            "status": final_status,
+            "eko_tid": eko_result.get("eko_tid") or data.eko_tid,
+            "utr_number": eko_result.get("utr") or data.utr_number,
+            "eko_status": eko_result.get("status"),
+            "eko_message": eko_result.get("message"),
+            "admin_notes": data.completion_notes,
+            "completed_at": now.isoformat() if final_status == STATUS_COMPLETED else None,
+            "completed_by": data.admin_id,
+            "updated_at": now.isoformat()
+        }
+        
+        await db.redeem_requests.update_one(
+            {"request_id": data.request_id},
+            {
+                "$set": update_data,
+                "$push": {
+                    "status_history": {
+                        "status": final_status,
+                        "timestamp": now.isoformat(),
+                        "by": data.admin_id,
+                        "note": f"Eko: {eko_result.get('message')} | TID: {eko_result.get('eko_tid')}"
+                    }
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": eko_result.get("message", "Transaction processed"),
+            "status": final_status,
+            "eko_tid": eko_result.get("eko_tid"),
+            "utr": eko_result.get("utr")
+        }
+    else:
+        # FAILED - Refund PRC to user
+        user_id = request_doc["user_id"]
+        refund_amount = request_doc["total_prc_deducted"]
+        
+        user = await db.users.find_one({"uid": user_id})
+        if user:
+            current_balance = user.get("prc_balance", 0)
+            new_balance = current_balance + refund_amount
+            
+            await db.users.update_one(
+                {"uid": user_id},
+                {
+                    "$set": {"prc_balance": new_balance},
+                    "$push": {
+                        "prc_transactions": {
+                            "type": "credit",
+                            "amount": refund_amount,
+                            "description": f"Refund: Eko transaction failed - {eko_result.get('message')}",
+                            "reference_id": data.request_id,
+                            "balance_after": new_balance,
+                            "timestamp": now.isoformat()
+                        }
+                    }
+                }
+            )
+        
+        update_data = {
+            "status": STATUS_FAILED,
+            "eko_status": "FAILED",
+            "eko_error_code": eko_result.get("error_code"),
+            "eko_message": eko_result.get("message"),
+            "admin_notes": data.completion_notes,
+            "prc_refunded": True,
+            "refund_amount": refund_amount,
+            "updated_at": now.isoformat()
+        }
+        
+        await db.redeem_requests.update_one(
+            {"request_id": data.request_id},
+            {
+                "$set": update_data,
+                "$push": {
+                    "status_history": {
+                        "status": STATUS_FAILED,
+                        "timestamp": now.isoformat(),
+                        "by": data.admin_id,
+                        "note": f"Eko Failed: {eko_result.get('message')} | Refunded {refund_amount} PRC"
+                    }
+                }
+            }
+        )
+        
+        return {
+            "success": False,
+            "message": f"Eko transaction failed: {eko_result.get('message')}. {refund_amount} PRC refunded to user.",
+            "status": STATUS_FAILED,
+            "error": eko_result.get("message"),
+            "refund_amount": refund_amount
+        }
 
 
 @router.get("/admin/request/{request_id}")

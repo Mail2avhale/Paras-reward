@@ -10,7 +10,7 @@ import {
   ArrowLeft, Search, Filter, RefreshCw, CheckCircle, XCircle, Clock,
   Smartphone, Tv, Zap, Flame, Building, Banknote, ChevronLeft, ChevronRight,
   AlertCircle, Eye, Loader2, Calendar, IndianRupee, User, FileText,
-  X, SlidersHorizontal
+  X, SlidersHorizontal, Wallet, Play
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -32,6 +32,7 @@ const AdminRedeemDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState(null);
+  const [ekoBalance, setEkoBalance] = useState(null);
   const [pagination, setPagination] = useState({ total: 0, page: 1, per_page: 20, total_pages: 0 });
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -96,9 +97,20 @@ const AdminRedeemDashboard = ({ user }) => {
     }
   };
   
+  const fetchEkoBalance = async () => {
+    try {
+      const response = await axios.get(`${API}/redeem/admin/eko-balance`);
+      setEkoBalance(response.data);
+    } catch (error) {
+      console.error('Error fetching Eko balance:', error);
+      setEkoBalance({ success: false, balance: 0, error: 'Failed to fetch' });
+    }
+  };
+  
   useEffect(() => {
     fetchRequests();
     fetchStats();
+    fetchEkoBalance();
   }, [fetchRequests]);
   
   // Handle filter changes
@@ -170,25 +182,38 @@ const AdminRedeemDashboard = ({ user }) => {
     }
   };
   
-  // Handle complete
+  // Handle complete - This actually executes Eko API
   const handleComplete = async () => {
     setActionLoading(true);
     try {
-      await axios.post(`${API}/redeem/admin/complete`, {
+      const response = await axios.post(`${API}/redeem/admin/complete`, {
         request_id: selectedRequest.request_id,
         admin_id: user.uid,
         eko_tid: completionData.eko_tid,
         utr_number: completionData.utr_number,
         completion_notes: completionData.notes
       });
-      toast.success('Request marked as completed');
+      
+      if (response.data.success) {
+        toast.success(response.data.message || 'Transaction completed successfully!');
+        if (response.data.eko_tid) {
+          toast.info(`Eko TID: ${response.data.eko_tid}`);
+        }
+      } else {
+        toast.error(response.data.message || 'Transaction failed');
+        if (response.data.refund_amount) {
+          toast.info(`${response.data.refund_amount} PRC refunded to user`);
+        }
+      }
+      
       fetchRequests();
       fetchStats();
+      fetchEkoBalance(); // Refresh Eko balance after transaction
       setSelectedRequest(null);
       setShowCompleteModal(false);
       setCompletionData({ eko_tid: '', utr_number: '', notes: '' });
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to complete');
+      toast.error(error.response?.data?.detail || error.response?.data?.message || 'Failed to process');
     } finally {
       setActionLoading(false);
     }
@@ -236,13 +261,42 @@ const AdminRedeemDashboard = ({ user }) => {
             <p className="text-gray-400 text-sm">Manage all user redeem requests</p>
           </div>
           <Button
-            onClick={() => { fetchRequests(); fetchStats(); }}
+            onClick={() => { fetchRequests(); fetchStats(); fetchEkoBalance(); }}
             variant="outline"
             className="border-gray-700 text-gray-400 hover:text-white"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+        </div>
+        
+        {/* Eko Balance Card */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <Wallet className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <p className="text-green-300/70 text-xs uppercase">Eko Wallet Balance</p>
+                {ekoBalance ? (
+                  ekoBalance.success ? (
+                    <p className="text-2xl font-bold text-green-400">₹{(ekoBalance.balance || 0).toLocaleString()}</p>
+                  ) : (
+                    <p className="text-red-400 text-sm">{ekoBalance.error || 'Failed to fetch'}</p>
+                  )
+                ) : (
+                  <Loader2 className="h-5 w-5 text-green-400 animate-spin" />
+                )}
+              </div>
+            </div>
+            {ekoBalance?.locked_amount > 0 && (
+              <div className="text-right">
+                <p className="text-gray-500 text-xs">Locked Amount</p>
+                <p className="text-yellow-400 font-semibold">₹{ekoBalance.locked_amount.toLocaleString()}</p>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Stats Cards */}
@@ -722,43 +776,42 @@ const AdminRedeemDashboard = ({ user }) => {
         </div>
       )}
       
-      {/* Complete Modal */}
+      {/* Complete Modal - Execute Eko Transaction */}
       {showCompleteModal && selectedRequest && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-3xl border border-gray-800 w-full max-w-md">
             <div className="p-6 border-b border-gray-800">
-              <h3 className="text-xl font-bold text-white">Complete Request</h3>
-              <p className="text-gray-500 text-sm">Enter transaction details</p>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Play className="h-5 w-5 text-green-400" />
+                Execute Eko Transaction
+              </h3>
+              <p className="text-gray-500 text-sm">This will call Eko API to process the payment</p>
             </div>
             
-            <div className="p-6 space-y-4">
+            {/* Request Summary */}
+            <div className="p-4 m-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+              <p className="text-amber-400 text-sm font-medium">{selectedRequest.service_name}</p>
+              <p className="text-white text-xl font-bold">₹{selectedRequest.amount_inr}</p>
+              <p className="text-gray-400 text-xs">{selectedRequest.request_id}</p>
+            </div>
+            
+            <div className="px-6 pb-6 space-y-4">
               <div>
-                <Label className="text-gray-300 text-sm mb-2 block">Eko Transaction ID</Label>
-                <Input
-                  value={completionData.eko_tid}
-                  onChange={(e) => setCompletionData(prev => ({ ...prev, eko_tid: e.target.value }))}
-                  placeholder="EKO TID (optional)"
-                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm mb-2 block">UTR Number</Label>
-                <Input
-                  value={completionData.utr_number}
-                  onChange={(e) => setCompletionData(prev => ({ ...prev, utr_number: e.target.value }))}
-                  placeholder="Bank UTR (optional)"
-                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-sm mb-2 block">Notes</Label>
+                <Label className="text-gray-300 text-sm mb-2 block">Notes (Optional)</Label>
                 <textarea
                   value={completionData.notes}
                   onChange={(e) => setCompletionData(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="Any additional notes..."
-                  rows={3}
+                  rows={2}
                   className="w-full p-3 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl resize-none"
                 />
+              </div>
+              
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3">
+                <p className="text-blue-400 text-xs">
+                  <AlertCircle className="inline h-3 w-3 mr-1" />
+                  Eko API will be called. If failed, PRC will be auto-refunded.
+                </p>
               </div>
             </div>
             
@@ -773,10 +826,19 @@ const AdminRedeemDashboard = ({ user }) => {
               <Button
                 onClick={handleComplete}
                 disabled={actionLoading}
-                className="bg-green-500 hover:bg-green-600 text-white"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold"
               >
-                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Mark Completed
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Execute & Complete
+                  </>
+                )}
               </Button>
             </div>
           </div>
