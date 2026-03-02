@@ -2356,6 +2356,7 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
             f"/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}",
             method="POST",
             data={
+                "initiator_id": EKO_INITIATOR_ID,  # Required in body as per Eko docs
                 "utility_acc_no": request.utility_acc_no,
                 "confirmation_mobile_no": EKO_INITIATOR_ID,
                 "sender_name": "Admin",
