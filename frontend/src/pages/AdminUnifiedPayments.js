@@ -813,7 +813,7 @@ const AdminUnifiedPayments = ({ user }) => {
                   {/* Amount & Status */}
                   <div className="text-right flex-shrink-0">
                     <p className="text-green-400 font-bold text-xl">₹{(req.amount_inr || 0).toLocaleString()}</p>
-                    <p className={`text-sm font-semibold ${getStatusColor(req.status)}`}>{req.status}</p>
+                    <p className={`text-sm font-semibold ${getStatusColor(req.status)}`}>{getStatusLabel(req.status)}</p>
                   </div>
 
                   {/* Expand Icon */}
