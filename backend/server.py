@@ -27872,6 +27872,216 @@ async def create_gift_voucher_request(request: Request):
             detail="Service temporarily down. Please try again later."
         )
     # ========================================
+
+
+# ==================== BULK REJECT ALL PENDING REQUESTS ====================
+@api_router.post("/admin/bulk-reject-all-pending")
+async def bulk_reject_all_pending_requests(request: Request):
+    """
+    Bulk reject all pending bill payment and bank transfer requests.
+    Returns PRC to all users.
+    
+    Required body: { "admin_uid": "...", "admin_pin": "123456" }
+    """
+    data = await request.json()
+    admin_uid = data.get("admin_uid")
+    admin_pin = data.get("admin_pin")
+    reject_reason = data.get("reject_reason", "BY ADMIN")
+    
+    # Verify admin PIN
+    if admin_pin != "123456":
+        raise HTTPException(status_code=403, detail="Invalid admin PIN")
+    
+    # Get admin name
+    admin_name = "Admin"
+    if admin_uid:
+        admin_user = await db.users.find_one({"uid": admin_uid}, {"name": 1, "role": 1})
+        if admin_user:
+            admin_name = admin_user.get("name", "Admin")
+            if admin_user.get("role") != "admin":
+                raise HTTPException(status_code=403, detail="Not authorized")
+    
+    results = {
+        "bill_payments": {"rejected": 0, "prc_refunded": 0, "errors": []},
+        "bank_transfers": {"rejected": 0, "prc_refunded": 0, "errors": []},
+        "total_rejected": 0,
+        "total_prc_refunded": 0
+    }
+    
+    now = datetime.now(timezone.utc)
+    
+    # ========== 1. REJECT ALL PENDING BILL PAYMENTS ==========
+    print("🔄 Starting bulk reject for BILL PAYMENTS...")
+    
+    pending_bills = await db.bill_payment_requests.find({
+        "status": {"$in": ["pending", "eko_failed"]}
+    }).to_list(length=None)
+    
+    print(f"📋 Found {len(pending_bills)} pending bill payment requests")
+    
+    for bill in pending_bills:
+        try:
+            request_id = bill.get("request_id")
+            user_id = bill.get("user_id")
+            total_prc = bill.get("total_prc_deducted", 0)
+            
+            if not user_id or total_prc <= 0:
+                results["bill_payments"]["errors"].append(f"Invalid data for {request_id}")
+                continue
+            
+            # Get user and refund PRC
+            user = await db.users.find_one({"uid": user_id})
+            if not user:
+                results["bill_payments"]["errors"].append(f"User not found: {user_id}")
+                continue
+            
+            balance_before = user.get("prc_balance", 0)
+            balance_after = balance_before + total_prc
+            
+            # Update user balance
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"prc_balance": balance_after}}
+            )
+            
+            # Update request status
+            await db.bill_payment_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "rejected",
+                    "reject_reason": reject_reason,
+                    "processed_at": now.isoformat(),
+                    "admin_notes": reject_reason,
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_uid,
+                    "refund_details": {
+                        "prc_refunded": total_prc,
+                        "balance_before": balance_before,
+                        "balance_after": balance_after,
+                        "refunded_at": now.isoformat()
+                    },
+                    "bulk_rejected": True
+                }}
+            )
+            
+            # Log refund transaction
+            await log_transaction(
+                user_id=user_id,
+                wallet_type="prc",
+                transaction_type="bill_payment_refund",
+                amount=total_prc,
+                description=f"Bill payment rejected - {reject_reason}",
+                metadata={
+                    "request_id": request_id,
+                    "reason": reject_reason,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                    "bulk_reject": True
+                }
+            )
+            
+            results["bill_payments"]["rejected"] += 1
+            results["bill_payments"]["prc_refunded"] += total_prc
+            
+        except Exception as e:
+            results["bill_payments"]["errors"].append(f"Error for {bill.get('request_id')}: {str(e)}")
+    
+    print(f"✅ Bill Payments: Rejected {results['bill_payments']['rejected']}, Refunded {results['bill_payments']['prc_refunded']} PRC")
+    
+    # ========== 2. REJECT ALL PENDING BANK TRANSFERS ==========
+    print("🔄 Starting bulk reject for BANK TRANSFERS...")
+    
+    pending_bank = await db.bank_redeem_requests.find({
+        "status": {"$in": ["pending", "eko_failed"]}
+    }).to_list(length=None)
+    
+    print(f"📋 Found {len(pending_bank)} pending bank transfer requests")
+    
+    for bank_req in pending_bank:
+        try:
+            request_id = bank_req.get("request_id")
+            user_id = bank_req.get("user_id")
+            total_prc = bank_req.get("total_prc_deducted", 0)
+            
+            if not user_id or total_prc <= 0:
+                results["bank_transfers"]["errors"].append(f"Invalid data for {request_id}")
+                continue
+            
+            # Get user and refund PRC
+            user = await db.users.find_one({"uid": user_id})
+            if not user:
+                results["bank_transfers"]["errors"].append(f"User not found: {user_id}")
+                continue
+            
+            balance_before = user.get("prc_balance", 0)
+            balance_after = balance_before + total_prc
+            
+            # Update user balance
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$set": {"prc_balance": balance_after}}
+            )
+            
+            # Update request status
+            await db.bank_redeem_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "rejected",
+                    "reject_reason": reject_reason,
+                    "processed_at": now.isoformat(),
+                    "admin_notes": reject_reason,
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_uid,
+                    "refund_details": {
+                        "prc_refunded": total_prc,
+                        "balance_before": balance_before,
+                        "balance_after": balance_after,
+                        "refunded_at": now.isoformat()
+                    },
+                    "bulk_rejected": True
+                }}
+            )
+            
+            # Log refund transaction
+            await log_transaction(
+                user_id=user_id,
+                wallet_type="prc",
+                transaction_type="bank_transfer_refund",
+                amount=total_prc,
+                description=f"Bank transfer rejected - {reject_reason}",
+                metadata={
+                    "request_id": request_id,
+                    "reason": reject_reason,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                    "bulk_reject": True
+                }
+            )
+            
+            results["bank_transfers"]["rejected"] += 1
+            results["bank_transfers"]["prc_refunded"] += total_prc
+            
+        except Exception as e:
+            results["bank_transfers"]["errors"].append(f"Error for {bank_req.get('request_id')}: {str(e)}")
+    
+    print(f"✅ Bank Transfers: Rejected {results['bank_transfers']['rejected']}, Refunded {results['bank_transfers']['prc_refunded']} PRC")
+    
+    # Calculate totals
+    results["total_rejected"] = results["bill_payments"]["rejected"] + results["bank_transfers"]["rejected"]
+    results["total_prc_refunded"] = results["bill_payments"]["prc_refunded"] + results["bank_transfers"]["prc_refunded"]
+    
+    print(f"🎉 BULK REJECT COMPLETE: {results['total_rejected']} requests rejected, {results['total_prc_refunded']} PRC refunded")
+    
+    return {
+        "success": True,
+        "message": f"Bulk reject completed. {results['total_rejected']} requests rejected.",
+        "results": results,
+        "rejected_by": admin_name,
+        "reject_reason": reject_reason,
+        "timestamp": now.isoformat()
+    }
+
+
     
     # Validate denomination
     valid_denominations = [10, 50, 100, 500, 1000, 5000]
