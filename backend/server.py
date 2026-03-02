@@ -10368,7 +10368,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
         except:
             pass
         
-        return {"success": True, "message": message, "new_expiry": new_expiry}
+        return {"success": True, "message": message, "new_expiry": new_expiry, "fraud_warning": fraud_warning}
     except HTTPException:
         raise
     except Exception as e:
