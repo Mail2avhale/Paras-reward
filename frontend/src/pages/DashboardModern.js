@@ -1069,7 +1069,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/bank-redeem')}
+                onClick={() => navigate('/redeem')}
                 className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
                 style={{
                   background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
@@ -1119,13 +1119,13 @@ const DashboardModern = ({ user, onLogout }) => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate('/bank-redeem');
+                      navigate('/redeem');
                     }}
                     className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
                     data-testid="redeem-to-bank-btn"
                   >
                     <Building2 className="w-5 h-5" />
-                    Redeem To Bank
+                    Redeem PRC
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
