@@ -294,7 +294,23 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             except (ValueError, json.JSONDecodeError) as je:
                 logging.error(f"JSON Parse Error: {je}")
                 logging.error(f"Full response text: {response.text}")
-                result = {"raw_response": response.text, "message": "No key for Response"}
+                
+                # Better error message based on response content
+                raw_lower = response.text.lower() if response.text else ""
+                if "forbidden" in raw_lower or response.status_code == 403:
+                    error_msg = f"Access denied (403) - IP not whitelisted. Status: {response.status_code}"
+                elif "unauthorized" in raw_lower or response.status_code == 401:
+                    error_msg = f"Authentication failed (401). Status: {response.status_code}"
+                elif "not found" in raw_lower or response.status_code == 404:
+                    error_msg = f"Endpoint not found (404). Status: {response.status_code}"
+                elif "<!doctype" in raw_lower or "<html" in raw_lower:
+                    error_msg = f"HTML response received instead of JSON. Status: {response.status_code}"
+                elif response.status_code >= 500:
+                    error_msg = f"Eko server error ({response.status_code})"
+                else:
+                    error_msg = f"Invalid JSON response. Status: {response.status_code}. Raw: {response.text[:100]}"
+                
+                result = {"raw_response": response.text[:500], "message": error_msg, "http_status": response.status_code}
             
             # Check for Eko error responses
             if response.status_code >= 400:
