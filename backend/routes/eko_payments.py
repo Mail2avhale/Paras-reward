@@ -859,20 +859,24 @@ async def process_mobile_recharge(
     circle_id: str = None,
     user_id: str = None
 ):
-    """Process mobile prepaid recharge via Eko"""
+    """Process mobile prepaid recharge via Eko BBPS API"""
     try:
         txn_ref = f"RCH{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile_number[-4:]}"
         
+        # Use BBPS paybill API for mobile recharge
         result = await make_eko_request(
-            "/v1/recharge",
+            "/v2/billpayments/paybill",
             method="POST",
             data={
-                "mobile_number": mobile_number,
+                "utility_acc_no": mobile_number,
+                "confirmation_mobile_no": EKO_INITIATOR_ID,
+                "sender_name": "Customer",
                 "operator_id": operator_id,
                 "amount": str(int(amount)),
-                "circle_id": circle_id or "",
                 "client_ref_id": txn_ref,
-                "confirmation_mobile_no": EKO_INITIATOR_ID
+                "source_ip": "127.0.0.1",
+                "latlong": "0.0,0.0",
+                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID
             }
         )
         
@@ -894,7 +898,7 @@ async def process_mobile_recharge(
         return {
             "success": True,
             "txn_ref": txn_ref,
-            "eko_txn_id": result.get("tid"),
+            "eko_txn_id": result.get("tid") or result.get("txstatus_desc"),
             "status": result.get("status"),
             "message": result.get("message", "Recharge initiated")
         }
