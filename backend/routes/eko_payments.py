@@ -749,11 +749,20 @@ def get_fallback_operators(service_type: str):
             {"id": "280", "name": "Tata Capital", "operator_id": 280},
             {"id": "476", "name": "LIC Housing Finance", "operator_id": 476},
             {"id": "2822", "name": "Mahindra Finance", "operator_id": 2822},
+            {"id": "321", "name": "AU Bank Loan Repayment", "operator_id": 321},
         ],
         "lpg": [
-            {"id": "301", "name": "Indane Gas (IOCL)", "operator_id": 301},
-            {"id": "302", "name": "HP Gas", "operator_id": 302},
-            {"id": "303", "name": "Bharat Gas (BPCL)", "operator_id": 303},
+            {"id": "438", "name": "Indane Gas (Indian Oil)", "operator_id": 438},
+            {"id": "270", "name": "HP Gas", "operator_id": 270},
+            {"id": "275", "name": "Bharat Gas (BPCL)", "operator_id": 275},
+        ],
+        "insurance": [
+            {"id": "ins_1", "name": "ICICI Prudential Life Insurance", "operator_id": 0},
+            {"id": "ins_2", "name": "LIC", "operator_id": 0},
+        ],
+        "fastag": [
+            {"id": "fastag_1", "name": "Paytm FASTag", "operator_id": 0},
+            {"id": "fastag_2", "name": "ICICI FASTag", "operator_id": 0},
         ]
     }
     return fallbacks.get(service_type.lower(), [])
