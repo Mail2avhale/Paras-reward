@@ -41,23 +41,27 @@ def generate_secret_key(timestamp: str):
     """
     Generate secret-key using HMAC-SHA256 as per Eko documentation
     
-    Algorithm (from https://developers.eko.in/docs/authentication):
+    Algorithm (from https://developers.eko.in/reference/authentication):
     1. Get current timestamp in milliseconds
-    2. Use authenticator key directly (NOT base64 encoded)
-    3. Compute HMAC-SHA256 of timestamp using authenticator key
-    4. Base64 encode the signature
+    2. Base64 encode the authenticator key FIRST
+    3. Compute HMAC-SHA256 of timestamp using the BASE64 ENCODED key
+    4. Base64 encode the signature to get secret-key
     """
     if not EKO_AUTHENTICATOR_KEY:
         return None
     
-    # Key bytes - use authenticator key directly
+    # Step 1: Base64 encode the authenticator key FIRST (THIS WAS MISSING!)
     key_bytes = EKO_AUTHENTICATOR_KEY.encode('utf-8')
+    encoded_key = base64.b64encode(key_bytes).decode('utf-8')
     
-    # HMAC SHA256 of timestamp
+    # Step 2: Use encoded key for HMAC
+    encoded_key_bytes = encoded_key.encode('utf-8')
+    
+    # Step 3: HMAC SHA256 of timestamp using encoded key
     message = timestamp.encode('utf-8')
-    signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
+    signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
     
-    # Base64 encode the signature
+    # Step 4: Base64 encode the signature
     return base64.b64encode(signature).decode('utf-8')
 
 
