@@ -84,6 +84,22 @@ const SERVICE_CATEGORIES = {
     borderColor: 'border-amber-500/30',
     textColor: 'text-amber-400'
   },
+  gas_bill: { 
+    name: 'Gas Bill (PNG)', 
+    icon: Zap, // Using Zap as Flame might not be imported
+    color: 'orange',
+    bgColor: 'bg-orange-500/10',
+    borderColor: 'border-orange-500/30',
+    textColor: 'text-orange-400'
+  },
+  lpg_booking: { 
+    name: 'LPG Cylinder', 
+    icon: CreditCard, // Using CreditCard as placeholder
+    color: 'red',
+    bgColor: 'bg-red-500/10',
+    borderColor: 'border-red-500/30',
+    textColor: 'text-red-400'
+  },
   credit_card_payment: { 
     name: 'Credit Card', 
     icon: CreditCard, 
