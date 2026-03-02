@@ -100,6 +100,14 @@ const SERVICE_CATEGORIES = {
     borderColor: 'border-red-500/30',
     textColor: 'text-red-400'
   },
+  loan_emi: { 
+    name: 'EMI Payment', 
+    icon: Wallet, 
+    color: 'cyan',
+    bgColor: 'bg-cyan-500/10',
+    borderColor: 'border-cyan-500/30',
+    textColor: 'text-cyan-400'
+  },
   credit_card_payment: { 
     name: 'Credit Card', 
     icon: CreditCard, 
@@ -108,7 +116,7 @@ const SERVICE_CATEGORIES = {
     borderColor: 'border-emerald-500/30',
     textColor: 'text-emerald-400'
   }
-  // loan_emi (EMI Payment) removed - handled in separate unified payment dashboard
+};
 };
 
 const AdminBillPayments = ({ user }) => {
