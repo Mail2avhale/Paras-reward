@@ -54,6 +54,7 @@ const BillPayments = ({ user, onLogout }) => {
     amount_inr: '',
     phone_number: '',
     operator: '',
+    operator_id: '',  // Eko operator ID
     recharge_type: '',  // prepaid or postpaid
     circle: '',         // telecom circle
     account_number: '',
