@@ -43,6 +43,9 @@ const BillPayments = ({ user, onLogout }) => {
   const [ekoOperators, setEkoOperators] = useState([]);
   const [ekoCircles, setEkoCircles] = useState([]);
   const [ekoDthOperators, setEkoDthOperators] = useState([]);
+  const [ekoElectricityOperators, setEkoElectricityOperators] = useState([]);
+  const [ekoGasOperators, setEkoGasOperators] = useState([]);
+  const [ekoLpgOperators, setEkoLpgOperators] = useState([]);
   const [ekoPlans, setEkoPlans] = useState([]);
   const [loadingOperators, setLoadingOperators] = useState(false);
   const [loadingPlans, setLoadingPlans] = useState(false);
