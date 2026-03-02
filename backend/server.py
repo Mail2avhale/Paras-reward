@@ -27509,6 +27509,80 @@ async def process_bill_payment_request(request: Request):
             "indane": "301", "indian oil": "301",
             "hp gas": "302", "hindustan petroleum": "302",
             "bharat gas": "303", "bpcl": "303",
+            
+            # ============ LOAN/EMI PAYMENT ============
+            # HDFC
+            "hdfc bank credit card": "230", "hdfc credit card": "5303",
+            "hdfc bank loan": "5622", "hdfc home loan": "5324",
+            
+            # ICICI
+            "icici credit card": "5299", "icici bank credit card": "5299",
+            "icici home loan": "2794", "icici retail loan": "2795",
+            "icici home finance": "5324",
+            
+            # Axis Bank
+            "axis bank credit card": "5304", "axis credit card": "5304",
+            "axis bank loan": "328", "axis retail loan": "328",
+            "axis finance": "329",
+            
+            # Bajaj
+            "bajaj finance": "340", "bajaj finserv": "340",
+            "bajaj auto finance": "336",
+            "bajaj housing finance": "334",
+            
+            # Tata
+            "tata capital": "280", "tata capital finance": "280",
+            "tata motors finance": "588",
+            "tata housing finance": "2699",
+            
+            # Mahindra
+            "mahindra finance": "2822", "mahindra home finance": "488",
+            
+            # IDFC
+            "idfc first bank credit card": "5293", "idfc credit card": "5293",
+            
+            # Kotak
+            "kotak mahindra loan": "2681", "kotak loan": "2681",
+            
+            # Yes Bank
+            "yes bank credit card": "5306", "yes credit card": "5306",
+            
+            # SBI
+            "sbi loan": "5622", "sbi home loan": "5622",
+            "state bank loan": "5622",
+            
+            # LIC Housing
+            "lic housing finance": "476", "lic hfl": "476",
+            
+            # Muthoot
+            "muthoot finance": "5066", "muthoot gold loan": "5066",
+            "muthoot housing finance": "516",
+            
+            # Manappuram
+            "manappuram finance": "2823", "manappuram gold loan": "2823",
+            "manappuram vehicle loan": "490",
+            
+            # Home Credit
+            "home credit": "425", "home credit india": "425",
+            
+            # L&T Finance
+            "l&t finance": "5483", "l and t finance": "5483",
+            
+            # TVS Credit
+            "tvs credit": "2700", "tvs finance": "2700",
+            
+            # Indiabulls
+            "indiabulls housing": "439", "indiabulls home loan": "439",
+            "indiabulls consumer finance": "436",
+            
+            # Fullerton
+            "fullerton india": "2672", "fullerton housing": "2673",
+            
+            # AU Bank
+            "au bank loan": "321", "au small finance loan": "321",
+            
+            # Hero FinCorp
+            "hero fincorp": "419", "hero finance": "419",
         }
         
         def get_eko_operator_id(operator_name, details_operator_id=None):
