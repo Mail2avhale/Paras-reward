@@ -170,7 +170,7 @@ const AdminUnifiedPayments = ({ user }) => {
   };
 
   const calculateStats = (requests) => {
-    const pendingReqs = requests.filter(r => r.status === 'pending');
+    const pendingReqs = requests.filter(r => r.status === 'pending' || r.status === 'eko_failed');
     const approvedReqs = requests.filter(r => ['approved', 'completed'].includes(r.status));
     const rejectedReqs = requests.filter(r => r.status === 'rejected');
     
@@ -201,6 +201,9 @@ const AdminUnifiedPayments = ({ user }) => {
     if (statusFilter !== 'all') {
       if (statusFilter === 'approved') {
         filtered = filtered.filter(r => ['approved', 'completed'].includes(r.status));
+      } else if (statusFilter === 'pending') {
+        // Include eko_failed in pending filter - these need admin action
+        filtered = filtered.filter(r => r.status === 'pending' || r.status === 'eko_failed');
       } else {
         filtered = filtered.filter(r => r.status === statusFilter);
       }
