@@ -1496,3 +1496,77 @@ async def get_eko_status_codes():
             "2": "IMPS - Immediate Payment Service (instant)"
         }
     }
+
+
+
+# ==================== ADMIN DIRECT API ENDPOINTS ====================
+# These endpoints are for admin-only direct access to Eko services
+# No approval workflow required
+
+class AdminPayBillRequest(BaseModel):
+    utility_acc_no: str
+    operator_id: str
+    amount: float
+    bill_type: str = "electricity"  # electricity, dth, mobile_prepaid, etc.
+
+@router.post("/bbps/paybill")
+async def admin_direct_paybill(request: AdminPayBillRequest):
+    """
+    Admin Direct Bill Payment via Eko BBPS API
+    No approval required - instant processing
+    """
+    try:
+        txn_ref = f"ADM{datetime.now().strftime('%Y%m%d%H%M%S')}{request.utility_acc_no[-4:]}"
+        
+        result = await make_eko_request(
+            "/v2/billpayments/paybill",
+            method="POST",
+            data={
+                "utility_acc_no": request.utility_acc_no,
+                "confirmation_mobile_no": EKO_INITIATOR_ID,
+                "sender_name": "Admin",
+                "operator_id": request.operator_id,
+                "amount": str(int(request.amount)),
+                "client_ref_id": txn_ref,
+                "source_ip": "127.0.0.1",
+                "latlong": "19.0760,72.8777",
+                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID
+            }
+        )
+        
+        # Log transaction
+        if db is not None:
+            await db.admin_eko_transactions.insert_one({
+                "type": f"admin_{request.bill_type}",
+                "utility_acc_no": request.utility_acc_no,
+                "operator_id": request.operator_id,
+                "amount": request.amount,
+                "txn_ref": txn_ref,
+                "eko_response": result,
+                "status": result.get("status", "pending"),
+                "timestamp": datetime.now(timezone.utc)
+            })
+        
+        # Check if transaction was successful
+        if result.get("status") == 0 or result.get("tx_status") == 0:
+            return {
+                "success": True,
+                "txn_ref": txn_ref,
+                "eko_txn_id": result.get("tid") or result.get("txstatus_desc"),
+                "status": "success",
+                "message": f"{request.bill_type.replace('_', ' ').title()} payment successful"
+            }
+        else:
+            return {
+                "success": False,
+                "txn_ref": txn_ref,
+                "status": result.get("status"),
+                "message": result.get("message") or result.get("txstatus_desc") or "Payment failed",
+                "raw_response": result
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Admin direct paybill failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
