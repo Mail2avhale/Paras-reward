@@ -1441,6 +1441,30 @@ async def process_mobile_recharge(
         user_code = EKO_USER_CODE or '20810200'
         amount_str = str(int(amount))
         
+        # Map operator name to Eko numeric operator_id
+        # Eko requires numeric IDs, not string names
+        OPERATOR_ID_MAP = {
+            # Mobile Prepaid
+            "AIRTEL": "1", "AIRTEL PREPAID": "1", "1": "1",
+            "JIO": "90", "JIO PREPAID": "90", "90": "90",
+            "VI": "400", "VI PREPAID": "400", "VODAFONE": "400", "IDEA": "400", "400": "400",
+            "BSNL": "5", "BSNL PREPAID": "5", "5": "5",
+            "MTNL DELHI": "91", "MTNL DELHI PREPAID": "91", "91": "91",
+            "MTNL MUMBAI": "508", "MTNL MUMBAI PREPAID": "508", "508": "508",
+            
+            # DTH
+            "DISH TV": "16", "16": "16",
+            "TATA SKY": "20", "TATA PLAY": "20", "20": "20",
+            "AIRTEL DTH": "21", "21": "21",
+            "D2H": "95", "95": "95",
+            "SUN DIRECT": "111", "111": "111",
+        }
+        
+        # Convert operator_id to Eko numeric ID
+        eko_operator_id = OPERATOR_ID_MAP.get(operator_id.upper().strip(), operator_id)
+        
+        logging.info(f"Operator mapping: {operator_id} -> {eko_operator_id}")
+        
         # Use EXACT same method as test-paybill (which works!)
         timestamp = get_secret_key_timestamp()
         secret_key = generate_secret_key(timestamp)
@@ -1460,7 +1484,7 @@ async def process_mobile_recharge(
             "utility_acc_no": mobile_number,
             "confirmation_mobile_no": EKO_INITIATOR_ID,
             "sender_name": "Customer",
-            "operator_id": operator_id,
+            "operator_id": eko_operator_id,  # Use mapped numeric ID
             "amount": amount_str,
             "client_ref_id": txn_ref,
             "source_ip": "127.0.0.1",
@@ -1468,11 +1492,12 @@ async def process_mobile_recharge(
             "user_code": user_code
         }
         
-        print(f"=== RECHARGE REQUEST ===")
-        print(f"URL: {url}")
-        print(f"Headers: {headers}")
-        print(f"Body: {body}")
-        print(f"=== END REQUEST ===")
+        logging.info(f"=== EKO RECHARGE REQUEST ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Operator: {operator_id} -> Eko ID: {eko_operator_id}")
+        logging.info(f"Mobile: {mobile_number}, Amount: {amount_str}")
+        logging.info(f"Body: {body}")
+        logging.info(f"=== END REQUEST ===")
 
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             response = await client.post(url, headers=headers, json=body)
