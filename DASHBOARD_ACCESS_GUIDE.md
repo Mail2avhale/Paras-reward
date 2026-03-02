@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://paras-reward-fix-1.preview.emergentagent.com/setup
+   https://admin-payment-hub-5.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
