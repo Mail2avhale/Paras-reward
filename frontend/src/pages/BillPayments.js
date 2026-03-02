@@ -943,7 +943,7 @@ const BillPayments = ({ user, onLogout }) => {
                 )}
 
                 {/* Other Operator (not mobile/DTH) - Text Input */}
-                {currentType?.fields.includes('operator') && !['mobile_recharge', 'dish_recharge'].includes(selectedType) && (
+                {currentType?.fields.includes('operator') && !['mobile_recharge', 'dish_recharge', 'gas_bill', 'lpg_booking'].includes(selectedType) && (
                   <div>
                     <Label htmlFor="operator" className="text-gray-300 text-sm font-medium mb-2 block">Operator/Provider *</Label>
                     <Input
@@ -955,6 +955,90 @@ const BillPayments = ({ user, onLogout }) => {
                       className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                     />
                   </div>
+                )}
+
+                {/* Gas Bill Provider Dropdown */}
+                {selectedType === 'gas_bill' && (
+                  <div>
+                    <Label htmlFor="gas_operator" className="text-gray-300 text-sm font-medium mb-2 block">Gas Provider *</Label>
+                    <select
+                      id="gas_operator"
+                      value={formData.operator}
+                      onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                      required
+                      className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                      data-testid="gas-provider-select"
+                    >
+                      <option value="">Select Gas Provider</option>
+                      <optgroup label="Mumbai">
+                        <option value="mahanagar gas">Mahanagar Gas (MGL)</option>
+                      </optgroup>
+                      <optgroup label="Delhi NCR">
+                        <option value="indraprastha gas">Indraprastha Gas (IGL)</option>
+                      </optgroup>
+                      <optgroup label="Gujarat">
+                        <option value="gujarat gas">Gujarat Gas</option>
+                        <option value="adani gas">Adani Gas</option>
+                        <option value="sabarmati gas">Sabarmati Gas</option>
+                      </optgroup>
+                      <optgroup label="Maharashtra">
+                        <option value="mngl">MNGL (Maharashtra Natural Gas)</option>
+                      </optgroup>
+                      <optgroup label="Telangana">
+                        <option value="bhagyanagar gas">Bhagyanagar Gas</option>
+                      </optgroup>
+                      <optgroup label="Other">
+                        <option value="gail gas">GAIL Gas</option>
+                        <option value="green gas">Green Gas</option>
+                        <option value="central up gas">Central UP Gas</option>
+                        <option value="tripura natural gas">Tripura Natural Gas</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                )}
+
+                {/* LPG Provider Dropdown */}
+                {selectedType === 'lpg_booking' && (
+                  <>
+                    <div>
+                      <Label htmlFor="lpg_operator" className="text-gray-300 text-sm font-medium mb-2 block">LPG Provider *</Label>
+                      <select
+                        id="lpg_operator"
+                        value={formData.operator}
+                        onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
+                        required
+                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                        data-testid="lpg-provider-select"
+                      >
+                        <option value="">Select LPG Provider</option>
+                        <option value="indane">Indane (Indian Oil)</option>
+                        <option value="hp gas">HP Gas (Hindustan Petroleum)</option>
+                        <option value="bharat gas">Bharat Gas (BPCL)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="lpg_id" className="text-gray-300 text-sm font-medium mb-2 block">LPG Consumer ID / Mobile *</Label>
+                      <Input
+                        id="lpg_id"
+                        value={formData.lpg_id || ''}
+                        onChange={(e) => setFormData({ ...formData, lpg_id: e.target.value })}
+                        placeholder="Enter your LPG ID or registered mobile"
+                        required
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Your LPG consumer number or registered mobile number</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="distributor_name" className="text-gray-300 text-sm font-medium mb-2 block">Distributor Name (Optional)</Label>
+                      <Input
+                        id="distributor_name"
+                        value={formData.distributor_name || ''}
+                        onChange={(e) => setFormData({ ...formData, distributor_name: e.target.value })}
+                        placeholder="e.g., ABC Gas Agency"
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
+                      />
+                    </div>
+                  </>
                 )}
 
                 {/* ==================== RECHARGE PLANS SECTION ==================== */}
