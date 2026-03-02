@@ -607,87 +607,240 @@ const RedeemPageV2 = ({ user }) => {
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Amount */}
-                <div>
-                  <Label className="text-gray-300 text-sm mb-2 block">Amount (₹) *</Label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
-                    <Input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      placeholder="0.00"
-                      min="1"
-                      className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                      data-testid="amount-input"
-                    />
-                  </div>
-                  
-                  {/* Charges Breakdown */}
-                  {charges && (
-                    <div className="mt-4 bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Info className="h-4 w-4 text-amber-400" />
-                        <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Amount</span>
-                          <span className="text-white">₹{charges.amount_inr} ({charges.amount_prc} PRC)</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Platform Fee</span>
-                          <span className="text-orange-400">+₹{charges.platform_fee_inr} ({charges.platform_fee_prc} PRC)</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Admin Charges (20%)</span>
-                          <span className="text-orange-400">+₹{charges.admin_charge_inr} ({charges.admin_charge_prc} PRC)</span>
-                        </div>
-                        <div className="flex justify-between pt-3 border-t border-gray-700">
-                          <span className="text-amber-400 font-bold">Total</span>
-                          <span className="text-xl font-bold text-amber-400">{charges.total_prc_required} PRC</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
                 
-                {/* Mobile Recharge Fields */}
-                {selectedService === 'mobile_recharge' && (
+                {/* ============================================ */}
+                {/* ELECTRICITY / GAS - New Flow */}
+                {/* 1. Provider → 2. Consumer → 3. Fetch Bill → 4. Amount → 5. Submit */}
+                {/* ============================================ */}
+                {(selectedService === 'electricity' || selectedService === 'gas') && (
                   <>
+                    {/* Step 1: Provider Selection */}
                     <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Mobile Number *</Label>
-                      <Input
-                        type="tel"
-                        value={formData.mobile_number}
-                        onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                        placeholder="10-digit mobile number"
-                        maxLength={10}
-                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        data-testid="mobile-input"
-                      />
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
+                        Provider *
+                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
+                      </Label>
+                      <select
+                        value={formData.operator}
+                        onChange={(e) => {
+                          setFormData({ ...formData, operator: e.target.value, amount: '' });
+                          setBillDetails(null);
+                          setBillError(null);
+                        }}
+                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
+                        data-testid="provider-select"
+                      >
+                        <option value="">Select Provider ({currentOperators.length} available)</option>
+                        {currentOperators.map((op, index) => (
+                          <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
+                        ))}
+                      </select>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
+                    {/* Step 2: Consumer Number (only show after provider selected) */}
+                    {formData.operator && (
+                      <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
-                          Operator *
-                          {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                          Consumer Number *
                         </Label>
-                        <select
-                          value={formData.operator}
-                          onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                          className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
-                          data-testid="operator-select"
-                        >
-                          <option value="">Select Operator ({currentOperators.length} available)</option>
-                          {currentOperators.map((op, index) => (
-                            <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
-                          ))}
-                        </select>
+                        <div className="flex gap-2">
+                          <Input
+                            value={formData.consumer_number}
+                            onChange={(e) => {
+                              setFormData({ ...formData, consumer_number: e.target.value, amount: '' });
+                              setBillDetails(null);
+                            }}
+                            placeholder="Enter consumer number"
+                            className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="consumer-input"
+                          />
+                          <Button
+                            type="button"
+                            onClick={fetchBillDetails}
+                            disabled={fetchingBill || !formData.consumer_number}
+                            className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                            data-testid="fetch-bill-btn"
+                          >
+                            {fetchingBill ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <Search className="h-5 w-5" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Consumer number टाकून Bill Fetch करा</p>
                       </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Circle *</Label>
+                    )}
+                    
+                    {/* Step 3: Bill Details Display */}
+                    {billDetails && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-400">Customer Name</p>
+                            <p className="text-white font-medium">{billDetails.customerName}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Bill Amount</p>
+                            <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
+                          </div>
+                          {billDetails.dueDate !== 'N/A' && (
+                            <div>
+                              <p className="text-gray-400">Due Date</p>
+                              <p className="text-white">{billDetails.dueDate}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {billError && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-red-400" />
+                          <span className="text-red-400 font-medium">{billError}</span>
+                        </div>
+                        <p className="text-gray-400 text-sm mt-2">Manual amount टाका खाली.</p>
+                      </div>
+                    )}
+                    
+                    {/* Step 4: Amount (auto-filled or manual) */}
+                    {(billDetails || billError || formData.consumer_number) && formData.operator && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          Amount (₹) *
+                          {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled from bill)</span>}
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* ============================================ */}
+                {/* MOBILE RECHARGE - New Flow */}
+                {/* 1. Type → 2. Operator → 3. Mobile → 4. Fetch Plans → 5. Amount → 6. Submit */}
+                {/* ============================================ */}
+                {selectedService === 'mobile_recharge' && (
+                  <>
+                    {/* Step 1: Recharge Type */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
+                        Recharge Type
+                      </Label>
+                      <div className="flex gap-3">
+                        {['prepaid', 'postpaid'].map(type => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, recharge_type: type, amount: '' });
+                              setBillDetails(null);
+                              setBillError(null);
+                            }}
+                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${
+                              formData.recharge_type === type
+                                ? 'bg-amber-500 text-black'
+                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                          >
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Step 2: Operator Selection */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                        Operator *
+                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
+                      </Label>
+                      <select
+                        value={formData.operator}
+                        onChange={(e) => {
+                          setFormData({ ...formData, operator: e.target.value, amount: '' });
+                          setBillDetails(null);
+                        }}
+                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
+                        data-testid="operator-select"
+                      >
+                        <option value="">Select Operator ({currentOperators.length} available)</option>
+                        {currentOperators.map((op, index) => (
+                          <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Step 3: Mobile Number (only show after operator selected) */}
+                    {formData.operator && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          Mobile Number *
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="tel"
+                            value={formData.mobile_number}
+                            onChange={(e) => {
+                              setFormData({ ...formData, mobile_number: e.target.value.replace(/\D/g, '').slice(0, 10), amount: '' });
+                              setBillDetails(null);
+                            }}
+                            placeholder="10-digit mobile number"
+                            maxLength={10}
+                            className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="mobile-input"
+                          />
+                          {formData.recharge_type === 'postpaid' && formData.mobile_number.length === 10 && (
+                            <Button
+                              type="button"
+                              onClick={fetchBillDetails}
+                              disabled={fetchingBill}
+                              className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                              data-testid="fetch-bill-btn"
+                            >
+                              {fetchingBill ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <Search className="h-5 w-5" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        {formData.recharge_type === 'postpaid' && (
+                          <p className="text-xs text-gray-500 mt-1">Bill fetch करण्यासाठी 🔍 बटण दाबा</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Step 4: Circle (for prepaid) */}
+                    {formData.operator && formData.recharge_type === 'prepaid' && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">4</span>
+                          Circle *
+                        </Label>
                         <select
                           value={formData.circle}
                           onChange={(e) => setFormData({ ...formData, circle: e.target.value })}
@@ -700,45 +853,75 @@ const RedeemPageV2 = ({ user }) => {
                           ))}
                         </select>
                       </div>
-                    </div>
+                    )}
                     
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Recharge Type</Label>
-                      <div className="flex gap-3">
-                        {['prepaid', 'postpaid'].map(type => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, recharge_type: type })}
-                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${
-                              formData.recharge_type === type
-                                ? 'bg-amber-500 text-black'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                            }`}
-                          >
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </button>
-                        ))}
+                    {/* Bill Details for Postpaid */}
+                    {billDetails && formData.recharge_type === 'postpaid' && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-400">Customer Name</p>
+                            <p className="text-white font-medium">{billDetails.customerName}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Bill Amount</p>
+                            <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    
+                    {billError && formData.recharge_type === 'postpaid' && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-red-400" />
+                          <span className="text-red-400 font-medium">{billError}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Step 5: Amount */}
+                    {formData.operator && formData.mobile_number && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">{formData.recharge_type === 'prepaid' ? '5' : '4'}</span>
+                          Amount (₹) *
+                          {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled)</span>}
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
+                        </div>
+                        {formData.recharge_type === 'prepaid' && (
+                          <p className="text-xs text-gray-500 mt-1">Popular: ₹199, ₹299, ₹399, ₹599</p>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
                 
-                {/* DTH Fields */}
+                {/* ============================================ */}
+                {/* DTH - Similar Flow */}
+                {/* 1. Provider → 2. Customer ID → 3. Amount → 4. Submit */}
+                {/* ============================================ */}
                 {selectedService === 'dth' && (
                   <>
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Consumer/Customer ID *</Label>
-                      <Input
-                        value={formData.consumer_number}
-                        onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
-                        placeholder="Enter DTH Customer ID"
-                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        data-testid="consumer-input"
-                      />
-                    </div>
+                    {/* Step 1: DTH Provider */}
                     <div>
                       <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
                         DTH Provider *
                         {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
                       </Label>
@@ -754,105 +937,44 @@ const RedeemPageV2 = ({ user }) => {
                         ))}
                       </select>
                     </div>
-                  </>
-                )}
-                
-                {/* Electricity / Gas Fields */}
-                {(selectedService === 'electricity' || selectedService === 'gas') && (
-                  <>
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Consumer Number *</Label>
-                      <Input
-                        value={formData.consumer_number}
-                        onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
-                        placeholder="Enter consumer number"
-                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        data-testid="consumer-input"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">
-                        Provider *
-                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
-                      </Label>
-                      <select
-                        value={formData.operator}
-                        onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
-                        data-testid="provider-select"
-                      >
-                        <option value="">Select Provider ({currentOperators.length} available)</option>
-                        {currentOperators.map((op, index) => (
-                          <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
-                        ))}
-                      </select>
-                    </div>
                     
-                    {/* Bill Fetch Button */}
-                    <div className="pt-2">
-                      <Button
-                        type="button"
-                        onClick={fetchBillDetails}
-                        disabled={fetchingBill || !formData.consumer_number || !formData.operator}
-                        className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
-                        data-testid="fetch-bill-btn"
-                      >
-                        {fetchingBill ? (
-                          <>
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Bill Fetch होत आहे...
-                          </>
-                        ) : (
-                          <>
-                            <Search className="h-5 w-5 mr-2" />
-                            Bill Details Fetch करा
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    
-                    {/* Bill Details Display */}
-                    {billDetails && (
-                      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle className="h-5 w-5 text-green-400" />
-                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-gray-400">Customer Name</p>
-                            <p className="text-white font-medium">{billDetails.customerName}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400">Bill Amount</p>
-                            <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
-                          </div>
-                          {billDetails.billNumber !== 'N/A' && (
-                            <div>
-                              <p className="text-gray-400">Bill Number</p>
-                              <p className="text-white">{billDetails.billNumber}</p>
-                            </div>
-                          )}
-                          {billDetails.dueDate !== 'N/A' && (
-                            <div>
-                              <p className="text-gray-400">Due Date</p>
-                              <p className="text-white">{billDetails.dueDate}</p>
-                            </div>
-                          )}
-                        </div>
+                    {/* Step 2: Customer ID (only show after provider selected) */}
+                    {formData.operator && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                          Customer/Subscriber ID *
+                        </Label>
+                        <Input
+                          value={formData.consumer_number}
+                          onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
+                          placeholder="Enter DTH Customer ID (from STB)"
+                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                          data-testid="consumer-input"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Set-Top Box वरून Customer ID पहा</p>
                       </div>
                     )}
                     
-                    {/* Bill Error Display */}
-                    {billError && (
-                      <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
-                        <div className="flex items-center gap-2">
-                          <XCircle className="h-5 w-5 text-red-400" />
-                          <span className="text-red-400 font-medium">{billError}</span>
+                    {/* Step 3: Amount */}
+                    {formData.operator && formData.consumer_number && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          Amount (₹) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
                         </div>
-                        <p className="text-gray-400 text-sm mt-2">
-                          कृपया Consumer Number आणि Provider तपासा किंवा manual amount टाका.
-                        </p>
                       </div>
                     )}
                   </>
@@ -861,12 +983,13 @@ const RedeemPageV2 = ({ user }) => {
                 {/* EMI Fields - Advanced with Lender Search */}
                 {selectedService === 'emi' && (
                   <>
-                    {/* Lender/Bank Search with Dropdown */}
+                    {/* Step 1: Lender/Bank Search with Dropdown */}
                     <div className="relative">
                       <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
                         Bank/Lender *
                         {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
-                        <span className="text-gray-500 text-xs ml-2">({emiOperators.length} lenders available)</span>
+                        <span className="text-gray-500 text-xs ml-2">({emiOperators.length} lenders)</span>
                       </Label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -935,68 +1058,99 @@ const RedeemPageV2 = ({ user }) => {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Loan Account Number *</Label>
-                        <Input
-                          value={formData.loan_account}
-                          onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
-                          placeholder="Loan account number"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
+                    {/* Step 2: Loan Details (only show after lender selected) */}
+                    {formData.selected_lender && (
+                      <div className="animate-fadeIn space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                              Loan Account Number *
+                            </Label>
+                            <Input
+                              value={formData.loan_account}
+                              onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
+                              placeholder="Loan account number"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Borrower Name *</Label>
+                            <Input
+                              value={formData.borrower_name}
+                              onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
+                              placeholder="Name as per bank records"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
+                            <Input
+                              type="tel"
+                              value={formData.mobile}
+                              onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                              placeholder="10-digit mobile"
+                              maxLength={10}
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Loan Type *</Label>
+                            <select
+                              value={formData.loan_type}
+                              onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
+                              className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
+                            >
+                              <option value="">Select Loan Type</option>
+                              <option value="home_loan">Home Loan</option>
+                              <option value="personal_loan">Personal Loan</option>
+                              <option value="car_loan">Car/Vehicle Loan</option>
+                              <option value="education_loan">Education Loan</option>
+                              <option value="gold_loan">Gold Loan</option>
+                              <option value="business_loan">Business Loan</option>
+                              <option value="two_wheeler">Two Wheeler Loan</option>
+                              <option value="consumer_durable">Consumer Durable Loan</option>
+                              <option value="microfinance">Microfinance Loan</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Borrower Name *</Label>
-                        <Input
-                          value={formData.borrower_name}
-                          onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
-                          placeholder="Name as per bank records"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                      </div>
-                    </div>
+                    )}
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
-                        <Input
-                          type="tel"
-                          value={formData.mobile}
-                          onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          placeholder="10-digit mobile"
-                          maxLength={10}
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
+                    {/* Step 3: Amount (only show after loan details) */}
+                    {formData.selected_lender && formData.loan_account && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          EMI Amount (₹) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Loan Type *</Label>
-                        <select
-                          value={formData.loan_type}
-                          onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
-                          className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
-                        >
-                          <option value="">Select Loan Type</option>
-                          <option value="home_loan">Home Loan</option>
-                          <option value="personal_loan">Personal Loan</option>
-                          <option value="car_loan">Car/Vehicle Loan</option>
-                          <option value="education_loan">Education Loan</option>
-                          <option value="gold_loan">Gold Loan</option>
-                          <option value="business_loan">Business Loan</option>
-                          <option value="two_wheeler">Two Wheeler Loan</option>
-                          <option value="consumer_durable">Consumer Durable Loan</option>
-                          <option value="microfinance">Microfinance Loan</option>
-                        </select>
-                      </div>
-                    </div>
+                    )}
                   </>
                 )}
                 
                 {/* DMT (Bank Transfer) Fields - Advanced with IFSC Lookup */}
                 {selectedService === 'dmt' && (
                   <>
-                    {/* Bank Search with Dropdown */}
+                    {/* Step 1: Bank Search with Dropdown */}
                     <div className="relative">
                       <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
                         Select Bank *
                         {loadingBanks && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
                       </Label>
@@ -1066,103 +1220,163 @@ const RedeemPageV2 = ({ user }) => {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Account Holder Name *</Label>
-                        <Input
-                          value={formData.account_holder}
-                          onChange={(e) => setFormData({ ...formData, account_holder: e.target.value })}
-                          placeholder="Name as per bank"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Account Number *</Label>
-                        <Input
-                          value={formData.account_number}
-                          onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '') })}
-                          placeholder="Bank account number"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          IFSC Code *
-                          {loadingIfsc && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
-                        </Label>
-                        <Input
-                          value={formData.ifsc_code}
-                          onChange={(e) => {
-                            const ifsc = e.target.value.toUpperCase();
-                            setFormData({ ...formData, ifsc_code: ifsc });
-                            if (ifsc.length === 11) {
-                              lookupIfsc(ifsc);
-                            }
-                          }}
-                          placeholder="e.g., SBIN0001234"
-                          maxLength={11}
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
-                        />
-                        
-                        {/* IFSC Details Display */}
-                        {ifscDetails && (
-                          <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs">
-                            <div className="flex items-center gap-2 mb-1">
-                              <CheckCircle className="h-3 w-3 text-blue-400" />
-                              <span className="text-blue-400 font-medium">IFSC Verified</span>
-                            </div>
-                            <p className="text-gray-400">{ifscDetails.bank}</p>
-                            <p className="text-gray-500">{ifscDetails.branch}, {ifscDetails.city}</p>
+                    {/* Step 2: Account Details (only show after bank selected) */}
+                    {formData.selected_bank && (
+                      <div className="animate-fadeIn space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                              Account Holder Name *
+                            </Label>
+                            <Input
+                              value={formData.account_holder}
+                              onChange={(e) => setFormData({ ...formData, account_holder: e.target.value })}
+                              placeholder="Name as per bank"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
                           </div>
-                        )}
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Account Number *</Label>
+                            <Input
+                              value={formData.account_number}
+                              onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '') })}
+                              placeholder="Bank account number"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              IFSC Code *
+                              {loadingIfsc && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
+                            </Label>
+                            <Input
+                              value={formData.ifsc_code}
+                              onChange={(e) => {
+                                const ifsc = e.target.value.toUpperCase();
+                                setFormData({ ...formData, ifsc_code: ifsc });
+                                if (ifsc.length === 11) {
+                                  lookupIfsc(ifsc);
+                                }
+                              }}
+                              placeholder="e.g., SBIN0001234"
+                              maxLength={11}
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
+                            />
+                            
+                            {/* IFSC Details Display */}
+                            {ifscDetails && (
+                              <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <CheckCircle className="h-3 w-3 text-blue-400" />
+                                  <span className="text-blue-400 font-medium">IFSC Verified</span>
+                                </div>
+                                <p className="text-gray-400">{ifscDetails.bank}</p>
+                                <p className="text-gray-500">{ifscDetails.branch}, {ifscDetails.city}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Recipient Mobile *</Label>
+                            <Input
+                              type="tel"
+                              value={formData.mobile}
+                              onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                              placeholder="10-digit mobile"
+                              maxLength={10}
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Transfer Mode Selection */}
+                        <div>
+                          <Label className="text-gray-300 text-sm mb-2 block">Transfer Mode</Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'IMPS' }))}
+                              className={`p-3 rounded-xl border-2 transition-all ${
+                                formData.transfer_mode === 'IMPS' || !formData.transfer_mode
+                                  ? 'bg-green-500/20 border-green-500/50 text-green-400'
+                                  : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
+                              }`}
+                            >
+                              <p className="font-medium">IMPS</p>
+                              <p className="text-xs opacity-70">Instant (up to ₹5 lakh)</p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'NEFT' }))}
+                              className={`p-3 rounded-xl border-2 transition-all ${
+                                formData.transfer_mode === 'NEFT'
+                                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                                  : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
+                              }`}
+                            >
+                              <p className="font-medium">NEFT</p>
+                              <p className="text-xs opacity-70">2-4 hours</p>
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Recipient Mobile *</Label>
-                        <Input
-                          type="tel"
-                          value={formData.mobile}
-                          onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          placeholder="10-digit mobile"
-                          maxLength={10}
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                      </div>
-                    </div>
+                    )}
                     
-                    {/* Transfer Mode Selection */}
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">Transfer Mode</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'IMPS' }))}
-                          className={`p-3 rounded-xl border-2 transition-all ${
-                            formData.transfer_mode === 'IMPS' || !formData.transfer_mode
-                              ? 'bg-green-500/20 border-green-500/50 text-green-400'
-                              : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
-                          }`}
-                        >
-                          <p className="font-medium">IMPS</p>
-                          <p className="text-xs opacity-70">Instant (up to ₹5 lakh)</p>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'NEFT' }))}
-                          className={`p-3 rounded-xl border-2 transition-all ${
-                            formData.transfer_mode === 'NEFT'
-                              ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                              : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
-                          }`}
-                        >
-                          <p className="font-medium">NEFT</p>
-                          <p className="text-xs opacity-70">2-4 hours</p>
-                        </button>
+                    {/* Step 3: Amount (only show after account details) */}
+                    {formData.selected_bank && formData.account_number && formData.ifsc_code && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          Transfer Amount (₹) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* ============================================ */}
+                {/* CHARGES BREAKDOWN - Common for all services */}
+                {/* ============================================ */}
+                {charges && formData.amount && (
+                  <div className="animate-fadeIn bg-gradient-to-br from-gray-800/50 to-gray-800/30 rounded-2xl p-4 border border-gray-700/50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Info className="h-4 w-4 text-amber-400" />
+                      <p className="text-xs text-amber-300 font-semibold">Charge Breakdown</p>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Amount</span>
+                        <span className="text-white">₹{charges.amount_inr} ({charges.amount_prc} PRC)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Platform Fee</span>
+                        <span className="text-orange-400">+₹{charges.platform_fee_inr} ({charges.platform_fee_prc} PRC)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Admin Charges (20%)</span>
+                        <span className="text-orange-400">+₹{charges.admin_charge_inr} ({charges.admin_charge_prc} PRC)</span>
+                      </div>
+                      <div className="flex justify-between pt-3 border-t border-gray-700">
+                        <span className="text-amber-400 font-bold">Total</span>
+                        <span className="text-xl font-bold text-amber-400">{charges.total_prc_required} PRC</span>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
                 
                 {/* Submit Button */}

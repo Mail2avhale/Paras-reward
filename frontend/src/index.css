@@ -3,6 +3,22 @@
 /* Admin Dark Theme Styles */
 @import './styles/admin-theme.css';
 
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* Safe area support for mobile browsers */
 /* Note: env(safe-area-inset-top) returns 0 on most Android browsers */
 /* We add a minimum 12px padding for Android browser address bar */
