@@ -41486,13 +41486,13 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Auto-sync Razorpay payments every 10 minutes
+        # Auto-sync Razorpay payments every 5 minutes (reduced from 10)
         scheduler.add_job(
             auto_sync_razorpay_payments,
             'interval',
-            minutes=10,
+            minutes=5,
             id='auto_sync_razorpay',
-            name='Auto sync Razorpay payments every 10 minutes',
+            name='Auto sync Razorpay payments every 5 minutes',
             replace_existing=True
         )
         
