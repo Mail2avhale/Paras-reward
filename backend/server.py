@@ -64,6 +64,7 @@ from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
 from routes.eko_payments import router as eko_router, set_db as set_eko_db
+from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
