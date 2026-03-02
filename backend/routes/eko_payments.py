@@ -1867,10 +1867,8 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
 
 
 @router.post("/test-paybill")
-async def test_paybill_direct():
+async def test_paybill_direct(mobile: str = "9936606966", amount: str = "29"):
     """Direct test of paybill API - for debugging"""
-    mobile = "9936606966"
-    amount = '29'
     user_code = EKO_USER_CODE or '20810200'
     amount_str = str(int(float(amount)))
     
