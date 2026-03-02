@@ -9,7 +9,7 @@ import {
   Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
-  ShieldAlert, CheckCircle, Building2
+  ShieldAlert, CheckCircle, Building2, Zap
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
