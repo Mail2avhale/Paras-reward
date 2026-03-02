@@ -596,6 +596,166 @@ async def get_billers_by_category(category: str):
         return {"billers": sample_billers.get(category, []), "note": f"Sample data - {str(e)}"}
 
 
+# ==================== EKO BBPS OPERATORS BY CATEGORY ====================
+# Eko operator_category mapping:
+# 1 = Broadband, 2 = Gas, 4 = DTH, 5 = Mobile Prepaid, 6 = Municipal Tax
+# 7 = Credit Card, 8 = Electricity, 9 = Landline, 10 = Mobile Postpaid
+# 11 = Water, 12 = Loan/EMI, 13 = Insurance, 14 = FASTag, etc.
+
+EKO_CATEGORY_MAP = {
+    "electricity": 8,
+    "gas": 2,
+    "water": 11,
+    "dth": 4,
+    "mobile_prepaid": 5,
+    "mobile_postpaid": 10,
+    "broadband": 1,
+    "landline": 9,
+    "credit_card": 7,
+    "loan_emi": 12,
+    "insurance": 13,
+    "fastag": 14,
+    "municipal_tax": 6,
+    "lpg": 15
+}
+
+@router.get("/bbps/operators/{service_type}")
+async def get_bbps_operators_by_service(service_type: str):
+    """
+    Get BBPS operators filtered by service type
+    
+    service_type: electricity, gas, water, dth, mobile_prepaid, mobile_postpaid, 
+                  broadband, landline, credit_card, loan_emi, insurance, fastag, lpg
+    """
+    try:
+        # Get all operators from Eko
+        result = await make_eko_request(
+            "/v2/billpayments/operators",
+            method="GET"
+        )
+        
+        all_operators = result.get("data", [])
+        
+        # Get category ID for filtering
+        category_id = EKO_CATEGORY_MAP.get(service_type.lower())
+        
+        if category_id is not None:
+            # Filter by category
+            filtered = [
+                {
+                    "id": str(op.get("operator_id")),
+                    "operator_id": op.get("operator_id"),
+                    "name": op.get("name", ""),
+                    "category": op.get("operator_category"),
+                    "bill_fetch": op.get("billFetchResponse", 0) == 1,
+                    "kyc_required": op.get("kyc_required", 0) == 1
+                }
+                for op in all_operators 
+                if op.get("operator_category") == category_id
+            ]
+        else:
+            # Return all operators if no category match
+            filtered = [
+                {
+                    "id": str(op.get("operator_id")),
+                    "operator_id": op.get("operator_id"),
+                    "name": op.get("name", ""),
+                    "category": op.get("operator_category"),
+                    "bill_fetch": op.get("billFetchResponse", 0) == 1,
+                    "kyc_required": op.get("kyc_required", 0) == 1
+                }
+                for op in all_operators
+            ]
+        
+        # Sort by name
+        filtered.sort(key=lambda x: x.get("name", ""))
+        
+        return {
+            "success": True,
+            "service_type": service_type,
+            "category_id": category_id,
+            "operators": filtered,
+            "count": len(filtered),
+            "source": "eko_api"
+        }
+        
+    except Exception as e:
+        logging.error(f"Failed to fetch BBPS operators: {e}")
+        # Return fallback operators
+        fallback = get_fallback_operators(service_type)
+        return {
+            "success": True,
+            "service_type": service_type,
+            "operators": fallback,
+            "count": len(fallback),
+            "source": "fallback",
+            "error": str(e)
+        }
+
+
+def get_fallback_operators(service_type: str):
+    """Fallback operators when Eko API fails"""
+    fallbacks = {
+        "electricity": [
+            {"id": "22", "name": "BSES Rajdhani", "operator_id": 22},
+            {"id": "23", "name": "BSES Yamuna", "operator_id": 23},
+            {"id": "24", "name": "Tata Power - Delhi", "operator_id": 24},
+            {"id": "62", "name": "MSEDCL (Maharashtra)", "operator_id": 62},
+            {"id": "56", "name": "BESCOM (Bangalore)", "operator_id": 56},
+            {"id": "149", "name": "TNEB (Tamil Nadu)", "operator_id": 149},
+            {"id": "131", "name": "UPPCL", "operator_id": 131},
+        ],
+        "gas": [
+            {"id": "28", "name": "Mahanagar Gas", "operator_id": 28},
+            {"id": "50", "name": "Gujarat Gas", "operator_id": 50},
+            {"id": "51", "name": "Adani Gas", "operator_id": 51},
+            {"id": "65", "name": "Indraprastha Gas (IGL)", "operator_id": 65},
+        ],
+        "water": [
+            {"id": "water_1", "name": "Delhi Jal Board", "operator_id": 0},
+            {"id": "water_2", "name": "Mumbai Water", "operator_id": 0},
+            {"id": "water_3", "name": "Bangalore Water Supply", "operator_id": 0},
+        ],
+        "dth": [
+            {"id": "16", "name": "Dish TV", "operator_id": 16},
+            {"id": "20", "name": "Tata Sky / Tata Play", "operator_id": 20},
+            {"id": "21", "name": "Airtel DTH", "operator_id": 21},
+            {"id": "95", "name": "D2H", "operator_id": 95},
+            {"id": "111", "name": "Sun Direct", "operator_id": 111},
+        ],
+        "mobile_prepaid": [
+            {"id": "1", "name": "Airtel Prepaid", "operator_id": 1},
+            {"id": "5", "name": "BSNL Prepaid", "operator_id": 5},
+            {"id": "90", "name": "Jio Prepaid", "operator_id": 90},
+            {"id": "400", "name": "Vi Prepaid", "operator_id": 400},
+        ],
+        "mobile_postpaid": [
+            {"id": "2", "name": "Airtel Postpaid", "operator_id": 2},
+            {"id": "6", "name": "BSNL Postpaid", "operator_id": 6},
+            {"id": "93", "name": "Jio Postpaid", "operator_id": 93},
+            {"id": "401", "name": "Vi Postpaid", "operator_id": 401},
+        ],
+        "credit_card": [
+            {"id": "5303", "name": "HDFC Credit Card", "operator_id": 5303},
+            {"id": "5299", "name": "ICICI Credit Card", "operator_id": 5299},
+            {"id": "5304", "name": "Axis Bank Credit Card", "operator_id": 5304},
+            {"id": "5306", "name": "Yes Bank Credit Card", "operator_id": 5306},
+        ],
+        "loan_emi": [
+            {"id": "340", "name": "Bajaj Finance", "operator_id": 340},
+            {"id": "280", "name": "Tata Capital", "operator_id": 280},
+            {"id": "476", "name": "LIC Housing Finance", "operator_id": 476},
+            {"id": "2822", "name": "Mahindra Finance", "operator_id": 2822},
+        ],
+        "lpg": [
+            {"id": "301", "name": "Indane Gas (IOCL)", "operator_id": 301},
+            {"id": "302", "name": "HP Gas", "operator_id": 302},
+            {"id": "303", "name": "Bharat Gas (BPCL)", "operator_id": 303},
+        ]
+    }
+    return fallbacks.get(service_type.lower(), [])
+
+
 # ==================== MOBILE RECHARGE APIs ====================
 
 @router.get("/recharge/operators")
