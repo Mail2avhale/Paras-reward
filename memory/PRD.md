@@ -2,6 +2,30 @@
 
 ## Latest Updates (March 2, 2026)
 
+### ✅ UNIFIED REDEEM SYSTEM v2 - COMPLETE (NEW!)
+- **Complete rewrite of payment/redeem flow** - PhonePe-style unified interface
+- **Backend Routes:** `/app/backend/routes/unified_redeem_v2.py`
+  - `GET /api/redeem/services` - All 6 services
+  - `GET /api/redeem/calculate-charges?amount=X` - Charge calculator
+  - `POST /api/redeem/request` - Create request (deducts PRC, needs admin approval)
+  - `GET /api/redeem/user/{user_id}/requests` - User history
+  - `GET /api/redeem/admin/requests` - Admin dashboard with filters & pagination
+  - `GET /api/redeem/admin/stats` - Dashboard statistics
+  - `POST /api/redeem/admin/approve` - Approve/Reject (auto-refund on reject)
+  - `POST /api/redeem/admin/complete` - Mark completed with Eko TID/UTR
+- **Frontend Pages:**
+  - `/redeem` - User page (`RedeemPageV2.js`) - PhonePe-style service selection
+  - `/admin/redeem` - Admin dashboard (`Admin/AdminRedeemDashboard.js`) - Filters + Pagination
+- **6 Services:** Mobile Recharge, DTH, Electricity, Gas, EMI, Bank Transfer (DMT)
+- **New Charging Logic:**
+  - Platform Fee: ₹10 (flat)
+  - Admin Charge: 20% of amount
+  - PRC Rate: 10 PRC = ₹1
+  - Example: ₹100 recharge → ₹10 + ₹20 = ₹130 total = 1300 PRC
+- **Admin Approval Workflow:** All requests → pending → admin approve/reject → complete
+- **Dashboard Updated:** Bill payments buttons now link to /redeem
+- **Sidebar Updated:** New "Redeem Requests" link in admin panel
+
 ### ✅ EKO BBPS LIVE OPERATORS INTEGRATION - COMPLETE
 - **New BBPS Operators Endpoint:** `GET /api/eko/bbps/operators/{service_type}`
 - **Supported Services:** electricity, gas, lpg, dth, mobile_prepaid, mobile_postpaid, credit_card, loan_emi, insurance, fastag, water, broadband
