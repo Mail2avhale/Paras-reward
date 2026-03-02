@@ -1879,7 +1879,7 @@ class BillPaymentRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
-    request_type: str  # mobile_recharge, dish_recharge, electricity_bill, credit_card_payment, loan_emi
+    request_type: str  # mobile_recharge, dish_recharge, electricity_bill, gas_bill, lpg_booking, credit_card_payment, loan_emi
     amount_inr: float  # Amount in INR
     prc_required: float  # PRC required (amount * 10)
     service_charge_amount: float  # Service charge in PRC
