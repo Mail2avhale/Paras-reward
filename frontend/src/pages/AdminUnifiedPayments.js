@@ -948,6 +948,39 @@ const AdminUnifiedPayments = ({ user }) => {
                         </Button>
                       </div>
                     </div>
+                  ) : req.status === 'eko_failed' ? (
+                    /* Eko Failed - Show Manual Complete + Retry + Reject options */
+                    <div className="space-y-3">
+                      {/* Manual Complete (Primary action for eko_failed) */}
+                      <div>
+                        <Button 
+                          onClick={() => {
+                            setManualCompleteId(req._id);
+                            setShowManualCompleteDialog(true);
+                          }} 
+                          disabled={processing === req._id}
+                          className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-base font-semibold gap-2"
+                        >
+                          <CheckCircle className="w-5 h-5" />Complete Manually (Enter UTR)
+                        </Button>
+                      </div>
+                      
+                      {/* Retry Eko */}
+                      <Button onClick={() => handleApprove(req)} disabled={processing === req._id}
+                        className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-base font-semibold gap-2">
+                        <RotateCcw className="w-5 h-5" />{processing === req._id ? 'Retrying...' : 'Retry Eko Transfer'}
+                      </Button>
+                      
+                      {/* Reject */}
+                      <div>
+                        <Input value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="Rejection Reason" className="h-10 text-base bg-gray-800 border-gray-700 mb-2" />
+                        <Button onClick={() => handleReject(req)} disabled={processing === req._id}
+                          variant="destructive" className="w-full h-10 text-base font-semibold gap-2">
+                          <XCircle className="w-5 h-5" />Reject + PRC Refund
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       <div className={`p-4 rounded-lg ${req.status === 'approved' || req.status === 'completed' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
