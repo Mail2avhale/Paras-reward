@@ -992,15 +992,6 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('electricity')}</span>
             </button>
             <button 
-              onClick={() => navigate('/redeem?service=dmt')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <span className="text-xl">💸</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">Bank</span>
-            </button>
-            <button 
               onClick={() => navigate('/redeem?service=emi')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
@@ -1164,7 +1155,7 @@ const DashboardModern = ({ user, onLogout }) => {
                       <ShieldAlert className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-bold text-lg">Redeem To Bank</p>
+                      <p className="text-white font-bold text-lg">KYC Required</p>
                       <p className={`${isKycRejected ? 'text-red-200' : 'text-amber-200'} text-sm`}>
                         {isKycRejected ? 'KYC Rejected' : 'KYC Verification Required'}
                       </p>
