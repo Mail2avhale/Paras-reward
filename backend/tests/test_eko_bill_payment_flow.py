@@ -22,7 +22,7 @@ import os
 import time
 import json
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://payment-workflow-v2.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-dmt-flow.preview.emergentagent.com')
 
 
 @pytest.fixture

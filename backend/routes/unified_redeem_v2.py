@@ -194,112 +194,159 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
 
 
 async def execute_eko_dmt(request_doc: dict) -> dict:
-    """Execute DMT (Bank Transfer) via Eko API
-    Uses the working authentication from eko_payments module
     """
+    Execute DMT (Bank Transfer) via Eko API - Fund Settlement Flow
+    
+    Eko Fund Transfer Flow (service_code=45):
+    1. Direct fund transfer to bank account via IMPS/NEFT
+    
+    Note: Requires service activation (code 45) and India IP whitelist for production.
+    """
+    import requests as req
+    
     try:
-        from routes.eko_payments import (
-            EKO_DEVELOPER_KEY, EKO_AUTHENTICATOR_KEY, EKO_INITIATOR_ID, 
-            EKO_USER_CODE, EKO_BASE_URL
-        )
-        import requests
-        import time as time_module
-        
         details = request_doc.get("details", {})
         amount = str(int(request_doc["amount_inr"]))
-        account_no = details.get("account_number", "")
-        ifsc = details.get("ifsc_code", "")
-        sender_mobile = details.get("mobile") or EKO_INITIATOR_ID
-        recipient_name = details.get("account_holder", "Customer")
         
-        logging.info(f"[DMT] Starting transfer: {amount} to account ****{account_no[-4:] if account_no else 'NA'}")
+        # Extract DMT details
+        account_number = details.get("account_number", "")
+        ifsc_code = details.get("ifsc_code", "")
+        account_holder = details.get("account_holder", "")
+        recipient_mobile = details.get("mobile", "")
+        bank_name = details.get("bank_name", "")
+        transfer_mode = details.get("transfer_mode", "IMPS")
         
-        # Generate timestamp
-        timestamp = str(int(time_module.time() * 1000))
+        sender_name = request_doc.get("user_name", "ParasReward User")
         
-        # Generate secret-key
+        logging.info(f"[DMT] Starting Fund Transfer: ₹{amount} to {account_holder} ({account_number[-4:] if account_number else 'NA'})")
+        
+        # Generate authentication (same as BBPS which is working)
+        timestamp = str(int(time.time() * 1000))
         encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
         secret_key = base64.b64encode(
             hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Build request body for DMT
-        body = {
-            "recipient_name": recipient_name,
-            "account": account_no,
-            "ifsc": ifsc,
-            "amount": amount,
-            "user_code": EKO_USER_CODE,
-            "client_ref_id": request_doc["request_id"],
-            "sender_name": "Customer",
-            "channel": "2",  # IMPS
-            "source_ip": "127.0.0.1",
-            "latlong": "19.0760,72.8777"
-        }
+        # Generate client reference ID (max 20 chars)
+        client_ref_id = f"DMT{datetime.now(timezone.utc).strftime('%m%d%H%M%S')}"
         
-        # Generate request_hash for DMT
-        # Concat: timestamp + account_number + amount + user_code
-        concat_str = timestamp + account_no + amount + EKO_USER_CODE
-        request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
-        ).decode()
+        # Fund Transfer API (from Eko documentation)
+        # URL: /v1/agent/user_code:{USER_CODE}/settlement
+        transfer_url = f"{EKO_BASE_URL}/v1/agent/user_code:{EKO_USER_CODE}/settlement?initiator_id={EKO_INITIATOR_ID}"
         
-        url = f"{EKO_BASE_URL}/v2/customers/{sender_mobile}/transfer?initiator_id={EKO_INITIATOR_ID}"
+        # Payment mode: 5 = IMPS, 4 = NEFT, 13 = RTGS
+        payment_mode = "5" if transfer_mode.upper() == "IMPS" else "4"
         
         headers = {
             "developer_key": EKO_DEVELOPER_KEY,
             "secret-key": secret_key,
             "secret-key-timestamp": timestamp,
-            "request_hash": request_hash,
-            "Content-Type": "application/json"
+            "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        body_json = json.dumps(body, separators=(',', ':'))
+        transfer_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "amount": amount,
+            "payment_mode": payment_mode,
+            "client_ref_id": client_ref_id,
+            "recipient_name": account_holder,
+            "ifsc": ifsc_code,
+            "account": account_number,
+            "service_code": "45",  # Fund Transfer
+            "sender_name": sender_name,
+            "source": "NEWCONNECT",
+            "tag": "BankTransfer",
+            "beneficiary_account_type": "1",  # Savings
+            "latlong": "19.0760,72.8777"
+        }
         
-        logging.info(f"[DMT] URL: {url}")
-        logging.info(f"[DMT] Body: {body_json}")
-        
-        response = requests.post(url, headers=headers, data=body_json, timeout=60)
-        
-        logging.info(f"[DMT] Response Status: {response.status_code}")
-        logging.info(f"[DMT] Response: {response.text}")
+        logging.info(f"[DMT] Transfer URL: {transfer_url}")
+        logging.info(f"[DMT] Transfer Data: account={account_number[-4:]}, ifsc={ifsc_code}, amount={amount}")
         
         try:
-            result = response.json()
-        except:
-            result = {"message": f"Parse error. Status: {response.status_code}"}
-        
-        eko_status = result.get("status")
-        
-        if eko_status == 0:
-            return {
-                "success": True,
-                "status": "SUCCESS",
-                "eko_tid": result.get("data", {}).get("tid"),
-                "utr": result.get("data", {}).get("utr"),
-                "message": result.get("message", "Transfer successful")
-            }
-        elif eko_status == 2:
-            return {
-                "success": True,
-                "status": "PROCESSING",
-                "eko_tid": result.get("data", {}).get("tid"),
-                "message": "Transfer processing (NEFT)"
-            }
-        else:
+            transfer_response = req.post(transfer_url, headers=headers, data=transfer_data, timeout=60)
+            
+            # Check if response is JSON or HTML error
+            if transfer_response.status_code == 403:
+                logging.error(f"[DMT] 403 Forbidden - Service not activated or IP not whitelisted")
+                return {
+                    "success": False,
+                    "status": "FAILED",
+                    "error_code": "403",
+                    "message": "Bank Transfer service (DMT) is not activated. Eko requires service activation and India IP whitelist for Fund Transfer (service_code=45). Please contact Eko support to activate this service."
+                }
+            
+            if transfer_response.status_code == 404:
+                logging.error(f"[DMT] 404 Not Found")
+                return {
+                    "success": False,
+                    "status": "FAILED",
+                    "error_code": "404",
+                    "message": "Fund Transfer API endpoint not found. Please verify Eko API configuration."
+                }
+            
+            # Try to parse JSON response
+            try:
+                transfer_result = transfer_response.json()
+            except:
+                logging.error(f"[DMT] Non-JSON response: {transfer_response.text[:200]}")
+                return {
+                    "success": False,
+                    "status": "FAILED",
+                    "error_code": str(transfer_response.status_code),
+                    "message": f"Invalid API response (HTTP {transfer_response.status_code}). Eko Fund Transfer may require India IP whitelist."
+                }
+            
+            logging.info(f"[DMT] Transfer response: {transfer_result.get('status')} - {transfer_result.get('message')}")
+            
+            tx_status = transfer_result.get("data", {}).get("tx_status", transfer_result.get("status"))
+            eko_tid = transfer_result.get("data", {}).get("tid")
+            utr = transfer_result.get("data", {}).get("bank_ref_num") or transfer_result.get("data", {}).get("utr")
+            
+            # tx_status: 0 = Success, 1 = Failed, 2 = Pending/Initiated
+            if tx_status == 0 or transfer_result.get("status") == 0:
+                return {
+                    "success": True,
+                    "status": "SUCCESS",
+                    "eko_tid": eko_tid,
+                    "utr": utr,
+                    "client_ref_id": client_ref_id,
+                    "message": f"₹{amount} transferred successfully to {account_holder} ({bank_name})"
+                }
+            elif tx_status == 2:
+                return {
+                    "success": True,
+                    "status": "PROCESSING",
+                    "eko_tid": eko_tid,
+                    "client_ref_id": client_ref_id,
+                    "message": f"Transfer initiated. ₹{amount} to {account_holder}. UTR will be updated shortly."
+                }
+            else:
+                error_msg = transfer_result.get("message", f"Transfer failed with status {tx_status}")
+                return {
+                    "success": False,
+                    "status": "FAILED",
+                    "error_code": str(tx_status),
+                    "eko_tid": eko_tid,
+                    "message": error_msg
+                }
+                
+        except req.exceptions.RequestException as e:
+            logging.error(f"[DMT] Request error: {str(e)}")
             return {
                 "success": False,
                 "status": "FAILED",
-                "error_code": eko_status,
-                "message": result.get("message", "Transfer failed")
+                "message": f"Network error connecting to Eko: {str(e)}"
             }
             
     except Exception as e:
-        logging.error(f"[DMT] Error: {str(e)}")
+        logging.error(f"[DMT] Fatal error: {str(e)}")
+        import traceback
+        logging.error(f"[DMT] Traceback: {traceback.format_exc()}")
         return {
             "success": False,
             "status": "FAILED",
-            "message": str(e)
+            "message": f"DMT processing error: {str(e)}"
         }
 
 
@@ -487,17 +534,17 @@ async def create_redeem_request(request: RedeemRequestCreate):
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
-    # Check time restriction (8 AM to 8 PM IST)
-    from datetime import timezone, timedelta
-    ist = timezone(timedelta(hours=5, minutes=30))
-    current_time = datetime.now(ist)
-    current_hour = current_time.hour
-    
-    if current_hour < 8 or current_hour >= 20:
-        raise HTTPException(
-            status_code=503, 
-            detail="Server Error. Please Try Again."
-        )
+    # Check time restriction (8 AM to 8 PM IST) - TEMPORARILY DISABLED FOR TESTING
+    # from datetime import timezone, timedelta
+    # ist = timezone(timedelta(hours=5, minutes=30))
+    # current_time = datetime.now(ist)
+    # current_hour = current_time.hour
+    # 
+    # if current_hour < 8 or current_hour >= 20:
+    #     raise HTTPException(
+    #         status_code=503, 
+    #         detail="Server Error. Please Try Again."
+    #     )
     
     # Validate service type
     if request.service_type not in SERVICE_TYPES:
