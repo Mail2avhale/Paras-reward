@@ -135,6 +135,11 @@ const RedeemPageV2 = ({ user }) => {
   const [lenderSearch, setLenderSearch] = useState('');
   const [showLenderDropdown, setShowLenderDropdown] = useState(false);
   
+  // Bill fetch states (for electricity, gas, etc.)
+  const [billDetails, setBillDetails] = useState(null);
+  const [fetchingBill, setFetchingBill] = useState(false);
+  const [billError, setBillError] = useState(null);
+  
   // Form data
   const [formData, setFormData] = useState({
     amount: '',
@@ -309,6 +314,69 @@ const RedeemPageV2 = ({ user }) => {
       setLoadingIfsc(false);
     }
   };
+  
+  // Fetch bill details for electricity/gas
+  const fetchBillDetails = async () => {
+    const consumerNumber = formData.consumer_number;
+    const operatorId = formData.operator;
+    
+    if (!consumerNumber || !operatorId) {
+      toast.error('Consumer Number आणि Operator दोन्ही आवश्यक आहेत');
+      return;
+    }
+    
+    setFetchingBill(true);
+    setBillDetails(null);
+    setBillError(null);
+    
+    try {
+      const response = await axios.post(`${API}/eko/bbps/fetch-bill`, {
+        category: selectedService,
+        biller_id: operatorId,
+        customer_params: {
+          consumer_number: consumerNumber
+        }
+      });
+      
+      if (response.data.success || response.data.status === 0) {
+        const data = response.data.data || response.data;
+        setBillDetails({
+          customerName: data.customer_name || data.customername || data.name || 'N/A',
+          billAmount: data.bill_amount || data.billamount || data.amount || 0,
+          billNumber: data.bill_number || data.billnumber || data.billno || 'N/A',
+          billDate: data.bill_date || data.billdate || data.duedate || 'N/A',
+          dueDate: data.due_date || data.duedate || 'N/A',
+          billPeriod: data.bill_period || data.billperiod || 'N/A'
+        });
+        
+        // Auto-fill amount from bill
+        if (data.bill_amount || data.billamount || data.amount) {
+          const billAmt = data.bill_amount || data.billamount || data.amount;
+          setFormData(prev => ({
+            ...prev,
+            amount: String(billAmt)
+          }));
+          toast.success(`Bill fetched! Amount: ₹${billAmt}`);
+        }
+      } else {
+        setBillError(response.data.message || 'Bill fetch failed');
+        toast.error(response.data.message || 'Bill माहिती मिळाली नाही');
+      }
+    } catch (error) {
+      console.error('Bill fetch error:', error);
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || 'Bill fetch failed';
+      setBillError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setFetchingBill(false);
+    }
+  };
+  
+  // Clear bill details when service or operator changes
+  useEffect(() => {
+    setBillDetails(null);
+    setBillError(null);
+  }, [selectedService, formData.operator]);
   
   // Fetch bank list when DMT is selected
   useEffect(() => {
@@ -719,6 +787,74 @@ const RedeemPageV2 = ({ user }) => {
                         ))}
                       </select>
                     </div>
+                    
+                    {/* Bill Fetch Button */}
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        onClick={fetchBillDetails}
+                        disabled={fetchingBill || !formData.consumer_number || !formData.operator}
+                        className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                        data-testid="fetch-bill-btn"
+                      >
+                        {fetchingBill ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Bill Fetch होत आहे...
+                          </>
+                        ) : (
+                          <>
+                            <Search className="h-5 w-5 mr-2" />
+                            Bill Details Fetch करा
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Bill Details Display */}
+                    {billDetails && (
+                      <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-gray-400">Customer Name</p>
+                            <p className="text-white font-medium">{billDetails.customerName}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Bill Amount</p>
+                            <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
+                          </div>
+                          {billDetails.billNumber !== 'N/A' && (
+                            <div>
+                              <p className="text-gray-400">Bill Number</p>
+                              <p className="text-white">{billDetails.billNumber}</p>
+                            </div>
+                          )}
+                          {billDetails.dueDate !== 'N/A' && (
+                            <div>
+                              <p className="text-gray-400">Due Date</p>
+                              <p className="text-white">{billDetails.dueDate}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Bill Error Display */}
+                    {billError && (
+                      <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-red-400" />
+                          <span className="text-red-400 font-medium">{billError}</span>
+                        </div>
+                        <p className="text-gray-400 text-sm mt-2">
+                          कृपया Consumer Number आणि Provider तपासा किंवा manual amount टाका.
+                        </p>
+                      </div>
+                    )}
                   </>
                 )}
                 
