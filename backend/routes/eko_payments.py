@@ -139,7 +139,9 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     if "billpayments/paybill" in endpoint and method == "POST":
         utility_acc_no = data.get("utility_acc_no", "")
         amount = str(data.get("amount", ""))
-        user_code = data.get("user_code", EKO_INITIATOR_ID)
+        # Use EKO_USER_CODE for request_hash, not EKO_INITIATOR_ID
+        user_code = EKO_USER_CODE or EKO_INITIATOR_ID
+        data["user_code"] = user_code  # Update data with correct user_code
         request_hash = generate_request_hash(secret_key_timestamp, utility_acc_no, amount, user_code)
         if request_hash:
             headers["request_hash"] = request_hash
