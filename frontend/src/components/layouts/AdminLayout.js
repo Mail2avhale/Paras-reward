@@ -186,6 +186,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'unified-payments', label: 'All Payments', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
+        { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
         { id: 'bill-payments', label: 'Bill Payments', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
         { id: 'recurring-deposits', label: 'PRC Savings Vault', icon: Building2, path: '/admin/recurring-deposits', pendingCount: pendingCounts.rdRedeem },
