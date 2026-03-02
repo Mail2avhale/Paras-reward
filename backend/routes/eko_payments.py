@@ -391,6 +391,63 @@ async def get_eko_balance():
         return {"success": False, "error": str(e)}
 
 
+@router.put("/activate-bbps")
+async def activate_bbps_service():
+    """
+    Activate BBPS service for the merchant
+    Service code 53 = BBPS (Bill Payment)
+    This must be called before using any bill payment APIs
+    """
+    try:
+        # Generate authentication
+        timestamp = get_secret_key_timestamp()
+        secret_key = generate_secret_key(timestamp)
+        
+        url = f"{EKO_BASE_URL}/v1/user/service/activate"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        data = {
+            "service_code": "53",  # BBPS service code
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.put(url, headers=headers, data=data)
+            
+            logging.info(f"BBPS Activation Response: {response.status_code} - {response.text}")
+            
+            try:
+                result = response.json()
+            except:
+                result = {"raw_response": response.text}
+            
+            if response.status_code == 200 and result.get("status") == 0:
+                return {
+                    "success": True,
+                    "message": "BBPS service activated successfully!",
+                    "response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Activation failed"),
+                    "status_code": response.status_code,
+                    "response": result
+                }
+                
+    except Exception as e:
+        logging.error(f"BBPS activation failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/bbps/categories")
 async def get_bill_categories():
     """Get available bill payment categories"""
