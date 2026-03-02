@@ -46,31 +46,118 @@ const AdminEkoServices = ({ user }) => {
   const [dmtBeneficiaryName, setDmtBeneficiaryName] = useState('');
   const [dmtVerifyResult, setDmtVerifyResult] = useState(null);
 
-  // Operators data
+  // Operators data from Eko API
   const mobileOperators = [
-    { id: '90', name: 'Jio' },
-    { id: '1', name: 'Airtel' },
-    { id: '400', name: 'Vi (Vodafone Idea)' },
-    { id: '5', name: 'BSNL' },
+    { id: '90', name: 'Jio Prepaid' },
+    { id: '1', name: 'Airtel Prepaid' },
+    { id: '400', name: 'Vi Prepaid' },
+    { id: '5', name: 'BSNL Prepaid' },
+    { id: '91', name: 'MTNL Delhi Prepaid' },
+    { id: '508', name: 'MTNL Mumbai Prepaid' },
   ];
 
   const dthOperators = [
-    { id: '20', name: 'Tata Play' },
+    { id: '20', name: 'Tata Sky' },
     { id: '21', name: 'Airtel DTH' },
     { id: '16', name: 'Dish TV' },
-    { id: '95', name: 'D2H' },
-    { id: '111', name: 'Sun Direct' },
+    { id: '95', name: 'Videocon D2H' },
+    { id: '17', name: 'BIG TV DTH' },
   ];
 
   const electricityOperators = [
-    { id: '62', name: 'MSEDCL (Maharashtra)' },
-    { id: '139', name: 'Tata Power Mumbai' },
-    { id: '200', name: 'Adani Electricity Mumbai' },
-    { id: '22', name: 'BSES Rajdhani (Delhi)' },
-    { id: '23', name: 'BSES Yamuna (Delhi)' },
-    { id: '56', name: 'BESCOM (Bangalore)' },
-    { id: '149', name: 'TNEB (Tamil Nadu)' },
-    { id: '131', name: 'UPPCL (UP)' },
+    // Maharashtra
+    { id: '62', name: 'MSEDCL - Maharashtra' },
+    { id: '139', name: 'Tata Power - Mumbai' },
+    { id: '242', name: 'Adani Electricity Mumbai' },
+    // Delhi
+    { id: '24', name: 'Tata Power - Delhi' },
+    { id: '178', name: 'NDMC - Electricity' },
+    // Karnataka
+    { id: '56', name: 'BESCOM - Bangalore' },
+    { id: '148', name: 'GESCOM - Gulbarga' },
+    { id: '155', name: 'CESC - Chamundeshwari' },
+    { id: '156', name: 'HESCOM - Hubli' },
+    // Tamil Nadu
+    { id: '149', name: 'TNEB - Tamil Nadu' },
+    // Andhra Pradesh
+    { id: '55', name: 'APSPDCL - Southern AP' },
+    { id: '164', name: 'EPDCL - Eastern AP' },
+    { id: '3018', name: 'APCPDCL - Central AP' },
+    // Uttar Pradesh
+    { id: '131', name: 'UPPCL - Urban' },
+    { id: '190', name: 'UPPCL - Rural' },
+    { id: '195', name: 'KESCO - Kanpur' },
+    // Madhya Pradesh
+    { id: '57', name: 'MPMKVVCL - Madhya (Urban)' },
+    { id: '59', name: 'MPPKVVCL - Paschim' },
+    { id: '78', name: 'MPPKVVCL - Poorv (Urban)' },
+    { id: '174', name: 'MPMKVVCL - Madhya (Rural)' },
+    { id: '175', name: 'MPPKVVCL - Poorv' },
+    // Bihar
+    { id: '81', name: 'NBPDCL - North Bihar' },
+    { id: '82', name: 'SBPDCL - South Bihar' },
+    // Gujarat
+    { id: '63', name: 'Torrent Power' },
+    { id: '240', name: 'Torrent Power - Bhiwandi' },
+    { id: '241', name: 'Torrent Power - Surat' },
+    // Rajasthan
+    { id: '121', name: 'KEDL - Kota' },
+    { id: '122', name: 'BESL - Bharatpur' },
+    { id: '125', name: 'JVVNL - Jaipur' },
+    { id: '126', name: 'AVVNL - Ajmer' },
+    { id: '141', name: 'BkESL - Bikaner' },
+    { id: '145', name: 'JDVVNL - Jodhpur' },
+    // West Bengal
+    { id: '204', name: 'WBSEDCL - West Bengal' },
+    // Kerala
+    { id: '247', name: 'KSEBL - Kerala' },
+    // Assam
+    { id: '96', name: 'APDCL - RAPDR' },
+    { id: '160', name: 'APDCL - Non-RAPDR' },
+    // Others
+    { id: '61', name: 'CSPDCL - Chhattisgarh' },
+    { id: '76', name: 'DNH Power' },
+    { id: '166', name: 'HPSEB - Himachal' },
+    { id: '198', name: 'Goa Electricity' },
+    { id: '375', name: 'Chandigarh Electricity' },
+    { id: '546', name: 'PSPCL - Punjab' },
+    { id: '603', name: 'UPCL - Uttarakhand' },
+  ];
+
+  const gasOperators = [
+    // PNG (Piped Natural Gas)
+    { id: '28', name: 'Mahanagar Gas (MGL)' },
+    { id: '50', name: 'Gujarat Gas' },
+    { id: '51', name: 'Adani Gas' },
+    { id: '65', name: 'Indraprastha Gas (IGL)' },
+    { id: '132', name: 'Sabarmati Gas' },
+    { id: '157', name: 'Central UP Gas' },
+    { id: '158', name: 'Aavantika Gas' },
+    { id: '163', name: 'Charotar Gas' },
+    { id: '168', name: 'Indian Oil-Adani Gas' },
+    { id: '176', name: 'MNGL - Maharashtra' },
+    { id: '191', name: 'Vadodara Gas' },
+    { id: '196', name: 'Gail Gas' },
+    { id: '341', name: 'Bhagyanagar Gas' },
+    { id: '396', name: 'Green Gas (GGL)' },
+    { id: '5643', name: 'BPCL PNG' },
+    // LPG
+    { id: '438', name: 'Indane Gas (Indian Oil)' },
+    { id: '275', name: 'Bharat Gas (BPCL)' },
+    { id: '270', name: 'HP Gas' },
+  ];
+
+  const waterOperators = [
+    { id: '130', name: 'Delhi Jal Board' },
+    { id: '117', name: 'Pune Municipal - Water' },
+    { id: '161', name: 'BWSSB - Bangalore' },
+    { id: '162', name: 'Bhopal Municipal - Water' },
+    { id: '167', name: 'HMWSSB - Hyderabad' },
+    { id: '183', name: 'Surat Municipal - Water' },
+    { id: '179', name: 'NDMC - Water' },
+    { id: '497', name: 'MCGM Water - Mumbai' },
+    { id: '466', name: 'Kerala Water Authority' },
+    { id: '116', name: 'Uttarakhand Jal Sansthan' },
   ];
 
   const circles = [
