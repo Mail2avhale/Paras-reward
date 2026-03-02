@@ -1502,29 +1502,60 @@ async def process_mobile_recharge(
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             response = await client.post(url, headers=headers, json=body)
             
-            print(f"=== RECHARGE RESPONSE ===")
-            print(f"Status: {response.status_code}")
-            print(f"Body: {response.text[:500]}")
-            print(f"=== END RESPONSE ===")
+            logging.info(f"=== EKO RECHARGE RESPONSE ===")
+            logging.info(f"HTTP Status: {response.status_code}")
+            logging.info(f"Response Body: {response.text[:1000]}")
+            logging.info(f"=== END RESPONSE ===")
             
+            # Handle non-JSON responses (like HTML error pages)
             try:
                 result = response.json()
-            except:
-                result = {"raw_response": response.text, "message": "Invalid JSON response"}
+            except Exception as json_error:
+                logging.error(f"JSON Parse Error: {json_error}")
+                logging.error(f"Raw Response: {response.text}")
+                
+                # Check for common error patterns in raw response
+                raw = response.text.lower()
+                if "forbidden" in raw or "403" in raw:
+                    error_msg = "Access denied (403) - IP not whitelisted or service not activated"
+                elif "unauthorized" in raw or "401" in raw:
+                    error_msg = "Authentication failed (401) - Check developer_key"
+                elif "not found" in raw or "404" in raw:
+                    error_msg = "Endpoint not found (404) - Check API URL"
+                elif "<!doctype" in raw or "<html" in raw:
+                    error_msg = "Received HTML instead of JSON - API endpoint error"
+                else:
+                    error_msg = f"Invalid response from Eko API: {response.text[:200]}"
+                
+                return {
+                    "success": False,
+                    "txn_ref": txn_ref,
+                    "message": f"Eko Error: {error_msg}",
+                    "http_status": response.status_code,
+                    "raw_response": response.text[:500]
+                }
         
         # DEBUG: Log full response
-        logging.info(f"=== EKO RECHARGE RESPONSE ===")
+        logging.info(f"=== EKO RECHARGE PARSED RESPONSE ===")
         logging.info(f"Full response: {result}")
         logging.info(f"=== END RESPONSE ===")
         
-        # Check if Eko returned success
-        # Eko uses status=0 for success OR message contains "Success"
+        # Check for Eko-specific errors first
         eko_status = result.get("status")
+        response_status_id = result.get("response_status_id")
         tx_status = result.get("tx_status")
         message = result.get("message", "")
         
+        # Get error details if present
+        if eko_status and eko_status != 0 and eko_status != "0":
+            error_msg = get_eko_error_message(eko_status)
+            logging.warning(f"Eko returned error status {eko_status}: {error_msg}")
+        
+        # Check if Eko returned success
+        # Eko uses status=0 for success OR message contains "Success"
         is_success = (
             (eko_status == 0 or eko_status == "0") or 
+            (response_status_id == 0 or response_status_id == "0") or
             (tx_status == 0 or tx_status == "0") or
             "Success" in message
         )
