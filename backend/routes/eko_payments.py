@@ -398,8 +398,87 @@ async def activate_bbps_service():
     Service code 53 = BBPS (Bill Payment)
     This must be called before using any bill payment APIs
     """
+    return await activate_eko_service("53", "BBPS (Bill Payments)")
+
+
+@router.put("/activate-dmt")
+async def activate_dmt_service():
+    """
+    Activate DMT service for the merchant
+    Service code 45 = DMT (Money Transfer/Payout)
+    This must be called before using any fund transfer APIs
+    """
+    return await activate_eko_service("45", "DMT (Money Transfer)")
+
+
+@router.put("/activate-all-services")
+async def activate_all_eko_services():
+    """
+    Activate ALL Eko services for the merchant
+    """
+    services = {
+        "45": "DMT (Money Transfer)",
+        "53": "BBPS (Bill Payments)",
+        "39": "Settlement",
+        "4": "AePS (Cash Withdrawal)"
+    }
+    
+    results = {}
+    for code, name in services.items():
+        result = await activate_eko_service(code, name)
+        results[name] = {
+            "service_code": code,
+            "success": result.get("success", False),
+            "status": result.get("response", {}).get("data", {}).get("service_status_desc", "Unknown"),
+            "message": result.get("message", "")
+        }
+    
+    all_success = all(r["success"] for r in results.values())
+    return {
+        "success": all_success,
+        "message": "All services activated!" if all_success else "Some services failed",
+        "services": results
+    }
+
+
+@router.get("/service-status")
+async def get_service_status():
+    """
+    Get activation status of all Eko services
+    """
     try:
-        # Generate authentication
+        timestamp = get_secret_key_timestamp()
+        secret_key = generate_secret_key(timestamp)
+        
+        url = f"{EKO_BASE_URL}/v1/user/services?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE or EKO_INITIATOR_ID}"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.get(url, headers=headers)
+            
+            try:
+                result = response.json()
+            except:
+                result = {"raw_response": response.text}
+            
+            return {
+                "success": response.status_code == 200,
+                "services": result.get("data", result)
+            }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def activate_eko_service(service_code: str, service_name: str):
+    """
+    Helper function to activate any Eko service
+    """
+    try:
         timestamp = get_secret_key_timestamp()
         secret_key = generate_secret_key(timestamp)
         
@@ -413,7 +492,7 @@ async def activate_bbps_service():
         }
         
         data = {
-            "service_code": "53",  # BBPS service code
+            "service_code": service_code,
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
             "latlong": "19.0760,72.8777"
@@ -422,7 +501,7 @@ async def activate_bbps_service():
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.put(url, headers=headers, data=data)
             
-            logging.info(f"BBPS Activation Response: {response.status_code} - {response.text}")
+            logging.info(f"{service_name} Activation Response: {response.status_code} - {response.text}")
             
             try:
                 result = response.json()
@@ -432,19 +511,19 @@ async def activate_bbps_service():
             if response.status_code == 200 and result.get("status") == 0:
                 return {
                     "success": True,
-                    "message": "BBPS service activated successfully!",
+                    "message": f"{service_name} service activated successfully!",
                     "response": result
                 }
             else:
                 return {
                     "success": False,
-                    "message": result.get("message", "Activation failed"),
+                    "message": result.get("message", f"{service_name} activation failed"),
                     "status_code": response.status_code,
                     "response": result
                 }
                 
     except Exception as e:
-        logging.error(f"BBPS activation failed: {e}")
+        logging.error(f"{service_name} activation failed: {e}")
         return {"success": False, "error": str(e)}
 
 
