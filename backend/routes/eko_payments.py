@@ -1081,25 +1081,60 @@ async def process_mobile_recharge(
     """Process mobile prepaid recharge via Eko BBPS API"""
     try:
         txn_ref = f"RCH{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile_number[-4:]}"
+        user_code = EKO_USER_CODE or EKO_INITIATOR_ID
+        amount_str = str(int(amount))
         
-        # Use BBPS paybill API for mobile recharge
-        # Add initiator_id to URL as query parameter
-        result = await make_eko_request(
-            f"/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}",
-            method="POST",
-            data={
-                "utility_acc_no": mobile_number,
-                "confirmation_mobile_no": EKO_INITIATOR_ID,
-                "sender_name": "Customer",
-                "operator_id": operator_id,
-                "amount": str(int(amount)),
-                "client_ref_id": txn_ref,
-                "source_ip": "127.0.0.1",
-                "latlong": "19.0760,72.8777",
-                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
-                "hc_channel": "2"  # 2 = API channel
-            }
-        )
+        # Generate timestamp and secret key
+        timestamp = get_secret_key_timestamp()
+        secret_key = generate_secret_key(timestamp)
+        
+        # Generate request_hash (REQUIRED for paybill)
+        request_hash = generate_request_hash(timestamp, mobile_number, amount_str, user_code)
+        
+        # Build request URL
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        # Build headers with request_hash
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
+        
+        # Build request body
+        body = {
+            "utility_acc_no": mobile_number,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "Customer",
+            "operator_id": operator_id,
+            "amount": amount_str,
+            "client_ref_id": txn_ref,
+            "source_ip": "127.0.0.1",
+            "latlong": "19.0760,72.8777",
+            "user_code": user_code
+        }
+        
+        # Make direct request (not using make_eko_request since we need custom headers)
+        async with httpx.AsyncClient(timeout=60.0, verify=True) as client:
+            print(f"=== EKO PAYBILL REQUEST ===")
+            print(f"URL: {url}")
+            print(f"Headers: {headers}")
+            print(f"Body: {body}")
+            print(f"=== END REQUEST ===")
+            
+            response = await client.post(url, headers=headers, json=body)
+            
+            print(f"=== EKO PAYBILL RESPONSE ===")
+            print(f"Status: {response.status_code}")
+            print(f"Body: {response.text[:500]}")
+            print(f"=== END RESPONSE ===")
+            
+            try:
+                result = response.json()
+            except:
+                result = {"raw_response": response.text, "message": "Invalid JSON response"}
         
         # DEBUG: Log full response
         logging.info(f"=== EKO RECHARGE RESPONSE ===")
