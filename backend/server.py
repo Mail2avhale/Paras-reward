@@ -27309,15 +27309,16 @@ async def process_bill_payment_request(request: Request):
                         "/v2/billpayments/paybill",
                         method="POST",
                         data={
+                            "initiator_id": EKO_INITIATOR_ID,  # Required in body
                             "utility_acc_no": customer_id,
                             "operator_id": eko_operator_id,
                             "amount": str(int(amount_inr)),
                             "confirmation_mobile_no": EKO_INITIATOR_ID,
                             "client_ref_id": eko_txn_ref,
                             "sender_name": sender_name,
-                            "user_code": "20810200",  # Fixed: Use correct user_code
+                            "user_code": EKO_USER_CODE or "20810200",
                             "latlong": "19.0760,72.8777",
-                            "source_ip": "34.170.12.145"
+                            "source_ip": "127.0.0.1"
                         }
                     )
                     
