@@ -327,14 +327,38 @@ const RedeemPageV2 = ({ user }) => {
     }
   };
   
-  // Fetch bill details for electricity/gas
+  // Fetch bill details for electricity/gas/postpaid/EMI
   const fetchBillDetails = async () => {
-    const consumerNumber = formData.consumer_number;
-    const operatorId = formData.operator;
+    let consumerNumber, operatorId, category;
     
-    if (!consumerNumber || !operatorId) {
-      toast.error('Consumer Number आणि Operator दोन्ही आवश्यक आहेत');
-      return;
+    // Handle different services
+    if (selectedService === 'emi') {
+      consumerNumber = formData.loan_account;
+      operatorId = formData.operator || formData.selected_lender?.operator_id;
+      category = 'emi';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Loan Account Number आणि Bank/Lender दोन्ही आवश्यक आहेत');
+        return;
+      }
+    } else if (selectedService === 'mobile_recharge' && formData.recharge_type === 'postpaid') {
+      consumerNumber = formData.mobile_number;
+      operatorId = formData.operator;
+      category = 'mobile_postpaid';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Mobile Number आणि Operator दोन्ही आवश्यक आहेत');
+        return;
+      }
+    } else {
+      consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = selectedService;
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Consumer Number आणि Provider दोन्ही आवश्यक आहेत');
+        return;
+      }
     }
     
     setFetchingBill(true);
@@ -343,7 +367,7 @@ const RedeemPageV2 = ({ user }) => {
     
     try {
       const response = await axios.post(`${API}/eko/bbps/fetch-bill`, {
-        category: selectedService,
+        category: category,
         biller_id: operatorId,
         customer_params: {
           consumer_number: consumerNumber
@@ -1087,25 +1111,32 @@ const RedeemPageV2 = ({ user }) => {
                               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
                               Loan Account Number *
                             </Label>
-                            <Input
-                              value={formData.loan_account}
-                              onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
-                              placeholder="Loan account number"
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
+                            <div className="flex gap-2">
+                              <Input
+                                value={formData.loan_account}
+                                onChange={(e) => {
+                                  setFormData({ ...formData, loan_account: e.target.value, amount: '' });
+                                  setBillDetails(null);
+                                }}
+                                placeholder="Loan account number"
+                                className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                              />
+                              <Button
+                                type="button"
+                                onClick={fetchBillDetails}
+                                disabled={fetchingBill || !formData.loan_account}
+                                className="h-12 px-4 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                                data-testid="fetch-emi-btn"
+                              >
+                                {fetchingBill ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <Search className="h-5 w-5" />
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">EMI fetch करण्यासाठी 🔍 बटण दाबा</p>
                           </div>
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">Borrower Name *</Label>
-                            <Input
-                              value={formData.borrower_name}
-                              onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
-                              placeholder="Name as per bank records"
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
                             <Input
@@ -1114,6 +1145,54 @@ const RedeemPageV2 = ({ user }) => {
                               onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                               placeholder="10-digit mobile"
                               maxLength={10}
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* EMI Bill Details */}
+                        {billDetails && (
+                          <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center gap-2 mb-3">
+                              <CheckCircle className="h-5 w-5 text-red-400" />
+                              <span className="text-red-400 font-semibold">EMI Details Found!</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-gray-400">Borrower Name</p>
+                                <p className="text-white font-medium">{billDetails.customerName}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">EMI Amount</p>
+                                <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
+                              </div>
+                              {billDetails.dueDate !== 'N/A' && (
+                                <div>
+                                  <p className="text-gray-400">Due Date</p>
+                                  <p className="text-white">{billDetails.dueDate}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {billError && (
+                          <div className="animate-fadeIn bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-2xl p-4">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-5 w-5 text-orange-400" />
+                              <span className="text-orange-400 font-medium">{billError}</span>
+                            </div>
+                            <p className="text-gray-400 text-sm mt-2">Manual EMI amount टाका खाली.</p>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Borrower Name *</Label>
+                            <Input
+                              value={formData.borrower_name}
+                              onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
+                              placeholder="Name as per bank records"
                               className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             />
                           </div>
