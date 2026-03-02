@@ -2081,7 +2081,7 @@ const AdminUser360 = ({ user: adminUser }) => {
                 {userData?.user?.kyc_status !== 'verified' && (
                   <Button
                     onClick={() => {
-                      if (confirm('✅ Approve KYC for this user? They will be able to make withdrawals.')) {
+                      if (confirm('✅ Approve KYC for this user? They will be able to redeem PRC.')) {
                         handleQuickAction('approve_kyc');
                       }
                     }}

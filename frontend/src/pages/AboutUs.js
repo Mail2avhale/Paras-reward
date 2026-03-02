@@ -156,7 +156,7 @@ const AboutUs = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-amber-500 text-gray-900 font-bold flex items-center justify-center text-sm">4</div>
-              <p className="text-gray-300 text-sm">Redeem rewards or upgrade to VIP for UPI withdrawals</p>
+              <p className="text-gray-300 text-sm">Redeem rewards for mobile recharge, bills, DTH & more</p>
             </div>
           </div>
         </div>

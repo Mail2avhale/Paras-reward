@@ -716,7 +716,7 @@ const SubscriptionPlans = ({ user }) => {
                     <div className="mt-4 pt-4 border-t border-gray-800/50 grid grid-cols-3 gap-2 text-center">
                       <div>
                         <CheckCircle className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                        <span className="text-xs text-gray-400">Withdrawals</span>
+                        <span className="text-xs text-gray-400">Redeem PRC</span>
                       </div>
                       <div>
                         <Gift className="w-4 h-4 text-purple-500 mx-auto mb-1" />

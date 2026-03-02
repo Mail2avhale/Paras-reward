@@ -352,7 +352,7 @@ const KYCVerification = ({ user }) => {
               <div>
                 <p className="font-bold text-lg text-emerald-400">KYC Verified!</p>
                 <p className="text-gray-400 text-sm">
-                  You can now withdraw funds and access all features.
+                  You can now redeem PRC and access all features.
                 </p>
               </div>
             </div>
@@ -590,7 +590,7 @@ const KYCVerification = ({ user }) => {
                     <li>• Upload clear images of your document</li>
                     <li>• All details should be clearly visible</li>
                     <li>• Verification takes 24-48 hours</li>
-                    <li>• Required for withdrawals</li>
+                    <li>• Required for PRC redemption</li>
                   </ul>
                 </div>
               </div>

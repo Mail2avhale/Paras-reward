@@ -417,7 +417,7 @@ const PrivacyPolicy = () => {
                         <tr className="border-b border-gray-800">
                           <td className="py-2 px-4">Bank Details</td>
                           <td className="py-2 px-4">Payment processing</td>
-                          <td className="py-2 px-4">Yes (for withdrawals)</td>
+                          <td className="py-2 px-4">Yes (for PRC redemption)</td>
                         </tr>
                         <tr className="border-b border-gray-800">
                           <td className="py-2 px-4">Device Info</td>

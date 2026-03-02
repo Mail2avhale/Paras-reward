@@ -1175,8 +1175,8 @@ const DashboardModern = ({ user, onLogout }) => {
                   <div className={`${isKycRejected ? 'bg-red-900/30' : 'bg-amber-900/30'} backdrop-blur rounded-xl p-4 mb-4`}>
                     <p className="text-white/90 text-sm leading-relaxed">
                       {isKycRejected 
-                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable bank withdrawals.'
-                        : 'Complete your KYC verification to unlock the Redeem to Bank feature. Your PRC balance will be waiting for you!'
+                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable PRC redemption.'
+                        : 'Complete your KYC verification to unlock the Redeem feature. Your PRC balance will be waiting for you!'
                       }
                     </p>
                     <div className="mt-3 flex items-center gap-2">

@@ -79,7 +79,7 @@ const settingsCategories = [
     id: 'redeem', 
     label: 'Redeem Safety', 
     icon: Shield, 
-    description: 'Set withdrawal limits, security thresholds and redemption rules',
+    description: 'Set redemption limits, security thresholds and rules',
     path: '/admin/redeem-settings',
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-500/10',
@@ -251,7 +251,7 @@ const AdminSettingsHub = ({ user, onLogout }) => {
               <ul className="text-gray-400 text-sm space-y-1">
                 <li>• Use <span className="text-purple-400">Payment Settings</span> to update UPI and bank details</li>
                 <li>• Configure subscription pricing in <span className="text-purple-400">System Settings</span></li>
-                <li>• Set withdrawal limits in <span className="text-purple-400">Redeem Safety</span></li>
+                <li>• Set redemption limits in <span className="text-purple-400">Redeem Safety</span></li>
                 <li>• Run <span className="text-purple-400">System Tasks</span> daily for notifications & cleanup</li>
               </ul>
             </div>

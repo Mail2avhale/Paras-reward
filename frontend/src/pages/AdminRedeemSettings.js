@@ -110,7 +110,7 @@ const AdminRedeemSettings = ({ user }) => {
             <Shield className="w-6 h-6 text-emerald-400" />
             Redeem Safety Settings
           </h1>
-          <p className="text-gray-400 text-sm">Configure withdrawal limits and security rules</p>
+          <p className="text-gray-400 text-sm">Configure redemption limits and security rules</p>
         </div>
       </div>
 

@@ -178,26 +178,26 @@ export const blogArticles = [
 
       <h2>🔄 Step-by-Step Redeem Process:</h2>
       <ol>
-        <li>Go to "Wallet" section (VIP only)</li>
-        <li>Click on "Withdraw" from Bonus Points Wallet</li>
-        <li>Enter UPI ID or Bank Account details</li>
+        <li>Go to "Redeem" section</li>
+        <li>Select service (Mobile, DTH, Bills, Bank Transfer)</li>
+        <li>Enter required details</li>
         <li>Select the amount based on balance</li>
         <li>Confirm redemption</li>
-        <li>Receive cash within 48–72 hours</li>
+        <li>Admin processes within 24-48 hours</li>
       </ol>
 
       <h2>⚠️ Redeem Rules:</h2>
       <ul>
-        <li>10% charity fee is deducted per redemption</li>
-        <li>₹5 processing fee applies</li>
-        <li>Minimum withdrawal: ₹10</li>
+        <li>₹10 platform fee + 20% admin charges</li>
+        <li>10 PRC = ₹1</li>
+        <li>Minimum redemption: ₹10</li>
         <li>KYC verification required</li>
       </ul>
 
       <h2>✅ Supported Redemption Methods:</h2>
       <ul>
-        <li><strong>UPI</strong> (PhonePe, Google Pay, Paytm, etc.)</li>
-        <li><strong>Shopping vouchers</strong> (via marketplace)</li>
+        <li><strong>Mobile Recharge</strong> (All operators)</li>
+        <li><strong>DTH Recharge</strong> (Tata Play, Dish TV, etc.)</li>
         <li><strong>Product redemption</strong> (5000+ items)</li>
       </ul>
 
@@ -240,8 +240,8 @@ export const blogArticles = [
       <h2>🔒 Security Measures:</h2>
       <ul>
         <li>Bank-grade encryption</li>
-        <li>KYC verification for withdrawals</li>
-        <li>Secure UPI integration</li>
+        <li>KYC verification for redemption</li>
+        <li>Secure payment integration via Eko</li>
         <li>No sharing of personal data with third parties</li>
       </ul>
 
@@ -316,7 +316,7 @@ export const blogArticles = [
       <p><strong>✔️ Solution:</strong> Paras Reward has strict device checks. Fraudulent activity leads to permanent bans. One genuine account is better than multiple fake ones.</p>
 
       <h2>❌ Mistake #5: Not Completing KYC</h2>
-      <p><strong>✔️ Solution:</strong> Complete KYC verification early to avoid delays during withdrawal.</p>
+      <p><strong>✔️ Solution:</strong> Complete KYC verification early to avoid delays during redemption.</p>
 
       <h2>❌ Mistake #6: Forgetting to Claim Rewards</h2>
       <p><strong>✔️ Solution:</strong> Regularly claim your earned PRC and daily bonuses. Don't let rewards go unclaimed.</p>
