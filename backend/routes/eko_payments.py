@@ -1770,7 +1770,7 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
         txn_ref = f"ADM{datetime.now().strftime('%Y%m%d%H%M%S')}{request.utility_acc_no[-4:]}"
         
         result = await make_eko_request(
-            "/v2/billpayments/paybill",
+            f"/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}",
             method="POST",
             data={
                 "utility_acc_no": request.utility_acc_no,
@@ -1781,7 +1781,8 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
                 "client_ref_id": txn_ref,
                 "source_ip": "127.0.0.1",
                 "latlong": "19.0760,72.8777",
-                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID
+                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
+                "hc_channel": "2"
             }
         )
         
