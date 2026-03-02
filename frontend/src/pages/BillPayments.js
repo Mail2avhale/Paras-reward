@@ -217,7 +217,7 @@ const BillPayments = ({ user, onLogout }) => {
   // Update selected type when URL param changes
   useEffect(() => {
     const typeFromUrl = searchParams.get('type');
-    if (typeFromUrl && ['mobile_recharge', 'dish_recharge', 'electricity_bill', 'credit_card_payment', 'loan_emi'].includes(typeFromUrl)) {
+    if (typeFromUrl && ['mobile_recharge', 'dish_recharge', 'electricity_bill', 'gas_bill', 'lpg_booking', 'credit_card_payment', 'loan_emi'].includes(typeFromUrl)) {
       setSelectedType(typeFromUrl);
     }
   }, [searchParams]);
