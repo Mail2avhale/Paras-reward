@@ -515,9 +515,9 @@ const RedeemPageV2 = ({ user }) => {
                           className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
                           data-testid="operator-select"
                         >
-                          <option value="">Select Operator</option>
-                          {currentOperators.map(op => (
-                            <option key={op.id} value={op.id || op.operator_id}>{op.name}</option>
+                          <option value="">Select Operator ({currentOperators.length} available)</option>
+                          {currentOperators.map((op, index) => (
+                            <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
                           ))}
                         </select>
                       </div>
