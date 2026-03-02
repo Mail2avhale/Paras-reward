@@ -26,6 +26,7 @@ EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")  # Default retailer code
 
 # Database reference
 db = None
