@@ -722,19 +722,84 @@ const RedeemPageV2 = ({ user }) => {
                   </>
                 )}
                 
-                {/* EMI Fields */}
+                {/* EMI Fields - Advanced with Lender Search */}
                 {selectedService === 'emi' && (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">Bank/Lender Name *</Label>
+                    {/* Lender/Bank Search with Dropdown */}
+                    <div className="relative">
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        Bank/Lender *
+                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
+                        <span className="text-gray-500 text-xs ml-2">({emiOperators.length} lenders available)</span>
+                      </Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                         <Input
-                          value={formData.bank_name}
-                          onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                          placeholder="e.g., HDFC Bank"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                          value={lenderSearch}
+                          onChange={(e) => {
+                            setLenderSearch(e.target.value);
+                            setShowLenderDropdown(true);
+                          }}
+                          onFocus={() => setShowLenderDropdown(true)}
+                          placeholder="Search bank/lender (e.g., HDFC, Bajaj, ICICI)"
+                          className="pl-10 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                         />
+                        {formData.selected_lender && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, selected_lender: null, bank_name: '' }));
+                              setLenderSearch('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
+                      
+                      {/* Selected Lender Display */}
+                      {formData.selected_lender && (
+                        <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <span className="text-green-400 font-medium">{formData.selected_lender.name}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Lender Dropdown */}
+                      {showLenderDropdown && !formData.selected_lender && lenderSearch && (
+                        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-gray-800 border border-gray-700 rounded-xl shadow-2xl">
+                          {filteredLenders.length === 0 ? (
+                            <div className="p-4 text-gray-500 text-center">No lenders found</div>
+                          ) : (
+                            filteredLenders.slice(0, 15).map((lender, index) => (
+                              <button
+                                key={lender.operator_id || index}
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selected_lender: lender,
+                                    bank_name: lender.name,
+                                    operator: lender.operator_id
+                                  }));
+                                  setLenderSearch(lender.name);
+                                  setShowLenderDropdown(false);
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700/50 last:border-0"
+                              >
+                                <Building className="h-4 w-4 text-red-400" />
+                                <span className="text-white">{lender.name}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-gray-300 text-sm mb-2 block">Loan Account Number *</Label>
                         <Input
@@ -742,18 +807,6 @@ const RedeemPageV2 = ({ user }) => {
                           onChange={(e) => setFormData({ ...formData, loan_account: e.target.value })}
                           placeholder="Loan account number"
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">IFSC Code *</Label>
-                        <Input
-                          value={formData.ifsc_code}
-                          onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
-                          placeholder="e.g., HDFC0001234"
-                          maxLength={11}
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
                         />
                       </div>
                       <div>
@@ -766,6 +819,7 @@ const RedeemPageV2 = ({ user }) => {
                         />
                       </div>
                     </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
@@ -793,15 +847,89 @@ const RedeemPageV2 = ({ user }) => {
                           <option value="gold_loan">Gold Loan</option>
                           <option value="business_loan">Business Loan</option>
                           <option value="two_wheeler">Two Wheeler Loan</option>
+                          <option value="consumer_durable">Consumer Durable Loan</option>
+                          <option value="microfinance">Microfinance Loan</option>
                         </select>
                       </div>
                     </div>
                   </>
                 )}
                 
-                {/* DMT (Bank Transfer) Fields */}
+                {/* DMT (Bank Transfer) Fields - Advanced with IFSC Lookup */}
                 {selectedService === 'dmt' && (
                   <>
+                    {/* Bank Search with Dropdown */}
+                    <div className="relative">
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        Select Bank *
+                        {loadingBanks && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
+                      </Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          value={bankSearch}
+                          onChange={(e) => {
+                            setBankSearch(e.target.value);
+                            setShowBankDropdown(true);
+                          }}
+                          onFocus={() => setShowBankDropdown(true)}
+                          placeholder="Search bank (e.g., SBI, HDFC, ICICI)"
+                          className="pl-10 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                        />
+                        {formData.selected_bank && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, selected_bank: null, bank_name: '' }));
+                              setBankSearch('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Selected Bank Display */}
+                      {formData.selected_bank && (
+                        <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <span className="text-green-400 font-medium">{formData.selected_bank.name}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Bank Dropdown */}
+                      {showBankDropdown && !formData.selected_bank && bankSearch && (
+                        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-gray-800 border border-gray-700 rounded-xl shadow-2xl">
+                          {filteredBanks.length === 0 ? (
+                            <div className="p-4 text-gray-500 text-center">No banks found</div>
+                          ) : (
+                            filteredBanks.slice(0, 15).map((bank, index) => (
+                              <button
+                                key={bank.bank_id || index}
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    selected_bank: bank,
+                                    bank_name: bank.name
+                                  }));
+                                  setBankSearch(bank.name);
+                                  setShowBankDropdown(false);
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700/50 last:border-0"
+                              >
+                                <Building className="h-4 w-4 text-green-400" />
+                                <span className="text-white">{bank.name}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-gray-300 text-sm mb-2 block">Account Holder Name *</Label>
@@ -822,16 +950,38 @@ const RedeemPageV2 = ({ user }) => {
                         />
                       </div>
                     </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-gray-300 text-sm mb-2 block">IFSC Code *</Label>
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          IFSC Code *
+                          {loadingIfsc && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
+                        </Label>
                         <Input
                           value={formData.ifsc_code}
-                          onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase() })}
+                          onChange={(e) => {
+                            const ifsc = e.target.value.toUpperCase();
+                            setFormData({ ...formData, ifsc_code: ifsc });
+                            if (ifsc.length === 11) {
+                              lookupIfsc(ifsc);
+                            }
+                          }}
                           placeholder="e.g., SBIN0001234"
                           maxLength={11}
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
                         />
+                        
+                        {/* IFSC Details Display */}
+                        {ifscDetails && (
+                          <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CheckCircle className="h-3 w-3 text-blue-400" />
+                              <span className="text-blue-400 font-medium">IFSC Verified</span>
+                            </div>
+                            <p className="text-gray-400">{ifscDetails.bank}</p>
+                            <p className="text-gray-500">{ifscDetails.branch}, {ifscDetails.city}</p>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <Label className="text-gray-300 text-sm mb-2 block">Recipient Mobile *</Label>
@@ -843,6 +993,37 @@ const RedeemPageV2 = ({ user }) => {
                           maxLength={10}
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                         />
+                      </div>
+                    </div>
+                    
+                    {/* Transfer Mode Selection */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">Transfer Mode</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'IMPS' }))}
+                          className={`p-3 rounded-xl border-2 transition-all ${
+                            formData.transfer_mode === 'IMPS' || !formData.transfer_mode
+                              ? 'bg-green-500/20 border-green-500/50 text-green-400'
+                              : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
+                          }`}
+                        >
+                          <p className="font-medium">IMPS</p>
+                          <p className="text-xs opacity-70">Instant (up to ₹5 lakh)</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'NEFT' }))}
+                          className={`p-3 rounded-xl border-2 transition-all ${
+                            formData.transfer_mode === 'NEFT'
+                              ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                              : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
+                          }`}
+                        >
+                          <p className="font-medium">NEFT</p>
+                          <p className="text-xs opacity-70">2-4 hours</p>
+                        </button>
                       </div>
                     </div>
                   </>
