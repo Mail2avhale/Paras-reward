@@ -123,6 +123,18 @@ const RedeemPageV2 = ({ user }) => {
   const [operators, setOperators] = useState({});
   const [loadingOperators, setLoadingOperators] = useState(false);
   
+  // Bank/IFSC search states
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankList, setBankList] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
+  const [ifscDetails, setIfscDetails] = useState(null);
+  const [loadingIfsc, setLoadingIfsc] = useState(false);
+  
+  // EMI lender search states
+  const [lenderSearch, setLenderSearch] = useState('');
+  const [showLenderDropdown, setShowLenderDropdown] = useState(false);
+  
   // Form data
   const [formData, setFormData] = useState({
     amount: '',
@@ -139,7 +151,9 @@ const RedeemPageV2 = ({ user }) => {
     loan_type: '',
     emi_amount: '',
     account_number: '',
-    account_holder: ''
+    account_holder: '',
+    selected_bank: null,
+    selected_lender: null
   });
   
   // Charges calculation
