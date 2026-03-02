@@ -82,6 +82,7 @@ const OPERATORS = {
 };
 
 const CIRCLES = [
+  { id: 'ALL', name: 'All India' },
   { id: 'MH', name: 'Maharashtra' },
   { id: 'DL', name: 'Delhi NCR' },
   { id: 'KA', name: 'Karnataka' },
@@ -96,7 +97,17 @@ const CIRCLES = [
   { id: 'MP', name: 'Madhya Pradesh' },
   { id: 'BH', name: 'Bihar' },
   { id: 'KL', name: 'Kerala' },
-  { id: 'AP', name: 'Andhra Pradesh' }
+  { id: 'AP', name: 'Andhra Pradesh' },
+  { id: 'TS', name: 'Telangana' },
+  { id: 'OR', name: 'Odisha' },
+  { id: 'AS', name: 'Assam' },
+  { id: 'JK', name: 'Jammu & Kashmir' },
+  { id: 'HP', name: 'Himachal Pradesh' },
+  { id: 'UK', name: 'Uttarakhand' },
+  { id: 'JH', name: 'Jharkhand' },
+  { id: 'CG', name: 'Chhattisgarh' },
+  { id: 'NE', name: 'North East' },
+  { id: 'GA', name: 'Goa' }
 ];
 
 const RedeemPageV2 = ({ user }) => {
