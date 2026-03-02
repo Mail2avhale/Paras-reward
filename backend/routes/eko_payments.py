@@ -1869,24 +1869,15 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
 @router.post("/test-paybill")
 async def test_paybill_direct():
     """Direct test of paybill API - for debugging"""
-    import time as time_module
-    
-    key = EKO_AUTHENTICATOR_KEY
-    encoded_key = base64.b64encode(key.encode()).decode()
-    timestamp = str(round(time_module.time() * 1000))
-
-    secret_key = base64.b64encode(
-        hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-    ).decode()
-
     mobile = "9936606966"
-    amount = '19'
+    amount = '29'
     user_code = EKO_USER_CODE or '20810200'
-
-    concatenated_string = timestamp + mobile + amount + user_code
-    request_hash = base64.b64encode(
-        hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
-    ).decode()
+    amount_str = str(int(float(amount)))
+    
+    # Use EXACT same method as recharge/process
+    timestamp = get_secret_key_timestamp()
+    secret_key = generate_secret_key(timestamp)
+    request_hash = generate_request_hash(timestamp, mobile, amount_str, user_code)
 
     url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
 
@@ -1903,7 +1894,7 @@ async def test_paybill_direct():
         "confirmation_mobile_no": EKO_INITIATOR_ID,
         "sender_name": "Customer",
         "operator_id": "90",
-        "amount": amount,
+        "amount": amount_str,
         "client_ref_id": f"TEST{timestamp[-8:]}",
         "source_ip": "127.0.0.1",
         "latlong": "19.0760,72.8777",
