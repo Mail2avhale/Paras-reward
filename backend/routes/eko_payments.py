@@ -1481,6 +1481,7 @@ async def process_mobile_recharge(
         }
 
         body = {
+            "initiator_id": EKO_INITIATOR_ID,  # Required in body as per Eko docs
             "utility_acc_no": mobile_number,
             "confirmation_mobile_no": EKO_INITIATOR_ID,
             "sender_name": "Customer",
