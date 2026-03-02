@@ -9582,9 +9582,9 @@ async def upgrade_subscription(uid: str, request: Request):
             # Extend from current expiry
             new_expiry = (expiry_dt + timedelta(days=extend_days)).isoformat() if extend_days > 0 else current_expiry
         except:
-            new_expiry = (now + timedelta(days=30)).isoformat()
+            new_expiry = (now + timedelta(days=28)).isoformat()
     else:
-        new_expiry = (now + timedelta(days=30)).isoformat()
+        new_expiry = (now + timedelta(days=28)).isoformat()
     
     # Update user subscription
     await db.users.update_one(
