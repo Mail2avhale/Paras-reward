@@ -10537,8 +10537,8 @@ async def migrate_vip_users_to_subscription(request: Request):
             # Preserve existing expiry if set
             expiry = user.get("vip_expiry") or user.get("membership_expiry") or user.get("subscription_expiry")
             if not expiry:
-                # Set 30 days from now if no expiry
-                expiry = (now + timedelta(days=30)).isoformat()
+                # Set 28 days from now if no expiry (1 month = 28 days)
+                expiry = (now + timedelta(days=28)).isoformat()
             
             await db.users.update_one(
                 {"uid": user["uid"]},
