@@ -789,8 +789,8 @@ const AdminUnifiedPayments = ({ user }) => {
               <div className="p-4 cursor-pointer" onClick={() => setExpandedRequest(expandedRequest === req._id ? null : req._id)}>
                 {/* Row 1: Checkbox + Type + Name + Amount */}
                 <div className="flex items-center gap-3 mb-3">
-                  {/* Checkbox */}
-                  {req.status === 'pending' && (
+                  {/* Checkbox - show for pending and eko_failed */}
+                  {(req.status === 'pending' || req.status === 'eko_failed') && (
                     <div onClick={(e) => toggleSelect(e, req._id)} className="flex-shrink-0">
                       {selectedIds.includes(req._id) 
                         ? <CheckSquare className="w-6 h-6 text-cyan-400" />
