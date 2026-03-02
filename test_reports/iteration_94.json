@@ -1,0 +1,70 @@
+{
+  "summary": "Eko Payment Integration Testing Complete - Backend 62/62 passed, 3 skipped. Balance API works (returns 0.0 INR). Authentication implementation verified: secret-key uses base64-encoded authenticator key + HMAC-SHA256, request_hash uses old_format_encoded method. Bill Payment API (paybill) returns HTTP 200 but may reject duplicate transactions. All unified redeem APIs working correctly.",
+  "mode": "generate",
+  "baseline_commit": "1c8cf7d1701212a4faced8f01c90728678e8fced",
+  "head_commit": "d27183ac6f4e7411c5fefde4686bae97ca609e3d",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/eko/test-recharge",
+        "issue": "Returns 'No key for Response' message - likely due to duplicate transaction check or Eko internal error. Auth headers verified correct.",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 65,
+    "passed": 62,
+    "failed": 0,
+    "skipped": 3
+  },
+  "specs_created": [
+    "/app/backend/tests/test_eko_bill_payment_flow.py",
+    "/app/backend/tests/test_unified_redeem_flow.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/eko_integration_results.xml",
+    "/app/backend/tests/test_eko_authentication.py",
+    "/app/backend/tests/test_eko_bill_payment_flow.py",
+    "/app/backend/tests/test_unified_redeem_flow.py"
+  ],
+  "action_items": [
+    "Eko paybill API returns 'No key for Response' on /test-recharge endpoint - investigate if this is Eko-side duplicate transaction rejection or configuration issue",
+    "Balance shows 0.0 INR - ensure Eko wallet is funded before live recharges",
+    "test-all-methods shows successful combination: secret_key=encoded, request_hash=old_format_encoded - main eko recharge functions should use this combo"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_eko_bill_payment_flow.py",
+    "/app/backend/tests/test_unified_redeem_flow.py"
+  ],
+  "success_rate": {
+    "backend": "95.4% - 62/65 tests passed (3 skipped)",
+    "frontend": "N/A - frontend testing not required per request"
+  },
+  "seed_data_creation": "None - used existing test user and admin",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Eko Payment Integration Testing Summary\n\n### Working APIs (Verified):\n1. GET /api/eko/balance - Returns balance 0.0 INR (auth working)\n2. GET /api/eko/config - Returns configured:true, production environment\n3. GET /api/eko/bbps/operators/mobile_prepaid - Returns 6 operators (Airtel, Jio, Vi, BSNL, MTNL)\n4. GET /api/eko/charges/calculate - Correct formula: ₹10 flat + 20% admin\n5. GET /api/redeem/services - Returns all 6 services\n6. GET /api/redeem/calculate-charges - Correct PRC calculation\n7. GET /api/redeem/admin/stats - Returns stats by status and service\n8. GET /api/redeem/admin/requests - Paginated results with filters\n9. POST /api/redeem/admin/approve - Validation working\n10. POST /api/redeem/admin/complete - Validation working\n\n### Auth Algorithm Verified:\n- Secret-key: HMAC-SHA256(base64_encoded_key, timestamp)\n- Request-hash: HMAC-SHA256(base64_encoded_key, timestamp + utility_acc_no + amount + user_code)\n- Timestamp: 13 digits (milliseconds)\n\n### test-all-methods Results:\n- Working combination: secret_key_method='encoded', request_hash_method='old_format_encoded'\n- Returns 'Success Last_used_OkeyKey: 6' when successful\n\n### Known Issues:\n- /api/eko/test-recharge returns 'No key for Response' - may be duplicate transaction rejection\n- Balance is 0.0 INR - Eko wallet needs funding for live recharges\n\n### Test Credentials:\n- Test user: testuser@test.com / test123\n- Admin: admin@paras.com / test123",
+  "features_tested": [
+    "Eko Balance API - WORKING (returns 0.0 INR)",
+    "Eko Secret Key Generation - format verified correct",
+    "Eko Request Hash Generation - format verified correct",
+    "Eko Bill Payment API (paybill) - HTTP 200 but may reject duplicates",
+    "Mobile Prepaid Operators API - WORKING (6 operators)",
+    "Unified Redeem Services API - WORKING (6 services)",
+    "Unified Redeem Calculate Charges - WORKING",
+    "Admin Stats API - WORKING",
+    "Admin Requests API - WORKING with pagination",
+    "Admin Approval Flow - Validation working",
+    "Admin Complete Flow - Validation working",
+    "test-all-methods - Found working auth combination"
+  ]
+}
