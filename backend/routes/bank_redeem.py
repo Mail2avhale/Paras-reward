@@ -1410,3 +1410,90 @@ async def verify_bank_account_admin(request: Request):
     
     result = await eko_verify_bank_account(ifsc, account_number)
     return result
+
+
+
+@router.post("/admin/eko/dmt-transfer")
+async def admin_direct_dmt_transfer(request: Request):
+    """
+    Admin Direct DMT Transfer via Eko API
+    No approval required - instant processing
+    """
+    data = await request.json()
+    recipient_mobile = data.get("recipient_mobile")
+    account_number = data.get("account_number")
+    ifsc = data.get("ifsc")
+    amount = data.get("amount")
+    recipient_name = data.get("recipient_name")
+    admin_id = data.get("admin_id")
+    
+    if not all([recipient_mobile, account_number, ifsc, amount, recipient_name]):
+        raise HTTPException(status_code=400, detail="All fields are required")
+    
+    if float(amount) < 100:
+        raise HTTPException(status_code=400, detail="Minimum transfer amount is ₹100")
+    
+    try:
+        # Check Eko balance first
+        balance_result = await eko_check_balance()
+        if not balance_result.get("success"):
+            raise HTTPException(status_code=400, detail="Failed to check Eko balance")
+        
+        current_balance = float(balance_result.get("balance", 0))
+        if current_balance < float(amount):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient Eko balance. Available: ₹{current_balance}, Required: ₹{amount}"
+            )
+        
+        # Create transaction reference
+        client_ref = f"ADMT{datetime.now().strftime('%Y%m%d%H%M%S')}{account_number[-4:]}"
+        
+        # Initiate transfer
+        result = await eko_initiate_transfer(
+            recipient_mobile=recipient_mobile,
+            account_number=account_number,
+            ifsc=ifsc,
+            amount=float(amount),
+            recipient_name=recipient_name,
+            client_ref_id=client_ref
+        )
+        
+        # Log transaction
+        if db is not None:
+            await db.admin_eko_transactions.insert_one({
+                "type": "admin_dmt_transfer",
+                "recipient_mobile": recipient_mobile,
+                "account_number": account_number[-4:],  # Store only last 4 digits
+                "ifsc": ifsc,
+                "amount": float(amount),
+                "recipient_name": recipient_name,
+                "admin_id": admin_id,
+                "client_ref": client_ref,
+                "eko_response": result,
+                "success": result.get("success", False),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+        
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": "Transfer successful!",
+                "txn_id": result.get("txn_id"),
+                "eko_txn_id": result.get("txn_id"),
+                "client_ref": client_ref,
+                "amount": amount
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("error") or "Transfer failed",
+                "error": result.get("error"),
+                "client_ref": client_ref
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Admin DMT transfer failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
