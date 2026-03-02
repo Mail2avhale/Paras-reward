@@ -1258,96 +1258,97 @@ const BillPayments = ({ user, onLogout }) => {
                 {currentType?.fields.includes('biller_name') && (
                   <div>
                     <Label htmlFor="biller" className="text-gray-300 text-sm font-medium mb-2 block">
-                      Electricity Provider *
-                      <span className="text-gray-500 text-xs ml-2">(Select your state electricity board)</span>
+                      {selectedType === 'electricity_bill' ? 'Electricity Provider' : selectedType === 'gas_bill' ? 'Gas Provider' : 'Provider'} *
+                      {loadingOperators && <span className="text-amber-400 text-xs ml-2">(Loading live providers...)</span>}
                     </Label>
                     <select
                       id="biller"
                       value={formData.biller_name}
-                      onChange={(e) => setFormData({ ...formData, biller_name: e.target.value })}
+                      onChange={(e) => {
+                        const selected = e.target.options[e.target.selectedIndex];
+                        const operatorId = selected.getAttribute('data-operator-id');
+                        setFormData({ 
+                          ...formData, 
+                          biller_name: e.target.value,
+                          operator_id: operatorId || ''
+                        });
+                      }}
                       required
                       className="w-full h-12 px-4 border border-gray-700/50 rounded-xl bg-gray-800/50 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      data-testid="electricity-provider-select"
+                      data-testid="provider-select"
                     >
-                      <option value="">-- Select Electricity Provider --</option>
-                      <optgroup label="Northern India">
-                        <option value="UPPCL - Uttar Pradesh">UPPCL - Uttar Pradesh Power Corporation Ltd</option>
-                        <option value="DHBVN - Haryana">DHBVN - Dakshin Haryana Bijli Vitran Nigam</option>
-                        <option value="UHBVN - Haryana">UHBVN - Uttar Haryana Bijli Vitran Nigam</option>
-                        <option value="PSPCL - Punjab">PSPCL - Punjab State Power Corporation Ltd</option>
-                        <option value="JVVNL - Rajasthan">JVVNL - Jaipur Vidyut Vitran Nigam Ltd</option>
-                        <option value="AVVNL - Rajasthan">AVVNL - Ajmer Vidyut Vitran Nigam Ltd</option>
-                        <option value="JdVVNL - Rajasthan">JdVVNL - Jodhpur Vidyut Vitran Nigam Ltd</option>
-                        <option value="HPSEBL - Himachal Pradesh">HPSEBL - Himachal Pradesh State Electricity Board</option>
-                        <option value="JKPDD - Jammu & Kashmir">JKPDD - Jammu & Kashmir Power Development Dept</option>
-                        <option value="BSES Delhi - Rajdhani">BSES Rajdhani Power Ltd - Delhi</option>
-                        <option value="BSES Delhi - Yamuna">BSES Yamuna Power Ltd - Delhi</option>
-                        <option value="NDPL - Tata Power Delhi">Tata Power Delhi Distribution Ltd (NDPL)</option>
-                        <option value="NDMC - Delhi">New Delhi Municipal Council (NDMC)</option>
-                        <option value="UPCL - Uttarakhand">UPCL - Uttarakhand Power Corporation Ltd</option>
-                      </optgroup>
-                      <optgroup label="Western India">
-                        <option value="MSEDCL - Maharashtra">MSEDCL - Maharashtra State Electricity Distribution Co. Ltd</option>
-                        <option value="BEST - Mumbai">BEST - Brihanmumbai Electric Supply & Transport</option>
-                        <option value="Tata Power - Mumbai">Tata Power Company Ltd - Mumbai</option>
-                        <option value="Adani Electricity - Mumbai">Adani Electricity Mumbai Ltd</option>
-                        <option value="MGVCL - Gujarat">MGVCL - Madhya Gujarat Vij Company Ltd</option>
-                        <option value="PGVCL - Gujarat">PGVCL - Paschim Gujarat Vij Company Ltd</option>
-                        <option value="UGVCL - Gujarat">UGVCL - Uttar Gujarat Vij Company Ltd</option>
-                        <option value="DGVCL - Gujarat">DGVCL - Dakshin Gujarat Vij Company Ltd</option>
-                        <option value="Torrent Power - Ahmedabad">Torrent Power Ltd - Ahmedabad</option>
-                        <option value="Torrent Power - Surat">Torrent Power Ltd - Surat</option>
-                        <option value="MPMKVVCL - Madhya Pradesh">MPMKVVCL - MP Madhya Kshetra Vidyut Vitaran Co. Ltd</option>
-                        <option value="MPPKVVCL - Madhya Pradesh">MPPKVVCL - MP Paschim Kshetra Vidyut Vitaran Co. Ltd</option>
-                        <option value="MPPOKVVCL - Madhya Pradesh">MPPOKVVCL - MP Poorv Kshetra Vidyut Vitaran Co. Ltd</option>
-                        <option value="CSPDCL - Chhattisgarh">CSPDCL - Chhattisgarh State Power Distribution Co. Ltd</option>
-                        <option value="Goa Electricity - Goa">Goa Electricity Department</option>
-                      </optgroup>
-                      <optgroup label="Southern India">
-                        <option value="TANGEDCO - Tamil Nadu">TANGEDCO - Tamil Nadu Generation & Distribution Corporation</option>
-                        <option value="BESCOM - Karnataka">BESCOM - Bangalore Electricity Supply Company Ltd</option>
-                        <option value="MESCOM - Karnataka">MESCOM - Mangalore Electricity Supply Company Ltd</option>
-                        <option value="HESCOM - Karnataka">HESCOM - Hubli Electricity Supply Company Ltd</option>
-                        <option value="GESCOM - Karnataka">GESCOM - Gulbarga Electricity Supply Company Ltd</option>
-                        <option value="CESC - Karnataka">CESC - Chamundeshwari Electricity Supply Corp Ltd</option>
-                        <option value="KSEB - Kerala">KSEB - Kerala State Electricity Board Ltd</option>
-                        <option value="APSPDCL - Andhra Pradesh">APSPDCL - AP Southern Power Distribution Co. Ltd</option>
-                        <option value="APEPDCL - Andhra Pradesh">APEPDCL - AP Eastern Power Distribution Co. Ltd</option>
-                        <option value="TSSPDCL - Telangana">TSSPDCL - Telangana Southern Power Distribution Co. Ltd</option>
-                        <option value="TSNPDCL - Telangana">TSNPDCL - Telangana Northern Power Distribution Co. Ltd</option>
-                        <option value="Electricity Dept - Puducherry">Electricity Department - Puducherry</option>
-                      </optgroup>
-                      <optgroup label="Eastern India">
-                        <option value="WBSEDCL - West Bengal">WBSEDCL - West Bengal State Electricity Distribution Co. Ltd</option>
-                        <option value="CESC - Kolkata">CESC Ltd - Kolkata</option>
-                        <option value="BSPHCL - Bihar">BSPHCL - Bihar State Power Holding Company Ltd</option>
-                        <option value="NBPDCL - Bihar">NBPDCL - North Bihar Power Distribution Co. Ltd</option>
-                        <option value="SBPDCL - Bihar">SBPDCL - South Bihar Power Distribution Co. Ltd</option>
-                        <option value="JBVNL - Jharkhand">JBVNL - Jharkhand Bijli Vitran Nigam Ltd</option>
-                        <option value="OSEB - Odisha">TPCODL/TPWODL/TPSODL/TPNODL - Odisha Discoms (Tata Power)</option>
-                        <option value="APDCL - Assam">APDCL - Assam Power Distribution Company Ltd</option>
-                        <option value="TSECL - Tripura">TSECL - Tripura State Electricity Corporation Ltd</option>
-                        <option value="MePDCL - Meghalaya">MePDCL - Meghalaya Power Distribution Corporation Ltd</option>
-                        <option value="MSPCL - Manipur">MSPCL - Manipur State Power Company Ltd</option>
-                        <option value="DoP - Nagaland">Department of Power - Nagaland</option>
-                        <option value="DoP - Mizoram">Power & Electricity Department - Mizoram</option>
-                        <option value="DoP - Arunachal">Department of Power - Arunachal Pradesh</option>
-                        <option value="DoP - Sikkim">Energy & Power Department - Sikkim</option>
-                      </optgroup>
-                      <optgroup label="Union Territories">
-                        <option value="Electricity Dept - Chandigarh">Electricity Department - Chandigarh</option>
-                        <option value="DNH Power - Dadra & Nagar Haveli">DNH Power Distribution Corporation Ltd</option>
-                        <option value="Electricity Dept - Daman & Diu">Electricity Department - Daman & Diu</option>
-                        <option value="Electricity Dept - Lakshadweep">Electricity Department - Lakshadweep</option>
-                        <option value="Electricity Dept - Andaman">Electricity Department - Andaman & Nicobar</option>
-                        <option value="Electricity Dept - Ladakh">Electricity Department - Ladakh</option>
-                      </optgroup>
-                      <optgroup label="Other">
-                        <option value="Other">Other Provider (Enter in notes)</option>
-                      </optgroup>
+                      <option value="">-- Select Provider --</option>
+                      {/* Live Electricity Operators from Eko API */}
+                      {selectedType === 'electricity_bill' && ekoElectricityOperators.length > 0 ? (
+                        ekoElectricityOperators.map((op) => (
+                          <option key={op.id} value={op.name} data-operator-id={op.operator_id}>
+                            {op.name}
+                          </option>
+                        ))
+                      ) : selectedType === 'electricity_bill' ? (
+                        <>
+                          <optgroup label="Northern India">
+                            <option value="BSES Rajdhani" data-operator-id="22">BSES Rajdhani - Delhi</option>
+                            <option value="BSES Yamuna" data-operator-id="23">BSES Yamuna - Delhi</option>
+                            <option value="Tata Power - Delhi" data-operator-id="24">Tata Power - Delhi</option>
+                            <option value="UPPCL" data-operator-id="131">UPPCL - Uttar Pradesh</option>
+                          </optgroup>
+                          <optgroup label="Western India">
+                            <option value="MSEDCL" data-operator-id="62">MSEDCL - Maharashtra</option>
+                            <option value="BEST Mumbai" data-operator-id="53">BEST - Mumbai</option>
+                            <option value="Tata Power - Mumbai" data-operator-id="139">Tata Power - Mumbai</option>
+                            <option value="Adani Electricity Mumbai" data-operator-id="242">Adani Electricity - Mumbai</option>
+                            <option value="Torrent Power" data-operator-id="63">Torrent Power - Gujarat</option>
+                          </optgroup>
+                          <optgroup label="Southern India">
+                            <option value="TANGEDCO" data-operator-id="149">TANGEDCO - Tamil Nadu</option>
+                            <option value="BESCOM" data-operator-id="56">BESCOM - Bangalore</option>
+                            <option value="KSEB" data-operator-id="159">KSEB - Kerala</option>
+                          </optgroup>
+                          <optgroup label="Eastern India">
+                            <option value="WBSEDCL" data-operator-id="115">WBSEDCL - West Bengal</option>
+                            <option value="NBPDCL" data-operator-id="81">NBPDCL - North Bihar</option>
+                            <option value="SBPDCL" data-operator-id="82">SBPDCL - South Bihar</option>
+                          </optgroup>
+                        </>
+                      ) : null}
+                      
+                      {/* Live Gas Operators from Eko API */}
+                      {selectedType === 'gas_bill' && ekoGasOperators.length > 0 ? (
+                        ekoGasOperators.map((op) => (
+                          <option key={op.id} value={op.name} data-operator-id={op.operator_id}>
+                            {op.name}
+                          </option>
+                        ))
+                      ) : selectedType === 'gas_bill' ? (
+                        <>
+                          <option value="Mahanagar Gas" data-operator-id="28">Mahanagar Gas - Mumbai</option>
+                          <option value="Gujarat Gas" data-operator-id="50">Gujarat Gas</option>
+                          <option value="Adani Gas" data-operator-id="51">Adani Gas</option>
+                          <option value="Indraprastha Gas" data-operator-id="65">Indraprastha Gas - Delhi</option>
+                          <option value="GAIL Gas" data-operator-id="196">GAIL Gas</option>
+                        </>
+                      ) : null}
+                      
+                      {/* LPG Operators */}
+                      {selectedType === 'lpg_booking' && ekoLpgOperators.length > 0 ? (
+                        ekoLpgOperators.map((op) => (
+                          <option key={op.id} value={op.name} data-operator-id={op.operator_id}>
+                            {op.name}
+                          </option>
+                        ))
+                      ) : selectedType === 'lpg_booking' ? (
+                        <>
+                          <option value="Indane Gas" data-operator-id="301">Indane Gas (IOCL)</option>
+                          <option value="HP Gas" data-operator-id="302">HP Gas</option>
+                          <option value="Bharat Gas" data-operator-id="303">Bharat Gas (BPCL)</option>
+                        </>
+                      ) : null}
                     </select>
                     <p className="text-gray-500 text-xs mt-2">
-                      Can't find your provider? Select "Other" and mention in your request notes.
+                      {ekoElectricityOperators.length > 0 || ekoGasOperators.length > 0 || ekoLpgOperators.length > 0 
+                        ? `✅ Live data loaded from Eko BBPS` 
+                        : `Loading providers...`}
                     </p>
                   </div>
                 )}
