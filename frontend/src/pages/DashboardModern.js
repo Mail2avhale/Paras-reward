@@ -957,7 +957,7 @@ const DashboardModern = ({ user, onLogout }) => {
               {t('billPayments')}
             </h3>
             <button 
-              onClick={() => navigate('/bill-payments')}
+              onClick={() => navigate('/redeem')}
               className="text-blue-400 text-xs font-medium flex items-center gap-1"
             >
               {t('viewAll')} <ChevronRight className="w-4 h-4" />
@@ -965,7 +965,7 @@ const DashboardModern = ({ user, onLogout }) => {
           </div>
           <div className="grid grid-cols-5 gap-2">
             <button 
-              onClick={() => navigate('/bill-payments?type=mobile_recharge')}
+              onClick={() => navigate('/redeem?service=mobile_recharge')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
@@ -974,7 +974,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('mobile')}</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=dish_recharge')}
+              onClick={() => navigate('/redeem?service=dth')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -983,7 +983,7 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('dth')}</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=electricity_bill')}
+              onClick={() => navigate('/redeem?service=electricity')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
@@ -992,16 +992,16 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('electricity')}</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=credit_card_payment')}
+              onClick={() => navigate('/redeem?service=dmt')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <span className="text-xl">💳</span>
+                <span className="text-xl">💸</span>
               </div>
-              <span className="text-[10px] text-gray-300 text-center">{t('card')}</span>
+              <span className="text-[10px] text-gray-300 text-center">Bank</span>
             </button>
             <button 
-              onClick={() => navigate('/bill-payments?type=loan_emi')}
+              onClick={() => navigate('/redeem?service=emi')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
