@@ -4,6 +4,8 @@ Eko.in API Integration - LIVE
 - DMT (Domestic Money Transfer)
 
 Documentation: https://developers.eko.in
+
+Error Codes Reference: https://developers.eko.in/docs/error-codes
 """
 
 from fastapi import APIRouter, HTTPException, Request
@@ -34,6 +36,113 @@ db = None
 def set_db(database):
     global db
     db = database
+
+
+# ==================== EKO ERROR CODES (Official Documentation) ====================
+
+# For financial transactions: status = 0 means success, else fail
+# For non-financial: check both status and response_type_id
+
+EKO_STATUS_CODES = {
+    # Success
+    "0": "Success",
+    
+    # User/Agent Related Errors
+    "463": "User not found",
+    "327": "Enrollment done. Verification pending",
+    "17": "User wallet already exists",
+    "31": "Agent can not be registered",
+    "319": "Invalid Sender/Initiator",
+    "1237": "ID proof number already exists in the system",
+    "585": "Customer already KYC Approved",
+    
+    # Sender Related
+    "132": "Sender name should only contain letters",
+    "945": "Sender/Beneficiary limit has been exhausted for this month",
+    
+    # OTP Related Errors
+    "302": "Wrong OTP",
+    "303": "OTP expired",
+    
+    # Recipient Related Errors
+    "342": "Recipient already registered",
+    "145": "Recipient mobile number should be numeric",
+    "140": "Recipient mobile number should be 10 digit",
+    "131": "Recipient name should only contain letters",
+    "122": "Recipient name length should be in between 1 and 50",
+    "39": "Max recipient limit reached",
+    "313": "Recipient registration not done",
+    "350": "Verification failed. Recipient name not found",
+    "536": "Invalid recipient type format",
+    "537": "Invalid recipient type length",
+    "44": "Customer not found",
+    "45": "Recipient not found / Incomplete IFSC Code",
+    
+    # Bank/IFSC Related Errors
+    "41": "Wrong IFSC",
+    "48": "Recipient bank not found",
+    "136": "Please provide valid IFSC format",
+    "508": "Invalid IFSC for the selected bank",
+    "521": "IFSC not found in the system",
+    
+    # Account Related Errors
+    "102": "Invalid Account number length",
+    "46": "Invalid account details",
+    
+    # Transaction Related Errors
+    "317": "NEFT not allowed",
+    "53": "IMPS transaction not allowed",
+    "55": "Error from NPCI",
+    "460": "Invalid channel",
+    "344": "IMPS is not available in this bank",
+    "168": "TID does not exist",
+    "544": "Transaction not processed. Bank is not available now",
+    
+    # Balance/Limit Related Errors
+    "347": "Insufficient balance",
+    "314": "Failed! Monthly limit exceeds",
+    
+    # HTTP/Server Errors
+    "400": "Bad Request - Invalid parameters",
+    "403": "Access denied - check IP whitelist or service not activated",
+    "404": "Resource not found",
+    "500": "Internal server error",
+    "503": "Service temporarily unavailable",
+    "504": "Gateway timeout"
+}
+
+# Transaction Status Codes (tx_status field)
+EKO_TX_STATUS_CODES = {
+    0: {"status": "Success", "description": "Transaction Successful", "is_final": True, "action": "None - Transaction complete"},
+    1: {"status": "Fail", "description": "Transaction Failed", "is_final": True, "action": "Initiate refund if applicable"},
+    2: {"status": "Initiated", "description": "Response Awaited/Initiated (NEFT pending)", "is_final": False, "action": "Poll status after 5-10 minutes"},
+    3: {"status": "Refund Pending", "description": "Refund is being processed", "is_final": False, "action": "Wait for refund completion"},
+    4: {"status": "Refunded", "description": "Amount has been refunded", "is_final": True, "action": "None - Refund complete"},
+    5: {"status": "Hold", "description": "Transaction Inquiry Required", "is_final": False, "action": "Contact Eko support with TID"}
+}
+
+def get_eko_error_message(status_code) -> str:
+    """Get human-readable error message from Eko status code"""
+    return EKO_STATUS_CODES.get(str(status_code), f"Unknown error (code: {status_code})")
+
+def get_tx_status_info(tx_status: int) -> dict:
+    """Get transaction status information"""
+    return EKO_TX_STATUS_CODES.get(tx_status, {
+        "status": "Unknown",
+        "description": f"Unknown status code: {tx_status}",
+        "is_final": False,
+        "action": "Contact support"
+    })
+
+def is_retryable_error(status_code) -> bool:
+    """Check if error is retryable (temporary failures)"""
+    retryable = ["544", "503", "504", "55"]  # Bank unavailable, timeout, NPCI error
+    return str(status_code) in retryable
+
+def needs_manual_review(status_code) -> bool:
+    """Check if error requires manual admin review"""
+    manual = ["347", "314", "403", "319", "945", "5"]  # Balance, limits, access, hold
+    return str(status_code) in manual
 
 
 # ==================== HELPER FUNCTIONS ====================
