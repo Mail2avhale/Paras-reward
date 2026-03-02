@@ -499,6 +499,110 @@ async def debug_eko_auth():
     }
 
 
+# ==================== SIMPLE TEST ENDPOINT (EXACT EKO FORMAT) ====================
+@router.post("/test-recharge")
+async def test_recharge_exact_format(
+    mobile: str = "9970100782",
+    operator: str = "1",  # Airtel = 1
+    amount: str = "10"
+):
+    """
+    Test recharge endpoint using EXACT Eko documentation format.
+    This helps debug what's different between working and non-working calls.
+    """
+    import time
+    
+    try:
+        # Step 1: Generate timestamp (milliseconds)
+        timestamp = str(int(time.time() * 1000))
+        
+        # Step 2: Generate secret-key (EXACT as per Eko docs)
+        key_bytes = EKO_AUTHENTICATOR_KEY.encode('utf-8')
+        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+        encoded_key_bytes = encoded_key.encode('utf-8')
+        
+        signature = hmac.new(encoded_key_bytes, timestamp.encode('utf-8'), hashlib.sha256).digest()
+        secret_key = base64.b64encode(signature).decode('utf-8')
+        
+        # Step 3: Generate request_hash
+        # Format: timestamp + utility_acc_no + amount + user_code
+        user_code = EKO_USER_CODE or EKO_INITIATOR_ID
+        concat_str = timestamp + mobile + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key_bytes, concat_str.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        # Step 4: Build request EXACTLY as per Eko curl example
+        client_ref_id = f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile[-4:]}"
+        
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json",
+            "Connection": "Keep-Alive",
+            "Accept-Encoding": "gzip",
+            "User-Agent": "okhttp/3.9.0"
+        }
+        
+        # Body EXACTLY as per Eko documentation
+        body = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "source_ip": "127.0.0.1",
+            "user_code": user_code,
+            "amount": amount,
+            "client_ref_id": client_ref_id,
+            "utility_acc_no": mobile,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "TestUser",
+            "operator_id": operator,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        logging.info(f"=== TEST RECHARGE REQUEST ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Headers: {headers}")
+        logging.info(f"Body: {json.dumps(body, indent=2)}")
+        
+        async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
+            response = await client.post(url, headers=headers, json=body)
+            
+            logging.info(f"=== TEST RECHARGE RESPONSE ===")
+            logging.info(f"HTTP Status: {response.status_code}")
+            logging.info(f"Headers: {dict(response.headers)}")
+            logging.info(f"Body: {response.text}")
+            
+            try:
+                result = response.json()
+            except:
+                result = {"raw_response": response.text, "parse_error": True}
+        
+        return {
+            "success": result.get("status") == 0,
+            "http_status": response.status_code,
+            "request_details": {
+                "url": url,
+                "timestamp": timestamp,
+                "client_ref_id": client_ref_id,
+                "operator_id": operator,
+                "amount": amount,
+                "mobile": mobile
+            },
+            "eko_response": result
+        }
+        
+    except Exception as e:
+        logging.error(f"Test recharge failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+
 @router.get("/balance")
 async def get_eko_balance():
     """Get Eko settlement account balance"""
