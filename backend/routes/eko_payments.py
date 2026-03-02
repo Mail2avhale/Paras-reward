@@ -1083,10 +1083,25 @@ async def process_mobile_recharge(
                 "amount": str(int(amount)),
                 "client_ref_id": txn_ref,
                 "source_ip": "127.0.0.1",
-                "latlong": "0.0,0.0",
+                "latlong": "19.0760,72.8777",
                 "user_code": EKO_USER_CODE or EKO_INITIATOR_ID
             }
         )
+        
+        # DEBUG: Log full response
+        logging.info(f"=== EKO RECHARGE RESPONSE ===")
+        logging.info(f"Full response: {result}")
+        logging.info(f"=== END RESPONSE ===")
+        
+        # Check if Eko returned success
+        # Eko uses status=0 for success, tx_status=0 for transaction success
+        eko_status = result.get("status")
+        tx_status = result.get("tx_status")
+        is_success = (eko_status == 0 or eko_status == "0") or (tx_status == 0 or tx_status == "0")
+        
+        # Also check for common error indicators
+        if "error" in str(result).lower() or "fail" in str(result).lower():
+            is_success = False
         
         # Log transaction
         if db is not None:
@@ -1099,17 +1114,33 @@ async def process_mobile_recharge(
                 "circle_id": circle_id,
                 "txn_ref": txn_ref,
                 "eko_response": result,
-                "status": result.get("status", "pending"),
+                "status": "success" if is_success else "failed",
+                "eko_status": eko_status,
+                "eko_tx_status": tx_status,
                 "timestamp": datetime.now(timezone.utc)
             })
         
-        return {
-            "success": True,
-            "txn_ref": txn_ref,
-            "eko_txn_id": result.get("tid") or result.get("txstatus_desc"),
-            "status": result.get("status"),
-            "message": result.get("message", "Recharge initiated")
-        }
+        if is_success:
+            return {
+                "success": True,
+                "txn_ref": txn_ref,
+                "eko_txn_id": result.get("tid") or result.get("txstatus_desc"),
+                "eko_status": eko_status,
+                "tx_status": tx_status,
+                "message": result.get("message", "Recharge successful!"),
+                "eko_response": result
+            }
+        else:
+            # Return failure with details
+            error_msg = result.get("message") or result.get("txstatus_desc") or "Recharge failed"
+            return {
+                "success": False,
+                "txn_ref": txn_ref,
+                "eko_status": eko_status,
+                "tx_status": tx_status,
+                "message": f"Eko Error: {error_msg}",
+                "eko_response": result
+            }
         
     except HTTPException:
         raise
