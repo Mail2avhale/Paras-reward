@@ -27305,7 +27305,7 @@ async def process_bill_payment_request(request: Request):
                             "confirmation_mobile_no": EKO_INITIATOR_ID,
                             "client_ref_id": eko_txn_ref,
                             "sender_name": sender_name,
-                            "user_code": EKO_INITIATOR_ID,
+                            "user_code": "20810200",  # Fixed: Use correct user_code
                             "latlong": "19.0760,72.8777",
                             "source_ip": "34.170.12.145"
                         }
