@@ -1142,13 +1142,19 @@ async def process_mobile_recharge(
         logging.info(f"=== END RESPONSE ===")
         
         # Check if Eko returned success
-        # Eko uses status=0 for success, tx_status=0 for transaction success
+        # Eko uses status=0 for success OR message contains "Success"
         eko_status = result.get("status")
         tx_status = result.get("tx_status")
-        is_success = (eko_status == 0 or eko_status == "0") or (tx_status == 0 or tx_status == "0")
+        message = result.get("message", "")
         
-        # Also check for common error indicators
-        if "error" in str(result).lower() or "fail" in str(result).lower():
+        is_success = (
+            (eko_status == 0 or eko_status == "0") or 
+            (tx_status == 0 or tx_status == "0") or
+            "Success" in message
+        )
+        
+        # Check for failure indicators
+        if "fail" in message.lower() or "invalid" in message.lower() or "error" in message.lower():
             is_success = False
         
         # Log transaction
