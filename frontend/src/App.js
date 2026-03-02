@@ -121,6 +121,7 @@ const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit")
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const BankRedeem = lazy(() => import("@/pages/BankRedeem"));
 const BankRedeemEdit = lazy(() => import("@/pages/BankRedeemEdit"));
+const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
