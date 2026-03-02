@@ -612,11 +612,14 @@ EKO_CATEGORY_MAP = {
     "broadband": 1,
     "landline": 9,
     "credit_card": 7,
-    "loan_emi": 12,
-    "insurance": 13,
-    "fastag": 14,
-    "municipal_tax": 6,
-    "lpg": 15
+    "loan_emi": 21,
+    "insurance": 20,
+    "fastag": 22,
+    "municipal_tax": 15,
+    "lpg": 18,
+    "education": 14,
+    "cable_tv": 17,
+    "hospital": 19
 }
 
 @router.get("/bbps/operators/{service_type}")
