@@ -1089,47 +1089,6 @@ const RedeemPageV2 = ({ user }) => {
               </ul>
             </div>
             
-            {/* Recent Requests */}
-            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 rounded-3xl p-6 border border-gray-800/50">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-gray-400" />
-                  Recent Requests
-                </h3>
-                <button
-                  onClick={() => navigate('/orders?tab=redeem')}
-                  className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
-                >
-                  View All <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-              
-              {requests.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-6">No requests yet</p>
-              ) : (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {requests.slice(0, 5).map(req => (
-                    <div
-                      key={req.request_id}
-                      className="p-3 bg-gray-800/30 rounded-xl border border-gray-700/30"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-white font-medium text-sm">{req.service_name}</span>
-                        {getStatusBadge(req.status)}
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">{req.request_id}</span>
-                        <span className="text-amber-400 font-semibold">₹{req.amount_inr}</span>
-                      </div>
-                      <p className="text-gray-600 text-[10px] mt-1">
-                        {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
             {/* How It Works */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 rounded-3xl p-6 border border-gray-800/50">
               <h3 className="font-bold text-white mb-4 flex items-center gap-2">
