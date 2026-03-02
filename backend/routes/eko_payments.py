@@ -516,6 +516,99 @@ async def debug_eko_auth():
 
 
 # ==================== SIMPLE TEST ENDPOINT (EXACT EKO FORMAT) ====================
+@router.get("/debug-recharge-test")
+async def debug_recharge_test():
+    """
+    Debug endpoint to test Eko recharge API and show exact response.
+    Use this to diagnose "No key for Response" errors.
+    """
+    import time
+    
+    try:
+        # Test values
+        mobile = "9970100782"
+        operator = "1"  # Airtel
+        amount = "10"
+        
+        # Step 1: Generate timestamp (milliseconds)
+        timestamp = str(int(time.time() * 1000))
+        
+        # Step 2: Generate secret-key
+        if not EKO_AUTHENTICATOR_KEY:
+            return {"error": "EKO_AUTHENTICATOR_KEY not set", "key_preview": "None"}
+        
+        key_bytes = EKO_AUTHENTICATOR_KEY.encode('utf-8')
+        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+        encoded_key_bytes = encoded_key.encode('utf-8')
+        
+        signature = hmac.new(encoded_key_bytes, timestamp.encode('utf-8'), hashlib.sha256).digest()
+        secret_key = base64.b64encode(signature).decode('utf-8')
+        
+        # Step 3: Generate request_hash
+        user_code = EKO_USER_CODE or EKO_INITIATOR_ID
+        concat_str = timestamp + mobile + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key_bytes, concat_str.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        # Build request
+        client_ref_id = f"DEBUG{int(time.time())}"
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
+        
+        body = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "source_ip": "127.0.0.1",
+            "user_code": user_code,
+            "amount": amount,
+            "client_ref_id": client_ref_id,
+            "utility_acc_no": mobile,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "DebugTest",
+            "operator_id": operator,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
+            response = await client.post(url, headers=headers, json=body)
+            
+            return {
+                "test_params": {
+                    "mobile": mobile,
+                    "operator": operator,
+                    "amount": amount,
+                    "user_code": user_code
+                },
+                "request": {
+                    "url": url,
+                    "timestamp": timestamp,
+                    "auth_key_preview": f"{EKO_AUTHENTICATOR_KEY[:8]}...{EKO_AUTHENTICATOR_KEY[-8:]}",
+                    "initiator_id": EKO_INITIATOR_ID
+                },
+                "response": {
+                    "http_status": response.status_code,
+                    "headers": dict(response.headers),
+                    "body_raw": response.text[:1000],
+                    "body_json": response.json() if response.headers.get("content-type", "").startswith("application/json") else "Not JSON"
+                }
+            }
+        
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }
+
+
 @router.post("/test-recharge")
 async def test_recharge_exact_format(
     mobile: str = "9970100782",
