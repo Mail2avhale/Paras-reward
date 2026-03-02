@@ -174,8 +174,8 @@ def generate_secret_key(timestamp: str):
 
 
 def get_secret_key_timestamp():
-    """Get current timestamp in milliseconds"""
-    return str(int(time.time() * 1000))
+    """Get current timestamp in milliseconds - use round() as per official Eko Python example"""
+    return str(round(time.time() * 1000))
 
 
 def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user_code: str):
@@ -778,7 +778,8 @@ async def test_recharge_exact_format(
     
     try:
         # Step 1: Generate timestamp (milliseconds - 13 digits)
-        timestamp = str(int(time.time() * 1000))
+        # CRITICAL: Use round() as per official Eko Python example
+        timestamp = str(round(time.time() * 1000))
         
         # Step 2: Generate secret-key using VERIFIED WORKING method
         # CRITICAL: Base64 encode the authenticator key FIRST, then HMAC!
@@ -838,8 +839,8 @@ async def test_recharge_exact_format(
         logging.info(f"Request Hash: {request_hash}")
         
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
-            # Use json=body instead of content=body_json
-            response = await client.post(url, headers=headers, json=body)
+            # CRITICAL: Use content=body_json to send exact same JSON used for hash calculation
+            response = await client.post(url, headers=headers, content=body_json)
             
             logging.info(f"=== TEST RECHARGE RESPONSE ===")
             logging.info(f"HTTP Status: {response.status_code}")
