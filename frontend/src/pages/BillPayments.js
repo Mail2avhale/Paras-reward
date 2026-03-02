@@ -115,12 +115,57 @@ const BillPayments = ({ user, onLogout }) => {
   const fetchDthOperators = async () => {
     try {
       setLoadingOperators(true);
-      const response = await axios.get(`${API}/eko/dth/operators`);
+      const response = await axios.get(`${API}/eko/bbps/operators/dth`);
       if (response.data.operators?.length > 0) {
         setEkoDthOperators(response.data.operators);
       }
     } catch (error) {
       console.error('Error fetching DTH operators:', error);
+    } finally {
+      setLoadingOperators(false);
+    }
+  };
+  
+  // Load Electricity operators from Eko BBPS API
+  const fetchElectricityOperators = async () => {
+    try {
+      setLoadingOperators(true);
+      const response = await axios.get(`${API}/eko/bbps/operators/electricity`);
+      if (response.data.operators?.length > 0) {
+        setEkoElectricityOperators(response.data.operators);
+      }
+    } catch (error) {
+      console.error('Error fetching electricity operators:', error);
+    } finally {
+      setLoadingOperators(false);
+    }
+  };
+  
+  // Load Gas operators from Eko BBPS API
+  const fetchGasOperators = async () => {
+    try {
+      setLoadingOperators(true);
+      const response = await axios.get(`${API}/eko/bbps/operators/gas`);
+      if (response.data.operators?.length > 0) {
+        setEkoGasOperators(response.data.operators);
+      }
+    } catch (error) {
+      console.error('Error fetching gas operators:', error);
+    } finally {
+      setLoadingOperators(false);
+    }
+  };
+  
+  // Load LPG operators from Eko BBPS API
+  const fetchLpgOperators = async () => {
+    try {
+      setLoadingOperators(true);
+      const response = await axios.get(`${API}/eko/bbps/operators/lpg`);
+      if (response.data.operators?.length > 0) {
+        setEkoLpgOperators(response.data.operators);
+      }
+    } catch (error) {
+      console.error('Error fetching LPG operators:', error);
     } finally {
       setLoadingOperators(false);
     }
