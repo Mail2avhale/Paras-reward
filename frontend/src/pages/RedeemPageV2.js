@@ -245,6 +245,89 @@ const RedeemPageV2 = ({ user }) => {
     }
   };
   
+  // Fetch bank list for DMT
+  const fetchBankList = async () => {
+    setLoadingBanks(true);
+    try {
+      const response = await axios.get(`${API}/eko/dmt/bank-list`);
+      if (response.data.banks) {
+        setBankList(response.data.banks);
+      }
+    } catch (error) {
+      console.error('Error fetching banks:', error);
+      // Fallback to common banks
+      setBankList([
+        { bank_id: 'SBI', name: 'State Bank of India', ifsc_prefix: 'SBIN' },
+        { bank_id: 'HDFC', name: 'HDFC Bank', ifsc_prefix: 'HDFC' },
+        { bank_id: 'ICICI', name: 'ICICI Bank', ifsc_prefix: 'ICIC' },
+        { bank_id: 'AXIS', name: 'Axis Bank', ifsc_prefix: 'UTIB' },
+        { bank_id: 'PNB', name: 'Punjab National Bank', ifsc_prefix: 'PUNB' },
+        { bank_id: 'BOB', name: 'Bank of Baroda', ifsc_prefix: 'BARB' },
+        { bank_id: 'KOTAK', name: 'Kotak Mahindra Bank', ifsc_prefix: 'KKBK' },
+        { bank_id: 'YES', name: 'Yes Bank', ifsc_prefix: 'YESB' },
+        { bank_id: 'IDBI', name: 'IDBI Bank', ifsc_prefix: 'IBKL' },
+        { bank_id: 'CANARA', name: 'Canara Bank', ifsc_prefix: 'CNRB' },
+        { bank_id: 'UNION', name: 'Union Bank of India', ifsc_prefix: 'UBIN' },
+        { bank_id: 'IOB', name: 'Indian Overseas Bank', ifsc_prefix: 'IOBA' },
+        { bank_id: 'INDIAN', name: 'Indian Bank', ifsc_prefix: 'IDIB' },
+        { bank_id: 'BOI', name: 'Bank of India', ifsc_prefix: 'BKID' },
+        { bank_id: 'CENTRAL', name: 'Central Bank of India', ifsc_prefix: 'CBIN' }
+      ]);
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+  
+  // IFSC Code lookup
+  const lookupIfsc = async (ifsc) => {
+    if (!ifsc || ifsc.length !== 11) {
+      setIfscDetails(null);
+      return;
+    }
+    
+    setLoadingIfsc(true);
+    try {
+      // Use Razorpay's IFSC API (public)
+      const response = await axios.get(`https://ifsc.razorpay.com/${ifsc}`);
+      setIfscDetails({
+        bank: response.data.BANK,
+        branch: response.data.BRANCH,
+        address: response.data.ADDRESS,
+        city: response.data.CITY,
+        state: response.data.STATE
+      });
+      // Auto-fill bank name
+      setFormData(prev => ({
+        ...prev,
+        bank_name: response.data.BANK
+      }));
+    } catch (error) {
+      console.error('IFSC lookup failed:', error);
+      setIfscDetails(null);
+      toast.error('Invalid IFSC Code');
+    } finally {
+      setLoadingIfsc(false);
+    }
+  };
+  
+  // Fetch bank list when DMT is selected
+  useEffect(() => {
+    if (selectedService === 'dmt') {
+      fetchBankList();
+    }
+  }, [selectedService]);
+  
+  // Filter banks based on search
+  const filteredBanks = bankList.filter(bank => 
+    bank.name?.toLowerCase().includes(bankSearch.toLowerCase())
+  );
+  
+  // Filter lenders based on search
+  const emiOperators = operators['emi'] || [];
+  const filteredLenders = emiOperators.filter(lender =>
+    lender.name?.toLowerCase().includes(lenderSearch.toLowerCase())
+  );
+  
   const calculateCharges = async (amount) => {
     try {
       const response = await axios.get(`${API}/redeem/calculate-charges?amount=${amount}`);
