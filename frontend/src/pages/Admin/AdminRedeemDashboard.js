@@ -25,6 +25,14 @@ const SERVICE_ICONS = {
   dmt: Banknote
 };
 
+// Tab configuration
+const TABS = [
+  { id: 'active', label: 'Active Requests', statuses: ['pending', 'approved', 'processing'], color: 'amber' },
+  { id: 'completed', label: 'Completed', statuses: ['completed'], color: 'green' },
+  { id: 'failed', label: 'Failed', statuses: ['failed'], color: 'red' },
+  { id: 'rejected', label: 'Rejected', statuses: ['rejected'], color: 'orange' }
+];
+
 const AdminRedeemDashboard = ({ user }) => {
   const navigate = useNavigate();
   
@@ -37,6 +45,7 @@ const AdminRedeemDashboard = ({ user }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('active'); // New: Active tab state
   
   // Filters
   const [filters, setFilters] = useState({
@@ -67,7 +76,18 @@ const AdminRedeemDashboard = ({ user }) => {
       params.append('page', pagination.page.toString());
       params.append('per_page', pagination.per_page.toString());
       
-      if (filters.status) params.append('status', filters.status);
+      // Tab-based status filtering
+      const currentTab = TABS.find(t => t.id === activeTab);
+      if (currentTab && currentTab.statuses.length > 0) {
+        // For active tab, we fetch multiple statuses
+        if (activeTab === 'active') {
+          params.append('status', 'pending,approved,processing');
+        } else {
+          params.append('status', currentTab.statuses[0]);
+        }
+      }
+      
+      // Additional filters
       if (filters.service_type) params.append('service_type', filters.service_type);
       if (filters.search) params.append('search', filters.search);
       if (filters.date_from) params.append('date_from', filters.date_from);
@@ -86,7 +106,7 @@ const AdminRedeemDashboard = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.page, pagination.per_page]);
+  }, [filters, pagination.page, pagination.per_page, activeTab]);
   
   const fetchStats = async () => {
     try {
@@ -112,6 +132,12 @@ const AdminRedeemDashboard = ({ user }) => {
     fetchStats();
     fetchEkoBalance();
   }, [fetchRequests]);
+  
+  // Handle tab change
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
   
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -355,31 +381,71 @@ const AdminRedeemDashboard = ({ user }) => {
           </div>
         </div>
         
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            {[
-              { key: 'pending', label: 'Pending', color: 'yellow' },
-              { key: 'approved', label: 'Approved', color: 'blue' },
-              { key: 'processing', label: 'Processing', color: 'cyan' },
-              { key: 'completed', label: 'Completed', color: 'green' },
-              { key: 'rejected', label: 'Rejected', color: 'red' },
-              { key: 'failed', label: 'Failed', color: 'red' }
-            ].map(({ key, label, color }) => (
+        {/* Tabs Navigation */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {TABS.map((tab) => {
+            // Calculate count for each tab
+            let tabCount = 0;
+            if (stats?.by_status) {
+              tab.statuses.forEach(status => {
+                tabCount += stats.by_status[status]?.count || 0;
+              });
+            }
+            
+            const isActive = activeTab === tab.id;
+            const colorClasses = {
+              amber: isActive ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'hover:border-amber-500/30',
+              green: isActive ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'hover:border-green-500/30',
+              red: isActive ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'hover:border-red-500/30',
+              orange: isActive ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'hover:border-orange-500/30'
+            };
+            
+            return (
               <button
-                key={key}
-                onClick={() => handleFilterChange('status', filters.status === key ? '' : key)}
-                className={`p-4 rounded-2xl border transition-all ${
-                  filters.status === key
-                    ? `bg-${color}-500/20 border-${color}-500/50`
-                    : 'bg-gray-900/50 border-gray-800/50 hover:border-gray-700'
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-3 px-5 py-3 rounded-xl border transition-all whitespace-nowrap ${
+                  isActive 
+                    ? colorClasses[tab.color]
+                    : `bg-gray-900/50 border-gray-800/50 text-gray-400 ${colorClasses[tab.color]}`
                 }`}
               >
-                <p className={`text-2xl font-bold text-${color}-400`}>
-                  {stats.by_status?.[key]?.count || 0}
-                </p>
-                <p className="text-xs text-gray-500">{label}</p>
+                <span className="font-medium">{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  isActive 
+                    ? `bg-${tab.color}-500/30` 
+                    : 'bg-gray-700/50'
+                }`}>
+                  {tabCount}
+                </span>
               </button>
+            );
+          })}
+        </div>
+        
+        {/* Quick Stats Row */}
+        {stats && (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+            {[
+              { key: 'pending', label: 'Pending', color: 'yellow', icon: Clock },
+              { key: 'approved', label: 'Approved', color: 'blue', icon: CheckCircle },
+              { key: 'processing', label: 'Processing', color: 'cyan', icon: RefreshCw },
+              { key: 'completed', label: 'Completed', color: 'green', icon: CheckCircle },
+              { key: 'rejected', label: 'Rejected', color: 'orange', icon: XCircle },
+              { key: 'failed', label: 'Failed', color: 'red', icon: XCircle }
+            ].map(({ key, label, color, icon: Icon }) => (
+              <div
+                key={key}
+                className="p-3 rounded-xl bg-gray-900/30 border border-gray-800/30"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className={`h-4 w-4 text-${color}-400`} />
+                  <span className={`text-lg font-bold text-${color}-400`}>
+                    {stats.by_status?.[key]?.count || 0}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{label}</p>
+              </div>
             ))}
           </div>
         )}

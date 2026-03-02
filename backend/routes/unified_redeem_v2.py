@@ -647,7 +647,12 @@ async def get_admin_requests(
     query = {}
     
     if status:
-        query["status"] = status
+        # Support comma-separated statuses (e.g., "pending,approved,processing")
+        if ',' in status:
+            status_list = [s.strip() for s in status.split(',')]
+            query["status"] = {"$in": status_list}
+        else:
+            query["status"] = status
     
     if service_type:
         query["service_type"] = service_type
