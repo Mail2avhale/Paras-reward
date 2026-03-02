@@ -384,11 +384,13 @@ const AdminRedeemDashboard = ({ user }) => {
         {/* Tabs Navigation */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {TABS.map((tab) => {
-            // Calculate count for each tab
+            // Calculate count and INR value for each tab
             let tabCount = 0;
+            let tabAmount = 0;
             if (stats?.by_status) {
               tab.statuses.forEach(status => {
                 tabCount += stats.by_status[status]?.count || 0;
+                tabAmount += stats.by_status[status]?.total_amount || 0;
               });
             }
             
@@ -404,20 +406,27 @@ const AdminRedeemDashboard = ({ user }) => {
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-3 px-5 py-3 rounded-xl border transition-all whitespace-nowrap ${
+                className={`flex flex-col items-start px-5 py-3 rounded-xl border transition-all whitespace-nowrap ${
                   isActive 
                     ? colorClasses[tab.color]
                     : `bg-gray-900/50 border-gray-800/50 text-gray-400 ${colorClasses[tab.color]}`
                 }`}
               >
-                <span className="font-medium">{tab.label}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                  isActive 
-                    ? `bg-${tab.color}-500/30` 
-                    : 'bg-gray-700/50'
-                }`}>
-                  {tabCount}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium">{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    isActive 
+                      ? `bg-${tab.color}-500/30` 
+                      : 'bg-gray-700/50'
+                  }`}>
+                    {tabCount}
+                  </span>
+                </div>
+                {tabAmount > 0 && (
+                  <span className={`text-sm font-semibold mt-1 ${isActive ? '' : 'text-gray-500'}`}>
+                    ₹{tabAmount.toLocaleString()}
+                  </span>
+                )}
               </button>
             );
           })}

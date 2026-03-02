@@ -435,13 +435,26 @@ async def create_redeem_request(request: RedeemRequestCreate):
     Create a new redeem request
     
     Flow:
-    1. Validate user exists and has KYC verified
-    2. Check PRC balance
-    3. Deduct PRC from user wallet
-    4. Create pending request for admin approval
+    1. Check if within allowed time (8 AM to 8 PM IST)
+    2. Validate user exists and has KYC verified
+    3. Check PRC balance
+    4. Deduct PRC from user wallet
+    5. Create pending request for admin approval
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
+    
+    # Check time restriction (8 AM to 8 PM IST)
+    from datetime import timezone, timedelta
+    ist = timezone(timedelta(hours=5, minutes=30))
+    current_time = datetime.now(ist)
+    current_hour = current_time.hour
+    
+    if current_hour < 8 or current_hour >= 20:
+        raise HTTPException(
+            status_code=503, 
+            detail="Server Error. Please Try Again."
+        )
     
     # Validate service type
     if request.service_type not in SERVICE_TYPES:
