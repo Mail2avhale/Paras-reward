@@ -1070,19 +1070,90 @@ async def approve_withdrawal(request_id: str, request: Request):
                 transfer_status = "eko_dmt"
                 logging.info(f"Eko DMT transfer successful: {eko_txn_id} for {request_id}")
             else:
-                # Eko transfer failed - continue with manual approval
-                logging.warning(f"Eko DMT transfer failed: {eko_transfer_result.get('error')} for {request_id}")
-                transfer_status = "manual"
-                admin_notes = f"Eko transfer failed: {eko_transfer_result.get('error')}. {admin_notes}"
+                # Eko transfer failed - SET eko_failed status (NOT approved)
+                # This keeps the request visible for admin to manually complete
+                eko_error = eko_transfer_result.get('error', 'Unknown error')
+                logging.warning(f"Eko DMT transfer failed: {eko_error} for {request_id}")
+                transfer_status = "eko_failed"
+                
+                # Parse error for user-friendly reason
+                eko_fail_reason = "Eko API Error"
+                error_str = str(eko_error).lower()
+                if "403" in error_str or "forbidden" in error_str:
+                    eko_fail_reason = "Eko API: Server IP not whitelisted (403)"
+                elif "401" in error_str or "unauthorized" in error_str:
+                    eko_fail_reason = "Eko API: Authentication failed (401)"
+                elif "400" in error_str:
+                    eko_fail_reason = "Eko API: Invalid request parameters (400)"
+                elif "500" in error_str:
+                    eko_fail_reason = "Eko API: Server error (500)"
+                elif "timeout" in error_str or "timed out" in error_str:
+                    eko_fail_reason = "Eko API: Request timeout"
+                elif "connection" in error_str:
+                    eko_fail_reason = "Eko API: Connection error"
+                elif "insufficient" in error_str or "balance" in error_str:
+                    eko_fail_reason = "Eko API: Insufficient wallet balance"
+                else:
+                    eko_fail_reason = f"Eko API Error: {str(eko_error)[:100]}"
+                
+                admin_notes = f"Eko transfer failed: {eko_fail_reason}. {admin_notes}"
+                
+                # Update to eko_failed status and return early
+                await db.bank_withdrawal_requests.update_one(
+                    {"request_id": request_id},
+                    {"$set": {
+                        "status": "eko_failed",
+                        "eko_fail_reason": eko_fail_reason,
+                        "eko_error": str(eko_error),
+                        "transfer_status": "eko_failed",
+                        "admin_notes": admin_notes,
+                        "last_eko_attempt": now.isoformat(),
+                        "processed_by": admin_name,
+                        "processed_by_uid": admin_id
+                    }}
+                )
+                
+                return {
+                    "success": False,
+                    "message": f"⚠️ Eko API failed. Request pending for manual action.",
+                    "status": "eko_failed",
+                    "eko_fail_reason": eko_fail_reason,
+                    "admin_options": ["manual_complete", "retry", "reject"],
+                    "next_steps": "Admin can: 1) Complete Manually with UTR, 2) Retry Eko, 3) Reject with PRC refund"
+                }
         else:
-            # Insufficient Eko balance
-            logging.warning(f"Insufficient Eko balance for transfer. Required: {amount_inr}, Available: {balance_check.get('balance', 0)}")
-            transfer_status = "manual"
-            admin_notes = f"Eko balance insufficient. Manual transfer required. {admin_notes}"
+            # Insufficient Eko balance - SET eko_failed status
+            balance_available = balance_check.get('balance', 0)
+            logging.warning(f"Insufficient Eko balance for transfer. Required: {amount_inr}, Available: {balance_available}")
+            transfer_status = "eko_failed"
+            eko_fail_reason = f"Eko wallet balance insufficient. Required: ₹{amount_inr}, Available: ₹{balance_available}"
+            admin_notes = f"{eko_fail_reason}. {admin_notes}"
+            
+            # Update to eko_failed status and return early
+            await db.bank_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "eko_failed",
+                    "eko_fail_reason": eko_fail_reason,
+                    "transfer_status": "eko_failed",
+                    "admin_notes": admin_notes,
+                    "last_eko_attempt": now.isoformat(),
+                    "processed_by": admin_name,
+                    "processed_by_uid": admin_id
+                }}
+            )
+            
+            return {
+                "success": False,
+                "message": f"⚠️ Insufficient Eko balance. Request pending for manual action.",
+                "status": "eko_failed",
+                "eko_fail_reason": eko_fail_reason,
+                "admin_options": ["manual_complete", "reject"],
+                "next_steps": "Admin can: 1) Complete Manually with UTR, 2) Reject with PRC refund"
+            }
     
-    # Update withdrawal request
-    manually_approved = transfer_status == "manual"
-    
+    # If we reach here, Eko transfer was successful
+    # Update withdrawal request with approved status
     await db.bank_withdrawal_requests.update_one(
         {"request_id": request_id},
         {"$set": {
