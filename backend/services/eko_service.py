@@ -161,10 +161,13 @@ class EkoAuth:
         """
         Generate secret-key and secret-key-timestamp for Eko API
         
-        Algorithm (from https://developers.eko.in/reference/authentication):
+        IMPORTANT: Eko's Python example does NOT base64 encode the key first!
+        Only Java/PHP/C# examples do base64 encoding.
+        
+        Algorithm (from Eko Python example):
         1. Get current timestamp in milliseconds
-        2. BASE64 ENCODE the authenticator key FIRST
-        3. Compute HMAC SHA256 of timestamp using BASE64 ENCODED key
+        2. Use key directly (NOT base64 encoded) for HMAC
+        3. Compute HMAC-SHA256 of timestamp
         4. Base64 encode the signature to get secret-key
         
         Returns:
@@ -176,19 +179,15 @@ class EkoAuth:
         # Get timestamp in milliseconds
         timestamp = str(int(time.time() * 1000))
         
-        # Step 1: Base64 encode the authenticator key FIRST (THIS IS CRITICAL!)
+        # Use key directly (as per Eko's Python example - NOT base64 encoded)
         key = EkoConfig.AUTHENTICATOR_KEY
         key_bytes = key.encode('utf-8')
-        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
         
-        # Step 2: Use encoded key for HMAC
-        encoded_key_bytes = encoded_key.encode('utf-8')
-        
-        # Step 3: Compute HMAC SHA256 of timestamp using encoded key
+        # Compute HMAC SHA256 of timestamp using key directly
         message = timestamp.encode('utf-8')
-        signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
+        signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
         
-        # Step 4: Base64 encode the signature to get secret-key
+        # Base64 encode the signature to get secret-key
         secret_key = base64.b64encode(signature).decode('utf-8')
         
         return secret_key, timestamp
