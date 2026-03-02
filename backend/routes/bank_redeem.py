@@ -1167,8 +1167,7 @@ async def approve_withdrawal(request_id: str, request: Request):
             "transaction_ref": transaction_ref,
             "admin_notes": admin_notes,
             "transfer_status": transfer_status,
-            "manually_approved": manually_approved,
-            "manual_txn_reference": transaction_ref if manually_approved else "",
+            "manually_approved": False,
             "eko_txn_id": eko_txn_id,
             "eko_response": eko_transfer_result
         }}
