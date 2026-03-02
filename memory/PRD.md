@@ -1,6 +1,20 @@
 # PARAS REWARD - Product Requirements Document
 
-## Latest Updates (March 1, 2026)
+## Latest Updates (March 2, 2026)
+
+### ✅ EKO BBPS LIVE OPERATORS INTEGRATION - COMPLETE
+- **New BBPS Operators Endpoint:** `GET /api/eko/bbps/operators/{service_type}`
+- **Supported Services:** electricity, gas, lpg, dth, mobile_prepaid, mobile_postpaid, credit_card, loan_emi, insurance, fastag, water, broadband
+- **Live Data from Eko API:** All operators fetched dynamically from Eko BBPS
+- **Frontend Integration:** BillPayments.js updated with dynamic operator dropdowns
+- **Electricity:** 89 live operators
+- **Gas:** 29 live operators  
+- **LPG:** 3 operators (Indane, HP Gas, Bharat Gas)
+- **DTH:** 5 operators
+- **Loan/EMI:** 294 lenders/banks
+- **Credit Card:** 29 banks
+- **Insurance:** 40 providers
+- **FASTag:** 20 providers
 
 ### ✅ ADVANCED SORTING & FILTERING - COMPLETE
 - **Admin Subscriptions Page (AdminSubscriptionManagement.js):** Enhanced with comprehensive filtering
@@ -16,9 +30,9 @@
   - Status, Date Range, Amount, Admin filters
   - Sorting by created_at, approved_at, rejected_at, amount
 
-### ✅ EKO INTEGRATION COMPLETE - STANDARDIZED
-- **New Eko Service Module:** `/app/backend/services/eko_service.py`
-- **Proper HMAC SHA256 Authentication:** As per Eko documentation
+### ✅ EKO INTEGRATION - STANDARDIZED
+- **Eko Service Module:** `/app/backend/services/eko_service.py`
+- **Proper HMAC SHA256 Authentication:** Base64 encode key first (as per Eko Java/PHP docs)
 - **Transaction Status Codes:** 0=Success, 1=Failed, 2=Initiated, 3=Refund Pending, 4=Refunded, 5=Hold
 - **Real-time Status Updates:** Background job every 5 minutes
 - **Admin APIs:** Status check, Sync pending, Verify account, Transaction logs
@@ -48,17 +62,30 @@
 
 ---
 
+## EKO BBPS OPERATOR CATEGORIES (Eko API)
+
+| Category ID | Service Type      | Count |
+|-------------|-------------------|-------|
+| 1           | Broadband         | 92    |
+| 2           | Gas (PNG)         | 29    |
+| 4           | DTH               | 5     |
+| 5           | Mobile Prepaid    | 6     |
+| 7           | Credit Card       | 29    |
+| 8           | Electricity       | 89    |
+| 9           | Landline          | 5     |
+| 10          | Mobile Postpaid   | 7     |
+| 11          | Water             | 54    |
+| 18          | LPG               | 3     |
+| 20          | Insurance         | 40    |
+| 21          | Loan/EMI          | 294   |
+| 22          | FASTag            | 20    |
+
+---
+
 ## EKO INTEGRATION ARCHITECTURE
 
-### Service Module: `/app/backend/services/eko_service.py`
-```
-EkoConfig      - Configuration management
-EkoAuth        - HMAC SHA256 authentication
-EkoService     - Main API service class
-EkoStatusUpdater - Background status sync
-```
-
 ### API Endpoints:
+- `GET /api/eko/bbps/operators/{service_type}` - Get live operators for service
 - `GET /api/eko/admin/status` - Integration status & wallet balance
 - `GET /api/eko/admin/transaction/{id}` - Check transaction status
 - `POST /api/eko/admin/sync-pending` - Manual sync of pending transactions
@@ -111,33 +138,36 @@ User → Select Plan → Select Duration → Payment Options:
 - Status: ✅ Production Ready
 
 ### Eko.in (BBPS + DMT)
-- Status: ⚠️ Needs **Production Server IP** Whitelisting
-- Integration: ✅ Complete with proper authentication
-- Note: Will work only when IP is whitelisted by Eko
+- **Authentication:** ✅ Fixed (HMAC SHA256 with Base64 encoded key)
+- **Services Activated:** BBPS, DMT, Settlement, AePS
+- **Balance Check:** ✅ Working (₹9,845.24 available)
+- **Operators API:** ✅ Live data from Eko
+- **Transactional API:** ⚠️ May need production IP whitelisting
+- Status: ✅ Authentication working, awaiting production deployment for full testing
 
 ---
 
 ## PENDING TASKS
 
-### P0 - Production Deployment
+### P0 - Critical
+- [ ] Test Eko transactional APIs after production deployment
+- [ ] Fix any remaining "No key for Response" errors
+
+### P1 - Production Deployment
 - [ ] Guide user to deploy latest code to parasreward.com
 - [ ] Ensure LIVE Razorpay keys are used in production
 - [ ] Data restoration for affected users (PRC balance, plans)
 - [ ] **Get Emergent/Production Server IP for Eko whitelisting**
 
-### P1 - Post-Deployment & Performance
-- [ ] Eko IP whitelisting with production IP
-- [ ] Domain SSL setup
-- [ ] MongoDB Atlas connection verification
-- [ ] Generate AAB file for Play Store submission
+### P2 - Post-Deployment & Performance
 - [ ] Admin pages timeout issue - refactor Python loops to MongoDB aggregations
 - [ ] Server-side search implementation (Currently frontend filtering)
 
-### P2 - Known Issues
+### P3 - Known Issues
 - [ ] Team/Level members display fix
 - [ ] Search functionality reliability improvement
 
-### P3 - Future Enhancements
+### P4 - Future Enhancements
 - [ ] Email/Mobile OTP verification on signup
 - [ ] KYC/Receipt image migration to file storage
 - [ ] Refactor backend/server.py into modules
@@ -153,6 +183,10 @@ User → Select Plan → Select Duration → Payment Options:
 ### Admin
 - UID: `8175c02a-4fbd-409c-8d47-d864e979f59f`
 - PIN: `123456`
+
+### Eko
+- Wallet Balance: ₹9,845.24
+- Services: BBPS, DMT, Settlement, AePS
 
 ---
 
