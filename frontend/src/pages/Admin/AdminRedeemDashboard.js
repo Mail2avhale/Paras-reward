@@ -131,7 +131,7 @@ const AdminRedeemDashboard = ({ user }) => {
     fetchRequests();
     fetchStats();
     fetchEkoBalance();
-  }, [fetchRequests]);
+  }, [fetchRequests, activeTab]);
   
   // Handle tab change
   const handleTabChange = (tabId) => {
