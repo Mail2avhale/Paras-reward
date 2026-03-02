@@ -162,13 +162,18 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
-            logging.info(f"Eko API Response: {response.status_code} - {response.text[:200]}")
+            logging.info(f"Eko API Response Status: {response.status_code}")
+            logging.info(f"Eko API Response Headers: {dict(response.headers)}")
+            logging.info(f"Eko API Response Raw: {response.text[:500]}")
             
             # Try to parse JSON response
             try:
                 result = response.json()
-            except (ValueError, json.JSONDecodeError):
-                result = {"raw_response": response.text}
+                logging.info(f"Eko API Parsed JSON: {result}")
+            except (ValueError, json.JSONDecodeError) as je:
+                logging.error(f"JSON Parse Error: {je}")
+                logging.error(f"Full response text: {response.text}")
+                result = {"raw_response": response.text, "message": "No key for Response"}
             
             # Check for Eko error responses
             if response.status_code >= 400:
