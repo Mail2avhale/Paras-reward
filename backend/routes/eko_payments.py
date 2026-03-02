@@ -1083,8 +1083,9 @@ async def process_mobile_recharge(
         txn_ref = f"RCH{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile_number[-4:]}"
         
         # Use BBPS paybill API for mobile recharge
+        # Add initiator_id to URL as query parameter
         result = await make_eko_request(
-            "/v2/billpayments/paybill",
+            f"/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}",
             method="POST",
             data={
                 "utility_acc_no": mobile_number,
@@ -1095,7 +1096,8 @@ async def process_mobile_recharge(
                 "client_ref_id": txn_ref,
                 "source_ip": "127.0.0.1",
                 "latlong": "19.0760,72.8777",
-                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID
+                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
+                "hc_channel": "2"  # 2 = API channel
             }
         )
         
