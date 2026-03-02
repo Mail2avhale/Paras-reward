@@ -182,6 +182,7 @@ const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNam
 const AdminRecurringDeposits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 const AdminUnifiedPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUnifiedPayments"));
+const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
 const BillPayments = lazy(() => import("@/pages/BillPayments"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
