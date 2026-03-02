@@ -631,7 +631,7 @@ async def get_admin_requests(
     min_amount: Optional[float] = None,
     max_amount: Optional[float] = None,
     sort_by: str = Query("created_at", pattern="^(created_at|amount_inr|approved_at|completed_at)$"),
-    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$"),  # Default: oldest first
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100)
 ):

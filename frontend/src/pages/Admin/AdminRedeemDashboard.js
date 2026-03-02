@@ -57,7 +57,7 @@ const AdminRedeemDashboard = ({ user }) => {
     min_amount: '',
     max_amount: '',
     sort_by: 'created_at',
-    sort_order: 'desc'
+    sort_order: 'asc'  // Default: oldest first
   });
   
   // Rejection reason
