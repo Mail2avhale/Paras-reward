@@ -375,6 +375,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
               <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
             )}
             
+            {/* New Redeem V2 Route - Unified Services */}
+            <Route path="/redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <RedeemPageV2 user={user} />) : <Navigate to="/login" />} />
+            
             <Route path="/bill-payments" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BillPayments user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/gift-vouchers" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <GiftVoucherRedemption user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Manager routes now redirect to Admin - Manager uses Admin panel with permission-based access */}
