@@ -27367,6 +27367,7 @@ async def process_bill_payment_request(request: Request):
                         "/v1/transactions",
                         method="POST",
                         data={
+                            "initiator_id": EKO_INITIATOR_ID,
                             "mobile": recipient_mobile,
                             "amount": str(int(amount_inr)),
                             "account": account_number,
@@ -27375,7 +27376,7 @@ async def process_bill_payment_request(request: Request):
                             "client_ref_id": eko_txn_ref,
                             "channel": "2",
                             "latlong": "19.0760,72.8777",
-                            "source_ip": "34.170.12.145"
+                            "source_ip": "127.0.0.1"
                         }
                     )
                     
