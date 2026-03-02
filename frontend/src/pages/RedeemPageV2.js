@@ -338,7 +338,7 @@ const RedeemPageV2 = ({ user }) => {
       category = 'emi';
       
       if (!consumerNumber || !operatorId) {
-        toast.error('Loan Account Number आणि Bank/Lender दोन्ही आवश्यक आहेत');
+        toast.error('Loan Account Number and Bank/Lender both are required');
         return;
       }
     } else if (selectedService === 'mobile_recharge' && formData.recharge_type === 'postpaid') {
@@ -347,7 +347,7 @@ const RedeemPageV2 = ({ user }) => {
       category = 'mobile_postpaid';
       
       if (!consumerNumber || !operatorId) {
-        toast.error('Mobile Number आणि Operator दोन्ही आवश्यक आहेत');
+        toast.error('Mobile Number and Operator both are required');
         return;
       }
     } else {
@@ -356,7 +356,7 @@ const RedeemPageV2 = ({ user }) => {
       category = selectedService;
       
       if (!consumerNumber || !operatorId) {
-        toast.error('Consumer Number आणि Provider दोन्ही आवश्यक आहेत');
+        toast.error('Consumer Number and Provider both are required');
         return;
       }
     }
@@ -396,7 +396,7 @@ const RedeemPageV2 = ({ user }) => {
         }
       } else {
         setBillError(response.data.message || 'Bill fetch failed');
-        toast.error(response.data.message || 'Bill माहिती मिळाली नाही');
+        toast.error(response.data.message || 'Bill details not found');
       }
     } catch (error) {
       console.error('Bill fetch error:', error);
@@ -714,7 +714,7 @@ const RedeemPageV2 = ({ user }) => {
                             )}
                           </Button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Consumer number टाकून Bill Fetch करा</p>
+                        <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
                       </div>
                     )}
                     
@@ -750,7 +750,7 @@ const RedeemPageV2 = ({ user }) => {
                           <XCircle className="h-5 w-5 text-red-400" />
                           <span className="text-red-400 font-medium">{billError}</span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-2">Manual amount टाका खाली.</p>
+                        <p className="text-gray-400 text-sm mt-2">Enter amount manually below.</p>
                       </div>
                     )}
                     
@@ -873,7 +873,7 @@ const RedeemPageV2 = ({ user }) => {
                           )}
                         </div>
                         {formData.recharge_type === 'postpaid' && (
-                          <p className="text-xs text-gray-500 mt-1">Bill fetch करण्यासाठी 🔍 बटण दाबा</p>
+                          <p className="text-xs text-gray-500 mt-1">Click 🔍 to fetch bill details</p>
                         )}
                       </div>
                     )}
@@ -996,7 +996,7 @@ const RedeemPageV2 = ({ user }) => {
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                           data-testid="consumer-input"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Set-Top Box वरून Customer ID पहा</p>
+                        <p className="text-xs text-gray-500 mt-1">Find Customer ID on your Set-Top Box</p>
                       </div>
                     )}
                     
@@ -1135,7 +1135,7 @@ const RedeemPageV2 = ({ user }) => {
                                 )}
                               </Button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">EMI fetch करण्यासाठी 🔍 बटण दाबा</p>
+                            <p className="text-xs text-gray-500 mt-1">Click 🔍 to fetch EMI details</p>
                           </div>
                           <div>
                             <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
@@ -1182,7 +1182,7 @@ const RedeemPageV2 = ({ user }) => {
                               <AlertCircle className="h-5 w-5 text-orange-400" />
                               <span className="text-orange-400 font-medium">{billError}</span>
                             </div>
-                            <p className="text-gray-400 text-sm mt-2">Manual EMI amount टाका खाली.</p>
+                            <p className="text-gray-400 text-sm mt-2">Enter EMI amount manually below.</p>
                           </div>
                         )}
                         
