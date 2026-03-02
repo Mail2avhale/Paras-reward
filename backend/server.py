@@ -1283,6 +1283,8 @@ async def auto_sync_razorpay_payments():
     Automatically sync pending Razorpay payments every 10 minutes.
     Checks Razorpay API and activates subscriptions for captured payments.
     """
+    print(f"[AUTO-SYNC] ⏰ Auto-sync triggered at {datetime.now(timezone.utc).isoformat()}")
+    
     try:
         import razorpay
         
@@ -1290,8 +1292,10 @@ async def auto_sync_razorpay_payments():
         RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
         
         if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
-            print("[AUTO-SYNC] Razorpay not configured, skipping...")
+            print("[AUTO-SYNC] ❌ Razorpay not configured, skipping...")
             return
+        
+        print(f"[AUTO-SYNC] ✅ Razorpay configured, starting sync...")
         
         razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
         
