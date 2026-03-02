@@ -8177,6 +8177,8 @@ async def manual_sync_razorpay_payments():
         RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
         RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
         
+        print(f"[SYNC] Starting manual sync. Razorpay configured: {bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET)}")
+        
         if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
             return {"success": False, "error": "Razorpay not configured"}
         
@@ -8190,10 +8192,12 @@ async def manual_sync_razorpay_payments():
             "yearly": 336
         }
         
-        # Get all pending orders
+        # Get all pending orders - include more statuses
         pending_orders = await db.razorpay_orders.find({
-            "status": {"$in": ["created", "pending"]}
-        }).to_list(100)
+            "status": {"$in": ["created", "pending", "attempted"]}
+        }).to_list(200)  # Increased limit
+        
+        print(f"[SYNC] Found {len(pending_orders)} pending orders to sync")
         
         if not pending_orders:
             return {"success": True, "message": "No pending orders to sync", "synced": 0, "total_pending": 0}
