@@ -1577,20 +1577,21 @@ async def process_mobile_recharge(
         # Map operator name to Eko numeric operator_id
         # Eko requires numeric IDs, not string names
         OPERATOR_ID_MAP = {
-            # Mobile Prepaid
+            # Mobile Prepaid (Category 5)
             "AIRTEL": "1", "AIRTEL PREPAID": "1", "1": "1",
             "JIO": "90", "JIO PREPAID": "90", "90": "90",
             "VI": "400", "VI PREPAID": "400", "VODAFONE": "400", "IDEA": "400", "400": "400",
-            "BSNL": "5", "BSNL PREPAID": "5", "5": "5",
+            "BSNL": "5", "BSNL PREPAID": "5", "BSNL  PREPAID": "5", "5": "5",
             "MTNL DELHI": "91", "MTNL DELHI PREPAID": "91", "91": "91",
             "MTNL MUMBAI": "508", "MTNL MUMBAI PREPAID": "508", "508": "508",
             
-            # DTH
-            "DISH TV": "16", "16": "16",
-            "TATA SKY": "20", "TATA PLAY": "20", "20": "20",
-            "AIRTEL DTH": "21", "21": "21",
-            "D2H": "95", "95": "95",
-            "SUN DIRECT": "111", "111": "111",
+            # DTH (Category 4)
+            "DISH TV": "16", "DISH": "16", "16": "16",
+            "TATA SKY": "20", "TATA PLAY": "20", "TATASKY": "20", "20": "20",
+            "AIRTEL DTH": "21", "AIRTEL DIGITAL TV": "21", "21": "21",
+            "D2H": "95", "VIDEOCON D2H": "95", "VIDEOCON": "95", "95": "95",
+            "BIG TV": "17", "BIG TV DTH": "17", "BIGTV": "17", "17": "17",
+            "SUN DIRECT": "111", "SUNDIRECT": "111", "111": "111",
         }
         
         # Convert operator_id to Eko numeric ID
