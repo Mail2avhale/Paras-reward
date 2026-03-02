@@ -10154,6 +10154,36 @@ async def approve_vip_payment(payment_id: str, request: Request):
         except asyncio.TimeoutError:
             raise HTTPException(status_code=504, detail="Database timeout. Please try again.")
         
+        # ========== FRAUD PREVENTION: Check recent subscription activity ==========
+        fraud_warning = None
+        recent_days = 10  # Check for subscriptions in last 10 days
+        check_date = now - timedelta(days=recent_days)
+        
+        # Find recently approved subscriptions for this user
+        recent_subscriptions = await db.vip_payments.find({
+            "$or": [{"user_id": user_id}, {"user_uid": user_id}],
+            "status": "approved",
+            "approved_at": {"$gte": check_date.isoformat()}
+        }).to_list(length=10)
+        
+        if recent_subscriptions and len(recent_subscriptions) > 0:
+            last_sub = recent_subscriptions[0]
+            last_approved = last_sub.get("approved_at", "")
+            last_plan = last_sub.get("subscription_plan", "")
+            days_since = (now - datetime.fromisoformat(last_approved.replace('Z', '+00:00'))).days if last_approved else 0
+            
+            fraud_warning = {
+                "type": "RECENT_SUBSCRIPTION_EXISTS",
+                "message": f"⚠️ WARNING: This user already activated a subscription ({last_plan}) {days_since} days ago!",
+                "last_subscription": {
+                    "plan": last_plan,
+                    "approved_at": last_approved,
+                    "days_ago": days_since,
+                    "payment_id": last_sub.get("payment_id")
+                },
+                "recommendation": "Please verify if this is a legitimate renewal or potential fraud."
+            }
+        
         # ========== DETERMINE IF NEW SUBSCRIPTION OR RENEWAL ==========
         is_renewal = False
         is_upgrade = False
