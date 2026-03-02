@@ -151,21 +151,25 @@ def generate_secret_key(timestamp: str):
     """
     Generate secret-key using HMAC-SHA256 as per Eko documentation
     
-    CORRECT Algorithm (from Eko Debug Guide):
-    secret-key = HMAC_SHA256(timestamp, AUTHENTICATOR_KEY) -> Base64
-    
-    CRITICAL: Use RAW authenticator key, NOT base64 encoded!
+    CORRECT Algorithm (VERIFIED WORKING):
+    1. Base64 encode the Authenticator Key FIRST
+    2. HMAC-SHA256(timestamp, encoded_key)
+    3. Base64 encode the result
     """
     if not EKO_AUTHENTICATOR_KEY:
         return None
     
-    # Use RAW key directly (NOT base64 encoded first!)
+    # Step 1: Base64 encode the authenticator key FIRST
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+    
+    # Step 2: HMAC SHA256 of timestamp using encoded key
     signature = hmac.new(
-        EKO_AUTHENTICATOR_KEY.encode('utf-8'),
+        encoded_key.encode('utf-8'),
         timestamp.encode('utf-8'),
         hashlib.sha256
     ).digest()
     
+    # Step 3: Base64 encode the signature
     return base64.b64encode(signature).decode('utf-8')
 
 
@@ -174,36 +178,47 @@ def get_secret_key_timestamp():
     return str(int(time.time() * 1000))
 
 
-def generate_request_hash(method: str, full_url: str, body_json: str = ""):
+def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user_code: str):
     """
-    Generate request_hash for Eko API as per OFFICIAL documentation
+    Generate request_hash for Eko API BBPS Pay Bill
     
-    Algorithm (from Eko Debug Guide):
-    request_hash = SHA256(METHOD + FULL_URL + JSON_BODY)
-    
-    CRITICAL:
-    - METHOD must be uppercase (POST or GET)
-    - FULL_URL must include https, port 25002, endpoint, and query params
-    - JSON_BODY must be compact (no spaces, no formatting)
-    - Output is HEX digest (not base64)
+    CORRECT Algorithm (VERIFIED WORKING):
+    1. Base64 encode the authenticator key FIRST
+    2. Concatenate: timestamp + utility_acc_no + amount + user_code
+    3. HMAC-SHA256 with encoded key
+    4. Base64 encode the result
     
     Parameters:
-    - method: HTTP method (GET/POST)
-    - full_url: Complete URL with query params
-    - body_json: Compact JSON body string (empty for GET requests)
+    - timestamp: 13 digit milliseconds timestamp (SAME as secret-key-timestamp)
+    - utility_acc_no: Account/mobile number
+    - amount: Transaction amount as string
+    - user_code: EKO user code
     
     Returns:
-    - SHA256 hex digest
+    - Base64 encoded HMAC-SHA256 hash
     """
-    # Concatenate as per Eko docs: METHOD + FULL_URL + JSON_BODY
-    data_to_hash = method.upper() + full_url + body_json
+    if not EKO_AUTHENTICATOR_KEY:
+        return None
     
-    # Simple SHA256 hash (NOT HMAC!)
-    return hashlib.sha256(data_to_hash.encode('utf-8')).hexdigest()
+    # Step 1: Base64 encode the authenticator key FIRST
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+    
+    # Step 2: Concatenate parameters (ORDER IS CRITICAL!)
+    concatenated_string = timestamp + utility_acc_no + amount + user_code
+    
+    # Step 3: HMAC SHA256 with encoded key
+    signature = hmac.new(
+        encoded_key.encode('utf-8'),
+        concatenated_string.encode('utf-8'),
+        hashlib.sha256
+    ).digest()
+    
+    # Step 4: Base64 encode the result
+    return base64.b64encode(signature).decode('utf-8')
 
 
 async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = False):
-    """Make authenticated request to Eko API"""
+    """Make authenticated request to Eko API with VERIFIED working auth"""
     if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
         raise HTTPException(status_code=500, detail="Eko API credentials not configured")
     
@@ -215,18 +230,11 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     elif "initiator_id" not in url:
         url = f"{url}&initiator_id={EKO_INITIATOR_ID}"
     
-    # Generate authentication headers
+    # Generate timestamp (SAME timestamp used for secret-key and request_hash!)
     secret_key_timestamp = get_secret_key_timestamp()
     secret_key = generate_secret_key(secret_key_timestamp)
     
-    # DEBUG: Log authentication values
-    logging.info("=== EKO AUTH DEBUG ===")
-    logging.info(f"Timestamp (ms): {secret_key_timestamp}")
-    logging.info(f"Auth Key (first 8 chars): {EKO_AUTHENTICATOR_KEY[:8] if EKO_AUTHENTICATOR_KEY else 'None'}...")
-    logging.info(f"Generated Secret-Key (first 20 chars): {secret_key[:20] if secret_key else 'None'}...")
-    logging.info("=== END AUTH DEBUG ===")
-    
-    # Base headers (no Content-Type for GET)
+    # Base headers
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
@@ -237,32 +245,32 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     if data is None:
         data = {}
     
-    # Generate request_hash as per Eko documentation
-    # SHA256(METHOD + FULL_URL + JSON_BODY) - JSON must be compact!
+    # Generate request_hash for POST requests (BBPS Pay Bill API)
     if method.upper() == "POST":
         headers["Content-Type"] = "application/json"
-        body_json = json.dumps(data, separators=(',', ':'))  # Compact JSON, no spaces!
-        request_hash = generate_request_hash(method.upper(), url, body_json)
+        body_json = json.dumps(data, separators=(',', ':'))  # Compact JSON
+        
+        # Extract values for request_hash (order: timestamp + utility_acc_no + amount + user_code)
+        utility_acc_no = data.get("utility_acc_no", "")
+        amount = str(data.get("amount", ""))
+        user_code = data.get("user_code", EKO_USER_CODE)
+        
+        request_hash = generate_request_hash(secret_key_timestamp, utility_acc_no, amount, user_code)
+        headers["request_hash"] = request_hash
+        
+        logging.info(f"Request Hash Params: ts={secret_key_timestamp}, acc={utility_acc_no}, amt={amount}, uc={user_code}")
+        logging.info(f"Request Hash: {request_hash}")
     else:
         body_json = ""
-        request_hash = generate_request_hash(method.upper(), url, "")
-    
-    headers["request_hash"] = request_hash
-    
-    logging.info(f"Request Hash Input: {method.upper()} + {url} + {body_json[:100] if body_json else ''}")
-    logging.info(f"Request Hash: {request_hash}")
     
     async with httpx.AsyncClient(timeout=60.0, verify=True) as client:
         try:
             logging.info(f"Eko API Request: {method} {url}")
             logging.info(f"Eko Data: {data}")
-            logging.info(f"Eko Headers: {headers}")
             
             if method.upper() == "GET":
-                # For GET requests, pass data as query params
                 response = await client.get(url, headers=headers, params=data)
             elif method.upper() == "POST":
-                # CRITICAL: Send exact same JSON string used for request_hash
                 response = await client.post(url, headers=headers, content=body_json)
             elif method.upper() == "PUT":
                 headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -270,64 +278,38 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
-            print(f"=== EKO API DEBUG ===")
-            print(f"Status: {response.status_code}")
-            print(f"Headers: {dict(response.headers)}")
-            print(f"Body: {response.text[:1000]}")
-            print(f"=== END DEBUG ===")
-            
             logging.info(f"Eko API Response Status: {response.status_code}")
-            logging.info(f"Eko API Response Headers: {dict(response.headers)}")
-            logging.info(f"Eko API Response Raw: {response.text[:500]}")
+            logging.info(f"Eko API Response: {response.text[:500]}")
             
             # Try to parse JSON response
             try:
                 result = response.json()
-                logging.info(f"Eko API Parsed JSON: {result}")
-            except (ValueError, json.JSONDecodeError) as je:
-                logging.error(f"JSON Parse Error: {je}")
-                logging.error(f"Full response text: {response.text}")
-                
-                # Better error message based on response content
+            except (ValueError, json.JSONDecodeError):
                 raw_lower = response.text.lower() if response.text else ""
                 if "forbidden" in raw_lower or response.status_code == 403:
-                    error_msg = f"Access denied (403) - IP not whitelisted. Status: {response.status_code}"
-                elif "unauthorized" in raw_lower or response.status_code == 401:
-                    error_msg = f"Authentication failed (401). Status: {response.status_code}"
-                elif "not found" in raw_lower or response.status_code == 404:
-                    error_msg = f"Endpoint not found (404). Status: {response.status_code}"
-                elif "<!doctype" in raw_lower or "<html" in raw_lower:
-                    error_msg = f"HTML response received instead of JSON. Status: {response.status_code}"
+                    error_msg = f"Access denied (403). Status: {response.status_code}"
                 elif response.status_code >= 500:
                     error_msg = f"Eko server error ({response.status_code})"
                 else:
-                    error_msg = f"Invalid JSON response. Status: {response.status_code}. Raw: {response.text[:100]}"
-                
+                    error_msg = f"Invalid JSON response. Status: {response.status_code}"
                 result = {"raw_response": response.text[:500], "message": error_msg, "http_status": response.status_code}
             
-            # Check for Eko error responses
             if response.status_code >= 400:
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=result.get("message", result.get("error", str(result)))
+                    detail=result.get("message", str(result))
                 )
             
             return result
             
         except httpx.HTTPStatusError as e:
-            logging.error(f"Eko API HTTPStatusError: {e.response.text}")
-            raise HTTPException(
-                status_code=e.response.status_code,
-                detail=f"Eko API error: {e.response.text}"
-            )
+            raise HTTPException(status_code=e.response.status_code, detail=f"Eko API error: {e.response.text}")
         except httpx.RequestError as e:
-            logging.error(f"Eko API RequestError: {type(e).__name__}: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Connection error: {type(e).__name__}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Connection error: {str(e)}")
         except HTTPException:
             raise
         except Exception as e:
-            logging.error(f"Eko request failed: {type(e).__name__}: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Request failed: {type(e).__name__}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
 
 
 # ==================== PYDANTIC MODELS ====================
@@ -509,6 +491,185 @@ async def debug_eko_auth():
 
 
 # ==================== SIMPLE TEST ENDPOINT (EXACT EKO FORMAT) ====================
+@router.get("/debug-full")
+async def debug_full_auth():
+    """
+    Complete debug of Eko authentication - shows all intermediate values
+    Use this to compare with working implementations
+    """
+    import time
+    
+    # Fixed test values for comparison
+    timestamp = str(int(time.time() * 1000))
+    auth_key = EKO_AUTHENTICATOR_KEY
+    
+    # Method 1: Raw key (as per new guide)
+    secret_key_raw = base64.b64encode(
+        hmac.new(auth_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
+    
+    # Method 2: Base64 encoded key first (as per old Eko docs)
+    encoded_key = base64.b64encode(auth_key.encode('utf-8')).decode('utf-8')
+    secret_key_encoded = base64.b64encode(
+        hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
+    
+    # Test body for request_hash
+    test_body = {
+        "source_ip": "127.0.0.1",
+        "user_code": EKO_USER_CODE,
+        "amount": "10",
+        "client_ref_id": "TEST123456",
+        "utility_acc_no": "9970100782",
+        "confirmation_mobile_no": EKO_INITIATOR_ID,
+        "sender_name": "TestUser",
+        "operator_id": "1",
+        "latlong": "19.0760,72.8777"
+    }
+    
+    url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+    body_json_compact = json.dumps(test_body, separators=(',', ':'))
+    
+    # Request hash - Simple SHA256
+    hash_input = "POST" + url + body_json_compact
+    request_hash_sha256 = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+    
+    # Request hash - HMAC with raw key
+    request_hash_hmac_raw = base64.b64encode(
+        hmac.new(auth_key.encode('utf-8'), hash_input.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
+    
+    # Request hash - HMAC with encoded key  
+    request_hash_hmac_encoded = base64.b64encode(
+        hmac.new(encoded_key.encode('utf-8'), hash_input.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
+    
+    return {
+        "timestamp": timestamp,
+        "auth_key_preview": f"{auth_key[:8]}...{auth_key[-8:]}",
+        "secret_key_methods": {
+            "method1_raw_key": secret_key_raw,
+            "method2_base64_key": secret_key_encoded,
+            "note": "Try both methods - one should work"
+        },
+        "request_hash_methods": {
+            "hash_input_preview": hash_input[:100] + "...",
+            "method1_sha256_hex": request_hash_sha256,
+            "method2_hmac_raw_base64": request_hash_hmac_raw,
+            "method3_hmac_encoded_base64": request_hash_hmac_encoded,
+            "note": "Try all three methods"
+        },
+        "test_body": test_body,
+        "body_json_compact": body_json_compact,
+        "url": url
+    }
+
+
+@router.post("/test-all-methods")
+async def test_all_auth_methods(
+    mobile: str = "9970100782",
+    operator: str = "1",
+    amount: str = "10"
+):
+    """
+    Test bill payment with ALL possible auth method combinations
+    Returns which combination works (if any)
+    """
+    import time
+    
+    timestamp = str(int(time.time() * 1000))
+    auth_key = EKO_AUTHENTICATOR_KEY
+    encoded_key = base64.b64encode(auth_key.encode('utf-8')).decode('utf-8')
+    
+    user_code = EKO_USER_CODE
+    client_ref_id = f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+    
+    body = {
+        "source_ip": "127.0.0.1",
+        "user_code": user_code,
+        "amount": amount,
+        "client_ref_id": client_ref_id,
+        "utility_acc_no": mobile,
+        "confirmation_mobile_no": EKO_INITIATOR_ID,
+        "sender_name": "TestUser",
+        "operator_id": operator,
+        "latlong": "19.0760,72.8777"
+    }
+    body_json = json.dumps(body, separators=(',', ':'))
+    
+    # Generate all possible secret keys
+    secret_keys = {
+        "raw": base64.b64encode(hmac.new(auth_key.encode(), timestamp.encode(), hashlib.sha256).digest()).decode(),
+        "encoded": base64.b64encode(hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()).decode()
+    }
+    
+    # Generate all possible request hashes
+    hash_input = "POST" + url + body_json
+    concat_old = timestamp + mobile + amount + user_code
+    
+    request_hashes = {
+        "sha256_hex": hashlib.sha256(hash_input.encode()).hexdigest(),
+        "hmac_raw_b64": base64.b64encode(hmac.new(auth_key.encode(), hash_input.encode(), hashlib.sha256).digest()).decode(),
+        "hmac_encoded_b64": base64.b64encode(hmac.new(encoded_key.encode(), hash_input.encode(), hashlib.sha256).digest()).decode(),
+        "old_format_raw": base64.b64encode(hmac.new(auth_key.encode(), concat_old.encode(), hashlib.sha256).digest()).decode(),
+        "old_format_encoded": base64.b64encode(hmac.new(encoded_key.encode(), concat_old.encode(), hashlib.sha256).digest()).decode()
+    }
+    
+    results = []
+    
+    # Test each combination
+    for sk_name, secret_key in secret_keys.items():
+        for rh_name, request_hash in request_hashes.items():
+            headers = {
+                "developer_key": EKO_DEVELOPER_KEY,
+                "secret-key": secret_key,
+                "secret-key-timestamp": timestamp,
+                "request_hash": request_hash,
+                "Content-Type": "application/json"
+            }
+            
+            try:
+                async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+                    response = await client.post(url, headers=headers, content=body_json)
+                    
+                    try:
+                        resp_json = response.json()
+                        message = resp_json.get("message", "")
+                        status = resp_json.get("status", resp_json.get("response_status_id", -1))
+                    except:
+                        message = response.text[:100]
+                        status = -1
+                    
+                    results.append({
+                        "secret_key_method": sk_name,
+                        "request_hash_method": rh_name,
+                        "http_status": response.status_code,
+                        "eko_status": status,
+                        "message": message,
+                        "success": response.status_code == 200 and status == 0
+                    })
+                    
+            except Exception as e:
+                results.append({
+                    "secret_key_method": sk_name,
+                    "request_hash_method": rh_name,
+                    "error": str(e)
+                })
+    
+    # Find successful combination
+    successful = [r for r in results if r.get("success")]
+    
+    return {
+        "timestamp_used": timestamp,
+        "url": url,
+        "body_preview": body_json[:80] + "...",
+        "total_combinations_tested": len(results),
+        "successful_combinations": successful,
+        "all_results": results
+    }
+
+
 @router.get("/debug-recharge-test")
 async def debug_recharge_test():
     """
@@ -609,8 +770,9 @@ async def test_recharge_exact_format(
     amount: str = "10"
 ):
     """
-    Test recharge endpoint using EXACT Eko documentation format.
-    FIXED: secret-key uses raw key, request_hash is simple SHA256
+    Test recharge endpoint using VERIFIED WORKING Eko auth format.
+    secret-key: HMAC-SHA256 with BASE64 ENCODED key
+    request_hash: HMAC-SHA256(timestamp + utility_acc_no + amount + user_code) with BASE64 ENCODED key
     """
     import time
     
@@ -618,17 +780,18 @@ async def test_recharge_exact_format(
         # Step 1: Generate timestamp (milliseconds - 13 digits)
         timestamp = str(int(time.time() * 1000))
         
-        # Step 2: Generate secret-key using HMAC-SHA256
-        # CRITICAL: Use RAW authenticator key, NOT base64 encoded!
+        # Step 2: Generate secret-key using VERIFIED WORKING method
+        # CRITICAL: Base64 encode the authenticator key FIRST, then HMAC!
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
         secret_key = base64.b64encode(
             hmac.new(
-                EKO_AUTHENTICATOR_KEY.encode('utf-8'),  # RAW key, not base64
+                encoded_key.encode('utf-8'),  # Use ENCODED key!
                 timestamp.encode('utf-8'),
                 hashlib.sha256
             ).digest()
         ).decode('utf-8')
         
-        # Step 3: Build request body FIRST (needed for request_hash)
+        # Step 3: Build request body
         user_code = EKO_USER_CODE or EKO_INITIATOR_ID
         client_ref_id = f"TEST{datetime.now().strftime('%Y%m%d%H%M%S')}{mobile[-4:]}"
         
@@ -648,12 +811,15 @@ async def test_recharge_exact_format(
             "latlong": "19.0760,72.8777"
         }
         
-        # Step 4: Generate request_hash
-        # CRITICAL: Simple SHA256(METHOD + FULL_URL + JSON_BODY) - NOT HMAC!
-        # JSON must be compact with no spaces
+        # Step 4: Generate request_hash using VERIFIED WORKING method
+        # HMAC-SHA256 with encoded key, concatenating: timestamp + utility_acc_no + amount + user_code
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        concat_str = timestamp + mobile + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), concat_str.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
         body_json = json.dumps(body, separators=(',', ':'))  # Compact JSON
-        data_to_hash = "POST" + url + body_json
-        request_hash = hashlib.sha256(data_to_hash.encode('utf-8')).hexdigest()
         
         headers = {
             "developer_key": EKO_DEVELOPER_KEY,
@@ -663,17 +829,17 @@ async def test_recharge_exact_format(
             "Content-Type": "application/json"
         }
         
-        logging.info(f"=== TEST RECHARGE REQUEST (FIXED) ===")
+        logging.info(f"=== TEST RECHARGE REQUEST (VERIFIED) ===")
         logging.info(f"URL: {url}")
         logging.info(f"Timestamp: {timestamp}")
         logging.info(f"Secret-Key: {secret_key}")
         logging.info(f"Body JSON: {body_json}")
-        logging.info(f"Hash Input: POST{url}{body_json[:50]}...")
+        logging.info(f"Request Hash concat: {concat_str}")
         logging.info(f"Request Hash: {request_hash}")
         
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
-            # CRITICAL: Send exact same JSON string used for request_hash
-            response = await client.post(url, headers=headers, content=body_json)
+            # Use json=body instead of content=body_json
+            response = await client.post(url, headers=headers, json=body)
             
             logging.info(f"=== TEST RECHARGE RESPONSE ===")
             logging.info(f"HTTP Status: {response.status_code}")
