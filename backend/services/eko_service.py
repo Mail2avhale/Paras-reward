@@ -161,11 +161,11 @@ class EkoAuth:
         """
         Generate secret-key and secret-key-timestamp for Eko API
         
-        Algorithm:
+        Algorithm (from https://developers.eko.in/reference/authentication):
         1. Get current timestamp in milliseconds
-        2. Encode authenticator key using base64
-        3. Compute HMAC SHA256 of timestamp using encoded key
-        4. Base64 encode the signature
+        2. BASE64 ENCODE the authenticator key FIRST
+        3. Compute HMAC SHA256 of timestamp using BASE64 ENCODED key
+        4. Base64 encode the signature to get secret-key
         
         Returns:
             tuple: (secret_key, timestamp)
@@ -176,15 +176,19 @@ class EkoAuth:
         # Get timestamp in milliseconds
         timestamp = str(int(time.time() * 1000))
         
-        # Encode the authenticator key
+        # Step 1: Base64 encode the authenticator key FIRST (THIS IS CRITICAL!)
         key = EkoConfig.AUTHENTICATOR_KEY
         key_bytes = key.encode('utf-8')
+        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
         
-        # Compute HMAC SHA256
+        # Step 2: Use encoded key for HMAC
+        encoded_key_bytes = encoded_key.encode('utf-8')
+        
+        # Step 3: Compute HMAC SHA256 of timestamp using encoded key
         message = timestamp.encode('utf-8')
-        signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
+        signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
         
-        # Base64 encode the signature
+        # Step 4: Base64 encode the signature to get secret-key
         secret_key = base64.b64encode(signature).decode('utf-8')
         
         return secret_key, timestamp
@@ -211,19 +215,24 @@ class EkoAuth:
         Generate request_hash for additional security (optional)
         
         Used for sensitive operations like fund transfer
+        
+        Algorithm: Same as secret-key but with concatenated params
         """
         if not EkoConfig.AUTHENTICATOR_KEY:
             raise ValueError("EKO_AUTHENTICATOR_KEY not configured")
         
+        # Step 1: Base64 encode the authenticator key FIRST
         key = EkoConfig.AUTHENTICATOR_KEY
         key_bytes = key.encode('utf-8')
+        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+        encoded_key_bytes = encoded_key.encode('utf-8')
         
-        # Concatenate parameters
+        # Step 2: Concatenate parameters
         concat_string = f"{timestamp}{utility_acc_no}{amount}{user_code}"
         message = concat_string.encode('utf-8')
         
-        # Compute HMAC SHA256
-        signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
+        # Step 3: Compute HMAC SHA256 with encoded key
+        signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
         
         return base64.b64encode(signature).decode('utf-8')
 
