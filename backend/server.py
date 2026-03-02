@@ -16700,7 +16700,10 @@ async def admin_delete_user_subscription(uid: str, payment_id: str):
     """
     Admin endpoint to delete a specific subscription record.
     Searches across multiple collections: vip_payments, subscriptions, vip_subscriptions
+    Supports both payment_id and MongoDB _id for deletion
     """
+    from bson import ObjectId
+    
     # Find user
     user = await db.users.find_one({"uid": uid})
     if not user:
@@ -16708,35 +16711,67 @@ async def admin_delete_user_subscription(uid: str, payment_id: str):
     
     deleted = False
     
+    # Check if payment_id is a valid ObjectId
+    is_object_id = False
+    try:
+        obj_id = ObjectId(payment_id)
+        is_object_id = True
+    except:
+        pass
+    
     # Try deleting from vip_payments collection
-    result = await db.vip_payments.delete_one({
-        "$and": [
-            {"$or": [{"user_uid": uid}, {"user_id": uid}]},
-            {"payment_id": payment_id}
-        ]
-    })
+    if is_object_id:
+        result = await db.vip_payments.delete_one({
+            "$and": [
+                {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+                {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+            ]
+        })
+    else:
+        result = await db.vip_payments.delete_one({
+            "$and": [
+                {"$or": [{"user_uid": uid}, {"user_id": uid}]},
+                {"payment_id": payment_id}
+            ]
+        })
     if result.deleted_count > 0:
         deleted = True
     
     # Try deleting from subscriptions collection
     if not deleted:
-        result = await db.subscriptions.delete_one({
-            "$and": [
-                {"user_id": uid},
-                {"payment_id": payment_id}
-            ]
-        })
+        if is_object_id:
+            result = await db.subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+                ]
+            })
+        else:
+            result = await db.subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"payment_id": payment_id}
+                ]
+            })
         if result.deleted_count > 0:
             deleted = True
     
     # Try deleting from vip_subscriptions collection
     if not deleted:
-        result = await db.vip_subscriptions.delete_one({
-            "$and": [
-                {"user_id": uid},
-                {"payment_id": payment_id}
-            ]
-        })
+        if is_object_id:
+            result = await db.vip_subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"$or": [{"_id": obj_id}, {"payment_id": payment_id}]}
+                ]
+            })
+        else:
+            result = await db.vip_subscriptions.delete_one({
+                "$and": [
+                    {"user_id": uid},
+                    {"payment_id": payment_id}
+                ]
+            })
         if result.deleted_count > 0:
             deleted = True
     
