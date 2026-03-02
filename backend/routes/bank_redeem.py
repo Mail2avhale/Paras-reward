@@ -1115,7 +1115,7 @@ async def approve_withdrawal(request_id: str, request: Request):
                 
                 return {
                     "success": False,
-                    "message": f"⚠️ Eko API failed. Request pending for manual action.",
+                    "message": "⚠️ Eko API failed. Request pending for manual action.",
                     "status": "eko_failed",
                     "eko_fail_reason": eko_fail_reason,
                     "admin_options": ["manual_complete", "retry", "reject"],
@@ -1145,7 +1145,7 @@ async def approve_withdrawal(request_id: str, request: Request):
             
             return {
                 "success": False,
-                "message": f"⚠️ Insufficient Eko balance. Request pending for manual action.",
+                "message": "⚠️ Insufficient Eko balance. Request pending for manual action.",
                 "status": "eko_failed",
                 "eko_fail_reason": eko_fail_reason,
                 "admin_options": ["manual_complete", "reject"],
