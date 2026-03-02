@@ -848,6 +848,17 @@ const AdminUnifiedPayments = ({ user }) => {
                   )}
                 </div>
 
+                {/* Eko Failed Warning Banner */}
+                {req.status === 'eko_failed' && (
+                  <div className="mx-4 mb-3 p-3 bg-orange-500/20 border border-orange-500/50 rounded-lg flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-orange-400 font-semibold">Eko Transfer Failed</p>
+                      <p className="text-orange-300 text-sm">{req.eko_fail_reason || 'API Error - Manual transfer required'}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Row 3: Bank Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-9 py-2 bg-gray-800/30 rounded-lg">
                   <div>
