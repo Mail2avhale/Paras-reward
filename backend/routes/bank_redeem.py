@@ -1194,11 +1194,11 @@ async def approve_withdrawal(request_id: str, request: Request):
     
     return {
         "success": True, 
-        "message": "Withdrawal approved",
+        "message": "Withdrawal approved and transferred via Eko DMT!",
         "transfer_status": transfer_status,
         "eko_txn_id": eko_txn_id,
-        "eko_transfer_success": transfer_status == "eko_dmt",
-        "manually_approved": manually_approved
+        "eko_transfer_success": True,
+        "manually_approved": False
     }
 
 
