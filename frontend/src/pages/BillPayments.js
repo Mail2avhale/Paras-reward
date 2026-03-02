@@ -406,6 +406,7 @@ const BillPayments = ({ user, onLogout }) => {
         amount_inr: '',
         phone_number: '',
         operator: '',
+        operator_id: '',
         recharge_type: '',
         circle: '',
         account_number: '',
