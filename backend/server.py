@@ -10091,6 +10091,105 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@api_router.get("/admin/subscription/fraud-check/{user_id}")
+async def check_subscription_fraud(user_id: str, days: int = 10):
+    """
+    Check if user has recent subscription activity that might indicate fraud.
+    Used by admin before approving a new subscription request.
+    """
+    try:
+        from datetime import timedelta
+        
+        now = datetime.now(timezone.utc)
+        check_date = now - timedelta(days=days)
+        
+        # Find recently approved subscriptions
+        recent_subscriptions = await db.vip_payments.find({
+            "$or": [{"user_id": user_id}, {"user_uid": user_id}],
+            "status": "approved",
+            "approved_at": {"$gte": check_date.isoformat()}
+        }).sort("approved_at", -1).to_list(length=10)
+        
+        # Get user info
+        user = await db.users.find_one({"uid": user_id})
+        
+        warnings = []
+        
+        if recent_subscriptions:
+            for sub in recent_subscriptions:
+                approved_at = sub.get("approved_at", "")
+                if approved_at:
+                    try:
+                        approved_date = datetime.fromisoformat(approved_at.replace('Z', '+00:00'))
+                        days_ago = (now - approved_date).days
+                    except:
+                        days_ago = 0
+                else:
+                    days_ago = 0
+                
+                warnings.append({
+                    "type": "RECENT_SUBSCRIPTION",
+                    "severity": "high" if days_ago <= 3 else "medium",
+                    "message": f"User activated {sub.get('subscription_plan', 'N/A')} plan {days_ago} days ago",
+                    "payment_id": sub.get("payment_id"),
+                    "plan": sub.get("subscription_plan"),
+                    "amount": sub.get("amount"),
+                    "approved_at": approved_at,
+                    "days_ago": days_ago
+                })
+        
+        # Check total subscription count
+        total_subscriptions = user.get("subscription_count", 0) if user else 0
+        if total_subscriptions > 5:
+            warnings.append({
+                "type": "HIGH_SUBSCRIPTION_COUNT",
+                "severity": "medium",
+                "message": f"User has {total_subscriptions} total subscriptions",
+                "count": total_subscriptions
+            })
+        
+        # Check if current subscription is still active
+        if user:
+            current_expiry = user.get("subscription_expiry") or user.get("vip_expiry")
+            if current_expiry:
+                try:
+                    if isinstance(current_expiry, str):
+                        expiry_date = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                    else:
+                        expiry_date = current_expiry
+                    
+                    if expiry_date > now:
+                        remaining_days = (expiry_date - now).days
+                        warnings.append({
+                            "type": "ACTIVE_SUBSCRIPTION",
+                            "severity": "high",
+                            "message": f"User already has active subscription with {remaining_days} days remaining",
+                            "current_plan": user.get("subscription_plan"),
+                            "expiry": current_expiry if isinstance(current_expiry, str) else current_expiry.isoformat(),
+                            "remaining_days": remaining_days
+                        })
+                except:
+                    pass
+        
+        has_fraud_risk = len(warnings) > 0
+        
+        return {
+            "user_id": user_id,
+            "has_fraud_risk": has_fraud_risk,
+            "risk_level": "high" if any(w.get("severity") == "high" for w in warnings) else ("medium" if warnings else "low"),
+            "warnings": warnings,
+            "checked_period_days": days,
+            "user_info": {
+                "name": user.get("name") if user else None,
+                "current_plan": user.get("subscription_plan") if user else None,
+                "total_subscriptions": total_subscriptions
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 async def approve_vip_payment(payment_id: str, request: Request):
     """Approve VIP payment and activate membership with fraud prevention and timeout handling"""
     try:
