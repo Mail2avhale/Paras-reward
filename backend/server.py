@@ -41518,8 +41518,18 @@ async def startup_db():
         print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
         print("   - 🔄 Razorpay auto-sync: Every 10 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
+        
+        # Trigger initial Razorpay sync 30 seconds after startup
+        import asyncio
+        asyncio.create_task(delayed_initial_sync())
     except Exception as e:
         print(f"⚠️ Error starting scheduler (non-critical): {e}")
+
+async def delayed_initial_sync():
+    """Run initial Razorpay sync after startup delay"""
+    await asyncio.sleep(30)  # Wait 30 seconds for full startup
+    print("[INITIAL-SYNC] 🚀 Running initial Razorpay sync after startup...")
+    await auto_sync_razorpay_payments()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
