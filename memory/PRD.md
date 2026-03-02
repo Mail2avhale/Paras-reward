@@ -182,16 +182,20 @@ User → Select Plan → Select Duration → Payment Options:
 - [ ] Ensure LIVE Razorpay keys are used in production
 - [ ] Data restoration for affected users (PRC balance, plans)
 - [ ] **Get Emergent/Production Server IP for Eko whitelisting**
+- [ ] Clear ~1700 pending old requests in production DB (use cleanup script)
 
 ### P2 - Post-Deployment & Performance
 - [ ] Admin pages timeout issue - refactor Python loops to MongoDB aggregations
 - [ ] Server-side search implementation (Currently frontend filtering)
+- [ ] Decommission old BillPayments.js, BankRedeem.js pages after new system stabilizes
 
 ### P3 - Known Issues
 - [ ] Team/Level members display fix
 - [ ] Search functionality reliability improvement
+- [ ] Razorpay Auto-Sync error handling for non-existent orders
 
 ### P4 - Future Enhancements
+- [ ] Direct Admin Services Page (admin can do instant Eko transactions without user request)
 - [ ] Email/Mobile OTP verification on signup
 - [ ] KYC/Receipt image migration to file storage
 - [ ] Refactor backend/server.py into modules
