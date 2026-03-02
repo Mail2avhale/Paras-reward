@@ -117,7 +117,6 @@ const SERVICE_CATEGORIES = {
     textColor: 'text-emerald-400'
   }
 };
-};
 
 const AdminBillPayments = ({ user }) => {
   const navigate = useNavigate();
