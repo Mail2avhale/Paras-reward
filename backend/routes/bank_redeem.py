@@ -1312,8 +1312,10 @@ async def reject_withdrawal(request_id: str, request: Request):
     if not withdrawal:
         raise HTTPException(status_code=404, detail="Request not found")
     
-    if withdrawal.get("status") != "pending":
-        raise HTTPException(status_code=400, detail=f"Request already {withdrawal.get('status')}")
+    # Allow rejection for pending and eko_failed statuses
+    current_status = withdrawal.get("status")
+    if current_status not in ["pending", "eko_failed"]:
+        raise HTTPException(status_code=400, detail=f"Cannot reject request with status: {current_status}")
     
     now = datetime.now(timezone.utc)
     user_id = withdrawal["user_id"]
