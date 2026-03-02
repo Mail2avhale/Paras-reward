@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260302_130340/results.json' }],
   ],
   use: {
-    baseURL: 'https://paras-redeem-v2.preview.emergentagent.com',
+    baseURL: 'https://paras-redeem.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

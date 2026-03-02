@@ -219,6 +219,62 @@ const AdminRedeemDashboard = ({ user }) => {
     }
   };
   
+  // Handle Check Status for processing transactions
+  const handleCheckStatus = async (requestId) => {
+    setActionLoading(true);
+    try {
+      const response = await axios.post(`${API}/redeem/admin/check-status/${requestId}?admin_id=${user.uid}`);
+      
+      if (response.data.success) {
+        if (response.data.status === 'completed') {
+          toast.success('Transaction completed successfully!');
+        } else if (response.data.status === 'processing') {
+          toast.info('Transaction still processing. Check again later.');
+        }
+      } else {
+        toast.error(response.data.message || 'Status check failed');
+        if (response.data.refund_amount) {
+          toast.info(`${response.data.refund_amount} PRC refunded to user`);
+        }
+      }
+      
+      fetchRequests();
+      fetchStats();
+      fetchEkoBalance();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to check status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  
+  // Handle Manual Refund
+  const handleManualRefund = async (requestId) => {
+    if (!confirm('⚠️ Manual Refund?\n\nThis will refund PRC to user and mark request as failed.\n\nAre you sure?')) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const response = await axios.post(
+        `${API}/redeem/admin/manual-refund/${requestId}?admin_id=${user.uid}&reason=Manual refund by admin`
+      );
+      
+      if (response.data.success) {
+        toast.success(`${response.data.refund_amount} PRC refunded successfully`);
+      } else {
+        toast.error(response.data.message || 'Refund failed');
+      }
+      
+      fetchRequests();
+      fetchStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to refund');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  
   // Status badge
   const getStatusBadge = (status) => {
     const config = {
@@ -564,9 +620,33 @@ const AdminRedeemDashboard = ({ user }) => {
                               <Button
                                 size="sm"
                                 onClick={() => { setSelectedRequest(req); setShowCompleteModal(true); }}
-                                className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white"
                               >
-                                Complete
+                                <Play className="h-3 w-3 mr-1" />
+                                Execute
+                              </Button>
+                            )}
+                            
+                            {req.status === 'processing' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleCheckStatus(req.request_id)}
+                                className="bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30"
+                                disabled={actionLoading}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            {(req.status === 'processing' || req.status === 'failed') && !req.prc_refunded && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleManualRefund(req.request_id)}
+                                className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                                disabled={actionLoading}
+                                title="Manual Refund"
+                              >
+                                <IndianRupee className="h-4 w-4" />
                               </Button>
                             )}
                           </div>

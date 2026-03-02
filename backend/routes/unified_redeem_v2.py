@@ -164,10 +164,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         result = await make_eko_request(
             "/v2/billpayments/paybill",
             method="POST",
-            data=body,
-            use_request_hash=True,
-            utility_acc_no=utility_acc_no,
-            amount=amount
+            data=body
         )
         
         logging.info(f"Eko Recharge Response: {result}")
@@ -234,10 +231,7 @@ async def execute_eko_dmt(request_doc: dict) -> dict:
         result = await make_eko_request(
             "/v1/dmt/transaction",
             method="POST",
-            data=body,
-            use_request_hash=True,
-            utility_acc_no=account_no,
-            amount=amount
+            data=body
         )
         
         logging.info(f"Eko DMT Response: {result}")
@@ -1063,3 +1057,233 @@ async def get_admin_request_details(request_id: str):
         "request": serialize_doc(request_doc),
         "user": user
     }
+
+
+@router.post("/admin/check-status/{request_id}")
+async def check_eko_transaction_status(request_id: str, admin_id: str = "admin"):
+    """
+    Admin: Check status of pending Eko transaction
+    Updates status based on Eko API response
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    request_doc = await db.redeem_requests.find_one({"request_id": request_id})
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if request_doc["status"] != STATUS_PROCESSING:
+        return {
+            "success": True,
+            "message": f"Request is not in processing state. Current status: {request_doc['status']}",
+            "status": request_doc["status"]
+        }
+    
+    eko_tid = request_doc.get("eko_tid")
+    if not eko_tid:
+        return {
+            "success": False,
+            "message": "No Eko TID found for this request"
+        }
+    
+    try:
+        from routes.eko_payments import make_eko_request
+        
+        # Check transaction status from Eko
+        result = await make_eko_request(
+            f"/v1/transactions/{eko_tid}",
+            method="GET"
+        )
+        
+        now = datetime.now(timezone.utc)
+        tx_status = str(result.get("data", {}).get("tx_status", result.get("status", -1)))
+        
+        status_map = {
+            "0": STATUS_COMPLETED,
+            "1": STATUS_FAILED,
+            "2": STATUS_PROCESSING,
+            "3": "refund_pending",
+            "4": "refunded",
+            "5": "hold"
+        }
+        
+        new_status = status_map.get(tx_status, STATUS_PROCESSING)
+        
+        if new_status == STATUS_COMPLETED:
+            # Success - Update status
+            await db.redeem_requests.update_one(
+                {"request_id": request_id},
+                {
+                    "$set": {
+                        "status": STATUS_COMPLETED,
+                        "eko_status": "SUCCESS",
+                        "utr_number": result.get("data", {}).get("utr") or result.get("data", {}).get("bbpstrxnrefid"),
+                        "completed_at": now.isoformat(),
+                        "updated_at": now.isoformat()
+                    },
+                    "$push": {
+                        "status_history": {
+                            "status": STATUS_COMPLETED,
+                            "timestamp": now.isoformat(),
+                            "by": admin_id,
+                            "note": "Status check: Transaction successful"
+                        }
+                    }
+                }
+            )
+            return {
+                "success": True,
+                "message": "Transaction completed successfully!",
+                "status": STATUS_COMPLETED,
+                "utr": result.get("data", {}).get("utr")
+            }
+            
+        elif new_status == STATUS_FAILED or new_status in ["refund_pending", "refunded"]:
+            # Failed - Refund PRC
+            user_id = request_doc["user_id"]
+            refund_amount = request_doc["total_prc_deducted"]
+            
+            user = await db.users.find_one({"uid": user_id})
+            if user:
+                current_balance = user.get("prc_balance", 0)
+                new_balance = current_balance + refund_amount
+                
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {"prc_balance": new_balance},
+                        "$push": {
+                            "prc_transactions": {
+                                "type": "credit",
+                                "amount": refund_amount,
+                                "description": "Refund: Eko transaction failed on status check",
+                                "reference_id": request_id,
+                                "balance_after": new_balance,
+                                "timestamp": now.isoformat()
+                            }
+                        }
+                    }
+                )
+            
+            await db.redeem_requests.update_one(
+                {"request_id": request_id},
+                {
+                    "$set": {
+                        "status": STATUS_FAILED,
+                        "eko_status": "FAILED",
+                        "prc_refunded": True,
+                        "refund_amount": refund_amount,
+                        "updated_at": now.isoformat()
+                    },
+                    "$push": {
+                        "status_history": {
+                            "status": STATUS_FAILED,
+                            "timestamp": now.isoformat(),
+                            "by": admin_id,
+                            "note": f"Status check: Failed. {refund_amount} PRC refunded"
+                        }
+                    }
+                }
+            )
+            
+            return {
+                "success": False,
+                "message": f"Transaction failed. {refund_amount} PRC refunded to user.",
+                "status": STATUS_FAILED,
+                "refund_amount": refund_amount
+            }
+        else:
+            # Still processing
+            return {
+                "success": True,
+                "message": "Transaction still processing. Check again later.",
+                "status": STATUS_PROCESSING,
+                "eko_status": tx_status
+            }
+            
+    except Exception as e:
+        logging.error(f"Status check error: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error checking status: {str(e)}"
+        }
+
+
+@router.post("/admin/manual-refund/{request_id}")
+async def manual_refund_request(request_id: str, admin_id: str = "admin", reason: str = "Manual refund by admin"):
+    """
+    Admin: Manually refund PRC for any request
+    Use when Eko transaction is stuck or needs manual intervention
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not available")
+    
+    request_doc = await db.redeem_requests.find_one({"request_id": request_id})
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if request_doc.get("prc_refunded"):
+        return {
+            "success": False,
+            "message": "PRC already refunded for this request"
+        }
+    
+    if request_doc["status"] == STATUS_COMPLETED:
+        return {
+            "success": False,
+            "message": "Cannot refund completed request"
+        }
+    
+    now = datetime.now(timezone.utc)
+    user_id = request_doc["user_id"]
+    refund_amount = request_doc["total_prc_deducted"]
+    
+    user = await db.users.find_one({"uid": user_id})
+    if user:
+        current_balance = user.get("prc_balance", 0)
+        new_balance = current_balance + refund_amount
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {"prc_balance": new_balance},
+                "$push": {
+                    "prc_transactions": {
+                        "type": "credit",
+                        "amount": refund_amount,
+                        "description": f"Manual Refund: {reason}",
+                        "reference_id": request_id,
+                        "balance_after": new_balance,
+                        "timestamp": now.isoformat()
+                    }
+                }
+            }
+        )
+    
+    await db.redeem_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": STATUS_FAILED,
+                "prc_refunded": True,
+                "refund_amount": refund_amount,
+                "refund_reason": reason,
+                "updated_at": now.isoformat()
+            },
+            "$push": {
+                "status_history": {
+                    "status": STATUS_FAILED,
+                    "timestamp": now.isoformat(),
+                    "by": admin_id,
+                    "note": f"Manual refund: {reason}. {refund_amount} PRC refunded"
+                }
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": f"{refund_amount} PRC refunded successfully",
+        "refund_amount": refund_amount
+    }
+
