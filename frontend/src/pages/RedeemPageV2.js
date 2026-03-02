@@ -184,10 +184,14 @@ const RedeemPageV2 = ({ user }) => {
     fetchRequests();
   }, [user, navigate]);
   
-  // Fetch operators when service changes
+  // Fetch operators when service or recharge type changes
   useEffect(() => {
-    fetchOperators(selectedService);
-  }, [selectedService]);
+    if (selectedService === 'mobile_recharge') {
+      fetchOperators(selectedService, formData.recharge_type);
+    } else {
+      fetchOperators(selectedService);
+    }
+  }, [selectedService, formData.recharge_type]);
   
   // Calculate charges when amount changes
   useEffect(() => {
@@ -216,26 +220,34 @@ const RedeemPageV2 = ({ user }) => {
     }
   };
   
-  const fetchOperators = async (serviceType) => {
+  const fetchOperators = async (serviceType, rechargeType = 'prepaid') => {
     // Map service types to Eko categories
-    const categoryMap = {
-      mobile_recharge: 'mobile_prepaid',
-      dth: 'dth',
-      electricity: 'electricity',
-      gas: 'gas',
-      emi: 'loan_emi'
-    };
+    let category;
     
-    const category = categoryMap[serviceType];
+    if (serviceType === 'mobile_recharge') {
+      // For mobile, use recharge type to determine category
+      category = rechargeType === 'postpaid' ? 'mobile_postpaid' : 'mobile_prepaid';
+    } else {
+      const categoryMap = {
+        dth: 'dth',
+        electricity: 'electricity',
+        gas: 'gas',
+        emi: 'loan_emi'
+      };
+      category = categoryMap[serviceType];
+    }
+    
     if (!category) return;
     
     setLoadingOperators(true);
     try {
       const response = await axios.get(`${API}/eko/bbps/operators/${category}`);
       if (response.data.operators) {
+        // For mobile, store with recharge type key
+        const storeKey = serviceType === 'mobile_recharge' ? `mobile_${rechargeType}` : serviceType;
         setOperators(prev => ({
           ...prev,
-          [serviceType]: response.data.operators
+          [storeKey]: response.data.operators
         }));
       }
     } catch (error) {
@@ -494,7 +506,15 @@ const RedeemPageV2 = ({ user }) => {
   };
   
   const currentConfig = SERVICE_CONFIG[selectedService];
-  const currentOperators = operators[selectedService] || OPERATORS[selectedService] || [];
+  
+  // Get current operators based on service and recharge type
+  const currentOperators = (() => {
+    if (selectedService === 'mobile_recharge') {
+      const key = `mobile_${formData.recharge_type}`;
+      return operators[key] || OPERATORS[selectedService] || [];
+    }
+    return operators[selectedService] || OPERATORS[selectedService] || [];
+  })();
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
@@ -753,7 +773,7 @@ const RedeemPageV2 = ({ user }) => {
                             key={type}
                             type="button"
                             onClick={() => {
-                              setFormData({ ...formData, recharge_type: type, amount: '' });
+                              setFormData({ ...formData, recharge_type: type, amount: '', operator: '' });
                               setBillDetails(null);
                               setBillError(null);
                             }}
