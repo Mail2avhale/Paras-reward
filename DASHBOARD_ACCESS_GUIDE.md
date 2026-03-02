@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://paras-redeem.preview.emergentagent.com/setup
+   https://payment-workflow-v2.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

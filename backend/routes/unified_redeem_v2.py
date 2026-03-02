@@ -28,6 +28,8 @@ import httpx
 import hashlib
 import hmac
 import base64
+import time
+import json
 
 router = APIRouter(prefix="/redeem", tags=["Unified Redeem v2"])
 
@@ -137,60 +139,121 @@ async def get_eko_balance() -> dict:
         return {"success": False, "balance": 0, "error": str(e)}
 
 
-async def execute_eko_recharge(request_doc: dict) -> dict:
-    """Execute mobile/DTH recharge via Eko BBPS API"""
+def execute_eko_recharge_sync(request_doc: dict) -> dict:
+    """Execute mobile/DTH recharge via Eko BBPS API - Synchronous implementation"""
+    import requests as req
+    
     try:
-        from routes.eko_payments import make_eko_request, EKO_USER_CODE as EKO_UC
+        # Get credentials directly
+        EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
+        EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
+        EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
+        EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
+        EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
         
         details = request_doc.get("details", {})
         amount = str(int(request_doc["amount_inr"]))
         utility_acc_no = details.get("mobile_number") or details.get("consumer_number") or ""
-        operator_id = details.get("operator", "")
+        operator_id = str(details.get("operator_id") or details.get("operator", ""))
         
+        # Generate timestamp
+        timestamp = str(int(time.time() * 1000))
+        
+        # Generate secret-key
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Generate request_hash
+        concat_str = timestamp + utility_acc_no + amount + EKO_USER_CODE
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Build URL
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        # Build body
         body = {
-            "utility_acc_no": utility_acc_no,
-            "confirmation_mobile_no": details.get("mobile", details.get("mobile_number", EKO_INITIATOR_ID)),
-            "sender_name": request_doc.get("user_name", "Customer"),
-            "operator_id": str(operator_id),
-            "user_code": EKO_UC,
-            "client_ref_id": request_doc["request_id"],
             "source_ip": "127.0.0.1",
-            "latlong": "19.0760,72.8777",
-            "amount": amount
+            "user_code": EKO_USER_CODE,
+            "amount": amount,
+            "client_ref_id": request_doc["request_id"],
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "Customer",
+            "operator_id": operator_id,
+            "latlong": "19.0760,72.8777"
         }
         
-        logging.info(f"Eko Recharge Request: {body}")
+        body_json = json.dumps(body, separators=(',', ':'))
         
-        result = await make_eko_request(
-            "/v2/billpayments/paybill",
-            method="POST",
-            data=body
-        )
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
         
-        logging.info(f"Eko Recharge Response: {result}")
+        print(f"=== SYNC EKO CALL ===")
+        print(f"URL: {url}")
+        print(f"Body: {body_json}")
         
-        status_code = str(result.get("status", result.get("response_status_id", -1)))
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        result = response.json()
         
-        if status_code == "0":
+        print(f"Response: {result}")
+        
+        eko_status = result.get("status")
+        if eko_status == 0:
+            return {
+                "status": "SUCCESS",
+                "tid": result.get("data", {}).get("tid"),
+                "message": result.get("message"),
+                "eko_response": result
+            }
+        else:
+            return {
+                "status": "FAILED",
+                "message": result.get("message", "Unknown error"),
+                "eko_response": result
+            }
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        return {
+            "status": "FAILED",
+            "message": str(e)
+        }
+
+
+async def execute_eko_recharge(request_doc: dict) -> dict:
+    """
+    Execute mobile/DTH recharge via Eko BBPS API
+    Uses asyncio.to_thread() to properly call sync requests from async context
+    """
+    import asyncio
+    
+    try:
+        # Run sync function in thread pool to avoid blocking event loop
+        result = await asyncio.to_thread(execute_eko_recharge_sync, request_doc)
+        
+        # Parse the sync function result
+        if result.get("status") == "SUCCESS":
             return {
                 "success": True,
                 "status": "SUCCESS",
-                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
-                "utr": result.get("data", {}).get("bbpstrxnrefid") or result.get("utr"),
-                "message": "Recharge successful"
-            }
-        elif status_code == "2":
-            return {
-                "success": True,
-                "status": "PROCESSING",
-                "eko_tid": result.get("data", {}).get("tid") or result.get("txn_id"),
-                "message": "Transaction processing (NEFT)"
+                "eko_tid": result.get("tid"),
+                "utr": result.get("eko_response", {}).get("data", {}).get("bbpstrxnrefid"),
+                "message": result.get("message", "Recharge successful")
             }
         else:
             return {
                 "success": False,
                 "status": "FAILED",
-                "error_code": status_code,
+                "error_code": result.get("eko_response", {}).get("status"),
                 "message": result.get("message", "Transaction failed")
             }
             
