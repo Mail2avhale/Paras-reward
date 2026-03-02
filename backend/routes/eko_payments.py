@@ -109,6 +109,10 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     
     url = f"{EKO_BASE_URL}{endpoint}"
     
+    # Add initiator_id to URL for paybill endpoint
+    if "billpayments/paybill" in endpoint and "?" not in endpoint:
+        url = f"{url}?initiator_id={EKO_INITIATOR_ID}"
+    
     # Generate authentication headers
     secret_key_timestamp = get_secret_key_timestamp()
     secret_key = generate_secret_key(secret_key_timestamp)
