@@ -757,6 +757,35 @@ async def activate_eko_service(service_code: str, service_name: str):
         return {"success": False, "error": str(e)}
 
 
+# ==================== GET OPERATOR PARAMETERS ====================
+@router.get("/bbps/operator-params/{operator_id}")
+async def get_operator_parameters(operator_id: int):
+    """
+    Get required parameters for a specific operator.
+    This is MANDATORY before calling paybill API.
+    
+    Returns: List of parameters with their regex, type, and labels
+    """
+    try:
+        result = await make_eko_request(
+            f"/v2/billpayments/operators/{operator_id}",
+            method="GET"
+        )
+        
+        return {
+            "success": True,
+            "operator_id": operator_id,
+            "operator_name": result.get("operator_name", ""),
+            "fetch_bill_required": result.get("fetchBill") == 1,
+            "is_bbps": result.get("BBPS") == 1,
+            "parameters": result.get("data", []),
+            "raw_response": result
+        }
+    except Exception as e:
+        logging.error(f"Failed to get operator params: {e}")
+        return {"success": False, "error": str(e), "operator_id": operator_id}
+
+
 # ==================== ERROR CODES REFERENCE ENDPOINT ====================
 
 @router.get("/error-codes")
