@@ -701,8 +701,68 @@ const BillPayments = ({ user, onLogout }) => {
 
                 {currentType?.fields.includes('loan_account') && (
                   <>
-                    {/* Row 1: Loan Account & Bank/Lender Name */}
+                    {/* Row 1: Bank/Lender Name & Loan Account */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="bank_lender_name" className="text-white text-sm font-medium mb-2 block">Bank/Lender Name *</Label>
+                        <select
+                          id="bank_lender_name"
+                          value={formData.bank_lender_name}
+                          onChange={(e) => setFormData({ ...formData, bank_lender_name: e.target.value })}
+                          required
+                          className="w-full h-12 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl px-4 focus:border-amber-500 focus:outline-none"
+                          data-testid="bank-lender-select"
+                        >
+                          <option value="">Select Bank/Lender</option>
+                          <optgroup label="Major Banks">
+                            <option value="hdfc bank">HDFC Bank</option>
+                            <option value="icici bank">ICICI Bank</option>
+                            <option value="sbi">State Bank of India (SBI)</option>
+                            <option value="axis bank">Axis Bank</option>
+                            <option value="kotak mahindra">Kotak Mahindra Bank</option>
+                            <option value="yes bank">Yes Bank</option>
+                            <option value="idfc first bank">IDFC FIRST Bank</option>
+                            <option value="indusind bank">IndusInd Bank</option>
+                            <option value="federal bank">Federal Bank</option>
+                            <option value="pnb">Punjab National Bank</option>
+                            <option value="bob">Bank of Baroda</option>
+                            <option value="canara bank">Canara Bank</option>
+                          </optgroup>
+                          <optgroup label="NBFCs - Vehicle & Personal Loans">
+                            <option value="bajaj finance">Bajaj Finance</option>
+                            <option value="bajaj auto finance">Bajaj Auto Finance</option>
+                            <option value="tata capital">Tata Capital</option>
+                            <option value="tata motors finance">Tata Motors Finance</option>
+                            <option value="mahindra finance">Mahindra Finance</option>
+                            <option value="hero fincorp">Hero FinCorp</option>
+                            <option value="tvs credit">TVS Credit</option>
+                            <option value="l&t finance">L&T Finance</option>
+                            <option value="shriram finance">Shriram Finance</option>
+                            <option value="cholamandalam">Cholamandalam Finance</option>
+                            <option value="sundaram finance">Sundaram Finance</option>
+                          </optgroup>
+                          <optgroup label="Housing Finance">
+                            <option value="lic housing finance">LIC Housing Finance</option>
+                            <option value="hdfc ltd">HDFC Ltd (Housing)</option>
+                            <option value="bajaj housing finance">Bajaj Housing Finance</option>
+                            <option value="pnb housing">PNB Housing Finance</option>
+                            <option value="indiabulls housing">Indiabulls Housing Finance</option>
+                            <option value="tata housing finance">Tata Housing Finance</option>
+                            <option value="aditya birla housing">Aditya Birla Housing Finance</option>
+                          </optgroup>
+                          <optgroup label="Gold & Consumer Loans">
+                            <option value="muthoot finance">Muthoot Finance</option>
+                            <option value="manappuram finance">Manappuram Finance</option>
+                            <option value="home credit">Home Credit India</option>
+                            <option value="fullerton india">Fullerton India</option>
+                          </optgroup>
+                          <optgroup label="Other">
+                            <option value="au small finance">AU Small Finance Bank</option>
+                            <option value="equitas bank">Equitas Small Finance Bank</option>
+                            <option value="other">Other (Enter manually)</option>
+                          </optgroup>
+                        </select>
+                      </div>
                       <div>
                         <Label htmlFor="loan_account" className="text-white text-sm font-medium mb-2 block">Loan Account Number *</Label>
                         <Input
@@ -713,17 +773,7 @@ const BillPayments = ({ user, onLogout }) => {
                           required
                           className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor="bank_lender_name" className="text-white text-sm font-medium mb-2 block">Bank/Lender Name *</Label>
-                        <Input
-                          id="bank_lender_name"
-                          value={formData.bank_lender_name}
-                          onChange={(e) => setFormData({ ...formData, bank_lender_name: e.target.value })}
-                          placeholder="e.g., HDFC Bank, Bajaj Finance, Tata Capital"
-                          required
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-amber-500"
-                        />
+                        <p className="text-xs text-gray-500 mt-1">Your loan account number as per bank/lender records</p>
                       </div>
                     </div>
 
