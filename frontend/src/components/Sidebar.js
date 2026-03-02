@@ -66,7 +66,6 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/bill-payments' },
-    { id: 'bank-redeem', label: 'Redeem To Bank', icon: Landmark, route: '/bank-redeem' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];
