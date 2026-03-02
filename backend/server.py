@@ -1303,14 +1303,16 @@ async def auto_sync_razorpay_payments():
             "yearly": 336
         }
         
-        # Get all pending orders
+        # Get all pending orders - include more statuses
         pending_orders = await db.razorpay_orders.find({
-            "status": {"$in": ["created", "pending"]}
-        }).to_list(100)
+            "status": {"$in": ["created", "pending", "attempted"]}
+        }).to_list(200)  # Increased limit
         
         if not pending_orders:
             print(f"[AUTO-SYNC] No pending orders to sync")
             return
+        
+        print(f"[AUTO-SYNC] Found {len(pending_orders)} pending orders to sync")
         
         synced_count = 0
         
