@@ -215,23 +215,22 @@ class EkoAuth:
         
         Used for sensitive operations like fund transfer
         
-        Algorithm: Same as secret-key but with concatenated params
+        Algorithm (from Eko Python example - same as secret-key):
+        Use key directly, NOT base64 encoded
         """
         if not EkoConfig.AUTHENTICATOR_KEY:
             raise ValueError("EKO_AUTHENTICATOR_KEY not configured")
         
-        # Step 1: Base64 encode the authenticator key FIRST
+        # Use key directly (as per Eko Python example)
         key = EkoConfig.AUTHENTICATOR_KEY
         key_bytes = key.encode('utf-8')
-        encoded_key = base64.b64encode(key_bytes).decode('utf-8')
-        encoded_key_bytes = encoded_key.encode('utf-8')
         
-        # Step 2: Concatenate parameters
+        # Concatenate parameters
         concat_string = f"{timestamp}{utility_acc_no}{amount}{user_code}"
         message = concat_string.encode('utf-8')
         
-        # Step 3: Compute HMAC SHA256 with encoded key
-        signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
+        # Compute HMAC SHA256 with key directly
+        signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
         
         return base64.b64encode(signature).decode('utf-8')
 
