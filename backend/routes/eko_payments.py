@@ -1863,3 +1863,56 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
     except Exception as e:
         logging.error(f"Admin direct paybill failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/test-paybill")
+async def test_paybill_direct():
+    """Direct test of paybill API - for debugging"""
+    import time as time_module
+    
+    key = EKO_AUTHENTICATOR_KEY
+    encoded_key = base64.b64encode(key.encode()).decode()
+    timestamp = str(round(time_module.time() * 1000))
+
+    secret_key = base64.b64encode(
+        hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+    ).decode()
+
+    mobile = "9936606966"
+    amount = '19'
+    user_code = EKO_USER_CODE or '20810200'
+
+    concatenated_string = timestamp + mobile + amount + user_code
+    request_hash = base64.b64encode(
+        hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
+    ).decode()
+
+    url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+
+    headers = {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp,
+        "request_hash": request_hash,
+        "Content-Type": "application/json"
+    }
+
+    body = {
+        "utility_acc_no": mobile,
+        "confirmation_mobile_no": EKO_INITIATOR_ID,
+        "sender_name": "Customer",
+        "operator_id": "90",
+        "amount": amount,
+        "client_ref_id": f"TEST{timestamp[-8:]}",
+        "source_ip": "127.0.0.1",
+        "latlong": "19.0760,72.8777",
+        "user_code": user_code
+    }
+
+    async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
+        response = await client.post(url, headers=headers, json=body)
+        return {
+            "request": {"url": url, "headers": headers, "body": body},
+            "response": {"status": response.status_code, "body": response.json()}
+        }
