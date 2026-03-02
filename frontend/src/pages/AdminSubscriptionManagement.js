@@ -86,10 +86,43 @@ const AdminSubscriptionManagement = () => {
     }
   };
 
-  const handleApprove = async (paymentId) => {
+  const handleApprove = async (paymentId, userId) => {
     setProcessing(paymentId);
     try {
+      // First check for fraud risk
+      if (userId) {
+        try {
+          const fraudCheck = await axios.get(`${API}/admin/subscription/fraud-check/${userId}?days=10`);
+          if (fraudCheck.data?.has_fraud_risk) {
+            const warnings = fraudCheck.data.warnings || [];
+            const warningMessages = warnings.map(w => w.message).join('\n• ');
+            
+            const confirmApprove = window.confirm(
+              `⚠️ FRAUD ALERT - ${fraudCheck.data.risk_level.toUpperCase()} RISK!\n\n` +
+              `• ${warningMessages}\n\n` +
+              `User: ${fraudCheck.data.user_info?.name || userId}\n` +
+              `Current Plan: ${fraudCheck.data.user_info?.current_plan || 'None'}\n` +
+              `Total Subscriptions: ${fraudCheck.data.user_info?.total_subscriptions || 0}\n\n` +
+              `Are you sure you want to approve this subscription?`
+            );
+            
+            if (!confirmApprove) {
+              setProcessing(null);
+              return;
+            }
+          }
+        } catch (fraudErr) {
+          console.log('Fraud check failed, proceeding with approval:', fraudErr);
+        }
+      }
+      
       const res = await axios.post(`${API}/admin/vip-payment/${paymentId}/approve`, {});
+      
+      // Show fraud warning if returned
+      if (res.data?.fraud_warning) {
+        toast.warning(res.data.fraud_warning.message, { duration: 8000 });
+      }
+      
       toast.success(res.data?.message || 'Payment approved!');
       fetchData();
     } catch (error) {
