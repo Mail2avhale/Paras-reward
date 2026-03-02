@@ -552,8 +552,18 @@ const AdminUnifiedPayments = ({ user }) => {
 
   const getStatusColor = (status) => {
     if (status === 'pending') return 'text-yellow-400';
+    if (status === 'eko_failed') return 'text-orange-400';
     if (['approved', 'completed'].includes(status)) return 'text-green-400';
     return 'text-red-400';
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === 'pending') return 'Pending';
+    if (status === 'eko_failed') return 'Eko Failed';
+    if (status === 'approved') return 'Approved';
+    if (status === 'completed') return 'Completed';
+    if (status === 'rejected') return 'Rejected';
+    return status;
   };
 
   const getTypeColor = (type) => {
