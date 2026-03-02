@@ -212,6 +212,12 @@ const BillPayments = ({ user, onLogout }) => {
       fetchCircles();
     } else if (selectedType === 'dish_recharge') {
       fetchDthOperators();
+    } else if (selectedType === 'electricity_bill') {
+      fetchElectricityOperators();
+    } else if (selectedType === 'gas_bill') {
+      fetchGasOperators();
+    } else if (selectedType === 'lpg_booking') {
+      fetchLpgOperators();
     }
     // Reset plans when type changes
     setEkoPlans([]);
