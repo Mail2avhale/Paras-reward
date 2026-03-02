@@ -554,7 +554,7 @@ const AdminSubscriptionManagement = () => {
                 payment={payment}
                 tab={activeTab}
                 processing={processing === payment.payment_id}
-                onApprove={() => handleApprove(payment.payment_id)}
+                onApprove={() => handleApprove(payment.payment_id, payment.user_id || payment.user_uid)}
                 onReject={() => setRejectModal({ show: true, payment })}
                 onEdit={() => setEditModal({ show: true, payment })}
                 onView={() => setViewModal({ show: true, payment })}
