@@ -56,7 +56,7 @@ const SERVICE_CONFIG = {
     icon: Banknote, 
     color: 'green',
     gradient: 'from-green-500 to-emerald-500',
-    fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile']
+    fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name']
   }
 };
 
