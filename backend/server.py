@@ -20172,6 +20172,59 @@ async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, re
                     "service_charge": req.get("processing_fee_inr", 0) + req.get("admin_charge_inr", 0)
                 })
         
+        # Get unified redeem requests if needed (new system)
+        if request_type in ["all", "redeem"]:
+            redeem_requests = await db.redeem_requests.find(
+                {"user_id": user_id},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(500)
+            
+            service_labels = {
+                "mobile_recharge": "Mobile Recharge",
+                "dth": "DTH Recharge",
+                "electricity": "Electricity Bill",
+                "gas": "Gas Bill",
+                "emi": "Loan EMI",
+                "dmt": "Bank Transfer"
+            }
+            
+            service_icons = {
+                "mobile_recharge": "smartphone",
+                "dth": "tv",
+                "electricity": "zap",
+                "gas": "flame",
+                "emi": "building",
+                "dmt": "banknote"
+            }
+            
+            for req in redeem_requests:
+                service = req.get("service_type", "redeem")
+                all_requests.append({
+                    "id": req.get("request_id"),
+                    "type": "redeem_request",
+                    "request_type": service,
+                    "type_label": service_labels.get(service, service.replace("_", " ").title()),
+                    "title": service_labels.get(service, "Redeem Request"),
+                    "description": f"₹{req.get('amount_inr', 0)}",
+                    "amount_prc": req.get("total_prc_deducted", 0),
+                    "amount_inr": req.get("amount_inr", 0),
+                    "status": req.get("status", "pending"),
+                    "created_at": req.get("created_at"),
+                    "processed_at": req.get("completed_at") or req.get("updated_at"),
+                    "completed_at": req.get("completed_at"),
+                    "rejected_at": req.get("rejected_at"),
+                    "failed_at": req.get("failed_at"),
+                    "icon": service_icons.get(service, "receipt"),
+                    "details": req.get("details", {}),
+                    "charges": req.get("charges", {}),
+                    "eko_tid": req.get("eko_tid"),
+                    "utr": req.get("utr"),
+                    "admin_notes": req.get("admin_notes"),
+                    "rejection_reason": req.get("rejection_reason"),
+                    "error_message": req.get("error_message"),
+                    "service_charge": req.get("charges", {}).get("total_charges_inr", 0)
+                })
+        
         # Sort all requests by created_at (newest first)
         all_requests.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         
@@ -20190,10 +20243,14 @@ async def get_user_all_requests(user_id: str, page: int = 1, limit: int = 10, re
             "total_bill_payments": len([r for r in all_requests if r["type"] == "bill_payment"]),
             "total_vouchers": len([r for r in all_requests if r["type"] == "gift_voucher"]),
             "total_bank_redeems": len([r for r in all_requests if r["type"] == "bank_redeem"]),
+            "total_redeem_requests": len([r for r in all_requests if r["type"] == "redeem_request"]),
             "pending_count": len([r for r in all_requests if r["status"] == "pending"]),
-            "completed_count": len([r for r in all_requests if r["status"] in ["completed", "delivered", "approved"]]),
-            "total_prc_used": sum(r.get("amount_prc", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"]),
-            "total_inr_value": sum(r.get("amount_inr", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled"])
+            "approved_count": len([r for r in all_requests if r["status"] == "approved"]),
+            "completed_count": len([r for r in all_requests if r["status"] in ["completed", "delivered"]]),
+            "failed_count": len([r for r in all_requests if r["status"] == "failed"]),
+            "rejected_count": len([r for r in all_requests if r["status"] == "rejected"]),
+            "total_prc_used": sum(r.get("amount_prc", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled", "failed"]),
+            "total_inr_value": sum(r.get("amount_inr", 0) for r in all_requests if r["status"] not in ["rejected", "cancelled", "failed"])
         }
         
         return {

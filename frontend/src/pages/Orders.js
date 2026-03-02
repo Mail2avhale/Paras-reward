@@ -827,6 +827,37 @@ const Orders = ({ user, onLogout }) => {
                             <span className="text-red-300 text-xs font-medium">{formatDateTime(request.rejected_at || request.processed_at)}</span>
                           </div>
                         )}
+                        {/* Completed time for completed requests */}
+                        {request.status === 'completed' && (request.completed_at || request.processed_at || request.updated_at) && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-green-400 text-xs">✓ Completed:</span>
+                            <span className="text-green-300 text-xs font-medium">{formatDateTime(request.completed_at || request.processed_at || request.updated_at)}</span>
+                            {/* Time taken to complete */}
+                            {(() => {
+                              const created = new Date(request.created_at);
+                              const completed = new Date(request.completed_at || request.processed_at || request.updated_at);
+                              const hoursToComplete = (completed - created) / (1000 * 60 * 60);
+                              
+                              if (hoursToComplete <= 1) {
+                                return <span className="px-2 py-0.5 bg-purple-500/30 text-purple-300 text-xs rounded-full font-bold">⚡ Instant</span>;
+                              } else if (hoursToComplete <= 6) {
+                                return <span className="px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded-full font-semibold">🚀 Super Fast</span>;
+                              } else if (hoursToComplete <= 24) {
+                                return <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">✓ Same Day</span>;
+                              } else if (hoursToComplete <= 48) {
+                                return <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">✓ Quick</span>;
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        )}
+                        {/* Failed time for failed requests */}
+                        {request.status === 'failed' && (request.failed_at || request.processed_at || request.updated_at) && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-400 text-xs">✗ Failed:</span>
+                            <span className="text-red-300 text-xs font-medium">{formatDateTime(request.failed_at || request.processed_at || request.updated_at)}</span>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Admin Notes if rejected */}
@@ -834,6 +865,54 @@ const Orders = ({ user, onLogout }) => {
                         <div className="mt-2 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
                           <p className="text-red-400 text-xs font-semibold mb-1">❌ Rejection Reason:</p>
                           <p className="text-red-300 text-sm">{request.admin_notes || request.reject_reason || request.rejection_reason}</p>
+                        </div>
+                      )}
+                      
+                      {/* Request Details Section */}
+                      {request.details && (
+                        <div className="mt-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                          <p className="text-gray-400 text-xs font-semibold mb-2">📋 Request Details</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {/* Mobile Recharge / DTH */}
+                            {(request.details.mobile_number || request.details.consumer_number) && (
+                              <div>
+                                <span className="text-gray-500">Number:</span>
+                                <span className="text-white ml-1 font-mono">{request.details.mobile_number || request.details.consumer_number}</span>
+                              </div>
+                            )}
+                            {request.details.operator && (
+                              <div>
+                                <span className="text-gray-500">Operator:</span>
+                                <span className="text-white ml-1">{request.details.operator}</span>
+                              </div>
+                            )}
+                            {/* Bank Details */}
+                            {request.details.account_number && (
+                              <div>
+                                <span className="text-gray-500">A/C:</span>
+                                <span className="text-white ml-1 font-mono">****{request.details.account_number.slice(-4)}</span>
+                              </div>
+                            )}
+                            {request.details.bank_name && (
+                              <div>
+                                <span className="text-gray-500">Bank:</span>
+                                <span className="text-white ml-1">{request.details.bank_name}</span>
+                              </div>
+                            )}
+                            {request.details.ifsc_code && (
+                              <div>
+                                <span className="text-gray-500">IFSC:</span>
+                                <span className="text-white ml-1 font-mono">{request.details.ifsc_code}</span>
+                              </div>
+                            )}
+                            {/* Transaction ID if completed */}
+                            {request.eko_tid && (
+                              <div className="col-span-2">
+                                <span className="text-gray-500">TXN ID:</span>
+                                <span className="text-green-400 ml-1 font-mono">{request.eko_tid}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                       
