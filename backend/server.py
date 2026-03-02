@@ -27402,6 +27402,41 @@ async def process_bill_payment_request(request: Request):
         from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
         import asyncio
         
+        # Eko Operator ID mapping (operator_name -> eko_operator_id)
+        EKO_OPERATOR_MAP = {
+            # Mobile Prepaid
+            "airtel": "1", "airtel prepaid": "1",
+            "bsnl": "5", "bsnl prepaid": "5",
+            "jio": "90", "jio prepaid": "90", "reliance jio": "90",
+            "vi": "400", "vi prepaid": "400", "vodafone": "400", "idea": "400", "vodafone idea": "400",
+            "mtnl delhi": "91", "mtnl delhi prepaid": "91",
+            "mtnl mumbai": "508", "mtnl mumbai prepaid": "508",
+            # Mobile Postpaid
+            "airtel postpaid": "2",
+            "bsnl postpaid": "6", "bsnl landline": "6",
+            "jio postpaid": "93",
+            "vi postpaid": "401", "vodafone postpaid": "401",
+            # DTH
+            "tata sky": "107", "tatasky": "107",
+            "airtel dth": "108", "airtel digital tv": "108",
+            "dish tv": "109", "dishtv": "109",
+            "sun direct": "111", "sundirect": "111",
+            "d2h": "110", "videocon d2h": "110",
+            # Electricity - will use operator_id from details if available
+            "electricity": "0",
+            # Gas
+            "indane": "301", "hp gas": "302", "bharat gas": "303",
+        }
+        
+        def get_eko_operator_id(operator_name, details_operator_id=None):
+            """Convert operator name to Eko operator ID"""
+            if details_operator_id and str(details_operator_id).isdigit():
+                return str(details_operator_id)
+            if not operator_name:
+                return "0"
+            op_lower = operator_name.lower().strip()
+            return EKO_OPERATOR_MAP.get(op_lower, operator_name)
+        
         # Get user details for sender_name
         user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
         sender_name = "Customer"
