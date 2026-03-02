@@ -1117,7 +1117,7 @@ async def process_mobile_recharge(
         }
         
         # Make direct request (not using make_eko_request since we need custom headers)
-        async with httpx.AsyncClient(timeout=60.0, verify=True) as client:
+        async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             print(f"=== EKO PAYBILL REQUEST ===")
             print(f"URL: {url}")
             print(f"Headers: {headers}")
