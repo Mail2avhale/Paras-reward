@@ -311,6 +311,68 @@ async def get_eko_config():
     }
 
 
+@router.get("/debug-auth")
+async def debug_eko_auth():
+    """
+    Debug endpoint to verify Eko authentication values
+    Use this to verify secret-key generation is correct
+    """
+    import time
+    
+    # Step 1: Get timestamp in milliseconds
+    timestamp = str(int(time.time() * 1000))
+    
+    # Step 2: Base64 encode the authenticator key
+    key = EKO_AUTHENTICATOR_KEY
+    key_bytes = key.encode('utf-8')
+    encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+    
+    # Step 3: HMAC SHA256
+    encoded_key_bytes = encoded_key.encode('utf-8')
+    message = timestamp.encode('utf-8')
+    signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
+    
+    # Step 4: Base64 encode result
+    secret_key = base64.b64encode(signature).decode('utf-8')
+    
+    # Generate request_hash for test values
+    utility_acc_no = "9922400782"
+    amount = "19"
+    user_code = EKO_INITIATOR_ID
+    concat_string = timestamp + utility_acc_no + amount + user_code
+    request_hash = base64.b64encode(
+        hmac.new(encoded_key_bytes, concat_string.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
+    
+    return {
+        "verification": {
+            "timestamp_format": "milliseconds (13 digits)" if len(timestamp) == 13 else f"WRONG: {len(timestamp)} digits",
+            "timestamp_value": timestamp,
+            "auth_key_first_8": EKO_AUTHENTICATOR_KEY[:8] + "...",
+            "auth_key_last_8": "..." + EKO_AUTHENTICATOR_KEY[-8:],
+            "encoded_key_first_20": encoded_key[:20] + "...",
+            "secret_key": secret_key,
+            "secret_key_length": len(secret_key)
+        },
+        "headers_to_send": {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/json"
+        },
+        "request_hash_example": {
+            "for_params": f"utility_acc_no={utility_acc_no}, amount={amount}, user_code={user_code}",
+            "concat_string_preview": concat_string[:30] + "...",
+            "request_hash": request_hash
+        },
+        "api_config": {
+            "base_url": EKO_BASE_URL,
+            "initiator_id": EKO_INITIATOR_ID,
+            "recharge_endpoint": "/v2/billpayments/paybill"
+        }
+    }
+
+
 @router.get("/balance")
 async def get_eko_balance():
     """Get Eko settlement account balance"""
