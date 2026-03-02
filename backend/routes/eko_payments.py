@@ -653,6 +653,76 @@ async def activate_eko_service(service_code: str, service_name: str):
         return {"success": False, "error": str(e)}
 
 
+# ==================== ERROR CODES REFERENCE ENDPOINT ====================
+
+@router.get("/error-codes")
+async def get_all_error_codes():
+    """
+    Get complete list of Eko API error codes and transaction status codes
+    Reference: https://developers.eko.in/docs/error-codes
+    """
+    return {
+        "success": True,
+        "documentation_url": "https://developers.eko.in/docs/error-codes",
+        "notes": {
+            "financial_transactions": "For all financial transactions, status = 0 should be treated as successful else fail",
+            "non_financial_requests": "For non-financial requests, check both status and response_type_id parameters",
+            "tx_status": "Current state of transaction can be retrieved from tx_status and txstatus_desc parameter"
+        },
+        "status_codes": EKO_STATUS_CODES,
+        "tx_status_codes": EKO_TX_STATUS_CODES,
+        "error_categories": {
+            "user_agent": ["463", "327", "17", "31", "319", "1237", "585"],
+            "otp": ["302", "303"],
+            "recipient": ["342", "145", "140", "131", "122", "39", "313", "350", "536", "537", "44", "45"],
+            "bank_ifsc": ["41", "48", "136", "508", "521"],
+            "account": ["102", "46"],
+            "transaction": ["317", "53", "55", "460", "344", "168", "544"],
+            "balance_limit": ["347", "314", "945"],
+            "http_server": ["400", "403", "404", "500", "503", "504"]
+        },
+        "retryable_errors": ["544", "503", "504", "55"],
+        "manual_review_required": ["347", "314", "403", "319", "945"]
+    }
+
+
+@router.get("/error-codes/{code}")
+async def get_specific_error(code: str):
+    """Get details for a specific error code"""
+    # Check if it's a status code
+    if code in EKO_STATUS_CODES:
+        return {
+            "code": code,
+            "type": "status_code",
+            "message": EKO_STATUS_CODES[code],
+            "is_retryable": is_retryable_error(code),
+            "needs_manual_review": needs_manual_review(code)
+        }
+    
+    # Check if it's a tx_status code
+    try:
+        tx_code = int(code)
+        if tx_code in EKO_TX_STATUS_CODES:
+            info = EKO_TX_STATUS_CODES[tx_code]
+            return {
+                "code": code,
+                "type": "tx_status",
+                "status": info["status"],
+                "description": info["description"],
+                "is_final": info["is_final"],
+                "recommended_action": info["action"]
+            }
+    except ValueError:
+        pass
+    
+    return {
+        "code": code,
+        "type": "unknown",
+        "message": f"Error code {code} not found in documentation",
+        "suggestion": "Contact Eko support for details"
+    }
+
+
 @router.get("/bbps/categories")
 async def get_bill_categories():
     """Get available bill payment categories"""
