@@ -378,6 +378,12 @@ const BillPayments = ({ user, onLogout }) => {
       currentType.fields.forEach(field => {
         details[field] = formData[field];
       });
+      
+      // Add operator_id for Eko API if available
+      if (formData.operator_id) {
+        details.operator_id = formData.operator_id;
+        details.eko_operator_id = formData.operator_id;
+      }
 
       const response = await axios.post(`${API}/bill-payment/request`, {
         user_id: user.uid,
