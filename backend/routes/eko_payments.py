@@ -74,28 +74,26 @@ def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user
     """
     Generate request_hash for BBPS Pay Bill API
     
-    Algorithm (from Eko documentation):
-    1. Base64 encode the authenticator key FIRST
+    Algorithm (from Eko Python example - same as secret-key):
+    1. Use key directly (NOT base64 encoded)
     2. Concatenate: timestamp + utility_acc_no + amount + user_code
-    3. HMAC-SHA256 with BASE64 ENCODED key
+    3. HMAC-SHA256 with key
     4. Base64 encode the result
     """
     if not EKO_AUTHENTICATOR_KEY:
         return None
     
-    # Step 1: Base64 encode the authenticator key FIRST
+    # Use key directly (as per Eko Python example)
     key_bytes = EKO_AUTHENTICATOR_KEY.encode('utf-8')
-    encoded_key = base64.b64encode(key_bytes).decode('utf-8')
-    encoded_key_bytes = encoded_key.encode('utf-8')
     
-    # Step 2: Concatenate parameters
+    # Concatenate parameters
     concatenated_string = timestamp + utility_acc_no + amount + user_code
     message = concatenated_string.encode('utf-8')
     
-    # Step 3: HMAC SHA256 with encoded key
-    signature = hmac.new(encoded_key_bytes, message, hashlib.sha256).digest()
+    # HMAC SHA256 with key directly
+    signature = hmac.new(key_bytes, message, hashlib.sha256).digest()
     
-    # Step 4: Base64 encode
+    # Base64 encode
     return base64.b64encode(signature).decode('utf-8')
 
 
