@@ -1,139 +1,86 @@
-# Paras Reward - Product Requirements Document
+# Paras Redeem - Product Requirements Document
 
 ## Original Problem Statement
-Eko payment integration for a reward platform with BBPS (Bill Payments) and DMT (Money Transfer) services.
+PRC (Paras Reward Coin) based redemption platform where users earn PRC through mining and referrals, then redeem for:
+- Mobile Recharges
+- DTH Recharges
+- Electricity Bills
+- Gas Bills
+- Bank Transfers (DMT)
+- Other utility payments
 
-## Core Features
-- **Mobile Recharge** with auto-detect operator and plans
-- **DTH Recharge** 
-- **Electricity Bill Payment**
-- **Gas Bill Payment**
-- **EMI Payment**
-- **Bank Account Transfer (DMT v3)**
-- **Mining/Tap Game** for earning PRC rewards
-
-## Architecture
-
-### Backend
-- FastAPI server at `/app/backend/server.py`
-- Eko API routes at `/app/backend/routes/eko_payments.py`
-- MongoDB database
-
-### Frontend
-- React app with Tailwind CSS
-- Dashboard at `/app/frontend/src/pages/DashboardModern.js`
-- Redeem page at `/app/frontend/src/pages/RedeemPageV2.js`
-
-## API Endpoints
-
-### Eko BBPS
-- `GET /api/eko/bbps/operators/{category}` - Get operators
-- `POST /api/eko/bbps/fetch-bill` - Fetch bill details
-- `POST /api/eko/bbps/pay-bill` - Pay bill
-
-### Eko DMT v3
-- `GET /api/eko/dmt/v3/banks` - Bank list
-- `GET /api/eko/dmt/v3/customer/{mobile}` - Check customer
-- `POST /api/eko/dmt/v3/recipient/add` - Add beneficiary
-- `POST /api/eko/dmt/v3/transfer` - Money transfer
-
-### Auto-Detect (NEW)
-- `GET /api/eko/recharge/detect/{mobile}` - Auto-detect operator & fetch plans
+## Core Architecture
+- **Frontend:** React.js with Tailwind CSS
+- **Backend:** FastAPI (Python)
+- **Database:** MongoDB Atlas
+- **Payment Gateway:** Eko India (BBPS & DMT APIs)
+- **Secondary:** Razorpay for subscriptions
 
 ## What's Been Implemented
 
-### December 2025 - Session Updates
+### March 2026 Updates:
 
-#### ✅ Mining Page UI Update (Completed - March 2026)
-- Removed "How to Play" section
-- Added "Mining Speed Breakdown" showing level-wise contribution:
-  - Your Mining (Base rate)
-  - Level 1-5 Referrals with paid/free count and PRC/hr bonus
-  - Total Speed calculation
-- Added Marathi info note explaining only Paid subscribers contribute to mining speed
+#### ✅ Eko Authentication Fix (Mar 3, 2026)
+- Fixed Authenticator Key in `.env`
+- Corrected secret-key generation algorithm (Base64 encoded key + HMAC-SHA256)
+- Fixed request_hash generation for BBPS payments
 
-#### ✅ PRC Vault Feature Removal (Completed)
-- Removed "PRC SAVINGS VAULT" banner from dashboard
-- Disabled 20% auto-deduction from mining rewards
-- Users now receive 100% of mined PRC
-- Created migration script: `/app/backend/migrate_vault_to_prc.py`
+#### ✅ BBPS Bill Payment Services (Mar 3, 2026)
+- **Electricity:** Tested BEST Mumbai ₹1,160 - SUCCESS
+- **DTH:** Tested Dish TV ₹236 - SUCCESS
+- **Mobile Recharge:** Already working
 
-#### ✅ Auto-Detect Operator Feature (Completed)
-- New API endpoint to auto-detect operator from mobile number
-- Returns operator name, circle, confidence level
-- Auto-fetches available recharge plans
-- Integrated into mobile recharge form
+#### ✅ Error Handling Improvements (Mar 3, 2026)
+- Added user-friendly error messages for Eko API errors
+- Added `eko_failed` status display in Orders page
+- Improved admin dashboard with bank transfer details display
 
-#### ✅ DMT v3 Backend (Completed)
-- Implemented Eko DMT v3 API integration
-- Customer verification, beneficiary management, money transfer
-- Hash formula: `timestamp + customer_id + recipient_id + amount + client_ref_id`
+#### ✅ PRC Vault Removal (Previous Session)
+- Removed PRC Savings Vault feature
+- Removed 20% deduction logic
+- Migration script created at `/app/migration_script.py`
 
-## Service Status
+#### ✅ Mining Formula Simplification (Previous Session)
+- Fixed-rate mining per subscription plan
+- Removed complex date/subscription multipliers
+- Formula: `Final Rate = Base_Rate + Referral_Bonus`
 
-| Service | Status | Notes |
-|---------|--------|-------|
-| Mobile Recharge | ✅ Ready | Auto-detect implemented |
-| DTH | ✅ Ready | Working |
-| Electricity | ✅ Ready | Bill fetch working |
-| Gas | ✅ Ready | Working |
-| EMI | ✅ Ready | Working |
-| DMT v3 | ⚠️ Blocked | IP whitelist issue in preview |
+## Pending/In Progress
 
-## Known Issues
+### 🔴 P0 - DMT (Bank Transfer)
+- **Status:** Waiting for Eko support reply
+- **Issue:** Add Recipient API returns 405 for POST method
+- **Blocker:** Cannot complete recipient registration flow
 
-1. **Eko API IP Whitelist**: Preview environment IP not whitelisted by Eko. Code is correct but testing blocked.
-2. **Admin Dashboard Refresh**: Tabs don't refresh after status change.
+### 🟡 P1 - PRC Vault Migration
+- **Status:** Script ready, awaiting production confirmation
+- **Action:** Run `/app/migration_script.py` on production database
 
-## Upcoming Tasks
+### 🟡 P2 - Other Issues
+- Admin dashboard tabs refresh issue
+- ~1700 legacy pending requests to clear
+- Razorpay Auto-Sync error handling
 
-### P1 - High Priority
-- Complete DMT self-service frontend flow
-- End-to-end testing on whitelisted environment
+## Key API Endpoints
 
-### P2 - Medium Priority
-- Fix admin dashboard tab refresh bug
-- Clear ~1700 legacy pending requests
+### Eko BBPS (Working)
+- `POST /api/eko/bbps/paybill` - Bill payment
+- `POST /api/eko/bbps/fetch-bill` - Fetch bill details
+- `GET /api/eko/bbps/operators/{category}` - Get operators list
 
-### P3 - Low Priority
-- Razorpay auto-sync error handling
-- Email/Mobile OTP verification
-- KYC image migration to file storage
+### Eko DMT (Pending Fix)
+- `GET /api/eko/dmt/v3/customer/{mobile}` - Check customer
+- `POST /api/eko/dmt/v3/recipient/add` - Add recipient (needs fix)
+- `POST /api/eko/dmt/v3/transfer` - Initiate transfer
 
-## Test Credentials
+## Credentials
+- **Eko Production URL:** https://api.eko.in:25002/ekoicici
+- **Eko Initiator ID:** 9936606966
+- **Eko User Code:** 20810200
 
-- **Test User**: testuser@test.com / PIN: 123456
-- **DMT Test Account**: 
-  - Name: Santosh Shamrao Avhale
-  - Account: 8829010000024578
-  - Bank: DBS Bank
-  - IFSC: DBSS0IN0829
-
-## Database Schema
-
-### users
-```
-{
-  uid: String,
-  email: String,
-  prc_balance: Number,
-  kyc_status: String,
-  subscription_plan: String
-}
-```
-
-### redeem_requests
-```
-{
-  request_id: String,
-  user_id: String,
-  service_type: String,
-  amount: Number,
-  status: String
-}
-```
-
-## Tech Stack
-- Backend: Python, FastAPI, MongoDB
-- Frontend: React, Tailwind CSS, Shadcn UI
-- APIs: Eko (BBPS, DMT), Razorpay
+## Files of Reference
+- `backend/routes/eko_payments.py` - All Eko API integrations
+- `backend/server.py` - Main FastAPI app, redeem processing
+- `backend/config.py` - Mining rates, limits, weights
+- `frontend/src/pages/RedeemPageV2.js` - Redeem UI
+- `frontend/src/pages/Orders.js` - User orders display
