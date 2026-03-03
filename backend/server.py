@@ -6427,13 +6427,37 @@ async def get_mining_status(uid: str):
     rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mining_rate_per_hour = rate_per_minute * 60
     
+    # Get user's subscription info for display
+    sub_info = await get_user_subscription_info(user)
+    user_multiplier = sub_info["multiplier"]
+    current_date = datetime.now(timezone.utc).day
+    
+    # Calculate actual hourly rates for frontend display
+    # Formula: value * day / 24 gives hourly contribution
+    base_hourly = (base_rate * user_multiplier * current_date) / 24
+    
+    # Convert referral breakdown to actual hourly contributions
+    hourly_breakdown = {}
+    for level, data in referral_breakdown.items():
+        hourly_bonus = (data['bonus'] * current_date) / 24
+        hourly_breakdown[level] = {
+            'count': data.get('count', 0),
+            'weighted_count': data.get('weighted_count', 0),
+            'free_count': data.get('free_count', 0),
+            'percentage': data.get('percentage', 0),
+            'bonus': hourly_bonus  # Actual hourly contribution
+        }
+    
     result = {
         "current_balance": user.get("prc_balance", 0),
         "mining_rate": mining_rate_per_hour,  # New field name
         "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
-        "base_rate": base_rate,
+        "base_rate": base_hourly,  # Now returns actual hourly base rate
+        "base_rate_raw": base_rate,  # Raw value for reference
+        "user_multiplier": user_multiplier,
+        "day_multiplier": current_date,
         "active_referrals": active_referrals,
-        "referral_breakdown": referral_breakdown,  # New: multi-level breakdown
+        "referral_breakdown": hourly_breakdown,  # Now returns actual hourly contributions
         "total_mined": user.get("total_mined", 0),
         "session_active": session_active,
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
