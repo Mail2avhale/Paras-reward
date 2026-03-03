@@ -318,6 +318,164 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
 
 # ==================== PYDANTIC MODELS ====================
 
+# ==================== SERVICE ACTIVATION ====================
+# As per Eko docs: https://developers.eko.in/reference/bbps-1
+# Must activate service before using BBPS APIs
+
+@router.post("/activate-service/{service_code}")
+async def activate_service(service_code: int = 53, user_code: str = None):
+    """
+    Activate a service for the merchant/user
+    
+    Service Codes:
+    - 53: BBPS (Bill Payments - Electricity, Gas, DTH, etc.)
+    - 45: DMT (Domestic Money Transfer)
+    
+    As per Eko docs: https://developers.eko.in/reference/bbps-1
+    """
+    import requests as req
+    
+    try:
+        # Generate timestamp
+        timestamp = str(int(time.time() * 1000))
+        
+        # Generate secret-key
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        # URL - use production base
+        url = f"{EKO_BASE_URL}/v1/user/service/activate"
+        
+        # Headers
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        # Body - form data
+        data = {
+            "service_code": str(service_code),
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": user_code or EKO_USER_CODE,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        logging.info(f"=== ACTIVATE SERVICE ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Service Code: {service_code}")
+        logging.info(f"User Code: {data['user_code']}")
+        
+        # Make request
+        response = req.put(url, headers=headers, data=data, timeout=60)
+        
+        logging.info(f"Response Status: {response.status_code}")
+        logging.info(f"Response Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+        except:
+            result = {"raw": response.text, "parse_error": True}
+        
+        eko_status = result.get("status")
+        
+        if eko_status == 0:
+            return {
+                "success": True,
+                "message": f"Service {service_code} activated successfully!",
+                "service_code": service_code,
+                "user_code": data['user_code'],
+                "raw_response": result
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message", "Activation failed"),
+                "error_code": str(eko_status),
+                "service_code": service_code,
+                "raw_response": result
+            }
+            
+    except Exception as e:
+        logging.error(f"Service activation failed: {e}")
+        return {
+            "success": False,
+            "message": f"Activation failed: {str(e)}"
+        }
+
+
+@router.get("/check-service-status/{service_code}")
+async def check_service_status(service_code: int = 53, user_code: str = None):
+    """
+    Check if a service is activated for the user
+    """
+    import requests as req
+    
+    try:
+        timestamp = str(int(time.time() * 1000))
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        url = f"{EKO_BASE_URL}/v1/user/service/status"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+        }
+        
+        params = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": user_code or EKO_USER_CODE,
+            "service_code": str(service_code)
+        }
+        
+        response = req.get(url, headers=headers, params=params, timeout=60)
+        
+        try:
+            result = response.json()
+        except:
+            result = {"raw": response.text}
+        
+        return {
+            "service_code": service_code,
+            "user_code": params['user_code'],
+            "http_status": response.status_code,
+            "response": result
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/activate-all-services")
+async def activate_all_services(user_code: str = None):
+    """
+    Activate all required services for bill payments
+    - 53: BBPS (Bill Payments)
+    - 45: DMT (Money Transfer)
+    """
+    results = []
+    service_codes = [53, 45]  # BBPS and DMT
+    
+    for code in service_codes:
+        result = await activate_service(code, user_code)
+        results.append({
+            "service_code": code,
+            "result": result
+        })
+    
+    return {
+        "message": "Service activation completed",
+        "results": results
+    }
+
+
 # ==================== BILL PAYMENT CHARGES ====================
 BILL_PLATFORM_FEE = 10  # ₹10 fixed platform fee
 BILL_ADMIN_CHARGE_PERCENT = 20  # 20% admin charge
