@@ -2054,48 +2054,52 @@ async def get_user_subscription_info(user: dict) -> dict:
 # Limits vary by subscription tier
 WEEKLY_SERVICE_LIMITS = {
     "explorer": {
-        "mobile_recharge": 1,
-        "dish_recharge": 1,  # DTH
-        "electricity_bill": 1,
-        "gas_bill": 1,
-        "lpg_booking": 1,
-        "credit_card_payment": 1,
-        "loan_emi": 1,
-        "gift_voucher": 1,
-        "shopping": 10
+        "mobile_recharge": 999,  # Unlimited
+        "dish_recharge": 999,    # Unlimited
+        "electricity_bill": 999, # Unlimited
+        "gas_bill": 999,         # Unlimited
+        "lpg_booking": 999,      # Unlimited
+        "credit_card_payment": 999, # Unlimited
+        "loan_emi": 1,           # Only 1 per week (EMI or Bank)
+        "bank_redeem": 1,        # Only 1 per week (EMI or Bank)
+        "gift_voucher": 999,     # Unlimited
+        "shopping": 999          # Unlimited
     },
     "startup": {
-        "mobile_recharge": 2,
-        "dish_recharge": 2,
-        "electricity_bill": 1,
-        "gas_bill": 1,
-        "lpg_booking": 2,
-        "credit_card_payment": 1,
-        "loan_emi": 1,
-        "gift_voucher": 2,
-        "shopping": 15
+        "mobile_recharge": 999,
+        "dish_recharge": 999,
+        "electricity_bill": 999,
+        "gas_bill": 999,
+        "lpg_booking": 999,
+        "credit_card_payment": 999,
+        "loan_emi": 1,           # Only 1 per week
+        "bank_redeem": 1,        # Only 1 per week
+        "gift_voucher": 999,
+        "shopping": 999
     },
     "growth": {
-        "mobile_recharge": 3,
-        "dish_recharge": 3,
-        "electricity_bill": 2,
-        "gas_bill": 2,
-        "lpg_booking": 3,
-        "credit_card_payment": 2,
-        "loan_emi": 2,
-        "gift_voucher": 3,
-        "shopping": 20
+        "mobile_recharge": 999,
+        "dish_recharge": 999,
+        "electricity_bill": 999,
+        "gas_bill": 999,
+        "lpg_booking": 999,
+        "credit_card_payment": 999,
+        "loan_emi": 1,           # Only 1 per week
+        "bank_redeem": 1,        # Only 1 per week
+        "gift_voucher": 999,
+        "shopping": 999
     },
     "elite": {
-        "mobile_recharge": 5,
-        "dish_recharge": 5,
-        "electricity_bill": 3,
-        "gas_bill": 3,
-        "lpg_booking": 5,
-        "credit_card_payment": 3,
-        "loan_emi": 3,
-        "gift_voucher": 5,
-        "shopping": 999  # Unlimited for Elite
+        "mobile_recharge": 999,
+        "dish_recharge": 999,
+        "electricity_bill": 999,
+        "gas_bill": 999,
+        "lpg_booking": 999,
+        "credit_card_payment": 999,
+        "loan_emi": 1,           # Only 1 per week
+        "bank_redeem": 1,        # Only 1 per week
+        "gift_voucher": 999,
+        "shopping": 999
     }
 }
 
@@ -13497,11 +13501,10 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 - ✅ Weekly limit: Based on subscription plan
 
 **Weekly Redeem Limits:**
-| Plan | Weekly Limit |
-|------|-------------|
-| Explorer | 1 time |
-| Startup | 2 times |
-| Elite | 5 times |
+| Service | Weekly Limit |
+|---------|-------------|
+| EMI / Bank Redeem | **1 time** (all plans) |
+| All Other Services | **Unlimited** |
 
 === 🔥 GAS BILL PAYMENT ===
 
