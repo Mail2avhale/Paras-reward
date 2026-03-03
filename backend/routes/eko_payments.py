@@ -3464,19 +3464,27 @@ async def execute_bbps_bill_payment(
             "request_hash": request_hash
         }
         
-        # Step 7: JSON body
+        # Step 7: JSON body - SAME FORMAT as working mobile recharge
+        client_ref_id = f"BBPS{int(time.time())}"
         payload = {
-            "operator_id": operator_id,
+            "source_ip": "127.0.0.1",
+            "user_code": EKO_USER_CODE,
+            "amount": amount,
+            "client_ref_id": client_ref_id,
             "utility_acc_no": utility_acc_no,
-            "amount": amount
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "ParasReward",
+            "operator_id": str(operator_id),
+            "latlong": "19.0760,72.8777"
         }
         
         logging.info(f"[BBPS] URL: {url}")
         logging.info(f"[BBPS] Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
         logging.info(f"[BBPS] Hash concat: {concatenated_string[:50]}...")
         
-        # Step 8: API call with json=payload
-        response = req.post(url, json=payload, headers=headers, timeout=60)
+        # Step 8: API call with data=json_string (SAME AS WORKING RECHARGE)
+        body_json = json.dumps(payload, separators=(',', ':'))
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
         
         logging.info(f"[BBPS] Response: {response.status_code}")
         logging.info(f"[BBPS] Body: {response.text[:300]}")
