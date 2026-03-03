@@ -13563,12 +13563,39 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 | 1000 PRC | ₹100 |
 | 5000 PRC | ₹500 |
 
-**📊 SUBSCRIPTION PLANS:**
+**📊 SUBSCRIPTION PLANS & MINING RATES:**
 (1 Month = 28 Days)
 
-1. **EXPLORER (Free)** - Basic access, 1 weekly redeem
-2. **STARTUP (₹299/28 days)** - 1.5x earning, 2 weekly redeems
-3. **ELITE (₹799/28 days)** - 3x earning, 5 weekly redeems, all features!
+| Plan | Price | Mining Speed | Referral Weight |
+|------|-------|--------------|-----------------|
+| **EXPLORER** | Free | 100 PRC/hr | 0 (no referral bonus) |
+| **STARTUP** | ₹299/28 days | 30 PRC/hr | 0.50 |
+| **ELITE** | ₹799/28 days | 90 PRC/hr | 1.0 |
+
+**Note:** Growth plan discontinued. Existing Growth users: 55 PRC/hr, weight 0.55
+
+**⛏️ MINING FORMULA (FIXED RATE - No date multiplier):**
+```
+Mining_Speed = Base_Rate + Referral_Bonus
+```
+- Base Rate is FIXED per plan (see table above)
+- No multiplier, no date-wise changes
+- Simple and transparent!
+
+**👥 REFERRAL BONUS LEVELS:**
+| Level | Bonus % |
+|-------|---------|
+| L1 (Direct) | 10% |
+| L2 | 5% |
+| L3 | 2.5% |
+| L4 | 1.5% |
+| L5 | 1% |
+| **Total Potential** | **20%** |
+
+**Example (Startup Plan):**
+- Base: 30 PRC/hr
+- 10 active L1 referrals (Startup weight 0.50): 10 × 0.50 × 10% × 30 = +15 PRC/hr
+- Total: 45 PRC/hr
 
 **⛏️ EARNING METHODS:**
 1. Daily Mining Sessions
