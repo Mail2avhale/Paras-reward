@@ -3723,8 +3723,8 @@ class DMTTransferRequestV3(BaseModel):
     client_ref_id: str = None
 
 
-def generate_dmt_v3_headers(timestamp: str = None, request_hash: str = None):
-    """Generate authentication headers for DMT v3 APIs using Base64 encoded key"""
+def generate_dmt_v3_headers(timestamp: str = None, request_hash: str = None, content_type: str = None):
+    """Generate authentication headers for DMT APIs using Base64 encoded key"""
     if not timestamp:
         timestamp = str(int(time.time() * 1000))
     
@@ -3739,8 +3739,11 @@ def generate_dmt_v3_headers(timestamp: str = None, request_hash: str = None):
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "Content-Type": "application/json"
     }
+    
+    # Only add Content-Type if specified
+    if content_type:
+        headers["Content-Type"] = content_type
     
     if request_hash:
         headers["request_hash"] = request_hash
@@ -4030,49 +4033,58 @@ async def get_dmt_recipients_v3(mobile: str):
 @router.post("/dmt/v3/recipient/add")
 async def add_dmt_recipient_v3(request: DMTRecipientRequestV3):
     """
-    STEP 2: Add Beneficiary
+    STEP 5: Add Beneficiary/Recipient
     
-    API: POST /ekoapi/v3/customers/{customer_id}/recipients
-    Content-Type: application/json
-    request_hash required
+    API: PUT /ekoicici/v1/customers/mobile_number:{mobile}/recipients
+    Content-Type: application/x-www-form-urlencoded
     """
     import requests as req
     
     try:
-        headers, encoded_key, timestamp = generate_dmt_v3_headers()
-        
-        # Generate request_hash (check documentation for exact formula)
-        # For add recipient, using timestamp as base
-        request_hash = generate_dmt_v3_request_hash(encoded_key, timestamp)
-        headers["request_hash"] = request_hash
+        headers, encoded_key, timestamp = generate_dmt_v3_headers(content_type="application/x-www-form-urlencoded")
         
         url = f"{DMT_BASE_URL}/customers/mobile_number:{request.customer_id}/recipients"
         
-        payload = {
+        # Form data for adding recipient
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
             "recipient_name": request.recipient_name,
-            "bank_code": request.bank_code,
-            "account_number": request.account_number,
-            "ifsc": request.ifsc,
-            "recipient_mobile": request.recipient_mobile
+            "bank_ifsc": request.ifsc,
+            "account": request.account_number,
+            "recipient_mobile": request.recipient_mobile or request.customer_id,
+            "user_code": EKO_USER_CODE
         }
         
-        logging.info(f"[DMT-v3] Add recipient for customer: {request.customer_id}")
-        logging.info(f"[DMT-v3] URL: {url}")
-        logging.info(f"[DMT-v3] Payload: {payload}")
+        logging.info(f"[DMT] Add recipient for customer: {request.customer_id}")
+        logging.info(f"[DMT] URL: {url}")
+        logging.info(f"[DMT] Data: {data}")
         
-        response = req.post(url, json=payload, headers=headers, timeout=30)
+        # Use PUT with form data
+        response = req.put(url, headers=headers, data=data, timeout=30)
         
-        logging.info(f"[DMT-v3] Status: {response.status_code}")
-        logging.info(f"[DMT-v3] Response: {response.text[:500]}")
+        logging.info(f"[DMT] Status: {response.status_code}")
+        logging.info(f"[DMT] Response: {response.text[:500]}")
         
         try:
             result = response.json()
-            return {
-                "success": result.get("status") == 0,
-                "http_status": response.status_code,
-                "data": result,
-                "recipient_id": result.get("data", {}).get("recipient_id")
-            }
+            eko_status = result.get("status")
+            
+            if eko_status == 0:
+                recipient_data = result.get("data", {})
+                return {
+                    "success": True,
+                    "message": "Recipient added successfully!",
+                    "recipient_id": recipient_data.get("recipient_id"),
+                    "recipient_id_type": recipient_data.get("recipient_id_type"),
+                    "raw_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to add recipient"),
+                    "error_code": str(eko_status),
+                    "raw_response": result
+                }
         except:
             return {
                 "success": False,
@@ -4081,7 +4093,7 @@ async def add_dmt_recipient_v3(request: DMTRecipientRequestV3):
             }
             
     except Exception as e:
-        logging.error(f"[DMT-v3] Error: {e}")
+        logging.error(f"[DMT] Error: {e}")
         return {"success": False, "error": str(e)}
 
 
