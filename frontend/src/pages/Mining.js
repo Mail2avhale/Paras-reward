@@ -972,7 +972,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 1 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_1?.count || 0} paid ({referralBreakdown?.level_1?.free_count || 0} free)
+                  {referralBreakdown?.level_1?.count || 0} active ({referralBreakdown?.level_1?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -988,7 +988,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 2 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_2?.count || 0} paid ({referralBreakdown?.level_2?.free_count || 0} free)
+                  {referralBreakdown?.level_2?.count || 0} active ({referralBreakdown?.level_2?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1004,7 +1004,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 3 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_3?.count || 0} paid ({referralBreakdown?.level_3?.free_count || 0} free)
+                  {referralBreakdown?.level_3?.count || 0} active ({referralBreakdown?.level_3?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1020,7 +1020,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 4 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_4?.count || 0} paid ({referralBreakdown?.level_4?.free_count || 0} free)
+                  {referralBreakdown?.level_4?.count || 0} active ({referralBreakdown?.level_4?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1036,7 +1036,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 5 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_5?.count || 0} paid ({referralBreakdown?.level_5?.free_count || 0} free)
+                  {referralBreakdown?.level_5?.count || 0} active ({referralBreakdown?.level_5?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1065,7 +1065,7 @@ const DailyRewards = ({ user }) => {
           <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
             <p className="text-blue-300 text-xs flex items-start gap-2">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Only Paid subscribers (Startup/Growth/Business) add to your mining speed. Free (Explorer) users don't count.</span>
+              <span>Active = Paid subscribers who mined/played in last 24h. Free (Explorer) users don't add to your speed.</span>
             </p>
           </div>
         </div>
