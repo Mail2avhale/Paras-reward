@@ -73,13 +73,36 @@ def generate_eko_request_hash(timestamp: str, utility_acc_no: str, amount: str, 
 
 # ==================== CONSTANTS ====================
 
-# Service Types
+# Service Types - All BBPS Services
 SERVICE_TYPES = {
+    # Recharge Services
     "mobile_recharge": {"name": "Mobile Recharge", "icon": "smartphone", "category": 5},
+    "mobile_postpaid": {"name": "Mobile Postpaid", "icon": "phone", "category": 6},
     "dth": {"name": "DTH Recharge", "icon": "tv", "category": 4},
+    
+    # Utility Bills
     "electricity": {"name": "Electricity Bill", "icon": "zap", "category": 8},
     "gas": {"name": "Gas Bill (PNG)", "icon": "flame", "category": 2},
+    "water": {"name": "Water Bill", "icon": "droplet", "category": 7},
+    
+    # Telecom
+    "broadband": {"name": "Broadband Bill", "icon": "wifi", "category": 9},
+    "landline": {"name": "Landline Bill", "icon": "phone-call", "category": 10},
+    
+    # Financial Services
     "emi": {"name": "EMI Payment", "icon": "building", "category": 21},
+    "credit_card": {"name": "Credit Card Bill", "icon": "credit-card", "category": 15},
+    "insurance": {"name": "Insurance Premium", "icon": "shield", "category": 12},
+    
+    # Transport & Others
+    "fastag": {"name": "FASTag Recharge", "icon": "car", "category": 11},
+    "education": {"name": "Education Fees", "icon": "graduation-cap", "category": 18},
+    "cable_tv": {"name": "Cable TV", "icon": "monitor", "category": 14},
+    "municipal_tax": {"name": "Municipal Tax", "icon": "landmark", "category": 17},
+    "housing_society": {"name": "Housing Society", "icon": "home", "category": 19},
+    "lpg": {"name": "LPG Cylinder Booking", "icon": "cylinder", "category": 3},
+    
+    # Money Transfer
     "dmt": {"name": "Bank Transfer (DMT)", "icon": "banknote", "category": 0}
 }
 
@@ -159,7 +182,19 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             utility_acc_no = details.get("loan_account", "")
         elif service_type == "mobile_recharge":
             utility_acc_no = details.get("mobile_number", "")
-        elif service_type in ["dth", "electricity", "gas"]:
+        elif service_type == "mobile_postpaid":
+            utility_acc_no = details.get("mobile_number", "")
+        elif service_type == "credit_card":
+            utility_acc_no = details.get("card_number", "") or details.get("consumer_number", "")
+        elif service_type == "insurance":
+            utility_acc_no = details.get("policy_number", "") or details.get("consumer_number", "")
+        elif service_type == "fastag":
+            utility_acc_no = details.get("vehicle_number", "") or details.get("fastag_id", "") or details.get("consumer_number", "")
+        elif service_type == "education":
+            utility_acc_no = details.get("student_id", "") or details.get("enrollment_number", "") or details.get("consumer_number", "")
+        elif service_type == "lpg":
+            utility_acc_no = details.get("lpg_id", "") or details.get("consumer_number", "")
+        elif service_type in ["dth", "electricity", "gas", "water", "broadband", "landline", "cable_tv", "municipal_tax", "housing_society"]:
             utility_acc_no = details.get("consumer_number", "")
         else:
             utility_acc_no = details.get("mobile_number") or details.get("consumer_number") or details.get("loan_account") or ""
@@ -218,8 +253,8 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             )
             return result
         
-        elif service_type in ["dth", "gas", "emi"]:
-            # DTH, Gas, EMI - use BBPS function with official format
+        elif service_type in ["dth", "gas", "emi", "water", "broadband", "landline", "credit_card", "insurance", "fastag", "education", "cable_tv", "municipal_tax", "housing_society", "lpg", "mobile_postpaid"]:
+            # All BBPS services use the same function with official format
             from routes.eko_payments import execute_bbps_bill_payment
             
             result = await execute_bbps_bill_payment(
@@ -638,6 +673,78 @@ async def get_admin_eko_balance():
         return {"success": False, "balance": 0, "error": str(e)}
 
 
+
+@router.get("/services")
+async def get_available_services():
+    """
+    Get all available BBPS services with their details
+    Used by frontend to dynamically render service options
+    """
+    services = []
+    
+    # Define which services are instant vs admin approval
+    instant_services = [
+        "mobile_recharge", "mobile_postpaid",
+        "dth", "cable_tv",
+        "electricity", "gas", "water",
+        "broadband", "landline",
+        "emi", "credit_card", "insurance",
+        "fastag", "education", "municipal_tax", "housing_society", "lpg"
+    ]
+    
+    for service_id, details in SERVICE_TYPES.items():
+        services.append({
+            "id": service_id,
+            "name": details["name"],
+            "icon": details["icon"],
+            "category": details["category"],
+            "is_instant": service_id in instant_services,
+            "requires_admin": service_id not in instant_services,
+            "fields": get_service_fields(service_id)
+        })
+    
+    return {
+        "success": True,
+        "services": services,
+        "total": len(services)
+    }
+
+def get_service_fields(service_type: str) -> list:
+    """Get required input fields for each service type"""
+    common_fields = [
+        {"name": "amount", "label": "Amount (₹)", "type": "number", "required": True},
+        {"name": "operator", "label": "Operator/Provider", "type": "select", "required": True}
+    ]
+    
+    if service_type == "mobile_recharge":
+        return [{"name": "mobile_number", "label": "Mobile Number", "type": "tel", "required": True}] + common_fields
+    elif service_type == "mobile_postpaid":
+        return [{"name": "mobile_number", "label": "Mobile Number", "type": "tel", "required": True}] + common_fields
+    elif service_type in ["dth", "cable_tv"]:
+        return [{"name": "consumer_number", "label": "Subscriber ID", "type": "text", "required": True}] + common_fields
+    elif service_type in ["electricity", "water", "gas"]:
+        return [{"name": "consumer_number", "label": "Consumer Number", "type": "text", "required": True}] + common_fields
+    elif service_type in ["broadband", "landline"]:
+        return [{"name": "consumer_number", "label": "Account Number", "type": "text", "required": True}] + common_fields
+    elif service_type == "emi":
+        return [{"name": "loan_account", "label": "Loan Account Number", "type": "text", "required": True}] + common_fields
+    elif service_type == "credit_card":
+        return [{"name": "card_number", "label": "Card Number (Last 4 digits)", "type": "text", "required": True}] + common_fields
+    elif service_type == "insurance":
+        return [{"name": "policy_number", "label": "Policy Number", "type": "text", "required": True}] + common_fields
+    elif service_type == "fastag":
+        return [{"name": "vehicle_number", "label": "Vehicle Number / FASTag ID", "type": "text", "required": True}] + common_fields
+    elif service_type == "education":
+        return [{"name": "student_id", "label": "Student ID / Enrollment No.", "type": "text", "required": True}] + common_fields
+    elif service_type == "lpg":
+        return [{"name": "lpg_id", "label": "LPG Consumer ID", "type": "text", "required": True}] + common_fields
+    elif service_type in ["municipal_tax", "housing_society"]:
+        return [{"name": "consumer_number", "label": "Property ID / Account No.", "type": "text", "required": True}] + common_fields
+    else:
+        return [{"name": "consumer_number", "label": "Account Number", "type": "text", "required": True}] + common_fields
+
+
+
 @router.post("/request")
 async def create_redeem_request(request: RedeemRequestCreate):
     """
@@ -797,10 +904,17 @@ async def create_redeem_request(request: RedeemRequestCreate):
     await db.redeem_requests.insert_one(request_doc)
     
     # =====================================================
-    # INSTANT RECHARGE for Mobile, DTH, Electricity, EMI
-    # These services are auto-executed without admin approval
+    # INSTANT RECHARGE - All BBPS Services (Auto-execute without admin)
+    # Only DMT requires admin approval due to bank verification needs
     # =====================================================
-    instant_services = ["mobile_recharge", "dth", "electricity", "emi"]
+    instant_services = [
+        "mobile_recharge", "mobile_postpaid",
+        "dth", "cable_tv",
+        "electricity", "gas", "water",
+        "broadband", "landline",
+        "emi", "credit_card", "insurance",
+        "fastag", "education", "municipal_tax", "housing_society", "lpg"
+    ]
     
     if request.service_type in instant_services:
         logging.info(f"[INSTANT] Auto-executing {request.service_type} for request {request_id}")
