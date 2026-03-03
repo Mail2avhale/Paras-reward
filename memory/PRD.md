@@ -1,63 +1,54 @@
-# Paras Reward - Eko BBPS Integration
+# Paras Reward - Eko API Integration
 
-## OFFICIAL EKO FORMAT (from developers.eko.in)
+## OFFICIAL EKO FORMATS (from developers.eko.in)
 
-### Authentication Headers:
+### BBPS (Bill Payments) - Electricity, DTH, Gas, EMI
 ```
-developer_key: Your static API key
-secret-key: Dynamic security key
-secret-key-timestamp: Timestamp in milliseconds
-request_hash: Hash for financial transactions
+URL: https://api.eko.in:25002/ekoicici/v2/billpayments/paybill
 Content-Type: application/json
+request_hash: timestamp + utility_acc_no + amount + user_code
+Body: { operator_id, utility_acc_no, amount }
+API call: requests.post(url, json=payload, headers=headers)
 ```
 
-### Key Generation (OFFICIAL):
-```python
-# Step 1: Encode access_key using base64
-encoded_key = base64.b64encode(access_key.encode()).decode()
-
-# Step 2: Generate secret-key
-secret_key = base64.b64encode(
-    hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-).decode()
-
-# Step 3: Generate request_hash for Bill Payments
-# Formula: timestamp + utility_acc_no + amount + user_code
-concatenated_string = timestamp + utility_acc_no + amount + user_code
-request_hash = base64.b64encode(
-    hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
-).decode()
+### DMT (Money Transfer) - Bank Transfer
 ```
-
-### API Call:
-```python
-payload = {
-    "operator_id": operator_id,
-    "utility_acc_no": utility_acc_no,
-    "amount": amount
-}
-response = requests.post(url, json=payload, headers=headers)
+URL: https://api.eko.in:25002/ekoapi/v2/...
+Content-Type: application/x-www-form-urlencoded
+request_hash formulas:
+  - Money Transfer: timestamp + customer_id + recipient_id + amount
+  - Add Recipient: timestamp only
+Body: Form data
+API call: requests.post(url, data=form_data, headers=headers)
 ```
 
 ## Service Status
 
-| Service | Function | Status |
-|---------|----------|--------|
-| Mobile Recharge | test_recharge_exact_format() | ✅ Working |
-| Electricity | execute_electricity_payment() | ✅ Working |
-| DTH | execute_bbps_bill_payment() | Ready for test |
-| Gas | execute_bbps_bill_payment() | Ready for test |
-| EMI | execute_bbps_bill_payment() | Ready for test |
+| Service | Function | Hash Formula | Status |
+|---------|----------|--------------|--------|
+| Mobile Recharge | test_recharge_exact_format() | timestamp + mobile + amount + user_code | ✅ Working |
+| Electricity | execute_electricity_payment() | timestamp + utility_acc_no + amount + user_code | ✅ Working |
+| DTH | execute_bbps_bill_payment() | timestamp + utility_acc_no + amount + user_code | Ready |
+| Gas | execute_bbps_bill_payment() | timestamp + utility_acc_no + amount + user_code | Ready |
+| EMI | execute_bbps_bill_payment() | timestamp + utility_acc_no + amount + user_code | Ready |
+| DMT | execute_dmt_transfer() | timestamp + customer_id + recipient_id + amount | Ready |
 
-## Files Changed
-- `backend/routes/eko_payments.py` - Updated with official format
+## DMT API Endpoints (v2)
+- `GET /api/eko/dmt/customer/v2/{mobile}` - Get customer
+- `POST /api/eko/dmt/customer/create/v2` - Create customer
+- `GET /api/eko/dmt/recipients/v2/{mobile}` - Get recipients
+- `POST /api/eko/dmt/recipient/add/v2` - Add recipient
+- `POST /api/eko/dmt/transfer/v2` - Initiate transfer
+- `GET /api/eko/dmt/transaction/v2/{ref}` - Get status
+- `GET /api/eko/dmt/banks` - Get bank list
+
+## Key Files
+- `backend/routes/eko_payments.py` - All Eko APIs
 - `backend/routes/unified_redeem_v2.py` - Service routing
 
 ## Credentials
 - Admin: admin@paras.com / 123456
 
-## Key Learnings
-1. **ALWAYS use official documentation** - not assumptions
-2. **IP whitelist errors can mask coding issues** - verify format first
-3. **Hash formula is critical** - `timestamp + utility_acc_no + amount + user_code`
-4. **Use `json=payload`** not `data=json_string` for cleaner code
+## Notes
+- Preview IP not whitelisted - test in production
+- DMT uses different base URL: `/ekoapi/v2/` vs `/ekoicici/v2/`

@@ -3158,3 +3158,538 @@ async def electricity_pay_endpoint(
         amount=amount,
         customer_mobile=customer_mobile
     )
+
+
+
+# ==================== DMT (DOMESTIC MONEY TRANSFER) APIs ====================
+# OFFICIAL EKO DOCUMENTATION FORMAT:
+# - Content-Type: application/x-www-form-urlencoded
+# - URL: /ekoapi/v2/... (different from BBPS)
+# - request_hash formulas vary by operation:
+#   * Money Transfer: timestamp + customer_id + recipient_id + amount
+#   * Add Recipient: timestamp only
+#   * Bill Payment: timestamp + utility_acc_no + amount + user_code
+
+# DMT Base URL
+DMT_BASE_URL = os.environ.get("EKO_DMT_URL", "https://api.eko.in:25002/ekoapi")
+
+
+class DMTCustomerRequest(BaseModel):
+    """Request model for DMT customer verification/creation"""
+    mobile_number: str
+    name: str = None
+    
+    
+class DMTRecipientRequest(BaseModel):
+    """Request model for adding bank recipient"""
+    customer_mobile: str
+    account_number: str
+    ifsc_code: str
+    recipient_name: str
+    recipient_mobile: str
+    bank_id: str
+
+
+class DMTTransferRequest(BaseModel):
+    """Request model for money transfer"""
+    customer_mobile: str
+    recipient_id: str
+    amount: str
+    channel: str = "2"  # 1=NEFT, 2=IMPS
+
+
+def generate_dmt_auth_headers(timestamp: str = None):
+    """
+    Generate authentication headers for DMT APIs.
+    DMT uses same auth as BBPS but different request_hash formula.
+    """
+    if not timestamp:
+        timestamp = str(int(time.time() * 1000))
+    
+    # Encode access_key using base64
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    
+    # Generate secret-key
+    secret_key = base64.b64encode(
+        hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+    ).decode()
+    
+    return {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp,
+        "Content-Type": "application/x-www-form-urlencoded"
+    }, encoded_key, timestamp
+
+
+def generate_dmt_request_hash(encoded_key: str, concat_string: str) -> str:
+    """Generate request_hash for DMT financial transactions"""
+    return base64.b64encode(
+        hmac.new(encoded_key.encode(), concat_string.encode(), hashlib.sha256).digest()
+    ).decode()
+
+
+@router.get("/dmt/customer/v2/{mobile}")
+async def get_dmt_customer(mobile: str):
+    """
+    Get/Verify DMT Customer.
+    API: GET /ekoapi/v2/customers/mobile_number:{mobile}
+    No request_hash required for non-financial operations.
+    """
+    import requests as req
+    
+    try:
+        headers, _, timestamp = generate_dmt_auth_headers()
+        
+        url = f"{DMT_BASE_URL}/v2/customers/mobile_number:{mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        logging.info(f"[DMT] Get customer: {mobile}")
+        logging.info(f"[DMT] URL: {url}")
+        
+        response = req.get(url, headers=headers, timeout=30)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        logging.info(f"[DMT] Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            return {
+                "success": result.get("status") == 0,
+                "http_status": response.status_code,
+                "data": result
+            }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/dmt/customer/create/v2")
+async def create_dmt_customer_v2(request: DMTCustomerRequest):
+    """
+    Create/Register DMT Customer (Sender).
+    API: PUT /ekoapi/v2/customers/mobile_number:{mobile}
+    Content-Type: application/x-www-form-urlencoded
+    """
+    import requests as req
+    
+    try:
+        headers, _, timestamp = generate_dmt_auth_headers()
+        
+        url = f"{DMT_BASE_URL}/v2/customers/mobile_number:{request.mobile_number}"
+        
+        form_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "name": request.name or "Customer"
+        }
+        
+        logging.info(f"[DMT] Create customer: {request.mobile_number}")
+        logging.info(f"[DMT] URL: {url}")
+        
+        response = req.put(url, data=form_data, headers=headers, timeout=30)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        logging.info(f"[DMT] Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            return {
+                "success": result.get("status") == 0,
+                "http_status": response.status_code,
+                "data": result
+            }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/dmt/recipients/v2/{customer_mobile}")
+async def get_dmt_recipients_v2(customer_mobile: str):
+    """
+    Get all recipients for a customer.
+    API: GET /ekoapi/v2/customers/mobile_number:{mobile}/recipients
+    """
+    import requests as req
+    
+    try:
+        headers, _, timestamp = generate_dmt_auth_headers()
+        
+        url = f"{DMT_BASE_URL}/v2/customers/mobile_number:{customer_mobile}/recipients?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        logging.info(f"[DMT] Get recipients for: {customer_mobile}")
+        
+        response = req.get(url, headers=headers, timeout=30)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        
+        try:
+            result = response.json()
+            return {
+                "success": result.get("status") == 0,
+                "http_status": response.status_code,
+                "data": result
+            }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/dmt/recipient/add/v2")
+async def add_dmt_recipient_v2(request: DMTRecipientRequest):
+    """
+    Add bank account recipient for a customer.
+    
+    OFFICIAL FORMAT:
+    - API: PUT /ekoapi/v2/customers/mobile_number:{customer}/recipients/acc_ifsc:{account}_{ifsc}
+    - Content-Type: application/x-www-form-urlencoded
+    - request_hash: timestamp only (for add recipient)
+    """
+    import requests as req
+    
+    try:
+        headers, encoded_key, timestamp = generate_dmt_auth_headers()
+        
+        # request_hash for add recipient = timestamp only
+        request_hash = generate_dmt_request_hash(encoded_key, timestamp)
+        headers["request_hash"] = request_hash
+        
+        # URL format: acc_ifsc:{account_number}_{ifsc_code}
+        recipient_id = f"{request.account_number}_{request.ifsc_code}"
+        url = f"{DMT_BASE_URL}/v2/customers/mobile_number:{request.customer_mobile}/recipients/acc_ifsc:{recipient_id}"
+        
+        form_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "recipient_mobile": request.recipient_mobile,
+            "bank_id": request.bank_id,
+            "recipient_type": "3",
+            "recipient_name": request.recipient_name
+        }
+        
+        logging.info(f"[DMT] Add recipient: {recipient_id}")
+        logging.info(f"[DMT] URL: {url}")
+        logging.info(f"[DMT] Hash concat: {timestamp}")
+        
+        response = req.put(url, data=form_data, headers=headers, timeout=30)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        logging.info(f"[DMT] Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            return {
+                "success": result.get("status") == 0,
+                "http_status": response.status_code,
+                "data": result,
+                "recipient_id": result.get("data", {}).get("recipient_id")
+            }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/dmt/transfer/v2")
+async def initiate_dmt_transfer_v2(request: DMTTransferRequest):
+    import requests as req
+    
+    try:
+        headers, encoded_key, timestamp = generate_dmt_auth_headers()
+        
+        # request_hash for money transfer = timestamp + customer_id + recipient_id + amount
+        concat_string = timestamp + request.customer_mobile + request.recipient_id + request.amount
+        request_hash = generate_dmt_request_hash(encoded_key, concat_string)
+        headers["request_hash"] = request_hash
+        
+        url = f"{DMT_BASE_URL}/v2/transactions"
+        
+        # Generate unique client_ref_id
+        client_ref_id = f"DMT{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
+        form_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "customer_id": request.customer_mobile,
+            "recipient_id": request.recipient_id,
+            "amount": request.amount,
+            "channel": request.channel,  # 1=NEFT, 2=IMPS
+            "state": "1",  # 1=Commit
+            "currency": "INR",
+            "latlong": "19.0760,72.8777",
+            "client_ref_id": client_ref_id,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        logging.info(f"[DMT] Transfer: {request.amount} to recipient {request.recipient_id}")
+        logging.info(f"[DMT] URL: {url}")
+        logging.info(f"[DMT] Hash concat: {concat_string[:50]}...")
+        logging.info(f"[DMT] Client Ref: {client_ref_id}")
+        
+        response = req.post(url, data=form_data, headers=headers, timeout=60)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        logging.info(f"[DMT] Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            
+            eko_status = result.get("status")
+            tx_status = result.get("data", {}).get("tx_status")
+            
+            if eko_status == 0:
+                return {
+                    "success": True,
+                    "status": "SUCCESS",
+                    "http_status": response.status_code,
+                    "data": result,
+                    "transaction": {
+                        "tid": result.get("data", {}).get("tid"),
+                        "utr": result.get("data", {}).get("utrnumber"),
+                        "client_ref_id": client_ref_id,
+                        "amount": request.amount
+                    }
+                }
+            elif tx_status == "2":
+                return {
+                    "success": True,
+                    "status": "PROCESSING",
+                    "http_status": response.status_code,
+                    "data": result,
+                    "transaction": {
+                        "tid": result.get("data", {}).get("tid"),
+                        "client_ref_id": client_ref_id
+                    }
+                }
+            else:
+                return {
+                    "success": False,
+                    "status": "FAILED",
+                    "http_status": response.status_code,
+                    "data": result,
+                    "error": result.get("message", f"Eko error: {eko_status}")
+                }
+                
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/dmt/transaction/v2/{client_ref_id}")
+async def get_dmt_transaction_status_v2(client_ref_id: str):
+    """
+    Get transaction status by client_ref_id.
+    API: GET /ekoapi/v2/transactions
+    """
+    import requests as req
+    
+    try:
+        headers, _, _ = generate_dmt_auth_headers()
+        
+        url = f"{DMT_BASE_URL}/v2/transactions?initiator_id={EKO_INITIATOR_ID}&client_ref_id={client_ref_id}"
+        
+        logging.info(f"[DMT] Get transaction: {client_ref_id}")
+        
+        response = req.get(url, headers=headers, timeout=30)
+        
+        try:
+            result = response.json()
+            return {
+                "success": result.get("status") == 0,
+                "http_status": response.status_code,
+                "data": result
+            }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:200]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/dmt/banks")
+async def get_dmt_banks():
+    """
+    Get list of supported banks for DMT.
+    """
+    # Common banks with Eko bank IDs
+    banks = [
+        {"bank_id": "58", "name": "State Bank of India", "ifsc_prefix": "SBIN"},
+        {"bank_id": "5", "name": "HDFC Bank", "ifsc_prefix": "HDFC"},
+        {"bank_id": "7", "name": "ICICI Bank", "ifsc_prefix": "ICIC"},
+        {"bank_id": "12", "name": "Axis Bank", "ifsc_prefix": "UTIB"},
+        {"bank_id": "15", "name": "Kotak Mahindra Bank", "ifsc_prefix": "KKBK"},
+        {"bank_id": "24", "name": "Punjab National Bank", "ifsc_prefix": "PUNB"},
+        {"bank_id": "21", "name": "Bank of Baroda", "ifsc_prefix": "BARB"},
+        {"bank_id": "6", "name": "Yes Bank", "ifsc_prefix": "YESB"},
+        {"bank_id": "56", "name": "Kotak Mahindra Bank", "ifsc_prefix": "KKBK"},
+        {"bank_id": "90", "name": "DBS Bank", "ifsc_prefix": "DBSS"},
+    ]
+    
+    return {
+        "success": True,
+        "banks": banks,
+        "note": "For complete bank list, refer to Eko documentation"
+    }
+
+
+async def execute_dmt_transfer(
+    customer_mobile: str,
+    recipient_id: str,
+    amount: str,
+    channel: str = "2"
+) -> dict:
+    """
+    Internal function to execute DMT transfer.
+    Called from unified_redeem_v2.py for bank transfer service.
+    
+    OFFICIAL FORMAT:
+    - Content-Type: application/x-www-form-urlencoded
+    - request_hash: timestamp + customer_id + recipient_id + amount
+    """
+    import requests as req
+    
+    try:
+        timestamp = str(int(time.time() * 1000))
+        
+        # Encode access_key
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        
+        # Generate secret-key
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # request_hash = timestamp + customer_id + recipient_id + amount
+        concat_string = timestamp + customer_mobile + recipient_id + amount
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), concat_string.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        url = f"{DMT_BASE_URL}/v2/transactions"
+        
+        client_ref_id = f"DMT{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:6].upper()}"
+        
+        form_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "customer_id": customer_mobile,
+            "recipient_id": recipient_id,
+            "amount": amount,
+            "channel": channel,
+            "state": "1",
+            "currency": "INR",
+            "latlong": "19.0760,72.8777",
+            "client_ref_id": client_ref_id,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        logging.info(f"[DMT] Execute transfer: {amount} to {recipient_id}")
+        logging.info(f"[DMT] Hash concat: {concat_string[:50]}...")
+        
+        response = req.post(url, data=form_data, headers=headers, timeout=60)
+        
+        logging.info(f"[DMT] Response: {response.status_code}")
+        logging.info(f"[DMT] Body: {response.text[:500]}")
+        
+        if response.status_code == 403:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "403",
+                "message": "Access denied (403)"
+            }
+        
+        try:
+            result = response.json()
+        except:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": f"Invalid response: {response.text[:100]}"
+            }
+        
+        eko_status = result.get("status")
+        tx_status = result.get("data", {}).get("tx_status")
+        
+        if eko_status == 0:
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": result.get("data", {}).get("tid"),
+                "utr": result.get("data", {}).get("utrnumber"),
+                "client_ref_id": client_ref_id,
+                "message": result.get("message", "Transfer successful")
+            }
+        elif tx_status == "2":
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": result.get("data", {}).get("tid"),
+                "client_ref_id": client_ref_id,
+                "message": "Transfer processing"
+            }
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(eko_status),
+                "message": result.get("message", f"Eko error: {eko_status}")
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
+        }
