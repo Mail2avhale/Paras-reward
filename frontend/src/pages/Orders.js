@@ -721,7 +721,7 @@ const Orders = ({ user, onLogout }) => {
             <p className="text-gray-600 text-sm mb-6">Start using Bill Payments, Gift Vouchers, or Redeem to Bank to see your requests here!</p>
             <div className="flex flex-wrap gap-3 justify-center">
               <button 
-                onClick={() => navigate('/bill-payments')}
+                onClick={() => navigate('/redeem')}
                 className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium transition-colors text-sm"
               >
                 📱 Bill Payments

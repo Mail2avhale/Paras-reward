@@ -22,6 +22,7 @@ const getPageKeyFromPath = (pathname) => {
     '/subscription': 'subscription',
     '/profile': 'profile',
     '/game': 'game',
+    '/redeem': 'bill-payments',
     '/bill-payments': 'bill-payments',
     '/gift-vouchers': 'gift-vouchers',
   };
