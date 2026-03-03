@@ -20,7 +20,7 @@ import os
 import uuid
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-dmt-flow.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-payment-flow.preview.emergentagent.com').rstrip('/')
 
 
 class TestManualUPIDoesNotActivateSubscription:

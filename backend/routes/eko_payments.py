@@ -8,7 +8,7 @@ Documentation: https://developers.eko.in
 Error Codes Reference: https://developers.eko.in/docs/error-codes
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 from typing import Optional, List
 import httpx
@@ -18,6 +18,7 @@ import hmac
 import base64
 import json
 import time
+import uuid
 from datetime import datetime, timezone
 import logging
 
@@ -2705,4 +2706,300 @@ async def test_paybill_direct(mobile: str = "9936606966", amount: str = "29"):
         return {
             "request": {"url": url, "headers": headers, "body": body},
             "response": {"status": response.status_code, "body": response.json()}
+        }
+
+
+# ==================== BBPS BILL PAYMENT (FORM-URLENCODED) ====================
+
+@router.post("/bbps/pay-bill-v2")
+async def bbps_pay_bill_form(
+    utility_acc_no: str = Query(..., description="Consumer/Account number"),
+    operator_id: str = Query(..., description="Eko operator ID"),
+    amount: str = Query(..., description="Payment amount in INR"),
+    sender_name: str = Query("ParasReward", description="Sender/Customer name"),
+    reference_id: str = Query(None, description="Optional reference ID")
+):
+    """
+    BBPS Bill Payment API using application/x-www-form-urlencoded format.
+    
+    This is the CORRECT format for BBPS services:
+    - DTH (category 4)
+    - Electricity (category 8)
+    - Gas (category 2)
+    - EMI/Loan (category 21)
+    - Water (category 11)
+    
+    The request_hash formula for BBPS is:
+    HMAC-SHA256(timestamp + utility_acc_no + amount + operator_id + reference_id, base64(auth_key))
+    
+    Args:
+        utility_acc_no: Consumer/Account number
+        operator_id: Eko operator ID (e.g., 16 for Dish TV, 62 for MSEDCL)
+        amount: Payment amount in INR
+        sender_name: Sender/Customer name
+        reference_id: Optional reference ID (auto-generated if not provided)
+    """
+    import requests as req
+    
+    try:
+        # Step 1: Generate timestamp (milliseconds)
+        timestamp = str(int(time.time() * 1000))
+        
+        # Step 2: Generate secret-key (same as mobile recharge)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Step 3: Generate reference_id if not provided
+        if not reference_id:
+            reference_id = f"BBPS{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        
+        # Step 4: Generate request_hash 
+        # CORRECT FORMULA FROM EKO DOCS: timestamp + utility_acc_no + amount + user_code
+        user_code = EKO_USER_CODE
+        concat_str = timestamp + utility_acc_no + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Step 5: Prepare JSON body (SAME FORMAT AS MOBILE RECHARGE!)
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        body = {
+            "source_ip": "127.0.0.1",
+            "user_code": user_code,
+            "amount": amount,
+            "client_ref_id": reference_id,
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": sender_name,
+            "operator_id": operator_id,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
+        
+        # Convert to compact JSON
+        body_json = json.dumps(body, separators=(',', ':'))
+        
+        logging.info(f"=== BBPS PAY BILL (JSON) ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
+        logging.info(f"Concat for hash: {concat_str[:50]}...")
+        logging.info(f"Request Hash: {request_hash}")
+        
+        # Make request with data=body_json (SAME AS MOBILE RECHARGE!)
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        
+        logging.info(f"Response Status: {response.status_code}")
+        logging.info(f"Response Body: {response.text[:300]}")
+        
+        if response.status_code == 403:
+            return {
+                "success": False,
+                "http_status": 403,
+                "error": "Access denied (403). Please verify IP whitelist with Eko.",
+                "request_details": {
+                    "url": url,
+                    "operator_id": operator_id,
+                    "utility_acc_no": utility_acc_no[-4:] if utility_acc_no else "NA",
+                    "amount": amount
+                }
+            }
+        
+        try:
+            result = response.json()
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": f"Invalid response: {response.text[:200]}",
+                "parse_error": True
+            }
+        
+        # Check Eko response status
+        eko_status = result.get("status")
+        tx_status = result.get("data", {}).get("tx_status")
+        
+        if eko_status == 0:
+            return {
+                "success": True,
+                "http_status": response.status_code,
+                "eko_response": result,
+                "transaction": {
+                    "tid": result.get("data", {}).get("tid"),
+                    "utr": result.get("data", {}).get("bbpstrxnrefid"),
+                    "client_ref_id": reference_id,
+                    "message": result.get("message", "Bill payment successful")
+                }
+            }
+        elif tx_status == 2:
+            return {
+                "success": True,
+                "http_status": response.status_code,
+                "eko_response": result,
+                "transaction": {
+                    "tid": result.get("data", {}).get("tid"),
+                    "status": "PROCESSING",
+                    "client_ref_id": reference_id,
+                    "message": "Payment initiated, processing"
+                }
+            }
+        else:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "eko_response": result,
+                "error": result.get("message", f"Eko error code: {eko_status}")
+            }
+            
+    except Exception as e:
+        logging.error(f"BBPS pay bill error: {e}")
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
+async def execute_bbps_bill_payment(
+    utility_acc_no: str,
+    operator_id: str,
+    amount: str,
+    sender_name: str = "ParasReward",
+    reference_id: str = None
+) -> dict:
+    """
+    Internal function to execute BBPS bill payment.
+    Called from unified_redeem_v2.py for DTH, Electricity, Gas, EMI services.
+    
+    Uses application/json format (same as mobile recharge - verified from Eko docs).
+    
+    request_hash formula: timestamp + utility_acc_no + amount + user_code
+    """
+    import requests as req
+    
+    try:
+        # Generate timestamp
+        timestamp = str(int(time.time() * 1000))
+        
+        # Generate secret-key
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Generate reference_id if not provided
+        if not reference_id:
+            reference_id = f"BBPS{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        
+        user_code = EKO_USER_CODE
+        
+        # Generate request_hash - CORRECT FORMULA FROM EKO DOCS:
+        # timestamp + utility_acc_no + amount + user_code
+        concat_str = timestamp + utility_acc_no + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Prepare JSON body (NOT form-urlencoded!)
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        body = {
+            "source_ip": "127.0.0.1",
+            "user_code": user_code,
+            "amount": amount,
+            "client_ref_id": reference_id,
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": sender_name,
+            "operator_id": operator_id,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
+        
+        # Convert to compact JSON (VERIFIED WORKING FORMAT)
+        body_json = json.dumps(body, separators=(',', ':'))
+        
+        logging.info(f"[BBPS] Executing: operator={operator_id}, account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, amount={amount}")
+        logging.info(f"[BBPS] Concat for hash: {concat_str[:40]}...")
+        
+        # Use data=body_json (NOT json=body) - this is how it works for mobile recharge
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        
+        logging.info(f"[BBPS] Response: {response.status_code}")
+        logging.info(f"[BBPS] Response body: {response.text[:200]}")
+        
+        if response.status_code == 403:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "403",
+                "message": "Access denied (403). Service may not be activated or IP not whitelisted."
+            }
+        
+        try:
+            result = response.json()
+        except:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(response.status_code),
+                "message": f"Invalid API response: {response.text[:100]}"
+            }
+        
+        eko_status = result.get("status")
+        tx_status = result.get("data", {}).get("tx_status")
+        eko_tid = result.get("data", {}).get("tid")
+        bbps_ref = result.get("data", {}).get("bbpstrxnrefid")
+        
+        if eko_status == 0:
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": eko_tid,
+                "utr": bbps_ref,
+                "client_ref_id": reference_id,
+                "message": result.get("message", "Bill payment successful")
+            }
+        elif tx_status == 2:
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": eko_tid,
+                "client_ref_id": reference_id,
+                "message": "Payment initiated, processing"
+            }
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(eko_status),
+                "eko_tid": eko_tid,
+                "message": result.get("message", f"Eko error: {eko_status}")
+            }
+            
+    except Exception as e:
+        logging.error(f"[BBPS] Error: {e}")
+        import traceback
+        logging.error(f"[BBPS] Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
         }

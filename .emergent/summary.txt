@@ -10,155 +10,154 @@ The user's initial request was to fix critical bugs in their Paras Reward financ
 6.  **Play Store Compliance:** Ensure all user-facing text uses Redeem instead of Withdrawal. Redeem to Bank Account is the approved name for DMT.
 7.  **Time Restriction:** Users can only create redeem requests between 8 AM and 8 PM IST.
 8.  **Improved User Feedback:** Show detailed request information (timestamps, mobile numbers, etc.) and clear failure reasons from the Eko API on both user and admin dashboards.
+9.  **Automatic Bill/Plan Fetching:** For services like Electricity, Gas, Postpaid, and EMI, the bill amount should be fetched automatically after the user enters their consumer number. For Prepaid Mobile, available plans should be fetched.
 
-**User's preferred language**: The user communicates in **Marathi**. The next agent **MUST** continue to respond in Marathi.
+**User's preferred language**: The user initially communicated in Marathi but has explicitly requested to switch to **English**. The next agent **MUST** respond in English only.
 
 **what currently exists?**
-The primary P0 blocker from the previous session—Eko API authentication failing in an  context—has been **resolved**. Live transactions for all BBPS services (Mobile Recharge, DTH, Electricity, Gas) from the admin approval workflow are now **working correctly**.
+The application has a redesigned Redeem page () which supports a multi-step workflow for various payment services. This includes UI elements for automatic bill fetching for Electricity, Gas, and EMI. Backend validation for service-specific fields has been added. The UI has been fully translated to English per the user's request.
 
-Several significant UI/UX improvements have been implemented based on user feedback:
-*   The Admin Dashboard now has a tabbed interface to filter redeem requests by status (Active, Completed, Failed, Rejected).
-*   User-facing error messages from the Eko API are now stored and displayed on both the user and admin dashboards.
-*   The user's My Orders page has been enhanced to show more details.
-*   A time-based restriction (8 AM - 8 PM IST) for creating redeem requests is in place.
-*   The UI has been cleaned up by removing obsolete components and renaming DMT to the policy-compliant Redeem to Bank Account.
+However, a critical  error from the Eko API is blocking all BBPS services (DTH, Electricity, EMI, Gas) except for mobile recharge. After extensive debugging, the root cause was identified: the code sends API requests as  with an incorrect , while the Eko Bill Payment API expects  with a completely different hash formula and body structure. The working mobile recharge uses a different, simpler Eko API.
 
-The application is now stable for all BBPS services. The current focus is on implementing the more complex Eko DMT (Direct Money Transfer) flow.
+The agent has identified the exact changes needed to fix this but has not yet implemented the solution.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the Eko DMT (Direct Money Transfer) feature, now labeled Redeem to Bank Account. The agent was debugging why the API call returned a 404 error, realizing that DMT is not a single API call like recharges but a more complex, multi-step process (e.g., recipient registration, OTP, transfer). The user has provided their personal bank account details for testing.
+-   **Last item agent was working:** Critically analyzing a  command provided by the user (message #480) and comparing it with the existing code. This led to the discovery of the fundamental mismatch in , body format, and  calculation for all failing BBPS services.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Backend testing agent. The agent needs to implement and test the multi-step Eko DMT API flow. This will involve creating and calling several new endpoints.
+-   **Which testing method agent to use?** Backend testing agent. The agent must rewrite the core Eko API calling function and then create tests to verify that DTH, Electricity, and EMI payments succeed.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Implement and Test Eko DMT (Direct Money Transfer) Flow (P0)
--   Issue 2: Admin dashboard tabs might not be refreshing correctly (P2)
--   Issue 3: Clear Pending Legacy Production Requests (P2)
--   Issue 4: Full End-to-End Workflow Testing for all services (P2)
+-   Issue 1: Fix Eko API 403 Error for DTH, Electricity, & EMI (P0)
+-   Issue 2: Implement Automatic Plan Fetch for Prepaid Mobile (P1)
+-   Issue 3: Admin dashboard tabs might not be refreshing correctly (P2)
+-   Issue 4: Clear Pending Legacy Production Requests (P2)
+-   Issue 5: Full End-to-End Workflow Testing for all services (P2)
+-   Issue 6: Implement and Test Eko DMT (Direct Money Transfer) Flow (P2)
 
 **Issues Detail:**
--   **Issue 1: Implement and Test Eko DMT (Direct Money Transfer) Flow**
-    -   **Attempted fixes:** The agent tried calling a simple endpoint () which resulted in a 404. They realized that the DMT flow is more complex and likely involves separate API calls for customer registration, recipient registration, and the final transfer. The agent had just started to investigate the correct multi-step flow before the session ended.
+-   **Issue 1: Fix Eko API 403 Error for DTH, Electricity, & EMI**
+    -   **Attempted fixes:** The agent investigated IP whitelisting, environment variables, and data types, all of which were red herrings. The breakthrough was discovering that the code was using the wrong API protocol () and an incorrect  formula.
     -   **Next debug checklist:**
-        1.  Do not use a single API call. Research and implement the full, multi-step Eko DMT flow. This likely includes:
-            a. Customer/Sender verification/registration.
-            b. Beneficiary/Recipient registration.
-            c. The final transfer API call.
-        2.  Create new backend routes in  or a new file to handle each step of this flow.
-        3.  Update the  function in  to orchestrate this new multi-step DMT flow when an admin approves a Redeem to Bank Account request.
-        4.  Use the user's provided test details:
-            -   **Name:** Santosh Shamrao Avhale
-            -   **Account Number:** 8829010000024578
-            -   **Bank Name:** DBS Bank
-            -   **IFSC:** DBSS0IN0829
-        5.  Test with small amounts as requested by the user (e.g., ₹19, ₹20, ₹30).
-    -   **Why fix this issue and what will be achieved with the fix?** This is the final core payment feature required by the user to complete the new Redeem system.
+        1.  In , modify or create a new function to handle BBPS Bill Payments.
+        2.  Change the  header to .
+        3.  Update the  generation logic to follow the formula for bill payments: .
+        4.  Transform the request body from a JSON object to a URL-encoded string (e.g., ).
+        5.  Use the correct parameter names required by the form-urlencoded API (e.g., , ).
+        6.  Update  in  to call this new/fixed function for DTH, Electricity, EMI, and Gas services.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the primary blocker for almost all payment services in the application. Fixing it will enable the core functionality.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Backend
-    -   **Blocked on other issue:** none
+    -   **Blocked on other issue:** None
 
--   **Issue 2: Admin dashboard tabs might not be refreshing correctly**
-    -   **Attempted fixes:** The agent reviewed the frontend code and confirmed the  dependencies seemed correct. They also verified the backend API was filtering correctly. However, the user reported that completed/failed requests were still appearing in the Active tab.
+-   **Issue 2: Implement Automatic Plan Fetch for Prepaid Mobile**
+    -   **Attempted fixes:** None. The UI was restructured in preparation for this, but the plan-fetching logic was not implemented.
     -   **Next debug checklist:**
-        1.  In the frontend , add  statements inside the  and  functions to trace the state of , , and the API calls being made.
-        2.  Verify the API response for each tab to ensure the backend is returning the correct filtered data.
-        3.  Check for any state management issues in React that might prevent the component from re-rendering with the new data.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a key usability feature for the admin, and fixing it will make managing requests much easier.
+        1.  Identify the Eko API endpoint for fetching mobile recharge plans.
+        2.  Create a new backend endpoint (e.g., ).
+        3.  In , implement the  function to call this endpoint after a user enters their mobile number.
+        4.  Display the fetched plans and auto-populate the amount when a plan is selected.
+    -   **Why fix this issue and what will be achieved with the fix?** It's a user-requested feature to improve the UX for the one currently working service.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** none
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on other issue:** None
+
+-   **Issue 3, 4, 5, 6:** No progress was made on these issues from the previous handoff. They are still pending.
 
 **In progress Task List**:
--   **Task 1: Implement Full Eko DMT Flow**
-    -   **Where to resume:**  and .
-    -   **What will be achieved with this?** A working Redeem to Bank Account feature that allows users to transfer funds to a bank account after admin approval.
+-   **Task 1: Refactor Eko API call for BBPS services**
+    -   **Where to resume:** .
+    -   **What will be achieved with this?** A working implementation for DTH, Electricity, and EMI payments by sending requests in the correct  format.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Backend primarily, then frontend to verify the form submission.
-    -   **Blocked on something:** Understanding the correct multi-step Eko API for DMT.
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on something:** Nothing.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Decommission Old System:** After DMT is live, systematically remove all old payment-related pages (), components, and API routes ( collection).
--   **P1: Test All Services:** Perform a full end-to-end regression test for all 6 Eko services now that the core system is stable.
+-   **P1: Implement Automatic Plan Fetch for Prepaid Mobile** (See Issue 2).
+-   **P1: Decommission Old System:** After all services are stable, remove old payment pages and APIs.
+-   **P1: Test All Services:** Perform a full end-to-end regression test for all 6 Eko services.
 
 **Future Tasks:**
--   **P2: Fix Razorpay Auto-Sync:** Address the error handling for non-existent orders.
--   **P3: Add Email/Mobile OTP verification on signup.**
--   **P3: Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.**
+-   **P2:** Fix the bug where admin dashboard tabs do not refresh correctly.
+-   **P2:** Implement the Eko DMT (Direct Money Transfer) flow.
+-   **P2:** Clear ~1700 old pending requests from the production database.
+-   **P2:** Fix Razorpay Auto-Sync error handling.
+-   **P3:** Add Email/Mobile OTP verification on signup.
+-   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
 
 **Completed work in this session**
--   **P0 Eko Authentication Bug (FIXED):** The critical No key for Response error in the async admin workflow was resolved. The root cause was identified as  being unreliable in the thread context; the fix involved calling a function from  that uses pre-loaded module-level variables.
--   **Live BBPS Transactions (Enabled):** Successful, live transactions from the admin panel have been confirmed for Mobile Recharge, DTH, Gas, and Electricity.
--   **Admin Dashboard UI Overhaul:** Implemented a tabbed interface (, , , ) to filter redeem requests.
--   **User & Admin Feedback Loop:** Implemented logic to save and display specific failure reasons from the Eko API on both user and admin dashboards.
--   **Time-Based Request Restriction:** Users can now only create redeem requests between 8 AM and 8 PM IST.
--   **UI/UX Cleanup:** Removed obsolete UI elements and renamed DMT to Redeem to Bank Account for Google Play Policy compliance.
--   **Default Sorting:** Changed the admin request list to sort by oldest first by default.
+-   **Critical Bug Discovery:** Identified that a  error was caused by using the wrong API protocol ( instead of ) and an incorrect  for BBPS services.
+-   **UI Flow Rework:** The Redeem page () was refactored into a multi-step flow (Provider -> ID -> Auto-Fetch -> Submit) for a better user experience.
+-   **Bill Fetch UI Implementation:** The UI and backend endpoint for fetching bill amounts for Electricity, Gas, and EMI were created.
+-   **Language Translation:** Converted all user-facing text in  from Marathi to English.
+-   **Bug Fix (Postpaid Operators):** Corrected an issue where prepaid mobile operators were incorrectly displayed for the postpaid service.
+-   **Backend Validation:** Added service-specific validation on the backend for creating redeem requests (e.g., ensuring  is present for EMI).
 
 **Earlier issues found/mentioned but not fixed**
--   The task to clear ~1700 old pending requests from the production database (, ) remains unresolved.
+-   The admin dashboard tabs do not automatically refresh after a request's status is changed.
+-   The task to clear ~1700 old pending requests from the production database remains unresolved.
+-   The Eko DMT feature is not implemented.
 
 **Known issue recurrence from previous fork**
--   **Issue:** The **No key for Response** error recurred frequently.
+-   **Issue:** Eko API returning  for most services.
 -   **Recurrence count:** High.
--   **Status:** **RESOLVED**. The root cause was determined to be the  call failing to retrieve credentials within the  context. The solution was to use a helper function from another module where the credentials were loaded as module-level variables at startup. This fix has proven stable.
+-   **Status:** **IN PROGRESS**. The root cause has been identified (wrong API protocol and hashing), and a fix is planned.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, 
--   **Critical Discovery:** The unreliability of  in background threads (). The solution is to load environment variables into module-level variables at application startup and reference them from there.
--   **Frontend:** React.js
--   **Integration:** Eko Payments API (BBPS and DMT)
+-   **Eko API Discrepancy:** A critical distinction exists between Eko's APIs. The working Mobile Recharge API uses . The failing Bill Payment (BBPS) API requires , a different  formula, and different body parameter names. This is the core problem to be solved.
+-   **Frontend State Management:** The  component uses multiple  and  hooks to manage the complex, dynamic state of the multi-step form.
 
 **key DB schema**
--   **redeem_requests:** The schema was effectively updated to utilize an  field to store user-friendly failure reasons from the Eko API.
+-   No changes were made to the database schema in this session.
 
 **All files of reference**
--   : The core file for the admin approval workflow. Contains the fix for the P0 bug.
--   : Contains the reliable, working Eko API call logic.
--   : The main admin UI, which was refactored to include tabs and display more data.
--   : The user-facing form for creating requests, updated with time restrictions.
--   : The user's history page, updated to show detailed failure reasons.
+-   : Contains the incorrect Eko API logic that must be fixed. The solution lies in changing the request format here.
+-   : The entry point for redeem requests, which calls functions in .
+-   : The main user-facing redeem form that was heavily refactored.
+
+**Areas that need refactoring**:
+- The  file should be refactored to have separate, clearly named functions for Recharge vs. Bill Payment to avoid confusion and bugs in the future.
 
 **Critical Info for New Agent**
--   **THE P0 AUTH BUG IS FIXED:** The No key for Response issue is solved. The solution is in  calling the  function in . Do not change this core logic. The problem was environment variables in threads, not the auth algorithm.
--   **DMT IS THE NEXT PRIORITY:** The user wants Redeem to Bank Account to work. This is not a simple, single API call. You must implement the full multi-step flow provided by Eko (likely involving customer/recipient registration).
--   **USE THE USER'S TEST DATA:** The user has provided their real bank details for DMT testing. Use them with small transaction amounts (e.g., under 50 Rs).
--   **CONTINUE IN MARATHI:** This is a strict requirement. All communication with the user must be in Marathi.
--   **UI IS IMPORTANT:** The user pays close attention to the frontend. Ensure the admin dashboard tabs work correctly and that all data is displayed as requested.
+-   **THE 403 ERROR IS A CODING ISSUE.** Do not investigate IP whitelisting. The root cause is confirmed to be the code sending  to Eko endpoints that expect .
+-   **YOUR FIRST TASK:** Fix the BBPS API calls in . Follow the  example from message #480 as the source of truth for the correct format: change the , use a URL-encoded body, and implement the correct  formula ().
+-   **USER LANGUAGE IS NOW ENGLISH.** All communication must be in English.
+-   **The UI has a new multi-step flow.** Be aware of the logic in  when making changes. After fixing the backend, test this new UI flow end-to-end.
+-   **Next User Request:** After the BBPS services are working, the user wants automatic plan fetching for prepaid mobile recharges.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asked for DMT implementation.
-9. **Agent:** Started DMT implementation.
-8. **User:** Provided personal bank account details for testing DMT.
-7. **Agent:** Acknowledged the details and continued debugging the DMT endpoint.
-6. **User:** Asked the agent to test the implementation in the environment.
-5. **Agent:** Bypassed the time restriction to test DMT.
-4. **User:** Asked to show proper failed reasons from the Eko API.
-3. **Agent:** Implemented the feature to store and display Eko error messages.
-2. **User:** Requested two changes: show Eko API failure reasons and sort redeem requests by oldest first.
-1. **User:** Pointed out that completed/failed requests are still visible in the pending list on the admin dashboard.
+10. : User provides the **CRITICAL**  command example, revealing the correct  format and the correct  formula for bill payments. This is the key to solving the main problem.
+9. : User insists the 403 error is a coding issue, not an IP issue, and that all services are enabled on their Eko account. They instruct the agent to re-read the developer docs carefully.
+8. : User asks the agent to double-check , , JSON structure, and for extra spaces.
+7. : User asks the agent to enable all services via the Eko API.
+6. : User asks the agent to use the testing agent to verify the code for DTH, Electricity, and EMI against the Eko developer documents.
+5. : User states that mobile recharge is working in production but DTH/Electricity/EMI get a 403 error, concluding it must be a code issue and telling the agent to study the developer documents again.
+4. : User confirms IP whitelisting is done and instructs the agent to check all other services' code against the Eko developer documents, similar to how mobile recharge was fixed.
+3. : User relays a message from Emergent support with the correct **production** egress IPs and confirms mobile recharges are now working in production.
+2. : User relays a message from Eko support stating their IP has been whitelisted and that the  error must be a code issue.
+1. : User requests a full test of the EMI payment flow, including field entry and proper error handling.
 
 **Project Health Check:**
--   **Broken:** The DMT (Redeem to Bank Account) functionality is not implemented and currently fails with a 404. The admin dashboard tab filtering is potentially buggy.
+-   **Broken:** DTH, Electricity, EMI, and Gas payments are all non-functional due to the  error. The Bill Fetch feature is also broken for the same reason. The DMT (Redeem to Bank Account) feature is not implemented.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Eko:** Live. BBPS services are fully functional. The DMT service integration is in progress.
+-   **Eko:** Live. Mobile recharge (non-BBPS) is functional. BBPS services (DTH, Electricity, etc.) and DMT are integrated but non-functional due to the 403 error.
 -   **Razorpay:** Live. No changes.
 -   **MongoDB Atlas:** Live. No changes.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES, but its findings were superseded by the later discovery of the  issue.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** The admin dashboard tabs may not be filtering requests correctly after a status change.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   **Admin User**:  / 
@@ -170,6 +169,6 @@ The application is now stable for all BBPS services. The current focus is on imp
     -   **IFSC:** DBSS0IN0829
 
 **What agent forgot to execute**
--   The P1 task to clear pending legacy production requests was not started.
--   A full end-to-end regression test of all services post-fix has not been performed.
--   The bug where admin tabs don't refresh correctly after a request's status changes is still pending.</analysis>
+-   The agent did not implement the fix for the  error after correctly identifying the root cause.
+-   The agent did not begin implementation of the Automatic Plan Fetch feature for prepaid mobile, a pending user request.
+-   The P2 tasks from the previous session (admin dashboard refresh, legacy data cleanup, DMT implementation) were not addressed.</analysis>

@@ -26,7 +26,7 @@ import base64
 import time
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-dmt-flow.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-payment-flow.preview.emergentagent.com')
 
 # Test authentication key (if not available, use a test key)
 TEST_AUTH_KEY = os.environ.get('EKO_AUTHENTICATOR_KEY', '7a2529f5-3587-4add-a2df-3d0606d62460')

@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260302_130340/results.json' }],
   ],
   use: {
-    baseURL: 'https://redeem-dmt-flow.preview.emergentagent.com',
+    baseURL: 'https://redeem-payment-flow.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

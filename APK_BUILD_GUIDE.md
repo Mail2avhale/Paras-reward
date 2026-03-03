@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://redeem-dmt-flow.preview.emergentagent.com",
+    "url": "https://redeem-payment-flow.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

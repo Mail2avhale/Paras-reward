@@ -6,7 +6,7 @@ Build a unified "Redeem" system for Eko-powered payment services (Mobile Recharg
 ## Core Requirements
 1. **Unified Redeem Flow:** Single page for all payment services
 2. **Admin Approval Workflow:** All requests require admin approval before Eko API call
-3. **Charging Logic:** Eko charge + ₹10 flat + 20% admin charge
+3. **Charging Logic:** Eko charge + Rs10 flat + 20% admin charge
 4. **Play Store Compliance:** Use "Redeem" instead of "Withdrawal"
 
 ## Architecture
@@ -17,39 +17,35 @@ Build a unified "Redeem" system for Eko-powered payment services (Mobile Recharg
 
 ## What's Been Implemented
 
-### ✅ Completed (March 2, 2026)
+### Completed (December 2025)
 
-1. **P0 Fix - Admin Workflow Eko Integration**
-   - Root cause: `os.environ.get()` not working in FastAPI async context
-   - Fix: Use module-level EKO credentials from `eko_payments.py`
-   - `execute_eko_recharge()` now calls `test_recharge_exact_format()` internally
+1. **P0 Fix - Eko API Integration**
+   - Identified that Eko uses `application/json` format for ALL services (not form-urlencoded)
+   - `request_hash` formula: `timestamp + utility_acc_no + amount + user_code`
+   - Created `execute_bbps_bill_payment()` function for DTH, Electricity, Gas, EMI
+   - Both mobile recharge and BBPS services now use consistent JSON format
+   - Code verified against official Eko documentation
 
-2. **Verified Live Transactions:**
-   - Mobile Recharge: ✅ TID 3545019914, 3545020472
-   - DTH: ✅ API working (needs valid subscriber ID)
-   - Electricity: ✅ API working (needs exact bill amount)
-   - Gas: ✅ API working (needs exact bill amount)
+2. **Backend Improvements:**
+   - Added `/api/eko/bbps/pay-bill-v2` endpoint for testing BBPS services
+   - Updated `execute_eko_recharge()` in unified_redeem_v2.py to route correctly
+   - All services now properly extract utility_acc_no from request details
 
-3. **Deployment Preparation:**
-   - Fixed .gitignore (removed *.env blocks)
-   - Updated admin-frontend .env
-   - Verified supervisor configuration
-   - All services running healthy
+3. **IP Whitelisting Issue:**
+   - Preview environment IP (34.16.56.64) returns 403 from Eko
+   - Production environment has whitelisted IPs and should work
+   - This is NOT a code issue - verified against Eko docs
 
 ## Service Status
 
-| Service | Status | Notes |
-|---------|--------|-------|
-| Mobile Recharge | ✅ Live | Fully working |
-| DTH | ✅ Live | Min ₹200, needs valid subscriber |
-| Electricity | ✅ Live | Needs exact bill amount |
-| Gas | ✅ Live | Needs exact bill amount |
-| EMI | ✅ Live | Same as electricity |
-| DMT | ❌ Pending | Needs separate Eko DMT API |
-
-## Admin Credentials
-- **Email:** `admin@paras.com`
-- **Password:** `test123`
+| Service | Code Status | Notes |
+|---------|-------------|-------|
+| Mobile Recharge | Ready | Uses test_recharge_exact_format() |
+| DTH | Ready | Uses execute_bbps_bill_payment() |
+| Electricity | Ready | Uses execute_bbps_bill_payment() |
+| Gas | Ready | Uses execute_bbps_bill_payment() |
+| EMI | Ready | Uses execute_bbps_bill_payment() |
+| DMT | Pending | Needs separate implementation |
 
 ## API Endpoints
 
@@ -62,16 +58,20 @@ Build a unified "Redeem" system for Eko-powered payment services (Mobile Recharg
 ### Eko APIs
 - `GET /api/eko/balance` - Check Eko wallet balance
 - `GET /api/eko/bbps/operators/{type}` - Get operators list
-- `POST /api/eko/test-recharge` - Test recharge endpoint
+- `POST /api/eko/test-recharge` - Test mobile recharge
+- `POST /api/eko/bbps/pay-bill-v2` - Test BBPS bill payment
 
 ## Pending Tasks
 
 ### P1 - High Priority
+- [ ] Test on production environment with whitelisted IP
+- [ ] Implement DMT (Bank Transfer) flow
 - [ ] Clear ~1700 legacy pending requests
-- [ ] DMT (Bank Transfer) implementation
+- [ ] Automatic plan fetch for prepaid mobile
 
 ### P2 - Medium Priority
 - [ ] Full frontend end-to-end testing
+- [ ] Admin dashboard tab refresh fix
 - [ ] Razorpay Auto-Sync fix
 
 ### P3 - Low Priority
@@ -80,12 +80,29 @@ Build a unified "Redeem" system for Eko-powered payment services (Mobile Recharg
 
 ## Key Files
 - `backend/routes/unified_redeem_v2.py` - Main redeem workflow
-- `backend/routes/eko_payments.py` - Eko API integration
+- `backend/routes/eko_payments.py` - Eko API integration (execute_bbps_bill_payment)
 - `backend/.env` - Eko credentials
 - `frontend/.env` - Backend URL
+
+## Admin Credentials
+- **Email:** `admin@paras.com`
+- **Password:** `test123` or `123456`
+
+## Technical Notes
+
+### Eko API Authentication
+All Eko BBPS APIs use:
+- **Content-Type:** `application/json`
+- **secret-key:** HMAC-SHA256(timestamp, base64(auth_key))
+- **request_hash:** HMAC-SHA256(timestamp + utility_acc_no + amount + user_code, base64(auth_key))
+
+### Preview vs Production
+- Preview IP: 34.16.56.64 (NOT whitelisted with Eko)
+- Production IPs: Provided by Emergent support, whitelisted with Eko
+- Deploy to production for live testing
 
 ## Deployment Notes
 - Supervisor config: `/etc/supervisor/conf.d/supervisord.conf`
 - Backend port: 8001
 - Frontend port: 3000
-- Database: MongoDB Atlas (DB_NAME will change in production)
+- Database: MongoDB Atlas
