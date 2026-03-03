@@ -3024,3 +3024,177 @@ async def execute_bbps_bill_payment(
             "status": "FAILED",
             "message": str(e)
         }
+
+
+
+# ==================== ELECTRICITY BILL PAYMENT (DEDICATED) ====================
+
+async def execute_electricity_payment(
+    consumer_number: str,
+    operator_id: str,
+    amount: str,
+    customer_mobile: str = None
+) -> dict:
+    """
+    Execute ELECTRICITY bill payment via Eko API.
+    
+    EXACT format from user's working code:
+    - Content-Type: application/x-www-form-urlencoded  
+    - Hash formula: timestamp + utility_acc_no + amount + operator_id + reference_id
+    - Body: form data with operator_id, utility_acc_no, amount, customer_mobile, reference_id
+    """
+    import requests as req
+    
+    try:
+        # Step 1: Generate timestamp (milliseconds)
+        timestamp = str(int(time.time() * 1000))
+        
+        # Step 2: Generate reference_id
+        reference_id = f"ELEC{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        
+        # Step 3: Use initiator_id as customer mobile if not provided
+        if not customer_mobile:
+            customer_mobile = EKO_INITIATOR_ID
+        
+        # Step 4: Generate secret-key
+        # User code: base64.b64decode(AUTH_KEY) - but our key is plain text
+        # So we need to encode it first like mobile recharge does
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Step 5: Generate request_hash
+        # USER'S FORMULA: timestamp + utility_acc_no + amount + operator_id + reference_id
+        raw_string = timestamp + consumer_number + amount + operator_id + reference_id
+        
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Step 6: Prepare FORM DATA (NOT JSON!)
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        form_data = {
+            "operator_id": operator_id,
+            "utility_acc_no": consumer_number,
+            "amount": amount,
+            "customer_mobile": customer_mobile,
+            "reference_id": reference_id
+        }
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        logging.info(f"=== ELECTRICITY PAYMENT ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Consumer: {consumer_number[-4:] if consumer_number else 'NA'}")
+        logging.info(f"Operator: {operator_id}")
+        logging.info(f"Amount: {amount}")
+        logging.info(f"Reference: {reference_id}")
+        logging.info(f"Hash raw: {raw_string[:60]}...")
+        logging.info(f"Headers: {headers}")
+        logging.info(f"Form data: {form_data}")
+        
+        # Make request with form data
+        response = req.post(url, data=form_data, headers=headers, timeout=60)
+        
+        logging.info(f"Response Status: {response.status_code}")
+        logging.info(f"Response Body: {response.text[:500]}")
+        
+        if response.status_code == 403:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "403",
+                "message": "Access denied (403). IP not whitelisted or service not enabled."
+            }
+        
+        if response.status_code == 415:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "415",
+                "message": "Unsupported Media Type (415). Format rejected by Eko."
+            }
+        
+        try:
+            result = response.json()
+        except:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(response.status_code),
+                "message": f"Non-JSON response: {response.text[:200]}"
+            }
+        
+        logging.info(f"Eko Response: {result}")
+        
+        eko_status = result.get("status")
+        tx_status = result.get("data", {}).get("tx_status")
+        eko_tid = result.get("data", {}).get("tid")
+        bbps_ref = result.get("data", {}).get("bbpstrxnrefid")
+        
+        # Success
+        if eko_status == 0:
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": eko_tid,
+                "utr": bbps_ref,
+                "reference_id": reference_id,
+                "message": result.get("message", "Electricity bill payment successful")
+            }
+        # Processing
+        elif tx_status == 2:
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": eko_tid,
+                "reference_id": reference_id,
+                "message": "Payment initiated, processing"
+            }
+        # Failed
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(eko_status),
+                "eko_tid": eko_tid,
+                "message": result.get("message", f"Eko error: {eko_status}")
+            }
+            
+    except Exception as e:
+        logging.error(f"[ELECTRICITY] Error: {e}")
+        import traceback
+        logging.error(f"[ELECTRICITY] Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
+        }
+
+
+@router.post("/electricity/pay")
+async def electricity_pay_endpoint(
+    consumer_number: str = Query(..., description="Consumer/Account number"),
+    operator_id: str = Query(..., description="Eko electricity operator ID"),
+    amount: str = Query(..., description="Bill amount in INR"),
+    customer_mobile: str = Query(None, description="Customer mobile number")
+):
+    """
+    Test endpoint for electricity bill payment.
+    Uses exact format from user's working code.
+    """
+    return await execute_electricity_payment(
+        consumer_number=consumer_number,
+        operator_id=operator_id,
+        amount=amount,
+        customer_mobile=customer_mobile
+    )

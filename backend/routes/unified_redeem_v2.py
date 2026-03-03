@@ -183,8 +183,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         
         logging.info(f"[EKO-{service_type}] Executing: account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, operator={operator}, amount={amount}")
         
-        # All services use the same BBPS paybill API with JSON format
-        # Route mobile recharge to existing tested function, others to new function
+        # Route based on service type
         if service_type == "mobile_recharge":
             # Mobile recharge uses existing verified function
             from routes.eko_payments import test_recharge_exact_format
@@ -207,12 +206,25 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                     "error_code": eko_response.get("status"),
                     "message": eko_response.get("message", "Transaction failed")
                 }
+        
+        elif service_type == "electricity":
+            # Electricity uses dedicated function with user's exact format
+            from routes.eko_payments import execute_electricity_payment
+            
+            customer_mobile = details.get("mobile_number") or details.get("customer_mobile") or None
+            
+            result = await execute_electricity_payment(
+                consumer_number=utility_acc_no,
+                operator_id=operator,
+                amount=amount,
+                customer_mobile=customer_mobile
+            )
+            return result
+        
         else:
-            # DTH, Electricity, Gas, EMI - use BBPS form-urlencoded format
-            # CORRECT FORMAT: x-www-form-urlencoded with different hash formula
+            # DTH, Gas, EMI - use BBPS function
             from routes.eko_payments import execute_bbps_bill_payment
             
-            # Get customer mobile from details or use default
             customer_mobile = details.get("mobile_number") or details.get("customer_mobile") or None
             
             result = await execute_bbps_bill_payment(
