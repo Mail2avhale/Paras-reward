@@ -189,6 +189,10 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         from routes.eko_payments import test_recharge_exact_format
         
         logging.info(f"[EKO-{service_type}] Executing: account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, operator={operator}, amount={amount}")
+        logging.info(f"[EKO-{service_type}] Full utility_acc_no: {utility_acc_no}")
+        logging.info(f"[EKO-{service_type}] Operator ID: {operator}")
+        logging.info(f"[EKO-{service_type}] Service type: {service_type}")
+        logging.info(f"[EKO-{service_type}] Details: {details}")
         
         # Call the working endpoint function directly
         # test_recharge_exact_format uses same BBPS paybill API for all services
