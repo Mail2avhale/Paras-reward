@@ -1952,7 +1952,7 @@ SUBSCRIPTION_PLANS = {
     "startup": {
         "name": "Startup",
         "multiplier": 1.5,
-        "referral_weight": 0.30,
+        "referral_weight": 0.50,
         "tap_limit": 100,
         "prc_per_tap": 0.5,
         "daily_max_prc": 50,
