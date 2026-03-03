@@ -2036,14 +2036,19 @@ async def get_dth_operators():
 async def fetch_bill(request: BillFetchRequest):
     """Fetch bill details before payment"""
     try:
+        utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
+        
         # Eko API call to fetch bill
         result = await make_eko_request(
             "/v2/billpayments/fetchbill",
             method="POST",
             data={
-                "utility_acc_no": list(request.customer_params.values())[0],
+                "utility_acc_no": utility_acc_no,
                 "operator_id": request.biller_id,
-                "confirmation_mobile_no": EKO_INITIATOR_ID
+                "confirmation_mobile_no": EKO_INITIATOR_ID,
+                "user_code": EKO_USER_CODE,
+                "source_ip": "127.0.0.1",
+                "latlong": "19.0760,72.8777"
             }
         )
         

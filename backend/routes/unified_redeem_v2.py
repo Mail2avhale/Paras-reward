@@ -183,13 +183,156 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             "status": "FAILED",
             "message": str(e)
         }
+
+
+async def execute_eko_bbps(request_doc: dict, service_type: str) -> dict:
+    """
+    Execute BBPS Bill Payment via Eko API
+    Works for: Electricity, Gas, DTH, EMI, Postpaid
+    
+    Uses same auth as mobile recharge which is verified working.
+    """
+    import requests as req
+    
+    try:
+        details = request_doc.get("details", {})
+        amount = str(int(request_doc["amount_inr"]))
+        
+        # Get consumer/utility account number based on service type
+        if service_type == "emi":
+            utility_acc_no = details.get("loan_account", "")
+        elif service_type == "mobile_recharge" and details.get("recharge_type") == "postpaid":
+            utility_acc_no = details.get("mobile_number", "")
+        else:
+            utility_acc_no = details.get("consumer_number", "")
+        
+        operator_id = str(details.get("operator_id") or details.get("operator", ""))
+        
+        if not utility_acc_no or not operator_id:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": f"Missing required details: utility_acc_no={utility_acc_no}, operator_id={operator_id}"
+            }
+        
+        # Generate authentication (same as working mobile recharge)
+        timestamp = str(int(time.time() * 1000))
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Generate request_hash
+        user_code = EKO_USER_CODE
+        concat_str = timestamp + utility_acc_no + amount + user_code
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Build request
+        client_ref_id = f"{service_type.upper()[:3]}{int(time.time())}"
+        
+        url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
+        
+        body = {
+            "source_ip": "127.0.0.1",
+            "user_code": user_code,
+            "amount": amount,
+            "client_ref_id": client_ref_id,
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": request_doc.get("user_name", "ParasReward"),
+            "operator_id": operator_id,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        # Add hc_channel for high commission (optional)
+        body["hc_channel"] = "1"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "request_hash": request_hash,
+            "Content-Type": "application/json"
+        }
+        
+        # Use json.dumps with separators (VERIFIED WORKING FORMAT)
+        body_json = json.dumps(body, separators=(',', ':'))
+        
+        logging.info(f"[BBPS-{service_type}] URL: {url}")
+        logging.info(f"[BBPS-{service_type}] Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
+        
+        # Make request (use data=body_json, NOT json=body)
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        
+        # Handle response
+        if response.status_code == 403:
+            logging.error(f"[BBPS-{service_type}] 403 Forbidden - IP may not be whitelisted")
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "403",
+                "message": "Access denied. Please ensure server IP is whitelisted with Eko."
+            }
+        
+        try:
+            result = response.json()
+        except:
+            logging.error(f"[BBPS-{service_type}] Non-JSON response: {response.text[:200]}")
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(response.status_code),
+                "message": f"Invalid API response (HTTP {response.status_code})"
+            }
+        
+        logging.info(f"[BBPS-{service_type}] Response: status={result.get('status')}, message={result.get('message')}")
+        
+        # Check success
+        eko_status = result.get("status")
+        tx_status = result.get("data", {}).get("tx_status")
+        eko_tid = result.get("data", {}).get("tid")
+        bbps_ref = result.get("data", {}).get("bbpstrxnrefid")
+        
+        # Status 0 = Success
+        if eko_status == 0:
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "eko_tid": eko_tid,
+                "utr": bbps_ref,
+                "client_ref_id": client_ref_id,
+                "message": result.get("message", f"{service_type} payment successful")
+            }
+        # tx_status 2 = Processing/Pending
+        elif tx_status == 2:
+            return {
+                "success": True,
+                "status": "PROCESSING",
+                "eko_tid": eko_tid,
+                "client_ref_id": client_ref_id,
+                "message": "Payment initiated and processing"
+            }
+        else:
+            # Get proper error message
+            error_msg = result.get("message", "Transaction failed")
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": str(eko_status),
+                "eko_tid": eko_tid,
+                "message": error_msg
+            }
             
     except Exception as e:
-        logging.error(f"Eko recharge error: {str(e)}")
+        logging.error(f"[BBPS-{service_type}] Error: {str(e)}")
+        import traceback
+        logging.error(f"[BBPS-{service_type}] Traceback: {traceback.format_exc()}")
         return {
             "success": False,
             "status": "FAILED",
-            "message": str(e)
+            "message": f"Payment processing error: {str(e)}"
         }
 
 
@@ -1068,9 +1211,12 @@ async def admin_complete_request(data: AdminCompleteRequest):
     # Execute Eko API based on service type
     if service_type == "dmt":
         eko_result = await execute_eko_dmt(request_doc)
-    else:
-        # Mobile, DTH, Electricity, Gas, EMI - all use BBPS
+    elif service_type == "mobile_recharge":
+        # Mobile recharge uses verified working function
         eko_result = await execute_eko_recharge(request_doc)
+    else:
+        # DTH, Electricity, Gas, EMI - all use BBPS paybill
+        eko_result = await execute_eko_bbps(request_doc, service_type)
     
     if eko_result.get("success"):
         # SUCCESS or PROCESSING
