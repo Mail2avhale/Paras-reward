@@ -1940,6 +1940,7 @@ class GiftVoucherProcess(BaseModel):
 SUBSCRIPTION_PLANS = {
     "explorer": {
         "name": "Explorer",
+        "mining_rate": 100,  # Fixed 100 PRC/hr
         "multiplier": 1.0,
         "referral_weight": 0,  # FREE users give NO referral bonus
         "tap_limit": 100,
@@ -1951,6 +1952,7 @@ SUBSCRIPTION_PLANS = {
     },
     "startup": {
         "name": "Startup",
+        "mining_rate": 30,  # Fixed 30 PRC/hr
         "multiplier": 1.5,
         "referral_weight": 0.50,
         "tap_limit": 100,
@@ -1963,6 +1965,7 @@ SUBSCRIPTION_PLANS = {
     # Growth plan discontinued - kept for backward compatibility of existing users
     "growth": {
         "name": "Growth (Discontinued)",
+        "mining_rate": 55,  # Fixed 55 PRC/hr
         "multiplier": 2.0,
         "referral_weight": 0.55,
         "tap_limit": 100,
@@ -1975,6 +1978,7 @@ SUBSCRIPTION_PLANS = {
     },
     "elite": {
         "name": "Elite",
+        "mining_rate": 90,  # Fixed 90 PRC/hr
         "multiplier": 3.0,
         "referral_weight": 1.0,
         "tap_limit": 100,
@@ -4088,12 +4092,10 @@ async def calculate_mining_rate(uid: str):
     if not user:
         return 0, 0, 0, {}
     
-    base_rate = await get_base_rate()
-    current_date = datetime.now(timezone.utc).day
-    
-    # Get user's subscription info
-    sub_info = await get_user_subscription_info(user)
-    user_multiplier = sub_info["multiplier"]
+    # Get user's subscription plan and FIXED base rate (no multiplier, no date)
+    subscription_plan = user.get("subscription_plan", "explorer").lower()
+    plan_config = SUBSCRIPTION_PLANS.get(subscription_plan, SUBSCRIPTION_PLANS["explorer"])
+    base_rate = plan_config.get("mining_rate", 30)  # Fixed hourly rate from plan
     
     # Get multi-level active referrals with their subscription weights
     active_referrals_by_level = await count_active_referrals_by_level_with_weights(uid)
@@ -4127,7 +4129,7 @@ async def calculate_mining_rate(uid: str):
         
         if count > 0:
             bonus_percentage = referral_bonus_percentages.get(level, 0)
-            # Use weighted count for bonus calculation
+            # Use weighted count for bonus calculation (hourly bonus)
             level_bonus = weighted_count * bonus_percentage * base_rate
             total_referral_bonus += level_bonus
             referral_breakdown[level] = {
@@ -4138,15 +4140,14 @@ async def calculate_mining_rate(uid: str):
                 'free_count': level_data.get('free_count', 0),  # Total free users
                 'total_count': level_data.get('total_count', 0),  # Total users at level
                 'percentage': bonus_percentage * 100,
-                'bonus': level_bonus
+                'bonus': level_bonus  # This is already hourly bonus
             }
     
-    # NEW FORMULA: Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
-    effective_base_rate = (base_rate * user_multiplier) + total_referral_bonus
-    total_rate = current_date * effective_base_rate
+    # FIXED FORMULA: Mining_Speed = Base_Rate + Referral_Bonus (no multiplier, no date)
+    mining_rate_per_hour = base_rate + total_referral_bonus
     
-    # Per minute rate
-    per_minute_rate = total_rate / 1440
+    # Per minute rate (for internal calculations)
+    per_minute_rate = mining_rate_per_hour / 60
     
     # Total active referrals across all levels
     total_active_referrals = sum(ld.get('count', 0) for ld in active_referrals_by_level.values())
@@ -6482,19 +6483,13 @@ async def get_mining_status(uid: str):
     rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mining_rate_per_hour = rate_per_minute * 60
     
-    # Get user's subscription info for display
-    sub_info = await get_user_subscription_info(user)
-    user_multiplier = sub_info["multiplier"]
-    current_date = datetime.now(timezone.utc).day
+    # FIXED RATES - No multiplier, no day calculation
+    # base_rate is already the fixed hourly rate from plan
+    # referral_breakdown bonuses are already hourly
     
-    # Calculate actual hourly rates for frontend display
-    # Formula: value * day / 24 gives hourly contribution
-    base_hourly = (base_rate * user_multiplier * current_date) / 24
-    
-    # Convert referral breakdown to actual hourly contributions
+    # Convert referral breakdown (already hourly from calculate_mining_rate)
     hourly_breakdown = {}
     for level, data in referral_breakdown.items():
-        hourly_bonus = (data['bonus'] * current_date) / 24
         hourly_breakdown[level] = {
             'count': data.get('count', 0),  # Active paid users (contributing to bonus)
             'active_count': data.get('active_count', 0),  # ALL active users (same as Invite page)
@@ -6503,19 +6498,16 @@ async def get_mining_status(uid: str):
             'total_count': data.get('total_count', 0),  # Total users at level
             'weighted_count': data.get('weighted_count', 0),
             'percentage': data.get('percentage', 0),
-            'bonus': hourly_bonus  # Actual hourly contribution
+            'bonus': data.get('bonus', 0)  # Already hourly from calculate_mining_rate
         }
     
     result = {
         "current_balance": user.get("prc_balance", 0),
         "mining_rate": mining_rate_per_hour,  # New field name
         "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
-        "base_rate": base_hourly,  # Now returns actual hourly base rate
-        "base_rate_raw": base_rate,  # Raw value for reference
-        "user_multiplier": user_multiplier,
-        "day_multiplier": current_date,
+        "base_rate": base_rate,  # Fixed hourly base rate from plan
         "active_referrals": active_referrals,
-        "referral_breakdown": hourly_breakdown,  # Now returns actual hourly contributions
+        "referral_breakdown": hourly_breakdown,  # Hourly contributions
         "total_mined": user.get("total_mined", 0),
         "session_active": session_active,
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
