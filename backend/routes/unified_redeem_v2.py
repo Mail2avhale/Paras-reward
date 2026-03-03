@@ -553,6 +553,41 @@ async def create_redeem_request(request: RedeemRequestCreate):
             detail=f"Invalid service type. Must be one of: {list(SERVICE_TYPES.keys())}"
         )
     
+    # Service-specific validation
+    details = request.details or {}
+    
+    if request.service_type == "emi":
+        if not details.get("loan_account"):
+            raise HTTPException(status_code=400, detail="Loan account number is required for EMI payment")
+        if not details.get("bank_name") and not details.get("operator"):
+            raise HTTPException(status_code=400, detail="Bank/Lender selection is required for EMI payment")
+    
+    elif request.service_type == "mobile_recharge":
+        if not details.get("mobile_number"):
+            raise HTTPException(status_code=400, detail="Mobile number is required for recharge")
+        if not details.get("operator"):
+            raise HTTPException(status_code=400, detail="Operator selection is required for recharge")
+    
+    elif request.service_type == "dth":
+        if not details.get("consumer_number"):
+            raise HTTPException(status_code=400, detail="Customer/Subscriber ID is required for DTH")
+        if not details.get("operator"):
+            raise HTTPException(status_code=400, detail="DTH provider selection is required")
+    
+    elif request.service_type in ["electricity", "gas"]:
+        if not details.get("consumer_number"):
+            raise HTTPException(status_code=400, detail="Consumer number is required")
+        if not details.get("operator"):
+            raise HTTPException(status_code=400, detail="Provider selection is required")
+    
+    elif request.service_type == "dmt":
+        if not details.get("account_number"):
+            raise HTTPException(status_code=400, detail="Bank account number is required")
+        if not details.get("ifsc_code"):
+            raise HTTPException(status_code=400, detail="IFSC code is required")
+        if not details.get("account_holder"):
+            raise HTTPException(status_code=400, detail="Account holder name is required")
+    
     # Get user
     user = await db.users.find_one({"uid": request.user_id})
     if not user:
