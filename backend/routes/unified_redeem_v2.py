@@ -141,23 +141,58 @@ async def get_eko_balance() -> dict:
 
 async def execute_eko_recharge(request_doc: dict) -> dict:
     """
-    Execute mobile/DTH recharge via Eko BBPS API
+    Execute recharge/bill payment via Eko BBPS API
     Uses the verified working authentication from eko_payments module
+    
+    Works for ALL BBPS services:
+    - Mobile Recharge (Prepaid/Postpaid)
+    - DTH Recharge
+    - Electricity Bill
+    - Gas Bill
+    - EMI Payment
     """
     try:
         details = request_doc.get("details", {})
+        service_type = request_doc.get("service_type", "mobile_recharge")
         amount = str(int(request_doc["amount_inr"]))
-        mobile = details.get("mobile_number") or details.get("consumer_number") or ""
+        
+        # Get utility_acc_no based on service type
+        # This is the key field - account/consumer/mobile number
+        if service_type == "emi":
+            utility_acc_no = details.get("loan_account", "")
+        elif service_type == "mobile_recharge":
+            utility_acc_no = details.get("mobile_number", "")
+        elif service_type in ["dth", "electricity", "gas"]:
+            utility_acc_no = details.get("consumer_number", "")
+        else:
+            utility_acc_no = details.get("mobile_number") or details.get("consumer_number") or details.get("loan_account") or ""
+        
+        # Get operator_id
         operator = str(details.get("operator_id") or details.get("operator", ""))
+        
+        if not utility_acc_no:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": f"Missing account/consumer number for {service_type}"
+            }
+        
+        if not operator:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": f"Missing operator for {service_type}"
+            }
         
         # Import the working function from eko_payments
         # This uses module-level EKO credentials which are properly loaded
         from routes.eko_payments import test_recharge_exact_format
         
-        logging.info(f"[EKO] Executing recharge: mobile={mobile}, operator={operator}, amount={amount}")
+        logging.info(f"[EKO-{service_type}] Executing: account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, operator={operator}, amount={amount}")
         
         # Call the working endpoint function directly
-        result = await test_recharge_exact_format(mobile=mobile, operator=operator, amount=amount)
+        # test_recharge_exact_format uses same BBPS paybill API for all services
+        result = await test_recharge_exact_format(mobile=utility_acc_no, operator=operator, amount=amount)
         
         if result.get("success"):
             eko_response = result.get("eko_response", {})
@@ -166,18 +201,27 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                 "status": "SUCCESS",
                 "eko_tid": eko_response.get("data", {}).get("tid"),
                 "utr": eko_response.get("data", {}).get("bbpstrxnrefid"),
-                "message": eko_response.get("message", "Recharge successful")
+                "message": eko_response.get("message", f"{service_type} payment successful")
             }
         else:
+            eko_response = result.get("eko_response", {})
+            error_msg = eko_response.get("message", "Transaction failed")
+            
+            # Log detailed error for debugging
+            logging.error(f"[EKO-{service_type}] Failed: {error_msg}")
+            logging.error(f"[EKO-{service_type}] Response: {eko_response}")
+            
             return {
                 "success": False,
                 "status": "FAILED",
-                "error_code": result.get("eko_response", {}).get("status"),
-                "message": result.get("eko_response", {}).get("message", "Transaction failed")
+                "error_code": eko_response.get("status"),
+                "message": error_msg
             }
             
     except Exception as e:
         logging.error(f"[EKO] Recharge error: {str(e)}")
+        import traceback
+        logging.error(f"[EKO] Traceback: {traceback.format_exc()}")
         return {
             "success": False,
             "status": "FAILED",
@@ -1209,14 +1253,13 @@ async def admin_complete_request(data: AdminCompleteRequest):
     )
     
     # Execute Eko API based on service type
+    # ALL services use same BBPS paybill API - just different operator_id
     if service_type == "dmt":
         eko_result = await execute_eko_dmt(request_doc)
-    elif service_type == "mobile_recharge":
-        # Mobile recharge uses verified working function
-        eko_result = await execute_eko_recharge(request_doc)
     else:
-        # DTH, Electricity, Gas, EMI - all use BBPS paybill
-        eko_result = await execute_eko_bbps(request_doc, service_type)
+        # Mobile, DTH, Electricity, Gas, EMI - ALL use same BBPS paybill
+        # Use the VERIFIED WORKING function for all
+        eko_result = await execute_eko_recharge(request_doc)
     
     if eko_result.get("success"):
         # SUCCESS or PROCESSING
