@@ -796,6 +796,169 @@ async def create_redeem_request(request: RedeemRequestCreate):
     # Insert request
     await db.redeem_requests.insert_one(request_doc)
     
+    # =====================================================
+    # INSTANT RECHARGE for Mobile, DTH, Electricity
+    # These services are auto-executed without admin approval
+    # =====================================================
+    instant_services = ["mobile_recharge", "dth", "electricity"]
+    
+    if request.service_type in instant_services:
+        logging.info(f"[INSTANT] Auto-executing {request.service_type} for request {request_id}")
+        
+        # Update status to processing
+        await db.redeem_requests.update_one(
+            {"request_id": request_id},
+            {
+                "$set": {"status": STATUS_PROCESSING, "updated_at": datetime.now(timezone.utc).isoformat()},
+                "$push": {
+                    "status_history": {
+                        "status": STATUS_PROCESSING,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "note": "Auto-processing instant recharge"
+                    }
+                }
+            }
+        )
+        
+        # Execute Eko API
+        try:
+            eko_result = await execute_eko_recharge(request_doc)
+            
+            if eko_result.get("success"):
+                # SUCCESS
+                final_status = STATUS_COMPLETED if eko_result.get("status") == "SUCCESS" else STATUS_PROCESSING
+                
+                await db.redeem_requests.update_one(
+                    {"request_id": request_id},
+                    {
+                        "$set": {
+                            "status": final_status,
+                            "eko_tid": eko_result.get("eko_tid"),
+                            "utr_number": eko_result.get("utr"),
+                            "eko_status": eko_result.get("status"),
+                            "eko_message": eko_result.get("message"),
+                            "completed_at": datetime.now(timezone.utc).isoformat() if final_status == STATUS_COMPLETED else None,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        },
+                        "$push": {
+                            "status_history": {
+                                "status": final_status,
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "note": f"Instant: {eko_result.get('message')} | TID: {eko_result.get('eko_tid')}"
+                            }
+                        }
+                    }
+                )
+                
+                return {
+                    "success": True,
+                    "message": f"✅ {SERVICE_TYPES[request.service_type]['name']} successful!",
+                    "request_id": request_id,
+                    "eko_tid": eko_result.get("eko_tid"),
+                    "status": final_status,
+                    "charges": charges,
+                    "prc_deducted": total_prc_required,
+                    "new_balance": new_balance
+                }
+            else:
+                # FAILED - Refund PRC
+                refund_balance = new_balance + total_prc_required
+                
+                await db.users.update_one(
+                    {"uid": request.user_id},
+                    {
+                        "$set": {"prc_balance": refund_balance},
+                        "$push": {
+                            "prc_transactions": {
+                                "type": "credit",
+                                "amount": total_prc_required,
+                                "description": f"Refund: {SERVICE_TYPES[request.service_type]['name']} failed - {eko_result.get('message')}",
+                                "reference_id": request_id,
+                                "balance_after": refund_balance,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }
+                        }
+                    }
+                )
+                
+                await db.redeem_requests.update_one(
+                    {"request_id": request_id},
+                    {
+                        "$set": {
+                            "status": STATUS_FAILED,
+                            "eko_status": "FAILED",
+                            "eko_message": eko_result.get("message"),
+                            "error_message": eko_result.get("message"),
+                            "prc_refunded": True,
+                            "refund_amount": total_prc_required,
+                            "failed_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        },
+                        "$push": {
+                            "status_history": {
+                                "status": STATUS_FAILED,
+                                "timestamp": datetime.now(timezone.utc).isoformat(),
+                                "note": f"Failed: {eko_result.get('message')} | Refunded {total_prc_required} PRC"
+                            }
+                        }
+                    }
+                )
+                
+                return {
+                    "success": False,
+                    "message": f"❌ {eko_result.get('message')}. {total_prc_required} PRC refunded.",
+                    "request_id": request_id,
+                    "status": STATUS_FAILED,
+                    "error": eko_result.get("message"),
+                    "prc_refunded": total_prc_required,
+                    "new_balance": refund_balance
+                }
+                
+        except Exception as e:
+            logging.error(f"[INSTANT] Error: {str(e)}")
+            # Refund on error
+            refund_balance = new_balance + total_prc_required
+            
+            await db.users.update_one(
+                {"uid": request.user_id},
+                {
+                    "$set": {"prc_balance": refund_balance},
+                    "$push": {
+                        "prc_transactions": {
+                            "type": "credit",
+                            "amount": total_prc_required,
+                            "description": f"Refund: System error - {str(e)[:50]}",
+                            "reference_id": request_id,
+                            "balance_after": refund_balance,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                }
+            )
+            
+            await db.redeem_requests.update_one(
+                {"request_id": request_id},
+                {
+                    "$set": {
+                        "status": STATUS_FAILED,
+                        "error_message": str(e),
+                        "prc_refunded": True,
+                        "refund_amount": total_prc_required,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            return {
+                "success": False,
+                "message": f"❌ System error. {total_prc_required} PRC refunded.",
+                "request_id": request_id,
+                "error": str(e),
+                "prc_refunded": total_prc_required,
+                "new_balance": refund_balance
+            }
+    
+    # For other services (DMT, EMI, Gas) - require admin approval
     return {
         "success": True,
         "message": "Request submitted successfully! Admin will process within 24-48 hours.",
