@@ -11,6 +11,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import AIContextualHelp from "@/components/AIContextualHelp";
+import HoliCelebration from "@/components/HoliCelebration";
 
 // Check if this is a user-only build (for Play Store AAB)
 const IS_USER_BUILD = process.env.REACT_APP_BUILD_TYPE === 'user';
@@ -228,6 +229,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
   return (
     <>
       <OfflineIndicator />
+      <HoliCelebration isLoggedIn={!!user} />
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>

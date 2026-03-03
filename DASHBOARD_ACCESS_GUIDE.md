@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://bbps-dmt-repair.preview.emergentagent.com/setup
+   https://dmt-bbps-migration.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

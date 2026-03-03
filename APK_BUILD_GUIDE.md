@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://bbps-dmt-repair.preview.emergentagent.com",
+    "url": "https://dmt-bbps-migration.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
