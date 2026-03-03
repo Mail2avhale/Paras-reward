@@ -3064,7 +3064,7 @@ async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     
     # Cache for 5 minutes
     if cache:
-        await cache.set(cache_key, referrals_by_level, ttl=300)
+        await cache.set(cache_key, referrals_by_level, ttl=60)
     
     return referrals_by_level
 
@@ -4021,7 +4021,7 @@ async def calculate_mining_rate(uid: str):
     
     Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
     """
-    # Try to get from cache first
+    # Try to get from cache first (TTL: 60 seconds)
     cache_key = f"mining_rate:{uid}"
     if cache:
         cached_rate = await cache.get(cache_key)
@@ -4103,7 +4103,7 @@ async def calculate_mining_rate(uid: str):
             'base_rate': base_rate,
             'total_active_referrals': total_active_referrals,
             'referral_breakdown': referral_breakdown
-        }, ttl=300)  # 5 minutes cache
+        }, ttl=60)  # 1 minute cache
     
     return per_minute_rate, base_rate, total_active_referrals, referral_breakdown
 
