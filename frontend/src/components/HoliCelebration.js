@@ -246,7 +246,7 @@ const HoliCelebration = ({ isLoggedIn = false }) => {
               letterSpacing: '3px',
             }}
           >
-            होळीच्या हार्दिक शुभेच्छा!
+            होली की हार्दिक शुभकामनाएं!
           </p>
           <div className="mt-6 flex justify-center gap-3 sm:gap-4">
             {['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🩷'].map((emoji, i) => (
