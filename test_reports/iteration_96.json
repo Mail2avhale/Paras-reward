@@ -1,0 +1,55 @@
+{
+  "summary": "Mining Speed Calculation Verification Complete - CALCULATION IS CORRECT. Verified Base + L1 + L2 + L3 + L4 + L5 = TOTAL. All 9 backend API tests passed. Found 1 minor bug: free_count always returns 0 in mining status API.",
+  "mode": "generate",
+  "baseline_commit": "90441ecd359bf5021953ea2958fc4ceb450d10f0",
+  "head_commit": "81856032b9d022d86d543769d28638a43aafc160",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/mining/status/{uid}",
+        "issue": "free_count is always 0 in referral_breakdown - not being passed from count_active_referrals_by_level_with_weights() to calculate_mining_rate(). Line 4082-4087 doesn't include free_count",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 10,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "xfailed": 1
+  },
+  "specs_created": [
+    "/app/backend/tests/test_mining_referral_calculation.py",
+    "/app/tests/e2e/mining-calculation.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/mining_calculation_results.xml",
+    "/app/backend/tests/test_mining_referral_calculation.py"
+  ],
+  "action_items": [
+    "OPTIONAL FIX: Add free_count to referral_breakdown in calculate_mining_rate() at line 4082-4087 in /app/backend/server.py",
+    "TEST USER FIX: User root_cb83 has plaintext login_pin instead of hashed pin_hash - need to call migrate_user_to_pin() or fix user creation script"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_mining_referral_calculation.py",
+    "/app/tests/e2e/mining-calculation.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 passed, 1 xfailed as documented bug)",
+    "frontend": "66.7% (4/6 passed - 2 failed due to test user PIN hash issue, not app bug)"
+  },
+  "seed_data_creation": "Test user root_cb83 with 27 referrals (L1-L5) was created by main agent",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Mining Calculation Verification Summary\n\n### RESULT: CALCULATION IS CORRECT ✅\n\nVerified that: base_rate + level_1_bonus + level_2_bonus + level_3_bonus + level_4_bonus + level_5_bonus = mining_rate_per_hour\n\nExample from test user root_cb83:\n- base_rate: 12.25\n- L1 bonus: 0.55125\n- L2 bonus: 0.55125\n- L3 bonus: 0.303187\n- L4 bonus: 0.2205\n- L5 bonus: 0.202125\n- CALCULATED TOTAL: 14.078312\n- API TOTAL: 14.078312 ✅ MATCH\n\n### Minor Bug Found:\nfree_count is always 0 in the mining status API response. The function count_active_referrals_by_level_with_weights() correctly tracks free users (line 3165), but calculate_mining_rate() doesn't include it in referral_breakdown (line 4082-4087).\n\n### Test Data Issue:\nTest user root_cb83 has plaintext login_pin='123456' but the auth system requires hashed pin_hash. This causes login failures but is not an application bug - it's a test data setup issue.\n\n### Consistency Between APIs:\nBoth /api/mining/status/{uid} and /api/referrals/{uid}/levels return consistent paid user counts, ensuring Invite page and Mining page show the same data.",
+  "rca_of_issue": "## Root Cause Analysis\n\n### Issue: 'Mining calculation values don't add up'\n\n**VERDICT: NOT A BUG**\n\nThe calculation is mathematically correct. Base + L1 + L2 + L3 + L4 + L5 = TOTAL.\n\n**Possible user confusion sources:**\n1. Free users don't contribute to mining bonus (by design, anti-fraud)\n2. free_count shows as 0 in the breakdown (minor display bug)\n3. Invite page shows TOTAL referrals, Mining page shows PAID referrals only\n\n**Formula Verified:**\n- mining_rate_per_hour = base_rate + sum(level_bonuses)\n- base_rate = (base_rate_raw * user_multiplier * day_multiplier) / 24\n- level_bonus = weighted_count * bonus_percentage * base_rate_raw * day_multiplier / 24"
+}
