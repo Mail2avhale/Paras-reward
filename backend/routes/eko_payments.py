@@ -3701,7 +3701,7 @@ async def electricity_pay_endpoint(
 # Content-Type: application/json
 # Hash Formula for Transfer: timestamp + customer_id + recipient_id + amount + client_ref_id
 
-DMT_BASE_URL = "https://api.eko.in:25002/ekoapi/v3"
+DMT_BASE_URL = "https://api.eko.in:25002/ekoicici/v1"
 
 
 class DMTRecipientRequestV3(BaseModel):
@@ -3758,34 +3758,263 @@ def generate_dmt_v3_request_hash(encoded_key: str, raw_string: str) -> str:
 @router.get("/dmt/v3/customer/{mobile}")
 async def get_dmt_customer_v3(mobile: str):
     """
-    STEP 1: Check Customer
+    STEP 1: Check if Customer exists
     
-    API: GET /ekoapi/v3/customers/mobile/{mobile}
+    API: GET /ekoapi/v3/customer/profile/{mobile}
+    Query params: initiator_id, user_code, service_code
     No request_hash required.
+    
+    Returns: Customer info if exists, or status 333 if not found
     """
     import requests as req
     
     try:
         headers, _, _ = generate_dmt_v3_headers()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
         
-        url = f"{DMT_BASE_URL}/customers/mobile/{mobile}"
+        url = f"{DMT_BASE_URL}/customers/mobile_number:{mobile}"
+        
+        params = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
         
         logging.info(f"[DMT-v3] Check customer: {mobile}")
         logging.info(f"[DMT-v3] URL: {url}")
         
-        response = req.get(url, headers=headers, timeout=30)
+        response = req.get(url, headers=headers, params=params, timeout=30)
         
         logging.info(f"[DMT-v3] Status: {response.status_code}")
         logging.info(f"[DMT-v3] Response: {response.text[:500]}")
         
         try:
             result = response.json()
+            customer_exists = result.get("status") == 0
+            customer_data = result.get("data", {})
+            
             return {
-                "success": result.get("status") == 0,
-                "http_status": response.status_code,
-                "data": result,
-                "customer_exists": result.get("status") == 0
+                "success": True,
+                "customer_exists": customer_exists,
+                "customer_data": customer_data if customer_exists else None,
+                "available_limit": customer_data.get("available_limit", 0) if customer_exists else 25000,
+                "used_limit": customer_data.get("used_limit", 0) if customer_exists else 0,
+                "state": customer_data.get("state", 0) if customer_exists else 0,
+                "state_desc": {
+                    0: "Not Registered",
+                    1: "OTP Verification Pending",
+                    2: "OTP Verified (Non-KYC)",
+                    3: "KYC Verification Pending",
+                    4: "Full KYC Verified",
+                    5: "Name Change Pending",
+                    8: "Partial KYC"
+                }.get(customer_data.get("state", 0), "Unknown"),
+                "raw_response": result
             }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:300]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT-v3] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/dmt/v3/customer/create")
+async def create_dmt_customer_v3(
+    mobile: str,
+    name: str,
+    dob: str = None,  # Format: YYYY-MM-DD
+    address: str = None
+):
+    """
+    STEP 2: Create new customer (Sends OTP to mobile)
+    
+    API: PUT /ekoapi/v3/customers/{mobile}
+    Content-Type: application/x-www-form-urlencoded
+    
+    After this, call verify OTP API to complete registration
+    """
+    import requests as req
+    
+    try:
+        headers, encoded_key, timestamp = generate_dmt_v3_headers()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        url = f"{DMT_BASE_URL}/customers/mobile_number:{mobile}"
+        
+        # Form data for creating customer
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "name": name,
+            "pipe": "9",  # Default DMT pipe
+            "user_code": EKO_USER_CODE
+        }
+        
+        # Optional fields
+        if dob:
+            data["dob"] = dob
+        if address:
+            data["residence_address"] = json.dumps({"address": address})
+        
+        logging.info(f"[DMT-v3] Create customer: {mobile}")
+        logging.info(f"[DMT-v3] URL: {url}")
+        logging.info(f"[DMT-v3] Data: {data}")
+        
+        response = req.put(url, headers=headers, data=data, timeout=30)
+        
+        logging.info(f"[DMT-v3] Status: {response.status_code}")
+        logging.info(f"[DMT-v3] Response: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            eko_status = result.get("status")
+            
+            if eko_status == 0:
+                return {
+                    "success": True,
+                    "message": "OTP sent to customer mobile. Call verify OTP to complete registration.",
+                    "customer_mobile": mobile,
+                    "otp_ref_id": result.get("data", {}).get("otp_ref_id"),
+                    "raw_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to create customer"),
+                    "error_code": str(eko_status),
+                    "raw_response": result
+                }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:300]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT-v3] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/dmt/v3/customer/verify-otp")
+async def verify_dmt_customer_otp_v3(
+    mobile: str,
+    otp: str,
+    otp_ref_id: str = None
+):
+    """
+    STEP 3: Verify OTP to complete customer registration
+    
+    API: PUT /ekoapi/v3/customers/verification/{mobile}
+    Content-Type: application/x-www-form-urlencoded
+    """
+    import requests as req
+    
+    try:
+        headers, _, _ = generate_dmt_v3_headers()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        url = f"{DMT_BASE_URL}/customers/verification/otp:{mobile}"
+        
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "otp": otp
+        }
+        
+        if otp_ref_id:
+            data["otp_ref_id"] = otp_ref_id
+        
+        logging.info(f"[DMT-v3] Verify OTP for: {mobile}")
+        logging.info(f"[DMT-v3] URL: {url}")
+        
+        response = req.put(url, headers=headers, data=data, timeout=30)
+        
+        logging.info(f"[DMT-v3] Status: {response.status_code}")
+        logging.info(f"[DMT-v3] Response: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            eko_status = result.get("status")
+            
+            if eko_status == 0:
+                return {
+                    "success": True,
+                    "message": "Customer verified successfully!",
+                    "customer_mobile": mobile,
+                    "customer_data": result.get("data", {}),
+                    "raw_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "OTP verification failed"),
+                    "error_code": str(eko_status),
+                    "raw_response": result
+                }
+        except:
+            return {
+                "success": False,
+                "http_status": response.status_code,
+                "error": response.text[:300]
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT-v3] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/dmt/v3/customer/{mobile}/recipients")
+async def get_dmt_recipients_v3(mobile: str):
+    """
+    STEP 4: Get list of recipients (beneficiaries) for a customer
+    
+    API: GET /ekoicici/v1/customers/mobile_number:{mobile}/recipients
+    """
+    import requests as req
+    
+    try:
+        headers, _, _ = generate_dmt_v3_headers()
+        # Remove Content-Type for GET request
+        if "Content-Type" in headers:
+            del headers["Content-Type"]
+        
+        url = f"{DMT_BASE_URL}/customers/mobile_number:{mobile}/recipients"
+        
+        params = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        logging.info(f"[DMT-v3] Get recipients for: {mobile}")
+        logging.info(f"[DMT-v3] URL: {url}")
+        
+        response = req.get(url, headers=headers, params=params, timeout=30)
+        
+        logging.info(f"[DMT-v3] Status: {response.status_code}")
+        logging.info(f"[DMT-v3] Response: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+            
+            if result.get("status") == 0:
+                recipients = result.get("data", {}).get("recipient_list", [])
+                return {
+                    "success": True,
+                    "customer_mobile": mobile,
+                    "recipients": recipients,
+                    "count": len(recipients),
+                    "raw_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to fetch recipients"),
+                    "raw_response": result
+                }
         except:
             return {
                 "success": False,
@@ -3817,7 +4046,7 @@ async def add_dmt_recipient_v3(request: DMTRecipientRequestV3):
         request_hash = generate_dmt_v3_request_hash(encoded_key, timestamp)
         headers["request_hash"] = request_hash
         
-        url = f"{DMT_BASE_URL}/customers/{request.customer_id}/recipients"
+        url = f"{DMT_BASE_URL}/customers/mobile_number:{request.customer_id}/recipients"
         
         payload = {
             "recipient_name": request.recipient_name,

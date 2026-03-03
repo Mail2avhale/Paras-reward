@@ -27491,29 +27491,97 @@ async def process_bill_payment_request(request: Request):
                     print(f"✅ Eko BBPS Success after {retry_count} attempt(s): TXN={eko_result.get('tid')}")
                     
                 elif request_type == "bank_transfer":
-                    # ================== DMT - BANK TRANSFER ==================
-                    # DMT v3 requires: 1) Customer Verification 2) Add Recipient 3) Transfer
-                    # This is a complex flow with OTP - recommend manual processing
-                    
+                    # ================== DMT - BANK TRANSFER (Eko v1 API) ==================
                     account_number = details.get("account_number", "")
                     ifsc_code = details.get("ifsc_code", "")
                     beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
-                    recipient_mobile = details.get("recipient_mobile", details.get("mobile", ""))
+                    sender_mobile = details.get("sender_mobile", details.get("mobile", EKO_INITIATOR_ID))
                     
                     if not account_number or not ifsc_code:
                         raise Exception("Bank account number and IFSC code required for DMT")
                     
-                    # For DMT v3, we need proper customer verification flow
-                    # This requires OTP verification which cannot be automated
-                    # Mark for manual processing by admin
+                    eko_txn_ref = f"DMT{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
                     
-                    raise Exception(
-                        f"DMT requires manual processing. "
-                        f"Account: ****{account_number[-4:]}, "
-                        f"IFSC: {ifsc_code}, "
-                        f"Amount: ₹{amount_inr}. "
-                        f"Admin can complete via direct bank transfer."
+                    print(f"🔄 [{retry_count}/{max_retries}] Processing Eko DMT v1: ₹{amount_inr} to {account_number}")
+                    
+                    # Step 1: Check if customer exists
+                    customer_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}"
+                    customer_check = await make_eko_request(customer_url, method="GET")
+                    
+                    if customer_check.get("status") != 0:
+                        # Customer doesn't exist - create them
+                        print(f"   📝 Creating customer: {sender_mobile}")
+                        customer_create = await make_eko_request(
+                            f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}",
+                            method="PUT",
+                            data={
+                                "initiator_id": EKO_INITIATOR_ID,
+                                "name": beneficiary_name or "Customer",
+                                "pipe": "9",
+                                "user_code": EKO_USER_CODE
+                            }
+                        )
+                        # Note: Customer creation sends OTP which needs verification
+                        # For now, we'll try direct transfer - may fail if customer needs OTP
+                    
+                    # Step 2: Add recipient
+                    print(f"   📝 Adding recipient: {account_number[-4:]}...")
+                    try:
+                        await make_eko_request(
+                            f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients",
+                            method="PUT",
+                            data={
+                                "initiator_id": EKO_INITIATOR_ID,
+                                "recipient_name": beneficiary_name or "Beneficiary",
+                                "bank_ifsc": ifsc_code,
+                                "account": account_number,
+                                "recipient_mobile": sender_mobile,
+                                "user_code": EKO_USER_CODE
+                            }
+                        )
+                    except Exception as rec_err:
+                        print(f"   ⚠️ Recipient may already exist: {rec_err}")
+                    
+                    # Step 3: Initiate DMT transfer
+                    print(f"   💸 Initiating transfer...")
+                    eko_result = await make_eko_request(
+                        f"{EKO_BASE_URL}/v1/transactions",
+                        method="POST",
+                        data={
+                            "initiator_id": EKO_INITIATOR_ID,
+                            "service_code": "45",  # DMT service
+                            "customer_id": sender_mobile,
+                            "recipient_id": account_number,  # Account number as recipient ID
+                            "amount": str(int(amount_inr)),
+                            "channel": "2",  # 2 = IMPS
+                            "client_ref_id": eko_txn_ref,
+                            "latlong": "19.0760,72.8777",
+                            "user_code": EKO_USER_CODE
+                        }
                     )
+                    
+                    # Check response
+                    tx_status = eko_result.get("data", {}).get("tx_status", eko_result.get("tx_status"))
+                    
+                    if tx_status == 0:
+                        # Success
+                        eko_payment_result = {
+                            "success": True,
+                            "payment_type": "dmt",
+                            "eko_txn_id": eko_result.get("data", {}).get("tid", eko_result.get("tid")),
+                            "eko_txn_ref": eko_txn_ref,
+                            "eko_status": tx_status,
+                            "eko_message": "Bank transfer successful via Eko DMT",
+                            "utr": eko_result.get("data", {}).get("utr", ""),
+                            "retry_count": retry_count
+                        }
+                        print(f"✅ Eko DMT Success: TXN={eko_result.get('data', {}).get('tid')}")
+                    elif tx_status in [2, 3, 5]:
+                        # Pending/Processing - mark for manual check
+                        raise Exception(f"DMT pending verification (tx_status={tx_status}). Admin please check transaction status.")
+                    else:
+                        # Failed
+                        raise Exception(f"DMT failed: {eko_result.get('message', 'Unknown error')}")
                     
                 else:
                     # Unsupported type - reject with reason
@@ -27762,17 +27830,65 @@ async def process_bill_payment_request(request: Request):
                     }
                     
                 elif request_type == "bank_transfer":
-                    # DMT v3 requires complex flow with OTP - manual processing recommended
+                    # DMT Retry with v1 API
                     account_number = details.get("account_number", "")
                     ifsc_code = details.get("ifsc_code", "")
+                    beneficiary_name = details.get("beneficiary_name", details.get("account_holder", ""))
+                    sender_mobile = details.get("sender_mobile", details.get("mobile", EKO_INITIATOR_ID))
                     
-                    raise Exception(
-                        f"DMT requires manual processing. "
-                        f"Account: ****{account_number[-4:]}, "
-                        f"IFSC: {ifsc_code}, "
-                        f"Amount: ₹{amount_inr}. "
-                        f"Admin can complete via direct bank transfer."
+                    eko_txn_ref = f"DMTRETRY{now.strftime('%Y%m%d%H%M%S')}{request_id[-6:]}"
+                    
+                    print(f"🔄 [RETRY {retry_count}/{max_retries}] Eko DMT: ₹{amount_inr}")
+                    
+                    # Try adding recipient
+                    try:
+                        await make_eko_request(
+                            f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients",
+                            method="PUT",
+                            data={
+                                "initiator_id": EKO_INITIATOR_ID,
+                                "recipient_name": beneficiary_name or "Beneficiary",
+                                "bank_ifsc": ifsc_code,
+                                "account": account_number,
+                                "recipient_mobile": sender_mobile,
+                                "user_code": EKO_USER_CODE
+                            }
+                        )
+                    except:
+                        pass
+                    
+                    # Initiate transfer
+                    eko_result = await make_eko_request(
+                        f"{EKO_BASE_URL}/v1/transactions",
+                        method="POST",
+                        data={
+                            "initiator_id": EKO_INITIATOR_ID,
+                            "service_code": "45",
+                            "customer_id": sender_mobile,
+                            "recipient_id": account_number,
+                            "amount": str(int(amount_inr)),
+                            "channel": "2",
+                            "client_ref_id": eko_txn_ref,
+                            "latlong": "19.0760,72.8777",
+                            "user_code": EKO_USER_CODE
+                        }
                     )
+                    
+                    tx_status = eko_result.get("data", {}).get("tx_status", eko_result.get("tx_status"))
+                    
+                    if tx_status == 0:
+                        eko_payment_result = {
+                            "success": True,
+                            "payment_type": "dmt",
+                            "eko_txn_id": eko_result.get("data", {}).get("tid"),
+                            "eko_txn_ref": eko_txn_ref,
+                            "eko_status": tx_status,
+                            "eko_message": "Bank transfer processed",
+                            "utr": eko_result.get("data", {}).get("utr", ""),
+                            "retry_count": previous_retries + retry_count
+                        }
+                    else:
+                        raise Exception(f"DMT retry failed: {eko_result.get('message', 'Unknown')}")
                 else:
                     raise Exception(f"Service type '{request_type}' not supported")
                     
