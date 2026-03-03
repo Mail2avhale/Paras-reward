@@ -797,10 +797,10 @@ async def create_redeem_request(request: RedeemRequestCreate):
     await db.redeem_requests.insert_one(request_doc)
     
     # =====================================================
-    # INSTANT RECHARGE for Mobile, DTH, Electricity
+    # INSTANT RECHARGE for Mobile, DTH, Electricity, EMI
     # These services are auto-executed without admin approval
     # =====================================================
-    instant_services = ["mobile_recharge", "dth", "electricity"]
+    instant_services = ["mobile_recharge", "dth", "electricity", "emi"]
     
     if request.service_type in instant_services:
         logging.info(f"[INSTANT] Auto-executing {request.service_type} for request {request_id}")
