@@ -1065,7 +1065,7 @@ const DailyRewards = ({ user }) => {
           <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
             <p className="text-blue-300 text-xs flex items-start gap-2">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>फक्त Paid subscribers (Startup/Growth/Business) तुमच्या mining speed मध्ये add होतात. Free (Explorer) users count होत नाहीत.</span>
+              <span>Only Paid subscribers (Startup/Growth/Business) add to your mining speed. Free (Explorer) users don't count.</span>
             </p>
           </div>
         </div>
