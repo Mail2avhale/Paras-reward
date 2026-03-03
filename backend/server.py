@@ -4082,6 +4082,7 @@ async def calculate_mining_rate(uid: str):
             referral_breakdown[level] = {
                 'count': count,
                 'weighted_count': weighted_count,
+                'free_count': level_data.get('free_count', 0),  # Include free count for display
                 'percentage': bonus_percentage * 100,
                 'bonus': level_bonus
             }
