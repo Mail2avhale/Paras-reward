@@ -266,7 +266,7 @@ const RedeemPageV2 = ({ user }) => {
   const fetchBankList = async () => {
     setLoadingBanks(true);
     try {
-      const response = await axios.get(`${API}/eko/dmt/bank-list`);
+      const response = await axios.get(`${API}/eko/dmt/v3/banks`);
       if (response.data.banks) {
         setBankList(response.data.banks);
       }

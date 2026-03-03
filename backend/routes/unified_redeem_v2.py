@@ -400,154 +400,68 @@ async def execute_eko_bbps(request_doc: dict, service_type: str) -> dict:
 
 async def execute_eko_dmt(request_doc: dict) -> dict:
     """
-    Execute DMT (Bank Transfer) via Eko API - Fund Settlement Flow
+    Execute DMT (Bank Transfer) via Eko v3 API
     
-    Eko Fund Transfer Flow (service_code=45):
-    1. Direct fund transfer to bank account via IMPS/NEFT
+    DMT v3 Flow:
+    1. Check/Create Customer
+    2. Add Recipient (if new)
+    3. Execute Transfer via /ekoapi/v3/transactions
     
-    Note: Requires service activation (code 45) and India IP whitelist for production.
+    request_hash formula: timestamp + customer_id + recipient_id + amount + client_ref_id
     """
-    import requests as req
-    
     try:
-        details = request_doc.get("details", {})
-        amount = str(int(request_doc["amount_inr"]))
+        from routes.eko_payments import execute_dmt_transfer_v3
         
-        # Extract DMT details
+        details = request_doc.get("details", {})
+        amount = int(request_doc["amount_inr"])
+        
+        # Extract DMT details from frontend
         account_number = details.get("account_number", "")
         ifsc_code = details.get("ifsc_code", "")
         account_holder = details.get("account_holder", "")
-        recipient_mobile = details.get("mobile", "")
+        mobile = details.get("mobile", "")
         bank_name = details.get("bank_name", "")
-        transfer_mode = details.get("transfer_mode", "IMPS")
         
-        sender_name = request_doc.get("user_name", "ParasReward User")
+        logging.info(f"[DMT] Starting Transfer: ₹{amount} to {account_holder}")
         
-        logging.info(f"[DMT] Starting Fund Transfer: ₹{amount} to {account_holder} ({account_number[-4:] if account_number else 'NA'})")
+        # For DMT v3:
+        # customer_id = sender's mobile number
+        # recipient_id = needs to be retrieved/created first via add recipient API
         
-        # Generate authentication (same as BBPS which is working)
-        timestamp = str(int(time.time() * 1000))
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
-        secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+        # Since frontend doesn't have recipient_id yet,
+        # we need to implement full DMT flow with:
+        # 1. Customer verification
+        # 2. Recipient add (get recipient_id)
+        # 3. Then transfer
         
-        # Generate client reference ID (max 20 chars)
-        client_ref_id = f"DMT{datetime.now(timezone.utc).strftime('%m%d%H%M%S')}"
-        
-        # Fund Transfer API (from Eko documentation)
-        # URL: /v1/agent/user_code:{USER_CODE}/settlement
-        transfer_url = f"{EKO_BASE_URL}/v1/agent/user_code:{EKO_USER_CODE}/settlement?initiator_id={EKO_INITIATOR_ID}"
-        
-        # Payment mode: 5 = IMPS, 4 = NEFT, 13 = RTGS
-        payment_mode = "5" if transfer_mode.upper() == "IMPS" else "4"
-        
-        headers = {
-            "developer_key": EKO_DEVELOPER_KEY,
-            "secret-key": secret_key,
-            "secret-key-timestamp": timestamp,
-            "Content-Type": "application/x-www-form-urlencoded"
+        # For now, return helpful message about DMT flow requirements
+        return {
+            "success": False,
+            "status": "PENDING_SETUP",
+            "message": "DMT requires customer verification and recipient setup. Please use the DMT flow: 1) Verify customer 2) Add recipient 3) Transfer",
+            "details": {
+                "account_number": account_number[-4:] if account_number else "",
+                "ifsc": ifsc_code,
+                "name": account_holder,
+                "bank": bank_name,
+                "amount": amount
+            },
+            "next_steps": [
+                "POST /api/eko/dmt/v3/customer/{mobile} - Check customer",
+                "POST /api/eko/dmt/v3/recipient/add - Add beneficiary",
+                "POST /api/eko/dmt/v3/transfer - Execute transfer"
+            ]
         }
         
-        transfer_data = {
-            "initiator_id": EKO_INITIATOR_ID,
-            "amount": amount,
-            "payment_mode": payment_mode,
-            "client_ref_id": client_ref_id,
-            "recipient_name": account_holder,
-            "ifsc": ifsc_code,
-            "account": account_number,
-            "service_code": "45",  # Fund Transfer
-            "sender_name": sender_name,
-            "source": "NEWCONNECT",
-            "tag": "BankTransfer",
-            "beneficiary_account_type": "1",  # Savings
-            "latlong": "19.0760,72.8777"
-        }
-        
-        logging.info(f"[DMT] Transfer URL: {transfer_url}")
-        logging.info(f"[DMT] Transfer Data: account={account_number[-4:]}, ifsc={ifsc_code}, amount={amount}")
-        
-        try:
-            transfer_response = req.post(transfer_url, headers=headers, data=transfer_data, timeout=60)
-            
-            # Check if response is JSON or HTML error
-            if transfer_response.status_code == 403:
-                logging.error(f"[DMT] 403 Forbidden - Service not activated or IP not whitelisted")
-                return {
-                    "success": False,
-                    "status": "FAILED",
-                    "error_code": "403",
-                    "message": "Bank Transfer service (DMT) is not activated. Eko requires service activation and India IP whitelist for Fund Transfer (service_code=45). Please contact Eko support to activate this service."
-                }
-            
-            if transfer_response.status_code == 404:
-                logging.error(f"[DMT] 404 Not Found")
-                return {
-                    "success": False,
-                    "status": "FAILED",
-                    "error_code": "404",
-                    "message": "Fund Transfer API endpoint not found. Please verify Eko API configuration."
-                }
-            
-            # Try to parse JSON response
-            try:
-                transfer_result = transfer_response.json()
-            except:
-                logging.error(f"[DMT] Non-JSON response: {transfer_response.text[:200]}")
-                return {
-                    "success": False,
-                    "status": "FAILED",
-                    "error_code": str(transfer_response.status_code),
-                    "message": f"Invalid API response (HTTP {transfer_response.status_code}). Eko Fund Transfer may require India IP whitelist."
-                }
-            
-            logging.info(f"[DMT] Transfer response: {transfer_result.get('status')} - {transfer_result.get('message')}")
-            
-            tx_status = transfer_result.get("data", {}).get("tx_status", transfer_result.get("status"))
-            eko_tid = transfer_result.get("data", {}).get("tid")
-            utr = transfer_result.get("data", {}).get("bank_ref_num") or transfer_result.get("data", {}).get("utr")
-            
-            # tx_status: 0 = Success, 1 = Failed, 2 = Pending/Initiated
-            if tx_status == 0 or transfer_result.get("status") == 0:
-                return {
-                    "success": True,
-                    "status": "SUCCESS",
-                    "eko_tid": eko_tid,
-                    "utr": utr,
-                    "client_ref_id": client_ref_id,
-                    "message": f"₹{amount} transferred successfully to {account_holder} ({bank_name})"
-                }
-            elif tx_status == 2:
-                return {
-                    "success": True,
-                    "status": "PROCESSING",
-                    "eko_tid": eko_tid,
-                    "client_ref_id": client_ref_id,
-                    "message": f"Transfer initiated. ₹{amount} to {account_holder}. UTR will be updated shortly."
-                }
-            else:
-                error_msg = transfer_result.get("message", f"Transfer failed with status {tx_status}")
-                return {
-                    "success": False,
-                    "status": "FAILED",
-                    "error_code": str(tx_status),
-                    "eko_tid": eko_tid,
-                    "message": error_msg
-                }
-                
-        except req.exceptions.RequestException as e:
-            logging.error(f"[DMT] Request error: {str(e)}")
-            return {
-                "success": False,
-                "status": "FAILED",
-                "message": f"Network error connecting to Eko: {str(e)}"
-            }
-            
     except Exception as e:
-        logging.error(f"[DMT] Fatal error: {str(e)}")
+        logging.error(f"[DMT] Error: {str(e)}")
         import traceback
-        logging.error(f"[DMT] Traceback: {traceback.format_exc()}")
+        logging.error(traceback.format_exc())
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e)
+        }
         return {
             "success": False,
             "status": "FAILED",
