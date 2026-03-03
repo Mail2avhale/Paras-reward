@@ -961,7 +961,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className="text-emerald-400 font-mono text-sm font-semibold">
-              {(baseRate * 60).toFixed(2)} PRC/hr
+              {baseRate.toFixed(2)} PRC/hr
             </p>
           </div>
           
@@ -977,7 +977,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_1?.bonus || 0) > 0 ? 'text-blue-400' : 'text-zinc-600'}`}>
-              +{((referralBreakdown?.level_1?.bonus || 0) * 60).toFixed(2)} PRC/hr
+              +{(referralBreakdown?.level_1?.bonus || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
@@ -993,7 +993,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_2?.bonus || 0) > 0 ? 'text-purple-400' : 'text-zinc-600'}`}>
-              +{((referralBreakdown?.level_2?.bonus || 0) * 60).toFixed(2)} PRC/hr
+              +{(referralBreakdown?.level_2?.bonus || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
@@ -1009,7 +1009,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_3?.bonus || 0) > 0 ? 'text-orange-400' : 'text-zinc-600'}`}>
-              +{((referralBreakdown?.level_3?.bonus || 0) * 60).toFixed(2)} PRC/hr
+              +{(referralBreakdown?.level_3?.bonus || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
@@ -1025,7 +1025,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_4?.bonus || 0) > 0 ? 'text-pink-400' : 'text-zinc-600'}`}>
-              +{((referralBreakdown?.level_4?.bonus || 0) * 60).toFixed(2)} PRC/hr
+              +{(referralBreakdown?.level_4?.bonus || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
@@ -1041,7 +1041,7 @@ const DailyRewards = ({ user }) => {
               </div>
             </div>
             <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_5?.bonus || 0) > 0 ? 'text-cyan-400' : 'text-zinc-600'}`}>
-              +{((referralBreakdown?.level_5?.bonus || 0) * 60).toFixed(2)} PRC/hr
+              +{(referralBreakdown?.level_5?.bonus || 0).toFixed(2)} PRC/hr
             </p>
           </div>
           
