@@ -1,103 +1,88 @@
 <analysis>**original_problem_statement:**
-The initial goal was to fix a failing Eko payment integration. This evolved into a complete rewrite of the payment and withdrawal flow, including a unified Redeem page, an admin approval workflow, new charging logic, and implementation of various Eko services (BBPS and DMT).
+The user's initial high-priority request was to remove all PRC related features, including the PRC SAVINGS VAULT, and migrate the funds. This was completed. Subsequent requests involved fixing complex mining calculation and display logic on the  page, which was also addressed through multiple iterations. A Redeem to Bank white screen bug was fixed. The agent also implemented several configuration changes requested by the user, including fixed mining rates, updated referral weights, and new weekly redeem limits. The chatbot's knowledge base was updated to reflect these changes.
 
-The user's most recent and highest-priority request is to **remove all PRC related features**.
+The current and most urgent problem is that all Eko services (DTH, Electricity, Gas, DMT, etc.), except for Mobile Recharge, are failing. The user has confirmed from Eko's side that IP whitelisting is complete and the issue lies within the codebase. The user is requesting a deep study of the Eko developer documentation to fix each service with its correct and distinct API format.
+
 **PRODUCT REQUIREMENTS:**
-1.  **Remove UI Components:**
-    -   Remove the Redeem PRC card from the user dashboard.
-    -   Completely remove the PRC SAVINGS VAULT card and all associated frontend code.
-2.  **Remove Backend Logic:**
-    -   Disable the 20% deduction logic that transfers a portion of earnings to the PRC vault.
-3.  **Data Migration:**
-    -   Create and execute a one-time script to transfer all funds from every user's  to their .
+1.  **Fix Eko Services (P0):**
+    -   Thoroughly review Eko's developer documentation for each service (DTH, Gas, Electricity, DMT, etc.).
+    -   Identify and correct the specific  formula, request body, headers, and endpoint URL for both  and  actions of each service in .
+    -   Ensure all services are enabled and functioning correctly end-to-end.
+2.  **Run PRC Vault Migration (P2):**
+    -   Execute the one-time script to transfer all funds from every user's  to their  on the **production** database. This requires user confirmation before execution.
 
-**User's preferred language**: The user communicates in both English and Marathi. Recent messages have been primarily in **Marathi**. The next agent should be prepared to understand and respond in Marathi.
+**User's preferred language**: The user communicates in **Marathi** and English. The next agent must be prepared to understand and respond primarily in Marathi.
 
 **what currently exists?**
-The application features a refactored Redeem page supporting multiple payment services. The backend code in  has been updated multiple times to find the correct API format for Eko's BBPS (Bill Pay) and DMT (Money Transfer) services. The agent has concluded that  is the correct  for all services, but different services and API versions require different  formulas and URL endpoints.
+The application has undergone significant changes. The PRC SAVINGS VAULT feature and its associated 20% deduction logic have been removed from the frontend and backend. The mining speed calculation has been completely overhauled to use a fixed base rate per subscription plan, removing the previous date and plan multipliers. The mining breakdown display on the  page has been updated multiple times to provide more clarity to the user, now showing counts for active, inactive, paid, and free referrals. Weekly redeem limits and referral bonus weights have also been configured as per user requests. The chatbot has been updated with all this new information. A critical bug causing a white screen on the Redeem to Bank page has been resolved.
 
-A significant amount of work has been done to implement the Eko DMT v3 API, including backend logic and a new multi-step, self-service UI on the frontend for users to manage their beneficiaries. However, this work is incomplete.
-
-A major blocker is that the preview environment's IP address is not whitelisted by Eko, causing all API calls to Eko to fail with  or  errors. This prevents any end-to-end testing of the Eko integrations.
+However, the core payment functionality is broken. All Eko services, apart from mobile recharge, are failing. While bill fetching might work for some, the actual payment transaction fails, indicating incorrect API request formats for each specific service.
 
 **Last working item**:
--   **Last item agent was working:** The agent had just received a new, high-priority request from the user (message #374) to remove all PRC (PRC Redeem and PRC Vault) related features. The agent acknowledged this request. Before this, the agent was in the middle of implementing the self-service DMT flow on the frontend.
--   **Status:** NOT STARTED (for the PRC removal task). The DMT task is IN PROGRESS.
+-   **Last item agent was working:** The agent was just informed by the user that all Eko Bill Payment and DMT services are failing despite IP whitelisting being completed. The user explicitly stated the problem is with the code's format and urged the agent to study the developer documentation deeply to fix each service.
+-   **Status:** NOT STARTED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Both.
-    -   For PRC Removal: Use the screenshot tool to verify UI changes on the dashboard. Use  to write and execute a one-time migration script for the PRC vault balance transfer.
-    -   For DMT Flow (when resumed): Use the frontend testing agent to verify the complex multi-step UI.
+-   **Which testing method agent to use?** backend testing agent. The agent should use  commands to test each Eko service's API endpoints (, , and DMT endpoints) individually. The focus should be on verifying the , request body, and headers against the official Eko documentation for each distinct service.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   Issue 1: Remove All PRC Features and Migrate Vault Balance (P0)
--   Issue 2: Complete Eko DMT v3 Self-Service Flow (P1)
--   Issue 3: Eko API Calls Blocked in Preview Due to IP Whitelisting (P1 - Blocker)
--   Issue 4: Implement Automatic Plan Fetch for Prepaid Mobile (P2)
--   Issue 5: Admin dashboard tabs do not refresh correctly (P2)
--   Issue 6: Clear ~1700 Legacy Pending Production Requests (P2)
+-   Issue 1: Fix All Failing Eko Bill Payment & DMT Services (P0)
+-   Issue 2: Run PRC Vault to PRC Balance Migration Script on Production (P2)
+-   Issue 3: Admin dashboard tabs do not refresh correctly after actions (P2)
+-   Issue 4: Clear ~1700 Legacy Pending Production Requests (P2)
 
 **Issues Detail:**
--   **Issue 1: Remove All PRC Features and Migrate Vault Balance**
-    -   **Attempted fixes:** None. This is a new request.
+-   **Issue 1: Fix All Failing Eko Bill Payment & DMT Services**
+    -   **Attempted fixes:** Previous attempts were made, but troubleshooting was halted under the assumption of an IP whitelist block. The user has now removed this blocker, confirming the issue is in the code.
     -   **Next debug checklist:**
-        1.  Identify the dashboard component file (likely ) and remove the JSX for the Redeem PRC and PRC SAVINGS VAULT cards.
-        2.  Search the backend codebase for the 20% vault deduction logic (e.g.,  in ) and remove or comment it out.
-        3.  Create a new Python script that connects to the MongoDB database.
-        4.  The script should execute .
-        5.  Run the script using  and verify the changes in the database for a sample user.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a direct, high-priority request from the user to simplify the application's economy.
+        1.  Obtain and meticulously study the Eko developer documentation.
+        2.  Navigate to .
+        3.  Address each service (DTH, Electricity, Gas, EMI, DMT v3, etc.) one by one.
+        4.  For each service's payment function (e.g., ), verify the  formula, request body parameters, and  header are exactly as specified in the documentation. Do not assume the mobile recharge format applies to others.
+        5.  Use  with valid test data to individually test each payment endpoint. Log the exact request being sent and the response received from Eko to debug  or other errors.
+        6.  Correct the code in  for each service until a successful transaction is confirmed via .
+    -   **Why fix this issue and what will be achieved with the fix?** This is the application's core functionality. Fixing it will enable users to redeem their PRC for various utility payments, which is the primary purpose of the app.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on other issue:** None
-
--   **Issue 2: Complete Eko DMT v3 Self-Service Flow**
-    -   **Attempted fixes:** Backend functions for Eko v3 API have been created in . Frontend refactoring has started in  to add states and functions for customer verification and beneficiary management.
-    -   **Next debug checklist:**
-        1.  Continue implementing the UI in  for the DMT flow: (Step 1: Enter mobile for customer check. Step 2: View/Add beneficiary. Step 3: Enter amount and submit redeem request).
-        2.  Wire up the new frontend functions (, ) to the corresponding backend APIs.
-        3.  Ensure the final Redeem submission gathers all necessary details (, etc.) for the admin approval step.
-    -   **Why fix this issue and what will be achieved with the fix?** Implements the Redeem to Bank Account feature, a core part of the application.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on other issue:** Issue 3 (IP Whitelisting) prevents end-to-end testing.
-
--   **Issue 3: Eko API Calls Blocked in Preview Due to IP Whitelisting**
-    -   **Attempted fixes:** The agent correctly diagnosed that API calls fail due to the preview environment's IP not being whitelisted by Eko, not due to incorrect code format (after many iterations).
-    -   **Next debug checklist:** This is an environment issue, not a code issue. The agent cannot resolve it. The correct approach is to code according to the latest Eko documentation provided by the user and proceed, with the caveat that full testing is only possible in production.
-    -   **Why fix this issue and what will be achieved with the fix?** Resolving this would unblock all Eko-related payment features for testing.
-    -   **Status:** BLOCKED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Backend
-    -   **Blocked on other issue:** None
+    -   **Blocked on other issue:** None.
+
+-   **Issue 2: Run PRC Vault to PRC Balance Migration Script on Production**
+    -   **Attempted fixes:** A script was created and tested on the empty preview database.
+    -   **Next debug checklist:**
+        1.  Confirm with the user that you are about to run the migration script on the production database.
+        2.  Verify the script () is correct.
+        3.  Ensure the  and  in  are pointing to the production database (or use appropriate connection details for the script).
+        4.  Execute the script: .
+        5.  Verify the data migration for a sample user in the production database.
+    -   **Why fix this issue and what will be achieved with the fix?** To finalize the removal of the PRC vault feature and give users access to their full earnings.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Backend (DB verification)
+    -   **Blocked on other issue:** User confirmation for production execution.
 
 **In progress Task List**:
--   **Task 1: Implement Self-Service DMT Frontend Flow**
-    -   **Where to resume:** . The component needs to be fully structured to handle the multi-step process for DMT: check customer, add/select recipient, and then create the redeem request.
-    -   **What will be achieved with this?** A complete user-facing flow for initiating a Redeem to Bank Account request.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** Blocked for full e2e testing by the IP Whitelist issue.
+-   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1: Implement Automatic Plan Fetch for Prepaid Mobile.**
--   **P1: Decommission Old System:** After all new services are stable, remove old payment pages and APIs.
--   **P1: Full End-to-End Regression Test:** Perform a full test of all 6 Eko services once deployed to a whitelisted environment.
+-   **P1:** Full End-to-End Regression Test of all Eko services once fixed.
+-   **P1:** Decommission Old System: Remove old payment pages and APIs after new services are stable.
 
 **Future Tasks:**
--   **P2:** Fix bug where admin dashboard tabs do not refresh correctly.
--   **P2:** Clear ~1700 old pending requests from the production database.
 -   **P2:** Fix Razorpay Auto-Sync error handling.
 -   **P3:** Add Email/Mobile OTP verification on signup.
 -   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
 
 **Completed work in this session**
--   **BBPS API Fix:** Corrected the Eko Bill Pay API integration. The agent determined the correct format is  with a  of , which was confirmed to work by the user for the electricity service.
--   **DMT v3 Backend Implementation:** Rewrote the DMT backend logic in  to use Eko's v3 API, including new endpoints and the correct hash formula ().
--   **DMT Frontend Scaffolding:** Began refactoring  to support a new self-service, multi-step UI for the DMT flow, as requested by the user.
+-   **PRC Vault Removed:** All UI components (e.g., in ) and backend logic (20% deduction in ) for the PRC Savings Vault have been eliminated.
+-   **Mining Formula Overhauled:** The mining calculation in  was completely rewritten to use a simple fixed base rate per plan, removing complex and buggy date/subscription multipliers.
+-   **Mining Display Fixed:** The  page was fixed multiple times to correct calculation display issues. It now shows a detailed breakdown of referral counts (active, paid, free) and a total speed that correctly sums the components.
+-   **Referral Weight Updated:** The  plan's referral weight was changed from 0.30 to 0.50 in .
+-   **Redeem Limits Updated:** Weekly limits in  were set to 1 for EMI/Bank and unlimited for all other services.
+-   **Chatbot Updated:** The chatbot's system prompt in  was updated with the new mining rates, new limits, and information about discontinued features.
+-   **Bug Fix (DMT White Screen):** Resolved a Javascript error () in  by adding a missing icon import.
+-   **Bug Fix (Chatbot):** Fixed a 500 error in the chatbot API () caused by an undefined  dictionary.
 
 **Earlier issues found/mentioned but not fixed**
 -   The admin dashboard tabs do not automatically refresh after a request's status is changed.
@@ -105,80 +90,84 @@ A major blocker is that the preview environment's IP address is not whitelisted 
 -   Razorpay Auto-Sync error handling has not been addressed.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Eko API errors (, ).
+-   **Issue recurrence in previous fork:** Eko API errors ().
 -   **Recurrence count:** High.
--   **Status:** RESOLVED (for code/format issues) / BLOCKED (for environment/IP issues). The agent has determined the correct API formats. The remaining  errors are confirmed to be due to the preview environment's IP not being whitelisted, which is beyond the agent's control.
+-   **Status:** NOT STARTED. Previously thought to be an IP whitelist issue, it's now confirmed to be a code formatting problem that needs to be fixed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Eko API Diversity:** Different Eko products (BBPS, DMT) and versions (v2, v3) have entirely different URL structures,  formulas, and body parameters. The latest user-provided documentation is the source of truth.
--   **IP Whitelisting Blocker:** The primary obstacle is that the preview environment's IP is not whitelisted by Eko, preventing any successful API calls and making testing impossible. The agent must code against the documentation and defer verification to production.
--   **DMT v3 Flow:** The correct flow is:  ->  -> . The user wants the first two steps to be self-service before a request is sent for admin approval.
+-   **Eko API Diversity:** This is the most critical concept. Different Eko services (BBPS, DMT) and even different actions within a service (fetch vs. pay) have unique requirements for endpoint URLs,  formulas, and request body parameters. A one-size-fits-all approach will fail.
+-   **Fixed-Rate Mining:** The mining system no longer uses complex multipliers for date or subscription tiers. It's a simple .
+-   **State Management:** Frontend issues like the DMT white screen and mining calculation mismatches were often due to incorrect state management, missing imports, or discrepancies between frontend display logic and backend calculations.
 
 **key DB schema**
 -   **users**:
     -   : {Number} - User's main PRC wallet.
-    -   : {Number} - User's PRC savings. Needs to be migrated to  and deprecated.
+    -   : {Number} - Deprecated. Needs to be migrated to .
 
 **All files of reference**
--   : Contains the corrected BBPS and new DMT v3 API logic.
--   : The entry point for redeem requests which calls the functions in .
--   : The user-facing redeem form, partially refactored for the DMT self-service flow.
--   The user dashboard file (e.g., ) where PRC cards need to be removed.
+-   : **Highest priority file.** Contains the broken Eko API logic that needs to be fixed service-by-service.
+-   : Contains the main mining calculation logic which was heavily modified.
+-   : Contains all the new fixed mining rates, referral weights, and weekly limits.
+-   : Contains the heavily modified frontend display for mining speed breakdown.
+-   : Location of the fixed Redeem to Bank white screen bug.
+-   : The script for migrating vault balances on production.
 
 **Areas that need refactoring**:
--   Once the PRC features are fully removed, any related fields or logic in the backend models and API routes should be cleaned up to avoid dead code.
+-    is extremely large (over 7000 lines) and contains logic for many different features (mining, user management, redeem limits). It should be broken down into smaller, more manageable modules (e.g., , ).
+-   Dead code related to PRC Vault, luxury savings, and old mining multipliers should be removed from the codebase.
 
 **key api endpoints**
--   : Creates a redeem request for admin approval.
--   : Admin endpoint to execute the Eko transaction.
--   : The new set of backend endpoints proxying Eko's DMT v3 API.
+-   : **BROKEN**. Needs to be fixed for various services.
+-   : **BROKEN**. Needs to be fixed.
+-   : Returns the mining speed and referral breakdown.
+-   : Chatbot API endpoint. Recently fixed.
 
 **Critical Info for New Agent**
--   **NEW PRIORITY:** The user's top priority is to **remove all PRC-related features** (UI cards, 20% deduction logic) and **migrate the vault balance to the main balance**. Start with this task immediately.
--   **EKO API BLOCKER:** Do not waste time debugging Eko  or  errors. The cause is the preview environment's IP not being whitelisted. Implement the code based on the latest user-provided documentation and assume it will work in production. Inform the user that testing is blocked.
--   **USER LANGUAGE:** The user is fluent in both English and Marathi and has recently been communicating in **Marathi**. Be prepared to respond in Marathi.
--   **DMT SELF-SERVICE FLOW:** When you resume the DMT task, remember the user wants the customer and beneficiary management to be a self-service flow handled by the user on the frontend *before* the redeem request is submitted for admin approval.
+-   **TOP PRIORITY:** Fix the failing Eko services in . The user has confirmed this is a **code issue**, not an IP whitelist issue. You must study the Eko developer documentation for each service and correct the API request format (, body, etc.). Do not assume one format works for all.
+-   **USER LANGUAGE:** The user's preferred language is **Marathi**. Ensure your communication is primarily in Marathi.
+-   **PRODUCTION MIGRATION:** The PRC vault migration script needs to be run on the production database. You must get explicit confirmation from the user before running this sensitive task.
+-   The mining calculation logic is now fixed and simplified. Do not re-introduce date or subscription multipliers. The new formula is .
+
+**documents and test reports created in this job**
+-   : Test report from testing agent confirming mining calculation logic.
+-   : Updated with completed tasks.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   : User gives a high-priority request to remove Redeem PRC card, PRC SAVINGS VAULT card and logic, stop the 20% cutting, and transfer all vault PRC to the main wallet. (PENDING IMPLEMENTATION)
--   : User asks to see the DMT page after login.
--   : Agent takes a screenshot of the login page.
--   : User clarifies that for DMT, the customer verification and beneficiary adding should be done by the user, not the admin. (PENDING IMPLEMENTATION)
--   : Agent discovers old DMT code using a deprecated Settlement API that needs to be replaced with the new v3 logic. (DONE)
--   : User asks if the frontend is okay.
--   : User provides the **correct and final Eko DMT v3 API documentation**, including the base URL, endpoints, headers, and hash logic. This is the source of truth for DMT. (IMPLEMENTED in backend code)
--   : User asks if the described DMT flow has been tested and if it works in the app. (Answer: No, it's blocked).
--   : User asks for an explanation of the complete DMT flow.
--   : User asks the agent to check the developer documents for DMT.
+1.  **User (LATEST):** States that Bill Payment & DMT are failing (except mobile recharge). Confirms IP Whitelisting is OK and the problem is in the code. Asks the agent to study the developer documentation deeply and fix each service individually. (PENDING)
+2.  **User:** No more changes needed for redeem limits. (RESOLVED)
+3.  **User:** Confirms that the monthly redeem limit is the combined total of all services. (RESOLVED)
+4.  **User:** Requests to set the weekly limit for EMI/Bank redeem to 1 and make all other services unlimited. (COMPLETED)
+5.  **User:** Asks for an explanation of weekly and monthly PRC redeem limits. (RESOLVED)
+6.  **User:** Reports an error with the chatbot. (COMPLETED)
+7.  **User:** Asks to remove all mentions of PRC Vault, Luxury Life, and Rain Drop from the chatbot's knowledge base. (COMPLETED)
+8.  **User:** Asks to inform the chatbot about the new fixed mining plan rates. (COMPLETED)
+9.  **User:** Requests to change to a fixed base rate for mining, with no date or subscription multipliers. (COMPLETED)
+10. **User:** Asks to change only the Startup plan's referral weight to 0.50. (COMPLETED)
 
 **Project Health Check:**
--   **Broken:** All Eko-dependent features (DTH, Electricity, Gas, EMI, DMT) are functionally broken *in the preview environment* due to the IP whitelist issue. The code is believed to be correct but is untestable.
+-   **Broken:** Core payment functionality. All Eko services (DTH, Gas, Electricity, DMT, etc.) except for mobile recharge are failing.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Eko:** Live integration for BBPS (Bill Payments) and DMT v3 (Money Transfer). The integration is blocked by IP whitelisting in the preview environment.
--   **Razorpay:** Live. No changes made.
--   **MongoDB Atlas:** Live. No changes made.
+-   **Eko:** Live integration for BBPS (Bill Payments) and DMT v3 (Money Transfer). The integration is currently broken due to incorrect API formatting in the code.
+-   **Razorpay:** Live. No recent changes.
+-   **MongoDB Atlas:** Live database.
+-   **OpenAI:** Used for the backend chatbot via .
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (Used to verify the complex mining calculation logic).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** []
--   **Known regressions:** None.
+-   **Test files created:** None.
+-   **Known regressions:** Eko payment services that may have worked previously are now confirmed to be failing.
 
 **Credentials to test flow:**
 -   **Admin User**:  / 
 -   **Test User**:  / 
--   **DMT Test Account:**
-    -   **Name:** Santosh Shamrao Avhale
-    -   **Account Number:** 8829010000024578
-    -   **Bank Name:** DBS Bank
-    -   **IFSC:** DBSS0IN0829
+-   **User's Account for Testing:**  / PIN: 
 
 **What agent forgot to execute**
--   The agent has not yet started the user's highest priority task of removing all PRC-related features and migrating the data.
--   The implementation of the self-service DMT frontend flow in  is incomplete.
--   The pending tasks from the original problem statement (automatic plan fetch, admin dashboard refresh, etc.) have not been addressed.</analysis>
+-   The agent did not begin the deep investigation and fix for the failing Eko services as requested by the user in the last message.
+-   The one-time production database migration for the PRC vault balance was not executed, as it requires explicit user confirmation which should be re-solicited.</analysis>

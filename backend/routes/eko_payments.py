@@ -150,9 +150,10 @@ def needs_manual_review(status_code) -> bool:
 
 def generate_secret_key(timestamp: str):
     """
-    Generate secret-key using HMAC-SHA256 as per Eko documentation
+    Generate secret-key using HMAC-SHA256 as per Eko Reference documentation
+    https://developers.eko.in/reference/authenticationn
     
-    CORRECT Algorithm (VERIFIED WORKING):
+    Algorithm:
     1. Base64 encode the Authenticator Key FIRST
     2. HMAC-SHA256(timestamp, encoded_key)
     3. Base64 encode the result
@@ -160,7 +161,7 @@ def generate_secret_key(timestamp: str):
     if not EKO_AUTHENTICATOR_KEY:
         return None
     
-    # Step 1: Base64 encode the authenticator key FIRST
+    # Step 1: Base64 encode the authenticator key FIRST (as per Reference docs)
     encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
     
     # Step 2: HMAC SHA256 of timestamp using encoded key
@@ -182,8 +183,9 @@ def get_secret_key_timestamp():
 def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user_code: str):
     """
     Generate request_hash for Eko API BBPS Pay Bill
+    https://developers.eko.in/reference/authenticationn
     
-    CORRECT Algorithm (VERIFIED WORKING):
+    Algorithm:
     1. Base64 encode the authenticator key FIRST
     2. Concatenate: timestamp + utility_acc_no + amount + user_code
     3. HMAC-SHA256 with encoded key
@@ -219,7 +221,7 @@ def generate_request_hash(timestamp: str, utility_acc_no: str, amount: str, user
 
 
 async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None, form_data: bool = False):
-    """Make authenticated request to Eko API - VERIFIED WORKING FORMAT"""
+    """Make authenticated request to Eko API - Using base64 encoded key as per Eko Reference docs"""
     import requests as req
     
     if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
@@ -236,11 +238,11 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
     # Generate timestamp
     timestamp = str(int(time.time() * 1000))
     
-    # Generate secret-key (Base64 encode key first!)
-    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    # Generate secret-key: Base64 encode key first, then HMAC (as per Reference docs)
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
     secret_key = base64.b64encode(
-        hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-    ).decode()
+        hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
     
     # Base headers
     headers = {
@@ -264,8 +266,8 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
         # request_hash = HMAC-SHA256(timestamp + utility_acc_no + amount + user_code, encoded_key)
         concat_str = timestamp + utility_acc_no + amount + user_code
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), concat_str.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         headers["request_hash"] = request_hash
         
         print(f"=== MAKE_EKO_REQUEST DEBUG ===")
@@ -768,8 +770,8 @@ async def test_recharge_exact_format(
     amount: str = "10"
 ):
     """
-    Test recharge endpoint using VERIFIED WORKING Eko auth format.
-    Uses requests library (not httpx) with exact working format.
+    Test recharge endpoint using Eko auth format.
+    Uses requests library (not httpx) with raw key bytes as per Eko Python docs.
     """
     import time
     import requests as req
@@ -778,11 +780,11 @@ async def test_recharge_exact_format(
         # Step 1: Generate timestamp (milliseconds - 13 digits)
         timestamp = str(int(time.time() * 1000))  # Use int() not round()
         
-        # Step 2: Generate secret-key
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        # Step 2: Generate secret-key using Base64 encoded key (as per Eko Reference docs)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
         secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
         # Step 3: Build request body
         user_code = EKO_USER_CODE
@@ -802,11 +804,11 @@ async def test_recharge_exact_format(
             "latlong": "19.0760,72.8777"
         }
         
-        # Step 4: Generate request_hash
+        # Step 4: Generate request_hash using Base64 encoded key
         concat_str = timestamp + mobile + amount + user_code
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), concat_str.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
         body_json = json.dumps(body, separators=(',', ':'))
         
@@ -823,7 +825,7 @@ async def test_recharge_exact_format(
         logging.info(f"Concat: {concat_str}")
         logging.info(f"Body: {body_json}")
         
-        # Use requests library with data=body_json (VERIFIED WORKING!)
+        # Use requests library with data=body_json
         response = req.post(url, headers=headers, data=body_json, timeout=60)
         
         try:
@@ -3039,32 +3041,25 @@ async def bbps_pay_bill_form(
         # Step 1: Generate timestamp (milliseconds)
         timestamp = str(int(time.time() * 1000))
         
-        # Step 2: Generate secret-key (same as mobile recharge)
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        # Step 2: Generate secret-key using Base64 encoded key (as per Eko Reference docs)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
         secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
         # Step 3: Generate reference_id if not provided
         if not reference_id:
             reference_id = f"BBPS{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
         
-        # Step 4: Generate request_hash 
-        # BBPS hash formula (user-provided): timestamp + utility_acc_no + amount + operator_id + reference_id
-        raw_string = timestamp + utility_acc_no + amount + operator_id + reference_id
-        
-        # Use same key encoding as mobile recharge
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
-        
-        secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+        # Step 4: Generate request_hash using Base64 encoded key
+        # BBPS hash formula: timestamp + utility_acc_no + amount + user_code
+        raw_string = timestamp + utility_acc_no + amount + EKO_USER_CODE
         
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), raw_string.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
-        # Step 5: Prepare JSON body (SAME AS MOBILE RECHARGE - confirmed by 403 vs 415 test)
+        # Step 5: Prepare JSON body
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
@@ -3095,7 +3090,7 @@ async def bbps_pay_bill_form(
         logging.info(f"Hash raw string: {raw_string[:50]}...")
         logging.info(f"Request Hash: {request_hash}")
         
-        # Use data=body_json (same as mobile recharge)
+        # Use data=body_json
         response = req.post(url, data=body_json, headers=headers, timeout=60)
         
         logging.info(f"Response Status: {response.status_code}")
@@ -3195,22 +3190,21 @@ async def execute_bbps_bill_payment(
         # Step 1: Generate timestamp (13 digits - milliseconds)
         timestamp = str(int(time.time() * 1000))
         
-        # Step 2: Encode access_key using base64 (OFFICIAL DOC)
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        # Step 2: Use Base64 encoded key (as per Eko Reference docs)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
         
         # Step 3: Generate secret-key
-        # secret-key = Base64(HMAC_SHA256(timestamp, encoded_key.encode()))
         secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
-        # Step 4: Generate request_hash (OFFICIAL DOC FORMULA)
+        # Step 4: Generate request_hash
         # request_hash = timestamp + utility_acc_no + amount + user_code
         concatenated_string = timestamp + utility_acc_no + amount + EKO_USER_CODE
         
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), concatenated_string.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
         # Step 5: Prepare URL
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
@@ -3235,7 +3229,7 @@ async def execute_bbps_bill_payment(
         logging.info(f"[BBPS] Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
         logging.info(f"[BBPS] Hash concat: {concatenated_string[:50]}...")
         
-        # Step 8: API call with json=payload (OFFICIAL DOC)
+        # Step 8: API call with json=payload
         response = req.post(url, json=payload, headers=headers, timeout=60)
         
         logging.info(f"[BBPS] Response: {response.status_code}")
@@ -3328,21 +3322,21 @@ async def execute_electricity_payment(
         # Step 1: Generate timestamp (13 digits - milliseconds)
         timestamp = str(int(time.time() * 1000))
         
-        # Step 2: Encode access_key using base64 (OFFICIAL DOC)
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        # Step 2: Use Base64 encoded key (as per Eko Reference docs)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
         
         # Step 3: Generate secret-key
         secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
-        # Step 4: Generate request_hash (OFFICIAL DOC FORMULA)
+        # Step 4: Generate request_hash
         # For Bill Payments: timestamp + utility_acc_no + amount + user_code
         concatenated_string = timestamp + consumer_number + amount + EKO_USER_CODE
         
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
-        ).decode()
+            hmac.new(encoded_key.encode('utf-8'), concatenated_string.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
         
         # Step 5: Prepare URL
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
@@ -3369,7 +3363,7 @@ async def execute_electricity_payment(
         logging.info(f"Operator: {operator_id}, Amount: {amount}")
         logging.info(f"Hash concat: {concatenated_string[:50]}...")
         
-        # Step 8: API call with json=payload (OFFICIAL DOC)
+        # Step 8: API call with json=payload
         response = req.post(url, json=payload, headers=headers, timeout=60)
         
         logging.info(f"Response: {response.status_code}")
@@ -3484,15 +3478,16 @@ class DMTTransferRequestV3(BaseModel):
 
 
 def generate_dmt_v3_headers(timestamp: str = None, request_hash: str = None):
-    """Generate authentication headers for DMT v3 APIs"""
+    """Generate authentication headers for DMT v3 APIs using Base64 encoded key"""
     if not timestamp:
         timestamp = str(int(time.time() * 1000))
     
-    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+    # Use Base64 encoded key (as per Eko Reference docs)
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
     
     secret_key = base64.b64encode(
-        hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
-    ).decode()
+        hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
     
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
@@ -3508,10 +3503,10 @@ def generate_dmt_v3_headers(timestamp: str = None, request_hash: str = None):
 
 
 def generate_dmt_v3_request_hash(encoded_key: str, raw_string: str) -> str:
-    """Generate request_hash for DMT v3 financial transactions"""
+    """Generate request_hash for DMT v3 financial transactions using Base64 encoded key"""
     return base64.b64encode(
-        hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
-    ).decode()
+        hmac.new(encoded_key.encode('utf-8'), raw_string.encode('utf-8'), hashlib.sha256).digest()
+    ).decode('utf-8')
 
 
 @router.get("/dmt/v3/customer/{mobile}")
