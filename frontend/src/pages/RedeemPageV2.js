@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
-  ArrowLeft, Smartphone, Tv, Zap, Flame, Building, Banknote,
+  ArrowLeft, ArrowRight, Smartphone, Tv, Zap, Flame, Building, Banknote,
   CheckCircle, Clock, XCircle, AlertCircle, Info, ChevronRight,
   Wallet, Receipt, Loader2, RefreshCw, Search, X
 } from 'lucide-react';
