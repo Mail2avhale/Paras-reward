@@ -3604,11 +3604,18 @@ async def execute_electricity_payment(
             "request_hash": request_hash
         }
         
-        # Step 7: JSON body
+        # Step 7: JSON body - SAME FORMAT as working mobile recharge
+        client_ref_id = f"ELEC{int(time.time())}"
         payload = {
-            "operator_id": operator_id,
+            "source_ip": "127.0.0.1",
+            "user_code": EKO_USER_CODE,
+            "amount": amount,
+            "client_ref_id": client_ref_id,
             "utility_acc_no": consumer_number,
-            "amount": amount
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "ParasReward",
+            "operator_id": str(operator_id),
+            "latlong": "19.0760,72.8777"
         }
         
         logging.info(f"=== ELECTRICITY PAYMENT ===")
@@ -3617,8 +3624,9 @@ async def execute_electricity_payment(
         logging.info(f"Operator: {operator_id}, Amount: {amount}")
         logging.info(f"Hash concat: {concatenated_string[:50]}...")
         
-        # Step 8: API call with json=payload
-        response = req.post(url, json=payload, headers=headers, timeout=60)
+        # Step 8: API call with data=json_string (SAME AS WORKING MOBILE RECHARGE)
+        body_json = json.dumps(payload, separators=(',', ':'))
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
         
         logging.info(f"Response: {response.status_code}")
         logging.info(f"Body: {response.text[:500]}")
