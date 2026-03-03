@@ -265,6 +265,9 @@ const RedeemPageV2 = ({ user }) => {
   const [operators, setOperators] = useState({});
   const [loadingOperators, setLoadingOperators] = useState(false);
   
+  // Quick Pay - Recently used payments
+  const [quickPayItems, setQuickPayItems] = useState([]);
+  
   // Bank/IFSC search states
   const [bankSearch, setBankSearch] = useState('');
   const [bankList, setBankList] = useState([]);
@@ -343,7 +346,88 @@ const RedeemPageV2 = ({ user }) => {
     
     fetchUserData();
     fetchRequests();
+    loadQuickPayItems();
   }, [user, navigate]);
+  
+  // Load Quick Pay items from localStorage
+  const loadQuickPayItems = () => {
+    try {
+      const saved = localStorage.getItem(`quickpay_${user.uid}`);
+      if (saved) {
+        const items = JSON.parse(saved);
+        setQuickPayItems(items.slice(0, 5)); // Keep only last 5
+      }
+    } catch (e) {
+      console.error('Error loading quick pay:', e);
+    }
+  };
+  
+  // Save to Quick Pay after successful transaction
+  const saveToQuickPay = (serviceType, details, amount) => {
+    try {
+      const config = SERVICE_CONFIG[serviceType];
+      if (!config) return;
+      
+      const newItem = {
+        id: Date.now(),
+        service_type: serviceType,
+        service_name: config.name,
+        details: details,
+        amount: amount,
+        display_text: getQuickPayDisplayText(serviceType, details),
+        timestamp: new Date().toISOString()
+      };
+      
+      // Get existing items
+      const saved = localStorage.getItem(`quickpay_${user.uid}`);
+      let items = saved ? JSON.parse(saved) : [];
+      
+      // Remove duplicate if exists (same service + same account)
+      items = items.filter(item => 
+        !(item.service_type === serviceType && 
+          item.display_text === newItem.display_text)
+      );
+      
+      // Add new item at beginning
+      items.unshift(newItem);
+      
+      // Keep only last 5
+      items = items.slice(0, 5);
+      
+      localStorage.setItem(`quickpay_${user.uid}`, JSON.stringify(items));
+      setQuickPayItems(items);
+    } catch (e) {
+      console.error('Error saving quick pay:', e);
+    }
+  };
+  
+  // Get display text for quick pay item
+  const getQuickPayDisplayText = (serviceType, details) => {
+    if (serviceType === 'mobile_recharge' || serviceType === 'mobile_postpaid') {
+      return details.mobile_number ? `${details.mobile_number.slice(-4)}` : '';
+    } else if (serviceType === 'credit_card') {
+      return details.card_number ? `****${details.card_number.slice(-4)}` : '';
+    } else if (serviceType === 'insurance') {
+      return details.policy_number ? `${details.policy_number.slice(-6)}` : '';
+    } else if (serviceType === 'fastag') {
+      return details.vehicle_number || '';
+    } else if (serviceType === 'emi') {
+      return details.loan_account ? `${details.loan_account.slice(-6)}` : '';
+    } else {
+      return details.consumer_number ? `${details.consumer_number.slice(-6)}` : '';
+    }
+  };
+  
+  // Use Quick Pay item
+  const useQuickPay = (item) => {
+    setSelectedService(item.service_type);
+    setFormData(prev => ({
+      ...prev,
+      ...item.details,
+      amount: item.amount.toString()
+    }));
+    toast.success(`${item.service_name} details loaded!`);
+  };
   
   // Fetch operators when service or recharge type changes
   useEffect(() => {
@@ -844,6 +928,11 @@ const RedeemPageV2 = ({ user }) => {
         details
       });
       
+      // Save to Quick Pay on success
+      if (response.data.success !== false) {
+        saveToQuickPay(selectedService, details, parseFloat(formData.amount));
+      }
+      
       toast.success(response.data.message || 'Request submitted successfully!');
       
       // Reset form
@@ -968,6 +1057,50 @@ const RedeemPageV2 = ({ user }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Service Selection & Form */}
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* Quick Pay Section - Recently Used */}
+            {quickPayItems.length > 0 && (
+              <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-xl rounded-3xl p-5 border border-amber-500/30">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-amber-400" />
+                    <h2 className="text-base font-bold text-white">Quick Pay</h2>
+                    <span className="text-xs text-gray-400">Recently used</span>
+                  </div>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  {quickPayItems.map((item) => {
+                    const config = SERVICE_CONFIG[item.service_type];
+                    if (!config) return null;
+                    const Icon = config.icon;
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => useQuickPay(item)}
+                        className="flex-shrink-0 bg-gray-800/60 hover:bg-gray-700/60 border border-gray-700/50 hover:border-amber-500/50 rounded-2xl p-3 transition-all duration-300 min-w-[140px]"
+                        data-testid={`quickpay-${item.id}`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center`}>
+                            <Icon className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xs font-medium text-white leading-tight">{config.name}</p>
+                            <p className="text-[10px] text-gray-400">{item.display_text}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-amber-400 font-bold text-sm">₹{item.amount}</span>
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             {/* Service Selection - PhonePe Style Grid */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl rounded-3xl p-6 border border-gray-800/50">
               <div className="flex items-center justify-between mb-5">
@@ -2417,32 +2550,6 @@ const RedeemPageV2 = ({ user }) => {
                   <span className="font-semibold">10 PRC = ₹1</span>
                 </li>
               </ul>
-            </div>
-            
-            {/* How It Works */}
-            <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/40 rounded-3xl p-6 border border-gray-800/50">
-              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                <Info className="h-5 w-5 text-green-400" />
-                How It Works
-              </h3>
-              <ol className="text-sm text-gray-400 space-y-3">
-                <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">1</span>
-                  <span>Select service & enter details</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">2</span>
-                  <span>PRC deducted from your balance</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">3</span>
-                  <span>Admin approves & processes</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center text-xs font-bold text-green-400 flex-shrink-0">4</span>
-                  <span>Transaction completed!</span>
-                </li>
-              </ol>
             </div>
           </div>
         </div>
