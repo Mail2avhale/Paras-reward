@@ -1,0 +1,57 @@
+{
+  "summary": "Eko BBPS Code Review Complete - Found CRITICAL BUG in EMI service: 'operator' field is NOT included in SERVICE_CONFIG fields list, so EMI requests never send operator_id to backend. For DTH/Electricity, code logic is CORRECT - 403 errors in production are likely due to Eko BBPS service activation per category (not code issue). Preview environment cannot test actual API calls as IP is not whitelisted.",
+  "mode": "generate",
+  "baseline_commit": "d27183ac6f4e7411c5fefde4686bae97ca609e3d",
+  "head_commit": "d27183ac6f4e7411c5fefde4686bae97ca609e3d",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "RedeemPageV2.js",
+        "issue": "CRITICAL BUG: EMI SERVICE_CONFIG.fields does NOT include 'operator' field. Even though operator is set from lender.operator_id when selecting a lender (line 1089), the handleSubmit function only sends fields listed in SERVICE_CONFIG. Result: EMI requests never include operator_id, causing backend 'Missing operator' error.",
+        "selector": "SERVICE_CONFIG.emi.fields",
+        "priority": "CRITICAL",
+        "fix_location": "/app/frontend/src/pages/RedeemPageV2.js line 52",
+        "current_value": "['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount']",
+        "required_value": "['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount', 'operator']"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 24,
+    "passed": 22,
+    "failed": 2,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_eko_bbps_field_mapping.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/eko_field_mapping_results.xml",
+    "/app/backend/tests/test_eko_bbps_field_mapping.py"
+  ],
+  "action_items": [
+    "FIX CRITICAL BUG: Add 'operator' to EMI SERVICE_CONFIG.fields in /app/frontend/src/pages/RedeemPageV2.js line 52",
+    "FOR DTH/ELECTRICITY 403 ERRORS: The code is CORRECT (verified via unit tests). 403 errors in production may require: 1) Activating BBPS service (code=53) for ALL categories via Eko dashboard, 2) Verifying production IP is whitelisted for ALL BBPS category types, 3) Contact Eko support to verify category-specific activation",
+    "VERIFY: Mobile Recharge uses category=5, DTH=4, Electricity=8, EMI=21. Each category may need separate activation with Eko"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_eko_bbps_field_mapping.py"
+  ],
+  "success_rate": {
+    "backend": "91.7% (22/24 passed, 2 intentional failures to identify EMI bug)",
+    "frontend": "Code Review Only - no live testing due to IP whitelist"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Eko BBPS Code Review Summary\n\n### CRITICAL BUG FOUND - EMI Service:\nFile: /app/frontend/src/pages/RedeemPageV2.js\nLine 52: SERVICE_CONFIG.emi.fields = ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount']\n\nPROBLEM: 'operator' field is MISSING from this array!\n\nEven though operator is correctly set from lender.operator_id when user selects a lender (line 1089):\n```js\nsetFormData(prev => ({\n  ...prev,\n  selected_lender: lender,\n  bank_name: lender.name,\n  operator: lender.operator_id  // <- OPERATOR IS SET\n}));\n```\n\nThe handleSubmit function only sends fields listed in SERVICE_CONFIG:\n```js\nfor (const field of config.fields) {\n  if (formData[field]) {\n    details[field] = formData[field];\n  }\n}\n```\n\nSince 'operator' is NOT in fields array, it's never sent to backend.\n\nFIX: Change line 52 to:\n```js\nfields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount', 'operator']\n```\n\n### DTH/Electricity Code Verification:\n- Field mapping is CORRECT (verified by unit tests)\n- Both services include 'operator' in fields array\n- Backend extracts consumer_number and operator correctly\n- Same BBPS paybill API endpoint used for all services\n\nIf DTH/Electricity still fail with 403 in production:\n1. Verify Eko BBPS service (code=53) is activated for ALL categories\n2. Check if production IP is whitelisted for ALL BBPS category types\n3. Contact Eko - some categories may need explicit activation\n\n### Test Created:\n/app/backend/tests/test_eko_bbps_field_mapping.py\n- Tests field extraction for all service types\n- Tests API body construction\n- Tests request_hash calculation\n- Identifies EMI operator bug (2 intentional failures)",
+  "rca_of_issue": "## Root Cause Analysis\n\n### EMI 403 Error:\nCODE BUG: EMI SERVICE_CONFIG.fields array in RedeemPageV2.js doesn't include 'operator' field.\nRESULT: Backend receives empty operator, returns 'Missing operator' error (not 403).\nNOTE: This is a different error than 403 - suggests EMI might also have API-level 403 from Eko.\n\n### DTH/Electricity 403 Error:\nCODE VERIFIED CORRECT. 403 is HTTP-level rejection from Eko server.\nPossible causes:\n1. BBPS categories (DTH=4, Electricity=8) need separate Eko service activation\n2. Production IP whitelist may be category-specific\n3. Different Eko API endpoints for different categories (unlikely - same endpoint used)\n\nRECOMMENDATION:\n1. Fix EMI operator bug immediately\n2. Contact Eko support about DTH/Electricity 403 - request category-specific activation verification\n3. Ask Eko if different categories need different IP whitelisting"
+}
