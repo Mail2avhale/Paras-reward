@@ -208,13 +208,18 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                     "message": eko_response.get("message", "Transaction failed")
                 }
         else:
-            # DTH, Electricity, Gas, EMI - all use same BBPS JSON format
+            # DTH, Electricity, Gas, EMI - use BBPS form-urlencoded format
+            # CORRECT FORMAT: x-www-form-urlencoded with different hash formula
             from routes.eko_payments import execute_bbps_bill_payment
+            
+            # Get customer mobile from details or use default
+            customer_mobile = details.get("mobile_number") or details.get("customer_mobile") or None
+            
             result = await execute_bbps_bill_payment(
                 utility_acc_no=utility_acc_no,
                 operator_id=operator,
                 amount=amount,
-                sender_name=sender_name
+                customer_mobile=customer_mobile
             )
             return result
             

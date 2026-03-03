@@ -2756,19 +2756,26 @@ async def bbps_pay_bill_form(
             reference_id = f"BBPS{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
         
         # Step 4: Generate request_hash 
-        # CORRECT FORMULA FROM EKO DOCS: timestamp + utility_acc_no + amount + user_code
-        user_code = EKO_USER_CODE
-        concat_str = timestamp + utility_acc_no + amount + user_code
-        request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+        # BBPS hash formula (user-provided): timestamp + utility_acc_no + amount + operator_id + reference_id
+        raw_string = timestamp + utility_acc_no + amount + operator_id + reference_id
+        
+        # Use same key encoding as mobile recharge
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Step 5: Prepare JSON body (SAME FORMAT AS MOBILE RECHARGE!)
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Step 5: Prepare JSON body (SAME AS MOBILE RECHARGE - confirmed by 403 vs 415 test)
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
             "source_ip": "127.0.0.1",
-            "user_code": user_code,
+            "user_code": EKO_USER_CODE,
             "amount": amount,
             "client_ref_id": reference_id,
             "utility_acc_no": utility_acc_no,
@@ -2786,17 +2793,16 @@ async def bbps_pay_bill_form(
             "Content-Type": "application/json"
         }
         
-        # Convert to compact JSON
         body_json = json.dumps(body, separators=(',', ':'))
         
         logging.info(f"=== BBPS PAY BILL (JSON) ===")
         logging.info(f"URL: {url}")
         logging.info(f"Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
-        logging.info(f"Concat for hash: {concat_str[:50]}...")
+        logging.info(f"Hash raw string: {raw_string[:50]}...")
         logging.info(f"Request Hash: {request_hash}")
         
-        # Make request with data=body_json (SAME AS MOBILE RECHARGE!)
-        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        # Use data=body_json (same as mobile recharge)
+        response = req.post(url, data=body_json, headers=headers, timeout=60)
         
         logging.info(f"Response Status: {response.status_code}")
         logging.info(f"Response Body: {response.text[:300]}")
@@ -2874,16 +2880,18 @@ async def execute_bbps_bill_payment(
     utility_acc_no: str,
     operator_id: str,
     amount: str,
-    sender_name: str = "ParasReward",
+    customer_mobile: str = None,
     reference_id: str = None
 ) -> dict:
     """
     Internal function to execute BBPS bill payment.
     Called from unified_redeem_v2.py for DTH, Electricity, Gas, EMI services.
     
-    Uses application/json format (same as mobile recharge - verified from Eko docs).
+    Format: application/json (same as mobile recharge - confirmed by 403 vs 415 test)
+    Hash formula: timestamp + utility_acc_no + amount + operator_id + reference_id (user-provided)
     
-    request_hash formula: timestamp + utility_acc_no + amount + user_code
+    Note: Both hash formulas return 403 (IP block) vs 415 (format error),
+    confirming JSON format is correct. The hash formula will need production testing.
     """
     import requests as req
     
@@ -2891,36 +2899,40 @@ async def execute_bbps_bill_payment(
         # Generate timestamp
         timestamp = str(int(time.time() * 1000))
         
-        # Generate secret-key
+        # Generate reference_id if not provided
+        if not reference_id:
+            reference_id = f"TXN{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        
+        # Use initiator_id as customer mobile if not provided
+        if not customer_mobile:
+            customer_mobile = EKO_INITIATOR_ID
+        
+        # Use same key encoding as mobile recharge
         encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
+        
+        # Generate secret-key (same as mobile recharge)
         secret_key = base64.b64encode(
             hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Generate reference_id if not provided
-        if not reference_id:
-            reference_id = f"BBPS{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
-        
-        user_code = EKO_USER_CODE
-        
-        # Generate request_hash - CORRECT FORMULA FROM EKO DOCS:
-        # timestamp + utility_acc_no + amount + user_code
-        concat_str = timestamp + utility_acc_no + amount + user_code
+        # request_hash formula for BBPS Bill Payment (user-provided):
+        # timestamp + utility_acc_no + amount + operator_id + reference_id
+        raw_string = timestamp + utility_acc_no + amount + operator_id + reference_id
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), concat_str.encode(), hashlib.sha256).digest()
+            hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Prepare JSON body (NOT form-urlencoded!)
+        # Prepare JSON body (SAME FORMAT AS MOBILE RECHARGE!)
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
             "source_ip": "127.0.0.1",
-            "user_code": user_code,
+            "user_code": EKO_USER_CODE,
             "amount": amount,
             "client_ref_id": reference_id,
             "utility_acc_no": utility_acc_no,
-            "confirmation_mobile_no": EKO_INITIATOR_ID,
-            "sender_name": sender_name,
+            "confirmation_mobile_no": customer_mobile,
+            "sender_name": "ParasReward",
             "operator_id": operator_id,
             "latlong": "19.0760,72.8777"
         }
@@ -2933,24 +2945,33 @@ async def execute_bbps_bill_payment(
             "Content-Type": "application/json"
         }
         
-        # Convert to compact JSON (VERIFIED WORKING FORMAT)
+        # Compact JSON format
         body_json = json.dumps(body, separators=(',', ':'))
         
         logging.info(f"[BBPS] Executing: operator={operator_id}, account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, amount={amount}")
-        logging.info(f"[BBPS] Concat for hash: {concat_str[:40]}...")
+        logging.info(f"[BBPS] Hash raw string: {raw_string[:50]}...")
+        logging.info(f"[BBPS] Reference ID: {reference_id}")
         
-        # Use data=body_json (NOT json=body) - this is how it works for mobile recharge
-        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        # Use data=body_json (same as mobile recharge)
+        response = req.post(url, data=body_json, headers=headers, timeout=60)
         
         logging.info(f"[BBPS] Response: {response.status_code}")
-        logging.info(f"[BBPS] Response body: {response.text[:200]}")
+        logging.info(f"[BBPS] Response body: {response.text[:300]}")
         
         if response.status_code == 403:
             return {
                 "success": False,
                 "status": "FAILED",
                 "error_code": "403",
-                "message": "Access denied (403). Service may not be activated or IP not whitelisted."
+                "message": "Access denied (403). IP may not be whitelisted with Eko."
+            }
+        
+        if response.status_code == 415:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": "415",
+                "message": "Unsupported Media Type (415). Check Content-Type and request format."
             }
         
         try:
