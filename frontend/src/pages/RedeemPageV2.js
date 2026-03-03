@@ -49,7 +49,7 @@ const SERVICE_CONFIG = {
     icon: Building, 
     color: 'red',
     gradient: 'from-red-500 to-rose-500',
-    fields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount']
+    fields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount', 'operator']
   },
   dmt: { 
     name: 'Redeem to Bank Account', 
