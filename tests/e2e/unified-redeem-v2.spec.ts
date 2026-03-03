@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://redeem-payment-flow.preview.emergentagent.com';
+const BASE_URL = 'https://eko-payment.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 

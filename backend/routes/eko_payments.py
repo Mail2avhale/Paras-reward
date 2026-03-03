@@ -1599,6 +1599,300 @@ async def toggle_plan_status(operator: str, amount: int):
     return {"success": True, "message": f"Plan ₹{amount} is now {'active' if new_status else 'inactive'}"}
 
 
+# ==================== AUTO OPERATOR & CIRCLE DETECTION ====================
+
+# Mobile number prefix to operator mapping (India)
+MOBILE_PREFIX_TO_OPERATOR = {
+    # Jio prefixes (9xxx, 8xxx, 7xxx series)
+    "6": "JIO",  # Most 6xxx numbers are Jio
+    "70": "JIO", "71": "JIO", "72": "JIO", "73": "JIO", "74": "JIO",
+    "75": "JIO", "76": "JIO", "77": "JIO", "78": "JIO", "79": "JIO",
+    "80": "JIO", "81": "JIO", "82": "JIO", "83": "JIO",
+    "89": "JIO", "90": "JIO", 
+    
+    # Airtel prefixes
+    "84": "AIRTEL", "85": "AIRTEL", "86": "AIRTEL", "87": "AIRTEL", "88": "AIRTEL",
+    "91": "AIRTEL", "92": "AIRTEL", "93": "AIRTEL", "94": "AIRTEL",
+    "95": "AIRTEL", "96": "AIRTEL", "97": "AIRTEL", "98": "AIRTEL", "99": "AIRTEL",
+    
+    # Vi (Vodafone Idea) prefixes
+    "79": "VI", "80": "VI", "81": "VI", "82": "VI",
+    "70": "VI", "72": "VI", "73": "VI", "74": "VI",
+    "97": "VI", "98": "VI", "99": "VI",
+    
+    # BSNL prefixes
+    "94": "BSNL",
+}
+
+# More accurate operator detection using first 4 digits
+MOBILE_4DIGIT_TO_OPERATOR = {
+    # Jio confirmed prefixes
+    "6000": "JIO", "6001": "JIO", "6002": "JIO", "6003": "JIO",
+    "6200": "JIO", "6201": "JIO", "6202": "JIO", "6203": "JIO",
+    "6290": "JIO", "6291": "JIO", "6292": "JIO",
+    "6370": "JIO", "6371": "JIO", "6372": "JIO",
+    "7000": "JIO", "7001": "JIO", "7002": "JIO", "7003": "JIO",
+    "7020": "JIO", "7021": "JIO", "7022": "JIO",
+    "7038": "JIO", "7039": "JIO",
+    "7066": "JIO", "7083": "JIO", "7208": "JIO", "7219": "JIO",
+    "7304": "JIO", "7400": "JIO", "7506": "JIO", "7507": "JIO",
+    "7666": "JIO", "7710": "JIO", "7715": "JIO", "7718": "JIO",
+    "7738": "JIO", "7756": "JIO", "7757": "JIO",
+    "8080": "JIO", "8081": "JIO", "8082": "JIO",
+    "8160": "JIO", "8200": "JIO", "8238": "JIO", "8286": "JIO",
+    "8291": "JIO", "8369": "JIO", "8454": "JIO", "8459": "JIO",
+    "8469": "JIO", "8488": "JIO", "8511": "JIO",
+    "8591": "JIO", "8600": "JIO", "8617": "JIO", "8655": "JIO",
+    "8657": "JIO", "8668": "JIO", "8669": "JIO",
+    "8779": "JIO", "8793": "JIO", "8796": "JIO", "8828": "JIO",
+    "8850": "JIO", "8879": "JIO", "8898": "JIO",
+    "9004": "JIO", "9029": "JIO", "9082": "JIO", "9137": "JIO",
+    "9152": "JIO", "9167": "JIO", "9209": "JIO", "9220": "JIO",
+    "9321": "JIO", "9324": "JIO", "9372": "JIO", "9403": "JIO",
+    "9619": "JIO", "9702": "JIO", "9757": "JIO", "9819": "JIO",
+    "9820": "JIO", "9821": "JIO", "9833": "JIO", "9860": "JIO",
+    "9867": "JIO", "9869": "JIO", "9920": "JIO", "9930": "JIO",
+    
+    # Airtel confirmed prefixes
+    "7303": "AIRTEL", "7838": "AIRTEL", "7982": "AIRTEL", "8010": "AIRTEL",
+    "8076": "AIRTEL", "8130": "AIRTEL", "8178": "AIRTEL", "8285": "AIRTEL",
+    "8375": "AIRTEL", "8376": "AIRTEL", "8377": "AIRTEL",
+    "8447": "AIRTEL", "8448": "AIRTEL", "8527": "AIRTEL", "8584": "AIRTEL",
+    "8587": "AIRTEL", "8588": "AIRTEL", "8595": "AIRTEL", "8700": "AIRTEL",
+    "8744": "AIRTEL", "8750": "AIRTEL", "8800": "AIRTEL", "8826": "AIRTEL",
+    "8860": "AIRTEL", "8882": "AIRTEL", "9205": "AIRTEL", "9211": "AIRTEL",
+    "9212": "AIRTEL", "9250": "AIRTEL", "9289": "AIRTEL", "9310": "AIRTEL",
+    "9311": "AIRTEL", "9312": "AIRTEL", "9350": "AIRTEL", "9540": "AIRTEL",
+    "9555": "AIRTEL", "9560": "AIRTEL", "9599": "AIRTEL", "9650": "AIRTEL",
+    "9654": "AIRTEL", "9711": "AIRTEL", "9717": "AIRTEL", "9718": "AIRTEL",
+    "9810": "AIRTEL", "9811": "AIRTEL", "9818": "AIRTEL", "9868": "AIRTEL",
+    "9871": "AIRTEL", "9873": "AIRTEL", "9899": "AIRTEL", "9910": "AIRTEL",
+    "9911": "AIRTEL", "9953": "AIRTEL", "9958": "AIRTEL", "9971": "AIRTEL",
+    "9990": "AIRTEL", "9999": "AIRTEL",
+    
+    # Vi (Vodafone Idea) confirmed prefixes  
+    "7011": "VI", "7042": "VI", "7065": "VI", "7206": "VI", "7290": "VI",
+    "7292": "VI", "7428": "VI", "7503": "VI", "7678": "VI", "7827": "VI",
+    "7830": "VI", "7836": "VI", "7840": "VI", "7982": "VI", "8003": "VI",
+    "8057": "VI", "8058": "VI", "8059": "VI", "8107": "VI", "8171": "VI",
+    "8218": "VI", "8219": "VI", "8287": "VI", "8295": "VI", "8318": "VI",
+    "8368": "VI", "8383": "VI", "8396": "VI", "8470": "VI", "8506": "VI",
+    "8512": "VI", "8527": "VI", "8570": "VI", "8586": "VI", "8630": "VI",
+    "8690": "VI", "8700": "VI", "8755": "VI", "8860": "VI", "9015": "VI",
+    "9015": "VI", "9136": "VI", "9205": "VI", "9289": "VI", "9310": "VI",
+    "9560": "VI", "9650": "VI", "9711": "VI", "9810": "VI", "9818": "VI",
+    "9871": "VI", "9873": "VI", "9899": "VI", "9910": "VI", "9999": "VI",
+    
+    # BSNL prefixes
+    "9402": "BSNL", "9415": "BSNL", "9425": "BSNL", "9435": "BSNL",
+    "9447": "BSNL", "9448": "BSNL", "9449": "BSNL", "9450": "BSNL",
+    "9452": "BSNL", "9454": "BSNL", "9455": "BSNL", "9456": "BSNL",
+}
+
+# Circle detection based on mobile number patterns
+MOBILE_PREFIX_TO_CIRCLE = {
+    # Maharashtra & Mumbai
+    "98200": "MH", "98210": "MH", "98220": "MH", "98230": "MH",
+    "98600": "MH", "98670": "MH", "98690": "MH",
+    "88050": "MH", "88280": "MH", "88500": "MH", "88790": "MH",
+    "90040": "MUM", "90820": "MUM", "91520": "MUM", "91670": "MUM",
+    "93210": "MUM", "93240": "MUM", "93720": "MUM", "96190": "MUM",
+    "97020": "MUM", "97570": "MUM", "98190": "MUM", "98200": "MUM",
+    "98300": "MUM", "98330": "MUM", "98670": "MUM", "98690": "MUM",
+    "99200": "MUM", "99300": "MUM",
+    
+    # Delhi NCR
+    "98100": "DL", "98110": "DL", "98180": "DL", "98680": "DL",
+    "98710": "DL", "98730": "DL", "98990": "DL", "99100": "DL",
+    "99110": "DL", "99530": "DL", "99580": "DL", "99710": "DL",
+    "99900": "DL", "99990": "DL",
+    "87000": "DL", "87440": "DL", "87500": "DL", "88000": "DL",
+    "88260": "DL", "88600": "DL", "88820": "DL",
+    
+    # Karnataka
+    "98440": "KA", "98450": "KA", "98800": "KA", "98860": "KA",
+    "97410": "KA", "97420": "KA", "97310": "KA",
+    "80500": "KA", "81050": "KA", "81470": "KA", "81970": "KA",
+    "87220": "KA", "87920": "KA", "88610": "KA",
+    
+    # Tamil Nadu & Chennai
+    "98400": "TN", "98410": "TN", "98420": "TN", "98430": "TN",
+    "97890": "TN", "97910": "TN", "98900": "TN",
+    "90030": "CHN", "90420": "CHN", "90430": "CHN", "90920": "CHN",
+    "94440": "CHN", "97100": "CHN", "97800": "CHN",
+    
+    # Gujarat
+    "98240": "GJ", "98250": "GJ", "98790": "GJ", "98980": "GJ",
+    "90990": "GJ", "91040": "GJ", "91060": "GJ",
+    "70160": "GJ", "72020": "GJ", "75670": "GJ", "75750": "GJ",
+    "78740": "GJ", "79840": "GJ", "81280": "GJ", "81600": "GJ",
+    
+    # UP East & West
+    "97920": "UP_E", "97940": "UP_E", "98380": "UP_E", "98390": "UP_E",
+    "94500": "UP_E", "94520": "UP_E", "94540": "UP_E", "94550": "UP_E",
+    "98370": "UP_W", "98970": "UP_W", "95480": "UP_W",
+    
+    # Punjab & Haryana
+    "98140": "PB", "98150": "PB", "98880": "PB", "94170": "PB",
+    "98120": "HR", "98130": "HR", "99960": "HR", "96710": "HR",
+    
+    # Rajasthan
+    "98280": "RJ", "98290": "RJ", "98290": "RJ",
+    "70140": "RJ", "72300": "RJ", "76650": "RJ", "86900": "RJ",
+    
+    # West Bengal & Kolkata
+    "98300": "WB", "98310": "WB", "98320": "WB", "98360": "WB",
+    "90070": "KOL", "91630": "KOL", "93310": "KOL", "97480": "KOL",
+}
+
+
+def detect_operator_from_mobile(mobile: str) -> dict:
+    """
+    Detect operator and circle from mobile number
+    Returns: {operator: str, circle: str, confidence: str}
+    """
+    if not mobile or len(mobile) < 10:
+        return {"operator": None, "circle": None, "confidence": "none"}
+    
+    # Clean mobile number
+    mobile = mobile.strip().replace(" ", "").replace("-", "")
+    if mobile.startswith("+91"):
+        mobile = mobile[3:]
+    if mobile.startswith("91") and len(mobile) == 12:
+        mobile = mobile[2:]
+    
+    if len(mobile) != 10 or not mobile.isdigit():
+        return {"operator": None, "circle": None, "confidence": "none"}
+    
+    operator = None
+    circle = None
+    confidence = "low"
+    
+    # Try 4-digit prefix first (highest accuracy)
+    prefix_4 = mobile[:4]
+    if prefix_4 in MOBILE_4DIGIT_TO_OPERATOR:
+        operator = MOBILE_4DIGIT_TO_OPERATOR[prefix_4]
+        confidence = "high"
+    else:
+        # Try 2-digit prefix
+        prefix_2 = mobile[:2]
+        if prefix_2 in MOBILE_PREFIX_TO_OPERATOR:
+            operator = MOBILE_PREFIX_TO_OPERATOR[prefix_2]
+            confidence = "medium"
+    
+    # Try circle detection (5-digit prefix)
+    prefix_5 = mobile[:5]
+    if prefix_5 in MOBILE_PREFIX_TO_CIRCLE:
+        circle = MOBILE_PREFIX_TO_CIRCLE[prefix_5]
+    
+    # Default circle based on common patterns
+    if not circle:
+        circle = "MH"  # Default to Maharashtra (most common)
+    
+    return {
+        "operator": operator,
+        "circle": circle,
+        "confidence": confidence
+    }
+
+
+@router.get("/recharge/detect/{mobile}")
+async def detect_operator_and_plans(mobile: str):
+    """
+    Auto-detect operator and circle from mobile number, then fetch plans
+    Returns operator info and available plans
+    """
+    detection = detect_operator_from_mobile(mobile)
+    
+    if not detection["operator"]:
+        return {
+            "success": False,
+            "message": "Could not detect operator from this number",
+            "mobile": mobile,
+            "detection": detection,
+            "suggestions": [
+                {"id": "JIO", "name": "Jio"},
+                {"id": "AIRTEL", "name": "Airtel"},
+                {"id": "VI", "name": "Vi (Vodafone Idea)"},
+                {"id": "BSNL", "name": "BSNL"}
+            ]
+        }
+    
+    # Fetch plans for detected operator
+    operator = detection["operator"]
+    circle = detection["circle"] or "MH"
+    
+    try:
+        # First try database
+        plans = []
+        if db is not None:
+            db_plans = await db.recharge_plans.find(
+                {"operator": operator, "is_active": True},
+                {"_id": 0}
+            ).sort("amount", 1).to_list(50)
+            
+            if db_plans and len(db_plans) > 0:
+                plans = db_plans
+        
+        # Fallback to hardcoded plans
+        if not plans:
+            plans = get_real_operator_plans(operator)
+        
+        # Get operator display name
+        operator_names = {
+            "JIO": "Jio",
+            "AIRTEL": "Airtel",
+            "VI": "Vi (Vodafone Idea)",
+            "BSNL": "BSNL"
+        }
+        
+        # Get circle display name
+        circle_names = {
+            "MH": "Maharashtra",
+            "MUM": "Mumbai",
+            "DL": "Delhi NCR",
+            "KA": "Karnataka",
+            "TN": "Tamil Nadu",
+            "CHN": "Chennai",
+            "GJ": "Gujarat",
+            "UP_E": "UP East",
+            "UP_W": "UP West",
+            "PB": "Punjab",
+            "HR": "Haryana",
+            "RJ": "Rajasthan",
+            "WB": "West Bengal",
+            "KOL": "Kolkata",
+            "AP": "Andhra Pradesh",
+            "KL": "Kerala",
+            "MP": "Madhya Pradesh",
+            "BH": "Bihar"
+        }
+        
+        return {
+            "success": True,
+            "mobile": mobile,
+            "detection": {
+                "operator": operator,
+                "operator_name": operator_names.get(operator, operator),
+                "circle": circle,
+                "circle_name": circle_names.get(circle, circle),
+                "confidence": detection["confidence"]
+            },
+            "plans": plans,
+            "plan_count": len(plans)
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fetching plans: {e}")
+        return {
+            "success": True,
+            "mobile": mobile,
+            "detection": detection,
+            "plans": [],
+            "error": str(e)
+        }
+
+
 # ==================== DTH PLANS MANAGEMENT ====================
 
 @router.get("/dth/plans/{operator}")

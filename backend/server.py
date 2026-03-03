@@ -6487,24 +6487,12 @@ async def claim_mining(uid: str):
     rate_per_minute, base_rate, total_active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mined_amount = elapsed_minutes * rate_per_minute
     
-    # Process luxury savings for ALL users (20% auto-deduct)
+    # PRC VAULT / LUXURY SAVINGS FEATURE DISABLED
+    # User now receives 100% of mined amount (no 20% deduction)
     luxury_deduction = 0
     luxury_savings_result = None
-    # Luxury Life is now for ALL users (free and paid)
-    try:
-        luxury_savings_result = await process_luxury_savings(uid, mined_amount)
-        print(f"[LUXURY DEBUG] User {uid}: mined={mined_amount}, luxury_result={luxury_savings_result}")
-        if luxury_savings_result:
-            luxury_deduction = luxury_savings_result.get("total_saved", 0)
-            print(f"[LUXURY DEBUG] Deduction: {luxury_deduction} (20% of {mined_amount})")
-        else:
-            print(f"[LUXURY DEBUG] No luxury result returned for user {uid}")
-    except Exception as e:
-        print(f"[LUXURY ERROR] Failed to process luxury savings: {e}")
-    
-    # User receives 80% (20% goes to luxury savings)
-    user_receives = mined_amount - luxury_deduction
-    print(f"[LUXURY DEBUG] User receives: {user_receives} (80% of {mined_amount})")
+    user_receives = mined_amount
+    print(f"[MINING] User {uid}: mined={mined_amount}, receives={user_receives} (100% - vault disabled)")
     
     # Update user balance (free and VIP users)
     # SAFETY: Handle None/null prc_balance explicitly
@@ -7662,16 +7650,11 @@ async def play_tap_game(uid: str, tap_data: TapGamePlay):
     taps_to_add = min(tap_data.taps, remaining_taps)
     prc_earned = round(taps_to_add * prc_per_tap, 2)
     
-    # Process luxury savings for ALL users (20% auto-deduct)
+    # PRC VAULT / LUXURY SAVINGS FEATURE DISABLED
+    # User now receives 100% of earned PRC (no 20% deduction)
     luxury_deduction = 0
     luxury_savings_result = None
-    # Luxury Life is now for ALL users
-    luxury_savings_result = await process_luxury_savings(uid, prc_earned)
-    if luxury_savings_result:
-        luxury_deduction = luxury_savings_result.get("total_saved", 0)
-    
-    # User receives 80% (20% goes to luxury savings)
-    user_receives = prc_earned - luxury_deduction
+    user_receives = prc_earned
     
     # Update user
     await db.users.update_one(

@@ -549,17 +549,12 @@ const DailyRewards = ({ user }) => {
       
       const data = response.data;
       const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
-      const luxurySaved = data.luxury_savings?.deducted || 0;
       
       // Trigger confetti celebration!
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 1000);
       
-      if (luxurySaved > 0) {
-        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC! (₹${luxurySaved.toFixed(2)} saved to Vault)`, { position: 'top-center' });
-      } else {
-        smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
-      }
+      smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
       
       // IMPORTANT: Immediately reset sessionPRC to 0 to avoid negative display
       setSessionPRC(0);

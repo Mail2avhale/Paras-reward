@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260302_130340/test-results',
+  outputDir: '/root/.emergent/automation_output/20260303_081523/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260302_130340/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260303_081523/results.json' }],
   ],
   use: {
-    baseURL: 'https://redeem-payment-flow.preview.emergentagent.com',
+    baseURL: 'https://eko-payment.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
