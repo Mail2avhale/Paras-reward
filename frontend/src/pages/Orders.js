@@ -82,7 +82,10 @@ const Orders = ({ user, onLogout }) => {
         return <Truck className="h-4 w-4 text-blue-500" />;
       case 'rejected':
       case 'cancelled':
+      case 'failed':
         return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'eko_failed':
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
       default:
         return <Package className="h-4 w-4 text-gray-500" />;
     }
@@ -102,7 +105,10 @@ const Orders = ({ user, onLogout }) => {
         return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'rejected':
       case 'cancelled':
+      case 'failed':
         return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'eko_failed':
+        return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
       default:
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
@@ -133,6 +139,10 @@ const Orders = ({ user, onLogout }) => {
         return 'Cancelled';
       case 'shipped':
         return 'Shipped';
+      case 'failed':
+        return 'Failed';
+      case 'eko_failed':
+        return 'Processing...';
       default:
         return status || 'Unknown';
     }
@@ -870,6 +880,19 @@ const Orders = ({ user, onLogout }) => {
                               ✓ {request.refund_amount || request.total_prc_deducted || request.amount_prc} PRC has been refunded to your account
                             </p>
                           )}
+                        </div>
+                      )}
+                      
+                      {/* Eko API Failed - Being processed */}
+                      {request.status === 'eko_failed' && (
+                        <div className="mt-2 p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                          <p className="text-orange-400 text-xs font-semibold mb-1">⏳ Being Processed:</p>
+                          <p className="text-orange-300 text-sm">
+                            {request.eko_fail_reason || 'Payment is being processed. Admin will complete it shortly.'}
+                          </p>
+                          <p className="text-gray-400 text-xs mt-2">
+                            Your PRC is safe. We'll update you once completed.
+                          </p>
                         </div>
                       )}
                       

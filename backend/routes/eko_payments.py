@@ -299,6 +299,10 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
         except:
             result = {"message": f"Parse error. Status: {response.status_code}", "raw": response.text[:200]}
         
+        # Check for Eko specific errors
+        if result.get("message") == "No key for Response":
+            raise HTTPException(status_code=400, detail="Service not enabled for this operator. Contact Eko support.")
+        
         if response.status_code >= 400:
             raise HTTPException(status_code=response.status_code, detail=result.get("message", str(result)))
         
@@ -2331,9 +2335,13 @@ async def get_dth_operators():
 
 @router.post("/bbps/fetch-bill")
 async def fetch_bill(request: BillFetchRequest):
-    """Fetch bill details before payment"""
+    """
+    Fetch bill details before payment
+    Required for services like Electricity, Gas, Water where bill amount needs to be fetched first
+    """
     try:
         utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
+        client_ref_id = f"FETCH{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         # Eko API call to fetch bill
         result = await make_eko_request(
@@ -2343,7 +2351,9 @@ async def fetch_bill(request: BillFetchRequest):
                 "utility_acc_no": utility_acc_no,
                 "operator_id": request.biller_id,
                 "confirmation_mobile_no": EKO_INITIATOR_ID,
+                "sender_name": "Customer",
                 "user_code": EKO_USER_CODE,
+                "client_ref_id": client_ref_id,
                 "source_ip": "127.0.0.1",
                 "latlong": "19.0760,72.8777"
             }
@@ -2359,35 +2369,75 @@ async def fetch_bill(request: BillFetchRequest):
                 "timestamp": datetime.now(timezone.utc)
             })
         
-        return result
+        # Parse Eko response and return structured data
+        eko_status = result.get("status")
+        
+        if eko_status == 0:
+            # Success - bill fetched
+            data = result.get("data", {})
+            return {
+                "success": True,
+                "bill_amount": data.get("amount"),
+                "customer_name": data.get("utilitycustomername"),
+                "bill_date": data.get("billdate"),
+                "due_date": data.get("duedate"),
+                "bill_number": data.get("billnumber"),
+                "billfetchresponse": data.get("billfetchresponse"),  # Required for payment
+                "raw_response": result
+            }
+        else:
+            # Error from Eko
+            error_msg = result.get("message", "Bill fetch failed")
+            return {
+                "success": False,
+                "error_code": str(eko_status),
+                "message": error_msg,
+                "raw_response": result
+            }
         
     except HTTPException:
         raise
     except Exception as e:
         logging.error(f"Bill fetch failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Bill fetch failed: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Bill fetch failed: {str(e)}"
+        }
 
 
 @router.post("/bbps/pay-bill")
 async def pay_bill(request: BillPayRequest):
-    """Pay a bill through BBPS"""
+    """
+    Pay a bill through BBPS
+    Supports: Electricity, Gas, Water, DTH, Broadband, Mobile Postpaid, etc.
+    """
     try:
         # Create unique transaction reference
-        txn_ref = f"PARAS{datetime.now().strftime('%Y%m%d%H%M%S')}{request.user_id[-6:]}"
+        txn_ref = f"PARAS{datetime.now().strftime('%Y%m%d%H%M%S')}{str(request.user_id)[-6:]}"
+        utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
+        
+        # Build request body
+        request_body = {
+            "utility_acc_no": utility_acc_no,
+            "operator_id": request.biller_id,
+            "amount": str(int(request.amount)),
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": request.customer_params.get("sender_name", "Customer"),
+            "client_ref_id": txn_ref,
+            "user_code": EKO_USER_CODE,
+            "source_ip": "127.0.0.1",
+            "latlong": "19.0760,72.8777"
+        }
+        
+        # Add billfetchresponse if available (required for some operators)
+        if request.bill_fetch_ref:
+            request_body["billfetchresponse"] = request.bill_fetch_ref
         
         # Eko API call to pay bill
         result = await make_eko_request(
             "/v2/billpayments/paybill",
             method="POST",
-            data={
-                "utility_acc_no": list(request.customer_params.values())[0],
-                "operator_id": request.biller_id,
-                "amount": str(int(request.amount)),
-                "confirmation_mobile_no": EKO_INITIATOR_ID,
-                "client_ref_id": txn_ref,
-                "latlong": "19.0760,72.8777",  # Mumbai coordinates
-                "source_ip": "34.170.12.145"  # Will be updated
-            }
+            data=request_body
         )
         
         # Log transaction
@@ -2405,19 +2455,44 @@ async def pay_bill(request: BillPayRequest):
                 "timestamp": datetime.now(timezone.utc)
             })
         
-        return {
-            "success": True,
-            "txn_ref": txn_ref,
-            "eko_txn_id": result.get("tid"),
-            "status": result.get("status"),
-            "message": result.get("message", "Bill payment initiated")
-        }
+        # Parse Eko response
+        eko_status = result.get("status")
+        data = result.get("data", {})
         
-    except HTTPException:
-        raise
+        if eko_status == 0:
+            # Success
+            return {
+                "success": True,
+                "txn_ref": txn_ref,
+                "eko_tid": data.get("tid"),
+                "utr": data.get("bbpstrxnrefid"),
+                "status": "SUCCESS",
+                "message": result.get("message", "Bill payment successful")
+            }
+        else:
+            # Failed - return clear error
+            error_msg = result.get("message", "Payment failed")
+            return {
+                "success": False,
+                "txn_ref": txn_ref,
+                "error_code": str(eko_status),
+                "status": "FAILED",
+                "message": error_msg
+            }
+        
+    except HTTPException as e:
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e.detail) if hasattr(e, 'detail') else str(e)
+        }
     except Exception as e:
         logging.error(f"Bill payment failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Bill payment failed: {str(e)}")
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": f"Payment failed: {str(e)}"
+        }
 
 
 @router.get("/bbps/transaction-status/{txn_ref}")
@@ -2902,7 +2977,7 @@ class AdminPayBillRequest(BaseModel):
 async def admin_direct_paybill(request: AdminPayBillRequest):
     """
     Admin Direct Bill Payment via Eko BBPS API
-    No approval required - instant processing
+    Supports: DTH, Electricity, Gas, Mobile Postpaid, Broadband, etc.
     """
     try:
         txn_ref = f"ADM{datetime.now().strftime('%Y%m%d%H%M%S')}{request.utility_acc_no[-4:]}"
@@ -2911,17 +2986,15 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
             f"/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}",
             method="POST",
             data={
-                "initiator_id": EKO_INITIATOR_ID,  # Required in body as per Eko docs
                 "utility_acc_no": request.utility_acc_no,
                 "confirmation_mobile_no": EKO_INITIATOR_ID,
-                "sender_name": "Admin",
-                "operator_id": request.operator_id,
+                "sender_name": "Customer",
+                "operator_id": str(request.operator_id),
                 "amount": str(int(request.amount)),
                 "client_ref_id": txn_ref,
                 "source_ip": "127.0.0.1",
                 "latlong": "19.0760,72.8777",
-                "user_code": EKO_USER_CODE or EKO_INITIATOR_ID,
-                "hc_channel": "2"
+                "user_code": EKO_USER_CODE
             }
         )
         
@@ -2938,29 +3011,44 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
                 "timestamp": datetime.now(timezone.utc)
             })
         
+        # Parse Eko response
+        eko_status = result.get("status")
+        data = result.get("data", {})
+        
         # Check if transaction was successful
-        if result.get("status") == 0 or result.get("tx_status") == 0:
+        if eko_status == 0:
             return {
                 "success": True,
                 "txn_ref": txn_ref,
-                "eko_txn_id": result.get("tid") or result.get("txstatus_desc"),
-                "status": "success",
+                "eko_tid": data.get("tid"),
+                "utr": data.get("bbpstrxnrefid"),
+                "status": "SUCCESS",
                 "message": f"{request.bill_type.replace('_', ' ').title()} payment successful"
             }
         else:
+            # Return clear error message
+            error_msg = result.get("message", "Payment failed")
             return {
                 "success": False,
                 "txn_ref": txn_ref,
-                "status": result.get("status"),
-                "message": result.get("message") or result.get("txstatus_desc") or "Payment failed",
-                "raw_response": result
+                "error_code": str(eko_status) if eko_status else "UNKNOWN",
+                "status": "FAILED",
+                "message": error_msg
             }
         
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": str(e.detail) if hasattr(e, 'detail') else str(e)
+        }
     except Exception as e:
         logging.error(f"Admin direct paybill failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": f"Payment failed: {str(e)}"
+        }
 
 
 

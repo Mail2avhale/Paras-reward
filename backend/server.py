@@ -27669,10 +27669,16 @@ async def process_bill_payment_request(request: Request):
                     eko_fail_reason = "Eko API: Connection error"
                 elif "insufficient" in error_str or "balance" in error_str:
                     eko_fail_reason = "Eko API: Insufficient wallet balance"
+                elif "no key for response" in error_str:
+                    eko_fail_reason = "Eko API: Service not enabled for this operator"
                 elif "not supported" in error_str:
                     eko_fail_reason = f"Service type not supported: {request_type}"
+                elif "unable to fetch" in error_str:
+                    eko_fail_reason = "Eko API: Unable to fetch bill - check account number"
+                elif "invalid" in error_str:
+                    eko_fail_reason = "Eko API: Invalid account/consumer number"
                 else:
-                    eko_fail_reason = f"Eko API Error: {eko_payment_error[:100]}"
+                    eko_fail_reason = f"Eko: {eko_payment_error[:100]}"
             
             print(f"⚠️ Eko failed after {retry_count} retries. Setting eko_failed status for admin action...")
             
