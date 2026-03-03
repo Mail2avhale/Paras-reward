@@ -1804,6 +1804,34 @@ const AdminBillPayments = ({ user }) => {
                       <p className="text-white font-mono">{pendingCompleteRequest.consumer_number || pendingCompleteRequest.details?.consumer_number || pendingCompleteRequest.details?.subscriber_id || pendingCompleteRequest.details?.dth_number}</p>
                     </div>
                   )}
+                  {/* Bank Transfer Details */}
+                  {pendingCompleteRequest.details?.account_number && (
+                    <div className="col-span-2 bg-blue-900/20 p-3 rounded-lg border border-blue-700/50 mt-2">
+                      <p className="text-blue-400 font-semibold mb-2">🏦 Bank Transfer Details</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-gray-500">Account Number</p>
+                          <p className="text-white font-mono font-bold">{pendingCompleteRequest.details.account_number}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">IFSC Code</p>
+                          <p className="text-white font-mono font-bold">{pendingCompleteRequest.details.ifsc_code}</p>
+                        </div>
+                        {pendingCompleteRequest.details.account_holder && (
+                          <div className="col-span-2">
+                            <p className="text-gray-500">Account Holder</p>
+                            <p className="text-white">{pendingCompleteRequest.details.account_holder}</p>
+                          </div>
+                        )}
+                        {pendingCompleteRequest.details.bank_name && (
+                          <div className="col-span-2">
+                            <p className="text-gray-500">Bank Name</p>
+                            <p className="text-white">{pendingCompleteRequest.details.bank_name}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
