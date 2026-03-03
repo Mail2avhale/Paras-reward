@@ -332,6 +332,8 @@ const DailyRewards = ({ user }) => {
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
+  const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
+  const [baseRate, setBaseRate] = useState(0); // Individual base mining rate
   
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
@@ -371,6 +373,10 @@ const DailyRewards = ({ user }) => {
       setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       // Set lifetime earnings from redemption stats API for consistency
       setLifetimeEarnings(statsData.total_earned || 0);
+      // Set referral breakdown from backend
+      setReferralBreakdown(miningData.referral_breakdown || null);
+      // Set base rate (individual mining)
+      setBaseRate(miningData.base_rate || 0);
       
       // Check mining session status
       if (miningData.session_active && miningData.remaining_hours > 0) {
@@ -936,23 +942,132 @@ const DailyRewards = ({ user }) => {
         </div>
       </div>
 
-      {/* How It Works - Dark Theme */}
+      {/* Level-wise Mining Breakdown */}
       <div className="px-5">
-        <h2 className="text-zinc-100 font-semibold text-lg mb-4">{globalT('howToPlay')}</h2>
-        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-5 space-y-4">
-          {[
-            { icon: Play, text: globalT('startSession'), color: 'text-emerald-500' },
-            { icon: Coins, text: globalT('collectRewards'), color: 'text-amber-500' },
-            { icon: CheckCircle, text: globalT('rewardRate'), color: 'text-emerald-400' },
-            { icon: Star, text: globalT('referralWeight') + ' +10%', color: 'text-amber-400' },
-          ].map((item, index) => (
-            <div key={index} className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-                <item.icon className={`w-5 h-5 ${item.color}`} />
+        <h2 className="text-zinc-100 font-semibold text-lg mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-amber-400" />
+          Mining Speed Breakdown
+        </h2>
+        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4 space-y-3">
+          {/* Individual Base Rate */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                <Coins className="w-4 h-4 text-emerald-400" />
               </div>
-              <p className="text-zinc-300 text-sm">{item.text}</p>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Your Mining</p>
+                <p className="text-zinc-500 text-xs">Base rate</p>
+              </div>
             </div>
-          ))}
+            <p className="text-emerald-400 font-mono text-sm font-semibold">
+              {(baseRate * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Level 1 */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">L1</div>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Level 1 Referrals</p>
+                <p className="text-zinc-500 text-xs">
+                  {referralBreakdown?.level_1?.count || 0} paid ({referralBreakdown?.level_1?.free_count || 0} free)
+                </p>
+              </div>
+            </div>
+            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_1?.bonus || 0) > 0 ? 'text-blue-400' : 'text-zinc-600'}`}>
+              +{((referralBreakdown?.level_1?.bonus || 0) * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Level 2 */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">L2</div>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Level 2 Referrals</p>
+                <p className="text-zinc-500 text-xs">
+                  {referralBreakdown?.level_2?.count || 0} paid ({referralBreakdown?.level_2?.free_count || 0} free)
+                </p>
+              </div>
+            </div>
+            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_2?.bonus || 0) > 0 ? 'text-purple-400' : 'text-zinc-600'}`}>
+              +{((referralBreakdown?.level_2?.bonus || 0) * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Level 3 */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">L3</div>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Level 3 Referrals</p>
+                <p className="text-zinc-500 text-xs">
+                  {referralBreakdown?.level_3?.count || 0} paid ({referralBreakdown?.level_3?.free_count || 0} free)
+                </p>
+              </div>
+            </div>
+            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_3?.bonus || 0) > 0 ? 'text-orange-400' : 'text-zinc-600'}`}>
+              +{((referralBreakdown?.level_3?.bonus || 0) * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Level 4 */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">L4</div>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Level 4 Referrals</p>
+                <p className="text-zinc-500 text-xs">
+                  {referralBreakdown?.level_4?.count || 0} paid ({referralBreakdown?.level_4?.free_count || 0} free)
+                </p>
+              </div>
+            </div>
+            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_4?.bonus || 0) > 0 ? 'text-pink-400' : 'text-zinc-600'}`}>
+              +{((referralBreakdown?.level_4?.bonus || 0) * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Level 5 */}
+          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">L5</div>
+              <div>
+                <p className="text-zinc-200 text-sm font-medium">Level 5 Referrals</p>
+                <p className="text-zinc-500 text-xs">
+                  {referralBreakdown?.level_5?.count || 0} paid ({referralBreakdown?.level_5?.free_count || 0} free)
+                </p>
+              </div>
+            </div>
+            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_5?.bonus || 0) > 0 ? 'text-cyan-400' : 'text-zinc-600'}`}>
+              +{((referralBreakdown?.level_5?.bonus || 0) * 60).toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Total */}
+          <div className="flex items-center justify-between pt-3 mt-2 border-t-2 border-amber-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/30 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-amber-400 text-sm font-bold">TOTAL SPEED</p>
+                <p className="text-zinc-500 text-xs">Per hour mining</p>
+              </div>
+            </div>
+            <p className="text-amber-400 font-mono text-lg font-bold">
+              {miningRate.toFixed(2)} PRC/hr
+            </p>
+          </div>
+          
+          {/* Info note */}
+          <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <p className="text-blue-300 text-xs flex items-start gap-2">
+              <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>फक्त Paid subscribers (Startup/Growth/Business) तुमच्या mining speed मध्ये add होतात. Free (Explorer) users count होत नाहीत.</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>

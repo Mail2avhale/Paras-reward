@@ -44,6 +44,14 @@ Eko payment integration for a reward platform with BBPS (Bill Payments) and DMT 
 
 ### December 2025 - Session Updates
 
+#### ✅ Mining Page UI Update (Completed - March 2026)
+- Removed "How to Play" section
+- Added "Mining Speed Breakdown" showing level-wise contribution:
+  - Your Mining (Base rate)
+  - Level 1-5 Referrals with paid/free count and PRC/hr bonus
+  - Total Speed calculation
+- Added Marathi info note explaining only Paid subscribers contribute to mining speed
+
 #### ✅ PRC Vault Feature Removal (Completed)
 - Removed "PRC SAVINGS VAULT" banner from dashboard
 - Disabled 20% auto-deduction from mining rewards
