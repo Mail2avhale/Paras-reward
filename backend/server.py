@@ -3135,27 +3135,34 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     level_data = {
-        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
-        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
-        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
-        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
-        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0}
+        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
+        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
+        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
+        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0},
+        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0, 'active_count': 0, 'total_count': 0}
     }
     
     # Free/Explorer plan identifiers (case-insensitive)
     FREE_PLANS = ['explorer', 'free', '', None]
     
-    # Collect all paid user UIDs for batch activity check
+    # Collect all user UIDs for batch activity check
     now = datetime.now(timezone.utc)
     twenty_four_hours_ago = now - timedelta(hours=24)
     
     paid_users_by_level = {}  # level -> {uid: user_data}
+    all_users_by_level = {}   # level -> {uid: user_data} (for total active count)
     
     for level, users in referrals_by_level.items():
         paid_users_by_level[level] = {}
+        all_users_by_level[level] = {}
+        level_data[level]['total_count'] = len(users)
+        
         for user in users:
             user_uid = user.get("uid")
             user_plan = (user.get("subscription_plan") or "").lower().strip()
+            
+            # Track all users for total active count
+            all_users_by_level[level][user_uid] = user
             
             # Check if user is on FREE plan
             is_free_user = user_plan in FREE_PLANS or user_plan == ""
@@ -3168,16 +3175,59 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 paid_users_by_level[level][user_uid] = user
                 level_data[level]['paid_count'] += 1  # Total paid users at this level
     
+    # Get all user UIDs for activity check (both paid and free for display)
+    all_uids = []
+    for level_users in all_users_by_level.values():
+        all_uids.extend(level_users.keys())
+    
     # Get all paid user UIDs across all levels
     all_paid_uids = []
     for level_users in paid_users_by_level.values():
         all_paid_uids.extend(level_users.keys())
     
-    if not all_paid_uids:
+    if not all_uids:
         return level_data
     
-    # BATCH QUERY: Get all active users in ONE query
-    # Active = mining_active OR mining_session_end > now
+    # BATCH QUERY 1: Get ALL active users (paid + free) for display - same logic as Invite page
+    all_active_uids = set()
+    try:
+        async for user in db.users.find(
+            {
+                "uid": {"$in": all_uids},
+                "$or": [
+                    {"mining_active": True},
+                    {"mining_session_end": {"$gt": now.isoformat()}}
+                ]
+            },
+            {"_id": 0, "uid": 1}
+        ):
+            all_active_uids.add(user["uid"])
+    except Exception as e:
+        print(f"Batch all-user mining check error: {e}")
+    
+    # Also check transactions for all users (same as Invite page)
+    remaining_all_uids = [uid for uid in all_uids if uid not in all_active_uids]
+    if remaining_all_uids:
+        try:
+            async for tx in db.transactions.find(
+                {
+                    "user_id": {"$in": remaining_all_uids},
+                    "created_at": {"$gte": twenty_four_hours_ago.isoformat()},
+                    "type": {"$in": ["mining", "tap_game", "rain_drop", "bonus"]}
+                },
+                {"_id": 0, "user_id": 1}
+            ):
+                all_active_uids.add(tx["user_id"])
+        except Exception as e:
+            print(f"All user transaction check error: {e}")
+    
+    # Calculate total active count per level (for display, same as Invite page)
+    for level, users_dict in all_users_by_level.items():
+        for uid in users_dict.keys():
+            if uid in all_active_uids:
+                level_data[level]['active_count'] += 1
+    
+    # BATCH QUERY 2: Get active PAID users only (for bonus calculation)
     active_by_mining = set()
     try:
         async for user in db.users.find(
@@ -4082,9 +4132,11 @@ async def calculate_mining_rate(uid: str):
             total_referral_bonus += level_bonus
             referral_breakdown[level] = {
                 'count': count,  # Active paid users (contributing to bonus)
+                'active_count': level_data.get('active_count', 0),  # ALL active users (same as Invite page)
                 'weighted_count': weighted_count,
                 'paid_count': level_data.get('paid_count', count),  # Total paid users
                 'free_count': level_data.get('free_count', 0),  # Total free users
+                'total_count': level_data.get('total_count', 0),  # Total users at level
                 'percentage': bonus_percentage * 100,
                 'bonus': level_bonus
             }
@@ -6444,9 +6496,11 @@ async def get_mining_status(uid: str):
     for level, data in referral_breakdown.items():
         hourly_bonus = (data['bonus'] * current_date) / 24
         hourly_breakdown[level] = {
-            'count': data.get('count', 0),  # Active paid users
+            'count': data.get('count', 0),  # Active paid users (contributing to bonus)
+            'active_count': data.get('active_count', 0),  # ALL active users (same as Invite page)
             'paid_count': data.get('paid_count', data.get('count', 0)),  # Total paid users
             'free_count': data.get('free_count', 0),  # Total free users
+            'total_count': data.get('total_count', 0),  # Total users at level
             'weighted_count': data.get('weighted_count', 0),
             'percentage': data.get('percentage', 0),
             'bonus': hourly_bonus  # Actual hourly contribution
