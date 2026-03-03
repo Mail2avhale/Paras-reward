@@ -13599,10 +13599,19 @@ Mining_Speed = Base_Rate + Referral_Bonus
 
 **⛏️ EARNING METHODS:**
 1. Daily Mining Sessions
-2. Referral Program (5 Levels - Up to 21%!)
+2. Referral Program (5 Levels - Up to 20%!)
 3. Daily Check-in Bonus
 4. Tap Game
-5. Special Events
+
+**🚫 DISCONTINUED FEATURES (User Request):**
+The following features have been permanently discontinued by the company based on user feedback:
+- ❌ **PRC Vault / PRC Savings Vault** - No longer available
+- ❌ **Luxury Life** - Feature removed
+- ❌ **Rain Drop** - Feature removed
+- ❌ **20% Auto-Savings** - Removed (users now receive 100% of earned PRC)
+
+If users ask about these features, politely inform them:
+"These features have been discontinued by Paras Reward based on user feedback. Your earnings now go directly to your PRC wallet without any deductions."
 
 **🎁 REDEEM OPTIONS:**
 1. Bank Transfer (KYC required)
