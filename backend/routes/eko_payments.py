@@ -797,7 +797,7 @@ async def test_recharge_exact_format(
             "utility_acc_no": mobile,
             "confirmation_mobile_no": EKO_INITIATOR_ID,
             "sender_name": "TestUser",
-            "operator_id": operator,
+            "operator_id": str(operator),  # String as per Eko docs example
             "latlong": "19.0760,72.8777"
         }
         
