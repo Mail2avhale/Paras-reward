@@ -3135,11 +3135,11 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     level_data = {
-        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0},
-        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0},
-        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0},
-        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0},
-        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0}
+        'level_1': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
+        'level_2': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
+        'level_3': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
+        'level_4': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0},
+        'level_5': {'count': 0, 'weighted_count': 0, 'free_count': 0, 'paid_count': 0}
     }
     
     # Free/Explorer plan identifiers (case-insensitive)
@@ -3164,8 +3164,9 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 # Track free users but DON'T count them for bonus
                 level_data[level]['free_count'] += 1
             else:
-                # Paid user - add to batch check list
+                # Paid user - add to batch check list AND count total paid
                 paid_users_by_level[level][user_uid] = user
+                level_data[level]['paid_count'] += 1  # Total paid users at this level
     
     # Get all paid user UIDs across all levels
     all_paid_uids = []
@@ -4080,9 +4081,10 @@ async def calculate_mining_rate(uid: str):
             level_bonus = weighted_count * bonus_percentage * base_rate
             total_referral_bonus += level_bonus
             referral_breakdown[level] = {
-                'count': count,
+                'count': count,  # Active paid users (contributing to bonus)
                 'weighted_count': weighted_count,
-                'free_count': level_data.get('free_count', 0),  # Include free count for display
+                'paid_count': level_data.get('paid_count', count),  # Total paid users
+                'free_count': level_data.get('free_count', 0),  # Total free users
                 'percentage': bonus_percentage * 100,
                 'bonus': level_bonus
             }
@@ -6442,9 +6444,10 @@ async def get_mining_status(uid: str):
     for level, data in referral_breakdown.items():
         hourly_bonus = (data['bonus'] * current_date) / 24
         hourly_breakdown[level] = {
-            'count': data.get('count', 0),
+            'count': data.get('count', 0),  # Active paid users
+            'paid_count': data.get('paid_count', data.get('count', 0)),  # Total paid users
+            'free_count': data.get('free_count', 0),  # Total free users
             'weighted_count': data.get('weighted_count', 0),
-            'free_count': data.get('free_count', 0),
             'percentage': data.get('percentage', 0),
             'bonus': hourly_bonus  # Actual hourly contribution
         }

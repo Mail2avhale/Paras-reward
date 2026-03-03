@@ -972,7 +972,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 1 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_1?.count || 0} active ({referralBreakdown?.level_1?.free_count || 0} free)
+                  {referralBreakdown?.level_1?.count || 0} active / {referralBreakdown?.level_1?.paid_count || 0} paid ({referralBreakdown?.level_1?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -988,7 +988,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 2 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_2?.count || 0} active ({referralBreakdown?.level_2?.free_count || 0} free)
+                  {referralBreakdown?.level_2?.count || 0} active / {referralBreakdown?.level_2?.paid_count || 0} paid ({referralBreakdown?.level_2?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1004,7 +1004,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 3 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_3?.count || 0} active ({referralBreakdown?.level_3?.free_count || 0} free)
+                  {referralBreakdown?.level_3?.count || 0} active / {referralBreakdown?.level_3?.paid_count || 0} paid ({referralBreakdown?.level_3?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1020,7 +1020,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 4 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_4?.count || 0} active ({referralBreakdown?.level_4?.free_count || 0} free)
+                  {referralBreakdown?.level_4?.count || 0} active / {referralBreakdown?.level_4?.paid_count || 0} paid ({referralBreakdown?.level_4?.free_count || 0} free)
                 </p>
               </div>
             </div>
@@ -1036,7 +1036,7 @@ const DailyRewards = ({ user }) => {
               <div>
                 <p className="text-zinc-200 text-sm font-medium">Level 5 Referrals</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_5?.count || 0} active ({referralBreakdown?.level_5?.free_count || 0} free)
+                  {referralBreakdown?.level_5?.count || 0} active / {referralBreakdown?.level_5?.paid_count || 0} paid ({referralBreakdown?.level_5?.free_count || 0} free)
                 </p>
               </div>
             </div>
