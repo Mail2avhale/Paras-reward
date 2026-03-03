@@ -9,54 +9,169 @@ import { Label } from '../components/ui/label';
 import {
   ArrowLeft, ArrowRight, Smartphone, Tv, Zap, Flame, Building, Banknote,
   CheckCircle, Clock, XCircle, AlertCircle, Info, ChevronRight,
-  Wallet, Receipt, Loader2, RefreshCw, Search, X
+  Wallet, Receipt, Loader2, RefreshCw, Search, X, Phone, Droplet, Wifi,
+  PhoneCall, CreditCard, Shield, Car, GraduationCap, Monitor, Landmark, Home, Cylinder
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Service configurations with icons and colors
+// Service configurations with icons and colors - ALL BBPS SERVICES
 const SERVICE_CONFIG = {
+  // Recharge Services
   mobile_recharge: { 
     name: 'Mobile Recharge', 
     icon: Smartphone, 
     color: 'blue',
     gradient: 'from-blue-500 to-cyan-500',
-    fields: ['mobile_number', 'operator', 'circle', 'recharge_type']
+    fields: ['mobile_number', 'operator', 'circle', 'recharge_type'],
+    category: 'recharge'
+  },
+  mobile_postpaid: { 
+    name: 'Mobile Postpaid', 
+    icon: Phone, 
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-blue-500',
+    fields: ['mobile_number', 'operator'],
+    category: 'recharge'
   },
   dth: { 
     name: 'DTH Recharge', 
     icon: Tv, 
     color: 'purple',
     gradient: 'from-purple-500 to-pink-500',
-    fields: ['consumer_number', 'operator']
+    fields: ['consumer_number', 'operator'],
+    category: 'recharge'
   },
+  
+  // Utility Bills
   electricity: { 
     name: 'Electricity', 
     icon: Zap, 
     color: 'yellow',
     gradient: 'from-yellow-500 to-orange-500',
-    fields: ['consumer_number', 'operator']
+    fields: ['consumer_number', 'operator'],
+    category: 'utility'
   },
   gas: { 
-    name: 'Gas Bill', 
+    name: 'Gas Bill (PNG)', 
     icon: Flame, 
     color: 'orange',
     gradient: 'from-orange-500 to-red-500',
-    fields: ['consumer_number', 'operator']
+    fields: ['consumer_number', 'operator'],
+    category: 'utility'
   },
+  water: { 
+    name: 'Water Bill', 
+    icon: Droplet, 
+    color: 'cyan',
+    gradient: 'from-cyan-500 to-blue-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'utility'
+  },
+  lpg: { 
+    name: 'LPG Cylinder', 
+    icon: Cylinder, 
+    color: 'red',
+    gradient: 'from-red-500 to-orange-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'utility'
+  },
+  
+  // Telecom
+  broadband: { 
+    name: 'Broadband', 
+    icon: Wifi, 
+    color: 'teal',
+    gradient: 'from-teal-500 to-green-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'telecom'
+  },
+  landline: { 
+    name: 'Landline', 
+    icon: PhoneCall, 
+    color: 'slate',
+    gradient: 'from-slate-500 to-gray-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'telecom'
+  },
+  cable_tv: { 
+    name: 'Cable TV', 
+    icon: Monitor, 
+    color: 'violet',
+    gradient: 'from-violet-500 to-purple-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'telecom'
+  },
+  
+  // Financial Services
   emi: { 
     name: 'EMI Payment', 
     icon: Building, 
-    color: 'red',
-    gradient: 'from-red-500 to-rose-500',
-    fields: ['loan_account', 'bank_name', 'ifsc_code', 'borrower_name', 'mobile', 'loan_type', 'emi_amount', 'operator']
+    color: 'rose',
+    gradient: 'from-rose-500 to-pink-500',
+    fields: ['loan_account', 'operator'],
+    category: 'finance'
   },
+  credit_card: { 
+    name: 'Credit Card', 
+    icon: CreditCard, 
+    color: 'amber',
+    gradient: 'from-amber-500 to-yellow-500',
+    fields: ['card_number', 'operator'],
+    category: 'finance'
+  },
+  insurance: { 
+    name: 'Insurance', 
+    icon: Shield, 
+    color: 'emerald',
+    gradient: 'from-emerald-500 to-green-500',
+    fields: ['policy_number', 'operator'],
+    category: 'finance'
+  },
+  
+  // Transport & Others
+  fastag: { 
+    name: 'FASTag', 
+    icon: Car, 
+    color: 'sky',
+    gradient: 'from-sky-500 to-blue-500',
+    fields: ['vehicle_number', 'operator'],
+    category: 'transport'
+  },
+  education: { 
+    name: 'Education Fees', 
+    icon: GraduationCap, 
+    color: 'fuchsia',
+    gradient: 'from-fuchsia-500 to-pink-500',
+    fields: ['student_id', 'operator'],
+    category: 'education'
+  },
+  municipal_tax: { 
+    name: 'Municipal Tax', 
+    icon: Landmark, 
+    color: 'stone',
+    gradient: 'from-stone-500 to-gray-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'tax'
+  },
+  housing_society: { 
+    name: 'Housing Society', 
+    icon: Home, 
+    color: 'lime',
+    gradient: 'from-lime-500 to-green-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'housing'
+  },
+  
+  // Money Transfer (Admin Approval Required)
   dmt: { 
-    name: 'Redeem to Bank Account', 
+    name: 'Bank Transfer', 
     icon: Banknote, 
     color: 'green',
     gradient: 'from-green-500 to-emerald-500',
-    fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name']
+    fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name'],
+    category: 'transfer',
+    requiresAdmin: true
   }
 };
 
@@ -68,6 +183,12 @@ const OPERATORS = {
     { id: 'VI', name: 'Vi (Vodafone Idea)' },
     { id: 'BSNL', name: 'BSNL' }
   ],
+  mobile_postpaid: [
+    { id: 'JIO', name: 'Jio Postpaid' },
+    { id: 'AIRTEL', name: 'Airtel Postpaid' },
+    { id: 'VI', name: 'Vi Postpaid' },
+    { id: 'BSNL', name: 'BSNL Postpaid' }
+  ],
   dth: [
     { id: 'TATA_PLAY', name: 'Tata Play' },
     { id: 'AIRTEL_DTH', name: 'Airtel Digital TV' },
@@ -77,7 +198,28 @@ const OPERATORS = {
   ],
   electricity: [],
   gas: [],
+  water: [],
+  lpg: [
+    { id: 'INDANE', name: 'Indane Gas' },
+    { id: 'HP_GAS', name: 'HP Gas' },
+    { id: 'BHARAT_GAS', name: 'Bharat Gas' }
+  ],
+  broadband: [],
+  landline: [],
+  cable_tv: [],
   emi: [],
+  credit_card: [],
+  insurance: [],
+  fastag: [
+    { id: 'PAYTM', name: 'Paytm FASTag' },
+    { id: 'ICICI', name: 'ICICI FASTag' },
+    { id: 'HDFC', name: 'HDFC FASTag' },
+    { id: 'SBI', name: 'SBI FASTag' },
+    { id: 'AXIS', name: 'Axis FASTag' }
+  ],
+  education: [],
+  municipal_tax: [],
+  housing_society: [],
   dmt: []
 };
 
@@ -171,7 +313,13 @@ const RedeemPageV2 = ({ user }) => {
     account_number: '',
     account_holder: '',
     selected_bank: null,
-    selected_lender: null
+    selected_lender: null,
+    // New service fields
+    card_number: '',
+    policy_number: '',
+    vehicle_number: '',
+    student_id: '',
+    lpg_id: ''
   });
   
   // Charges calculation
@@ -458,7 +606,7 @@ const RedeemPageV2 = ({ user }) => {
     }
   }, [selectedService]);
   
-  // Fetch bill details for electricity/gas/postpaid/EMI
+  // Fetch bill details for electricity/gas/postpaid/EMI and new services
   const fetchBillDetails = async () => {
     let consumerNumber, operatorId, category;
     
@@ -479,6 +627,60 @@ const RedeemPageV2 = ({ user }) => {
       
       if (!consumerNumber || !operatorId) {
         toast.error('Mobile Number and Operator both are required');
+        return;
+      }
+    } else if (selectedService === 'mobile_postpaid') {
+      consumerNumber = formData.mobile_number;
+      operatorId = formData.operator;
+      category = 'mobile_postpaid';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Mobile Number and Operator both are required');
+        return;
+      }
+    } else if (selectedService === 'credit_card') {
+      consumerNumber = formData.card_number;
+      operatorId = formData.operator;
+      category = 'credit_card';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Card Number and Bank both are required');
+        return;
+      }
+    } else if (selectedService === 'insurance') {
+      consumerNumber = formData.policy_number;
+      operatorId = formData.operator;
+      category = 'insurance';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Policy Number and Insurance Company both are required');
+        return;
+      }
+    } else if (selectedService === 'fastag') {
+      consumerNumber = formData.vehicle_number;
+      operatorId = formData.operator;
+      category = 'fastag';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Vehicle Number and Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'education') {
+      consumerNumber = formData.student_id;
+      operatorId = formData.operator;
+      category = 'education';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Student ID and Institution both are required');
+        return;
+      }
+    } else if (selectedService === 'lpg') {
+      consumerNumber = formData.lpg_id;
+      operatorId = formData.operator;
+      category = 'lpg';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('LPG Consumer ID and Provider both are required');
         return;
       }
     } else {
@@ -580,14 +782,49 @@ const RedeemPageV2 = ({ user }) => {
       return;
     }
     
-    // Validate based on service type
-    const config = SERVICE_CONFIG[selectedService];
-    const details = {};
+    // Build details based on service type
+    const details = {
+      operator: formData.operator,
+      operator_id: formData.operator
+    };
     
-    for (const field of config.fields) {
-      if (formData[field]) {
-        details[field] = formData[field];
+    // Add service-specific fields
+    if (selectedService === 'mobile_recharge' || selectedService === 'mobile_postpaid') {
+      details.mobile_number = formData.mobile_number;
+      if (selectedService === 'mobile_recharge') {
+        details.circle = formData.circle;
+        details.recharge_type = formData.recharge_type;
       }
+    } else if (selectedService === 'credit_card') {
+      details.card_number = formData.card_number;
+      details.consumer_number = formData.card_number;
+    } else if (selectedService === 'insurance') {
+      details.policy_number = formData.policy_number;
+      details.consumer_number = formData.policy_number;
+    } else if (selectedService === 'fastag') {
+      details.vehicle_number = formData.vehicle_number;
+      details.fastag_id = formData.vehicle_number;
+      details.consumer_number = formData.vehicle_number;
+    } else if (selectedService === 'education') {
+      details.student_id = formData.student_id;
+      details.enrollment_number = formData.student_id;
+      details.consumer_number = formData.student_id;
+    } else if (selectedService === 'lpg') {
+      details.lpg_id = formData.lpg_id;
+      details.consumer_number = formData.lpg_id;
+    } else if (selectedService === 'emi') {
+      details.loan_account = formData.loan_account;
+      details.borrower_name = formData.borrower_name;
+      details.loan_type = formData.loan_type;
+    } else if (selectedService === 'dmt') {
+      details.account_number = formData.account_number;
+      details.ifsc_code = formData.ifsc_code;
+      details.account_holder = formData.account_holder;
+      details.bank_name = formData.bank_name;
+      details.mobile = formData.mobile;
+    } else {
+      // Default for electricity, gas, water, broadband, landline, cable_tv, municipal_tax, housing_society, dth
+      details.consumer_number = formData.consumer_number;
     }
     
     // Check PRC balance
@@ -625,9 +862,16 @@ const RedeemPageV2 = ({ user }) => {
         loan_type: '',
         emi_amount: '',
         account_number: '',
-        account_holder: ''
+        account_holder: '',
+        card_number: '',
+        policy_number: '',
+        vehicle_number: '',
+        student_id: '',
+        lpg_id: ''
       });
       setCharges(null);
+      setBillDetails(null);
+      setBillError(null);
       
       // Refresh data
       fetchUserData();
@@ -734,38 +978,252 @@ const RedeemPageV2 = ({ user }) => {
                 <Receipt className="h-6 w-6 text-amber-400" />
               </div>
               
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {Object.entries(SERVICE_CONFIG).map(([id, config]) => {
-                  const Icon = config.icon;
-                  const isSelected = selectedService === id;
-                  
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setSelectedService(id)}
-                      className={`relative p-4 rounded-2xl border-2 transition-all duration-300 ${
-                        isSelected
-                          ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg`
-                          : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                      }`}
-                      data-testid={`service-${id}`}
-                    >
-                      {isSelected && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                      )}
-                      <div className={`w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center ${
-                        isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                      }`}>
-                        <Icon className={`h-5 w-5 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                      </div>
-                      <p className={`text-[10px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                        {config.name}
-                      </p>
-                    </button>
-                  );
-                })}
+              {/* Service Categories */}
+              <div className="space-y-4">
+                {/* Recharge & DTH */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Recharge & TV</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['mobile_recharge', 'mobile_postpaid', 'dth', 'cable_tv'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Utility Bills */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Utility Bills</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['electricity', 'water', 'gas', 'lpg'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Telecom */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Telecom</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['broadband', 'landline'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Financial Services */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Financial Services</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['emi', 'credit_card', 'insurance'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Transport & Others */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport & Others</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['fastag', 'education', 'municipal_tax', 'housing_society'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Bank Transfer */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Money Transfer</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {['dmt'].map(id => {
+                      const config = SERVICE_CONFIG[id];
+                      if (!config) return null;
+                      const Icon = config.icon;
+                      const isSelected = selectedService === id;
+                      
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedService(id)}
+                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                            isSelected
+                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                          }`}
+                          data-testid={`service-${id}`}
+                        >
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                            </div>
+                          )}
+                          {config.requiresAdmin && (
+                            <div className="absolute -top-1 -left-1 px-1 bg-amber-500 rounded text-[8px] font-bold text-black">
+                              Admin
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {config.name}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -1427,6 +1885,178 @@ const RedeemPageV2 = ({ user }) => {
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
                           EMI Amount (₹) *
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                          <Input
+                            type="number"
+                            value={formData.amount}
+                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                            placeholder="0.00"
+                            min="1"
+                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="amount-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* ============================================ */}
+                {/* NEW BBPS SERVICES - Generic Form */}
+                {/* Water, Broadband, Landline, Credit Card, Insurance, FASTag, Education, etc. */}
+                {/* ============================================ */}
+                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'fastag', 'education', 'municipal_tax', 'housing_society', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
+                  <>
+                    {/* Step 1: Provider Selection */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
+                        {selectedService === 'insurance' ? 'Insurance Company' : 
+                         selectedService === 'credit_card' ? 'Bank/Card Issuer' :
+                         selectedService === 'fastag' ? 'FASTag Provider' :
+                         selectedService === 'education' ? 'Institution' :
+                         selectedService === 'lpg' ? 'LPG Provider' :
+                         'Provider'} *
+                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
+                      </Label>
+                      <select
+                        value={formData.operator}
+                        onChange={(e) => {
+                          setFormData({ ...formData, operator: e.target.value, amount: '' });
+                          setBillDetails(null);
+                          setBillError(null);
+                        }}
+                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
+                        data-testid="provider-select"
+                      >
+                        <option value="">Select Provider ({currentOperators.length} available)</option>
+                        {currentOperators.map((op, index) => (
+                          <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Step 2: Account/Consumer Number */}
+                    {formData.operator && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                          {selectedService === 'mobile_postpaid' ? 'Mobile Number' :
+                           selectedService === 'credit_card' ? 'Card Number (Last 4 digits)' :
+                           selectedService === 'insurance' ? 'Policy Number' :
+                           selectedService === 'fastag' ? 'Vehicle Number / FASTag ID' :
+                           selectedService === 'education' ? 'Student ID / Enrollment No.' :
+                           selectedService === 'lpg' ? 'LPG Consumer ID' :
+                           selectedService === 'municipal_tax' ? 'Property ID' :
+                           selectedService === 'housing_society' ? 'Flat/Unit No.' :
+                           'Consumer/Account Number'} *
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={selectedService === 'mobile_postpaid' ? formData.mobile_number : 
+                                   selectedService === 'credit_card' ? formData.card_number :
+                                   selectedService === 'insurance' ? formData.policy_number :
+                                   selectedService === 'fastag' ? formData.vehicle_number :
+                                   selectedService === 'education' ? formData.student_id :
+                                   selectedService === 'lpg' ? formData.lpg_id :
+                                   formData.consumer_number}
+                            onChange={(e) => {
+                              const field = selectedService === 'mobile_postpaid' ? 'mobile_number' :
+                                           selectedService === 'credit_card' ? 'card_number' :
+                                           selectedService === 'insurance' ? 'policy_number' :
+                                           selectedService === 'fastag' ? 'vehicle_number' :
+                                           selectedService === 'education' ? 'student_id' :
+                                           selectedService === 'lpg' ? 'lpg_id' :
+                                           'consumer_number';
+                              setFormData({ ...formData, [field]: e.target.value, amount: '' });
+                              setBillDetails(null);
+                            }}
+                            placeholder={selectedService === 'mobile_postpaid' ? 'Enter 10 digit mobile number' :
+                                        selectedService === 'fastag' ? 'Enter vehicle number (e.g., MH12AB1234)' :
+                                        'Enter account/consumer number'}
+                            className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            data-testid="consumer-input"
+                          />
+                          <Button
+                            type="button"
+                            onClick={fetchBillDetails}
+                            disabled={fetchingBill || !(selectedService === 'mobile_postpaid' ? formData.mobile_number : 
+                                                        selectedService === 'credit_card' ? formData.card_number :
+                                                        selectedService === 'insurance' ? formData.policy_number :
+                                                        selectedService === 'fastag' ? formData.vehicle_number :
+                                                        selectedService === 'education' ? formData.student_id :
+                                                        selectedService === 'lpg' ? formData.lpg_id :
+                                                        formData.consumer_number)}
+                            className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                            data-testid="fetch-bill-btn"
+                          >
+                            {fetchingBill ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <Search className="h-5 w-5" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Bill Details Display */}
+                    {billDetails && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <span className="text-green-400 font-medium">Bill Fetched Successfully!</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-500">Customer Name:</span>
+                            <p className="text-white font-medium">{billDetails.customerName || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Bill Amount:</span>
+                            <p className="text-amber-400 font-bold text-lg">₹{billDetails.amount || billDetails.billAmount || '0'}</p>
+                          </div>
+                          {billDetails.dueDate && (
+                            <div>
+                              <span className="text-gray-500">Due Date:</span>
+                              <p className="text-white font-medium">{billDetails.dueDate}</p>
+                            </div>
+                          )}
+                          {billDetails.billNumber && (
+                            <div>
+                              <span className="text-gray-500">Bill Number:</span>
+                              <p className="text-white font-medium">{billDetails.billNumber}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {billError && (
+                      <div className="animate-fadeIn bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-2xl p-4">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-orange-400" />
+                          <span className="text-orange-400 font-medium">{billError}</span>
+                        </div>
+                        <p className="text-gray-400 text-sm mt-2">You can still enter amount manually.</p>
+                      </div>
+                    )}
+                    
+                    {/* Step 3: Amount */}
+                    {formData.operator && (selectedService === 'mobile_postpaid' ? formData.mobile_number : 
+                                           selectedService === 'credit_card' ? formData.card_number :
+                                           selectedService === 'insurance' ? formData.policy_number :
+                                           selectedService === 'fastag' ? formData.vehicle_number :
+                                           selectedService === 'education' ? formData.student_id :
+                                           selectedService === 'lpg' ? formData.lpg_id :
+                                           formData.consumer_number) && (
+                      <div className="animate-fadeIn">
+                        <Label className="text-gray-300 text-sm mb-2 block">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          Amount (₹) *
+                          {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled from bill)</span>}
                         </Label>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
