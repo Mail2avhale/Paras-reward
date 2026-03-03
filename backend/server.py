@@ -13386,6 +13386,9 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
+# Store chat sessions for context continuity
+chat_sessions = {}
+
 # Chatbot system message with platform context
 CHATBOT_SYSTEM_MESSAGE = """You are PARAS AI - the friendly AI Assistant for Paras Reward Platform! 🎉
 
