@@ -208,32 +208,33 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                 }
         
         elif service_type == "electricity":
-            # Electricity uses dedicated function with user's exact format
+            # Electricity uses dedicated function
             from routes.eko_payments import execute_electricity_payment
-            
-            customer_mobile = details.get("mobile_number") or details.get("customer_mobile") or None
             
             result = await execute_electricity_payment(
                 consumer_number=utility_acc_no,
                 operator_id=operator,
-                amount=amount,
-                customer_mobile=customer_mobile
+                amount=amount
             )
             return result
         
-        else:
-            # DTH, Gas, EMI - use BBPS function
+        elif service_type in ["dth", "gas", "emi"]:
+            # DTH, Gas, EMI - use BBPS function with official format
             from routes.eko_payments import execute_bbps_bill_payment
-            
-            customer_mobile = details.get("mobile_number") or details.get("customer_mobile") or None
             
             result = await execute_bbps_bill_payment(
                 utility_acc_no=utility_acc_no,
                 operator_id=operator,
-                amount=amount,
-                customer_mobile=customer_mobile
+                amount=amount
             )
             return result
+        
+        else:
+            return {
+                "success": False,
+                "status": "FAILED",
+                "message": f"Unknown service type: {service_type}"
+            }
             
     except Exception as e:
         logging.error(f"[EKO] Recharge error: {str(e)}")

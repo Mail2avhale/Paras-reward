@@ -2884,94 +2884,75 @@ async def execute_bbps_bill_payment(
     reference_id: str = None
 ) -> dict:
     """
-    Internal function to execute BBPS bill payment.
-    Called from unified_redeem_v2.py for DTH, Electricity, Gas, EMI services.
+    Execute BBPS bill payment via Eko API.
+    Used for DTH, Gas, EMI services.
     
-    Format: application/json (same as mobile recharge - confirmed by 403 vs 415 test)
-    Hash formula: timestamp + utility_acc_no + amount + operator_id + reference_id (user-provided)
-    
-    Note: Both hash formulas return 403 (IP block) vs 415 (format error),
-    confirming JSON format is correct. The hash formula will need production testing.
+    OFFICIAL EKO DOCUMENTATION FORMAT:
+    - Content-Type: application/json
+    - secret-key: Base64(HMAC_SHA256(timestamp, encoded_key))
+    - request_hash: Base64(HMAC_SHA256(timestamp + utility_acc_no + amount + user_code, encoded_key))
+    - encoded_key = base64_encode(access_key)
+    - Body: JSON with operator_id, utility_acc_no, amount
+    - API call: json=payload
     """
     import requests as req
     
     try:
-        # Generate timestamp
+        # Step 1: Generate timestamp (13 digits - milliseconds)
         timestamp = str(int(time.time() * 1000))
         
-        # Generate reference_id if not provided
-        if not reference_id:
-            reference_id = f"TXN{datetime.now().strftime('%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
-        
-        # Use initiator_id as customer mobile if not provided
-        if not customer_mobile:
-            customer_mobile = EKO_INITIATOR_ID
-        
-        # Use same key encoding as mobile recharge
+        # Step 2: Encode access_key using base64 (OFFICIAL DOC)
         encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
         
-        # Generate secret-key (same as mobile recharge)
+        # Step 3: Generate secret-key
+        # secret-key = Base64(HMAC_SHA256(timestamp, encoded_key.encode()))
         secret_key = base64.b64encode(
             hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # request_hash formula for BBPS Bill Payment (user-provided):
-        # timestamp + utility_acc_no + amount + operator_id + reference_id
-        raw_string = timestamp + utility_acc_no + amount + operator_id + reference_id
+        # Step 4: Generate request_hash (OFFICIAL DOC FORMULA)
+        # request_hash = timestamp + utility_acc_no + amount + user_code
+        concatenated_string = timestamp + utility_acc_no + amount + EKO_USER_CODE
+        
         request_hash = base64.b64encode(
-            hmac.new(encoded_key.encode(), raw_string.encode(), hashlib.sha256).digest()
+            hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Prepare JSON body (SAME FORMAT AS MOBILE RECHARGE!)
+        # Step 5: Prepare URL
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
-        body = {
-            "source_ip": "127.0.0.1",
-            "user_code": EKO_USER_CODE,
-            "amount": amount,
-            "client_ref_id": reference_id,
-            "utility_acc_no": utility_acc_no,
-            "confirmation_mobile_no": customer_mobile,
-            "sender_name": "ParasReward",
-            "operator_id": operator_id,
-            "latlong": "19.0760,72.8777"
-        }
-        
+        # Step 6: Headers
         headers = {
+            "Content-Type": "application/json",
             "developer_key": EKO_DEVELOPER_KEY,
             "secret-key": secret_key,
             "secret-key-timestamp": timestamp,
-            "request_hash": request_hash,
-            "Content-Type": "application/json"
+            "request_hash": request_hash
         }
         
-        # Compact JSON format
-        body_json = json.dumps(body, separators=(',', ':'))
+        # Step 7: JSON body
+        payload = {
+            "operator_id": operator_id,
+            "utility_acc_no": utility_acc_no,
+            "amount": amount
+        }
         
-        logging.info(f"[BBPS] Executing: operator={operator_id}, account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, amount={amount}")
-        logging.info(f"[BBPS] Hash raw string: {raw_string[:50]}...")
-        logging.info(f"[BBPS] Reference ID: {reference_id}")
+        logging.info(f"[BBPS] URL: {url}")
+        logging.info(f"[BBPS] Operator: {operator_id}, Account: {utility_acc_no[-4:] if utility_acc_no else 'NA'}, Amount: {amount}")
+        logging.info(f"[BBPS] Hash concat: {concatenated_string[:50]}...")
         
-        # Use data=body_json (same as mobile recharge)
-        response = req.post(url, data=body_json, headers=headers, timeout=60)
+        # Step 8: API call with json=payload (OFFICIAL DOC)
+        response = req.post(url, json=payload, headers=headers, timeout=60)
         
         logging.info(f"[BBPS] Response: {response.status_code}")
-        logging.info(f"[BBPS] Response body: {response.text[:300]}")
+        logging.info(f"[BBPS] Body: {response.text[:300]}")
         
         if response.status_code == 403:
             return {
                 "success": False,
                 "status": "FAILED",
                 "error_code": "403",
-                "message": "Access denied (403). IP may not be whitelisted with Eko."
-            }
-        
-        if response.status_code == 415:
-            return {
-                "success": False,
-                "status": "FAILED",
-                "error_code": "415",
-                "message": "Unsupported Media Type (415). Check Content-Type and request format."
+                "message": "Access denied (403). Check IP whitelist or credentials."
             }
         
         try:
@@ -2981,7 +2962,7 @@ async def execute_bbps_bill_payment(
                 "success": False,
                 "status": "FAILED",
                 "error_code": str(response.status_code),
-                "message": f"Invalid API response: {response.text[:100]}"
+                "message": f"Invalid response: {response.text[:100]}"
             }
         
         eko_status = result.get("status")
@@ -2995,16 +2976,14 @@ async def execute_bbps_bill_payment(
                 "status": "SUCCESS",
                 "eko_tid": eko_tid,
                 "utr": bbps_ref,
-                "client_ref_id": reference_id,
-                "message": result.get("message", "Bill payment successful")
+                "message": result.get("message", "Payment successful")
             }
         elif tx_status == 2:
             return {
                 "success": True,
                 "status": "PROCESSING",
                 "eko_tid": eko_tid,
-                "client_ref_id": reference_id,
-                "message": "Payment initiated, processing"
+                "message": "Payment processing"
             }
         else:
             return {
@@ -3018,7 +2997,7 @@ async def execute_bbps_bill_payment(
     except Exception as e:
         logging.error(f"[BBPS] Error: {e}")
         import traceback
-        logging.error(f"[BBPS] Traceback: {traceback.format_exc()}")
+        logging.error(traceback.format_exc())
         return {
             "success": False,
             "status": "FAILED",
@@ -3038,12 +3017,16 @@ async def execute_electricity_payment(
     """
     Execute ELECTRICITY bill payment via Eko API.
     
-    EXACT format from Eko documentation:
+    OFFICIAL EKO DOCUMENTATION FORMAT:
     - Content-Type: application/json
-    - secret-key: Base64(HMAC_SHA256(timestamp, Base64Decode(auth_key)))
-    - request_hash: Base64(HMAC_SHA256(timestamp + utility_acc_no + amount, Base64Decode(auth_key)))
+    - secret-key: Base64(HMAC_SHA256(timestamp, encoded_key))
+    - request_hash: Base64(HMAC_SHA256(timestamp + utility_acc_no + amount + user_code, encoded_key))
+    - encoded_key = base64_encode(access_key)
     - Body: JSON with operator_id, utility_acc_no, amount
-    - API call: json=payload (NOT data=)
+    - API call: json=payload
+    
+    NOTE: Testing showed timestamp + utility_acc_no + amount (without user_code) also worked.
+    Using official formula with user_code for consistency.
     """
     import requests as req
     
@@ -3051,26 +3034,20 @@ async def execute_electricity_payment(
         # Step 1: Generate timestamp (13 digits - milliseconds)
         timestamp = str(int(time.time() * 1000))
         
-        # Step 2: Get auth key
-        # User's AUTH_KEY_BASE64 is already base64 encoded
-        # Our EKO_AUTHENTICATOR_KEY is plain text, so we need to encode it first
-        # Then decode it for HMAC (to match user's flow)
-        auth_key_base64 = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
-        decoded_key = base64.b64decode(auth_key_base64)  # = original key bytes
+        # Step 2: Encode access_key using base64 (OFFICIAL DOC)
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode()).decode()
         
         # Step 3: Generate secret-key
-        # secret-key = Base64(HMAC_SHA256(timestamp, Base64Decode(auth_key)))
         secret_key = base64.b64encode(
-            hmac.new(decoded_key, timestamp.encode(), hashlib.sha256).digest()
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
         ).decode()
         
-        # Step 4: Generate request_hash  
-        # request_hash = Base64(HMAC_SHA256(timestamp + utility_acc_no + amount, Base64Decode(auth_key)))
-        # IMPORTANT: ONLY 3 values - NO operator_id, NO reference_id!
-        data_string = timestamp + consumer_number + amount
+        # Step 4: Generate request_hash (OFFICIAL DOC FORMULA)
+        # For Bill Payments: timestamp + utility_acc_no + amount + user_code
+        concatenated_string = timestamp + consumer_number + amount + EKO_USER_CODE
         
         request_hash = base64.b64encode(
-            hmac.new(decoded_key, data_string.encode(), hashlib.sha256).digest()
+            hmac.new(encoded_key.encode(), concatenated_string.encode(), hashlib.sha256).digest()
         ).decode()
         
         # Step 5: Prepare URL
@@ -3085,7 +3062,7 @@ async def execute_electricity_payment(
             "request_hash": request_hash
         }
         
-        # Step 7: JSON body - SIMPLE, only 3 fields!
+        # Step 7: JSON body
         payload = {
             "operator_id": operator_id,
             "utility_acc_no": consumer_number,
@@ -3095,23 +3072,21 @@ async def execute_electricity_payment(
         logging.info(f"=== ELECTRICITY PAYMENT ===")
         logging.info(f"URL: {url}")
         logging.info(f"Consumer: {consumer_number[-4:] if consumer_number else 'NA'}")
-        logging.info(f"Operator: {operator_id}")
-        logging.info(f"Amount: {amount}")
-        logging.info(f"Hash data_string: {data_string[:40]}...")
-        logging.info(f"Payload: {payload}")
+        logging.info(f"Operator: {operator_id}, Amount: {amount}")
+        logging.info(f"Hash concat: {concatenated_string[:50]}...")
         
-        # Step 8: API call with json=payload (NOT data=!)
+        # Step 8: API call with json=payload (OFFICIAL DOC)
         response = req.post(url, json=payload, headers=headers, timeout=60)
         
-        logging.info(f"Response Status: {response.status_code}")
-        logging.info(f"Response Body: {response.text[:500]}")
+        logging.info(f"Response: {response.status_code}")
+        logging.info(f"Body: {response.text[:500]}")
         
         if response.status_code == 403:
             return {
                 "success": False,
                 "status": "FAILED",
                 "error_code": "403",
-                "message": "Access denied (403). Check IP whitelist or service activation."
+                "message": "Access denied (403). Check IP whitelist or credentials."
             }
         
         try:
@@ -3131,24 +3106,21 @@ async def execute_electricity_payment(
         eko_tid = result.get("data", {}).get("tid")
         bbps_ref = result.get("data", {}).get("bbpstrxnrefid")
         
-        # Success
         if eko_status == 0:
             return {
                 "success": True,
                 "status": "SUCCESS",
                 "eko_tid": eko_tid,
                 "utr": bbps_ref,
-                "message": result.get("message", "Electricity bill payment successful")
+                "message": result.get("message", "Electricity payment successful")
             }
-        # Processing
         elif tx_status == 2:
             return {
                 "success": True,
                 "status": "PROCESSING",
                 "eko_tid": eko_tid,
-                "message": "Payment initiated, processing"
+                "message": "Payment processing"
             }
-        # Failed
         else:
             return {
                 "success": False,
@@ -3161,7 +3133,7 @@ async def execute_electricity_payment(
     except Exception as e:
         logging.error(f"[ELECTRICITY] Error: {e}")
         import traceback
-        logging.error(f"[ELECTRICITY] Traceback: {traceback.format_exc()}")
+        logging.error(traceback.format_exc())
         return {
             "success": False,
             "status": "FAILED",
@@ -3178,7 +3150,7 @@ async def electricity_pay_endpoint(
 ):
     """
     Test endpoint for electricity bill payment.
-    Uses exact format from Eko documentation.
+    Uses official Eko documentation format.
     """
     return await execute_electricity_payment(
         consumer_number=consumer_number,
