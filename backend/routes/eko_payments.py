@@ -1428,75 +1428,16 @@ async def get_bbps_operators_by_service(service_type: str):
 
 
 def get_fallback_operators(service_type: str):
-    """Fallback operators when Eko API fails - Comprehensive list for all India"""
+    """Fallback operators when Eko API fails"""
     fallbacks = {
         "electricity": [
-            # North India
-            {"id": "22", "name": "BSES Rajdhani (Delhi)", "operator_id": 22},
-            {"id": "23", "name": "BSES Yamuna (Delhi)", "operator_id": 23},
+            {"id": "22", "name": "BSES Rajdhani", "operator_id": 22},
+            {"id": "23", "name": "BSES Yamuna", "operator_id": 23},
             {"id": "24", "name": "Tata Power - Delhi", "operator_id": 24},
-            {"id": "131", "name": "UPPCL (Uttar Pradesh)", "operator_id": 131},
-            {"id": "132", "name": "UPPCL Rural", "operator_id": 132},
-            {"id": "196", "name": "UHBVN (Haryana Urban)", "operator_id": 196},
-            {"id": "197", "name": "DHBVN (Haryana)", "operator_id": 197},
-            {"id": "226", "name": "HPSEB (Himachal Pradesh)", "operator_id": 226},
-            {"id": "228", "name": "PSPCL (Punjab)", "operator_id": 228},
-            {"id": "2821", "name": "JVVNL (Rajasthan Jaipur)", "operator_id": 2821},
-            {"id": "2820", "name": "AVVNL (Rajasthan Ajmer)", "operator_id": 2820},
-            {"id": "227", "name": "JDVVNL (Rajasthan Jodhpur)", "operator_id": 227},
-            # J&K - User requested fix
-            {"id": "5285", "name": "JPDCL (Jammu Power)", "operator_id": 5285},
-            {"id": "5286", "name": "KPDCL (Kashmir Power)", "operator_id": 5286},
-            {"id": "5274", "name": "J&K Power Development Corporation", "operator_id": 5274},
-            # West India
             {"id": "62", "name": "MSEDCL (Maharashtra)", "operator_id": 62},
-            {"id": "63", "name": "Tata Power - Mumbai", "operator_id": 63},
-            {"id": "64", "name": "BEST (Mumbai)", "operator_id": 64},
-            {"id": "65", "name": "Adani Electricity Mumbai", "operator_id": 65},
-            {"id": "50", "name": "DGVCL (Gujarat)", "operator_id": 50},
-            {"id": "51", "name": "MGVCL (Gujarat)", "operator_id": 51},
-            {"id": "52", "name": "PGVCL (Gujarat)", "operator_id": 52},
-            {"id": "53", "name": "UGVCL (Gujarat)", "operator_id": 53},
-            {"id": "54", "name": "Torrent Power (Gujarat)", "operator_id": 54},
-            {"id": "208", "name": "MPEB (MP)", "operator_id": 208},
-            {"id": "209", "name": "MPMKVVCL (MP Madhya)", "operator_id": 209},
-            {"id": "210", "name": "MPPMKVVCL (MP Poorv)", "operator_id": 210},
-            # South India
-            {"id": "56", "name": "BESCOM (Karnataka Bangalore)", "operator_id": 56},
-            {"id": "57", "name": "HESCOM (Karnataka)", "operator_id": 57},
-            {"id": "58", "name": "MESCOM (Karnataka)", "operator_id": 58},
-            {"id": "59", "name": "GESCOM (Karnataka)", "operator_id": 59},
-            {"id": "60", "name": "CESCOM (Karnataka)", "operator_id": 60},
+            {"id": "56", "name": "BESCOM (Bangalore)", "operator_id": 56},
             {"id": "149", "name": "TNEB (Tamil Nadu)", "operator_id": 149},
-            {"id": "150", "name": "TANGEDCO (Tamil Nadu)", "operator_id": 150},
-            {"id": "82", "name": "KSEB (Kerala)", "operator_id": 82},
-            {"id": "83", "name": "APEPDCL (Andhra East)", "operator_id": 83},
-            {"id": "84", "name": "APSPDCL (Andhra South)", "operator_id": 84},
-            {"id": "233", "name": "TSSPDCL (Telangana South)", "operator_id": 233},
-            {"id": "234", "name": "TSNPDCL (Telangana North)", "operator_id": 234},
-            # East India
-            {"id": "115", "name": "WBSEDCL (West Bengal)", "operator_id": 115},
-            {"id": "116", "name": "CESC (Kolkata)", "operator_id": 116},
-            {"id": "186", "name": "NBPDCL (Bihar North)", "operator_id": 186},
-            {"id": "187", "name": "SBPDCL (Bihar South)", "operator_id": 187},
-            {"id": "169", "name": "CESU (Odisha Central)", "operator_id": 169},
-            {"id": "170", "name": "NESCO (Odisha North)", "operator_id": 170},
-            {"id": "171", "name": "SOUTHCO (Odisha South)", "operator_id": 171},
-            {"id": "172", "name": "WESCO (Odisha West)", "operator_id": 172},
-            {"id": "173", "name": "TPNODL (Odisha TP North)", "operator_id": 173},
-            {"id": "174", "name": "TPSODL (Odisha TP South)", "operator_id": 174},
-            {"id": "188", "name": "JBVNL (Jharkhand)", "operator_id": 188},
-            # Northeast India
-            {"id": "189", "name": "APDCL (Assam)", "operator_id": 189},
-            {"id": "250", "name": "Meghalaya Power", "operator_id": 250},
-            {"id": "251", "name": "Tripura Power", "operator_id": 251},
-            {"id": "252", "name": "Manipur Power", "operator_id": 252},
-            {"id": "253", "name": "Nagaland Power", "operator_id": 253},
-            # Central India
-            {"id": "160", "name": "CSPDCL (Chhattisgarh)", "operator_id": 160},
-            # Union Territories
-            {"id": "254", "name": "Goa Electricity", "operator_id": 254},
-            {"id": "255", "name": "Puducherry Electricity", "operator_id": 255},
+            {"id": "131", "name": "UPPCL", "operator_id": 131},
         ],
         "gas": [
             {"id": "28", "name": "Mahanagar Gas", "operator_id": 28},
@@ -1547,67 +1488,12 @@ def get_fallback_operators(service_type: str):
             {"id": "275", "name": "Bharat Gas (BPCL)", "operator_id": 275},
         ],
         "insurance": [
-            {"id": "5337", "name": "LIC of India", "operator_id": 5337},
-            {"id": "5338", "name": "ICICI Prudential Life Insurance", "operator_id": 5338},
-            {"id": "5339", "name": "HDFC Life Insurance", "operator_id": 5339},
-            {"id": "5340", "name": "Max Life Insurance", "operator_id": 5340},
-            {"id": "5341", "name": "SBI Life Insurance", "operator_id": 5341},
-            {"id": "5342", "name": "Bajaj Allianz Life Insurance", "operator_id": 5342},
-            {"id": "5343", "name": "Kotak Life Insurance", "operator_id": 5343},
-            {"id": "5344", "name": "Tata AIA Life Insurance", "operator_id": 5344},
-            {"id": "5345", "name": "Birla Sun Life Insurance", "operator_id": 5345},
-            {"id": "5346", "name": "Star Health Insurance", "operator_id": 5346},
-            {"id": "5347", "name": "New India Assurance", "operator_id": 5347},
+            {"id": "ins_1", "name": "ICICI Prudential Life Insurance", "operator_id": 0},
+            {"id": "ins_2", "name": "LIC", "operator_id": 0},
         ],
         "fastag": [
-            {"id": "5348", "name": "Paytm FASTag", "operator_id": 5348},
-            {"id": "5349", "name": "ICICI Bank FASTag", "operator_id": 5349},
-            {"id": "5350", "name": "HDFC Bank FASTag", "operator_id": 5350},
-            {"id": "5351", "name": "Axis Bank FASTag", "operator_id": 5351},
-            {"id": "5352", "name": "SBI FASTag", "operator_id": 5352},
-            {"id": "5353", "name": "Kotak Bank FASTag", "operator_id": 5353},
-            {"id": "5354", "name": "IDFC First Bank FASTag", "operator_id": 5354},
-            {"id": "5355", "name": "Airtel Payments Bank FASTag", "operator_id": 5355},
-            {"id": "5356", "name": "Bank of Baroda FASTag", "operator_id": 5356},
-            {"id": "5357", "name": "IndusInd Bank FASTag", "operator_id": 5357},
-        ],
-        "broadband": [
-            {"id": "5358", "name": "BSNL Broadband", "operator_id": 5358},
-            {"id": "5359", "name": "Airtel Broadband", "operator_id": 5359},
-            {"id": "5360", "name": "Jio Fiber", "operator_id": 5360},
-            {"id": "5361", "name": "ACT Fibernet", "operator_id": 5361},
-            {"id": "5362", "name": "Hathway Broadband", "operator_id": 5362},
-            {"id": "5363", "name": "Tata Sky Broadband", "operator_id": 5363},
-            {"id": "5364", "name": "MTNL Broadband", "operator_id": 5364},
-            {"id": "5365", "name": "Tikona Broadband", "operator_id": 5365},
-        ],
-        "landline": [
-            {"id": "5366", "name": "BSNL Landline", "operator_id": 5366},
-            {"id": "5367", "name": "MTNL Landline", "operator_id": 5367},
-            {"id": "5368", "name": "Airtel Landline", "operator_id": 5368},
-            {"id": "5369", "name": "Reliance Landline", "operator_id": 5369},
-            {"id": "5370", "name": "Tata Teleservices Landline", "operator_id": 5370},
-        ],
-        "cable_tv": [
-            {"id": "5371", "name": "Hathway Cable", "operator_id": 5371},
-            {"id": "5372", "name": "DEN Networks", "operator_id": 5372},
-            {"id": "5373", "name": "GTPL Hathway", "operator_id": 5373},
-            {"id": "5374", "name": "Siti Networks", "operator_id": 5374},
-            {"id": "5375", "name": "In Digital Cable", "operator_id": 5375},
-        ],
-        "education": [
-            {"id": "5376", "name": "School/College Fees", "operator_id": 5376},
-            {"id": "5377", "name": "University Fees", "operator_id": 5377},
-            {"id": "5378", "name": "Coaching Institute Fees", "operator_id": 5378},
-        ],
-        "municipal_tax": [
-            {"id": "5379", "name": "Municipal Corporation Tax", "operator_id": 5379},
-            {"id": "5380", "name": "Property Tax", "operator_id": 5380},
-            {"id": "5381", "name": "Water Tax", "operator_id": 5381},
-        ],
-        "housing_society": [
-            {"id": "5382", "name": "Housing Society Maintenance", "operator_id": 5382},
-            {"id": "5383", "name": "Apartment Maintenance", "operator_id": 5383},
+            {"id": "fastag_1", "name": "Paytm FASTag", "operator_id": 0},
+            {"id": "fastag_2", "name": "ICICI FASTag", "operator_id": 0},
         ]
     }
     return fallbacks.get(service_type.lower(), [])
@@ -2611,59 +2497,26 @@ async def fetch_bill(request: BillFetchRequest):
     """
     Fetch bill details before payment
     Required for services like Electricity, Gas, Water where bill amount needs to be fetched first
-    
-    NOTE: Fetch bill API does NOT require request_hash - only secret-key authentication
     """
-    import requests as req
-    
     try:
         utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
         client_ref_id = f"FETCH{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Generate authentication headers (NO request_hash for fetch-bill)
-        timestamp = str(int(time.time() * 1000))
-        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
-        secret_key = base64.b64encode(
-            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
-        ).decode('utf-8')
-        
-        url = f"{EKO_BASE_URL}/v2/billpayments/fetchbill?initiator_id={EKO_INITIATOR_ID}"
-        
-        headers = {
-            "developer_key": EKO_DEVELOPER_KEY,
-            "secret-key": secret_key,
-            "secret-key-timestamp": timestamp,
-            "Content-Type": "application/json"
-        }
-        
-        body = {
-            "source_ip": "127.0.0.1",
-            "user_code": EKO_USER_CODE,
-            "client_ref_id": client_ref_id,
-            "utility_acc_no": utility_acc_no,
-            "confirmation_mobile_no": EKO_INITIATOR_ID,
-            "sender_name": "Customer",
-            "operator_id": str(request.biller_id),
-            "latlong": "19.0760,72.8777"
-        }
-        
-        logging.info(f"[FETCH-BILL] URL: {url}")
-        logging.info(f"[FETCH-BILL] Operator: {request.biller_id}, Consumer: {utility_acc_no}")
-        
-        body_json = json.dumps(body, separators=(',', ':'))
-        response = req.post(url, headers=headers, data=body_json, timeout=60)
-        
-        logging.info(f"[FETCH-BILL] Response Status: {response.status_code}")
-        logging.info(f"[FETCH-BILL] Response Body: {response.text[:500]}")
-        
-        try:
-            result = response.json()
-        except:
-            logging.error(f"[FETCH-BILL] Failed to parse JSON: {response.text[:200]}")
-            return {
-                "success": False,
-                "message": f"Invalid response from Eko (HTTP {response.status_code})"
+        # Eko API call to fetch bill
+        result = await make_eko_request(
+            "/v2/billpayments/fetchbill",
+            method="POST",
+            data={
+                "utility_acc_no": utility_acc_no,
+                "operator_id": request.biller_id,
+                "confirmation_mobile_no": EKO_INITIATOR_ID,
+                "sender_name": "Customer",
+                "user_code": EKO_USER_CODE,
+                "client_ref_id": client_ref_id,
+                "source_ip": "127.0.0.1",
+                "latlong": "19.0760,72.8777"
             }
+        )
         
         # Log the fetch
         if db is not None:
