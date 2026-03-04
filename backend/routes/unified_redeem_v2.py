@@ -252,11 +252,11 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
                 }
         
         elif service_type == "electricity":
-            # Electricity uses dedicated function
-            from routes.eko_payments import execute_electricity_payment
+            # Electricity uses same BBPS function as other bill payments
+            from routes.eko_payments import execute_bbps_bill_payment
             
-            result = await execute_electricity_payment(
-                consumer_number=utility_acc_no,
+            result = await execute_bbps_bill_payment(
+                utility_acc_no=utility_acc_no,
                 operator_id=operator,
                 amount=amount
             )
