@@ -1439,10 +1439,10 @@ const RedeemPageV2 = ({ user }) => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 
                 {/* ============================================ */}
-                {/* GAS - Bill Payment Flow (Electricity removed) */}
+                {/* ELECTRICITY & GAS - Bill Payment Flow */}
                 {/* 1. Provider → 2. Consumer → 3. Fetch Bill → 4. Amount → 5. Submit */}
                 {/* ============================================ */}
-                {(selectedService === 'gas') && (
+                {(selectedService === 'electricity' || selectedService === 'gas') && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>
