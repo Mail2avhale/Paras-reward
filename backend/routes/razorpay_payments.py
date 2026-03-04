@@ -1047,3 +1047,122 @@ async def fix_user_subscription(request: Request):
     except Exception as e:
         logging.error(f"[FIX] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/admin/manual-activate-by-email")
+async def manual_activate_by_email(request: Request):
+    """
+    ADMIN TOOL: Manually activate subscription by user email.
+    Use when payment was captured but subscription not activated.
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/manual-activate-by-email" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "email": "user@example.com", "plan": "startup", "days": 28}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        email = data.get("email")
+        plan = data.get("plan", "startup")
+        days = data.get("days", 28)
+        reason = data.get("reason", "Manual activation - payment captured but not synced")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        # Find user by email
+        user = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User not found with email: {email}")
+        
+        user_id = user.get("uid")
+        user_name = user.get("name", "Unknown")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Check existing subscription and add remaining days
+        remaining_days = 0
+        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+        
+        if existing_expiry:
+            if isinstance(existing_expiry, str):
+                try:
+                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                except:
+                    existing_expiry = None
+            
+            if existing_expiry:
+                if existing_expiry.tzinfo is None:
+                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                
+                if existing_expiry > now:
+                    remaining_days = (existing_expiry - now).days
+        
+        total_days = days + remaining_days
+        expiry_date = now + timedelta(days=total_days)
+        
+        # Update user subscription
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "subscription_plan": plan,
+                "subscription_start": now,
+                "subscription_expires": expiry_date,
+                "subscription_expiry": expiry_date.isoformat(),
+                "vip_expiry": expiry_date.isoformat(),
+                "membership_type": "vip",
+                "subscription_status": "active",
+                "manual_activated": True,
+                "manual_activation_reason": reason,
+                "manual_activated_at": now.isoformat()
+            }}
+        )
+        
+        # Log in vip_payments for admin dashboard visibility
+        await db.vip_payments.insert_one({
+            "payment_id": f"manual_{user_id}_{now.strftime('%Y%m%d%H%M%S')}",
+            "user_id": user_id,
+            "user_name": user_name,
+            "user_email": email,
+            "amount": 0,
+            "subscription_plan": plan,
+            "plan_type": "manual",
+            "status": "approved",
+            "payment_method": "manual_activation",
+            "new_expiry": expiry_date.isoformat(),
+            "duration_days": total_days,
+            "remaining_days_added": remaining_days,
+            "approved_at": now.isoformat(),
+            "created_at": now.isoformat(),
+            "admin_notes": reason
+        })
+        
+        logging.info(f"[MANUAL] Subscription activated for {email} ({user_id}), plan: {plan}, days: {total_days}")
+        
+        return {
+            "success": True,
+            "message": f"Subscription activated for {user_name}",
+            "user_id": user_id,
+            "user_name": user_name,
+            "email": email,
+            "plan": plan,
+            "new_expiry": expiry_date.isoformat(),
+            "total_days": total_days,
+            "new_days_added": days,
+            "remaining_days_added": remaining_days
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[MANUAL] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
