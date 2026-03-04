@@ -429,11 +429,14 @@ const AdminBBPSDashboard = () => {
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="text-sm text-gray-300">{req.user_email || req.user_id}</span>
+                        <div>
+                          <span className="text-sm text-white block">{req.user_name || 'N/A'}</span>
+                          <span className="text-xs text-gray-400">({req.user_mobile || req.user_email || req.user_id})</span>
+                        </div>
                       </td>
                       <td className="p-3">
                         <span className="text-sm font-semibold text-amber-400">
-                          ₹{(req.amount || 0).toLocaleString()}
+                          ₹{(req.amount || req.details?.amount || 0).toLocaleString()}
                         </span>
                       </td>
                       <td className="p-3">

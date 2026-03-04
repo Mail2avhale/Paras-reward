@@ -1881,10 +1881,26 @@ async def get_bbps_requests(
     skip = (page - 1) * limit
     
     # Fetch requests with full details
-    requests = await db.redeem_requests.find(
+    requests_raw = await db.redeem_requests.find(
         query,
         {"_id": 0}  # Exclude MongoDB _id
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich requests with user info
+    requests = []
+    for req in requests_raw:
+        user_id = req.get("user_id")
+        if user_id:
+            user = await db.users.find_one(
+                {"uid": user_id},
+                {"_id": 0, "name": 1, "mobile": 1, "email": 1}
+            )
+            if user:
+                req["user_name"] = user.get("name", "")
+                req["user_mobile"] = user.get("mobile", "")
+                if not req.get("user_email"):
+                    req["user_email"] = user.get("email", "")
+        requests.append(req)
     
     # Calculate stats
     stats = {
