@@ -3597,49 +3597,375 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
     """Backward compatible wrapper"""
     return await check_vip_service_access(uid, "marketplace")
 
-# ==================== PRC BURN SYSTEM - DEPRECATED ====================
-# NOTE: As of Feb 2026, free users CANNOT collect PRC anymore.
-# Therefore, PRC burning for free users is NO LONGER NEEDED.
-# These functions are kept for backward compatibility but do nothing.
+# ==================== PRC BURN SYSTEM - UPDATED MARCH 2026 ====================
+# NEW BURNING RULES:
+# 1. Explorer (Free): 4 hours validity - then burn
+# 2. VIP (Paid): Lifetime, max 2 days inactivity - then burn  
+# 3. Expired VIP: 2 days - then burn
+# 4. ALL USERS: Daily 1% burn from available PRC (0.5% at 11 AM + 0.5% at 11 PM)
+
+# Burn Settings
+BURN_SETTINGS = {
+    "explorer_validity_hours": 4,      # Free users: 4 hours
+    "vip_inactivity_days": 2,          # VIP: 2 days max inactivity
+    "expired_vip_validity_days": 2,    # Expired VIP: 2 days
+    "daily_burn_percentage": 1.0,      # 1% daily
+    "burn_schedule_hours": [11, 23],   # 11 AM and 11 PM (23 = 11 PM)
+    "per_session_burn_percentage": 0.5 # 0.5% per session
+}
+
+async def get_user_burn_status(user: dict) -> dict:
+    """
+    Determine user's burn status and applicable rules
+    """
+    uid = user.get("uid")
+    subscription_plan = user.get("subscription_plan", "explorer")
+    prc_balance = user.get("prc_balance", 0)
+    
+    # Check subscription expiry
+    is_vip = subscription_plan in ["startup", "growth", "elite"]
+    is_expired_vip = False
+    
+    if is_vip:
+        expiry = user.get("subscription_expiry") or user.get("membership_expiry")
+        if expiry:
+            try:
+                expiry_date = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+                if expiry_date.tzinfo is None:
+                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+                if expiry_date < datetime.now(timezone.utc):
+                    is_vip = False
+                    is_expired_vip = True
+            except:
+                pass
+    
+    # Determine user type and validity
+    if is_vip:
+        user_type = "vip"
+        validity_hours = BURN_SETTINGS["vip_inactivity_days"] * 24
+    elif is_expired_vip:
+        user_type = "expired_vip"
+        validity_hours = BURN_SETTINGS["expired_vip_validity_days"] * 24
+    else:
+        user_type = "explorer"
+        validity_hours = BURN_SETTINGS["explorer_validity_hours"]
+    
+    return {
+        "uid": uid,
+        "user_type": user_type,
+        "is_vip": is_vip,
+        "is_expired_vip": is_expired_vip,
+        "prc_balance": prc_balance,
+        "validity_hours": validity_hours,
+        "daily_burn_pct": BURN_SETTINGS["daily_burn_percentage"]
+    }
 
 async def burn_expired_prc_for_explorer_users():
     """
-    DEPRECATED: Free users can no longer collect PRC.
-    This function is kept for backward compatibility but does nothing.
+    Burn PRC for Explorer (Free) users after 4 hours validity
     """
-    logging.info("[PRC BURN] Explorer burn SKIPPED - Free users cannot collect PRC (new policy)")
-    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Free users cannot collect PRC"}
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - timedelta(hours=BURN_SETTINGS["explorer_validity_hours"])
+    
+    users_affected = 0
+    total_burned = 0
+    burned_details = []
+    
+    # Find explorer users with PRC balance
+    explorer_users = await db.users.find({
+        "subscription_plan": {"$in": ["explorer", "free", None, ""]},
+        "prc_balance": {"$gt": 0}
+    }).to_list(1000)
+    
+    for user in explorer_users:
+        uid = user.get("uid")
+        current_balance = user.get("prc_balance", 0)
+        
+        if current_balance <= 0:
+            continue
+        
+        # Check last PRC earning time
+        last_earning = await db.transactions.find_one({
+            "user_id": uid,
+            "transaction_type": {"$in": ["mining", "tap_game", "mining_reward", "referral_bonus"]},
+            "amount": {"$gt": 0}
+        }, sort=[("created_at", -1)])
+        
+        should_burn = False
+        
+        if last_earning:
+            earning_time = last_earning.get("created_at")
+            if isinstance(earning_time, str):
+                earning_time = datetime.fromisoformat(earning_time.replace('Z', '+00:00'))
+            if earning_time and earning_time < cutoff_time:
+                should_burn = True
+        else:
+            # No earnings found, check account creation
+            created_at = user.get("created_at")
+            if created_at:
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                if created_at < cutoff_time:
+                    should_burn = True
+        
+        if should_burn and current_balance > 0:
+            # Burn all PRC for explorer users past validity
+            await db.users.update_one(
+                {"uid": uid},
+                {
+                    "$set": {"prc_balance": 0},
+                    "$push": {
+                        "prc_transactions": {
+                            "type": "debit",
+                            "amount": current_balance,
+                            "description": f"PRC Expired (4hr validity for free users)",
+                            "reference_id": f"BURN-{now.strftime('%Y%m%d%H%M%S')}",
+                            "balance_after": 0,
+                            "timestamp": now.isoformat()
+                        }
+                    }
+                }
+            )
+            
+            users_affected += 1
+            total_burned += current_balance
+            burned_details.append({
+                "uid": uid,
+                "burned": current_balance,
+                "reason": "4hr_expiry"
+            })
+    
+    logging.info(f"[PRC BURN] Explorer: {users_affected} users, {total_burned:.2f} PRC burned")
+    return {
+        "users_affected": users_affected,
+        "total_burned": round(total_burned, 2),
+        "status": "completed",
+        "details": burned_details[:50]
+    }
 
-async def burn_expired_prc_for_free_users():
+async def burn_expired_prc_for_expired_vip():
     """
-    DEPRECATED: Free users can no longer collect PRC.
-    This function is kept for backward compatibility but does nothing.
+    Burn PRC for Expired VIP users after 2 days
     """
-    logging.info("[PRC BURN] Free user burn SKIPPED - Free users cannot collect PRC (new policy)")
-    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Free users cannot collect PRC"}
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - timedelta(days=BURN_SETTINGS["expired_vip_validity_days"])
+    
+    users_affected = 0
+    total_burned = 0
+    burned_details = []
+    
+    # Find users with expired VIP subscriptions
+    expired_vip_users = await db.users.find({
+        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
+        "prc_balance": {"$gt": 0},
+        "$or": [
+            {"subscription_expiry": {"$lt": cutoff_time.isoformat()}},
+            {"membership_expiry": {"$lt": cutoff_time.isoformat()}}
+        ]
+    }).to_list(1000)
+    
+    for user in expired_vip_users:
+        uid = user.get("uid")
+        current_balance = user.get("prc_balance", 0)
+        
+        if current_balance <= 0:
+            continue
+        
+        # Verify subscription is actually expired
+        expiry = user.get("subscription_expiry") or user.get("membership_expiry")
+        if expiry:
+            try:
+                expiry_date = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
+                if expiry_date.tzinfo is None:
+                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+                
+                days_expired = (now - expiry_date).days
+                
+                if days_expired >= BURN_SETTINGS["expired_vip_validity_days"]:
+                    # Burn all PRC
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {"prc_balance": 0},
+                            "$push": {
+                                "prc_transactions": {
+                                    "type": "debit",
+                                    "amount": current_balance,
+                                    "description": f"PRC Expired (VIP expired {days_expired} days ago)",
+                                    "reference_id": f"BURN-{now.strftime('%Y%m%d%H%M%S')}",
+                                    "balance_after": 0,
+                                    "timestamp": now.isoformat()
+                                }
+                            }
+                        }
+                    )
+                    
+                    users_affected += 1
+                    total_burned += current_balance
+                    burned_details.append({
+                        "uid": uid,
+                        "burned": current_balance,
+                        "days_expired": days_expired,
+                        "reason": "vip_expired_2days"
+                    })
+            except Exception as e:
+                logging.error(f"[PRC BURN] Error processing user {uid}: {e}")
+    
+    logging.info(f"[PRC BURN] Expired VIP: {users_affected} users, {total_burned:.2f} PRC burned")
+    return {
+        "users_affected": users_affected,
+        "total_burned": round(total_burned, 2),
+        "status": "completed",
+        "details": burned_details[:50]
+    }
 
-async def burn_expired_subscription_prc():
+async def daily_percentage_burn():
     """
-    DEPRECATED: Expired subscription users become free users and cannot collect PRC.
-    This function is kept for backward compatibility but does nothing.
+    Daily 0.5% burn from ALL users' available PRC balance
+    Runs at 11 AM and 11 PM (0.5% each = 1% daily)
+    NO NEGATIVE IMPACT - gradual, sustainable mechanism
     """
-    logging.info("[PRC BURN] Expired subscription burn SKIPPED - Expired users cannot collect PRC (new policy)")
-    return {"users_affected": 0, "total_burned": 0, "status": "skipped", "reason": "Expired users cannot collect PRC"}
+    now = datetime.now(timezone.utc)
+    burn_pct = BURN_SETTINGS["per_session_burn_percentage"]  # 0.5%
+    
+    users_affected = 0
+    total_burned = 0
+    burned_details = []
+    
+    # Find ALL users with PRC balance > 0
+    users_with_prc = await db.users.find({
+        "prc_balance": {"$gt": 0}
+    }).to_list(10000)
+    
+    for user in users_with_prc:
+        uid = user.get("uid")
+        current_balance = user.get("prc_balance", 0)
+        
+        if current_balance <= 0:
+            continue
+        
+        # Calculate 0.5% to burn
+        burn_amount = round(current_balance * (burn_pct / 100), 4)
+        
+        # Minimum burn of 0.01 PRC (avoid micro burns)
+        if burn_amount < 0.01:
+            continue
+        
+        new_balance = round(current_balance - burn_amount, 4)
+        
+        # Ensure no negative balance
+        if new_balance < 0:
+            new_balance = 0
+            burn_amount = current_balance
+        
+        # Apply burn
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {"prc_balance": new_balance},
+                "$push": {
+                    "prc_transactions": {
+                        "type": "debit",
+                        "amount": burn_amount,
+                        "description": f"Daily PRC Maintenance ({burn_pct}%)",
+                        "reference_id": f"DAILY-{now.strftime('%Y%m%d%H%M%S')}",
+                        "balance_after": new_balance,
+                        "timestamp": now.isoformat()
+                    }
+                }
+            }
+        )
+        
+        users_affected += 1
+        total_burned += burn_amount
+        burned_details.append({
+            "uid": uid,
+            "before": current_balance,
+            "burned": burn_amount,
+            "after": new_balance
+        })
+    
+    # Log the burn operation
+    from routes.user_logs import log_burn_operation
+    try:
+        await log_burn_operation(
+            operation_type="daily_percentage_burn",
+            total_users_checked=len(users_with_prc),
+            users_burned=users_affected,
+            users_skipped=len(users_with_prc) - users_affected,
+            total_prc_burned=total_burned,
+            notes=f"Daily {burn_pct}% burn at {now.strftime('%H:%M')} IST",
+            burned_users_details=burned_details[:100],
+            settings_used=BURN_SETTINGS
+        )
+    except Exception as e:
+        logging.error(f"[BURN LOG] Failed to log: {e}")
+    
+    logging.info(f"[PRC BURN] Daily {burn_pct}%: {users_affected} users, {total_burned:.2f} PRC burned")
+    return {
+        "users_affected": users_affected,
+        "total_burned": round(total_burned, 2),
+        "burn_percentage": burn_pct,
+        "timestamp": now.isoformat(),
+        "status": "completed"
+    }
 
 async def run_prc_burn_job():
     """
-    DEPRECATED: PRC burn job is no longer needed.
-    Free users cannot collect PRC, so there's nothing to burn.
-    This function returns immediately with a skip message.
+    Main PRC burn job - runs all burn operations
+    Called by scheduler at 11 AM and 11 PM IST
     """
-    logging.info("[PRC BURN JOB] SKIPPED - New policy: Free users cannot collect PRC, no burning needed")
-    return {
-        "status": "skipped",
-        "reason": "Free users cannot collect PRC (Feb 2026 policy change)",
-        "explorer_users": {"users_affected": 0, "total_burned": 0},
-        "free_users": {"users_affected": 0, "total_burned": 0},
-        "expired_subscriptions": {"users_affected": 0, "total_burned": 0}
+    now = datetime.now(timezone.utc)
+    logging.info(f"[PRC BURN JOB] Starting burn job at {now.isoformat()}")
+    
+    results = {
+        "timestamp": now.isoformat(),
+        "explorer_burn": {},
+        "expired_vip_burn": {},
+        "daily_percentage_burn": {}
     }
+    
+    try:
+        # 1. Burn expired PRC for Explorer users (4hr validity)
+        results["explorer_burn"] = await burn_expired_prc_for_explorer_users()
+    except Exception as e:
+        logging.error(f"[PRC BURN] Explorer burn error: {e}")
+        results["explorer_burn"] = {"error": str(e)}
+    
+    try:
+        # 2. Burn expired PRC for Expired VIP users (2 day validity)
+        results["expired_vip_burn"] = await burn_expired_prc_for_expired_vip()
+    except Exception as e:
+        logging.error(f"[PRC BURN] Expired VIP burn error: {e}")
+        results["expired_vip_burn"] = {"error": str(e)}
+    
+    try:
+        # 3. Daily 0.5% burn for ALL users
+        results["daily_percentage_burn"] = await daily_percentage_burn()
+    except Exception as e:
+        logging.error(f"[PRC BURN] Daily percentage burn error: {e}")
+        results["daily_percentage_burn"] = {"error": str(e)}
+    
+    # Calculate totals
+    total_users = (
+        results.get("explorer_burn", {}).get("users_affected", 0) +
+        results.get("expired_vip_burn", {}).get("users_affected", 0) +
+        results.get("daily_percentage_burn", {}).get("users_affected", 0)
+    )
+    total_burned = (
+        results.get("explorer_burn", {}).get("total_burned", 0) +
+        results.get("expired_vip_burn", {}).get("total_burned", 0) +
+        results.get("daily_percentage_burn", {}).get("total_burned", 0)
+    )
+    
+    results["summary"] = {
+        "total_users_affected": total_users,
+        "total_prc_burned": round(total_burned, 2),
+        "status": "completed"
+    }
+    
+    logging.info(f"[PRC BURN JOB] Completed: {total_users} users, {total_burned:.2f} PRC burned")
+    return results
 
 # ==================== END PRC BURN SYSTEM ====================
 
@@ -41853,9 +42179,29 @@ async def startup_db():
     print("⏰ Starting scheduled tasks...")
     
     try:
-        # NOTE: PRC burn jobs REMOVED (Feb 2026)
-        # Free users cannot collect PRC anymore, so no burning needed.
-        # Old jobs: burn_free_user_prc, burn_expired_subscription_prc - REMOVED
+        # ========== PRC BURN JOBS - UPDATED MARCH 2026 ==========
+        # New burning rules:
+        # - Explorer: 4 hours validity
+        # - VIP: 2 days inactivity
+        # - Daily 1% burn: 0.5% at 11 AM + 0.5% at 11 PM
+        
+        # PRC Burn Job at 11:00 AM IST (5:30 AM UTC)
+        scheduler.add_job(
+            run_prc_burn_job,
+            CronTrigger(hour=5, minute=30),  # 11 AM IST = 5:30 AM UTC
+            id='prc_burn_morning',
+            name='PRC Burn Job - Morning (11 AM IST)',
+            replace_existing=True
+        )
+        
+        # PRC Burn Job at 11:00 PM IST (5:30 PM UTC)
+        scheduler.add_job(
+            run_prc_burn_job,
+            CronTrigger(hour=17, minute=30),  # 11 PM IST = 5:30 PM UTC
+            id='prc_burn_evening',
+            name='PRC Burn Job - Evening (11 PM IST)',
+            replace_existing=True
+        )
         
         # Schedule daily wallet reconciliation - runs at 3 AM
         scheduler.add_job(
@@ -41934,14 +42280,15 @@ async def startup_db():
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
-        print("   - Free user PRC burn: Every hour")
-        print("   - Expired VIP PRC burn: Daily at 2 AM")
-        print("   - Wallet reconciliation: Daily at 3 AM")
-        print("   - Daily system summary: Daily at 12:05 AM")
-        print("   - Inactive user PRC burn: Weekly Sunday at 4 AM")
-        print("   - Account hard delete: Daily at 3:30 AM")
-        print("   - Auto lockout clear: Daily at 12 PM & 12 AM")
-        print("   - 🔄 Razorpay auto-sync: Every 10 minutes")
+        print("   - 🔥 PRC Burn (11 AM IST): Daily 0.5% + Expiry burn")
+        print("   - 🔥 PRC Burn (11 PM IST): Daily 0.5% + Expiry burn")
+        print("   - 💰 Wallet reconciliation: Daily at 3 AM")
+        print("   - 📊 Daily system summary: Daily at 12:05 AM")
+        print("   - ⚡ Inactive user PRC burn: Weekly Sunday at 4 AM")
+        print("   - 🗑️ Account hard delete: Daily at 3:30 AM")
+        print("   - 🔓 Auto lockout clear: Daily at 12 PM & 12 AM")
+        print("   - 🔄 Razorpay auto-sync: Every 5 minutes")
+        print("   - 🏦 Eko status update: Every 5 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
         
         # Trigger initial Razorpay sync 30 seconds after startup

@@ -252,24 +252,66 @@ async def get_user_subscription_history(uid: str):
 
 @router.post("/run-explorer-burn")
 async def run_explorer_burn(request: Request):
-    """Run explorer PRC burn (set free users PRC to 0)"""
+    """Run explorer PRC burn (4hr validity for free users)"""
+    from server import burn_expired_prc_for_explorer_users
+    
     data = await request.json()
     admin_id = data.get("admin_id")
     
-    result = await db.users.update_many(
-        {"membership_type": {"$ne": "vip"}, "prc_balance": {"$gt": 0}},
-        {"$set": {"prc_balance": 0}}
-    )
+    result = await burn_expired_prc_for_explorer_users()
     
     if log_admin_action:
         await log_admin_action(
             admin_uid=admin_id,
             action="explorer_burn",
             entity_type="system",
-            details={"users_affected": result.modified_count}
+            details=result
         )
     
-    return {"success": True, "users_affected": result.modified_count}
+    return {"success": True, **result}
+
+@router.post("/run-prc-burn")
+async def run_prc_burn_manual(request: Request):
+    """
+    Manually trigger complete PRC burn job
+    Includes: Explorer burn, Expired VIP burn, Daily 0.5% burn
+    """
+    from server import run_prc_burn_job
+    
+    data = await request.json()
+    admin_id = data.get("admin_id")
+    
+    result = await run_prc_burn_job()
+    
+    if log_admin_action:
+        await log_admin_action(
+            admin_uid=admin_id,
+            action="manual_prc_burn",
+            entity_type="system",
+            details=result
+        )
+    
+    return {"success": True, **result}
+
+@router.get("/burn-settings")
+async def get_burn_settings():
+    """Get current PRC burn settings"""
+    from server import BURN_SETTINGS
+    
+    return {
+        "success": True,
+        "settings": BURN_SETTINGS,
+        "schedule": {
+            "morning": "11:00 AM IST (5:30 AM UTC)",
+            "evening": "11:00 PM IST (5:30 PM UTC)",
+            "daily_burn": "1% total (0.5% each session)"
+        },
+        "validity": {
+            "explorer": "4 hours",
+            "vip": "Lifetime (max 2 days inactivity)",
+            "expired_vip": "2 days"
+        }
+    }
 
 
 @router.post("/send-renewal-notifications")
