@@ -816,6 +816,9 @@ def get_operators(category: str):
                 "supports_bill_fetch": op.get("billFetchResponse", 0) == 1
             })
         
+        # Sort operators A to Z by name
+        formatted.sort(key=lambda x: (x.get("name") or "").lower())
+        
         return {
             "success": True,
             "category": category,
