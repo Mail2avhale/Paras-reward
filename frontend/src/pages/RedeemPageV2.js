@@ -508,7 +508,8 @@ const RedeemPageV2 = ({ user }) => {
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const response = await axios.get(`${API}/eko/bbps/operators/${category}`, {
+        // Use new clean BBPS API: GET /api/bbps/operators/{category}
+        const response = await axios.get(`${API}/bbps/operators/${category}`, {
           timeout: 15000 // 15 second timeout
         });
         console.log(`[BBPS] API Response for ${category} (attempt ${attempt}):`, response.data);
@@ -811,54 +812,42 @@ const RedeemPageV2 = ({ user }) => {
     setBillError(null);
     
     try {
-      // Build customer_params with all required parameters
-      const customerParams = {
-        consumer_number: consumerNumber
-      };
-      
-      // Add additional parameters if operator requires them (like BU for MSEDCL)
-      if (operatorParams?.parameters?.length > 1) {
-        operatorParams.parameters.slice(1).forEach((param, idx) => {
-          const value = idx === 0 ? formData.additional_param_1 : formData.additional_param_2;
-          if (value) {
-            customerParams[param.param_name] = value;
-          }
-        });
-      }
-      
-      const response = await axios.post(`${API}/eko/bbps/fetch-bill`, {
-        category: category,
-        biller_id: operatorId,
-        customer_params: customerParams
+      // Use new clean BBPS API: POST /api/bbps/fetch
+      // Request format: { operator_id, account, mobile }
+      const response = await axios.post(`${API}/bbps/fetch`, {
+        operator_id: operatorId,
+        account: consumerNumber,
+        mobile: "9999999999"  // Required by Eko
       });
       
-      if (response.data.success || response.data.status === 0) {
-        const data = response.data.data || response.data;
+      if (response.data.success) {
+        const data = response.data;
         setBillDetails({
-          customerName: data.customer_name || data.customername || data.name || 'N/A',
-          billAmount: data.bill_amount || data.billamount || data.amount || 0,
-          billNumber: data.bill_number || data.billnumber || data.billno || 'N/A',
-          billDate: data.bill_date || data.billdate || data.duedate || 'N/A',
-          dueDate: data.due_date || data.duedate || 'N/A',
-          billPeriod: data.bill_period || data.billperiod || 'N/A'
+          customerName: data.customer_name || 'N/A',
+          billAmount: data.bill_amount || 0,
+          billNumber: data.bill_number || 'N/A',
+          billDate: data.bill_date || 'N/A',
+          dueDate: data.due_date || 'N/A',
+          billPeriod: 'N/A'
         });
         
         // Auto-fill amount from bill
-        if (data.bill_amount || data.billamount || data.amount) {
-          const billAmt = data.bill_amount || data.billamount || data.amount;
+        if (data.bill_amount) {
           setFormData(prev => ({
             ...prev,
-            amount: String(billAmt)
+            amount: String(data.bill_amount)
           }));
-          toast.success(`Bill fetched! Amount: ₹${billAmt}`);
+          toast.success(`Bill fetched! Amount: ₹${data.bill_amount}`);
         }
       } else {
-        setBillError(response.data.message || 'Bill fetch failed');
-        toast.error(response.data.message || 'Bill details not found');
+        // Error from Eko
+        const errorMsg = response.data.message || 'Bill fetch failed';
+        setBillError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Bill fetch error:', error);
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || 'Bill fetch failed';
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || 'Unable to fetch bill';
       setBillError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -878,11 +867,12 @@ const RedeemPageV2 = ({ user }) => {
     const fetchOperatorParams = async () => {
       if (!formData.operator) return;
       
-      const billServices = ['gas', 'water', 'broadband', 'landline', 'insurance'];
+      const billServices = ['electricity', 'gas', 'water', 'broadband', 'landline', 'insurance', 'dth', 'fastag', 'emi'];
       if (!billServices.includes(selectedService)) return;
       
       try {
-        const response = await axios.get(`${API}/eko/bbps/operator-params/${formData.operator}`);
+        // Use new clean BBPS API: GET /api/bbps/operator-params/{operator_id}
+        const response = await axios.get(`${API}/bbps/operator-params/${formData.operator}`);
         if (response.data.success && response.data.parameters) {
           setOperatorParams(response.data);
           console.log('[BBPS] Operator params:', response.data);
