@@ -2611,26 +2611,59 @@ async def fetch_bill(request: BillFetchRequest):
     """
     Fetch bill details before payment
     Required for services like Electricity, Gas, Water where bill amount needs to be fetched first
+    
+    NOTE: Fetch bill API does NOT require request_hash - only secret-key authentication
     """
+    import requests as req
+    
     try:
         utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
         client_ref_id = f"FETCH{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Eko API call to fetch bill
-        result = await make_eko_request(
-            "/v2/billpayments/fetchbill",
-            method="POST",
-            data={
-                "utility_acc_no": utility_acc_no,
-                "operator_id": request.biller_id,
-                "confirmation_mobile_no": EKO_INITIATOR_ID,
-                "sender_name": "Customer",
-                "user_code": EKO_USER_CODE,
-                "client_ref_id": client_ref_id,
-                "source_ip": "127.0.0.1",
-                "latlong": "19.0760,72.8777"
+        # Generate authentication headers (NO request_hash for fetch-bill)
+        timestamp = str(int(time.time() * 1000))
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        url = f"{EKO_BASE_URL}/v2/billpayments/fetchbill?initiator_id={EKO_INITIATOR_ID}"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/json"
+        }
+        
+        body = {
+            "source_ip": "127.0.0.1",
+            "user_code": EKO_USER_CODE,
+            "client_ref_id": client_ref_id,
+            "utility_acc_no": utility_acc_no,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "Customer",
+            "operator_id": str(request.biller_id),
+            "latlong": "19.0760,72.8777"
+        }
+        
+        logging.info(f"[FETCH-BILL] URL: {url}")
+        logging.info(f"[FETCH-BILL] Operator: {request.biller_id}, Consumer: {utility_acc_no}")
+        
+        body_json = json.dumps(body, separators=(',', ':'))
+        response = req.post(url, headers=headers, data=body_json, timeout=60)
+        
+        logging.info(f"[FETCH-BILL] Response Status: {response.status_code}")
+        logging.info(f"[FETCH-BILL] Response Body: {response.text[:500]}")
+        
+        try:
+            result = response.json()
+        except:
+            logging.error(f"[FETCH-BILL] Failed to parse JSON: {response.text[:200]}")
+            return {
+                "success": False,
+                "message": f"Invalid response from Eko (HTTP {response.status_code})"
             }
-        )
         
         # Log the fetch
         if db is not None:
