@@ -1551,7 +1551,11 @@ const RedeemPageV2 = ({ user }) => {
                               setBillDetails(null);
                             }}
                             placeholder={operatorParams?.parameters?.[0]?.error_message || "Enter consumer number"}
-                            className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            className={`flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl ${
+                              formData.consumer_number && operatorParams?.parameters?.[0]?.regex && 
+                              !new RegExp(operatorParams.parameters[0].regex).test(formData.consumer_number) 
+                                ? 'border-red-500/50 focus:border-red-500' : ''
+                            }`}
                             data-testid="consumer-input"
                           />
                           {supportsBillFetch && (
@@ -1570,19 +1574,36 @@ const RedeemPageV2 = ({ user }) => {
                             </Button>
                           )}
                         </div>
-                        {/* Show operator-specific format hint */}
-                        {operatorParams?.parameters?.[0]?.regex && (
-                          <p className="text-xs text-cyan-400 mt-1">
-                            Format: {operatorParams.parameters[0].regex === '^[0-9]{13}$' ? '13 digits required' : 
-                                    operatorParams.parameters[0].regex === '^[0-9]{10}$' ? '10 digits required' :
-                                    operatorParams.parameters[0].regex === '^[0-9]{12}$' ? '12 digits required' :
-                                    `Pattern: ${operatorParams.parameters[0].regex}`}
+                        {/* Real-time validation error */}
+                        {formData.consumer_number && operatorParams?.parameters?.[0]?.regex && 
+                         !new RegExp(operatorParams.parameters[0].regex).test(formData.consumer_number) && (
+                          <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                            ❌ चुकीचा format! {operatorParams.parameters[0].error_message}
                           </p>
                         )}
+                        {formData.consumer_number && operatorParams?.parameters?.[0]?.regex && 
+                         new RegExp(operatorParams.parameters[0].regex).test(formData.consumer_number) && (
+                          <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                            ✅ योग्य format
+                          </p>
+                        )}
+                        {/* Show operator-specific format hint */}
+                        {operatorParams?.parameters?.[0] && (
+                          <div className="mt-2 p-2 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                            <p className="text-xs text-cyan-400">
+                              💡 {operatorParams.parameters[0].error_message || 
+                                  (operatorParams.parameters[0].regex === '^[0-9]{13}$' ? '13 अंकी नंबर टाका' : 
+                                   operatorParams.parameters[0].regex === '^[0-9]{10}$' ? '10 अंकी नंबर टाका' :
+                                   operatorParams.parameters[0].regex === '^[0-9]{12}$' ? '12 अंकी नंबर टाका' :
+                                   operatorParams.parameters[0].regex === '^[0-9]{9}$' ? '9 अंकी नंबर टाका' :
+                                   `Format: ${operatorParams.parameters[0].regex}`)}
+                            </p>
+                          </div>
+                        )}
                         {supportsBillFetch ? (
-                          <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
+                          <p className="text-xs text-gray-500 mt-1">Consumer number टाकून 🔍 बटण दाबा</p>
                         ) : (
-                          <p className="text-xs text-amber-500 mt-1">⚡ Bill fetch not available for this provider. Enter amount manually.</p>
+                          <p className="text-xs text-amber-500 mt-1">⚡ या provider साठी bill fetch उपलब्ध नाही. Amount manually टाका.</p>
                         )}
                       </div>
                     )}
@@ -1645,9 +1666,9 @@ const RedeemPageV2 = ({ user }) => {
                       <div className="animate-fadeIn bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4">
                         <div className="flex items-center gap-2">
                           <Info className="h-5 w-5 text-amber-400" />
-                          <span className="text-amber-400 font-medium">Bill fetch unavailable for this provider</span>
+                          <span className="text-amber-400 font-medium">Bill fetch उपलब्ध नाही</span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-2">No problem! Enter your bill amount manually and proceed with payment.</p>
+                        <p className="text-gray-400 text-sm mt-2">काळजी नको! तुमचा bill amount खाली manually टाका आणि payment करा.</p>
                       </div>
                     )}
                     
