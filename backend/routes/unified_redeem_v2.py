@@ -865,6 +865,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
         "user_mobile": user.get("mobile", ""),
         "service_type": request.service_type,
         "service_name": SERVICE_TYPES[request.service_type]["name"],
+        "amount": request.amount,  # Store as 'amount' for dashboard compatibility
         "amount_inr": request.amount,
         "details": request.details,
         # Charges breakdown
@@ -1946,6 +1947,13 @@ async def get_bbps_requests(
                 req["user_mobile"] = user.get("mobile", "")
                 if not req.get("user_email"):
                     req["user_email"] = user.get("email", "")
+        
+        # Ensure amount field exists (fallback to amount_inr for old records)
+        if not req.get("amount") and req.get("amount_inr"):
+            req["amount"] = req.get("amount_inr")
+        elif not req.get("amount") and req.get("details", {}).get("amount"):
+            req["amount"] = req.get("details", {}).get("amount")
+        
         requests.append(req)
     
     # Calculate stats
@@ -1963,7 +1971,7 @@ async def get_bbps_requests(
         {"$group": {
             "_id": "$status",
             "count": {"$sum": 1},
-            "total_amount": {"$sum": "$amount"},
+            "total_amount": {"$sum": {"$ifNull": ["$amount", {"$ifNull": ["$amount_inr", 0]}]}},
             "total_prc": {"$sum": "$total_prc_deducted"}
         }}
     ]
@@ -2049,3 +2057,54 @@ async def get_bbps_request_details(request_id: str):
         }
     }
 
+
+
+
+@router.post("/admin/fix-amounts")
+async def fix_missing_amounts():
+    """
+    Migration: Fix old records where 'amount' field is missing but 'amount_inr' exists
+    """
+    try:
+        # Find records with amount_inr but no amount
+        result = await db.redeem_requests.update_many(
+            {
+                "$or": [
+                    {"amount": {"$exists": False}},
+                    {"amount": None},
+                    {"amount": 0}
+                ],
+                "amount_inr": {"$exists": True, "$gt": 0}
+            },
+            [
+                {"$set": {"amount": "$amount_inr"}}
+            ]
+        )
+        
+        fixed_count = result.modified_count
+        
+        # Also fix records where amount_inr doesn't exist but details has amount
+        result2 = await db.redeem_requests.update_many(
+            {
+                "$or": [
+                    {"amount": {"$exists": False}},
+                    {"amount": None},
+                    {"amount": 0}
+                ],
+                "details.amount": {"$exists": True, "$gt": 0}
+            },
+            [
+                {"$set": {"amount": "$details.amount"}}
+            ]
+        )
+        
+        fixed_count += result2.modified_count
+        
+        return {
+            "success": True,
+            "message": f"Fixed {fixed_count} records with missing amounts",
+            "fixed_count": fixed_count
+        }
+    except Exception as e:
+        logging.error(f"Fix amounts error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
