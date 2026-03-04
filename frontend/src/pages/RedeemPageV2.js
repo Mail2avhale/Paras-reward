@@ -323,7 +323,10 @@ const RedeemPageV2 = ({ user }) => {
     policy_number: '',
     vehicle_number: '',
     student_id: '',
-    lpg_id: ''
+    lpg_id: '',
+    // Additional operator params (like BU for MSEDCL)
+    additional_param_1: '',
+    additional_param_2: ''
   });
   
   // Charges calculation
@@ -820,12 +823,25 @@ const RedeemPageV2 = ({ user }) => {
     setBillError(null);
     
     try {
+      // Build customer_params with all required parameters
+      const customerParams = {
+        consumer_number: consumerNumber
+      };
+      
+      // Add additional parameters if operator requires them (like BU for MSEDCL)
+      if (operatorParams?.parameters?.length > 1) {
+        operatorParams.parameters.slice(1).forEach((param, idx) => {
+          const value = idx === 0 ? formData.additional_param_1 : formData.additional_param_2;
+          if (value) {
+            customerParams[param.param_name] = value;
+          }
+        });
+      }
+      
       const response = await axios.post(`${API}/eko/bbps/fetch-bill`, {
         category: category,
         biller_id: operatorId,
-        customer_params: {
-          consumer_number: consumerNumber
-        }
+        customer_params: customerParams
       });
       
       if (response.data.success || response.data.status === 0) {
@@ -1524,6 +1540,34 @@ const RedeemPageV2 = ({ user }) => {
                         ) : (
                           <p className="text-xs text-amber-500 mt-1">⚡ Bill fetch not available for this provider. Enter amount manually.</p>
                         )}
+                      </div>
+                    )}
+                    
+                    {/* Additional Parameters (like BU for MSEDCL) */}
+                    {formData.operator && operatorParams?.parameters?.length > 1 && (
+                      <div className="animate-fadeIn space-y-3">
+                        {operatorParams.parameters.slice(1).map((param, idx) => (
+                          <div key={param.param_id || idx}>
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-500 text-black text-xs font-bold mr-2">+</span>
+                              {param.param_label} *
+                            </Label>
+                            <Input
+                              value={idx === 0 ? formData.additional_param_1 : formData.additional_param_2}
+                              onChange={(e) => setFormData({ 
+                                ...formData, 
+                                [idx === 0 ? 'additional_param_1' : 'additional_param_2']: e.target.value 
+                              })}
+                              placeholder={param.error_message || `Enter ${param.param_label}`}
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                            {param.regex && (
+                              <p className="text-xs text-cyan-400 mt-1">
+                                {param.error_message || `Format: ${param.regex}`}
+                              </p>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                     

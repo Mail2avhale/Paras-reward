@@ -2497,25 +2497,40 @@ async def fetch_bill(request: BillFetchRequest):
     """
     Fetch bill details before payment
     Required for services like Electricity, Gas, Water where bill amount needs to be fetched first
+    Supports multiple parameters (e.g., MSEDCL requires Consumer No + BU)
     """
     try:
-        utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
+        # Get primary consumer number
+        utility_acc_no = request.customer_params.get("consumer_number", "")
+        if not utility_acc_no:
+            utility_acc_no = list(request.customer_params.values())[0] if request.customer_params else ""
+        
         client_ref_id = f"FETCH{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Build request data with all customer params
+        request_data = {
+            "utility_acc_no": utility_acc_no,
+            "operator_id": request.biller_id,
+            "confirmation_mobile_no": EKO_INITIATOR_ID,
+            "sender_name": "Customer",
+            "user_code": EKO_USER_CODE,
+            "client_ref_id": client_ref_id,
+            "source_ip": "127.0.0.1",
+            "latlong": "19.0760,72.8777"
+        }
+        
+        # Add additional parameters if present (like cycle_number/BU for MSEDCL)
+        for key, value in request.customer_params.items():
+            if key != "consumer_number" and value:
+                request_data[key] = value
+        
+        logging.info(f"[FETCH-BILL] Request data: {request_data}")
         
         # Eko API call to fetch bill
         result = await make_eko_request(
             "/v2/billpayments/fetchbill",
             method="POST",
-            data={
-                "utility_acc_no": utility_acc_no,
-                "operator_id": request.biller_id,
-                "confirmation_mobile_no": EKO_INITIATOR_ID,
-                "sender_name": "Customer",
-                "user_code": EKO_USER_CODE,
-                "client_ref_id": client_ref_id,
-                "source_ip": "127.0.0.1",
-                "latlong": "19.0760,72.8777"
-            }
+            data=request_data
         )
         
         # Log the fetch
