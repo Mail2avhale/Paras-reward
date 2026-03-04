@@ -1519,12 +1519,12 @@ const RedeemPageV2 = ({ user }) => {
                     )}
                     
                     {billError && (
-                      <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
+                      <div className="animate-fadeIn bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4">
                         <div className="flex items-center gap-2">
-                          <XCircle className="h-5 w-5 text-red-400" />
-                          <span className="text-red-400 font-medium">{billError}</span>
+                          <Info className="h-5 w-5 text-amber-400" />
+                          <span className="text-amber-400 font-medium">Bill fetch unavailable for this provider</span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-2">Enter amount manually below.</p>
+                        <p className="text-gray-400 text-sm mt-2">No problem! Enter your bill amount manually and proceed with payment.</p>
                       </div>
                     )}
                     
