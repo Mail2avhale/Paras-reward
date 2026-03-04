@@ -2592,7 +2592,7 @@ async def fetch_bill(request: BillFetchRequest):
             "sender_name": "Paras Reward",
             "user_code": EKO_USER_CODE,
             "client_ref_id": client_ref_id,
-            "source_ip": "34.170.12.145",
+            "source_ip": "34.44.149.98",  # Production whitelisted IP
             "latlong": "19.9975,73.7898"
         }
         
@@ -2687,7 +2687,7 @@ async def pay_bill(request: BillPayRequest):
             "sender_name": "Paras Reward",
             "client_ref_id": txn_ref,
             "user_code": EKO_USER_CODE,
-            "source_ip": "34.170.12.145",
+            "source_ip": "34.44.149.98",  # Production whitelisted IP
             "latlong": "19.9975,73.7898"
         }
         
