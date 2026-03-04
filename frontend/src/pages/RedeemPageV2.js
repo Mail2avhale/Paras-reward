@@ -297,6 +297,7 @@ const RedeemPageV2 = ({ user }) => {
   const [billDetails, setBillDetails] = useState(null);
   const [fetchingBill, setFetchingBill] = useState(false);
   const [billError, setBillError] = useState(null);
+  const [operatorParams, setOperatorParams] = useState(null); // Operator specific parameters from Eko
   
   // Form data
   const [formData, setFormData] = useState({
@@ -865,7 +866,30 @@ const RedeemPageV2 = ({ user }) => {
   useEffect(() => {
     setBillDetails(null);
     setBillError(null);
+    setOperatorParams(null);
   }, [selectedService, formData.operator]);
+  
+  // Fetch operator parameters when operator is selected for bill services
+  useEffect(() => {
+    const fetchOperatorParams = async () => {
+      if (!formData.operator) return;
+      
+      const billServices = ['electricity', 'gas', 'water', 'broadband', 'landline', 'insurance', 'fastag'];
+      if (!billServices.includes(selectedService)) return;
+      
+      try {
+        const response = await axios.get(`${API}/eko/bbps/operator-params/${formData.operator}`);
+        if (response.data.success && response.data.parameters) {
+          setOperatorParams(response.data);
+          console.log('[BBPS] Operator params:', response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch operator params:', error);
+      }
+    };
+    
+    fetchOperatorParams();
+  }, [formData.operator, selectedService]);
   
   // Fetch bank list when DMT is selected
   useEffect(() => {
@@ -1457,7 +1481,7 @@ const RedeemPageV2 = ({ user }) => {
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
-                          Consumer Number *
+                          {operatorParams?.parameters?.[0]?.param_label || 'Consumer Number'} *
                         </Label>
                         <div className="flex gap-2">
                           <Input
@@ -1466,7 +1490,7 @@ const RedeemPageV2 = ({ user }) => {
                               setFormData({ ...formData, consumer_number: e.target.value, amount: '' });
                               setBillDetails(null);
                             }}
-                            placeholder="Enter consumer number"
+                            placeholder={operatorParams?.parameters?.[0]?.error_message || "Enter consumer number"}
                             className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             data-testid="consumer-input"
                           />
@@ -1486,6 +1510,15 @@ const RedeemPageV2 = ({ user }) => {
                             </Button>
                           )}
                         </div>
+                        {/* Show operator-specific format hint */}
+                        {operatorParams?.parameters?.[0]?.regex && (
+                          <p className="text-xs text-cyan-400 mt-1">
+                            Format: {operatorParams.parameters[0].regex === '^[0-9]{13}$' ? '13 digits required' : 
+                                    operatorParams.parameters[0].regex === '^[0-9]{10}$' ? '10 digits required' :
+                                    operatorParams.parameters[0].regex === '^[0-9]{12}$' ? '12 digits required' :
+                                    `Pattern: ${operatorParams.parameters[0].regex}`}
+                          </p>
+                        )}
                         {supportsBillFetch ? (
                           <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
                         ) : (
