@@ -11,51 +11,49 @@ Full-stack bill payment platform using Eko BBPS APIs for electricity, mobile, DT
 
 ## What's Been Implemented
 
-### Session: 2026-03-05 - BBPS Category Mapping Fix
+### Session: 2026-03-05 - Standard Error Handling & Category Fix
 
-**Critical Fix Applied:**
-- **Issue:** FASTag and EMI operators were returning incorrect data
-- **Root Cause:** Wrong Eko BBPS category IDs in `bbps_services.py`
-  - FASTag: Was using category 5 (Mobile Prepaid) → Fixed to category 22
-  - EMI: Was using category 6 (legacy) → Fixed to category 21
-- **Fix:** Updated `/app/backend/routes/bbps_services.py` with correct category mapping
+**Standard Error Handling Implemented (as per Eko Documentation):**
 
-**Correct Eko BBPS Category Mapping:**
+1. **HTTP Response Code Handling:**
+   - 200: OK - Check status, tx_status, message
+   - 403: Forbidden - Authentication failed
+   - 404: Not Found - Invalid URL
+   - 405: Method Not Allowed
+   - 415: Unsupported Media Type
+   - 500: Server Error
+
+2. **Eko Status Code Handling (45+ codes):**
+   - 0: Success
+   - 347: Insufficient balance
+   - 463: User not found
+   - 544: Bank not available
+   - 945: Limit exhausted
+   - And 40+ more documented codes
+
+3. **Transaction Status (tx_status) Handling:**
+   - 0: SUCCESS - Transaction complete
+   - 1: FAILED - Transaction failed
+   - 2: PENDING - Awaiting response (NEFT)
+   - 3: REFUND_PENDING - Refund in progress
+   - 4: REFUNDED - Amount refunded
+   - 5: ON_HOLD - Requires inquiry
+
+**Files Created/Modified:**
+- `/app/backend/routes/eko_error_handler.py` - NEW: Central error handling module
+- `/app/backend/routes/bbps_services.py` - REWRITTEN: Standard error handling
+
+**Category Mapping Fixed:**
 ```python
-"mobile_recharge": 1,    # 92 operators
-"mobile_postpaid": 10,   # 7 operators
-"dth": 4,                # 5 operators
-"electricity": 8,        # 89 operators
-"water": 11,             # 54 operators
-"landline": 9,           # 5 operators
-"fastag": 22,            # 20 operators ← FIXED!
-"emi": 21,               # 294 operators ← FIXED!
-"credit_card": 7,        # 29 operators
-"insurance": 20,         # 40 operators
-"housing_society": 12    # 105 operators
+"mobile_prepaid": 5,     # Jio, Airtel, Vi, BSNL (was 1)
+"dth": 4,
+"electricity": 8,
+"fastag": 22,           # (was 5)
+"emi": 21,              # (was 6)
 ```
 
-**Testing Results (100% pass):**
-- ✅ 28/28 Backend tests passed
-- ✅ 20/21 Frontend API tests passed (1 skipped due to Eko timeout)
-- ✅ FASTag: 20 operators (IndusInd, IHMCL, Axis, BOB, etc.)
-- ✅ EMI: 294 operators (IDFC, Tata Capital, AAVAS, etc.)
-
-**KYC Activation:**
-- ✅ User `mail2avhale@gmail.com` KYC already verified (kyc_status: verified)
-
-### Session: 2026-03-04 - Eko Electricity Bill Payment Fix
-
-**Critical Fix Applied:**
-- **Issue:** All POST requests to Eko API were failing with 403 Forbidden
-- **Root Cause:** Wrong `EKO_AUTHENTICATOR_KEY` was configured
-  - Old (Wrong): `dmt-bbps-migration`
-  - New (Correct): `7a2529f5-3587-4add-a2df-3d0606d62460`
-- **Fix:** Updated `/app/backend/.env` with correct AUTH_KEY
-
-**Additional Fixes:**
-- Fixed frontend compilation error in `/app/frontend/src/pages/Admin/ErrorMonitor.js`
-- Added manual subscription activation endpoint for Razorpay issues
+**Language Fix:**
+- All Marathi UI text converted to English
 
 ### Key Eko API Configuration
 ```
@@ -66,21 +64,53 @@ EKO_INITIATOR_ID=9936606966
 EKO_USER_CODE=20810200
 ```
 
+## Standard BBPS Process Flow
+
+### 1. Fetch Bill
+```
+Client → /api/bbps/fetch → Eko API
+↓
+HTTP 200? → Parse status
+↓
+status=0? → Return bill details
+status!=0? → Return user-friendly error
+```
+
+### 2. Pay Bill
+```
+Client → /api/bbps/pay → Eko API
+↓
+HTTP 200? → Parse status + tx_status
+↓
+status=0, tx_status=0 → SUCCESS
+status=0, tx_status=1 → FAILED
+status=0, tx_status=2 → PENDING (check status later)
+status=0, tx_status=3 → REFUND_PENDING
+status=0, tx_status=4 → REFUNDED
+status=0, tx_status=5 → ON_HOLD (inquiry required)
+status!=0 → Error with user message
+```
+
+### 3. Check Status (for pending transactions)
+```
+Client → /api/bbps/status/{tid} → Eko API
+↓
+Returns current tx_status with description
+```
+
 ## Pending/Backlog Tasks
 
 ### P1 - High Priority
-- [ ] Some BBPS services may need HG Pay enrollment from Eko (business requirement)
+- [ ] Some BBPS services may need HG Pay enrollment from Eko
 - [ ] Admin Panel "Failed to delete plan" error
 
 ### P2 - Medium Priority
 - [ ] Eko DMT Service integration (blocked on API specs)
 - [ ] PRC Vault to PRC Balance migration script
-- [ ] UX: Update "Submit Request" button text for BBPS services (instant payment)
 
 ### P3 - Low Priority
 - [ ] Email/Mobile OTP verification on signup
 - [ ] KYC/Receipt images file storage migration
-- [ ] Code refactoring: RedeemPageV2.js and server.py split
 
 ## API Endpoints Reference
 
