@@ -34,14 +34,6 @@ const SERVICE_CONFIG = {
     fields: ['mobile_number', 'operator'],
     category: 'recharge'
   },
-  dth: { 
-    name: 'DTH Recharge', 
-    icon: Tv, 
-    color: 'purple',
-    gradient: 'from-purple-500 to-pink-500',
-    fields: ['consumer_number', 'operator'],
-    category: 'recharge'
-  },
   
   // Utility Bills (Electricity removed)
   gas: { 
@@ -95,15 +87,7 @@ const SERVICE_CONFIG = {
     category: 'telecom'
   },
   
-  // Financial Services
-  emi: { 
-    name: 'EMI Payment', 
-    icon: Building, 
-    color: 'rose',
-    gradient: 'from-rose-500 to-pink-500',
-    fields: ['loan_account', 'operator'],
-    category: 'finance'
-  },
+  // Financial Services (EMI removed)
   credit_card: { 
     name: 'Credit Card', 
     icon: CreditCard, 
@@ -121,15 +105,7 @@ const SERVICE_CONFIG = {
     category: 'finance'
   },
   
-  // Transport & Others
-  fastag: { 
-    name: 'FASTag', 
-    icon: Car, 
-    color: 'sky',
-    gradient: 'from-sky-500 to-blue-500',
-    fields: ['vehicle_number', 'operator'],
-    category: 'transport'
-  },
+  // Education & Others (FASTag removed)
   education: { 
     name: 'Education Fees', 
     icon: GraduationCap, 
@@ -181,13 +157,6 @@ const OPERATORS = {
     { id: 'VI', name: 'Vi Postpaid' },
     { id: 'BSNL', name: 'BSNL Postpaid' }
   ],
-  dth: [
-    { id: 'TATA_PLAY', name: 'Tata Play' },
-    { id: 'AIRTEL_DTH', name: 'Airtel Digital TV' },
-    { id: 'DISH_TV', name: 'Dish TV' },
-    { id: 'D2H', name: 'D2H' },
-    { id: 'SUN_DIRECT', name: 'Sun Direct' }
-  ],
   gas: [],
   water: [],
   lpg: [
@@ -198,16 +167,8 @@ const OPERATORS = {
   broadband: [],
   landline: [],
   cable_tv: [],
-  emi: [],
   credit_card: [],
   insurance: [],
-  fastag: [
-    { id: 'PAYTM', name: 'Paytm FASTag' },
-    { id: 'ICICI', name: 'ICICI FASTag' },
-    { id: 'HDFC', name: 'HDFC FASTag' },
-    { id: 'SBI', name: 'SBI FASTag' },
-    { id: 'AXIS', name: 'Axis FASTag' }
-  ],
   education: [],
   municipal_tax: [],
   housing_society: [],
@@ -405,10 +366,6 @@ const RedeemPageV2 = ({ user }) => {
       return details.card_number ? `****${details.card_number.slice(-4)}` : '';
     } else if (serviceType === 'insurance') {
       return details.policy_number ? `${details.policy_number.slice(-6)}` : '';
-    } else if (serviceType === 'fastag') {
-      return details.vehicle_number || '';
-    } else if (serviceType === 'emi') {
-      return details.loan_account ? `${details.loan_account.slice(-6)}` : '';
     } else {
       return details.consumer_number ? `${details.consumer_number.slice(-6)}` : '';
     }
@@ -469,12 +426,10 @@ const RedeemPageV2 = ({ user }) => {
       // For mobile, use recharge type to determine category
       category = rechargeType === 'postpaid' ? 'mobile_postpaid' : 'mobile_prepaid';
     } else {
-      // Complete category mapping for ALL BBPS services
+      // Complete category mapping for ALL BBPS services (DTH, EMI, FASTag removed)
       const categoryMap = {
-        // Existing services (Electricity removed)
-        dth: 'dth',
+        // Existing services
         gas: 'gas',
-        emi: 'loan_emi',
         
         // New services - telecom
         mobile_postpaid: 'mobile_postpaid',
@@ -490,8 +445,7 @@ const RedeemPageV2 = ({ user }) => {
         credit_card: 'credit_card',
         insurance: 'insurance',
         
-        // New services - transport & others
-        fastag: 'fastag',
+        // New services - others
         education: 'education',
         municipal_tax: 'municipal_tax'
       };
@@ -746,17 +700,8 @@ const RedeemPageV2 = ({ user }) => {
   const fetchBillDetails = async () => {
     let consumerNumber, operatorId, category;
     
-    // Handle different services
-    if (selectedService === 'emi') {
-      consumerNumber = formData.loan_account;
-      operatorId = formData.operator || formData.selected_lender?.operator_id;
-      category = 'emi';
-      
-      if (!consumerNumber || !operatorId) {
-        toast.error('Loan Account Number and Bank/Lender both are required');
-        return;
-      }
-    } else if (selectedService === 'mobile_recharge' && formData.recharge_type === 'postpaid') {
+    // Handle different services (DTH, EMI, FASTag removed)
+    if (selectedService === 'mobile_recharge' && formData.recharge_type === 'postpaid') {
       consumerNumber = formData.mobile_number;
       operatorId = formData.operator;
       category = 'mobile_postpaid';
@@ -790,15 +735,6 @@ const RedeemPageV2 = ({ user }) => {
       
       if (!consumerNumber || !operatorId) {
         toast.error('Policy Number and Insurance Company both are required');
-        return;
-      }
-    } else if (selectedService === 'fastag') {
-      consumerNumber = formData.vehicle_number;
-      operatorId = formData.operator;
-      category = 'fastag';
-      
-      if (!consumerNumber || !operatorId) {
-        toast.error('Vehicle Number and Provider both are required');
         return;
       }
     } else if (selectedService === 'education') {
@@ -902,7 +838,7 @@ const RedeemPageV2 = ({ user }) => {
     const fetchOperatorParams = async () => {
       if (!formData.operator) return;
       
-      const billServices = ['gas', 'water', 'broadband', 'landline', 'insurance', 'fastag'];
+      const billServices = ['gas', 'water', 'broadband', 'landline', 'insurance'];
       if (!billServices.includes(selectedService)) return;
       
       try {
@@ -929,12 +865,6 @@ const RedeemPageV2 = ({ user }) => {
   // Filter banks based on search
   const filteredBanks = bankList.filter(bank => 
     bank.name?.toLowerCase().includes(bankSearch.toLowerCase())
-  );
-  
-  // Filter lenders based on search
-  const emiOperators = operators['emi'] || [];
-  const filteredLenders = emiOperators.filter(lender =>
-    lender.name?.toLowerCase().includes(lenderSearch.toLowerCase())
   );
   
   const calculateCharges = async (amount) => {
@@ -973,10 +903,6 @@ const RedeemPageV2 = ({ user }) => {
     } else if (selectedService === 'insurance') {
       details.policy_number = formData.policy_number;
       details.consumer_number = formData.policy_number;
-    } else if (selectedService === 'fastag') {
-      details.vehicle_number = formData.vehicle_number;
-      details.fastag_id = formData.vehicle_number;
-      details.consumer_number = formData.vehicle_number;
     } else if (selectedService === 'education') {
       details.student_id = formData.student_id;
       details.enrollment_number = formData.student_id;
@@ -984,10 +910,6 @@ const RedeemPageV2 = ({ user }) => {
     } else if (selectedService === 'lpg') {
       details.lpg_id = formData.lpg_id;
       details.consumer_number = formData.lpg_id;
-    } else if (selectedService === 'emi') {
-      details.loan_account = formData.loan_account;
-      details.borrower_name = formData.borrower_name;
-      details.loan_type = formData.loan_type;
     } else if (selectedService === 'dmt') {
       details.account_number = formData.account_number;
       details.ifsc_code = formData.ifsc_code;
@@ -995,7 +917,7 @@ const RedeemPageV2 = ({ user }) => {
       details.bank_name = formData.bank_name;
       details.mobile = formData.mobile;
     } else {
-      // Default for gas, water, broadband, landline, cable_tv, municipal_tax, housing_society, dth
+      // Default for gas, water, broadband, landline, cable_tv, municipal_tax, housing_society
       details.consumer_number = formData.consumer_number;
     }
     
@@ -1225,11 +1147,11 @@ const RedeemPageV2 = ({ user }) => {
               
               {/* Service Categories */}
               <div className="space-y-4">
-                {/* Recharge & DTH */}
+                {/* Recharge & TV (DTH removed) */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Recharge & TV</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['mobile_recharge', 'mobile_postpaid', 'dth', 'cable_tv'].map(id => {
+                    {['mobile_recharge', 'mobile_postpaid', 'cable_tv'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1345,11 +1267,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Financial Services */}
+                {/* Financial Services (EMI removed) */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Financial Services</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['emi', 'credit_card', 'insurance'].map(id => {
+                    {['credit_card', 'insurance'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1385,11 +1307,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Transport & Others */}
+                {/* Others (FASTag removed) */}
                 <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport & Others</p>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Others</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['fastag', 'education', 'municipal_tax'].map(id => {
+                    {['education', 'municipal_tax'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1939,298 +1861,13 @@ const RedeemPageV2 = ({ user }) => {
                   </>
                 )}
                 
-                {/* ============================================ */}
-                {/* DTH - Similar Flow */}
-                {/* 1. Provider → 2. Customer ID → 3. Amount → 4. Submit */}
-                {/* ============================================ */}
-                {selectedService === 'dth' && (
-                  <>
-                    {/* Step 1: DTH Provider */}
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
-                        DTH Provider *
-                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
-                      </Label>
-                      <select
-                        value={formData.operator}
-                        onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                        className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
-                        data-testid="dth-operator-select"
-                      >
-                        <option value="">Select Provider ({currentOperators.length} available)</option>
-                        {currentOperators.map((op, index) => (
-                          <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* Step 2: Customer ID (only show after provider selected) */}
-                    {formData.operator && (
-                      <div className="animate-fadeIn">
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
-                          Customer/Subscriber ID *
-                        </Label>
-                        <Input
-                          value={formData.consumer_number}
-                          onChange={(e) => setFormData({ ...formData, consumer_number: e.target.value })}
-                          placeholder="Enter DTH Customer ID (from STB)"
-                          className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                          data-testid="consumer-input"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Find Customer ID on your Set-Top Box</p>
-                      </div>
-                    )}
-                    
-                    {/* Step 3: Amount */}
-                    {formData.operator && formData.consumer_number && (
-                      <div className="animate-fadeIn">
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
-                          Amount (₹) *
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
-                          <Input
-                            type="number"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                            placeholder="0.00"
-                            min="1"
-                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            data-testid="amount-input"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                
-                {/* EMI Fields - Advanced with Lender Search */}
-                {selectedService === 'emi' && (
-                  <>
-                    {/* Step 1: Lender/Bank Search with Dropdown */}
-                    <div className="relative">
-                      <Label className="text-gray-300 text-sm mb-2 block">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
-                        Bank/Lender *
-                        {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin text-amber-400" />}
-                        <span className="text-gray-500 text-xs ml-2">({emiOperators.length} lenders)</span>
-                      </Label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                        <Input
-                          value={lenderSearch}
-                          onChange={(e) => {
-                            setLenderSearch(e.target.value);
-                            setShowLenderDropdown(true);
-                          }}
-                          onFocus={() => setShowLenderDropdown(true)}
-                          placeholder="Search bank/lender (e.g., HDFC, Bajaj, ICICI)"
-                          className="pl-10 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                        {formData.selected_lender && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({ ...prev, selected_lender: null, bank_name: '' }));
-                              setLenderSearch('');
-                            }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Selected Lender Display */}
-                      {formData.selected_lender && (
-                        <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-400" />
-                            <span className="text-green-400 font-medium">{formData.selected_lender.name}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Lender Dropdown */}
-                      {showLenderDropdown && !formData.selected_lender && lenderSearch && (
-                        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-gray-800 border border-gray-700 rounded-xl shadow-2xl">
-                          {filteredLenders.length === 0 ? (
-                            <div className="p-4 text-gray-500 text-center">No lenders found</div>
-                          ) : (
-                            filteredLenders.slice(0, 15).map((lender, index) => (
-                              <button
-                                key={lender.operator_id || index}
-                                type="button"
-                                onClick={() => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    selected_lender: lender,
-                                    bank_name: lender.name,
-                                    operator: lender.operator_id
-                                  }));
-                                  setLenderSearch(lender.name);
-                                  setShowLenderDropdown(false);
-                                }}
-                                className="w-full px-4 py-3 text-left hover:bg-gray-700 flex items-center gap-3 border-b border-gray-700/50 last:border-0"
-                              >
-                                <Building className="h-4 w-4 text-red-400" />
-                                <span className="text-white">{lender.name}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Step 2: Loan Details (only show after lender selected) */}
-                    {formData.selected_lender && (
-                      <div className="animate-fadeIn space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
-                              Loan Account Number *
-                            </Label>
-                            <div className="flex gap-2">
-                              <Input
-                                value={formData.loan_account}
-                                onChange={(e) => {
-                                  setFormData({ ...formData, loan_account: e.target.value, amount: '' });
-                                  setBillDetails(null);
-                                }}
-                                placeholder="Loan account number"
-                                className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                              />
-                              <Button
-                                type="button"
-                                onClick={fetchBillDetails}
-                                disabled={fetchingBill || !formData.loan_account}
-                                className="h-12 px-4 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold rounded-xl disabled:opacity-50"
-                                data-testid="fetch-emi-btn"
-                              >
-                                {fetchingBill ? (
-                                  <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                  <Search className="h-5 w-5" />
-                                )}
-                              </Button>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">Click 🔍 to fetch EMI details</p>
-                          </div>
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">Registered Mobile *</Label>
-                            <Input
-                              type="tel"
-                              value={formData.mobile}
-                              onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                              placeholder="10-digit mobile"
-                              maxLength={10}
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* EMI Bill Details */}
-                        {billDetails && (
-                          <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4 space-y-3">
-                            <div className="flex items-center gap-2 mb-3">
-                              <CheckCircle className="h-5 w-5 text-red-400" />
-                              <span className="text-red-400 font-semibold">EMI Details Found!</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <p className="text-gray-400">Borrower Name</p>
-                                <p className="text-white font-medium">{billDetails.customerName}</p>
-                              </div>
-                              <div>
-                                <p className="text-gray-400">EMI Amount</p>
-                                <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
-                              </div>
-                              {billDetails.dueDate !== 'N/A' && (
-                                <div>
-                                  <p className="text-gray-400">Due Date</p>
-                                  <p className="text-white">{billDetails.dueDate}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {billError && (
-                          <div className="animate-fadeIn bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-2xl p-4">
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="h-5 w-5 text-orange-400" />
-                              <span className="text-orange-400 font-medium">{billError}</span>
-                            </div>
-                            <p className="text-gray-400 text-sm mt-2">Enter EMI amount manually below.</p>
-                          </div>
-                        )}
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">Borrower Name *</Label>
-                            <Input
-                              value={formData.borrower_name}
-                              onChange={(e) => setFormData({ ...formData, borrower_name: e.target.value })}
-                              placeholder="Name as per bank records"
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">Loan Type *</Label>
-                            <select
-                              value={formData.loan_type}
-                              onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
-                              className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
-                            >
-                              <option value="">Select Loan Type</option>
-                              <option value="home_loan">Home Loan</option>
-                              <option value="personal_loan">Personal Loan</option>
-                              <option value="car_loan">Car/Vehicle Loan</option>
-                              <option value="education_loan">Education Loan</option>
-                              <option value="gold_loan">Gold Loan</option>
-                              <option value="business_loan">Business Loan</option>
-                              <option value="two_wheeler">Two Wheeler Loan</option>
-                              <option value="consumer_durable">Consumer Durable Loan</option>
-                              <option value="microfinance">Microfinance Loan</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Step 3: Amount (only show after loan details) */}
-                    {formData.selected_lender && formData.loan_account && (
-                      <div className="animate-fadeIn">
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
-                          EMI Amount (₹) *
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
-                          <Input
-                            type="number"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                            placeholder="0.00"
-                            min="1"
-                            className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            data-testid="amount-input"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                {/* DTH, EMI removed - these services are no longer available */}
                 
                 {/* ============================================ */}
                 {/* NEW BBPS SERVICES - Generic Form */}
-                {/* Water, Broadband, Landline, Credit Card, Insurance, FASTag, Education, etc. */}
+                {/* Water, Broadband, Landline, Credit Card, Insurance, Education, etc. */}
                 {/* ============================================ */}
-                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'fastag', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
+                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>
@@ -2238,7 +1875,6 @@ const RedeemPageV2 = ({ user }) => {
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
                         {selectedService === 'insurance' ? 'Insurance Company' : 
                          selectedService === 'credit_card' ? 'Bank/Card Issuer' :
-                         selectedService === 'fastag' ? 'FASTag Provider' :
                          selectedService === 'education' ? 'Institution' :
                          selectedService === 'lpg' ? 'LPG Provider' :
                          'Provider'} *
@@ -2269,7 +1905,6 @@ const RedeemPageV2 = ({ user }) => {
                           {selectedService === 'mobile_postpaid' ? 'Mobile Number' :
                            selectedService === 'credit_card' ? 'Card Number (Last 4 digits)' :
                            selectedService === 'insurance' ? 'Policy Number' :
-                           selectedService === 'fastag' ? 'Vehicle Number / FASTag ID' :
                            selectedService === 'education' ? 'Student ID / Enrollment No.' :
                            selectedService === 'lpg' ? 'LPG Consumer ID' :
                            selectedService === 'municipal_tax' ? 'Property ID' :
@@ -2281,7 +1916,6 @@ const RedeemPageV2 = ({ user }) => {
                             value={selectedService === 'mobile_postpaid' ? formData.mobile_number : 
                                    selectedService === 'credit_card' ? formData.card_number :
                                    selectedService === 'insurance' ? formData.policy_number :
-                                   selectedService === 'fastag' ? formData.vehicle_number :
                                    selectedService === 'education' ? formData.student_id :
                                    selectedService === 'lpg' ? formData.lpg_id :
                                    formData.consumer_number}
@@ -2289,7 +1923,6 @@ const RedeemPageV2 = ({ user }) => {
                               const field = selectedService === 'mobile_postpaid' ? 'mobile_number' :
                                            selectedService === 'credit_card' ? 'card_number' :
                                            selectedService === 'insurance' ? 'policy_number' :
-                                           selectedService === 'fastag' ? 'vehicle_number' :
                                            selectedService === 'education' ? 'student_id' :
                                            selectedService === 'lpg' ? 'lpg_id' :
                                            'consumer_number';
@@ -2297,7 +1930,6 @@ const RedeemPageV2 = ({ user }) => {
                               setBillDetails(null);
                             }}
                             placeholder={selectedService === 'mobile_postpaid' ? 'Enter 10 digit mobile number' :
-                                        selectedService === 'fastag' ? 'Enter vehicle number (e.g., MH12AB1234)' :
                                         'Enter account/consumer number'}
                             className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             data-testid="consumer-input"
@@ -2308,7 +1940,6 @@ const RedeemPageV2 = ({ user }) => {
                             disabled={fetchingBill || !(selectedService === 'mobile_postpaid' ? formData.mobile_number : 
                                                         selectedService === 'credit_card' ? formData.card_number :
                                                         selectedService === 'insurance' ? formData.policy_number :
-                                                        selectedService === 'fastag' ? formData.vehicle_number :
                                                         selectedService === 'education' ? formData.student_id :
                                                         selectedService === 'lpg' ? formData.lpg_id :
                                                         formData.consumer_number)}
@@ -2371,7 +2002,6 @@ const RedeemPageV2 = ({ user }) => {
                     {formData.operator && (selectedService === 'mobile_postpaid' ? formData.mobile_number : 
                                            selectedService === 'credit_card' ? formData.card_number :
                                            selectedService === 'insurance' ? formData.policy_number :
-                                           selectedService === 'fastag' ? formData.vehicle_number :
                                            selectedService === 'education' ? formData.student_id :
                                            selectedService === 'lpg' ? formData.lpg_id :
                                            formData.consumer_number) && (
