@@ -270,29 +270,24 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
         ).decode('utf-8')
         headers["request_hash"] = request_hash
         
-        print(f"=== MAKE_EKO_REQUEST DEBUG ===")
-        print(f"URL: {url}")
-        print(f"Timestamp: {timestamp}")
-        print(f"Concat: {concat_str}")
-        print(f"Request Hash: {request_hash}")
-        print(f"Body: {data}")
+        logging.info(f"[EKO API] Timestamp: {timestamp}, Concat: {concat_str}")
     
     try:
         if method.upper() == "GET":
-            response = req.get(url, headers=headers, params=data, timeout=60)
+            response = req.get(url, headers=headers, params=data, timeout=120)
         elif method.upper() == "POST":
             body_json = json.dumps(data, separators=(',', ':'))
-            print(f"Body JSON: {body_json}")
-            print(f"Headers: {headers}")
-            response = req.post(url, headers=headers, data=body_json, timeout=60)
+            logging.info(f"[EKO API] URL: {url}")
+            logging.info(f"[EKO API] Body: {body_json}")
+            response = req.post(url, headers=headers, data=body_json, timeout=120)
         elif method.upper() == "PUT":
             headers["Content-Type"] = "application/x-www-form-urlencoded"
             response = req.put(url, headers=headers, data=data, timeout=60)
         else:
             raise ValueError(f"Unsupported method: {method}")
         
-        print(f"Response Status: {response.status_code}")
-        print(f"Response Body: {response.text[:300]}")
+        logging.info(f"[EKO API] Response Status: {response.status_code}")
+        logging.info(f"[EKO API] Response: {response.text[:300]}")
         
         try:
             result = response.json()
