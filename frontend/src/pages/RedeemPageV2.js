@@ -34,8 +34,24 @@ const SERVICE_CONFIG = {
     fields: ['mobile_number', 'operator'],
     category: 'recharge'
   },
+  dth: { 
+    name: 'DTH Recharge', 
+    icon: Tv, 
+    color: 'purple',
+    gradient: 'from-purple-500 to-pink-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'recharge'
+  },
   
-  // Utility Bills (Electricity removed)
+  // Utility Bills
+  electricity: { 
+    name: 'Electricity', 
+    icon: Zap, 
+    color: 'yellow',
+    gradient: 'from-yellow-500 to-orange-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'utility'
+  },
   gas: { 
     name: 'Gas Bill (PNG)', 
     icon: Flame, 
@@ -87,7 +103,15 @@ const SERVICE_CONFIG = {
     category: 'telecom'
   },
   
-  // Financial Services (EMI removed)
+  // Financial Services
+  emi: { 
+    name: 'EMI Payment', 
+    icon: Building, 
+    color: 'rose',
+    gradient: 'from-rose-500 to-pink-500',
+    fields: ['loan_account', 'operator'],
+    category: 'finance'
+  },
   credit_card: { 
     name: 'Credit Card', 
     icon: CreditCard, 
@@ -105,7 +129,15 @@ const SERVICE_CONFIG = {
     category: 'finance'
   },
   
-  // Education & Others (FASTag removed)
+  // Transport & Others
+  fastag: { 
+    name: 'FASTag', 
+    icon: Car, 
+    color: 'sky',
+    gradient: 'from-sky-500 to-blue-500',
+    fields: ['vehicle_number', 'operator'],
+    category: 'transport'
+  },
   education: { 
     name: 'Education Fees', 
     icon: GraduationCap, 
@@ -157,6 +189,8 @@ const OPERATORS = {
     { id: 'VI', name: 'Vi Postpaid' },
     { id: 'BSNL', name: 'BSNL Postpaid' }
   ],
+  dth: [],
+  electricity: [],
   gas: [],
   water: [],
   lpg: [
@@ -167,8 +201,10 @@ const OPERATORS = {
   broadband: [],
   landline: [],
   cable_tv: [],
+  emi: [],
   credit_card: [],
   insurance: [],
+  fastag: [],
   education: [],
   municipal_tax: [],
   housing_society: [],
@@ -426,26 +462,30 @@ const RedeemPageV2 = ({ user }) => {
       // For mobile, use recharge type to determine category
       category = rechargeType === 'postpaid' ? 'mobile_postpaid' : 'mobile_prepaid';
     } else {
-      // Complete category mapping for ALL BBPS services (DTH, EMI, FASTag removed)
+      // Complete category mapping for ALL BBPS services
       const categoryMap = {
-        // Existing services
-        gas: 'gas',
+        // Recharge
+        dth: 'dth',
         
-        // New services - telecom
+        // Utility
+        electricity: 'electricity',
+        gas: 'gas',
+        water: 'water',
+        lpg: 'lpg',
+        
+        // Telecom
         mobile_postpaid: 'mobile_postpaid',
         broadband: 'broadband',
         landline: 'landline',
         cable_tv: 'cable_tv',
         
-        // New services - utility
-        water: 'water',
-        lpg: 'lpg',
-        
-        // New services - financial
+        // Financial
+        emi: 'emi',
         credit_card: 'credit_card',
         insurance: 'insurance',
         
-        // New services - others
+        // Transport & Others
+        fastag: 'fastag',
         education: 'education',
         municipal_tax: 'municipal_tax'
       };
@@ -1147,11 +1187,11 @@ const RedeemPageV2 = ({ user }) => {
               
               {/* Service Categories */}
               <div className="space-y-4">
-                {/* Recharge & TV (DTH removed) */}
+                {/* Recharge & TV */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Recharge & TV</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['mobile_recharge', 'mobile_postpaid', 'cable_tv'].map(id => {
+                    {['mobile_recharge', 'mobile_postpaid', 'dth', 'cable_tv'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1187,11 +1227,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Utility Bills (Electricity removed) */}
+                {/* Utility Bills */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Utility Bills</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['water', 'gas', 'lpg'].map(id => {
+                    {['electricity', 'water', 'gas', 'lpg'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1267,11 +1307,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Financial Services (EMI removed) */}
+                {/* Financial Services */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Financial Services</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['credit_card', 'insurance'].map(id => {
+                    {['emi', 'credit_card', 'insurance'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1307,11 +1347,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Others (FASTag removed) */}
+                {/* Transport & Others */}
                 <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Others</p>
+                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport & Others</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['education', 'municipal_tax'].map(id => {
+                    {['fastag', 'education', 'municipal_tax'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
