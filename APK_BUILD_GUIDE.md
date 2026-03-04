@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://error-monitor-v2.preview.emergentagent.com",
+    "url": "https://eko-rebuild.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

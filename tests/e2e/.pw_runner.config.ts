@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260304_091827/test-results',
+  outputDir: '/root/.emergent/automation_output/20260304_162300/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260304_091827/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260304_162300/results.json' }],
   ],
   use: {
-    baseURL: 'https://error-monitor-v2.preview.emergentagent.com',
+    baseURL: 'https://eko-rebuild.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

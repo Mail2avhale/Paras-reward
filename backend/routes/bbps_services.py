@@ -242,19 +242,44 @@ def get_operators(category: str):
     """
     Get operators list for a category.
     
-    Categories (as per EKO document):
-    - electricity = 1
-    - dth = 4
-    - fastag = 5
-    - emi/loan = 6
+    EKO BBPS Categories (verified):
+    - 1: Mobile Prepaid (92 operators)
+    - 4: DTH (5 operators)
+    - 6: EMI/Loan legacy (2 operators)
+    - 7: Credit Card (29 operators)
+    - 8: Electricity (89 operators)
+    - 9: Landline (5 operators)
+    - 10: Mobile Postpaid (7 operators)
+    - 11: Water (54 operators)
+    - 12: Housing Society (105 operators)
+    - 20: Insurance (40 operators)
+    - 21: Loan/EMI (294 operators)
+    - 22: FASTag (20 operators)
     """
     category_map = {
-        "electricity": 1,
+        # Recharge
+        "mobile_recharge": 1,
+        "mobile_prepaid": 1,
         "dth": 4,
-        "fastag": 5,
-        "emi": 6,
-        "loan": 6,
-        "loan_emi": 6
+        "mobile_postpaid": 10,
+        
+        # Utility Bills
+        "electricity": 8,
+        "water": 11,
+        "landline": 9,
+        "broadband": 1,  # Uses same as mobile prepaid
+        
+        # Financial
+        "emi": 21,
+        "loan": 21,
+        "loan_emi": 21,
+        "credit_card": 7,
+        "insurance": 20,
+        
+        # Transport & Others
+        "fastag": 22,
+        "housing_society": 12,
+        "municipal_tax": 12
     }
     
     category_id = category_map.get(category.lower())

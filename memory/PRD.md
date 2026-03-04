@@ -35,7 +35,7 @@ Full-stack bill payment platform using Eko BBPS APIs for electricity, mobile, DT
 ```
 EKO_BASE_URL=https://api.eko.in:25002/ekoicici
 EKO_DEVELOPER_KEY=7c179a397b4710e71b2248d1f5892d19
-EKO_AUTHENTICATOR_KEY=7a2529f5-3587-4add-a2df-3d0606d62460
+EKO_AUTHENTICATOR_KEY=eko-rebuild
 EKO_INITIATOR_ID=9936606966
 EKO_USER_CODE=20810200
 ```
