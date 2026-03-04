@@ -264,6 +264,7 @@ const RedeemPageV2 = ({ user }) => {
   const [requests, setRequests] = useState([]);
   const [operators, setOperators] = useState({});
   const [loadingOperators, setLoadingOperators] = useState(false);
+  const [operatorsError, setOperatorsError] = useState(null); // Track operator loading errors
   
   // Quick Pay - Recently used payments
   const [quickPayItems, setQuickPayItems] = useState([]);
@@ -515,36 +516,57 @@ const RedeemPageV2 = ({ user }) => {
     console.log(`[BBPS] Fetching operators for ${serviceType} -> category: ${category}`);
     
     setLoadingOperators(true);
-    try {
-      const response = await axios.get(`${API}/eko/bbps/operators/${category}`);
-      console.log(`[BBPS] API Response for ${category}:`, response.data);
-      
-      if (response.data.operators && response.data.operators.length > 0) {
-        // For mobile, store with recharge type key
-        const storeKey = serviceType === 'mobile_recharge' ? `mobile_${rechargeType}` : serviceType;
-        console.log(`[BBPS] Storing ${response.data.operators.length} operators in key: ${storeKey}`);
-        
-        setOperators(prev => {
-          const updated = {
-            ...prev,
-            [storeKey]: response.data.operators
-          };
-          console.log('[BBPS] Updated operators state:', Object.keys(updated));
-          return updated;
+    setOperatorsError(null); // Clear previous error
+    
+    // Retry logic for intermittent failures
+    const maxRetries = 3;
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await axios.get(`${API}/eko/bbps/operators/${category}`, {
+          timeout: 15000 // 15 second timeout
         });
-      } else {
-        console.log(`[BBPS] No operators returned for ${category}`);
+        console.log(`[BBPS] API Response for ${category} (attempt ${attempt}):`, response.data);
+        
+        if (response.data.operators && response.data.operators.length > 0) {
+          // For mobile, store with recharge type key
+          const storeKey = serviceType === 'mobile_recharge' ? `mobile_${rechargeType}` : serviceType;
+          console.log(`[BBPS] Storing ${response.data.operators.length} operators in key: ${storeKey}`);
+          
+          setOperators(prev => {
+            const updated = {
+              ...prev,
+              [storeKey]: response.data.operators
+            };
+            console.log('[BBPS] Updated operators state:', Object.keys(updated));
+            return updated;
+          });
+          setLoadingOperators(false);
+          return; // Success, exit retry loop
+        } else {
+          console.log(`[BBPS] No operators returned for ${category}, attempt ${attempt}`);
+          lastError = new Error('No operators returned');
+        }
+      } catch (error) {
+        console.error(`[BBPS] Error fetching operators (attempt ${attempt}/${maxRetries}):`, error.message);
+        lastError = error;
+        
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
-    } catch (error) {
-      console.error('[BBPS] Error fetching operators:', error);
-      // Use fallback operators
-      setOperators(prev => ({
-        ...prev,
-        [serviceType]: OPERATORS[serviceType] || []
-      }));
-    } finally {
-      setLoadingOperators(false);
     }
+    
+    // All retries failed - use fallback operators
+    console.error('[BBPS] All retries failed, using fallback operators');
+    setOperatorsError('Unable to load providers. Please refresh the page.');
+    setOperators(prev => ({
+      ...prev,
+      [serviceType]: OPERATORS[serviceType] || []
+    }));
+    setLoadingOperators(false);
   };
   
   // Fetch bank list for DMT
@@ -1475,6 +1497,18 @@ const RedeemPageV2 = ({ user }) => {
                         Provider *
                         {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
                       </Label>
+                      {operatorsError && currentOperators.length === 0 && (
+                        <div className="mb-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between">
+                          <span className="text-red-400 text-sm">{operatorsError}</span>
+                          <Button
+                            type="button"
+                            onClick={() => fetchOperators(selectedService, formData.recharge_type)}
+                            className="px-3 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      )}
                       <select
                         value={formData.operator}
                         onChange={(e) => {
