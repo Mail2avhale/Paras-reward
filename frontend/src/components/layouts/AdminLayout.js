@@ -211,6 +211,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Controls & Security',
       icon: Shield,
       subItems: [
+        { id: 'error-monitor', label: 'System Monitor', icon: Activity, path: '/admin/error-monitor', highlight: true },
         { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
         { id: 'fraud-dashboard', label: 'Fraud Detection', icon: ShieldAlert, path: '/admin/fraud-dashboard' },

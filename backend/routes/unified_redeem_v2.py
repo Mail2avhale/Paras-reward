@@ -14,6 +14,7 @@ Features:
 - New charging logic: Eko charge + ₹10 flat + 20% admin charge
 - Advanced admin dashboard with filters & pagination
 - Eko API integration for actual payments
+- Error monitoring & payment event logging
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -28,6 +29,14 @@ import httpx
 import hashlib
 import hmac
 import base64
+
+# Import error monitoring functions
+try:
+    from routes.error_monitor import log_error, log_payment_event
+except ImportError:
+    # Fallback if import fails
+    async def log_error(*args, **kwargs): pass
+    async def log_payment_event(*args, **kwargs): pass
 import time
 import json
 
@@ -964,6 +973,18 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     }
                 )
                 
+                # Log successful payment event
+                await log_payment_event(
+                    event_type="success",
+                    service_type=request.service_type,
+                    user_id=request.user_id,
+                    amount=request.amount,
+                    operator=request.operator,
+                    consumer_number=request.consumer_number,
+                    transaction_id=eko_result.get("eko_tid"),
+                    eko_response=eko_result
+                )
+                
                 return {
                     "success": True,
                     "message": f"✅ {SERVICE_TYPES[request.service_type]['name']} successful!",
@@ -1016,6 +1037,29 @@ async def create_redeem_request(request: RedeemRequestCreate):
                             }
                         }
                     }
+                )
+                
+                # Log failed payment event
+                await log_payment_event(
+                    event_type="failed",
+                    service_type=request.service_type,
+                    user_id=request.user_id,
+                    amount=request.amount,
+                    operator=request.operator,
+                    consumer_number=request.consumer_number,
+                    eko_response=eko_result,
+                    error_message=eko_result.get("message")
+                )
+                
+                # Log error for monitoring
+                await log_error(
+                    error_type="payment_failed",
+                    error_message=eko_result.get("message", "Unknown error"),
+                    source="unified_redeem_v2",
+                    user_id=request.user_id,
+                    request_data={"operator": request.operator, "consumer": request.consumer_number, "amount": request.amount},
+                    severity="warning",
+                    category="payment"
                 )
                 
                 return {
