@@ -43,15 +43,7 @@ const SERVICE_CONFIG = {
     category: 'recharge'
   },
   
-  // Utility Bills
-  electricity: { 
-    name: 'Electricity', 
-    icon: Zap, 
-    color: 'yellow',
-    gradient: 'from-yellow-500 to-orange-500',
-    fields: ['consumer_number', 'operator'],
-    category: 'utility'
-  },
+  // Utility Bills (Electricity removed)
   gas: { 
     name: 'Gas Bill (PNG)', 
     icon: Flame, 
@@ -196,7 +188,6 @@ const OPERATORS = {
     { id: 'D2H', name: 'D2H' },
     { id: 'SUN_DIRECT', name: 'Sun Direct' }
   ],
-  electricity: [],
   gas: [],
   water: [],
   lpg: [
@@ -294,7 +285,7 @@ const RedeemPageV2 = ({ user }) => {
   const [autoDetection, setAutoDetection] = useState(null);
   const [autoDetectedPlans, setAutoDetectedPlans] = useState([]);
   
-  // Bill fetch states (for electricity, gas, etc.)
+  // Bill fetch states (for gas, water, etc.)
   const [billDetails, setBillDetails] = useState(null);
   const [fetchingBill, setFetchingBill] = useState(false);
   const [billError, setBillError] = useState(null);
@@ -480,9 +471,8 @@ const RedeemPageV2 = ({ user }) => {
     } else {
       // Complete category mapping for ALL BBPS services
       const categoryMap = {
-        // Existing services
+        // Existing services (Electricity removed)
         dth: 'dth',
-        electricity: 'electricity',
         gas: 'gas',
         emi: 'loan_emi',
         
@@ -752,7 +742,7 @@ const RedeemPageV2 = ({ user }) => {
     }
   }, [selectedService]);
   
-  // Fetch bill details for electricity/gas/postpaid/EMI and new services
+  // Fetch bill details for gas/postpaid/EMI and new services
   const fetchBillDetails = async () => {
     let consumerNumber, operatorId, category;
     
@@ -912,7 +902,7 @@ const RedeemPageV2 = ({ user }) => {
     const fetchOperatorParams = async () => {
       if (!formData.operator) return;
       
-      const billServices = ['electricity', 'gas', 'water', 'broadband', 'landline', 'insurance', 'fastag'];
+      const billServices = ['gas', 'water', 'broadband', 'landline', 'insurance', 'fastag'];
       if (!billServices.includes(selectedService)) return;
       
       try {
@@ -1005,7 +995,7 @@ const RedeemPageV2 = ({ user }) => {
       details.bank_name = formData.bank_name;
       details.mobile = formData.mobile;
     } else {
-      // Default for electricity, gas, water, broadband, landline, cable_tv, municipal_tax, housing_society, dth
+      // Default for gas, water, broadband, landline, cable_tv, municipal_tax, housing_society, dth
       details.consumer_number = formData.consumer_number;
     }
     
@@ -1275,11 +1265,11 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* Utility Bills */}
+                {/* Utility Bills (Electricity removed) */}
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Utility Bills</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['electricity', 'water', 'gas', 'lpg'].map(id => {
+                    {['water', 'gas', 'lpg'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -1497,10 +1487,10 @@ const RedeemPageV2 = ({ user }) => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 
                 {/* ============================================ */}
-                {/* ELECTRICITY / GAS - New Flow */}
+                {/* GAS - Bill Payment Flow (Electricity removed) */}
                 {/* 1. Provider → 2. Consumer → 3. Fetch Bill → 4. Amount → 5. Submit */}
                 {/* ============================================ */}
-                {(selectedService === 'electricity' || selectedService === 'gas') && (
+                {(selectedService === 'gas') && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>
