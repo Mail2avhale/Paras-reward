@@ -543,6 +543,88 @@ class DMTTransferRequest(BaseModel):
     otp: Optional[str] = None
 
 
+# ==================== USER SERVICES APIs ====================
+
+@router.get("/user/services")
+async def get_user_services():
+    """
+    Get list of services enabled for the user (retailer)
+    Service Code 53 = BBPS
+    """
+    try:
+        result = await make_eko_request(
+            f"/v1/user/services?user_code={EKO_USER_CODE}",
+            method="GET"
+        )
+        return {
+            "success": True,
+            "user_code": EKO_USER_CODE,
+            "services": result.get("data", []),
+            "raw_response": result
+        }
+    except Exception as e:
+        logging.error(f"Failed to get user services: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@router.put("/user/service/activate")
+async def activate_user_service(service_code: int = 53, latlong: str = "19.0760,72.8777"):
+    """
+    Activate a service for the user
+    Service Code 53 = BBPS
+    """
+    import requests as req
+    
+    try:
+        timestamp = str(int(time.time() * 1000))
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        url = f"{EKO_BASE_URL}/v1/user/service/activate"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        data = {
+            "service_code": str(service_code),
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "latlong": latlong
+        }
+        
+        logging.info(f"[EKO] Activating service {service_code} for user {EKO_USER_CODE}")
+        response = req.put(url, headers=headers, data=data, timeout=30)
+        
+        logging.info(f"[EKO] Service activation response: {response.status_code} - {response.text[:500]}")
+        
+        try:
+            result = response.json()
+        except:
+            result = {"raw_text": response.text}
+        
+        return {
+            "success": response.status_code == 200 and result.get("status") == 0,
+            "status_code": response.status_code,
+            "service_code": service_code,
+            "response": result
+        }
+    except Exception as e:
+        logging.error(f"Service activation failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 # ==================== BBPS BILL PAYMENT APIs ====================
 
 @router.get("/charges/calculate")
