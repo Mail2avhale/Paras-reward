@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: './test-results/results.json' }],
   ],
   use: {
-    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://dmt-bbps-migration.preview.emergentagent.com',
+    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://prc-burn-system.preview.emergentagent.com',
     screenshot: 'on',
     trace: 'on-first-retry',
     headless: true,

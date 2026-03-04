@@ -1044,6 +1044,12 @@ const RedeemPageV2 = ({ user }) => {
     return ops;
   })();
   
+  // Check if selected operator supports bill fetch
+  const selectedOperatorData = currentOperators.find(op => 
+    String(op.id) === String(formData.operator) || String(op.operator_id) === String(formData.operator)
+  );
+  const supportsBillFetch = selectedOperatorData?.bill_fetch !== false;
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
       {/* Background Effects */}
@@ -1462,21 +1468,27 @@ const RedeemPageV2 = ({ user }) => {
                             className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             data-testid="consumer-input"
                           />
-                          <Button
-                            type="button"
-                            onClick={fetchBillDetails}
-                            disabled={fetchingBill || !formData.consumer_number}
-                            className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
-                            data-testid="fetch-bill-btn"
-                          >
-                            {fetchingBill ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                              <Search className="h-5 w-5" />
-                            )}
-                          </Button>
+                          {supportsBillFetch && (
+                            <Button
+                              type="button"
+                              onClick={fetchBillDetails}
+                              disabled={fetchingBill || !formData.consumer_number}
+                              className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
+                              data-testid="fetch-bill-btn"
+                            >
+                              {fetchingBill ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <Search className="h-5 w-5" />
+                              )}
+                            </Button>
+                          )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
+                        {supportsBillFetch ? (
+                          <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
+                        ) : (
+                          <p className="text-xs text-amber-500 mt-1">⚡ Bill fetch not available for this provider. Enter amount manually.</p>
+                        )}
                       </div>
                     )}
                     
@@ -1517,12 +1529,13 @@ const RedeemPageV2 = ({ user }) => {
                     )}
                     
                     {/* Step 4: Amount (auto-filled or manual) */}
-                    {(billDetails || billError || formData.consumer_number) && formData.operator && (
+                    {(billDetails || billError || !supportsBillFetch || formData.consumer_number) && formData.operator && formData.consumer_number && (
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
                           Amount (₹) *
                           {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled from bill)</span>}
+                          {!supportsBillFetch && !billDetails && <span className="text-amber-400 text-xs ml-2">(Enter manually)</span>}
                         </Label>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>

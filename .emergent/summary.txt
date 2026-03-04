@@ -1,80 +1,81 @@
 <analysis>**original_problem_statement:**
-The user's primary goal was to fix all failing Eko services (DTH, Electricity, Gas, DMT, etc.), which, except for Mobile Recharge, were returning errors. The user confirmed this was a code issue, not an IP whitelist problem, and requested a deep study of the Eko developer documentation to fix each service's distinct API format.
-
-A secondary, lower-priority task was to run a one-time migration script to move funds from the deprecated  to the active  for all users in the production environment.
-
-During the session, the user also requested to fix a frontend routing issue where a Bill Payments menu item pointed to an old page and, as a festive request, to add a temporary Holi animation to the app.
-
-**PRODUCT REQUIREMENTS:**
-1.  **Fix Eko Services (P0):**
-    *   **BBPS (Bill Payments):** Fix DTH, Electricity, Gas, and other bill payment services. This was the highest priority.
-    *   **DMT (Domestic Money Transfer):** Fix the entire money transfer flow, which was failing.
-2.  **Fix Frontend Routing (P1):** Remove an old Bill Payments page and redirect the menu link to the current  page.
-3.  **Holi Animation (P2):** Implement a temporary festive UI feature.
-4.  **Run PRC Vault Migration (P2):** Execute the one-time fund migration script on the production database, pending user confirmation.
+The user initially wanted to fix all failing Eko services (DTH, Electricity, Gas, DMT). Throughout the session, the scope expanded significantly. The new requirements included:
+1.  **Making Services Instant (P0):** Convert Mobile, DTH, and Electricity bill payments from an admin-approval model to an instant-execution model upon user request.
+2.  **Expanding BBPS Services (P0):** Add all available Eko BBPS services (e.g., Water, FASTag, Insurance, Credit Card, etc.) to the platform, make them instant, and integrate them into the frontend.
+3.  **Fix Regressions (P0):** Debug why DTH and Electricity payments were failing in production despite previous fixes.
+4.  **Admin Reporting (P1):** Create a new dashboard for admins to view the status of all instant BBPS requests (success, failed, pending) with user details.
+5.  **Update PRC Burning Mechanism (P1):** Implement a new, complex set of rules for PRC coin expiration, including a daily 1% burn for all users.
+6.  **Frontend Enhancements (P2):** Add an HD Holi animation (and later remove it), add a Quick Pay feature for recent transactions, and remove a How it Works section.
+7.  **Bug Fixes (P1):** Fix an issue where admins could not delete subscription plans and, most critically, resolve why operators were not loading for the newly added BBPS services.
 
 **User's preferred language**: The user communicates in a mix of **Marathi** and English. The next agent MUST be prepared to understand and respond primarily in **Marathi**.
 
 **what currently exists?**
-The application's core Eko authentication mechanism has been successfully fixed. Previously, all calls failed with a  error due to an incorrect  generation method. This has been resolved in  by implementing the correct Base64 encoding and HMAC-SHA256 signing process.
-
-As a result, several Eko services are now functional:
-*   **BBPS Fetch Bill:** Works correctly for various operators.
-*   **BBPS Pay Bill:** Confirmed working for Electricity (BEST Mumbai) and DTH (Dish TV) after discovering that the API requires the  object from the fetch call to be included in the payment request payload.
-*   **Mobile Recharge:** Was already working.
-
-The Eko DMT (Domestic Money Transfer) service remains broken. The agent investigated the multi-step v1 API flow (Customer Verification -> Add Recipient -> Transfer) but got blocked at the Add Recipient step due to inconsistent API behavior. The user and agent have agreed to pause DMT development until the user receives clarification on the correct API format from Eko support.
-
-Additionally, the frontend has been improved by redirecting an old  link to the correct  page, and a temporary Holi animation feature has been added as requested.
+The application now supports a wide range of Eko BBPS services.
+- **Instant Services:** Mobile Recharge, DTH, Electricity, and EMI payments are configured to be executed instantly upon user request, bypassing admin approval. The logic includes an automatic refund mechanism if the transaction fails.
+- **New BBPS Services:** The backend and frontend have been updated to support ~18 different BBPS services, including Water, FASTag, Credit Card, Insurance, etc.
+- **PRC Burning Mechanism:** A new, complex PRC coin burning system has been implemented in  and scheduled in . It includes different expiry rules for user types and a daily 1% burn of all users' balances at 11 AM and 11 PM.
+- **Admin BBPS Dashboard:** A new page exists at  () which fetches data from a new API () to show all instant transaction attempts with user details and status.
+- **Quick Pay Feature:** The  page now includes a Quick Pay section that saves the user's last 5 transactions to  for easy repetition.
+- **Holi Animation Removed:** The temporary Holi animation feature has been completely removed from the codebase ( and ).
 
 **Last working item**:
--   **Last item agent was working:** Implementing a temporary Holi celebration animation feature.
--   **Status:** FINISHED
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** NA (This was a minor, temporary visual feature. The agent correctly prioritized fixing the core Eko services.)
--   **User Testing Done:** N
+-   **Last item agent was working:** Debugging a critical production issue where operators fail to load for newly added BBPS services like Credit Card and Municipal Tax. The user reported this with screenshots even after a potential fix was deployed. The agent confirmed via  that the backend API was returning operators correctly, but the frontend was intermittently failing to display them.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** Y (Manual  for backend, screenshots for frontend in preview)
+-   **Which testing method agent to use?** Frontend testing agent. The issue is a subtle frontend bug related to state management or component re-rendering. The testing agent should be instructed to:
+    1.  Navigate to the  page.
+    2.  Click on each new service one by one (Insurance, Credit Card, Municipal Tax, etc.).
+    3.  For each service, verify that the Select Operator dropdown becomes populated and the X available text shows a number greater than 0.
+-   **User Testing Done:** Y (User reported the issue persists in production for some services).
 
 **All Pending/In progress Issue list**:
--   Issue 1: Fix Eko Domestic Money Transfer (DMT) Service (P0)
--   Issue 2: Run PRC Vault to PRC Balance Migration Script on Production (P2)
--   Issue 3: Admin dashboard tabs do not refresh correctly after actions (P2)
--   Issue 4: Clear ~1700 Legacy Pending Production Requests (P2)
+-   Issue 1: BBPS Operators Not Loading in Production for New Services (P0)
+-   Issue 2: Admin Panel Failed to delete plan Error (P1)
+-   Issue 3: Fix Eko Domestic Money Transfer (DMT) Service (P2)
+-   Issue 4: Run PRC Vault to PRC Balance Migration Script on Production (P2)
 
 **Issues Detail:**
--   **Issue 1: Fix Eko Domestic Money Transfer (DMT) Service**
-    -   **Attempted fixes:** The agent identified the correct v1 API flow. While customer verification works, the Add Recipient step is the blocker. The agent tried multiple HTTP methods (POST, PUT) and payload formats based on user-provided documentation, but the API either rejected the request (), accepted it without creating the recipient (returning  or  without a ), or failed the subsequent transfer with error 313 (Recipient registration not done).
+-   **Issue 1: BBPS Operators Not Loading in Production for New Services**
+    -   **Attempted fixes:** The agent identified that the frontend  in  was missing entries for the new services and added them. This fixed the issue for some services (like Insurance) but not others (like Credit Card), according to the user. The agent verified the backend API works correctly and returns operators for all categories. The agent added debug logs to the frontend but couldn't definitively find the root cause before the session ended. The issue seems to be a subtle state management or re-rendering bug in .
     -   **Next debug checklist:**
-        1.  Wait for the user to provide the exact, confirmed Add Recipient API specification (endpoint, method, headers, and body) from Eko support.
-        2.  Once received, modify the  function (or equivalent) in  to match the correct format.
-        3.  Ensure the response returns a .
-        4.  Implement the recipient verification step if the API response indicates it's required (e.g., handling an OTP).
-        5.  Update the DMT processing logic in  to use the full, correct flow: Check Customer -> Add Recipient -> Verify Recipient (if needed) -> Initiate Transfer.
-    -   **Why fix this issue and what will be achieved with the fix?** DMT is a core business function for the application, allowing users to send money to bank accounts.
-    -   **Status:** BLOCKED (Waiting on user/Eko Support)
+        1.  Examine  very closely.
+        2.  Focus on the  hook that calls . Check its dependency array ().
+        3.  Investigate the logic in  and how the  state object is structured and accessed. The key  might be the source of the problem if  or  has an unexpected value.
+        4.  Use the **Frontend testing agent** to systematically test each service tab on the  page and check if the operator dropdown is populated.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a P0 bug blocking the use of all newly added payment services.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend
-    -   **Blocked on other issue:** User confirmation from Eko Support.
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None.
 
--   **Issue 2: Run PRC Vault to PRC Balance Migration Script on Production**
-    -   **Attempted fixes:** Script  was created in a previous session.
+-   **Issue 2: Admin Panel Failed to delete plan Error**
+    -   **Attempted fixes:** The agent reviewed the backend API () and frontend code in . No obvious errors were found. The API call seems correct.
     -   **Next debug checklist:**
-        1.  Re-confirm with the user that you are about to run the one-time migration on the **production database**.
-        2.  Execute .
-        3.  Verify the migration was successful by checking the balances of a few sample users in the production database.
-    -   **Why fix this issue and what will be achieved with the fix?** To finalize the removal of the PRC vault feature and consolidate all user funds into a single balance.
-    -   **Status:** NOT STARTED
+        1.  Since this is a production issue, the agent needs to test using the user's provided production credentials.
+        2.  Login as the user. Navigate to the plans page.
+        3.  Open the browser's developer tools (Network tab).
+        4.  Attempt to delete a plan and inspect the failed API request and its response payload for a more detailed error message.
+    -   **Why fix this issue and what will be achieved with the fix?** Admins are unable to manage subscription plans.
+    -   **Status:** NOT STARTED (Investigation done, but fix is pending).
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend (DB verification only)
-    -   **Blocked on other issue:** Explicit user confirmation to run on production.
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None.
+
+-   **Issue 3: Fix Eko Domestic Money Transfer (DMT) Service**
+    -   **Status:** BLOCKED (Same as previous summary. Waiting on user/Eko Support for correct API specification).
+
+-   **Issue 4: Run PRC Vault to PRC Balance Migration Script on Production**
+    -   **Status:** NOT STARTED (Same as previous summary. Awaiting user confirmation).
 
 **In progress Task List**:
 -   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** End-to-End Regression Test: Verify other BBPS services (e.g., Gas, EMI) are working with the new authentication fix.
--   **P1:** Remove temporary Holi animation code ( and its usage in ) after the festival.
+-   **P1:** End-to-End Regression Test: Once the operator loading issue is fixed, verify one transaction for each new BBPS service (e.g., Water, FASTag).
 -   **P1:** Decommission Old System: Remove any remaining old payment pages and APIs.
+-   **P1:** Remove  file as it's no longer used.
 
 **Future Tasks:**
 -   **P2:** Fix Razorpay Auto-Sync error handling.
@@ -82,85 +83,167 @@ Additionally, the frontend has been improved by redirecting an old  link to the 
 -   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
 
 **Completed work in this session**
--   **Eko Authentication Fixed:** Corrected the  generation logic in , resolving all  errors.
--   **Eko BBPS Pay Bill Fixed:** Enabled successful bill payments for Electricity and DTH by correctly implementing the API flow, which requires passing the  in the request body.
--   **Eko Services Tested:** Successfully tested Mobile Recharge, DTH (Dish TV), and Electricity (BEST Mumbai) payments.
--   **Frontend Routing Fixed:** Redirected the /bill-payments menu link to /redeem in  and .
--   **UI Error Display Improved:** Added handling for  status in  to show clearer error messages.
--   **Holi Animation Feature Added:** Implemented a temporary festive UI animation via a new  component.
--   **DMT Issue Isolated:** Thoroughly investigated and isolated the Eko DMT failure to the Add Recipient API step, which is now blocked pending a response from Eko support.
-
-**Earlier issues found/mentioned but not fixed**
--   The admin dashboard tabs do not automatically refresh after a request's status is changed.
--   The task to clear ~1700 old pending requests from the production database remains unresolved.
--   Razorpay Auto-Sync error handling has not been addressed.
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Eko API errors ().
--   **Recurrence count:** High.
--   **Status:** RESOLVED (The authentication part of this issue is fixed).
+-   **Instant Recharge Feature (DONE):** Implemented instant execution for Mobile, DTH, Electricity, and EMI payments in , bypassing admin approval.
+-   **BBPS Service Expansion (DONE):** Added ~12 new BBPS services (Water, FASTag, Credit Card etc.) to the backend (, ) and frontend ().
+-   **New PRC Burning Mechanism (DONE):** Implemented a complex new PRC expiration system with a daily 1% balance burn, managed via  and .
+-   **Admin BBPS Dashboard (DONE):** Created a new backend API () and a corresponding frontend page () for admins to monitor instant transactions.
+-   **Frontend UI Enhancements (DONE):**
+    -   Added a Quick Pay feature to the Redeem page.
+    -   Removed the How It Works section from the Redeem page.
+    -   Added, improved, and subsequently removed a temporary Holi animation.
+-   **Bug Fixes (DONE):**
+    -   Fixed a regression where Electricity payments failed due to using an incorrect API request format in .
+    -   Partially fixed the operator loading issue by updating the frontend .
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Eko API Authentication:** The correct  generation requires Base64 encoding the  *before* creating the HMAC-SHA256 signature with the timestamp. This was the breakthrough fix.
--   **Eko BBPS Pay Bill Flow:** For many billers, a successful  call is a prerequisite. The entire JSON response from that call must be passed as the value for the  key in the  API request body.
--   **Eko DMT v1 API:** A complex, stateful, multi-step process (Verify Customer -> Add Recipient -> Verify Recipient -> Transfer). The live API appears to have inconsistencies with its documentation, specifically around the Add Recipient endpoint.
-
-**key DB schema**
--   No changes made to the database schema in this session.
+-   **Instant Payments Logic:** In , the  function was modified to check  against an  list. If matched, it immediately calls the Eko processing function within a  block, allowing for auto-refunds on failure.
+-   **Dynamic Operator Fetching:** The frontend  page fetches operators by calling  with a . This ID is determined by mapping the selected  (e.g., Credit Card) to a category ID via a  object. The bug lies somewhere in this mapping/fetching/rendering chain.
+-   **Scheduled Jobs:** The  library in  is used to trigger the daily PRC burn logic in  at 11 AM and 11 PM.
+-   **MongoDB Aggregation:** The  endpoint uses a MongoDB aggregation pipeline with  to join the  collection with the  collection to display user names and mobile numbers.
 
 **All files of reference**
--   : Contains all the critical fixes for Eko authentication and the updated logic for BBPS and DMT API calls.
--   : Contains the high-level logic for processing redeem requests that call the functions in .
--   : Contains the UI fix for displaying  status.
--   : Contains the routing fix and the temporary Holi animation.
+-   : Central file for all BBPS services UI, operator loading logic, and the current P0 bug.
+-   : Contains the core logic for instant payments and auto-refunds.
+-   : Contains the new PRC burning logic and the API for the admin BBPS dashboard.
+-   : New admin-facing UI for monitoring transactions.
 
 **Areas that need refactoring**:
--   The temporary  component and its usage in  should be removed after the festival.
--    remains extremely large and is a candidate for being broken down into smaller, feature-specific modules.
+-   The  file is now unused and should be deleted.
+-    has become extremely large and complex. It should be broken down into smaller components (e.g., , , ).
+-    continues to grow and should be modularized.
 
 **key api endpoints**
--   : **FIXED**. Tested and confirmed working for Electricity and DTH.
--   : **BLOCKED**. The underlying Eko APIs are not working as documented, specifically for adding a recipient. Awaiting clarification from Eko support.
+-   : (POST) **Modified** to handle both pending and instant requests.
+-   : (GET) Used by the frontend to fetch operators. Key to the current P0 bug.
+-   : (GET) **New** endpoint to populate the admin dashboard for instant requests.
+-   : (POST) **New** endpoint to configure the PRC burn mechanism.
+-   : (GET) **New** endpoint that lists all available BBPS services.
 
 **Critical Info for New Agent**
--   **EKO BBPS IS WORKING:** The main  error is fixed. Electricity, DTH, and Mobile Recharge payments are confirmed to be working. The key fixes were in  generation and including the  object in pay bill requests. You can likely apply this pattern to fix other bill payment services like Gas, EMI, etc.
--   **DO NOT WORK ON DMT:** The Eko DMT service is **BLOCKED**. Do not attempt to fix it. The user has agreed to wait for clarification from Eko support on the correct API format for adding a recipient. The issue is clearly documented in this summary. Only resume work on DMT after the user provides the correct specification from Eko.
--   **USER LANGUAGE:** The user's preferred language is **Marathi**. All communication should be primarily in Marathi.
--   **PENDING TASKS:** The next high-priority task after DMT is unblocked is to run the PRC Vault migration script, which requires explicit user confirmation to execute on production.
+-   **The #1 Priority is the Operator Loading Bug.** The user cannot use the newly added services until this is fixed. The problem is in the frontend (), as the backend API has been verified to work. Do not get sidetracked.
+-   **Production Testing:** The user has provided production credentials. Use them carefully for debugging the operator loading and plan deletion issues, as these bugs are only visible in the production environment.
+-   **IP Whitelisting is NOT the current issue.** While it was a problem in the preview environment, the user has confirmed some services work in production, so the production server's IP is whitelisted. The current failures are code-related.
+-   **User Language is Marathi.** All communication, plans, and summaries must be primarily in Marathi.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   User asks for confirmation that Mobile, DTH, and Electricity will work after deployment. (Agent confirmed)
--   User reports the Bill payment menu goes to an old page and asks to fix it. (Completed)
--   User makes a festive request to add a Holi color animation. (Completed)
--   User asks to proceed with DMT development. (Agent started)
--   User provides their bank details for a DMT test. (Used for testing)
--   User agrees to pause DMT development and wait for a reply from Eko. (Acknowledged, DMT is now blocked)
--   User provides an electricity bill for testing. (Completed, payment was successful)
--   User provides a DTH bill for testing. (Completed, payment was successful)
--   User asks to test DTH. (Completed)
--   User confirms to test electricity bill with the full amount. (Completed)
+1.  **User:** Requests to fix Plan Delete and the still-failing BBPS operator loading in production. Provides production login credentials. (IN PROGRESS)
+2.  **User:** Asks if the new BBPS services flow is correct and if they can be completed. (Agent confirmed logic is correct, pending bugfix)
+3.  **User:** Reports the new services are not active because operators are not loading. States this is a coding issue, not IP whitelist. Also asks for a place to see all success/failed instant requests. (This led to the BBPS Dashboard task).
+4.  **User:** Defines new, complex rules for the PRC Burning Mechanism, including a daily 1% burn for all users. (COMPLETED)
+5.  **User:** Asks for an explanation and update of the Burning Mechanism. (COMPLETED)
+6.  **User:** Asks if FASTag and all other new services can be used. (Agent confirmed logic is ready)
+7.  **User:** Requests adding a Quick Pay feature and removing the How it Works section. (COMPLETED)
+8.  **User:** Asks for all new BBPS services to be added to the frontend and made live. (COMPLETED)
+9.  **User:** Asks for all Eko-supported BBPS services to be added. (COMPLETED)
+10. **User:** Asks for a list of all services available in BBPS via Eko. (COMPLETED)
 
 **Project Health Check:**
--   **Broken:** Eko DMT service.
--   **Untested:** Other Eko BBPS services like Gas, EMI, etc., though the underlying fix is likely to work for them.
+-   **Broken:**
+    -   Frontend operator loading for new BBPS services ().
+    -   Admin panel Delete Plan functionality.
+-   **Blocked:** Eko DMT service (pending info from Eko support).
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Eko:** The integration is now partially functional. The authentication layer is fixed. BBPS (Bill Payments) is working for tested services. DMT v1 (Money Transfer) is blocked due to API inconsistencies.
+-   **Eko:** Integration has been significantly expanded to include many new BBPS payment categories. The core logic relies on correctly mapping frontend service names to Eko's numerical .
 
 **Testing status**
--   **Testing agent used after significant changes:** NO. The agent used extensive manual  commands to debug and verify the Eko API fixes, which was highly effective for this specific problem.
+-   **Testing agent used after significant changes:** NO. All testing was manual via  for the backend and screenshots/visual inspection for the frontend. This likely contributed to the subtle frontend bug being missed.
 -   **Test files created:** None.
--   **Known regressions:** None. The fixes resolved a major regression.
+-   **Known regressions:** The BBPS operator loading feature regressed after being partially fixed. It works for some services but not others in production.
 
 **Credentials to test flow:**
+-   **Production User**: UID:  / PIN: 
 -   **Admin User**:  / 
 -   **Test User**:  / 
--   **User's Account for Testing:**  / PIN: 
 
 **What agent forgot to execute**
--   The agent did not explicitly test other BBPS services (Gas, EMI, etc.) after fixing the core authentication issue. While the fix is generic, these services remain unverified.
--   The P2 task to run the PRC vault migration was not attempted, as the agent correctly prioritized the P0 Eko service fixes throughout the session.</analysis>
+-   The agent did not create persistent tests (============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: /app
+plugins: anyio-4.11.0
+collected 1366 items / 8 errors
+
+==================================== ERRORS ====================================
+_________ ERROR collecting backend/tests/test_luxury_savings_split.py __________
+import file mismatch:
+imported module 'test_luxury_savings_split' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_luxury_savings_split.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_luxury_savings_split.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+___________ ERROR collecting backend/tests/test_mining_claim_flow.py ___________
+import file mismatch:
+imported module 'test_mining_claim_flow' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_mining_claim_flow.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_mining_claim_flow.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+________ ERROR collecting backend/tests/test_mining_referral_issues.py _________
+import file mismatch:
+imported module 'test_mining_referral_issues' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_mining_referral_issues.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_mining_referral_issues.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+___________ ERROR collecting backend/tests/test_network_analytics.py ___________
+import file mismatch:
+imported module 'test_network_analytics' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_network_analytics.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_network_analytics.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+________ ERROR collecting backend/tests/test_referrals_active_status.py ________
+import file mismatch:
+imported module 'test_referrals_active_status' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_referrals_active_status.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_referrals_active_status.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_____ ERROR collecting backend/tests/test_rejection_reason_account_age.py ______
+import file mismatch:
+imported module 'test_rejection_reason_account_age' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_rejection_reason_account_age.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_rejection_reason_account_age.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_______________ ERROR collecting backend/tests/test_user_360.py ________________
+import file mismatch:
+imported module 'test_user_360' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_user_360.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_user_360.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_________ ERROR collecting backend/tests/test_vip_multi_plan_system.py _________
+import file mismatch:
+imported module 'test_vip_multi_plan_system' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_vip_multi_plan_system.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_vip_multi_plan_system.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+=============================== warnings summary ===============================
+admin-deploy/backend/tests/test_order_delivery_distribution.py:60
+  /app/admin-deploy/backend/tests/test_order_delivery_distribution.py:60: PytestCollectionWarning: cannot collect test class 'TestData' because it has a __init__ constructor (from: admin-deploy/backend/tests/test_order_delivery_distribution.py)
+    class TestData:
+
+backend/tests/test_eko_bill_payments.py:107
+  /app/backend/tests/test_eko_bill_payments.py:107: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.timeout(60)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR backend/tests/test_luxury_savings_split.py
+ERROR backend/tests/test_mining_claim_flow.py
+ERROR backend/tests/test_mining_referral_issues.py
+ERROR backend/tests/test_network_analytics.py
+ERROR backend/tests/test_referrals_active_status.py
+ERROR backend/tests/test_rejection_reason_account_age.py
+ERROR backend/tests/test_user_360.py
+ERROR backend/tests/test_vip_multi_plan_system.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
+======================== 2 warnings, 8 errors in 1.61s ========================= or ) for the new instant payment flows or the complex PRC burn logic, making future regressions likely.
+-   The agent did not fully resolve the recurring frontend operator loading issue, leaving it as the main blocker for the next session.
+-   The agent did not address the long-standing pending tasks from the previous fork (DMT fix, PRC vault migration, admin dashboard refresh, clearing old requests).</analysis>

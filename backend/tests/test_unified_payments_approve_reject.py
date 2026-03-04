@@ -11,7 +11,7 @@ import requests
 import os
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://dmt-bbps-migration.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-burn-system.preview.emergentagent.com').rstrip('/')
 
 class TestBankRedeemApproveReject:
     """Test Bank Redeem Approve/Reject functionality"""

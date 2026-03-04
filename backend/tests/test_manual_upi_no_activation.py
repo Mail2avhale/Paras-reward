@@ -20,7 +20,7 @@ import os
 import uuid
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://dmt-bbps-migration.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-burn-system.preview.emergentagent.com').rstrip('/')
 
 
 class TestManualUPIDoesNotActivateSubscription:
