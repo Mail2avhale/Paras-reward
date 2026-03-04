@@ -498,30 +498,41 @@ const RedeemPageV2 = ({ user }) => {
         // New services - transport & others
         fastag: 'fastag',
         education: 'education',
-        municipal_tax: 'municipal_tax',
-        housing_society: 'housing_society'
+        municipal_tax: 'municipal_tax'
       };
       category = categoryMap[serviceType];
     }
     
     if (!category) {
-      console.log(`No category mapping for service: ${serviceType}`);
+      console.log(`[BBPS] No category mapping for service: ${serviceType}`);
       return;
     }
+    
+    console.log(`[BBPS] Fetching operators for ${serviceType} -> category: ${category}`);
     
     setLoadingOperators(true);
     try {
       const response = await axios.get(`${API}/eko/bbps/operators/${category}`);
-      if (response.data.operators) {
+      console.log(`[BBPS] API Response for ${category}:`, response.data);
+      
+      if (response.data.operators && response.data.operators.length > 0) {
         // For mobile, store with recharge type key
         const storeKey = serviceType === 'mobile_recharge' ? `mobile_${rechargeType}` : serviceType;
-        setOperators(prev => ({
-          ...prev,
-          [storeKey]: response.data.operators
-        }));
+        console.log(`[BBPS] Storing ${response.data.operators.length} operators in key: ${storeKey}`);
+        
+        setOperators(prev => {
+          const updated = {
+            ...prev,
+            [storeKey]: response.data.operators
+          };
+          console.log('[BBPS] Updated operators state:', Object.keys(updated));
+          return updated;
+        });
+      } else {
+        console.log(`[BBPS] No operators returned for ${category}`);
       }
     } catch (error) {
-      console.error('Error fetching operators:', error);
+      console.error('[BBPS] Error fetching operators:', error);
       // Use fallback operators
       setOperators(prev => ({
         ...prev,
@@ -1022,11 +1033,15 @@ const RedeemPageV2 = ({ user }) => {
   
   // Get current operators based on service and recharge type
   const currentOperators = (() => {
+    let ops = [];
     if (selectedService === 'mobile_recharge') {
       const key = `mobile_${formData.recharge_type}`;
-      return operators[key] || OPERATORS[selectedService] || [];
+      ops = operators[key] || OPERATORS[selectedService] || [];
+    } else {
+      ops = operators[selectedService] || OPERATORS[selectedService] || [];
     }
-    return operators[selectedService] || OPERATORS[selectedService] || [];
+    console.log(`[BBPS] currentOperators for ${selectedService}:`, ops.length, 'operators available');
+    return ops;
   })();
   
   return (
