@@ -980,8 +980,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     service_type=request.service_type,
                     user_id=request.user_id,
                     amount=request.amount,
-                    operator=request.operator,
-                    consumer_number=request.consumer_number,
+                    operator=request.details.get("operator"),
+                    consumer_number=request.details.get("consumer_number") or request.details.get("mobile_number"),
                     transaction_id=eko_result.get("eko_tid"),
                     eko_response=eko_result
                 )
@@ -1046,8 +1046,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     service_type=request.service_type,
                     user_id=request.user_id,
                     amount=request.amount,
-                    operator=request.operator,
-                    consumer_number=request.consumer_number,
+                    operator=request.details.get("operator"),
+                    consumer_number=request.details.get("consumer_number") or request.details.get("mobile_number"),
                     eko_response=eko_result,
                     error_message=eko_result.get("message")
                 )
@@ -1058,7 +1058,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     error_message=eko_result.get("message", "Unknown error"),
                     source="unified_redeem_v2",
                     user_id=request.user_id,
-                    request_data={"operator": request.operator, "consumer": request.consumer_number, "amount": request.amount},
+                    request_data={"operator": request.details.get("operator"), "consumer": request.details.get("consumer_number") or request.details.get("mobile_number"), "amount": request.amount},
                     severity="warning",
                     category="payment"
                 )
