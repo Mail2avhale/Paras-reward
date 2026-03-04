@@ -1026,10 +1026,20 @@ const RedeemPageV2 = ({ user }) => {
         details
       });
       
-      // Save to Quick Pay on success
-      if (response.data.success !== false) {
-        saveToQuickPay(selectedService, details, parseFloat(formData.amount));
+      // Check if request was successful
+      if (response.data.success === false) {
+        // Payment failed - show error
+        toast.error(response.data.message || 'Payment failed. Please check your details and try again.');
+        
+        // If PRC was refunded, show that info
+        if (response.data.prc_refunded) {
+          toast.info(`${response.data.prc_refunded} PRC has been refunded to your account.`);
+        }
+        return;
       }
+      
+      // Save to Quick Pay on success
+      saveToQuickPay(selectedService, details, parseFloat(formData.amount));
       
       toast.success(response.data.message || 'Request submitted successfully!');
       

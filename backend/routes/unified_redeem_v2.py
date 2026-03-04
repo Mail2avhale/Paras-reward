@@ -1020,10 +1020,11 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 
                 return {
                     "success": False,
-                    "message": f"❌ {eko_result.get('message')}. {total_prc_required} PRC refunded.",
+                    "message": f"❌ Payment failed: Invalid Account ID or Consumer Code. Please check the format and try again. {total_prc_required} PRC refunded.",
                     "request_id": request_id,
                     "status": STATUS_FAILED,
                     "error": eko_result.get("message"),
+                    "error_detail": eko_result.get("message"),  # Keep original for debugging
                     "prc_refunded": total_prc_required,
                     "new_balance": refund_balance
                 }
@@ -1566,9 +1567,10 @@ async def admin_complete_request(data: AdminCompleteRequest):
         
         return {
             "success": False,
-            "message": f"Eko transaction failed: {eko_result.get('message')}. {refund_amount} PRC refunded to user.",
+            "message": f"Payment failed: Please verify the Account ID/Consumer Code format. {refund_amount} PRC refunded to user.",
             "status": STATUS_FAILED,
             "error": eko_result.get("message"),
+            "error_detail": eko_result.get("message"),
             "refund_amount": refund_amount
         }
 
