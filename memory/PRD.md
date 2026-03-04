@@ -1,86 +1,89 @@
-# Paras Redeem - Product Requirements Document
+# PARAS REWARD - Bill Payment Platform
 
 ## Original Problem Statement
-PRC (Paras Reward Coin) based redemption platform where users earn PRC through mining and referrals, then redeem for:
-- Mobile Recharges
-- DTH Recharges
-- Electricity Bills
-- Gas Bills
-- Bank Transfers (DMT)
-- Other utility payments
+Full-stack bill payment platform using Eko BBPS APIs for electricity, mobile, DTH, and other utility bill payments.
 
-## Core Architecture
-- **Frontend:** React.js with Tailwind CSS
+## Architecture
+- **Frontend:** React.js with Tailwind CSS, Shadcn UI
 - **Backend:** FastAPI (Python)
-- **Database:** MongoDB Atlas
-- **Payment Gateway:** Eko India (BBPS & DMT APIs)
-- **Secondary:** Razorpay for subscriptions
+- **Database:** MongoDB
+- **Payment Gateway:** Razorpay (subscriptions), Eko (BBPS)
 
 ## What's Been Implemented
 
-### March 2026 Updates:
+### Session: 2026-03-04 - Eko Electricity Bill Payment Fix
 
-#### ✅ Eko Authentication Fix (Mar 3, 2026)
-- Fixed Authenticator Key in `.env`
-- Corrected secret-key generation algorithm (Base64 encoded key + HMAC-SHA256)
-- Fixed request_hash generation for BBPS payments
+**Critical Fix Applied:**
+- **Issue:** All POST requests to Eko API were failing with 403 Forbidden
+- **Root Cause:** Wrong `EKO_AUTHENTICATOR_KEY` was configured
+  - Old (Wrong): `dmt-bbps-migration`
+  - New (Correct): `7a2529f5-3587-4add-a2df-3d0606d62460`
+- **Fix:** Updated `/app/backend/.env` with correct AUTH_KEY
 
-#### ✅ BBPS Bill Payment Services (Mar 3, 2026)
-- **Electricity:** Tested BEST Mumbai ₹1,160 - SUCCESS
-- **DTH:** Tested Dish TV ₹236 - SUCCESS
-- **Mobile Recharge:** Already working
+**Verification Results:**
+1. ✅ GET /api/eko/bbps/operators/electricity - 89 operators retrieved
+2. ✅ GET /api/eko/bbps/operator-params/{id} - Dynamic parameters working
+3. ✅ POST /api/eko/bbps/fetch-bill - Bill fetch working (Adani Mumbai tested)
+4. ✅ POST /api/eko/bbps/pay-bill - Payment API working (TID generated)
 
-#### ✅ Error Handling Improvements (Mar 3, 2026)
-- Added user-friendly error messages for Eko API errors
-- Added `eko_failed` status display in Orders page
-- Improved admin dashboard with bank transfer details display
+**Additional Fixes:**
+- Fixed frontend compilation error in `/app/frontend/src/pages/Admin/ErrorMonitor.js`
+  - Wrong import path: `../components/ui/card` → `../../components/ui/card`
+- Added manual subscription activation endpoint for Razorpay issues
 
-#### ✅ PRC Vault Removal (Previous Session)
-- Removed PRC Savings Vault feature
-- Removed 20% deduction logic
-- Migration script created at `/app/migration_script.py`
+### Key Eko API Configuration
+```
+EKO_BASE_URL=https://api.eko.in:25002/ekoicici
+EKO_DEVELOPER_KEY=7c179a397b4710e71b2248d1f5892d19
+EKO_AUTHENTICATOR_KEY=7a2529f5-3587-4add-a2df-3d0606d62460
+EKO_INITIATOR_ID=9936606966
+EKO_USER_CODE=20810200
+```
 
-#### ✅ Mining Formula Simplification (Previous Session)
-- Fixed-rate mining per subscription plan
-- Removed complex date/subscription multipliers
-- Formula: `Final Rate = Base_Rate + Referral_Bonus`
+### Tested Operators
+- **BSES Rajdhani (22):** billFetchResponse=0, 9-digit CA Number
+- **MSEDCL (62):** 12-digit Consumer No + 4-digit BU (currently down)
+- **Adani Electricity Mumbai (242):** 9-digit Consumer Number
 
-## Pending/In Progress
+## Pending/Backlog Tasks
 
-### 🔴 P0 - DMT (Bank Transfer)
-- **Status:** Waiting for Eko support reply
-- **Issue:** Add Recipient API returns 405 for POST method
-- **Blocker:** Cannot complete recipient registration flow
+### P0 - Critical
+- [ ] User subscription issue: `order_SOtM3kCj7Hl58c` - User should use manual activation endpoint
 
-### 🟡 P1 - PRC Vault Migration
-- **Status:** Script ready, awaiting production confirmation
-- **Action:** Run `/app/migration_script.py` on production database
+### P1 - High Priority
+- [ ] FASTag, DTH services require "HG Pay enrollment" from Eko (business requirement, not code)
+- [ ] Admin Panel "Failed to delete plan" error
 
-### 🟡 P2 - Other Issues
-- Admin dashboard tabs refresh issue
-- ~1700 legacy pending requests to clear
-- Razorpay Auto-Sync error handling
+### P2 - Medium Priority
+- [ ] Eko DMT Service integration (blocked on API specs)
+- [ ] PRC Vault to PRC Balance migration script
 
-## Key API Endpoints
+### P3 - Low Priority
+- [ ] Email/Mobile OTP verification on signup
+- [ ] KYC/Receipt images file storage migration
+- [ ] Code refactoring: RedeemPageV2.js and server.py split
 
-### Eko BBPS (Working)
-- `POST /api/eko/bbps/paybill` - Bill payment
-- `POST /api/eko/bbps/fetch-bill` - Fetch bill details
-- `GET /api/eko/bbps/operators/{category}` - Get operators list
+## API Endpoints Reference
 
-### Eko DMT (Pending Fix)
-- `GET /api/eko/dmt/v3/customer/{mobile}` - Check customer
-- `POST /api/eko/dmt/v3/recipient/add` - Add recipient (needs fix)
-- `POST /api/eko/dmt/v3/transfer` - Initiate transfer
+### Electricity Bill Payment Flow
+```
+1. GET /api/eko/bbps/operators/{category}    - List operators
+2. GET /api/eko/bbps/operator-params/{id}    - Get required parameters
+3. POST /api/eko/bbps/fetch-bill             - Fetch bill details
+4. POST /api/eko/bbps/pay-bill               - Execute payment
+```
 
-## Credentials
-- **Eko Production URL:** https://api.eko.in:25002/ekoicici
-- **Eko Initiator ID:** 9936606966
-- **Eko User Code:** 20810200
+### Admin Endpoints
+```
+POST /api/razorpay/admin/manual-activate-by-email  - Manual subscription activation
+GET /admin/error-monitor                            - Error monitoring dashboard
+```
 
-## Files of Reference
-- `backend/routes/eko_payments.py` - All Eko API integrations
-- `backend/server.py` - Main FastAPI app, redeem processing
-- `backend/config.py` - Mining rates, limits, weights
-- `frontend/src/pages/RedeemPageV2.js` - Redeem UI
-- `frontend/src/pages/Orders.js` - User orders display
+## Test Credentials
+- **User:** mail2avhale@gmail.com / PIN: 153759
+- **Admin:** admin@paras.com / 123456
+
+## Notes
+- MSEDCL operator is currently down (Eko side issue)
+- Fetch bill may timeout (up to 120s) - normal Eko latency
+- For operators with billFetchResponse=0, fetch is not required
