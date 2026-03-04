@@ -1666,9 +1666,10 @@ const RedeemPageV2 = ({ user }) => {
                       <div className="animate-fadeIn bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4">
                         <div className="flex items-center gap-2">
                           <Info className="h-5 w-5 text-amber-400" />
-                          <span className="text-amber-400 font-medium">Bill fetch उपलब्ध नाही</span>
+                          <span className="text-amber-400 font-medium">Bill Fetch Issue</span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-2">काळजी नको! तुमचा bill amount खाली manually टाका आणि payment करा.</p>
+                        <p className="text-white text-sm mt-2 font-medium">{billError}</p>
+                        <p className="text-gray-400 text-xs mt-2">Amount manually टाकून payment करू शकता.</p>
                       </div>
                     )}
                     

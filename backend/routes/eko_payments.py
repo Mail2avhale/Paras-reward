@@ -2637,12 +2637,23 @@ async def fetch_bill(request: BillFetchRequest):
                 "raw_response": result
             }
         else:
-            # Error from Eko
+            # Error from Eko - get detailed reason
+            data = result.get("data", {})
             error_msg = result.get("message", "Bill fetch failed")
+            reason = data.get("reason", "") if isinstance(data, dict) else ""
+            
+            # Build user-friendly message
+            if reason:
+                user_message = reason  # Use Eko's detailed reason
+            else:
+                user_message = error_msg
+            
             return {
                 "success": False,
                 "error_code": str(eko_status),
-                "message": error_msg,
+                "message": user_message,
+                "eko_message": error_msg,
+                "reason": reason,
                 "raw_response": result
             }
         
