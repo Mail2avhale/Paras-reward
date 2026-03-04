@@ -1048,7 +1048,9 @@ const RedeemPageV2 = ({ user }) => {
   const selectedOperatorData = currentOperators.find(op => 
     String(op.id) === String(formData.operator) || String(op.operator_id) === String(formData.operator)
   );
-  const supportsBillFetch = selectedOperatorData?.bill_fetch !== false;
+  // Always allow bill fetch attempt for electricity/gas/water - let user try even if API says false
+  const isBillService = ['electricity', 'gas', 'water', 'broadband', 'landline'].includes(selectedService);
+  const supportsBillFetch = isBillService ? true : (selectedOperatorData?.bill_fetch !== false);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
