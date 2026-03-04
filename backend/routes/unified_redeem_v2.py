@@ -1821,3 +1821,169 @@ async def manual_refund_request(request_id: str, admin_id: str = "admin", reason
         "refund_amount": refund_amount
     }
 
+
+
+# ==================== ADMIN BBPS DASHBOARD ====================
+# View all instant BBPS requests with full details
+
+@router.get("/admin/bbps-requests")
+async def get_bbps_requests(
+    status: str = None,
+    service_type: str = None,
+    user_id: str = None,
+    from_date: str = None,
+    to_date: str = None,
+    page: int = 1,
+    limit: int = 50
+):
+    """
+    Admin: Get all BBPS instant requests with full details
+    
+    Query params:
+    - status: pending, processing, completed, failed, rejected
+    - service_type: mobile_recharge, dth, electricity, gas, emi, water, etc.
+    - user_id: Filter by specific user
+    - from_date, to_date: Date range filter (ISO format)
+    - page, limit: Pagination
+    
+    Returns all request details including Eko response
+    """
+    # Build query
+    query = {}
+    
+    # Filter by status
+    if status:
+        query["status"] = status
+    
+    # Filter by service type - exclude DMT (bank transfer)
+    if service_type:
+        query["service_type"] = service_type
+    else:
+        # Only show BBPS instant services (not DMT)
+        query["service_type"] = {"$ne": "dmt"}
+    
+    # Filter by user
+    if user_id:
+        query["user_id"] = user_id
+    
+    # Date range filter
+    if from_date:
+        query["created_at"] = {"$gte": from_date}
+    if to_date:
+        if "created_at" not in query:
+            query["created_at"] = {}
+        query["created_at"]["$lte"] = to_date
+    
+    # Get total count
+    total = await db.redeem_requests.count_documents(query)
+    
+    # Pagination
+    skip = (page - 1) * limit
+    
+    # Fetch requests with full details
+    requests = await db.redeem_requests.find(
+        query,
+        {"_id": 0}  # Exclude MongoDB _id
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Calculate stats
+    stats = {
+        "total": total,
+        "by_status": {},
+        "by_service": {},
+        "total_amount": 0,
+        "total_prc_used": 0
+    }
+    
+    # Get aggregated stats
+    pipeline = [
+        {"$match": {"service_type": {"$ne": "dmt"}}},
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount"},
+            "total_prc": {"$sum": "$total_prc_deducted"}
+        }}
+    ]
+    
+    status_stats = await db.redeem_requests.aggregate(pipeline).to_list(10)
+    for stat in status_stats:
+        stats["by_status"][stat["_id"]] = {
+            "count": stat["count"],
+            "amount": stat["total_amount"],
+            "prc": stat["total_prc"]
+        }
+        stats["total_amount"] += stat["total_amount"] or 0
+        stats["total_prc_used"] += stat["total_prc"] or 0
+    
+    # Get service-wise stats
+    service_pipeline = [
+        {"$match": {"service_type": {"$ne": "dmt"}}},
+        {"$group": {
+            "_id": "$service_type",
+            "count": {"$sum": 1},
+            "success": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+            "failed": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}}
+        }}
+    ]
+    
+    service_stats = await db.redeem_requests.aggregate(service_pipeline).to_list(20)
+    for stat in service_stats:
+        stats["by_service"][stat["_id"]] = {
+            "total": stat["count"],
+            "success": stat["success"],
+            "failed": stat["failed"],
+            "success_rate": round((stat["success"] / stat["count"]) * 100, 1) if stat["count"] > 0 else 0
+        }
+    
+    return {
+        "success": True,
+        "requests": requests,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "pages": (total + limit - 1) // limit
+        },
+        "stats": stats
+    }
+
+
+@router.get("/admin/bbps-request/{request_id}")
+async def get_bbps_request_details(request_id: str):
+    """
+    Admin: Get single BBPS request with complete details
+    Includes: User info, Eko response, status history, refund info
+    """
+    # Get request
+    request_doc = await db.redeem_requests.find_one(
+        {"request_id": request_id},
+        {"_id": 0}
+    )
+    
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Get user info
+    user = await db.users.find_one(
+        {"uid": request_doc.get("user_id")},
+        {"_id": 0, "uid": 1, "email": 1, "name": 1, "mobile": 1, "subscription_plan": 1}
+    )
+    
+    return {
+        "success": True,
+        "request": request_doc,
+        "user": user,
+        "eko_details": {
+            "tid": request_doc.get("eko_tid"),
+            "utr": request_doc.get("utr_number"),
+            "status": request_doc.get("eko_status"),
+            "message": request_doc.get("eko_message"),
+            "response": request_doc.get("eko_response")
+        },
+        "refund_info": {
+            "refunded": request_doc.get("prc_refunded", False),
+            "amount": request_doc.get("refund_amount", 0)
+        }
+    }
+

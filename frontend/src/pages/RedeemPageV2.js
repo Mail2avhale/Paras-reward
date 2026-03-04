@@ -473,16 +473,41 @@ const RedeemPageV2 = ({ user }) => {
       // For mobile, use recharge type to determine category
       category = rechargeType === 'postpaid' ? 'mobile_postpaid' : 'mobile_prepaid';
     } else {
+      // Complete category mapping for ALL BBPS services
       const categoryMap = {
+        // Existing services
         dth: 'dth',
         electricity: 'electricity',
         gas: 'gas',
-        emi: 'loan_emi'
+        emi: 'loan_emi',
+        
+        // New services - telecom
+        mobile_postpaid: 'mobile_postpaid',
+        broadband: 'broadband',
+        landline: 'landline',
+        cable_tv: 'cable_tv',
+        
+        // New services - utility
+        water: 'water',
+        lpg: 'lpg',
+        
+        // New services - financial
+        credit_card: 'credit_card',
+        insurance: 'insurance',
+        
+        // New services - transport & others
+        fastag: 'fastag',
+        education: 'education',
+        municipal_tax: 'municipal_tax',
+        housing_society: 'housing_society'
       };
       category = categoryMap[serviceType];
     }
     
-    if (!category) return;
+    if (!category) {
+      console.log(`No category mapping for service: ${serviceType}`);
+      return;
+    }
     
     setLoadingOperators(true);
     try {
@@ -1277,7 +1302,7 @@ const RedeemPageV2 = ({ user }) => {
                 <div>
                   <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport & Others</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['fastag', 'education', 'municipal_tax', 'housing_society'].map(id => {
+                    {['fastag', 'education', 'municipal_tax'].map(id => {
                       const config = SERVICE_CONFIG[id];
                       if (!config) return null;
                       const Icon = config.icon;
@@ -2040,7 +2065,7 @@ const RedeemPageV2 = ({ user }) => {
                 {/* NEW BBPS SERVICES - Generic Form */}
                 {/* Water, Broadband, Landline, Credit Card, Insurance, FASTag, Education, etc. */}
                 {/* ============================================ */}
-                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'fastag', 'education', 'municipal_tax', 'housing_society', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
+                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'fastag', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>

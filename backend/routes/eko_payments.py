@@ -1349,7 +1349,8 @@ EKO_CATEGORY_MAP = {
     "lpg": 18,
     "education": 14,
     "cable_tv": 17,
-    "hospital": 19
+    "hospital": 19,
+    "housing_society": 16  # Housing Society
 }
 
 @router.get("/bbps/operators/{service_type}")
