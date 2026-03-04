@@ -242,19 +242,19 @@ def get_operators(category: str):
     """
     Get operators list for a category.
     
-    Categories:
-    - electricity (8)
-    - dth (4)
-    - fastag (17)
-    - emi/loan (10)
+    Categories (as per EKO document):
+    - electricity = 1
+    - dth = 4
+    - fastag = 5
+    - emi/loan = 6
     """
     category_map = {
-        "electricity": 8,
+        "electricity": 1,
         "dth": 4,
-        "fastag": 17,
-        "emi": 10,
-        "loan": 10,
-        "loan_emi": 10
+        "fastag": 5,
+        "emi": 6,
+        "loan": 6,
+        "loan_emi": 6
     }
     
     category_id = category_map.get(category.lower())
