@@ -357,6 +357,27 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             "timestamp": now
         })
         
+        # ==================== STEP 10: ADD TO VIP_PAYMENTS FOR ADMIN DASHBOARD ====================
+        # This is critical - admin dashboard shows vip_payments collection
+        await db.vip_payments.insert_one({
+            "user_id": request.user_id,
+            "order_id": request.razorpay_order_id,
+            "payment_id": request.razorpay_payment_id,
+            "amount": payment_amount,
+            "subscription_plan": plan_name,
+            "plan_type": plan_type,
+            "status": "approved",
+            "payment_method": "razorpay",
+            "payment_captured": payment_captured,
+            "new_expiry": expiry_date.isoformat(),
+            "duration_days": total_days,
+            "remaining_days_added": remaining_days,
+            "approved_at": now.isoformat(),
+            "created_at": now.isoformat(),
+            "auto_activated": True,
+            "activation_source": "razorpay_verify"
+        })
+        
         logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}, total days: {total_days}")
         
         return {
@@ -604,10 +625,11 @@ async def sync_payments_from_razorpay(request: Request):
         if admin_pin != "123456":
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
-        # Get all pending orders (status = 'created')
+        # Get all pending orders (status = 'created' or 'pending')
+        # ALSO get 'paid' orders that may not have activated subscription
         pending_orders = await db.razorpay_orders.find({
-            "status": {"$in": ["created", "pending"]}
-        }).to_list(100)
+            "status": {"$in": ["created", "pending", "paid"]}
+        }).to_list(200)
         
         synced = []
         failed_sync = []
@@ -637,6 +659,14 @@ async def sync_payments_from_razorpay(request: Request):
                     if captured_payment:
                         payment_id = captured_payment.get("id")
                         amount = captured_payment.get("amount", 0) / 100
+                        
+                        # Check if user's subscription was already updated by this payment
+                        user = await db.users.find_one({"uid": user_id})
+                        
+                        # Skip if this payment already activated subscription
+                        if user and user.get("last_payment_id") == payment_id:
+                            logging.info(f"[SYNC] Order {order_id}: Already activated, skipping")
+                            continue
                         
                         # Update order status
                         await db.razorpay_orders.update_one(
@@ -687,6 +717,7 @@ async def sync_payments_from_razorpay(request: Request):
                                     "subscription_plan": plan_name,
                                     "subscription_start": now,
                                     "subscription_expires": expiry_date,
+                                    "subscription_expiry": expiry_date.isoformat(),
                                     "membership_type": "vip",
                                     "subscription_status": "active",
                                     "last_payment_id": payment_id,
@@ -710,6 +741,26 @@ async def sync_payments_from_razorpay(request: Request):
                             "total_days": total_days,
                             "activated_via": "manual_sync",
                             "timestamp": now
+                        })
+                        
+                        # Add to vip_payments for admin dashboard
+                        await db.vip_payments.insert_one({
+                            "user_id": user_id,
+                            "order_id": order_id,
+                            "payment_id": payment_id,
+                            "amount": amount,
+                            "subscription_plan": plan_name,
+                            "plan_type": plan_type,
+                            "status": "approved",
+                            "payment_method": "razorpay",
+                            "payment_captured": True,
+                            "new_expiry": expiry_date.isoformat(),
+                            "duration_days": total_days,
+                            "remaining_days_added": remaining_days,
+                            "approved_at": now.isoformat(),
+                            "created_at": now.isoformat(),
+                            "auto_activated": True,
+                            "activation_source": "manual_sync"
                         })
                         
                         synced.append({
@@ -774,4 +825,225 @@ async def sync_payments_from_razorpay(request: Request):
         raise
     except Exception as e:
         logging.error(f"Sync error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/admin/fix-subscription")
+async def fix_user_subscription(request: Request):
+    """
+    ADMIN TOOL: Manually fix a user's subscription when payment was received but subscription not extended.
+    This will find the paid order and activate the subscription properly.
+    """
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay not configured")
+    
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        order_id = data.get("order_id")
+        user_id = data.get("user_id")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not order_id and not user_id:
+            raise HTTPException(status_code=400, detail="Either order_id or user_id required")
+        
+        # Find the order
+        query = {}
+        if order_id:
+            query["order_id"] = order_id
+        if user_id:
+            query["user_id"] = user_id
+        query["status"] = "paid"
+        
+        order = await db.razorpay_orders.find_one(query, sort=[("paid_at", -1)])
+        
+        if not order:
+            # Try to find in razorpay API directly
+            if order_id:
+                try:
+                    razorpay_order = razorpay_client.order.fetch(order_id)
+                    if razorpay_order.get("status") == "paid":
+                        # Get payment details
+                        payments = razorpay_client.order.payments(order_id)
+                        for payment in payments.get("items", []):
+                            if payment.get("status") == "captured":
+                                # Found captured payment - activate subscription
+                                payment_id = payment.get("id")
+                                amount = payment.get("amount", 0) / 100
+                                
+                                # Get order from our DB
+                                order = await db.razorpay_orders.find_one({"order_id": order_id})
+                                
+                                if order:
+                                    user_id = order.get("user_id")
+                                    plan_name = order.get("plan_name", "startup")
+                                    plan_type = order.get("plan_type", "monthly")
+                                    duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                                    
+                                    now = datetime.now(timezone.utc)
+                                    
+                                    # Check existing subscription
+                                    user = await db.users.find_one({"uid": user_id})
+                                    remaining_days = 0
+                                    
+                                    if user:
+                                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+                                        if existing_expiry:
+                                            if isinstance(existing_expiry, str):
+                                                try:
+                                                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                                except:
+                                                    existing_expiry = None
+                                            
+                                            if existing_expiry and existing_expiry.tzinfo is None:
+                                                existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                            
+                                            if existing_expiry and existing_expiry > now:
+                                                remaining_days = (existing_expiry - now).days
+                                    
+                                    total_days = duration_days + remaining_days
+                                    expiry_date = now + timedelta(days=total_days)
+                                    
+                                    # Update order
+                                    await db.razorpay_orders.update_one(
+                                        {"order_id": order_id},
+                                        {"$set": {
+                                            "status": "paid",
+                                            "payment_id": payment_id,
+                                            "payment_captured": True,
+                                            "fixed_at": now.isoformat()
+                                        }}
+                                    )
+                                    
+                                    # Update user subscription
+                                    await db.users.update_one(
+                                        {"uid": user_id},
+                                        {"$set": {
+                                            "subscription_plan": plan_name,
+                                            "subscription_start": now,
+                                            "subscription_expires": expiry_date,
+                                            "subscription_expiry": expiry_date.isoformat(),
+                                            "membership_type": "vip",
+                                            "subscription_status": "active",
+                                            "last_payment_id": payment_id,
+                                            "fixed_by_admin": True,
+                                            "fixed_at": now.isoformat()
+                                        }}
+                                    )
+                                    
+                                    # Add to vip_payments
+                                    await db.vip_payments.insert_one({
+                                        "user_id": user_id,
+                                        "order_id": order_id,
+                                        "payment_id": payment_id,
+                                        "amount": amount,
+                                        "subscription_plan": plan_name,
+                                        "status": "approved",
+                                        "payment_method": "razorpay",
+                                        "new_expiry": expiry_date.isoformat(),
+                                        "duration_days": total_days,
+                                        "created_at": now.isoformat(),
+                                        "fixed_by_admin": True
+                                    })
+                                    
+                                    return {
+                                        "success": True,
+                                        "message": f"Subscription fixed for user {user_id}",
+                                        "user_id": user_id,
+                                        "user_name": user.get("name") if user else "Unknown",
+                                        "plan": plan_name,
+                                        "new_expiry": expiry_date.isoformat(),
+                                        "total_days": total_days
+                                    }
+                except Exception as e:
+                    logging.error(f"[FIX] Error fetching from Razorpay: {e}")
+            
+            raise HTTPException(status_code=404, detail="No paid order found")
+        
+        # Order found in our DB - activate subscription
+        user_id = order.get("user_id")
+        plan_name = order.get("plan_name", "startup")
+        plan_type = order.get("plan_type", "monthly")
+        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+        payment_id = order.get("payment_id", "")
+        amount = order.get("verified_amount", order.get("amount", 0))
+        
+        now = datetime.now(timezone.utc)
+        
+        # Get user and check existing subscription
+        user = await db.users.find_one({"uid": user_id})
+        remaining_days = 0
+        
+        if user:
+            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+            if existing_expiry:
+                if isinstance(existing_expiry, str):
+                    try:
+                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                    except:
+                        existing_expiry = None
+                
+                if existing_expiry and existing_expiry.tzinfo is None:
+                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                
+                if existing_expiry and existing_expiry > now:
+                    remaining_days = (existing_expiry - now).days
+        
+        total_days = duration_days + remaining_days
+        expiry_date = now + timedelta(days=total_days)
+        
+        # Update user subscription
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "subscription_plan": plan_name,
+                "subscription_start": now,
+                "subscription_expires": expiry_date,
+                "subscription_expiry": expiry_date.isoformat(),
+                "membership_type": "vip",
+                "subscription_status": "active",
+                "last_payment_id": payment_id,
+                "fixed_by_admin": True,
+                "fixed_at": now.isoformat()
+            }}
+        )
+        
+        # Check if already in vip_payments
+        existing_vip = await db.vip_payments.find_one({"order_id": order.get("order_id")})
+        if not existing_vip:
+            await db.vip_payments.insert_one({
+                "user_id": user_id,
+                "order_id": order.get("order_id"),
+                "payment_id": payment_id,
+                "amount": amount,
+                "subscription_plan": plan_name,
+                "status": "approved",
+                "payment_method": "razorpay",
+                "new_expiry": expiry_date.isoformat(),
+                "duration_days": total_days,
+                "created_at": now.isoformat(),
+                "fixed_by_admin": True
+            })
+        
+        return {
+            "success": True,
+            "message": f"Subscription fixed for user {user_id}",
+            "user_id": user_id,
+            "user_name": user.get("name") if user else "Unknown",
+            "plan": plan_name,
+            "new_expiry": expiry_date.isoformat(),
+            "total_days": total_days,
+            "remaining_days_added": remaining_days
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIX] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
