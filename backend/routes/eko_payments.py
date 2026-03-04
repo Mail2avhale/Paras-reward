@@ -276,10 +276,10 @@ async def make_eko_request(endpoint: str, method: str = "GET", data: dict = None
         if method.upper() == "GET":
             response = req.get(url, headers=headers, params=data, timeout=120)
         elif method.upper() == "POST":
-            body_json = json.dumps(data, separators=(',', ':'))
             logging.info(f"[EKO API] URL: {url}")
-            logging.info(f"[EKO API] Body: {body_json}")
-            response = req.post(url, headers=headers, data=body_json, timeout=120)
+            logging.info(f"[EKO API] Body: {data}")
+            # Use json=data as per working Eko pattern
+            response = req.post(url, json=data, headers=headers, timeout=120)
         elif method.upper() == "PUT":
             headers["Content-Type"] = "application/x-www-form-urlencoded"
             response = req.put(url, headers=headers, data=data, timeout=60)
@@ -2589,11 +2589,11 @@ async def fetch_bill(request: BillFetchRequest):
             "utility_acc_no": utility_acc_no,
             "operator_id": request.biller_id,
             "confirmation_mobile_no": EKO_INITIATOR_ID,
-            "sender_name": "Customer",
+            "sender_name": "Paras Reward",
             "user_code": EKO_USER_CODE,
             "client_ref_id": client_ref_id,
-            "source_ip": "127.0.0.1",
-            "latlong": "19.0760,72.8777"
+            "source_ip": "34.170.12.145",
+            "latlong": "19.9975,73.7898"
         }
         
         # Add additional parameters if present (like cycle_number/BU for MSEDCL)
@@ -2673,11 +2673,11 @@ async def pay_bill(request: BillPayRequest):
             "operator_id": request.biller_id,
             "amount": str(int(request.amount)),
             "confirmation_mobile_no": EKO_INITIATOR_ID,
-            "sender_name": request.customer_params.get("sender_name", "Customer"),
+            "sender_name": "Paras Reward",
             "client_ref_id": txn_ref,
             "user_code": EKO_USER_CODE,
-            "source_ip": "127.0.0.1",
-            "latlong": "19.0760,72.8777"
+            "source_ip": "34.170.12.145",
+            "latlong": "19.9975,73.7898"
         }
         
         # Add billfetchresponse if available (required for some operators)
