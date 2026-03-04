@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://prc-burn-system.preview.emergentagent.com/setup
+   https://error-monitor-v2.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

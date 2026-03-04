@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260304_091827/results.json' }],
   ],
   use: {
-    baseURL: 'https://prc-burn-system.preview.emergentagent.com',
+    baseURL: 'https://error-monitor-v2.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

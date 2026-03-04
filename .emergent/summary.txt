@@ -1,249 +1,152 @@
 <analysis>**original_problem_statement:**
-The user initially wanted to fix all failing Eko services (DTH, Electricity, Gas, DMT). Throughout the session, the scope expanded significantly. The new requirements included:
-1.  **Making Services Instant (P0):** Convert Mobile, DTH, and Electricity bill payments from an admin-approval model to an instant-execution model upon user request.
-2.  **Expanding BBPS Services (P0):** Add all available Eko BBPS services (e.g., Water, FASTag, Insurance, Credit Card, etc.) to the platform, make them instant, and integrate them into the frontend.
-3.  **Fix Regressions (P0):** Debug why DTH and Electricity payments were failing in production despite previous fixes.
-4.  **Admin Reporting (P1):** Create a new dashboard for admins to view the status of all instant BBPS requests (success, failed, pending) with user details.
-5.  **Update PRC Burning Mechanism (P1):** Implement a new, complex set of rules for PRC coin expiration, including a daily 1% burn for all users.
-6.  **Frontend Enhancements (P2):** Add an HD Holi animation (and later remove it), add a Quick Pay feature for recent transactions, and remove a How it Works section.
-7.  **Bug Fixes (P1):** Fix an issue where admins could not delete subscription plans and, most critically, resolve why operators were not loading for the newly added BBPS services.
+The user's primary goal is to fix all failing services and improve system reliability. The key issues reported during the session were:
+1.  **Electricity Bill Fetch Failures (P0):** Users were unable to fetch bill details for several electricity operators, including Jammu & Kashmir Power and MSEDCL. The issue evolved from incorrect consumer ID formats to missing secondary parameters (like 'BU' for MSEDCL).
+2.  **Razorpay Subscription Failures (P0):** A critical issue where users would successfully pay for a subscription via Razorpay, but the system would fail to extend their subscription validity, causing major customer complaints.
+3.  **FASTag and Other Services Failing (P0):** Users reported that FASTag and other BBPS services were failing with a Service not enabled error.
+4.  **Lack of Production Visibility (P1):** The user requested a way to monitor errors and payment statuses in production to understand and debug issues more effectively.
+5.  **Data Integrity Bugs (P1):** An issue where the  for BBPS transactions was being recorded as 0 in the admin dashboard.
 
 **User's preferred language**: The user communicates in a mix of **Marathi** and English. The next agent MUST be prepared to understand and respond primarily in **Marathi**.
 
 **what currently exists?**
-The application now supports a wide range of Eko BBPS services.
-- **Instant Services:** Mobile Recharge, DTH, Electricity, and EMI payments are configured to be executed instantly upon user request, bypassing admin approval. The logic includes an automatic refund mechanism if the transaction fails.
-- **New BBPS Services:** The backend and frontend have been updated to support ~18 different BBPS services, including Water, FASTag, Credit Card, Insurance, etc.
-- **PRC Burning Mechanism:** A new, complex PRC coin burning system has been implemented in  and scheduled in . It includes different expiry rules for user types and a daily 1% burn of all users' balances at 11 AM and 11 PM.
-- **Admin BBPS Dashboard:** A new page exists at  () which fetches data from a new API () to show all instant transaction attempts with user details and status.
-- **Quick Pay Feature:** The  page now includes a Quick Pay section that saves the user's last 5 transactions to  for easy repetition.
-- **Holi Animation Removed:** The temporary Holi animation feature has been completely removed from the codebase ( and ).
+The application is a full-stack platform for bill payments (BBPS) and subscriptions.
+-   **Dynamic BBPS Forms:** The frontend () now dynamically fetches operator-specific parameters (e.g., required fields, regex validation) from the Eko API and renders the appropriate input fields and validation hints. This supports multi-parameter services like MSEDCL electricity.
+-   **Robust Razorpay Sync:** The subscription logic () has been hardened. It now correctly processes 'paid' orders that were previously missed and includes a manual admin endpoint () to force-activate subscriptions, which has been successfully used to fix user issues.
+-   **Error Monitoring Dashboard:** A new admin page at  provides a dashboard to view payment event logs, success/failure rates, and aggregated error messages, giving visibility into production issues. The backend logs all critical payment events to a dedicated  collection.
+-   **Data Integrity Fixes:** A bug causing  to be stored as  in  has been fixed. A migration script was also run to correct 73 historical records.
+-   **Improved Error Handling:** Raw API error messages are now parsed to show user-friendly toasts and messages (e.g., Please enter a valid Consumer Code instead of a raw Eko error string).
 
 **Last working item**:
--   **Last item agent was working:** Debugging a critical production issue where operators fail to load for newly added BBPS services like Credit Card and Municipal Tax. The user reported this with screenshots even after a potential fix was deployed. The agent confirmed via  that the backend API was returning operators correctly, but the frontend was intermittently failing to display them.
+-   **Last item agent was working:** The user reported a Razorpay payment () that was successfully 'captured' but showed as 'Cancelled' in the admin panel, and the user's subscription was not extended. The agent identified that money was deducted and the correct action would be to manually activate the subscription.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (Manual  for backend, screenshots for frontend in preview)
--   **Which testing method agent to use?** Frontend testing agent. The issue is a subtle frontend bug related to state management or component re-rendering. The testing agent should be instructed to:
-    1.  Navigate to the  page.
-    2.  Click on each new service one by one (Insurance, Credit Card, Municipal Tax, etc.).
-    3.  For each service, verify that the Select Operator dropdown becomes populated and the X available text shows a number greater than 0.
--   **User Testing Done:** Y (User reported the issue persists in production for some services).
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Manual testing. The agent should first use the existing manual activation endpoint to immediately resolve the issue for the user.
+-   **User Testing Done:** Y (User reported the issue).
 
 **All Pending/In progress Issue list**:
--   Issue 1: BBPS Operators Not Loading in Production for New Services (P0)
--   Issue 2: Admin Panel Failed to delete plan Error (P1)
--   Issue 3: Fix Eko Domestic Money Transfer (DMT) Service (P2)
--   Issue 4: Run PRC Vault to PRC Balance Migration Script on Production (P2)
+-   Issue 1: Razorpay Captured Payment showing as 'Cancelled' (P0)
+-   Issue 2: FASTag, DTH, and other services failing with Service not enabled (P0)
+-   Issue 3: Electricity Bill Fetch Failures for some operators (P1)
+-   Issue 4: Admin Panel Failed to delete plan Error (P1)
 
 **Issues Detail:**
--   **Issue 1: BBPS Operators Not Loading in Production for New Services**
-    -   **Attempted fixes:** The agent identified that the frontend  in  was missing entries for the new services and added them. This fixed the issue for some services (like Insurance) but not others (like Credit Card), according to the user. The agent verified the backend API works correctly and returns operators for all categories. The agent added debug logs to the frontend but couldn't definitively find the root cause before the session ended. The issue seems to be a subtle state management or re-rendering bug in .
+-   **Issue 1: Razorpay Captured Payment showing as 'Cancelled'**
+    -   **Attempted fixes:** A previous fix was implemented to sync 'paid' orders, but this is a new edge case. The agent recommended manual activation as an immediate solution.
     -   **Next debug checklist:**
-        1.  Examine  very closely.
-        2.  Focus on the  hook that calls . Check its dependency array ().
-        3.  Investigate the logic in  and how the  state object is structured and accessed. The key  might be the source of the problem if  or  has an unexpected value.
-        4.  Use the **Frontend testing agent** to systematically test each service tab on the  page and check if the operator dropdown is populated.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a P0 bug blocking the use of all newly added payment services.
+        1.  Use the manual activation endpoint to fix this user's subscription: 
+        2.  Investigate why a  payment resulted in a  status in the  collection. Review the webhook handler in  for any logic that could incorrectly mark a paid order as cancelled.
+    -   **Why fix this issue and what will be achieved with the fix?** Critical financial issue. Users are paying but not getting the service.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Should Test frontend/backend/both after fix?** Backend
     -   **Blocked on other issue:** None.
 
--   **Issue 2: Admin Panel Failed to delete plan Error**
-    -   **Attempted fixes:** The agent reviewed the backend API () and frontend code in . No obvious errors were found. The API call seems correct.
+-   **Issue 2: FASTag, DTH, and other services failing with Service not enabled**
+    -   **Attempted fixes:** The agent confirmed BBPS service is active. Research into Eko documentation revealed that certain services require merchants to complete **HG Pay enrollment** for non-KYC users. This was identified as an Eko business requirement, not a technical bug.
     -   **Next debug checklist:**
-        1.  Since this is a production issue, the agent needs to test using the user's provided production credentials.
-        2.  Login as the user. Navigate to the plans page.
-        3.  Open the browser's developer tools (Network tab).
-        4.  Attempt to delete a plan and inspect the failed API request and its response payload for a more detailed error message.
-    -   **Why fix this issue and what will be achieved with the fix?** Admins are unable to manage subscription plans.
-    -   **Status:** NOT STARTED (Investigation done, but fix is pending).
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
+        1.  Clearly explain to the user in Marathi that this is not a code issue. They must contact Eko support and ask to complete the HG Pay enrollment process to activate these specific services (FASTag, DTH, Insurance, etc.).
+    -   **Why fix this issue and what will be achieved with the fix?** Unblocks major service categories for the user.
+    -   **Status:** BLOCKED (on user action with Eko).
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** N/A (Business requirement).
     -   **Blocked on other issue:** None.
 
--   **Issue 3: Fix Eko Domestic Money Transfer (DMT) Service**
-    -   **Status:** BLOCKED (Same as previous summary. Waiting on user/Eko Support for correct API specification).
+-   **Issue 3: Electricity Bill Fetch Failures**
+    -   **Attempted fixes:** Implemented multi-parameter support for operators like MSEDCL. Added dynamic validation hints to the UI. Direct API tests confirmed some operators work (BEST, UGVCL) while others have biller-side issues.
+    -   **Next debug checklist:**
+        1.  Ask the user to check the new Error Monitoring dashboard on production to see the exact errors for recent electricity payment failures.
+        2.  Work with the user to test one MSEDCL payment using the correct 12-digit Consumer No and 4-digit BU number to confirm if the UI and backend logic are working as expected post-deployment.
+    -   **Why fix this issue and what will be achieved with the fix?** Electricity payment is a core, high-volume feature.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on other issue:** None.
 
--   **Issue 4: Run PRC Vault to PRC Balance Migration Script on Production**
-    -   **Status:** NOT STARTED (Same as previous summary. Awaiting user confirmation).
+-   **Issue 4: Admin Panel Failed to delete plan Error**
+    -   **Status:** NOT STARTED (Carried over from initial handoff).
 
 **In progress Task List**:
 -   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** End-to-End Regression Test: Once the operator loading issue is fixed, verify one transaction for each new BBPS service (e.g., Water, FASTag).
--   **P1:** Decommission Old System: Remove any remaining old payment pages and APIs.
--   **P1:** Remove  file as it's no longer used.
+-   **P1:** Regression Test: Once the user confirms HG Pay enrollment, perform a full regression test of all newly enabled services (FASTag, DTH, etc.).
+-   **P1:** Refactor  into smaller, more manageable components.
+-   **P1:** Refactor  by moving routes into their respective files in the  directory.
 
 **Future Tasks:**
--   **P2:** Fix Razorpay Auto-Sync error handling.
+-   **P2:** Fix Eko Domestic Money Transfer (DMT) Service (BLOCKED).
+-   **P2:** Run PRC Vault to PRC Balance Migration Script on Production (NOT STARTED).
 -   **P3:** Add Email/Mobile OTP verification on signup.
 -   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
 
 **Completed work in this session**
--   **Instant Recharge Feature (DONE):** Implemented instant execution for Mobile, DTH, Electricity, and EMI payments in , bypassing admin approval.
--   **BBPS Service Expansion (DONE):** Added ~12 new BBPS services (Water, FASTag, Credit Card etc.) to the backend (, ) and frontend ().
--   **New PRC Burning Mechanism (DONE):** Implemented a complex new PRC expiration system with a daily 1% balance burn, managed via  and .
--   **Admin BBPS Dashboard (DONE):** Created a new backend API () and a corresponding frontend page () for admins to monitor instant transactions.
--   **Frontend UI Enhancements (DONE):**
-    -   Added a Quick Pay feature to the Redeem page.
-    -   Removed the How It Works section from the Redeem page.
-    -   Added, improved, and subsequently removed a temporary Holi animation.
--   **Bug Fixes (DONE):**
-    -   Fixed a regression where Electricity payments failed due to using an incorrect API request format in .
-    -   Partially fixed the operator loading issue by updating the frontend .
+-   **Error/Log Monitoring System (DONE):** Implemented a new backend API and frontend dashboard () to provide visibility into production payment events and errors.
+-   **Dynamic Multi-Parameter BBPS Support (DONE):** The frontend and backend now handle services requiring multiple inputs (like MSEDCL electricity), fetching parameter requirements dynamically from Eko.
+-   **Critical Razorpay Subscription Sync Fix (DONE):** Resolved a bug where paid subscriptions were not being activated. Added an idempotent sync process and a manual admin activation endpoint.
+-   **BBPS  Bug Fix (DONE):** Corrected a bug causing the amount to be stored improperly and ran a migration to fix 73 historical transaction records.
+-   **Improved UI/UX (DONE):** Replaced raw API errors with user-friendly messages and added retry logic for fetching operators to improve UI stability.
+-   **All BBPS Services Enabled (DONE):** The testing agent confirmed that all core BBPS categories (Mobile, DTH, Electricity, EMI, Credit Card) are technically integrated and passing tests. Some are blocked by Eko business rules.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Admin Panel Failed to delete plan Error:** This issue was noted in the original handoff but has not been addressed in this session.
+-   **Eko Domestic Money Transfer (DMT) Service:** This remains blocked, pending API specifications from Eko.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Instant Payments Logic:** In , the  function was modified to check  against an  list. If matched, it immediately calls the Eko processing function within a  block, allowing for auto-refunds on failure.
--   **Dynamic Operator Fetching:** The frontend  page fetches operators by calling  with a . This ID is determined by mapping the selected  (e.g., Credit Card) to a category ID via a  object. The bug lies somewhere in this mapping/fetching/rendering chain.
--   **Scheduled Jobs:** The  library in  is used to trigger the daily PRC burn logic in  at 11 AM and 11 PM.
--   **MongoDB Aggregation:** The  endpoint uses a MongoDB aggregation pipeline with  to join the  collection with the  collection to display user names and mobile numbers.
+-   **Dynamic Operator Parameters:** The system now calls Eko's  API upon operator selection. The response (required fields, regex, labels) is used to dynamically render the correct input fields and validation hints on the frontend, solving the MSEDCL and J&K Power issues.
+-   **Event-Driven Logging:** A new  MongoDB collection was created to log key actions (e.g., , , ). The Error Monitor dashboard aggregates this data.
+-   **Idempotent Financial Operations:** The Razorpay sync logic in  was updated to be idempotent, safely processing 'paid' orders by checking if a subscription has already been extended for a given order before acting.
 
 **All files of reference**
--   : Central file for all BBPS services UI, operator loading logic, and the current P0 bug.
--   : Contains the core logic for instant payments and auto-refunds.
--   : Contains the new PRC burning logic and the API for the admin BBPS dashboard.
--   : New admin-facing UI for monitoring transactions.
-
-**Areas that need refactoring**:
--   The  file is now unused and should be deleted.
--    has become extremely large and complex. It should be broken down into smaller components (e.g., , , ).
--    continues to grow and should be modularized.
-
-**key api endpoints**
--   : (POST) **Modified** to handle both pending and instant requests.
--   : (GET) Used by the frontend to fetch operators. Key to the current P0 bug.
--   : (GET) **New** endpoint to populate the admin dashboard for instant requests.
--   : (POST) **New** endpoint to configure the PRC burn mechanism.
--   : (GET) **New** endpoint that lists all available BBPS services.
+-   : Core file for all BBPS services UI.
+-   : Logic for fetching operator parameters and executing Eko transactions.
+-   : Critical subscription activation and sync logic.
+-    & : The new error monitoring system.
 
 **Critical Info for New Agent**
--   **The #1 Priority is the Operator Loading Bug.** The user cannot use the newly added services until this is fixed. The problem is in the frontend (), as the backend API has been verified to work. Do not get sidetracked.
--   **Production Testing:** The user has provided production credentials. Use them carefully for debugging the operator loading and plan deletion issues, as these bugs are only visible in the production environment.
--   **IP Whitelisting is NOT the current issue.** While it was a problem in the preview environment, the user has confirmed some services work in production, so the production server's IP is whitelisted. The current failures are code-related.
--   **User Language is Marathi.** All communication, plans, and summaries must be primarily in Marathi.
+-   **User Communication is Key:** The user is frustrated with recurring issues. Communicate clearly in **Marathi**. Explain the distinction between code bugs (which you will fix) and business requirements from Eko (which the user must address).
+-   **HG Pay Enrollment is a Blocker:** The user cannot use FASTag, DTH, Insurance, etc., until they contact Eko and complete the HG Pay enrollment. You must make this clear. This is not a technical issue you can solve.
+-   **Prioritize Financial Bugs:** The Razorpay subscription issue is P0. Manually fix the user's immediate problem first, then investigate the root cause.
+-   **Use the Error Monitor:** The new Error Monitor at  is your best tool for understanding production failures. Use it to diagnose the remaining electricity bill fetch issues.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests to fix Plan Delete and the still-failing BBPS operator loading in production. Provides production login credentials. (IN PROGRESS)
-2.  **User:** Asks if the new BBPS services flow is correct and if they can be completed. (Agent confirmed logic is correct, pending bugfix)
-3.  **User:** Reports the new services are not active because operators are not loading. States this is a coding issue, not IP whitelist. Also asks for a place to see all success/failed instant requests. (This led to the BBPS Dashboard task).
-4.  **User:** Defines new, complex rules for the PRC Burning Mechanism, including a daily 1% burn for all users. (COMPLETED)
-5.  **User:** Asks for an explanation and update of the Burning Mechanism. (COMPLETED)
-6.  **User:** Asks if FASTag and all other new services can be used. (Agent confirmed logic is ready)
-7.  **User:** Requests adding a Quick Pay feature and removing the How it Works section. (COMPLETED)
-8.  **User:** Asks for all new BBPS services to be added to the frontend and made live. (COMPLETED)
-9.  **User:** Asks for all Eko-supported BBPS services to be added. (COMPLETED)
-10. **User:** Asks for a list of all services available in BBPS via Eko. (COMPLETED)
+1.  **User:** Reports a Razorpay payment is 'captured' but the admin panel shows it as 'Cancelled'. **(PENDING FIX)**
+2.  **User:** Asks for next steps after deploying. (Agent advised to sync).
+3.  **User:** Reports FASTag recharge is failing. **(PENDING EXPLANATION of HG Pay)**
+4.  **User:** Demands a full fix for all services, referencing Eko docs and correct formats.
+5.  **User:** Asks if the new Error Monitor will help understand production issues. (Agent confirmed).
+6.  **User:** Reports the 'Amount' column shows 0 in the BBPS dashboard. **(FIXED)**
+7.  **User:** Requests an error/log monitoring system. **(IMPLEMENTED)**
+8.  **User:** Reports an electricity bill payment failed with a raw Eko error. **(FIXED - improved message)**
+9.  **User:** Provides a correct 13-digit J&K consumer number. **(Agent confirmed API works)**
+10. **User:** Reports that after deploying, no bills are fetching on production. **(Agent identified MSEDCL multi-parameter issue and fixed it)**
 
 **Project Health Check:**
 -   **Broken:**
-    -   Frontend operator loading for new BBPS services ().
-    -   Admin panel Delete Plan functionality.
--   **Blocked:** Eko DMT service (pending info from Eko support).
+    -   Razorpay subscription activation has an edge case where  payments are marked .
+    -   Electricity bill fetch for certain operators (MSEDCL still needs user verification).
+-   **Blocked:**
+    -   Major BBPS categories (FASTag, DTH, Insurance) are blocked by Eko's HG Pay enrollment business requirement.
+    -   Eko DMT service remains blocked.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Eko:** Integration has been significantly expanded to include many new BBPS payment categories. The core logic relies on correctly mapping frontend service names to Eko's numerical .
+-   **Eko:** The integration is now more sophisticated, using Eko's  API to handle operator-specific requirements. Several services are blocked pending account-level activation with Eko (HG Pay).
+-   **Razorpay:** Used for subscriptions. A critical sync issue was resolved, but edge cases still need investigation.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO. All testing was manual via  for the backend and screenshots/visual inspection for the frontend. This likely contributed to the subtle frontend bug being missed.
--   **Test files created:** None.
--   **Known regressions:** The BBPS operator loading feature regressed after being partially fixed. It works for some services but not others in production.
+-   **Testing agent used after significant changes:** YES. It confirmed that the underlying BBPS services API was working for many operators and helped isolate issues.
+-   **Test files created:** Yes, in  and as  files in the frontend.
+-   **Known regressions:** Electricity bill payment remains a recurring pain point, with the root cause shifting as deeper issues are uncovered.
 
 **Credentials to test flow:**
--   **Production User**: UID:  / PIN: 
+-   **Production User**:  / PIN: 
 -   **Admin User**:  / 
--   **Test User**:  / 
 
 **What agent forgot to execute**
--   The agent did not create persistent tests (============================= test session starts ==============================
-platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0
-rootdir: /app
-plugins: anyio-4.11.0
-collected 1366 items / 8 errors
-
-==================================== ERRORS ====================================
-_________ ERROR collecting backend/tests/test_luxury_savings_split.py __________
-import file mismatch:
-imported module 'test_luxury_savings_split' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_luxury_savings_split.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_luxury_savings_split.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_mining_claim_flow.py ___________
-import file mismatch:
-imported module 'test_mining_claim_flow' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_claim_flow.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_claim_flow.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_mining_referral_issues.py _________
-import file mismatch:
-imported module 'test_mining_referral_issues' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_referral_issues.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_referral_issues.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_network_analytics.py ___________
-import file mismatch:
-imported module 'test_network_analytics' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_network_analytics.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_network_analytics.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_referrals_active_status.py ________
-import file mismatch:
-imported module 'test_referrals_active_status' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_referrals_active_status.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_referrals_active_status.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting backend/tests/test_rejection_reason_account_age.py ______
-import file mismatch:
-imported module 'test_rejection_reason_account_age' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_rejection_reason_account_age.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_rejection_reason_account_age.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______________ ERROR collecting backend/tests/test_user_360.py ________________
-import file mismatch:
-imported module 'test_user_360' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_user_360.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_user_360.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting backend/tests/test_vip_multi_plan_system.py _________
-import file mismatch:
-imported module 'test_vip_multi_plan_system' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_vip_multi_plan_system.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_vip_multi_plan_system.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-=============================== warnings summary ===============================
-admin-deploy/backend/tests/test_order_delivery_distribution.py:60
-  /app/admin-deploy/backend/tests/test_order_delivery_distribution.py:60: PytestCollectionWarning: cannot collect test class 'TestData' because it has a __init__ constructor (from: admin-deploy/backend/tests/test_order_delivery_distribution.py)
-    class TestData:
-
-backend/tests/test_eko_bill_payments.py:107
-  /app/backend/tests/test_eko_bill_payments.py:107: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-    @pytest.mark.timeout(60)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-ERROR backend/tests/test_luxury_savings_split.py
-ERROR backend/tests/test_mining_claim_flow.py
-ERROR backend/tests/test_mining_referral_issues.py
-ERROR backend/tests/test_network_analytics.py
-ERROR backend/tests/test_referrals_active_status.py
-ERROR backend/tests/test_rejection_reason_account_age.py
-ERROR backend/tests/test_user_360.py
-ERROR backend/tests/test_vip_multi_plan_system.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
-======================== 2 warnings, 8 errors in 1.61s ========================= or ) for the new instant payment flows or the complex PRC burn logic, making future regressions likely.
--   The agent did not fully resolve the recurring frontend operator loading issue, leaving it as the main blocker for the next session.
--   The agent did not address the long-standing pending tasks from the previous fork (DMT fix, PRC vault migration, admin dashboard refresh, clearing old requests).</analysis>
+-   The Failed to delete plan admin bug was not addressed.
+-   The long-standing PRC vault migration and DMT fix tasks were not prioritized.
+-   The suggested refactoring of  and  was not performed.</analysis>
