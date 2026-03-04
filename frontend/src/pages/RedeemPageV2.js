@@ -1891,13 +1891,11 @@ const RedeemPageV2 = ({ user }) => {
                   </>
                 )}
                 
-                {/* DTH, EMI removed - these services are no longer available */}
-                
                 {/* ============================================ */}
-                {/* NEW BBPS SERVICES - Generic Form */}
-                {/* Water, Broadband, Landline, Credit Card, Insurance, Education, etc. */}
+                {/* BBPS SERVICES - Generic Form */}
+                {/* DTH, EMI, FASTag, Water, Broadband, Landline, Credit Card, Insurance, Education, etc. */}
                 {/* ============================================ */}
-                {['water', 'broadband', 'landline', 'credit_card', 'insurance', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid'].includes(selectedService) && (
+                {['dth', 'emi', 'fastag', 'water', 'broadband', 'landline', 'credit_card', 'insurance', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid', 'housing_society'].includes(selectedService) && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>
@@ -1907,6 +1905,9 @@ const RedeemPageV2 = ({ user }) => {
                          selectedService === 'credit_card' ? 'Bank/Card Issuer' :
                          selectedService === 'education' ? 'Institution' :
                          selectedService === 'lpg' ? 'LPG Provider' :
+                         selectedService === 'dth' ? 'DTH Provider' :
+                         selectedService === 'emi' ? 'Bank / Lender' :
+                         selectedService === 'fastag' ? 'FASTag Issuer' :
                          'Provider'} *
                         {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
                       </Label>
@@ -1939,6 +1940,9 @@ const RedeemPageV2 = ({ user }) => {
                            selectedService === 'lpg' ? 'LPG Consumer ID' :
                            selectedService === 'municipal_tax' ? 'Property ID' :
                            selectedService === 'housing_society' ? 'Flat/Unit No.' :
+                           selectedService === 'dth' ? 'Customer ID / Subscriber ID' :
+                           selectedService === 'emi' ? 'Loan Account Number' :
+                           selectedService === 'fastag' ? 'Vehicle Number' :
                            'Consumer/Account Number'} *
                         </Label>
                         <div className="flex gap-2">
@@ -1948,6 +1952,8 @@ const RedeemPageV2 = ({ user }) => {
                                    selectedService === 'insurance' ? formData.policy_number :
                                    selectedService === 'education' ? formData.student_id :
                                    selectedService === 'lpg' ? formData.lpg_id :
+                                   selectedService === 'emi' ? formData.loan_account :
+                                   selectedService === 'fastag' ? formData.vehicle_number :
                                    formData.consumer_number}
                             onChange={(e) => {
                               const field = selectedService === 'mobile_postpaid' ? 'mobile_number' :
@@ -1955,11 +1961,16 @@ const RedeemPageV2 = ({ user }) => {
                                            selectedService === 'insurance' ? 'policy_number' :
                                            selectedService === 'education' ? 'student_id' :
                                            selectedService === 'lpg' ? 'lpg_id' :
+                                           selectedService === 'emi' ? 'loan_account' :
+                                           selectedService === 'fastag' ? 'vehicle_number' :
                                            'consumer_number';
                               setFormData({ ...formData, [field]: e.target.value, amount: '' });
                               setBillDetails(null);
                             }}
                             placeholder={selectedService === 'mobile_postpaid' ? 'Enter 10 digit mobile number' :
+                                        selectedService === 'dth' ? 'Enter DTH Customer ID' :
+                                        selectedService === 'emi' ? 'Enter Loan Account Number' :
+                                        selectedService === 'fastag' ? 'Enter Vehicle Number (e.g., MH12AB1234)' :
                                         'Enter account/consumer number'}
                             className="flex-1 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             data-testid="consumer-input"
@@ -1972,6 +1983,8 @@ const RedeemPageV2 = ({ user }) => {
                                                         selectedService === 'insurance' ? formData.policy_number :
                                                         selectedService === 'education' ? formData.student_id :
                                                         selectedService === 'lpg' ? formData.lpg_id :
+                                                        selectedService === 'emi' ? formData.loan_account :
+                                                        selectedService === 'fastag' ? formData.vehicle_number :
                                                         formData.consumer_number)}
                             className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
                             data-testid="fetch-bill-btn"
