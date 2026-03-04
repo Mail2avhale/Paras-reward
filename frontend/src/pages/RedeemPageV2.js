@@ -1062,11 +1062,14 @@ const RedeemPageV2 = ({ user }) => {
   const selectedOperatorData = currentOperators.find(op => 
     String(op.id) === String(formData.operator) || String(op.operator_id) === String(formData.operator)
   );
-  // Check actual fetch_bill_required from operator params API response
-  const supportsBillFetch = operatorParams?.fetch_bill_required === true || 
-                            operatorParams?.data?.fetchBill === 1 ||
-                            selectedOperatorData?.bill_fetch === true ||
-                            selectedOperatorData?.fetchBill === 1;
+  
+  // For electricity, gas, water - ALWAYS allow bill fetch (Eko API supports it)
+  // billFetchResponse from Eko may be 0 but the API still works
+  const billFetchServices = ['electricity', 'gas', 'water', 'landline', 'broadband', 'credit_card', 'insurance', 'emi'];
+  const supportsBillFetch = billFetchServices.includes(selectedService) ||
+                            operatorParams?.billFetchResponse === 1 ||
+                            selectedOperatorData?.billFetchResponse === 1 ||
+                            selectedOperatorData?.supports_bill_fetch === true;
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 pb-24 pt-16">
