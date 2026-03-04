@@ -1522,13 +1522,13 @@ const RedeemPageV2 = ({ user }) => {
                         {formData.consumer_number && operatorParams?.parameters?.[0]?.regex && 
                          !new RegExp(operatorParams.parameters[0].regex).test(formData.consumer_number) && (
                           <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
-                            ❌ चुकीचा format! {operatorParams.parameters[0].error_message}
+                            ❌ Invalid format! {operatorParams.parameters[0].error_message}
                           </p>
                         )}
                         {formData.consumer_number && operatorParams?.parameters?.[0]?.regex && 
                          new RegExp(operatorParams.parameters[0].regex).test(formData.consumer_number) && (
                           <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                            ✅ योग्य format
+                            ✅ Valid format
                           </p>
                         )}
                         {/* Show operator-specific format hint */}
@@ -1536,18 +1536,18 @@ const RedeemPageV2 = ({ user }) => {
                           <div className="mt-2 p-2 bg-gray-800/30 rounded-lg border border-gray-700/50">
                             <p className="text-xs text-cyan-400">
                               💡 {operatorParams.parameters[0].error_message || 
-                                  (operatorParams.parameters[0].regex === '^[0-9]{13}$' ? '13 अंकी नंबर टाका' : 
-                                   operatorParams.parameters[0].regex === '^[0-9]{10}$' ? '10 अंकी नंबर टाका' :
-                                   operatorParams.parameters[0].regex === '^[0-9]{12}$' ? '12 अंकी नंबर टाका' :
-                                   operatorParams.parameters[0].regex === '^[0-9]{9}$' ? '9 अंकी नंबर टाका' :
+                                  (operatorParams.parameters[0].regex === '^[0-9]{13}$' ? 'Enter 13 digit number' : 
+                                   operatorParams.parameters[0].regex === '^[0-9]{10}$' ? 'Enter 10 digit number' :
+                                   operatorParams.parameters[0].regex === '^[0-9]{12}$' ? 'Enter 12 digit number' :
+                                   operatorParams.parameters[0].regex === '^[0-9]{9}$' ? 'Enter 9 digit number' :
                                    `Format: ${operatorParams.parameters[0].regex}`)}
                             </p>
                           </div>
                         )}
                         {supportsBillFetch ? (
-                          <p className="text-xs text-gray-500 mt-1">Consumer number टाकून 🔍 बटण दाबा</p>
+                          <p className="text-xs text-gray-500 mt-1">Enter consumer number and click 🔍 to fetch bill</p>
                         ) : (
-                          <p className="text-xs text-amber-500 mt-1">⚡ या provider साठी bill fetch उपलब्ध नाही. Amount manually टाका.</p>
+                          <p className="text-xs text-amber-500 mt-1">⚡ Bill fetch not available for this provider. Enter amount manually.</p>
                         )}
                       </div>
                     )}
@@ -1613,7 +1613,7 @@ const RedeemPageV2 = ({ user }) => {
                           <span className="text-amber-400 font-medium">Bill Fetch Issue</span>
                         </div>
                         <p className="text-white text-sm mt-2 font-medium">{billError}</p>
-                        <p className="text-gray-400 text-xs mt-2">Amount manually टाकून payment करू शकता.</p>
+                        <p className="text-gray-400 text-xs mt-2">You can still enter amount manually.</p>
                       </div>
                     )}
                     

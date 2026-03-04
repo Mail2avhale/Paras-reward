@@ -257,28 +257,30 @@ def get_operators(category: str):
     - 22: FASTag (20 operators)
     """
     category_map = {
-        # Recharge
-        "mobile_recharge": 1,
-        "mobile_prepaid": 1,
-        "dth": 4,
-        "mobile_postpaid": 10,
+        # Mobile Recharge - Category 5 has Jio, Airtel, Vi, BSNL
+        "mobile_recharge": 5,
+        "mobile_prepaid": 5,
+        "mobile_postpaid": 10,   # 7 operators
+        
+        # DTH
+        "dth": 4,                # 5 operators
         
         # Utility Bills
-        "electricity": 8,
-        "water": 11,
-        "landline": 9,
-        "broadband": 1,  # Uses same as mobile prepaid
+        "electricity": 8,        # 89 operators
+        "water": 11,             # 54 operators
+        "landline": 9,           # 5 operators
+        "broadband": 1,          # 92 operators (this is actually broadband)
         
         # Financial
-        "emi": 21,
+        "emi": 21,               # 294 operators
         "loan": 21,
         "loan_emi": 21,
-        "credit_card": 7,
-        "insurance": 20,
+        "credit_card": 7,        # 29 operators
+        "insurance": 20,         # 40 operators
         
         # Transport & Others
-        "fastag": 22,
-        "housing_society": 12,
+        "fastag": 22,            # 20 operators
+        "housing_society": 12,   # 105 operators
         "municipal_tax": 12
     }
     
