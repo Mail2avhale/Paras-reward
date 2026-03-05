@@ -269,6 +269,7 @@ const RedeemPageV2 = ({ user }) => {
   const [dmtStep, setDmtStep] = useState(1); // 1=Mobile, 2=Verify, 3=Recipient, 4=Amount
   const [dmtCustomer, setDmtCustomer] = useState(null);
   const [dmtRecipientId, setDmtRecipientId] = useState(null);
+  const [existingRecipients, setExistingRecipients] = useState([]);
   const [verifyingCustomer, setVerifyingCustomer] = useState(false);
   const [addingRecipient, setAddingRecipient] = useState(false);
   const [senderMobile, setSenderMobile] = useState('');
@@ -661,24 +662,35 @@ const RedeemPageV2 = ({ user }) => {
     
     setVerifyingCustomer(true);
     try {
-      const response = await axios.get(`${API}/eko/dmt/v3/customer/${senderMobile}`);
+      // Use working v1 API for customer search
+      const response = await axios.post(`${API}/eko/dmt/customer/search`, {
+        mobile: senderMobile,
+        user_id: user?.uid || 'guest'
+      });
       
-      if (response.data.success) {
+      if (response.data.success && response.data.data?.customer_exists) {
         setDmtCustomer(response.data.data);
         setDmtStep(3); // Go to recipient step
         toast.success('Customer verified successfully!');
+        
+        // Fetch existing recipients
+        try {
+          const recipientsRes = await axios.get(`${API}/eko/dmt/recipients/${senderMobile}?user_id=${user?.uid || 'guest'}`);
+          if (recipientsRes.data.success && recipientsRes.data.data?.recipients?.length > 0) {
+            setExistingRecipients(recipientsRes.data.data.recipients);
+          }
+        } catch (e) {
+          console.log('No existing recipients found');
+        }
       } else {
-        // Customer not found - might need OTP verification
-        toast.info('New customer - verification may be required');
-        setDmtCustomer({ mobile: senderMobile, is_new: true });
-        setDmtStep(3); // Still proceed to recipient step
+        // Customer not found - needs registration
+        toast.info('New customer - registration required');
+        setDmtCustomer({ mobile: senderMobile, is_new: true, needs_registration: true });
+        setDmtStep(2); // Go to registration/OTP step
       }
     } catch (error) {
       console.error('Customer verification failed:', error);
-      // Allow to proceed for testing
-      toast.warning('Could not verify customer. Proceeding...');
-      setDmtCustomer({ mobile: senderMobile, is_new: true });
-      setDmtStep(3);
+      toast.error('Customer verification failed. Please try again.');
     } finally {
       setVerifyingCustomer(false);
     }
@@ -693,35 +705,25 @@ const RedeemPageV2 = ({ user }) => {
     
     setAddingRecipient(true);
     try {
-      const customerId = dmtCustomer?.customer_id || dmtCustomer?.mobile || senderMobile;
-      
-      const response = await axios.post(`${API}/eko/dmt/v3/recipient/add`, {
-        customer_id: customerId,
+      // Use working v1 API for adding recipient
+      const response = await axios.post(`${API}/eko/dmt/recipient/add`, {
+        user_id: user?.uid || 'guest',
+        mobile: senderMobile,
         recipient_name: formData.account_holder,
-        bank_code: formData.selected_bank?.bank_code || formData.bank_name?.substring(0, 4).toUpperCase(),
         account_number: formData.account_number,
-        ifsc: formData.ifsc_code,
-        recipient_mobile: formData.mobile || senderMobile
+        ifsc: formData.ifsc_code
       });
       
-      if (response.data.success && response.data.recipient_id) {
-        setDmtRecipientId(response.data.recipient_id);
+      if (response.data.success && response.data.data?.recipient_id) {
+        setDmtRecipientId(response.data.data.recipient_id);
         setDmtStep(4); // Go to amount step
         toast.success('Bank account added successfully!');
       } else {
-        // For testing, generate a temporary ID
-        const tempId = `RCPT_${Date.now()}`;
-        setDmtRecipientId(tempId);
-        setDmtStep(4);
-        toast.info('Recipient registered. Proceeding...');
+        toast.error(response.data.user_message || 'Failed to add recipient');
       }
     } catch (error) {
       console.error('Add recipient failed:', error);
-      // Allow to proceed for testing
-      const tempId = `RCPT_${Date.now()}`;
-      setDmtRecipientId(tempId);
-      setDmtStep(4);
-      toast.warning('Could not verify recipient with Eko. Proceeding...');
+      toast.error('Failed to add bank account. Please check details.');
     } finally {
       setAddingRecipient(false);
     }
@@ -961,6 +963,36 @@ const RedeemPageV2 = ({ user }) => {
     
     setSubmitting(true);
     try {
+      // For DMT, use direct EKO transfer API
+      if (selectedService === 'dmt' && dmtRecipientId) {
+        const transferResponse = await axios.post(`${API}/eko/dmt/transfer`, {
+          user_id: user.uid,
+          customer_mobile: senderMobile,
+          recipient_id: dmtRecipientId,
+          amount: parseFloat(formData.amount)
+        });
+        
+        if (transferResponse.data.success) {
+          toast.success(transferResponse.data.message || 'Transfer successful!');
+          // Reset DMT flow
+          setDmtStep(1);
+          setDmtCustomer(null);
+          setDmtRecipientId(null);
+          setSenderMobile('');
+          setExistingRecipients([]);
+          setFormData(prev => ({ ...prev, amount: '', account_number: '', ifsc_code: '', account_holder: '' }));
+          fetchUserData();
+        } else {
+          toast.error(transferResponse.data.message || 'Transfer failed');
+          if (transferResponse.data.prc_refunded) {
+            toast.info('PRC has been refunded');
+            fetchUserData();
+          }
+        }
+        return;
+      }
+      
+      // For other services, use redeem request
       const response = await axios.post(`${API}/redeem/request`, {
         user_id: user.uid,
         service_type: selectedService,
@@ -2131,8 +2163,163 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                     )}
                     
+                    {/* Step 2: Customer Registration/OTP (for new customers) */}
+                    {dmtStep === 2 && dmtCustomer?.needs_registration && (
+                      <div className="space-y-4 animate-fadeIn">
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-4">
+                          <p className="text-amber-400 text-sm">
+                            <Info className="inline h-4 w-4 mr-2" />
+                            New customer. Enter your name to register.
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">First Name *</Label>
+                            <Input
+                              value={formData.first_name || ''}
+                              onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                              placeholder="First Name"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm mb-2 block">Last Name *</Label>
+                            <Input
+                              value={formData.last_name || ''}
+                              onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                              placeholder="Last Name"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                            />
+                          </div>
+                        </div>
+                        
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!formData.first_name || !formData.last_name) {
+                              toast.error('Please enter your name');
+                              return;
+                            }
+                            setVerifyingCustomer(true);
+                            try {
+                              // Register customer
+                              const regRes = await axios.post(`${API}/eko/dmt/customer/register`, {
+                                user_id: user?.uid || 'guest',
+                                mobile: senderMobile,
+                                first_name: formData.first_name,
+                                last_name: formData.last_name
+                              });
+                              
+                              if (regRes.data.success) {
+                                // Send OTP
+                                await axios.post(`${API}/eko/dmt/customer/resend-otp`, {
+                                  user_id: user?.uid || 'guest',
+                                  mobile: senderMobile
+                                });
+                                toast.success('OTP sent to your mobile');
+                                setDmtCustomer(prev => ({ ...prev, otp_sent: true, needs_registration: false }));
+                              } else {
+                                toast.error(regRes.data.user_message || 'Registration failed');
+                              }
+                            } catch (error) {
+                              toast.error('Registration failed. Please try again.');
+                            } finally {
+                              setVerifyingCustomer(false);
+                            }
+                          }}
+                          disabled={!formData.first_name || !formData.last_name || verifyingCustomer}
+                          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
+                        >
+                          {verifyingCustomer ? (
+                            <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Registering...</>
+                          ) : (
+                            <>Register & Send OTP</>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Step 2: OTP Verification */}
+                    {dmtStep === 2 && dmtCustomer?.otp_sent && (
+                      <div className="space-y-4 animate-fadeIn">
+                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl mb-4">
+                          <p className="text-green-400 text-sm">
+                            <CheckCircle className="inline h-4 w-4 mr-2" />
+                            OTP sent to {senderMobile}
+                          </p>
+                        </div>
+                        
+                        <Label className="text-gray-300 text-sm mb-2 block">Enter OTP *</Label>
+                        <Input
+                          type="tel"
+                          value={formData.otp || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                          placeholder="Enter 6-digit OTP"
+                          maxLength={6}
+                          className="h-14 text-lg bg-gray-800/50 border-gray-700/50 text-white rounded-xl text-center tracking-widest"
+                        />
+                        
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!formData.otp || formData.otp.length < 4) {
+                              toast.error('Please enter OTP');
+                              return;
+                            }
+                            setVerifyingCustomer(true);
+                            try {
+                              const verifyRes = await axios.post(`${API}/eko/dmt/customer/verify-otp`, {
+                                user_id: user?.uid || 'guest',
+                                mobile: senderMobile,
+                                otp: formData.otp
+                              });
+                              
+                              if (verifyRes.data.success) {
+                                toast.success('Customer verified!');
+                                setDmtCustomer(verifyRes.data.data);
+                                setDmtStep(3);
+                              } else {
+                                toast.error(verifyRes.data.user_message || 'Invalid OTP');
+                              }
+                            } catch (error) {
+                              toast.error('Verification failed');
+                            } finally {
+                              setVerifyingCustomer(false);
+                            }
+                          }}
+                          disabled={!formData.otp || formData.otp.length < 4 || verifyingCustomer}
+                          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
+                        >
+                          {verifyingCustomer ? (
+                            <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Verifying...</>
+                          ) : (
+                            <>Verify OTP</>
+                          )}
+                        </Button>
+                        
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await axios.post(`${API}/eko/dmt/customer/resend-otp`, {
+                                user_id: user?.uid || 'guest',
+                                mobile: senderMobile
+                              });
+                              toast.success('OTP resent');
+                            } catch (e) {
+                              toast.error('Could not resend OTP');
+                            }
+                          }}
+                          className="w-full text-amber-400 hover:text-amber-300 text-sm"
+                        >
+                          Resend OTP
+                        </button>
+                      </div>
+                    )}
+                    
                     {/* Step 2: Customer Verified - Show info */}
-                    {dmtStep >= 2 && dmtCustomer && (
+                    {dmtStep >= 2 && dmtCustomer && !dmtCustomer.needs_registration && !dmtCustomer.otp_sent && (
                       <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-xl mb-4">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-400" />
@@ -2151,6 +2338,52 @@ const RedeemPageV2 = ({ user }) => {
                     {/* Step 3: Bank Account Details */}
                     {dmtStep === 3 && (
                       <div className="space-y-4 animate-fadeIn">
+                        {/* Show Existing Recipients */}
+                        {existingRecipients.length > 0 && (
+                          <div className="mb-4">
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              Your Saved Bank Accounts
+                            </Label>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {existingRecipients.map((recipient) => (
+                                <button
+                                  key={recipient.recipient_id}
+                                  type="button"
+                                  onClick={() => {
+                                    setDmtRecipientId(recipient.recipient_id);
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      account_holder: recipient.recipient_name,
+                                      account_number: recipient.account || recipient.acc_no
+                                    }));
+                                    setDmtStep(4);
+                                    toast.success('Bank account selected');
+                                  }}
+                                  className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-amber-500 transition-colors text-left"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-white font-medium">{recipient.recipient_name}</p>
+                                      <p className="text-gray-400 text-sm">
+                                        {recipient.bank} • ****{(recipient.account || recipient.acc_no || '').slice(-4)}
+                                      </p>
+                                    </div>
+                                    <ArrowRight className="h-5 w-5 text-amber-500" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="relative my-4">
+                              <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-gray-700" />
+                              </div>
+                              <div className="relative flex justify-center text-xs">
+                                <span className="bg-gray-900 px-2 text-gray-500">OR ADD NEW</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
                           Select Bank *
