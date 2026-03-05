@@ -98,6 +98,11 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
    - Frontend shows proper registration form
    - Button shows "Transfer to Bank" for DMT (not "Submit Request")
    - "Direct instant transfer via IMPS" message shown
+9. ✅ **P0 Bug Fix**: Subscription Renewal - Remaining Days Not Added (35/35 tests passed)
+   - Root cause: Webhook/sync code only checked `subscription_expires`
+   - Fix: Now checks `subscription_expires` OR `subscription_expiry` OR `vip_expiry`
+   - Debug endpoint added: `/api/razorpay/debug/subscription-renewal/{user_id}`
+   - Formula: total_days = plan_duration + remaining_days
 
 ## Pending/Future
 - P1: In-App Notifications (sonner toasts) for transfer status
