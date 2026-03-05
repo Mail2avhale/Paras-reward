@@ -8769,6 +8769,209 @@ async def manual_sync_razorpay_payments():
         return {"success": False, "error": str(e)}
 
 
+@api_router.post("/admin/razorpay/bulk-sync-captured")
+async def bulk_sync_captured_payments(request: Request):
+    """
+    SMART BULK SYNC: Fetch recent captured payments from Razorpay API
+    and activate any that are not yet activated in our system.
+    This is the FASTEST way to sync missing activations.
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            raise HTTPException(status_code=500, detail="Razorpay not configured")
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Plan durations
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Fetch recent captured payments from Razorpay (last 7 days)
+        # Using timestamp for 7 days ago
+        from_timestamp = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp())
+        
+        logging.info(f"[BULK-SYNC] Fetching payments from Razorpay since {from_timestamp}")
+        
+        # Fetch payments with status=captured
+        payments_response = razorpay_client.payment.all({
+            "count": 100,  # Max 100 at a time
+            "from": from_timestamp
+        })
+        
+        all_payments = payments_response.get("items", [])
+        logging.info(f"[BULK-SYNC] Found {len(all_payments)} total payments from Razorpay")
+        
+        # Filter only captured payments
+        captured_payments = [p for p in all_payments if p.get("status") == "captured"]
+        logging.info(f"[BULK-SYNC] {len(captured_payments)} are captured")
+        
+        activated_count = 0
+        already_active = 0
+        not_found = 0
+        errors = []
+        results = []
+        
+        for payment in captured_payments:
+            payment_id = payment.get("id")
+            order_id = payment.get("order_id")
+            amount = payment.get("amount", 0) / 100
+            
+            if not order_id:
+                continue
+            
+            try:
+                # Check if this order exists in our DB
+                order = await db.razorpay_orders.find_one({"order_id": order_id})
+                
+                if not order:
+                    not_found += 1
+                    continue
+                
+                # Check if already paid/activated
+                if order.get("status") == "paid":
+                    # Check if user subscription is actually active
+                    user_id = order.get("user_id")
+                    user = await db.users.find_one({"uid": user_id})
+                    
+                    if user and user.get("last_payment_id") == payment_id:
+                        already_active += 1
+                        continue
+                
+                # Need to activate!
+                user_id = order.get("user_id")
+                plan_type = order.get("plan_type", "monthly")
+                plan_name = order.get("plan_name", "startup")
+                duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                
+                now = datetime.now(timezone.utc)
+                
+                # Get user and check existing subscription
+                user = await db.users.find_one({"uid": user_id})
+                remaining_days = 0
+                user_name = "Unknown"
+                user_email = "Unknown"
+                
+                if user:
+                    user_name = user.get("name", "Unknown")
+                    user_email = user.get("email", "Unknown")
+                    
+                    # Check for existing active subscription
+                    expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                    if expiry:
+                        try:
+                            if isinstance(expiry, str):
+                                exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                            else:
+                                exp_date = expiry
+                            if exp_date.tzinfo is None:
+                                exp_date = exp_date.replace(tzinfo=timezone.utc)
+                            if exp_date > now:
+                                remaining_days = (exp_date - now).days
+                        except:
+                            pass
+                
+                total_days = duration_days + remaining_days
+                new_expiry = now + timedelta(days=total_days)
+                
+                # Update order status
+                await db.razorpay_orders.update_one(
+                    {"order_id": order_id},
+                    {
+                        "$set": {
+                            "status": "paid",
+                            "payment_id": payment_id,
+                            "payment_captured": True,
+                            "verified_amount": amount,
+                            "synced_at": now.isoformat(),
+                            "synced_via": "bulk_sync"
+                        }
+                    }
+                )
+                
+                # Update user subscription
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "subscription_plan": plan_name.lower(),
+                            "subscription_type": plan_type,
+                            "subscription_status": "active",
+                            "subscription_start": now.isoformat(),
+                            "subscription_expires": new_expiry,
+                            "subscription_expiry": new_expiry.isoformat(),
+                            "vip_expiry": new_expiry.isoformat(),
+                            "membership_type": "vip",
+                            "last_payment_id": payment_id,
+                            "last_payment_amount": amount,
+                            "last_payment_date": now.isoformat(),
+                            "activated_via": "bulk_sync"
+                        }
+                    }
+                )
+                
+                # Log to vip_payments
+                await db.vip_payments.insert_one({
+                    "user_id": user_id,
+                    "order_id": order_id,
+                    "payment_id": payment_id,
+                    "amount": amount,
+                    "subscription_plan": plan_name.lower(),
+                    "plan_type": plan_type,
+                    "status": "approved",
+                    "payment_method": "razorpay",
+                    "payment_captured": True,
+                    "new_expiry": new_expiry.isoformat(),
+                    "duration_days": total_days,
+                    "remaining_days_added": remaining_days,
+                    "approved_at": now.isoformat(),
+                    "created_at": now.isoformat(),
+                    "auto_activated": True,
+                    "activation_source": "bulk_sync"
+                })
+                
+                activated_count += 1
+                results.append({
+                    "order_id": order_id,
+                    "payment_id": payment_id,
+                    "user_name": user_name,
+                    "user_email": user_email,
+                    "plan": plan_name,
+                    "amount": amount,
+                    "total_days": total_days,
+                    "status": "ACTIVATED"
+                })
+                
+                logging.info(f"[BULK-SYNC] ✅ Activated: {user_name} ({user_email}) - {plan_name} for {total_days} days")
+                
+            except Exception as e:
+                errors.append({"order_id": order_id, "error": str(e)})
+                logging.error(f"[BULK-SYNC] Error for {order_id}: {e}")
+        
+        return {
+            "success": True,
+            "total_captured_in_razorpay": len(captured_payments),
+            "newly_activated": activated_count,
+            "already_active": already_active,
+            "orders_not_in_db": not_found,
+            "errors": len(errors),
+            "activated_users": results,
+            "error_details": errors[:10] if errors else []
+        }
+        
+    except Exception as e:
+        logging.error(f"[BULK-SYNC] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/admin/razorpay/sync-single")
 async def sync_single_razorpay_order(request: Request):
     """
