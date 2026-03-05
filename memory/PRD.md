@@ -86,6 +86,12 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
    - User current plan & expiry shown on orders
    - Payment history with status_message for users
    - Failure reason visible in admin panel
+7. ✅ **P1 Complete**: User Payment History on Subscription Page (23/23 tests passed)
+   - Payment History section with all attempts (success/failed/pending)
+   - Status emoji & color coding (✅⏳❌⚠️🚫)
+   - Failure reason displayed when payment fails
+   - "Try Again" retry button for failed payments
+   - Alert banner for payment done but subscription not activated
 
 ## Pending/Future
 - P1: In-App Notifications (sonner toasts) for transfer status
