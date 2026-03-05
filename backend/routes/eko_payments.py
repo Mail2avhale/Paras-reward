@@ -2843,17 +2843,18 @@ async def add_dmt_recipient(request: DMTRecipientRequest):
         raise HTTPException(status_code=500, detail=f"Recipient addition failed: {str(e)}")
 
 
-@router.get("/dmt/recipients/{mobile}")
-async def get_dmt_recipients(mobile: str):
-    """Get list of recipients for a sender"""
-    try:
-        result = await make_eko_request(
-            f"/v2/customers/{mobile}/recipients",
-            method="GET"
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Recipients not found: {str(e)}")
+# DEPRECATED: Use /api/eko/dmt/recipients/{mobile} from eko_dmt_service.py instead
+# @router.get("/dmt/recipients/{mobile}")
+# async def get_dmt_recipients(mobile: str):
+#     """Get list of recipients for a sender"""
+#     try:
+#         result = await make_eko_request(
+#             f"/v2/customers/{mobile}/recipients",
+#             method="GET"
+#         )
+#         return result
+#     except Exception as e:
+#         raise HTTPException(status_code=404, detail=f"Recipients not found: {str(e)}")
 
 
 @router.post("/dmt/verify-account")

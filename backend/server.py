@@ -67,6 +67,7 @@ from routes.eko_payments import router as eko_router, set_db as set_eko_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
+from routes.eko_dmt_service import router as dmt_router
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -41778,6 +41779,9 @@ api_router.include_router(monitor_router)
 
 # BBPS Services Router (Clean Implementation)
 api_router.include_router(bbps_router)
+
+# EKO DMT (Domestic Money Transfer) Router
+api_router.include_router(dmt_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
