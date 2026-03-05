@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260305_143535/results.json' }],
   ],
   use: {
-    baseURL: 'https://dmt-bugfix.preview.emergentagent.com',
+    baseURL: 'https://eko-integration.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

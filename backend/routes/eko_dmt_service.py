@@ -527,7 +527,7 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
         response = requests.post(url, data=payload, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Resend OTP Response: {response.status_code}")
-        logging.info(f"[DMT] Resend OTP Raw Response: {response.text[:500]}")
+        logging.info(f"[DMT] Resend OTP Raw Response: {response.text}")
         
         if response.status_code != 200:
             return create_error_response(
@@ -538,17 +538,39 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
         
         result = response.json()
         eko_status = result.get("status")
+        eko_data = result.get("data", {})
+        
+        # Check if OTP is returned in response (for testing/sandbox)
+        otp_in_response = eko_data.get("otp") or result.get("otp")
+        otp_ref_id = eko_data.get("otp_ref_id") or result.get("otp_ref_id")
+        verification_token = eko_data.get("verification_token") or result.get("verification_token")
+        
+        if otp_in_response:
+            logging.info(f"[DMT] *** OTP FOUND IN RESPONSE: {otp_in_response} ***")
         
         if eko_status == 0:
             eko_message = result.get("message", "OTP sent successfully")
             logging.info(f"[DMT] OTP Success - Eko Message: {eko_message}")
-            return create_success_response({
+            
+            response_data = {
                 "otp_sent": True,
                 "mobile": req.mobile,
                 "message": eko_message,
                 "eko_response_message": eko_message,
+                "eko_raw_response": result,  # Include full raw response
                 "note": "OTP should arrive within 1-2 minutes. If not received, check DND status or try resending."
-            }, "OTP sent")
+            }
+            
+            # Include OTP if present in response (sandbox/testing mode)
+            if otp_in_response:
+                response_data["otp"] = otp_in_response
+                response_data["otp_note"] = "OTP returned in API response (testing mode)"
+            if otp_ref_id:
+                response_data["otp_ref_id"] = otp_ref_id
+            if verification_token:
+                response_data["verification_token"] = verification_token
+            
+            return create_success_response(response_data, "OTP sent")
         else:
             return create_error_response(
                 eko_status,
