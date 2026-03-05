@@ -71,6 +71,7 @@ from routes.eko_dmt_service import router as dmt_router
 # DMT v3 router disabled - using v1 APIs instead
 # from routes.eko_dmt_v3 import router as dmt_v3_router
 from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
+from routes.eko_dmt_icici import router as dmt_icici_router, set_db as set_dmt_icici_db
 from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 
@@ -41855,6 +41856,7 @@ api_router.include_router(redeem_v2_router)
 # Error Monitor Router
 set_monitor_db(db)
 set_dmt_v3_db(db)  # Set DB for EKO DMT v3
+set_dmt_icici_db(db)  # Set DB for EKO DMT ICICI
 api_router.include_router(monitor_router)
 
 # BBPS Services Router (Clean Implementation)
@@ -41862,6 +41864,7 @@ api_router.include_router(bbps_router)
 
 # EKO DMT (Domestic Money Transfer) Router
 api_router.include_router(dmt_router)
+api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 (NO OTP)
 
 # EKO DMT v3 (Advanced with Aadhaar/OTP) Router
 # DMT v3 router disabled - using v1 APIs
