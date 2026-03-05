@@ -97,7 +97,31 @@ def generate_eko_headers() -> Dict[str, str]:
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/json"
+    }
+
+
+def generate_eko_headers_for_get() -> Dict[str, str]:
+    """
+    Generate EKO authentication headers for GET requests.
+    GET requests should not have Content-Type header.
+    """
+    timestamp = str(int(time.time() * 1000))
+    
+    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode()).decode()
+    
+    secret_key = base64.b64encode(
+        hmac.new(
+            encoded_key.encode(),
+            timestamp.encode(),
+            hashlib.sha256
+        ).digest()
+    ).decode()
+    
+    return {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp
     }
 
 
@@ -217,7 +241,7 @@ def get_bank_code_from_ifsc(ifsc: str) -> Optional[str]:
     """Get bank code from IFSC using EKO API"""
     try:
         url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}"
-        response = requests.get(url, headers=generate_eko_headers(), timeout=30)
+        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=30)
         
         if response.status_code == 200:
             data = response.json()
@@ -339,7 +363,7 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
     try:
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers(), timeout=REQUEST_TIMEOUT)
+        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Customer Search Response: {response.status_code}")
         
@@ -425,7 +449,7 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
         
         response = requests.put(
             url,
-            data=payload,
+            json=payload,
             headers=generate_eko_headers(),
             timeout=REQUEST_TIMEOUT
         )
@@ -467,6 +491,143 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
     except Exception as e:
         logging.error(f"[DMT] Registration Error: {e}")
         return create_error_response(500, str(e), "Registration failed. Please try again.")
+
+
+# ==================== STEP 2.5: CUSTOMER OTP VERIFICATION ====================
+
+class CustomerOTPRequest(BaseModel):
+    """Request for OTP operations"""
+    user_id: str
+    mobile: str = Field(..., min_length=10, max_length=10)
+    otp: Optional[str] = Field(None, min_length=4, max_length=6)
+
+
+@router.post("/customer/resend-otp")
+async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
+    """
+    Resend OTP for customer verification.
+    
+    EKO API: POST /v1/customers/mobile_number:{mobile}/otp
+    """
+    db = get_db()
+    client_ip = request.client.host if request.client else "unknown"
+    
+    logging.info(f"[DMT] Resend OTP: {req.mobile}")
+    
+    try:
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/otp?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        payload = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "pipe": "9",
+            "source_ip": SOURCE_IP
+        }
+        
+        response = requests.post(url, data=payload, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        
+        logging.info(f"[DMT] Resend OTP Response: {response.status_code}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                f"API Error: {response.status_code}",
+                "Failed to send OTP. Please try again."
+            )
+        
+        result = response.json()
+        eko_status = result.get("status")
+        
+        if eko_status == 0:
+            return create_success_response({
+                "otp_sent": True,
+                "mobile": req.mobile,
+                "message": result.get("message", "OTP sent successfully")
+            }, "OTP sent")
+        else:
+            return create_error_response(
+                eko_status,
+                result.get("message", "Failed to send OTP"),
+                "Unable to send OTP. Please try again."
+            )
+            
+    except Exception as e:
+        logging.error(f"[DMT] Resend OTP Error: {e}")
+        return create_error_response(500, str(e), "Failed to send OTP.")
+
+
+@router.post("/customer/verify-otp")
+async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
+    """
+    Verify customer OTP to complete registration.
+    
+    EKO API: PUT /v1/customers/verification/otp:{otp}
+    """
+    db = get_db()
+    client_ip = request.client.host if request.client else "unknown"
+    
+    if not req.otp:
+        return create_error_response(400, "OTP is required", "Please enter the OTP.")
+    
+    logging.info(f"[DMT] Verify OTP: {req.mobile}, OTP: ***{req.otp[-2:]}")
+    
+    try:
+        url = f"{EKO_BASE_URL}/v1/customers/verification/otp:{req.otp}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        payload = {
+            "id_type": "mobile_number",
+            "id": req.mobile,
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "pipe": "9",
+            "source_ip": SOURCE_IP
+        }
+        
+        response = requests.put(url, data=payload, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        
+        logging.info(f"[DMT] Verify OTP Response: {response.status_code}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                f"API Error: {response.status_code}",
+                "Failed to verify OTP. Please try again."
+            )
+        
+        result = response.json()
+        eko_status = result.get("status")
+        
+        # Log verification attempt
+        log_dmt_transaction(db, {
+            "action": "verify_otp",
+            "user_id": req.user_id,
+            "mobile": req.mobile,
+            "ip": client_ip,
+            "eko_status": eko_status,
+            "response": result
+        })
+        
+        if eko_status == 0:
+            customer_data = result.get("data", {})
+            return create_success_response({
+                "verified": True,
+                "customer_id": customer_data.get("customer_id"),
+                "mobile": req.mobile,
+                "state": customer_data.get("state"),
+                "state_desc": customer_data.get("state_desc"),
+                "available_limit": customer_data.get("available_limit"),
+                "message": result.get("message", "Customer verified successfully")
+            }, "Customer verified")
+        else:
+            return create_error_response(
+                eko_status,
+                result.get("message", "OTP verification failed"),
+                "Invalid OTP. Please check and try again."
+            )
+            
+    except Exception as e:
+        logging.error(f"[DMT] Verify OTP Error: {e}")
+        return create_error_response(500, str(e), "Verification failed.")
 
 
 # ==================== STEP 3: ADD RECIPIENT ====================
@@ -515,7 +676,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             "source_ip": SOURCE_IP
         }
         
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = requests.put(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Add Recipient Response: {response.status_code}")
         
@@ -599,7 +760,7 @@ async def get_recipients(mobile: str, user_id: str):
     try:
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{mobile}/recipients?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers(), timeout=REQUEST_TIMEOUT)
+        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Recipients Response: {response.status_code}")
         
@@ -806,7 +967,7 @@ async def transfer_money(req: TransferRequest, request: Request):
         
         logging.info(f"[DMT] Executing Transfer: ₹{amount_inr} via {url}")
         
-        response = requests.post(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = requests.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Transfer Response: {response.status_code}")
         
@@ -1088,7 +1249,7 @@ async def get_transaction_status(transaction_id: str, user_id: str):
         try:
             url = f"{EKO_BASE_URL}/v1/transactions/{eko_tid}?initiator_id={EKO_INITIATOR_ID}"
             
-            response = requests.get(url, headers=generate_eko_headers(), timeout=30)
+            response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -1213,7 +1374,7 @@ async def verify_bank_account(account: str, ifsc: str, user_id: str, request: Re
     try:
         url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}/accounts/{account}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers(), timeout=60)
+        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=60)
         
         result = response.json()
         
