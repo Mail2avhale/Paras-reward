@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, Info, AlertTriangle, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -7,10 +8,22 @@ const PopupMessage = () => {
   const [popup, setPopup] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const location = useLocation();
+
+  // Don't show popup on login, signup, or reset pages
+  const isAuthPage = ['/login', '/signup', '/reset-password', '/forgot-password'].some(
+    path => location.pathname.startsWith(path)
+  );
 
   useEffect(() => {
-    fetchPopup();
-  }, []);
+    // Only fetch popup if not on auth page and user is logged in
+    if (!isAuthPage) {
+      const user = localStorage.getItem('paras_user');
+      if (user) {
+        fetchPopup();
+      }
+    }
+  }, [location.pathname]);
 
   const fetchPopup = async () => {
     try {

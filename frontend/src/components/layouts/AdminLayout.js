@@ -9,7 +9,7 @@ import {
   Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
-  ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send
+  ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
@@ -212,6 +212,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
       label: 'Controls & Security',
       icon: Shield,
       subItems: [
+        { id: 'popup-messages', label: 'Popup Messages', icon: MessageSquare, path: '/admin/popup-messages', highlight: true },
         { id: 'error-monitor', label: 'System Monitor', icon: Activity, path: '/admin/error-monitor', highlight: true },
         { id: 'prc-economy', label: 'PRC Emergency Controls', icon: AlertOctagon, path: '/admin/prc-economy' },
         { id: 'security-dashboard', label: 'Security Dashboard', icon: Shield, path: '/admin/security' },
