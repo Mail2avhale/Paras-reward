@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://bbps-money-transfer.preview.emergentagent.com/setup
+   https://dmt-bugfix.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

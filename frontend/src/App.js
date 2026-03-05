@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
+import PopupMessage from "@/components/PopupMessage";
 import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -419,6 +420,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
         }}
       />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {/* Admin Popup Message - Shows on app load */}
+      <PopupMessage />
     </>
   );
 }

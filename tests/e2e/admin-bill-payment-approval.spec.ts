@@ -17,7 +17,7 @@ import { test, expect } from '@playwright/test';
  * 5. Complete action available for admin manual completion
  */
 
-const BASE_URL = 'https://bbps-money-transfer.preview.emergentagent.com';
+const BASE_URL = 'https://dmt-bugfix.preview.emergentagent.com';
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';
 const ADMIN_PIN = '123456';
 

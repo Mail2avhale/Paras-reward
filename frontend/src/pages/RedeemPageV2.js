@@ -676,21 +676,33 @@ const RedeemPageV2 = ({ user }) => {
         // Fetch existing recipients
         try {
           const recipientsRes = await axios.get(`${API}/eko/dmt/recipients/${senderMobile}?user_id=${user?.uid || 'guest'}`);
+          console.log('[DMT] Recipients response:', recipientsRes.data);
           if (recipientsRes.data.success && recipientsRes.data.data?.recipients?.length > 0) {
             setExistingRecipients(recipientsRes.data.data.recipients);
+            console.log('[DMT] Loaded recipients:', recipientsRes.data.data.recipients);
+          } else {
+            console.log('[DMT] No recipients in response:', recipientsRes.data);
+            setExistingRecipients([]);
           }
         } catch (e) {
-          console.log('No existing recipients found');
+          console.log('[DMT] Recipients fetch error:', e.response?.data || e.message);
+          setExistingRecipients([]);
         }
-      } else {
+      } else if (response.data.success && !response.data.data?.customer_exists) {
         // Customer not found - needs registration
-        toast.info('New customer - registration required');
+        toast.info('New customer - Please register to continue');
         setDmtCustomer({ mobile: senderMobile, is_new: true, needs_registration: true });
         setDmtStep(2); // Go to registration/OTP step
+      } else {
+        // API returned error
+        const errorMsg = response.data.user_message || response.data.message || 'Service temporarily unavailable';
+        toast.error(errorMsg);
+        console.error('[DMT] Customer search error:', response.data);
       }
     } catch (error) {
-      console.error('Customer verification failed:', error);
-      toast.error('Customer verification failed. Please try again.');
+      console.error('[DMT] Customer verification failed:', error.response?.data || error);
+      const errorMsg = error.response?.data?.user_message || error.response?.data?.message || 'Customer verification failed. Please try again.';
+      toast.error(errorMsg);
     } finally {
       setVerifyingCustomer(false);
     }
@@ -963,13 +975,28 @@ const RedeemPageV2 = ({ user }) => {
     
     setSubmitting(true);
     try {
-      // For DMT, use direct EKO transfer API
-      if (selectedService === 'dmt' && dmtRecipientId) {
+      // For DMT, ALWAYS use direct EKO transfer API - NO ADMIN APPROVAL EVER
+      if (selectedService === 'dmt') {
+        // Check if we have a recipient selected
+        if (!dmtRecipientId) {
+          toast.error('Please select or add a bank account first');
+          setSubmitting(false);
+          return;
+        }
+        
+        // Check if we have sender mobile
+        if (!senderMobile || senderMobile.length !== 10) {
+          toast.error('Please verify your mobile number first');
+          setDmtStep(1);
+          setSubmitting(false);
+          return;
+        }
+        
         const transferResponse = await axios.post(`${API}/eko/dmt/transfer`, {
           user_id: user.uid,
-          customer_mobile: senderMobile,
+          mobile: senderMobile,
           recipient_id: dmtRecipientId,
-          amount: parseFloat(formData.amount)
+          prc_amount: Math.round(parseFloat(formData.amount) * 100) // Convert INR to PRC
         });
         
         if (transferResponse.data.success) {
@@ -983,8 +1010,8 @@ const RedeemPageV2 = ({ user }) => {
           setFormData(prev => ({ ...prev, amount: '', account_number: '', ifsc_code: '', account_holder: '' }));
           fetchUserData();
         } else {
-          toast.error(transferResponse.data.message || 'Transfer failed');
-          if (transferResponse.data.prc_refunded) {
+          toast.error(transferResponse.data.user_message || transferResponse.data.message || 'Transfer failed');
+          if (transferResponse.data.data?.prc_refunded) {
             toast.info('PRC has been refunded');
             fetchUserData();
           }
@@ -992,7 +1019,7 @@ const RedeemPageV2 = ({ user }) => {
         return;
       }
       
-      // For other services, use redeem request
+      // For other services (NOT DMT), use redeem request
       const response = await axios.post(`${API}/redeem/request`, {
         user_id: user.uid,
         service_type: selectedService,
