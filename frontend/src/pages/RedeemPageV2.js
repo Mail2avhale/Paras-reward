@@ -669,8 +669,32 @@ const RedeemPageV2 = ({ user }) => {
       });
       
       if (response.data.success && response.data.data?.customer_exists) {
-        setDmtCustomer(response.data.data);
-        setDmtStep(3); // Go to recipient step
+        const customerData = response.data.data;
+        setDmtCustomer(customerData);
+        
+        // Check if customer needs OTP verification (state: 1 = Verification Pending)
+        if (customerData.state === '1' || customerData.state === 1 || customerData.kyc_status === 'Verification Pending') {
+          // Customer exists but OTP verification is pending
+          toast.info('OTP verification pending - Please complete verification');
+          
+          // Auto-send OTP for verification
+          try {
+            await axios.post(`${API}/eko/dmt/customer/resend-otp`, {
+              user_id: user?.uid || 'guest',
+              mobile: senderMobile
+            });
+            toast.success('OTP sent to your mobile');
+            setDmtCustomer(prev => ({ ...prev, otp_sent: true, verification_pending: true }));
+            setDmtStep(2); // Go to OTP verification step
+          } catch (e) {
+            console.error('[DMT] Failed to send OTP:', e);
+            toast.error('Failed to send OTP. Please try again.');
+          }
+          return;
+        }
+        
+        // Customer fully verified - go to recipient step
+        setDmtStep(3);
         toast.success('Customer verified successfully!');
         
         // Fetch existing recipients
@@ -2270,10 +2294,26 @@ const RedeemPageV2 = ({ user }) => {
                     {/* Step 2: OTP Verification */}
                     {dmtStep === 2 && dmtCustomer?.otp_sent && (
                       <div className="space-y-4 animate-fadeIn">
+                        {dmtCustomer?.verification_pending && (
+                          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-2">
+                            <p className="text-amber-400 text-sm font-medium">
+                              ⏳ Verification Pending
+                            </p>
+                            <p className="text-amber-300/70 text-xs mt-1">
+                              {dmtCustomer?.name ? `Name: ${dmtCustomer.name}` : ''}
+                            </p>
+                          </div>
+                        )}
                         <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl mb-4">
                           <p className="text-green-400 text-sm">
                             <CheckCircle className="inline h-4 w-4 mr-2" />
                             OTP sent to {senderMobile}
+                          </p>
+                          <p className="text-green-300/70 text-xs mt-1">
+                            Check SMS on your registered mobile. OTP valid for 10 minutes.
+                          </p>
+                          <p className="text-amber-300/70 text-xs mt-2">
+                            💡 OTP न आल्यास: DND बंद करा, network check करा, किंवा 2 मिनिटानंतर Resend करा
                           </p>
                         </div>
                         
