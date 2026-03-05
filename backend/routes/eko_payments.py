@@ -2894,6 +2894,74 @@ async def initiate_dmt_transfer(request: DMTTransferRequest):
     try:
         import requests as req
         
+        # ========== LIMIT ENFORCEMENT ==========
+        # Get DMT settings
+        dmt_settings = await db.settings.find_one({"key": "dmt_settings"}, {"_id": 0})
+        if not dmt_settings:
+            dmt_settings = {
+                "dmt_enabled": True,
+                "min_transfer": 100,
+                "max_daily_limit": 1000,
+                "max_monthly_limit": 1000,
+                "max_daily_transactions": 1,
+                "max_monthly_transactions": 1
+            }
+        
+        # Check if DMT is enabled
+        if not dmt_settings.get("dmt_enabled", True):
+            raise HTTPException(status_code=400, detail="DMT service is currently disabled")
+        
+        # Check minimum transfer amount
+        min_transfer = dmt_settings.get("min_transfer", 100)
+        if request.amount < min_transfer:
+            raise HTTPException(status_code=400, detail=f"Minimum transfer amount is ₹{min_transfer}")
+        
+        # Check user's custom limits or use global limits
+        user = await db.users.find_one({"uid": request.user_id}, {"custom_dmt_limits": 1})
+        user_limits = user.get("custom_dmt_limits") if user and user.get("custom_dmt_limits", {}).get("enabled") else None
+        
+        max_monthly_limit = user_limits.get("monthly_limit") if user_limits else dmt_settings.get("max_monthly_limit", 1000)
+        max_monthly_txns = user_limits.get("monthly_transaction_limit") if user_limits else dmt_settings.get("max_monthly_transactions", 1)
+        
+        # Check amount limit
+        if request.amount > max_monthly_limit:
+            raise HTTPException(status_code=400, detail=f"Maximum transfer amount is ₹{max_monthly_limit}")
+        
+        # Check monthly usage
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        monthly_usage = await db.dmt_transactions.aggregate([
+            {"$match": {
+                "user_id": request.user_id,
+                "status": {"$in": ["completed", "pending", "processing"]},
+                "created_at": {"$gte": month_start}
+            }},
+            {"$group": {
+                "_id": None,
+                "count": {"$sum": 1},
+                "amount": {"$sum": "$amount_inr"}
+            }}
+        ]).to_list(1)
+        
+        usage = monthly_usage[0] if monthly_usage else {"count": 0, "amount": 0}
+        
+        # Check transaction count limit
+        if usage["count"] >= max_monthly_txns:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Monthly transaction limit reached ({max_monthly_txns} transactions). Please contact admin to increase limit."
+            )
+        
+        # Check amount limit
+        if usage["amount"] + request.amount > max_monthly_limit:
+            remaining = max_monthly_limit - usage["amount"]
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Monthly limit exceeded. Remaining: ₹{max(0, remaining)}. Please contact admin to increase limit."
+            )
+        
+        # ========== PROCEED WITH TRANSFER ==========
         # Create unique transaction reference
         txn_ref = f"DMT{datetime.now().strftime('%Y%m%d%H%M%S')}{request.user_id[-6:]}"
         
