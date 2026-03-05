@@ -1,0 +1,63 @@
+{
+  "summary": "DMT New User Registration OTP Flow - All tests pass. Backend APIs (customer/search, register, resend-otp, verify-otp) all working. Frontend UI correctly shows: registration form for new users, OTP input after registration, 'Transfer to Bank' button, and 'Direct instant transfer via IMPS' message. No admin approval messaging for DMT.",
+  "mode": "generate",
+  "baseline_commit": "bea4966e7e45a06b1282b7451e5b1daa1c3c4afc",
+  "head_commit": "a7d8d38577806b51e025f77232b5e08de6780052",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Redeem Page",
+        "issues": ["Popup 'Welcome to Paras Reward!' blocks interaction until dismissed with popup-close-btn testid. Consider adding Escape key support or click-outside-to-close functionality."]
+      }
+    ]
+  },
+  "regression_results": {
+    "total_specs": 25,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/tests/e2e/dmt-new-user-otp-flow.spec.ts",
+    "/app/backend/tests/test_dmt_new_user_otp_flow.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/dmt-new-user-otp-flow.spec.ts",
+    "/app/backend/tests/test_dmt_new_user_otp_flow.py",
+    "/app/test_reports/pytest/dmt_new_user_otp_flow.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/dmt-new-user-otp-flow.spec.ts",
+    "/app/backend/tests/test_dmt_new_user_otp_flow.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "None - used existing test user mail2avhale@gmail.com and dynamic random mobile numbers for new user tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "DMT New User Registration OTP flow verified. All backend APIs working: customer/search returns customer_exists=false for new numbers, customer/register creates new customers, resend-otp sends OTP successfully, verify-otp rejects invalid OTP appropriately. Frontend shows correct UI: 'Transfer to Bank' button for DMT, 'Direct instant transfer via IMPS' message (no admin approval), registration form for new users, OTP input after registration.",
+  "features_tested": [
+    "POST /api/eko/dmt/customer/search - Returns customer_exists=false for new number",
+    "POST /api/eko/dmt/customer/register - Registers new customer",
+    "POST /api/eko/dmt/customer/resend-otp - Sends OTP to mobile",
+    "POST /api/eko/dmt/customer/verify-otp - Verifies OTP (rejects invalid OTP)",
+    "Frontend DMT Step 1 shows mobile input",
+    "Frontend DMT Step 2 shows registration form for new customers",
+    "Frontend DMT Step 2 shows OTP input after registration",
+    "DMT submit button shows 'Transfer to Bank' not 'Submit Request'",
+    "DMT does NOT show admin approval message",
+    "DMT shows 'Direct instant transfer via IMPS' message",
+    "DMT service button has no Admin badge"
+  ]
+}

@@ -2621,23 +2621,32 @@ const RedeemPageV2 = ({ user }) => {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={submitting || !formData.amount || (userData?.kyc_status !== 'verified')}
+                  disabled={submitting || !formData.amount || (userData?.kyc_status !== 'verified') || (selectedService === 'dmt' && !dmtRecipientId)}
                   className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
                   data-testid="submit-redeem-btn"
                 >
                   {submitting ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Submitting...
+                      {selectedService === 'dmt' ? 'Processing Transfer...' : 'Submitting...'}
                     </>
+                  ) : selectedService === 'dmt' ? (
+                    <>Transfer to Bank</>
                   ) : (
                     <>Submit Request</>
                   )}
                 </Button>
                 
-                <p className="text-xs text-gray-500 text-center">
-                  Admin will process your request within 24-48 hours
-                </p>
+                {selectedService !== 'dmt' && (
+                  <p className="text-xs text-gray-500 text-center">
+                    Admin will process your request within 24-48 hours
+                  </p>
+                )}
+                {selectedService === 'dmt' && (
+                  <p className="text-xs text-green-400 text-center">
+                    Direct instant transfer via IMPS
+                  </p>
+                )}
               </form>
             </div>
           </div>
