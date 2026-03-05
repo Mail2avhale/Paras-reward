@@ -1452,6 +1452,171 @@ async def auto_sync_razorpay_payments():
         print(f"[AUTO-SYNC] ❌ Error: {e}")
 
 
+async def auto_sync_captured_from_razorpay():
+    """
+    ADDITIONAL SYNC: Fetch recent captured payments directly from Razorpay API
+    and activate any that have orders in our DB but are not yet activated.
+    This catches payments where webhook failed or user closed modal early.
+    """
+    print(f"[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at {datetime.now(timezone.utc).isoformat()}")
+    
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            return
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Fetch recent captured payments (last 24 hours)
+        from_timestamp = int((datetime.now(timezone.utc) - timedelta(hours=24)).timestamp())
+        
+        payments_response = razorpay_client.payment.all({
+            "count": 50,
+            "from": from_timestamp
+        })
+        
+        all_payments = payments_response.get("items", [])
+        captured_payments = [p for p in all_payments if p.get("status") == "captured"]
+        
+        if not captured_payments:
+            print(f"[RAZORPAY-CAPTURED-SYNC] No recent captured payments")
+            return
+        
+        print(f"[RAZORPAY-CAPTURED-SYNC] Found {len(captured_payments)} captured payments in last 24 hours")
+        
+        activated_count = 0
+        
+        for payment in captured_payments:
+            payment_id = payment.get("id")
+            order_id = payment.get("order_id")
+            amount = payment.get("amount", 0) / 100
+            
+            if not order_id:
+                continue
+            
+            try:
+                # Check if order exists and is not yet paid
+                order = await db.razorpay_orders.find_one({"order_id": order_id})
+                
+                if not order:
+                    continue
+                
+                if order.get("status") == "paid":
+                    # Check if user subscription is actually active
+                    user_id = order.get("user_id")
+                    user = await db.users.find_one({"uid": user_id})
+                    if user and user.get("last_payment_id") == payment_id:
+                        continue  # Already activated properly
+                
+                # Need to activate!
+                user_id = order.get("user_id")
+                plan_type = order.get("plan_type", "monthly")
+                plan_name = order.get("plan_name", "startup")
+                duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                
+                now = datetime.now(timezone.utc)
+                
+                user = await db.users.find_one({"uid": user_id})
+                remaining_days = 0
+                user_name = "Unknown"
+                
+                if user:
+                    user_name = user.get("name", "Unknown")
+                    expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                    if expiry:
+                        try:
+                            if isinstance(expiry, str):
+                                exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                            else:
+                                exp_date = expiry
+                            if exp_date.tzinfo is None:
+                                exp_date = exp_date.replace(tzinfo=timezone.utc)
+                            if exp_date > now:
+                                remaining_days = (exp_date - now).days
+                        except:
+                            pass
+                
+                total_days = duration_days + remaining_days
+                new_expiry = now + timedelta(days=total_days)
+                
+                # Update order
+                await db.razorpay_orders.update_one(
+                    {"order_id": order_id},
+                    {"$set": {
+                        "status": "paid",
+                        "payment_id": payment_id,
+                        "payment_captured": True,
+                        "verified_amount": amount,
+                        "synced_at": now.isoformat(),
+                        "synced_via": "captured_sync"
+                    }}
+                )
+                
+                # Update user
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {"$set": {
+                        "subscription_plan": plan_name.lower(),
+                        "subscription_type": plan_type,
+                        "subscription_status": "active",
+                        "subscription_start": now.isoformat(),
+                        "subscription_expires": new_expiry,
+                        "subscription_expiry": new_expiry.isoformat(),
+                        "vip_expiry": new_expiry.isoformat(),
+                        "membership_type": "vip",
+                        "last_payment_id": payment_id,
+                        "last_payment_amount": amount,
+                        "last_payment_date": now.isoformat(),
+                        "activated_via": "captured_sync"
+                    }}
+                )
+                
+                # Log to vip_payments
+                await db.vip_payments.insert_one({
+                    "user_id": user_id,
+                    "order_id": order_id,
+                    "payment_id": payment_id,
+                    "amount": amount,
+                    "subscription_plan": plan_name.lower(),
+                    "plan_type": plan_type,
+                    "status": "approved",
+                    "payment_method": "razorpay",
+                    "payment_captured": True,
+                    "new_expiry": new_expiry.isoformat(),
+                    "duration_days": total_days,
+                    "remaining_days_added": remaining_days,
+                    "approved_at": now.isoformat(),
+                    "created_at": now.isoformat(),
+                    "auto_activated": True,
+                    "activation_source": "captured_sync"
+                })
+                
+                activated_count += 1
+                print(f"[RAZORPAY-CAPTURED-SYNC] ✅ Activated: {user_name}, Plan: {plan_name}")
+                
+            except Exception as e:
+                print(f"[RAZORPAY-CAPTURED-SYNC] Error for {order_id}: {e}")
+        
+        if activated_count > 0:
+            print(f"[RAZORPAY-CAPTURED-SYNC] ✅ Activated {activated_count} subscriptions")
+        else:
+            print(f"[RAZORPAY-CAPTURED-SYNC] No new activations needed")
+            
+    except Exception as e:
+        print(f"[RAZORPAY-CAPTURED-SYNC] ❌ Error: {e}")
+
+
 # ========== AUTO LOCKOUT CLEAR FUNCTION ==========
 async def auto_clear_all_lockouts():
     """
@@ -43062,6 +43227,17 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Captured payments sync - runs every 10 minutes
+        # This catches payments where webhook failed
+        scheduler.add_job(
+            auto_sync_captured_from_razorpay,
+            'interval',
+            minutes=10,
+            id='auto_sync_captured',
+            name='Sync captured payments from Razorpay API',
+            replace_existing=True
+        )
+        
         # Eko transaction status update every 5 minutes
         scheduler.add_job(
             eko_update_pending_transactions,
@@ -43083,7 +43259,7 @@ async def startup_db():
         print("   - 🗑️ Account hard delete: Daily at 3:30 AM")
         print("   - 🔓 Auto lockout clear: Daily at 12 PM & 12 AM")
         print("   - 🔄 Razorpay auto-sync: Every 5 minutes")
-        print("   - 🏦 Eko status update: Every 5 minutes")
+        print("   - 💳 Razorpay captured-sync: Every 10 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
         
         # Trigger initial Razorpay sync 30 seconds after startup
