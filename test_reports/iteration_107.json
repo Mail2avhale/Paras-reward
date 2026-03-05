@@ -1,0 +1,62 @@
+{
+  "summary": "Subscription Renewal Bug Fix - All 35 tests pass. Debug endpoint correctly calculates remaining days from subscription_expiry/vip_expiry fields. Total days formula (plan_duration + remaining_days) verified for all plan types (monthly, quarterly, half_yearly, yearly). Test user has 373 remaining days and renewal would correctly give 401 total days (28 + 373).",
+  "mode": "generate",
+  "baseline_commit": "a7d8d38577806b51e025f77232b5e08de6780052",
+  "head_commit": "6f6c10b74eb0e93bcb2a2e60eec09a3769c0eeb3",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 35,
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_subscription_renewal_bug.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_subscription_renewal_bug.py",
+    "/app/test_reports/pytest/subscription_renewal_bug.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_subscription_renewal_bug.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only bug fix)"
+  },
+  "seed_data_creation": "Used existing test user 73b95483-f36b-4637-a5ee-d447300c6835",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Subscription renewal bug fix verified. The debug endpoint at GET /api/razorpay/debug/subscription-renewal/{user_id} correctly shows remaining days calculation. All code paths (verify-payment, webhook, manual_sync, auto_sync) now check subscription_expires OR subscription_expiry OR vip_expiry fields. Formula: total_days = plan_duration + remaining_days is working correctly.",
+  "features_tested": [
+    "GET /api/razorpay/debug/subscription-renewal/{user_id} - Returns user info and remaining days",
+    "Debug endpoint shows raw_fields (subscription_expires, subscription_expiry, vip_expiry)",
+    "Remaining days calculated correctly from subscription_expiry string field",
+    "Remaining days calculated correctly from vip_expiry field",
+    "Total days = plan_duration + remaining_days for monthly (28 days)",
+    "Total days = plan_duration + remaining_days for quarterly (84 days)",
+    "Total days = plan_duration + remaining_days for half_yearly (168 days)",
+    "Total days = plan_duration + remaining_days for yearly (336 days)",
+    "Debug endpoint returns parsed_expiry datetime",
+    "Debug endpoint returns new_expiry_would_be calculation",
+    "Debug endpoint returns 404 for non-existent user",
+    "Existing razorpay payment tests still pass"
+  ],
+  "bug_fix_verification": {
+    "bug_description": "Remaining days not being added when user renews subscription",
+    "root_cause": "Webhook and sync code only checked subscription_expires field, but database had subscription_expiry (string) and vip_expiry",
+    "fix_applied": "All code paths now check: subscription_expires OR subscription_expiry OR vip_expiry",
+    "verification": "Debug endpoint shows test user with 373 remaining days would get 401 total days on monthly renewal (28 + 373)"
+  }
+}

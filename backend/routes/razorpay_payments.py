@@ -291,7 +291,13 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             old_plan = user.get("subscription_plan")
             
             # Check BOTH field names for expiry (subscription_expires AND subscription_expiry)
-            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            raw_expires = user.get("subscription_expires")
+            raw_expiry = user.get("subscription_expiry")
+            raw_vip = user.get("vip_expiry")
+            
+            logging.info(f"[RAZORPAY] User {request.user_id} expiry fields - subscription_expires: {raw_expires} (type: {type(raw_expires).__name__}), subscription_expiry: {raw_expiry}, vip_expiry: {raw_vip}")
+            
+            existing_expiry = raw_expires or raw_expiry or raw_vip
             
             if existing_expiry:
                 old_expiry_str = str(existing_expiry)
@@ -300,6 +306,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                 if isinstance(existing_expiry, str):
                     try:
                         existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                        logging.info(f"[RAZORPAY] Parsed expiry string to datetime: {existing_expiry}")
                     except Exception as e:
                         logging.warning(f"[RAZORPAY] Could not parse expiry date: {existing_expiry}, error: {e}")
                         existing_expiry = None
@@ -312,7 +319,11 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     if existing_expiry > now:
                         # User has active subscription - calculate remaining days
                         remaining_days = (existing_expiry - now).days
-                        logging.info(f"[RAZORPAY] User {request.user_id} has {remaining_days} days remaining from {old_plan}, will be added to new plan")
+                        logging.info(f"[RAZORPAY] ✅ User {request.user_id} has {remaining_days} days remaining from {old_plan}, will be added to new plan")
+                    else:
+                        logging.info(f"[RAZORPAY] User {request.user_id} subscription expired on {existing_expiry}, no days to add")
+            else:
+                logging.info(f"[RAZORPAY] User {request.user_id} has no existing subscription expiry")
         
         # New expiry = today + new plan duration + remaining days
         total_days = duration_days + remaining_days
@@ -461,7 +472,8 @@ async def razorpay_webhook(request: Request):
                     remaining_days = 0
                     
                     if user:
-                        existing_expiry = user.get("subscription_expires")
+                        # Check BOTH field names for expiry
+                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
                         if existing_expiry:
                             if isinstance(existing_expiry, str):
                                 try:
@@ -469,8 +481,13 @@ async def razorpay_webhook(request: Request):
                                 except:
                                     existing_expiry = None
                             
-                            if existing_expiry and existing_expiry > now:
-                                remaining_days = (existing_expiry - now).days
+                            if existing_expiry:
+                                if existing_expiry.tzinfo is None:
+                                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                
+                                if existing_expiry > now:
+                                    remaining_days = (existing_expiry - now).days
+                                    logging.info(f"[WEBHOOK] User {user_id} has {remaining_days} remaining days to add")
                     
                     total_days = duration_days + remaining_days
                     expiry_date = now + timedelta(days=total_days)
@@ -483,10 +500,13 @@ async def razorpay_webhook(request: Request):
                                 "subscription_plan": plan_name,
                                 "subscription_start": now,
                                 "subscription_expires": expiry_date,
+                                "subscription_expiry": expiry_date.isoformat(),  # Also set string field
+                                "vip_expiry": expiry_date.isoformat(),  # Also set vip_expiry
                                 "membership_type": "vip",
                                 "subscription_status": "active",
                                 "last_payment_id": payment_id,
                                 "last_payment_date": now,
+                                "previous_remaining_days_added": remaining_days,
                                 "activated_via": "webhook"
                             }
                         }
@@ -583,6 +603,73 @@ async def get_payment_history(user_id: str, include_all: bool = False):
             p["status_color"] = "gray"
     
     return {"payments": payments}
+
+
+@router.get("/debug/subscription-renewal/{user_id}")
+async def debug_subscription_renewal(user_id: str, plan_type: str = "monthly"):
+    """
+    Debug endpoint to check how subscription renewal would work.
+    Shows: current expiry, remaining days, new total days after renewal.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    now = datetime.now(timezone.utc)
+    duration_days = PLAN_DURATIONS.get(plan_type, 28)
+    
+    # Get all expiry fields
+    raw_expires = user.get("subscription_expires")
+    raw_expiry = user.get("subscription_expiry")
+    raw_vip = user.get("vip_expiry")
+    
+    # Calculate remaining days
+    existing_expiry = raw_expires or raw_expiry or raw_vip
+    remaining_days = 0
+    parsed_expiry = None
+    
+    if existing_expiry:
+        if isinstance(existing_expiry, str):
+            try:
+                parsed_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+            except:
+                parsed_expiry = None
+        else:
+            parsed_expiry = existing_expiry
+        
+        if parsed_expiry:
+            if parsed_expiry.tzinfo is None:
+                parsed_expiry = parsed_expiry.replace(tzinfo=timezone.utc)
+            
+            if parsed_expiry > now:
+                remaining_days = (parsed_expiry - now).days
+    
+    total_days = duration_days + remaining_days
+    new_expiry = now + timedelta(days=total_days)
+    
+    return {
+        "user_id": user_id,
+        "user_name": user.get("name"),
+        "current_plan": user.get("subscription_plan"),
+        "raw_fields": {
+            "subscription_expires": str(raw_expires) if raw_expires else None,
+            "subscription_expiry": raw_expiry,
+            "vip_expiry": raw_vip
+        },
+        "parsed_expiry": str(parsed_expiry) if parsed_expiry else None,
+        "remaining_days": remaining_days,
+        "renewal_calculation": {
+            "plan_type": plan_type,
+            "plan_duration_days": duration_days,
+            "remaining_days_to_add": remaining_days,
+            "total_days": total_days,
+            "new_expiry_would_be": new_expiry.isoformat()
+        },
+        "message": f"If renewed now: {duration_days} days + {remaining_days} remaining = {total_days} total days"
+    }
 
 
 @router.post("/update-order-status")
@@ -725,7 +812,8 @@ async def sync_payments_from_razorpay(request: Request):
                         remaining_days = 0
                         
                         if user:
-                            existing_expiry = user.get("subscription_expires")
+                            # Check BOTH field names for expiry
+                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
                             if existing_expiry:
                                 if isinstance(existing_expiry, str):
                                     try:
@@ -733,8 +821,13 @@ async def sync_payments_from_razorpay(request: Request):
                                     except:
                                         existing_expiry = None
                                 
-                                if existing_expiry and existing_expiry > now:
-                                    remaining_days = (existing_expiry - now).days
+                                if existing_expiry:
+                                    if existing_expiry.tzinfo is None:
+                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                    
+                                    if existing_expiry > now:
+                                        remaining_days = (existing_expiry - now).days
+                                        logging.info(f"[MANUAL-SYNC] User {user_id} has {remaining_days} remaining days to add")
                         
                         total_days = duration_days + remaining_days
                         expiry_date = now + timedelta(days=total_days)
@@ -748,10 +841,12 @@ async def sync_payments_from_razorpay(request: Request):
                                     "subscription_start": now,
                                     "subscription_expires": expiry_date,
                                     "subscription_expiry": expiry_date.isoformat(),
+                                    "vip_expiry": expiry_date.isoformat(),
                                     "membership_type": "vip",
                                     "subscription_status": "active",
                                     "last_payment_id": payment_id,
                                     "last_payment_date": now,
+                                    "previous_remaining_days_added": remaining_days,
                                     "activated_via": "manual_sync"
                                 }
                             }
@@ -923,7 +1018,7 @@ async def fix_user_subscription(request: Request):
                                     remaining_days = 0
                                     
                                     if user:
-                                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+                                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
                                         if existing_expiry:
                                             if isinstance(existing_expiry, str):
                                                 try:
@@ -936,6 +1031,7 @@ async def fix_user_subscription(request: Request):
                                             
                                             if existing_expiry and existing_expiry > now:
                                                 remaining_days = (existing_expiry - now).days
+                                                logging.info(f"[AUTO-SYNC] User {user_id} has {remaining_days} remaining days to add")
                                     
                                     total_days = duration_days + remaining_days
                                     expiry_date = now + timedelta(days=total_days)
@@ -1011,7 +1107,7 @@ async def fix_user_subscription(request: Request):
         remaining_days = 0
         
         if user:
-            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
             if existing_expiry:
                 if isinstance(existing_expiry, str):
                     try:
@@ -1024,6 +1120,7 @@ async def fix_user_subscription(request: Request):
                 
                 if existing_expiry and existing_expiry > now:
                     remaining_days = (existing_expiry - now).days
+                    logging.info(f"[FIX-ORDER] User {user_id} has {remaining_days} remaining days to add")
         
         total_days = duration_days + remaining_days
         expiry_date = now + timedelta(days=total_days)
@@ -1036,9 +1133,11 @@ async def fix_user_subscription(request: Request):
                 "subscription_start": now,
                 "subscription_expires": expiry_date,
                 "subscription_expiry": expiry_date.isoformat(),
+                "vip_expiry": expiry_date.isoformat(),
                 "membership_type": "vip",
                 "subscription_status": "active",
                 "last_payment_id": payment_id,
+                "previous_remaining_days_added": remaining_days,
                 "fixed_by_admin": True,
                 "fixed_at": now.isoformat()
             }}
