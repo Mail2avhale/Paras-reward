@@ -76,27 +76,24 @@ def generate_eko_headers() -> Dict[str, str]:
     """
     Generate EKO authentication headers.
     
-    Formula:
-    1. timestamp = current time in milliseconds
-    2. encoded_key = Base64(authenticator_key)
-    3. secret_key = Base64(HMAC_SHA256(encoded_key, timestamp))
+    CORRECT Formula (as per Eko documentation):
+    1. timestamp = current time in SECONDS (not milliseconds)
+    2. raw = developer_key + timestamp + authenticator_key
+    3. secret_key = Base64(SHA256(raw))
     """
-    timestamp = str(int(time.time() * 1000))
+    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
     
-    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode()).decode()
-    
+    # Correct formula: SHA256 of concatenated string
+    raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
     secret_key = base64.b64encode(
-        hmac.new(
-            encoded_key.encode(),
-            timestamp.encode(),
-            hashlib.sha256
-        ).digest()
+        hashlib.sha256(raw.encode()).digest()
     ).decode()
     
     return {
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
+        "initiator_id": EKO_INITIATOR_ID,
         "Content-Type": "application/json"
     }
 
@@ -105,23 +102,24 @@ def generate_eko_headers_for_get() -> Dict[str, str]:
     """
     Generate EKO authentication headers for GET requests.
     GET requests should not have Content-Type header.
+    
+    CORRECT Formula:
+    raw = developer_key + timestamp + authenticator_key
+    secret_key = Base64(SHA256(raw))
     """
-    timestamp = str(int(time.time() * 1000))
+    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
     
-    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode()).decode()
-    
+    # Correct formula: SHA256 of concatenated string
+    raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
     secret_key = base64.b64encode(
-        hmac.new(
-            encoded_key.encode(),
-            timestamp.encode(),
-            hashlib.sha256
-        ).digest()
+        hashlib.sha256(raw.encode()).digest()
     ).decode()
     
     return {
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
-        "secret-key-timestamp": timestamp
+        "secret-key-timestamp": timestamp,
+        "initiator_id": EKO_INITIATOR_ID
     }
 
 
