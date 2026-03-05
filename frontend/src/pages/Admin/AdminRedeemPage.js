@@ -37,7 +37,7 @@ export default function AdminRedeemPage() {
   const [user, setUser] = useState(null);
   
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('paras_user');
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));

@@ -26,7 +26,7 @@ export default function RedeemPage() {
   const [prcBalance, setPrcBalance] = useState(0);
   
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('paras_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
