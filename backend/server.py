@@ -68,7 +68,8 @@ from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_r
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
 from routes.eko_dmt_service import router as dmt_router
-from routes.eko_dmt_v3 import router as dmt_v3_router
+# DMT v3 router disabled - using v1 APIs instead
+# from routes.eko_dmt_v3 import router as dmt_v3_router
 from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 
 # ========== SECURITY CONFIGURATION ==========
@@ -14301,6 +14302,15 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
    - Use 'Forgot PIN' to reset
    - Contact support if locked
 
+9. **How to Transfer Money to Bank (DMT):**
+   - Go to Dashboard → Click "Bank Transfer" under MONEY TRANSFER
+   - Enter your registered mobile number (same as Paras account)
+   - If new user: Enter name → OTP will be sent → Verify OTP
+   - Select existing bank account OR add new account (Account No + IFSC)
+   - Enter amount (Min ₹100, Max as per your limit)
+   - Confirm transfer → Money sent via IMPS instantly!
+   - Note: Only Savings accounts supported. Major banks work (SBI, HDFC, ICICI)
+
 === END DIAGNOSTIC DATA ===
 """
     return diagnostic_context
@@ -14334,16 +14344,19 @@ async def ai_chatbot(
         "session", "login", "kyc", "balance", "subscription", "plan",
         "voucher", "gift", "bill", "recharge", "order", "shopping",
         "contact", "support", "wallet", "transaction", "earnings",
+        "bank transfer", "money transfer", "dmt", "transfer money", "send money",
         # Marathi keywords
         "काम नाही", "समस्या", "का", "कसे", "नाही झाले", "अडकले", "फेल", 
         "कामात नाही", "होत नाही", "पेंडिंग", "रिजेक्ट", "अप्रूव्ह",
         "सबस्क्रिप्शन", "प्लॅन", "व्हाउचर", "बिल", "रिचार्ज", "बॅलन्स",
         "केवायसी", "रेफरल", "बोनस", "माइनिंग", "ऑर्डर", "शॉपिंग",
+        "बँक ट्रान्सफर", "पैसे पाठवा", "पैसे ट्रान्सफर",
         # Hindi keywords
         "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
         "pending", "reject", "approve", "subscription", "plan",
         "voucher", "bill", "recharge", "balance", "kyc", "referral",
-        "bonus", "mining", "order", "shopping", "contact", "support"
+        "bonus", "mining", "order", "shopping", "contact", "support",
+        "bank transfer", "paisa bhejo", "transfer kaise"
     ]
     
     is_diagnostic_query = any(keyword in message.lower() for keyword in diagnostic_keywords)
@@ -41803,7 +41816,8 @@ api_router.include_router(bbps_router)
 api_router.include_router(dmt_router)
 
 # EKO DMT v3 (Advanced with Aadhaar/OTP) Router
-api_router.include_router(dmt_v3_router)
+# DMT v3 router disabled - using v1 APIs
+# api_router.include_router(dmt_v3_router)
 
 # Admin DMT Management Router
 set_admin_dmt_db(db)

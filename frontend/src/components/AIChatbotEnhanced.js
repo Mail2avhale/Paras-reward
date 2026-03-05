@@ -112,6 +112,9 @@ const parseResponseForActions = (text) => {
   if (lowerText.includes('redeem') || lowerText.includes('voucher') || lowerText.includes('gift')) {
     actions.push({ label: 'Gift Vouchers', route: '/gift-vouchers', icon: ShoppingBag, variant: 'default' });
   }
+  if (lowerText.includes('bank') || lowerText.includes('transfer') || lowerText.includes('dmt') || lowerText.includes('money transfer')) {
+    actions.push({ label: 'Bank Transfer', route: '/redeem?service=dmt', icon: TrendingUp, variant: 'success' });
+  }
   if (lowerText.includes('kyc') || lowerText.includes('verify') || lowerText.includes('document')) {
     actions.push({ label: 'Complete KYC', route: '/kyc', icon: Target, variant: 'default' });
   }
