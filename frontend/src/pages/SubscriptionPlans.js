@@ -62,6 +62,9 @@ const SubscriptionPlans = ({ user }) => {
   });
   const [subscriptionHistory, setSubscriptionHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [paymentAttempts, setPaymentAttempts] = useState([]);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
 
   // Special Offer Prices
   const specialOffers = {
@@ -129,6 +132,21 @@ const SubscriptionPlans = ({ user }) => {
         setSubscriptionHistory(historyRes.data.history || []);
       } catch (err) {
         console.log('No subscription history');
+      }
+      
+      // Fetch ALL payment attempts (including failed/pending)
+      try {
+        const paymentRes = await axios.get(`${API}/razorpay/payment-history/${user.uid}?include_all=true`);
+        const attempts = paymentRes.data.payments || [];
+        setPaymentAttempts(attempts);
+        
+        // Check if any payment is paid but user doesn't have active subscription
+        const paidPayment = attempts.find(p => p.status === 'paid');
+        if (paidPayment && (!subRes.data.subscription?.plan || subRes.data.subscription?.plan === 'explorer')) {
+          setHasUnactivatedPayment(true);
+        }
+      } catch (err) {
+        console.log('No payment history');
       }
       
     } catch (error) {
@@ -451,6 +469,171 @@ const SubscriptionPlans = ({ user }) => {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ALERT: Payment received but subscription not activated */}
+      {hasUnactivatedPayment && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-5 mt-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/30"
+          data-testid="unactivated-payment-alert"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-400 font-semibold">⚠️ Payment Issue Detected!</p>
+              <p className="text-red-300/80 text-sm mt-1">
+                तुमचे payment successful झाले पण subscription activate झाले नाही. कृपया support शी संपर्क करा.
+              </p>
+              <button 
+                onClick={() => navigate('/support')}
+                className="mt-3 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl text-sm font-medium transition-colors"
+                data-testid="unactivated-payment-support-button"
+              >
+                Contact Support →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Payment History Section */}
+      {currentStep === 1 && paymentAttempts.length > 0 && (
+        <div className="mx-5 mt-4" data-testid="payment-history-section">
+          <button
+            onClick={() => setShowPaymentHistory(!showPaymentHistory)}
+            className="w-full p-3 rounded-xl bg-gray-900/50 border border-gray-800 flex items-center justify-between"
+            data-testid="payment-history-toggle"
+          >
+            <div className="flex items-center gap-3">
+              <CreditCard className="w-5 h-5 text-gray-400" />
+              <span className="text-gray-300">Payment History</span>
+              <span className="px-2 py-0.5 bg-gray-800 rounded-full text-xs text-gray-400" data-testid="payment-history-count">
+                {paymentAttempts.length}
+              </span>
+              {paymentAttempts.some(p => p.status === 'failed' || p.status === 'error') && (
+                <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-xs text-red-400" data-testid="payment-issues-badge">
+                  Issues
+                </span>
+              )}
+            </div>
+            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${showPaymentHistory ? 'rotate-90' : ''}`} />
+          </button>
+          
+          {/* Payment Attempts List */}
+          <AnimatePresence>
+            {showPaymentHistory && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 space-y-2" data-testid="payment-attempts-list">
+                  {paymentAttempts.map((payment, index) => (
+                    <div 
+                      key={payment.order_id || index}
+                      data-testid={`payment-attempt-${payment.status}`}
+                      className={`p-3 rounded-xl border ${
+                        payment.status === 'paid' ? 'bg-green-500/10 border-green-500/30' :
+                        payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/10 border-red-500/30' :
+                        payment.status === 'created' ? 'bg-amber-500/10 border-amber-500/30' :
+                        'bg-gray-900/50 border-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg ${
+                            payment.status === 'paid' ? 'text-green-400' :
+                            payment.status === 'failed' || payment.status === 'error' ? 'text-red-400' :
+                            payment.status === 'created' ? 'text-amber-400' :
+                            'text-gray-400'
+                          }`}>
+                            {payment.status === 'paid' ? '✅' :
+                             payment.status === 'failed' ? '❌' :
+                             payment.status === 'error' ? '⚠️' :
+                             payment.status === 'created' ? '⏳' :
+                             payment.status === 'cancelled' ? '🚫' : '•'}
+                          </span>
+                          <div>
+                            <p className="text-white font-medium">₹{payment.amount}</p>
+                            <p className="text-gray-400 text-xs">{payment.plan_name} - {payment.plan_type}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-1 rounded-lg ${
+                            payment.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                            payment.status === 'failed' || payment.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                            payment.status === 'created' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-gray-700 text-gray-400'
+                          }`}>
+                            {payment.status === 'paid' ? 'Success' :
+                             payment.status === 'failed' ? 'Failed' :
+                             payment.status === 'error' ? 'Error' :
+                             payment.status === 'created' ? 'Pending' :
+                             payment.status === 'cancelled' ? 'Cancelled' : payment.status}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Show failure reason */}
+                      {(payment.status === 'failed' || payment.status === 'error') && payment.failure_reason && (
+                        <div className="mt-2 p-2 bg-red-500/10 rounded-lg" data-testid="payment-failure-reason">
+                          <p className="text-red-300 text-xs">{payment.failure_reason}</p>
+                        </div>
+                      )}
+                      
+                      {/* Status message */}
+                      {payment.status_message && (
+                        <p data-testid="payment-status-message" className={`mt-2 text-xs ${
+                          payment.status_color === 'green' ? 'text-green-400' :
+                          payment.status_color === 'red' ? 'text-red-400' :
+                          payment.status_color === 'yellow' ? 'text-amber-400' :
+                          payment.status_color === 'orange' ? 'text-orange-400' :
+                          'text-gray-400'
+                        }`}>
+                          {payment.status_message}
+                        </p>
+                      )}
+                      
+                      {/* Retry button for failed payments */}
+                      {(payment.status === 'failed' || payment.status === 'error') && (
+                        <button
+                          onClick={() => {
+                            // Find the plan and set it for retry
+                            const plan = plans.find(p => p.id === payment.plan_name?.toLowerCase());
+                            if (plan) {
+                              setSelectedPlan(plan);
+                              setSelectedDuration(payment.plan_type || 'monthly');
+                              setCurrentStep(2);
+                              setShowPaymentHistory(false);
+                              toast.info('Plan selected - proceed with payment');
+                            } else {
+                              toast.error('Plan not found - select a plan manually');
+                            }
+                          }}
+                          className="mt-3 w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                          data-testid="payment-retry-button"
+                        >
+                          <Zap className="w-4 h-4" />
+                          Try Again
+                        </button>
+                      )}
+                      
+                      {/* Date */}
+                      <p className="mt-2 text-gray-500 text-xs">
+                        {payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-IN', {
+                          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        }) : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
