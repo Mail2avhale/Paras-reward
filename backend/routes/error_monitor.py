@@ -1,6 +1,36 @@
 """
 Error Monitoring & Log System
 Tracks all API errors, payment failures, and system issues for debugging
+
+EKO ERROR CODE REFERENCE (as per developer docs):
+=====================================
+DMT Transaction Status (tx_status):
+- 0: SUCCESS (Final)
+- 1: FAILED (Final)
+- 2: INITIATED/RESPONSE AWAITED (Needs inquiry)
+- 3: REFUND PENDING
+- 4: REFUNDED (Final)
+- 5: HOLD (Needs inquiry)
+
+Common EKO Status Codes:
+- 0: Success
+- 30: Invalid mobile
+- 31: Invalid amount
+- 41: Invalid IFSC
+- 44: Insufficient balance (merchant)
+- 46: Invalid account number
+- 53: IMPS not available for bank
+- 63: Transaction already processed
+- 144: Customer not found
+- 302: Authentication failed
+- 315: Duplicate request_hash
+- 317: NEFT not available for account
+- 342: Recipient already exists
+- 347: Insufficient balance
+- 403: IP not whitelisted
+- 430: Bank server down/timeout
+- 463: Customer not registered
+- 544: Service temporarily unavailable
 """
 
 from fastapi import APIRouter, Request, HTTPException
@@ -18,6 +48,57 @@ db = None
 def set_db(database):
     global db
     db = database
+
+
+# ==================== EKO ERROR CODES MAPPING ====================
+
+EKO_STATUS_CODES = {
+    0: {"status": "SUCCESS", "description": "Transaction successful", "action": None},
+    30: {"status": "ERROR", "description": "Invalid mobile number", "action": "Verify mobile format (10 digits)"},
+    31: {"status": "ERROR", "description": "Invalid amount", "action": "Check amount limits"},
+    41: {"status": "ERROR", "description": "Invalid IFSC code", "action": "Verify IFSC code format"},
+    44: {"status": "ERROR", "description": "Insufficient merchant balance", "action": "Contact admin to recharge wallet"},
+    46: {"status": "ERROR", "description": "Invalid account number", "action": "Verify account number"},
+    53: {"status": "ERROR", "description": "IMPS not available for this bank", "action": "Try NEFT transfer"},
+    63: {"status": "WARNING", "description": "Transaction already processed", "action": "Check transaction status"},
+    144: {"status": "ERROR", "description": "Customer not found", "action": "Register customer first"},
+    302: {"status": "CRITICAL", "description": "Authentication failed", "action": "Check API credentials"},
+    315: {"status": "ERROR", "description": "Duplicate request hash", "action": "Retry with new timestamp"},
+    317: {"status": "ERROR", "description": "NEFT not available for account", "action": "Try IMPS transfer"},
+    342: {"status": "WARNING", "description": "Recipient already exists", "action": "Use existing recipient"},
+    347: {"status": "ERROR", "description": "Insufficient balance", "action": "Recharge merchant wallet"},
+    403: {"status": "CRITICAL", "description": "IP not whitelisted", "action": "Contact Eko support"},
+    430: {"status": "WARNING", "description": "Bank server timeout", "action": "Retry after some time"},
+    463: {"status": "WARNING", "description": "Customer not registered", "action": "Register customer first"},
+    544: {"status": "CRITICAL", "description": "Service temporarily unavailable", "action": "Retry later"}
+}
+
+DMT_TX_STATUS = {
+    0: {"status": "SUCCESS", "description": "Transaction successful", "is_final": True},
+    1: {"status": "FAILED", "description": "Transaction failed", "is_final": True},
+    2: {"status": "PENDING", "description": "Response awaited from bank", "is_final": False},
+    3: {"status": "REFUND_PENDING", "description": "Refund initiated", "is_final": False},
+    4: {"status": "REFUNDED", "description": "Amount refunded", "is_final": True},
+    5: {"status": "HOLD", "description": "Transaction on hold", "is_final": False}
+}
+
+
+def get_eko_error_info(status_code: int) -> dict:
+    """Get detailed info for EKO status code"""
+    return EKO_STATUS_CODES.get(status_code, {
+        "status": "UNKNOWN",
+        "description": f"Unknown error code: {status_code}",
+        "action": "Contact support"
+    })
+
+
+def get_dmt_tx_status_info(tx_status: int) -> dict:
+    """Get detailed info for DMT transaction status"""
+    return DMT_TX_STATUS.get(tx_status, {
+        "status": "UNKNOWN",
+        "description": f"Unknown tx_status: {tx_status}",
+        "is_final": False
+    })
 
 
 # ==================== ERROR LOGGING FUNCTIONS ====================
@@ -489,4 +570,85 @@ async def get_monitoring_dashboard():
         }
     except Exception as e:
         logging.error(f"Dashboard error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== EKO ERROR LOOKUP ENDPOINTS ====================
+
+@router.get("/eko/error-codes")
+async def get_all_eko_error_codes():
+    """Get all EKO error codes with descriptions"""
+    return {
+        "success": True,
+        "status_codes": EKO_STATUS_CODES,
+        "tx_status_codes": DMT_TX_STATUS
+    }
+
+
+@router.get("/eko/error-codes/{code}")
+async def lookup_eko_error(code: int):
+    """Lookup specific EKO error code"""
+    status_info = get_eko_error_info(code)
+    tx_info = get_dmt_tx_status_info(code)
+    
+    return {
+        "success": True,
+        "code": code,
+        "as_status_code": status_info,
+        "as_tx_status": tx_info
+    }
+
+
+@router.get("/eko/errors")
+async def get_eko_errors(hours: int = 24, limit: int = 50):
+    """Get recent EKO-related errors with interpretation"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        since = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        
+        # Get EKO category errors
+        eko_errors = await db.error_logs.find({
+            "timestamp": {"$gte": since},
+            "category": "eko"
+        }).sort("timestamp", -1).limit(limit).to_list(limit)
+        
+        # Get DMT transaction failures
+        dmt_failures = await db.dmt_transactions.find({
+            "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(hours=hours)},
+            "status": {"$in": ["failed", "error"]}
+        }, {"_id": 0, "transaction_id": 1, "eko_status": 1, "tx_status": 1, "eko_message": 1, "created_at": 1}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        # Get bill payment failures
+        bill_failures = await db.bill_payment_requests.find({
+            "created_at": {"$gte": since},
+            "status": "failed"
+        }, {"_id": 0, "request_id": 1, "service_type": 1, "operator": 1, "eko_status": 1, "error_message": 1, "created_at": 1}).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        # Enrich with error interpretations
+        for err in eko_errors:
+            err["_id"] = str(err["_id"])
+        
+        for txn in dmt_failures:
+            if txn.get("eko_status"):
+                txn["status_info"] = get_eko_error_info(txn["eko_status"])
+            if txn.get("tx_status"):
+                txn["tx_status_info"] = get_dmt_tx_status_info(txn["tx_status"])
+        
+        for bill in bill_failures:
+            if bill.get("eko_status"):
+                bill["status_info"] = get_eko_error_info(bill["eko_status"])
+        
+        return {
+            "success": True,
+            "time_range_hours": hours,
+            "eko_errors": eko_errors,
+            "dmt_failures": dmt_failures,
+            "bill_failures": bill_failures,
+            "error_code_reference": "Use /monitor/eko/error-codes for full reference"
+        }
+    except Exception as e:
+        logging.error(f"Eko errors fetch error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

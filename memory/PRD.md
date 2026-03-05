@@ -1,141 +1,130 @@
-# PARAS REWARD - Bill Payment Platform
+# PARAS Reward Portal - Product Requirements Document
 
 ## Original Problem Statement
-Full-stack bill payment platform using Eko BBPS APIs for electricity, mobile, DTH, FASTag, and other utility bill payments with DMT (Domestic Money Transfer) for bank transfers.
+Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) system for Paras Reward Portal where users can redeem their PRC (Paras Reward Coins) for real-world services like bill payments and bank transfers.
 
-## Architecture
-- **Frontend:** React.js with Tailwind CSS, Shadcn UI
-- **Backend:** FastAPI (Python)
-- **Database:** MongoDB
-- **Payment Gateway:** Razorpay (subscriptions), Eko (BBPS + DMT)
+## Core Features
 
-## What's Been Implemented
+### 1. BBPS Module (COMPLETED)
+- Universal bill payment engine for Electricity, DTH, FASTag, Loan/EMI, Gas, LPG
+- Robust Eko API error handling
+- A-Z sorted operator lists
+- Bill fetch functionality for electricity providers
 
-### Session: 2026-03-05 - Complete DMT Implementation
+### 2. DMT Module (IN PROGRESS)
+- **v1 Backend (COMPLETED)**: Customer/recipient management, money transfers
+- **v3 Backend (SCAFFOLDED)**: Aadhaar/eKYC flow - needs implementation
+- **Frontend UI**: Needs completion
 
-**DMT v1 (Basic Flow)** - `/api/eko/dmt/*`
-- Customer Search/Registration
-- Add Bank Recipient
-- Money Transfer (PRC to INR)
-- Transaction Status & History
-- PRC refund on failure
+### 3. Admin Panel Features
 
-**DMT v3 (Advanced Flow with Aadhaar)** - `/api/dmt/v3/*`
-- Airtel DMT Flow
-- Fino DMT Flow  
-- Levin DMT Flow
-- Aadhaar OTP Verification
-- Biometric eKYC
-- Transaction OTP
+#### 3.1 DMT Admin Dashboard (COMPLETED - Dec 2025)
+- **Location**: `/admin/dmt`
+- **Features**:
+  - DMT Enable/Disable toggle
+  - Global settings (min/max transfer, PRC rate)
+  - Daily/Monthly limits configuration
+  - Transaction count limits (daily/monthly)
+  - DMT Transaction viewer with filters (date, status, search, amount)
+  - Per-user custom DMT limits
+  - CSV export functionality
+  - Real-time statistics
 
-**Frontend DMT Page** - `/dmt` or `/bank-transfer`
-- Customer search
-- Recipient management
-- Transfer execution
-- Transaction history
-- PRC balance display
+#### 3.2 Error Monitor (UPDATED - Dec 2025)
+- Eko error codes reference (18 status codes)
+- DMT transaction status codes (0-5)
+- Error interpretation and suggested actions
+- Eko-specific error tracking endpoints
 
-### BBPS Services (Bill Payments)
-| Service | Category | Operators |
-|---------|----------|-----------|
-| Mobile Prepaid | 5 | 6 (Jio, Airtel, Vi, BSNL) |
-| Electricity | 8 | 89 |
-| DTH | 4 | 5 |
-| FASTag | 22 | 20 |
-| EMI/Loan | 21 | 294 |
-| Water | 11 | 54 |
-| Credit Card | 7 | 29 |
-| Insurance | 20 | 40 |
+#### 3.3 Chatbot (UPDATED - Dec 2025)
+- Added DMT transaction context for self-user
+- Shows pending/completed/failed DMT transfers
+- Last transfer details with status
 
-### PRC Conversion Rules
-- 100 PRC = ₹1 INR
-- Minimum Redeem: ₹100 (10,000 PRC)
-- Maximum Daily: ₹5,000 (5,00,000 PRC)
-- Auto refund on failure
+## Technical Architecture
 
-## API Endpoints Summary
-
-### BBPS APIs
+### Backend Routes
 ```
-GET  /api/bbps/health
-GET  /api/bbps/operators/{category}
-GET  /api/bbps/operator-params/{id}
-POST /api/bbps/fetch
-POST /api/bbps/pay
-GET  /api/bbps/status/{tid}
+/api/admin/dmt/settings      - GET/POST DMT global settings
+/api/admin/dmt/toggle        - POST enable/disable DMT
+/api/admin/dmt/stats         - GET DMT statistics
+/api/admin/dmt/transactions  - GET transactions with filters
+/api/admin/dmt/user-limits   - GET/POST/DELETE per-user limits
+/api/admin/dmt/export        - GET CSV export
+/api/monitor/eko/error-codes - GET all Eko error codes
+/api/monitor/eko/errors      - GET Eko-related errors
 ```
 
-### DMT v1 APIs
-```
-GET  /api/eko/dmt/health
-GET  /api/eko/dmt/wallet/{user_id}
-POST /api/eko/dmt/customer/search
-POST /api/eko/dmt/customer/register
-POST /api/eko/dmt/recipient/add
-GET  /api/eko/dmt/recipients/{mobile}
-POST /api/eko/dmt/transfer
-GET  /api/eko/dmt/status/{tid}
-GET  /api/eko/dmt/transactions/{user_id}
+### Key Files
+- `backend/routes/admin_dmt_routes.py` - Admin DMT APIs
+- `backend/routes/error_monitor.py` - Error monitoring with Eko codes
+- `frontend/src/pages/Admin/AdminDMTDashboard.js` - Admin DMT UI
+- `backend/routes/eko_dmt_service.py` - DMT v1 backend
+- `backend/routes/bbps_services.py` - BBPS engine
+
+## Database Schema
+
+### DMT Settings (settings collection)
+```json
+{
+  "key": "dmt_settings",
+  "dmt_enabled": true,
+  "min_transfer": 100,
+  "max_daily_limit": 5000,
+  "max_monthly_limit": 50000,
+  "max_daily_transactions": 10,
+  "max_monthly_transactions": 100,
+  "prc_rate": 100
+}
 ```
 
-### DMT v3 APIs (Aadhaar/eKYC)
-```
-GET  /api/dmt/v3/health
-POST /api/dmt/v3/sender/profile
-POST /api/dmt/v3/sender/onboard
-POST /api/dmt/v3/sender/aadhaar/otp
-POST /api/dmt/v3/sender/aadhaar/verify
-POST /api/dmt/v3/recipient/add
-GET  /api/dmt/v3/recipients/{mobile}
-POST /api/dmt/v3/transaction/otp
-POST /api/dmt/v3/transaction/initiate
-GET  /api/dmt/v3/transaction/status/{id}
-```
-
-## Eko Configuration
-```
-BASE_URL=https://api.eko.in:25002/ekoicici
-DEVELOPER_KEY=7c179a397b4710e71b2248d1f5892d19
-AUTHENTICATOR_KEY=7a2529f5-3587-4add-a2df-3d0606d62460
-INITIATOR_ID=9936606966
-USER_CODE=20810200
+### User Custom Limits (users collection)
+```json
+{
+  "custom_dmt_limits": {
+    "enabled": true,
+    "daily_limit": 10000,
+    "monthly_limit": 100000,
+    "daily_transaction_limit": 20,
+    "monthly_transaction_limit": 200
+  }
+}
 ```
 
-## Pending/Backlog Tasks
+## Completed Work (December 2025)
+1. ✅ Admin DMT Dashboard with enable/disable toggle
+2. ✅ DMT Transaction viewer with filters
+3. ✅ Per-user daily/monthly limits
+4. ✅ Transaction count limits
+5. ✅ Error Monitor with Eko error codes
+6. ✅ Chatbot DMT transaction updates
+
+## Pending Tasks
+
+### P0 - Critical
+- Test Admin DMT Dashboard UI
+- Verify per-user limit enforcement in transfer API
 
 ### P1 - High Priority
-- [ ] End-to-end DMT testing with real bank transfer
-- [ ] BBPS bill fetch timeout handling
+- Complete DMT v1 Frontend UI
+- Implement DMT v3 backend (Aadhaar/eKYC)
+- DMT v3 frontend
 
 ### P2 - Medium Priority
-- [ ] Admin Panel delete plan error
-- [ ] PRC Vault migration script
+- Fix "Failed to delete plan" error
+- PRC Vault migration script
 
-### P3 - Low Priority
-- [ ] Email/OTP verification on signup
-- [ ] Code refactoring
-
-## API Endpoints Reference
-
-### Electricity Bill Payment Flow
-```
-1. GET /api/eko/bbps/operators/{category}    - List operators
-2. GET /api/eko/bbps/operator-params/{id}    - Get required parameters
-3. POST /api/eko/bbps/fetch-bill             - Fetch bill details
-4. POST /api/eko/bbps/pay-bill               - Execute payment
-```
-
-### Admin Endpoints
-```
-POST /api/razorpay/admin/manual-activate-by-email  - Manual subscription activation
-GET /admin/error-monitor                            - Error monitoring dashboard
-```
+### P3 - Low Priority/Backlog
+- Email/Mobile OTP verification
+- KYC images migration to S3
+- server.py refactoring
 
 ## Test Credentials
-- **User:** mail2avhale@gmail.com / PIN: 153759
-- **Admin:** admin@paras.com / 123456
+- **Admin**: admin@paras.com / PIN: 123456
+- **User**: mail2avhale@gmail.com / PIN: 153759
 
-## Notes
-- MSEDCL operator is currently down (Eko side issue)
-- Fetch bill may timeout (up to 120s) - normal Eko latency
-- For operators with billFetchResponse=0, fetch is not required
+## Third-Party Integrations
+- **Eko BBPS API v2**: Bill payments
+- **Eko DMT API v1**: Money transfers (implemented)
+- **Eko DMT API v3**: Advanced transfers (scaffolded)
+- **Razorpay**: Subscription payments

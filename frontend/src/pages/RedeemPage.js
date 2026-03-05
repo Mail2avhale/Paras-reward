@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { 
@@ -22,7 +21,23 @@ const SERVICES = [
 ];
 
 export default function RedeemPage() {
-  const { user, prcBalance } = useAuth();
+  // Get user from localStorage
+  const [user, setUser] = useState(null);
+  const [prcBalance, setPrcBalance] = useState(0);
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        setPrcBalance(parsed.prc_balance || 0);
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+  }, []);
+  
   const [activeTab, setActiveTab] = useState('services'); // services, form, confirm, history
   const [selectedService, setSelectedService] = useState(null);
   const [operators, setOperators] = useState([]);
@@ -34,7 +49,7 @@ export default function RedeemPage() {
     beneficiary_name: '',
     bank_account: '',
     ifsc_code: '',
-    sender_name: user?.name || 'Customer'
+    sender_name: 'Customer'
   });
   const [charges, setCharges] = useState(null);
   const [loading, setLoading] = useState(false);

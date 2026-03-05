@@ -15,7 +15,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://eko-rebuild.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bbps-money-transfer.preview.emergentagent.com')
 
 
 @pytest.fixture

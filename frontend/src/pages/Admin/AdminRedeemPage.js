@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -34,7 +33,20 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminRedeemPage() {
-  const { user } = useAuth();
+  // Get user from localStorage
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+  }, []);
+  
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);

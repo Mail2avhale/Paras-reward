@@ -69,6 +69,7 @@ from routes.error_monitor import router as monitor_router, set_db as set_monitor
 from routes.bbps_services import router as bbps_router
 from routes.eko_dmt_service import router as dmt_router
 from routes.eko_dmt_v3 import router as dmt_v3_router
+from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -14104,6 +14105,15 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
         "user_id": uid
     }, {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}).sort("created_at", -1).to_list(10)
     
+    # 14.1 DMT Transactions (Bank Transfers)
+    dmt_transactions = await db.dmt_transactions.find({
+        "user_id": uid
+    }, {"_id": 0, "transaction_id": 1, "amount_inr": 1, "prc_amount": 1, "status": 1, "created_at": 1, "eko_message": 1}).sort("created_at", -1).to_list(5)
+    
+    pending_dmt = [t for t in dmt_transactions if t.get("status") in ["pending", "processing"]]
+    completed_dmt = [t for t in dmt_transactions if t.get("status") == "completed"]
+    failed_dmt = [t for t in dmt_transactions if t.get("status") == "failed"]
+    
     # Monthly earnings summary
     monthly_earnings = await db.transactions.aggregate([
         {"$match": {"user_id": uid, "type": {"$in": ["mining", "referral_bonus", "daily_bonus", "tap_game"]}, 
@@ -14191,6 +14201,14 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
 - Pending Payments: {len(pending_subscriptions)} {'⏳ Contact admin if > 48hrs' if pending_subscriptions else ''}
 - Recent Completed: {len(completed_subscriptions)}
 {f"- Pending Amount: ₹{pending_subscriptions[0].get('amount', 0)}" if pending_subscriptions else ''}
+
+**💸 DMT Bank Transfers:**
+- Recent Transfers: {len(dmt_transactions)}
+- Pending/Processing: {len(pending_dmt)} {'⏳' if pending_dmt else ''}
+- Completed: {len(completed_dmt)} {'✅' if completed_dmt else ''}
+- Failed: {len(failed_dmt)} {'❌' if failed_dmt else ''}
+{f"- Last Failed Reason: {failed_dmt[0].get('eko_message', 'Unknown')}" if failed_dmt else ''}
+{f"- Last Transfer: ₹{dmt_transactions[0].get('amount_inr', 0)} ({dmt_transactions[0].get('status', 'unknown')})" if dmt_transactions else '- No DMT transfers yet'}
 
 **📱 Bill Services:**
 - Available: {'Mobile Recharge, DTH, Electricity, Water, Gas' if subscription_plan not in ['explorer', 'free'] else 'Upgrade to VIP for bill payments'}
@@ -41786,6 +41804,10 @@ api_router.include_router(dmt_router)
 
 # EKO DMT v3 (Advanced with Aadhaar/OTP) Router
 api_router.include_router(dmt_v3_router)
+
+# Admin DMT Management Router
+set_admin_dmt_db(db)
+api_router.include_router(admin_dmt_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)

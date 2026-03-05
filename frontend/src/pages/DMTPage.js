@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -29,7 +28,20 @@ import { toast } from 'sonner';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const DMTPage = () => {
-  const { user } = useAuth();
+  // Get user from localStorage
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+  }, []);
+  
   const [activeTab, setActiveTab] = useState('transfer');
   const [loading, setLoading] = useState(false);
   

@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://eko-rebuild.preview.emergentagent.com",
+    "url": "https://bbps-money-transfer.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

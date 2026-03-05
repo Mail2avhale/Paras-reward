@@ -9,7 +9,7 @@ import {
   Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
-  ShieldAlert, CheckCircle, Building2, Zap, Receipt
+  ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
@@ -187,6 +187,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'redeem-v2', label: 'Redeem Requests', icon: Receipt, path: '/admin/redeem', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
+        { id: 'dmt-dashboard', label: 'DMT Bank Transfer', icon: Send, path: '/admin/dmt', highlight: true },
         { id: 'unified-payments', label: 'All Payments (Old)', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
         { id: 'bill-payments', label: 'Bill Payments (Old)', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },

@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: './test-results/results.json' }],
   ],
   use: {
-    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://eko-rebuild.preview.emergentagent.com',
+    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://bbps-money-transfer.preview.emergentagent.com',
     screenshot: 'on',
     trace: 'on-first-retry',
     headless: true,

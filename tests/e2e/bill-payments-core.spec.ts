@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
-const BASE_URL = 'https://eko-rebuild.preview.emergentagent.com';
+const BASE_URL = 'https://bbps-money-transfer.preview.emergentagent.com';
 
 test.describe('Bill Payments API Endpoints', () => {
   
