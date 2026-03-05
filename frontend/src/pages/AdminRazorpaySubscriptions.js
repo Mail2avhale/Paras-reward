@@ -30,9 +30,8 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [itemsPerPage] = useState(10);
 
   useEffect(() => {
-    fetchData();
     fetchRazorpayConfig();
-  }, [statusFilter]);
+  }, []);
 
   const fetchRazorpayConfig = async () => {
     try {
@@ -64,7 +63,10 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+      let params = statusFilter !== 'all' ? `?status=${statusFilter}` : '?';
+      if (searchQuery) {
+        params += `${params.includes('?') && params.length > 1 ? '&' : ''}search=${encodeURIComponent(searchQuery)}`;
+      }
       const res = await axios.get(`${API}/admin/razorpay-subscriptions${params}`);
       setOrders(res.data.orders || []);
       setStats(res.data.stats || {});
@@ -75,6 +77,14 @@ const AdminRazorpaySubscriptions = ({ user }) => {
       setLoading(false);
     }
   };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter]);
 
   // Fraud cleanup functions
   const previewFraudCleanup = async () => {
@@ -308,12 +318,12 @@ const AdminRazorpaySubscriptions = ({ user }) => {
           <p className="text-2xl font-bold text-amber-400">{stats.pending_orders || 0}</p>
         </div>
         
-        <div className="p-4 rounded-2xl bg-gray-800/50 border border-gray-700">
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-400 text-sm">Total Orders</span>
+            <XCircle className="w-5 h-5 text-red-400" />
+            <span className="text-gray-400 text-sm">Failed</span>
           </div>
-          <p className="text-2xl font-bold text-white">{stats.total_orders || 0}</p>
+          <p className="text-2xl font-bold text-red-400">{stats.failed_orders || 0}</p>
         </div>
       </div>
 
@@ -497,6 +507,35 @@ const AdminRazorpaySubscriptions = ({ user }) => {
                   {order.paid_at && (
                     <p className="text-gray-500 text-xs mt-1">Paid: {formatDate(order.paid_at)}</p>
                   )}
+                </div>
+              )}
+              
+              {/* User's Current Subscription Status */}
+              {order.user_current_plan && (
+                <div className="mt-3 pt-3 border-t border-gray-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-xs">User's Current Plan:</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      order.user_current_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                      order.user_current_plan === 'growth' ? 'bg-purple-500/20 text-purple-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {order.user_current_plan?.toUpperCase()}
+                    </span>
+                  </div>
+                  {order.user_subscription_expiry && (
+                    <p className="text-gray-400 text-xs mt-1">
+                      Expires: {formatDate(order.user_subscription_expiry)}
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* If payment done but no current plan - show warning */}
+              {order.status === 'paid' && !order.user_current_plan && (
+                <div className="mt-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <p className="text-red-400 text-xs font-medium">⚠️ Payment received but subscription NOT ACTIVE!</p>
+                  <p className="text-red-300 text-xs">Use SYNC button to fix this.</p>
                 </div>
               )}
             </motion.div>

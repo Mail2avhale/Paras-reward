@@ -8339,14 +8339,43 @@ async def get_user_subscription_history(uid: str):
 @api_router.get("/admin/razorpay-subscriptions")
 async def get_admin_razorpay_subscriptions(
     status: str = None,
+    search: str = None,
     limit: int = 100,
     skip: int = 0
 ):
-    """Get all Razorpay subscription payments for admin dashboard"""
+    """Get all Razorpay subscription payments for admin dashboard with search"""
     
     query = {}
     if status:
         query["status"] = status
+    
+    # If search is provided, we need to find matching user IDs first
+    matching_user_ids = []
+    if search:
+        search_term = search.strip()
+        # Search in users collection
+        user_query = {"$or": [
+            {"name": {"$regex": search_term, "$options": "i"}},
+            {"email": {"$regex": search_term, "$options": "i"}},
+            {"mobile": {"$regex": search_term, "$options": "i"}},
+            {"uid": search_term}
+        ]}
+        matching_users = await db.users.find(user_query, {"uid": 1}).to_list(100)
+        matching_user_ids = [u["uid"] for u in matching_users]
+        
+        # Also search by order_id or payment_id
+        if matching_user_ids:
+            query["$or"] = [
+                {"user_id": {"$in": matching_user_ids}},
+                {"order_id": {"$regex": search_term, "$options": "i"}},
+                {"payment_id": {"$regex": search_term, "$options": "i"}}
+            ]
+        else:
+            query["$or"] = [
+                {"order_id": {"$regex": search_term, "$options": "i"}},
+                {"payment_id": {"$regex": search_term, "$options": "i"}},
+                {"user_id": {"$regex": search_term, "$options": "i"}}
+            ]
     
     orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.razorpay_orders.count_documents(query)
@@ -8354,7 +8383,11 @@ async def get_admin_razorpay_subscriptions(
     result = []
     for order in orders:
         user_id = order.get("user_id")
-        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1})
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "subscription_expires": 1, "subscription_expiry": 1})
+        
+        # Get user's current subscription status
+        current_plan = user.get("subscription_plan") if user else None
+        current_expiry = user.get("subscription_expires") or user.get("subscription_expiry") if user else None
         
         result.append({
             "order_id": order.get("order_id"),
@@ -8364,24 +8397,36 @@ async def get_admin_razorpay_subscriptions(
             "user_mobile": user.get("mobile") if user else None,
             "plan_name": order.get("plan_name", "").title(),
             "plan_type": order.get("plan_type", "monthly"),
-            "amount": order.get("amount", 0),  # Already in INR, don't divide by 100
+            "amount": order.get("amount", 0),
             "status": order.get("status", "created"),
             "payment_id": order.get("payment_id"),
+            "failure_reason": order.get("failure_reason"),
+            "error_code": order.get("error_code"),
             "created_at": order.get("created_at"),
-            "paid_at": order.get("paid_at")
+            "paid_at": order.get("paid_at"),
+            "status_updated_at": order.get("status_updated_at"),
+            # User's current subscription info
+            "user_current_plan": current_plan,
+            "user_subscription_expiry": str(current_expiry) if current_expiry else None
         })
     
+    # Stats
+    paid_count = await db.razorpay_orders.count_documents({"status": "paid"})
+    failed_count = await db.razorpay_orders.count_documents({"status": {"$in": ["failed", "error", "cancelled"]}})
+    pending_count = await db.razorpay_orders.count_documents({"status": "created"})
+    
     paid_orders = await db.razorpay_orders.find({"status": "paid"}).to_list(1000)
-    total_revenue = sum(o.get("amount", 0) for o in paid_orders)  # Already in INR
+    total_revenue = sum(o.get("amount", 0) for o in paid_orders)
     
     return {
         "orders": result,
         "total": total,
         "stats": {
-            "total_orders": total,
-            "paid_orders": len(paid_orders),
-            "total_revenue": total_revenue,
-            "pending_orders": await db.razorpay_orders.count_documents({"status": "created"})
+            "total_orders": await db.razorpay_orders.count_documents({}),
+            "paid_orders": paid_count,
+            "failed_orders": failed_count,
+            "pending_orders": pending_count,
+            "total_revenue": total_revenue
         }
     }
 

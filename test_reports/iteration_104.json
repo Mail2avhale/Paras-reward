@@ -1,0 +1,53 @@
+{
+  "summary": "Razorpay Admin Subscription APIs Testing Complete - All tests passed. Backend: 20/20 pytest tests. Frontend API: 19/19 Playwright tests. All required features verified: search by name/email/phone/order_id, filter by status, stats with failed_orders count, orders include user_current_plan and user_subscription_expiry, payment history with status_message, sync-pending endpoint.",
+  "mode": "generate",
+  "baseline_commit": "1ebb1550f0b616a4e8547a9ba1974818cc3b5faa",
+  "head_commit": "337c5bbb158b91bc1ff38852ff43554185d80b5f",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "AdminRazorpaySubscriptions.js",
+        "issues": ["No data-testid attributes on UI elements - recommend adding for easier automated testing"]
+      }
+    ]
+  },
+  "regression_results": {
+    "total_specs": 39,
+    "passed": 39,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_razorpay_admin.py",
+    "/app/tests/e2e/razorpay-admin-api.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_razorpay_admin.py",
+    "/app/test_reports/pytest/razorpay_admin_results.xml",
+    "/app/tests/e2e/razorpay-admin-api.spec.ts"
+  ],
+  "action_items": [
+    "Admin credentials (admin@paras.com / 123456) show 'Wrong PIN' error - unable to test Admin UI page directly. Consider updating admin PIN or documenting correct credentials.",
+    "Add data-testid attributes to AdminRazorpaySubscriptions.js for better testability"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_razorpay_admin.py",
+    "/app/tests/e2e/razorpay-admin-api.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 passed)",
+    "frontend": "100% (19/19 passed)"
+  },
+  "seed_data_creation": "No seed data created - tests use existing Razorpay orders in database",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Razorpay Admin Subscription APIs Testing Complete - Iteration 104:\n\n## Backend API Tests (20 passed):\n- GET /api/admin/razorpay-subscriptions - Returns all orders with stats\n- Stats include: total_orders, paid_orders, pending_orders, failed_orders, total_revenue\n- Orders include: user_current_plan, user_subscription_expiry, failure_reason, error_code\n- Search by name/email/phone/order_id all working\n- Filter by status (paid/created/failed/cancelled/error) working\n- Combined search + filter working\n- GET /api/razorpay/payment-history/{user_id}?include_all=true returns status_message and status_color\n- POST /api/admin/razorpay/sync-pending syncs pending payments from Razorpay API\n- GET /api/razorpay/config returns gateway configuration\n- POST /api/razorpay/update-order-status validates inputs correctly\n\n## Frontend API Tests (19 passed):\n- All backend API integrations tested via Playwright request API\n- Verified response structures and field presence\n- Verified search, filter, and sync functionality\n\n## Known Issues:\n- Admin credentials (admin@paras.com / 123456) rejected with 'Wrong PIN' error\n- Could not test Admin Panel UI at /admin/razorpay-subscriptions directly\n- AdminRazorpaySubscriptions.js lacks data-testid attributes\n\n## Test Files:\n- Backend: /app/backend/tests/test_razorpay_admin.py (20 tests)\n- Frontend: /app/tests/e2e/razorpay-admin-api.spec.ts (19 tests)"
+}

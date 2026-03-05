@@ -542,15 +542,45 @@ async def razorpay_webhook(request: Request):
 
 
 @router.get("/payment-history/{user_id}")
-async def get_payment_history(user_id: str):
-    """Get user's payment history"""
+async def get_payment_history(user_id: str, include_all: bool = False):
+    """Get user's payment history - optionally include failed/pending payments"""
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
-    payments = await db.razorpay_orders.find(
-        {"user_id": user_id, "status": {"$in": ["paid", "captured"]}},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(50)
+    if include_all:
+        # Include all payment attempts for user visibility
+        payments = await db.razorpay_orders.find(
+            {"user_id": user_id},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(50)
+    else:
+        # Only successful payments
+        payments = await db.razorpay_orders.find(
+            {"user_id": user_id, "status": {"$in": ["paid", "captured"]}},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(50)
+    
+    # Add user-friendly status messages
+    for p in payments:
+        status = p.get("status", "created")
+        if status == "paid":
+            p["status_message"] = "✅ Payment successful - Subscription activated"
+            p["status_color"] = "green"
+        elif status == "created":
+            p["status_message"] = "⏳ Payment pending - Complete payment to activate"
+            p["status_color"] = "yellow"
+        elif status == "failed":
+            p["status_message"] = f"❌ Payment failed - {p.get('failure_reason', 'Please try again')}"
+            p["status_color"] = "red"
+        elif status == "error":
+            p["status_message"] = f"⚠️ Error occurred - {p.get('failure_reason', 'Contact support')}"
+            p["status_color"] = "orange"
+        elif status == "cancelled":
+            p["status_message"] = "🚫 Payment cancelled"
+            p["status_color"] = "gray"
+        else:
+            p["status_message"] = f"Status: {status}"
+            p["status_color"] = "gray"
     
     return {"payments": payments}
 
