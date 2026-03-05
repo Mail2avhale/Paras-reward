@@ -227,9 +227,9 @@ const DMTPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.uid,
-          mobile: customerMobile,
+          customer_mobile: customerMobile,
           recipient_id: selectedRecipient.recipient_id,
-          prc_amount: prcRequired
+          amount: amount
         })
       });
       
