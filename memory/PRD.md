@@ -80,11 +80,18 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
    - Backend CRUD APIs at `/api/admin/popup/*`
    - Admin UI at `/admin/popup-messages`
    - User-facing popup shows after login only
+6. ✅ **P0 Complete**: Razorpay Error Handling & Admin Search (39/39 tests passed)
+   - Admin search by name/email/phone/order_id
+   - Failed orders count in stats
+   - User current plan & expiry shown on orders
+   - Payment history with status_message for users
+   - Failure reason visible in admin panel
 
 ## Pending/Future
 - P1: In-App Notifications (sonner toasts) for transfer status
 - P1: DMT v3 with Aadhaar OTP eKYC (planned after deploy)
 - P2: API route conflict cleanup (eko_payments.py vs eko_dmt_service.py)
 - P2: "Failed to delete plan" admin bug
+- P2: Admin PIN credentials check (testing agent reports wrong PIN)
 - P3: Email/Mobile OTP verification
 - P3: KYC images migration to S3
