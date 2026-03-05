@@ -654,20 +654,20 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             # Try to extract from IFSC (first 4 chars usually map to bank)
             bank_code = req.ifsc[:4]
         
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        # Use correct URL format with acc_no in path
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients/acc_no:{req.account_number}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
         # Generate request hash for recipient add
         timestamp = str(int(time.time() * 1000))
         hash_string = f"{timestamp}{req.account_number}{req.ifsc}"
         request_hash = generate_request_hash(hash_string)
         
-        headers = generate_eko_headers()
+        headers = generate_eko_headers_for_get()
         headers["request_hash"] = request_hash
         
         payload = {
             "recipient_name": req.recipient_name,
             "recipient_mobile": req.mobile,
-            "acc_no": req.account_number,
             "ifsc": req.ifsc,
             "bank_code": bank_code,
             "recipient_type": "1",  # 1 = Bank Account
@@ -676,7 +676,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             "source_ip": SOURCE_IP
         }
         
-        response = requests.put(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Add Recipient Response: {response.status_code}")
         
