@@ -2890,44 +2890,86 @@ async def send_dmt_otp(mobile: str, amount: float):
 
 @router.post("/dmt/transfer")
 async def initiate_dmt_transfer(request: DMTTransferRequest):
-    """Initiate money transfer to bank account"""
+    """Initiate money transfer to bank account via IMPS"""
     try:
+        import requests as req
+        
         # Create unique transaction reference
         txn_ref = f"DMT{datetime.now().strftime('%Y%m%d%H%M%S')}{request.user_id[-6:]}"
         
-        result = await make_eko_request(
-            f"/v2/customers/{request.customer_mobile}/transfer",
-            method="POST",
-            data={
-                "recipient_id": request.recipient_id,
-                "amount": str(int(request.amount)),
-                "otp": request.otp,
-                "client_ref_id": txn_ref,
-                "latlong": "19.0760,72.8777",
-                "source_ip": "34.170.12.145"
-            }
-        )
+        # Generate timestamp
+        timestamp = str(int(time.time() * 1000))
+        
+        # Generate secret key
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), timestamp.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        # Request hash: timestamp + recipient_id + amount + user_code
+        amount_str = str(int(request.amount))
+        hash_string = f"{timestamp}{request.recipient_id}{amount_str}{EKO_USER_CODE}"
+        request_hash = base64.b64encode(
+            hmac.new(encoded_key.encode('utf-8'), hash_string.encode('utf-8'), hashlib.sha256).digest()
+        ).decode('utf-8')
+        
+        headers = {
+            'developer_key': EKO_DEVELOPER_KEY,
+            'secret-key': secret_key,
+            'secret-key-timestamp': timestamp,
+            'request_hash': request_hash
+        }
+        
+        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        payload = {
+            'amount': amount_str,
+            'payment_mode': '5',  # IMPS
+            'channel': '2',
+            'state': '1',
+            'recipient_id': request.recipient_id,
+            'client_ref_id': txn_ref,
+            'customer_id': request.customer_mobile,
+            'initiator_id': EKO_INITIATOR_ID,
+            'user_code': EKO_USER_CODE,
+            'source_ip': '34.44.149.98',
+            'latlong': '19.0760,72.8777'
+        }
+        
+        logging.info(f"[DMT] Initiating transfer: ₹{request.amount} to {request.recipient_id}")
+        response = req.post(url, data=payload, headers=headers, timeout=120)
+        result = response.json()
+        
+        logging.info(f"[DMT] Response: {result}")
         
         # Log transaction
         if db is not None:
-            await db.eko_transactions.insert_one({
-                "type": "dmt_transfer",
+            await db.dmt_transactions.insert_one({
+                "transaction_id": txn_ref,
                 "user_id": request.user_id,
-                "customer_mobile": request.customer_mobile,
+                "mobile": request.customer_mobile,
                 "recipient_id": request.recipient_id,
-                "amount": request.amount,
-                "txn_ref": txn_ref,
-                "eko_response": result,
-                "status": result.get("status", "pending"),
-                "timestamp": datetime.now(timezone.utc)
+                "amount_inr": request.amount,
+                "prc_amount": int(request.amount * 100),
+                "eko_tid": result.get("data", {}).get("tid"),
+                "tx_status": result.get("data", {}).get("tx_status"),
+                "eko_status": result.get("status"),
+                "eko_message": result.get("message"),
+                "status": "completed" if result.get("data", {}).get("tx_status") == 0 else "pending",
+                "created_at": datetime.now(timezone.utc),
+                "eko_response": result
             })
         
+        tx_status = result.get("data", {}).get("tx_status")
+        
         return {
-            "success": True,
+            "success": result.get("status") == 0,
             "txn_ref": txn_ref,
-            "eko_txn_id": result.get("tid"),
-            "status": result.get("status"),
-            "message": result.get("message", "Transfer initiated")
+            "eko_tid": result.get("data", {}).get("tid"),
+            "tx_status": tx_status,
+            "status": "completed" if tx_status == 0 else ("failed" if tx_status == 1 else "pending"),
+            "message": result.get("message", "Transfer initiated"),
+            "amount": request.amount
         }
         
     except HTTPException:
