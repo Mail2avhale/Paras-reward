@@ -8769,6 +8769,306 @@ async def manual_sync_razorpay_payments():
         return {"success": False, "error": str(e)}
 
 
+@api_router.post("/admin/razorpay/search-payment")
+async def search_razorpay_payment(request: Request):
+    """
+    Search for a payment in Razorpay by various criteria.
+    Use this when payment was made but not found in our system.
+    """
+    try:
+        import razorpay
+        
+        data = await request.json()
+        payment_id = data.get("payment_id")  # pay_xxx
+        amount = data.get("amount")  # Amount in INR (e.g., 799)
+        date_str = data.get("date")  # Date string YYYY-MM-DD
+        upi_ref = data.get("upi_ref")  # UPI transaction reference
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            raise HTTPException(status_code=500, detail="Razorpay not configured")
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # If payment_id provided, fetch directly
+        if payment_id:
+            try:
+                payment = razorpay_client.payment.fetch(payment_id)
+                return {
+                    "success": True,
+                    "found": True,
+                    "payment": {
+                        "id": payment.get("id"),
+                        "amount": payment.get("amount", 0) / 100,
+                        "status": payment.get("status"),
+                        "captured": payment.get("captured"),
+                        "order_id": payment.get("order_id"),
+                        "method": payment.get("method"),
+                        "email": payment.get("email"),
+                        "contact": payment.get("contact"),
+                        "vpa": payment.get("vpa"),
+                        "created_at": datetime.fromtimestamp(payment.get("created_at", 0)).isoformat() if payment.get("created_at") else None,
+                        "description": payment.get("description"),
+                        "notes": payment.get("notes", {})
+                    }
+                }
+            except Exception as e:
+                return {"success": False, "found": False, "error": str(e)}
+        
+        # Search by criteria
+        search_params = {"count": 50}
+        
+        if date_str:
+            try:
+                search_date = datetime.strptime(date_str, "%Y-%m-%d")
+                search_params["from"] = int(search_date.timestamp())
+                search_params["to"] = int((search_date + timedelta(days=1)).timestamp())
+            except:
+                pass
+        
+        payments_response = razorpay_client.payment.all(search_params)
+        all_payments = payments_response.get("items", [])
+        
+        # Filter by amount if provided
+        if amount:
+            amount_paise = int(float(amount) * 100)
+            all_payments = [p for p in all_payments if p.get("amount") == amount_paise]
+        
+        # Filter by status - only captured/authorized
+        captured_payments = [p for p in all_payments if p.get("status") in ["captured", "authorized"]]
+        
+        # Search for UPI reference in notes/description if provided
+        if upi_ref:
+            matching = []
+            for p in captured_payments:
+                notes = p.get("notes", {})
+                desc = p.get("description", "")
+                acquirer_data = p.get("acquirer_data", {})
+                
+                # Check in various fields
+                if (upi_ref in str(notes) or 
+                    upi_ref in str(desc) or 
+                    upi_ref in str(acquirer_data) or
+                    upi_ref == acquirer_data.get("rrn") or
+                    upi_ref == acquirer_data.get("upi_transaction_id")):
+                    matching.append(p)
+            
+            captured_payments = matching if matching else captured_payments
+        
+        # Format results
+        results = []
+        for p in captured_payments[:20]:  # Limit to 20
+            results.append({
+                "id": p.get("id"),
+                "amount": p.get("amount", 0) / 100,
+                "status": p.get("status"),
+                "captured": p.get("captured"),
+                "order_id": p.get("order_id"),
+                "method": p.get("method"),
+                "email": p.get("email"),
+                "contact": p.get("contact"),
+                "vpa": p.get("vpa"),
+                "created_at": datetime.fromtimestamp(p.get("created_at", 0)).isoformat() if p.get("created_at") else None,
+                "acquirer_data": p.get("acquirer_data", {})
+            })
+        
+        return {
+            "success": True,
+            "total_found": len(results),
+            "payments": results,
+            "search_criteria": {
+                "amount": amount,
+                "date": date_str,
+                "upi_ref": upi_ref
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"[SEARCH-PAYMENT] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/razorpay/manual-activate")
+async def manual_activate_subscription(request: Request):
+    """
+    Manually activate a subscription for a payment that exists in Razorpay
+    but has no corresponding order in our system.
+    Use this for edge cases where payment was made outside the normal flow.
+    """
+    try:
+        import razorpay
+        
+        data = await request.json()
+        payment_id = data.get("payment_id")  # Required: pay_xxx
+        user_email = data.get("user_email")  # Required: User's email to activate
+        plan_name = data.get("plan_name", "elite")  # Optional: startup/elite
+        plan_type = data.get("plan_type", "monthly")  # Optional: monthly/quarterly/etc
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not payment_id:
+            raise HTTPException(status_code=400, detail="payment_id is required")
+        
+        if not user_email:
+            raise HTTPException(status_code=400, detail="user_email is required")
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            raise HTTPException(status_code=500, detail="Razorpay not configured")
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        # Verify payment exists and is captured
+        try:
+            payment = razorpay_client.payment.fetch(payment_id)
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Payment not found in Razorpay: {e}")
+        
+        if payment.get("status") != "captured":
+            raise HTTPException(status_code=400, detail=f"Payment status is {payment.get('status')}, not captured")
+        
+        amount = payment.get("amount", 0) / 100
+        
+        # Find user by email
+        user = await db.users.find_one({"email": {"$regex": f"^{user_email}$", "$options": "i"}})
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User with email {user_email} not found")
+        
+        user_id = user.get("uid")
+        user_name = user.get("name", "Unknown")
+        
+        # Check if this payment was already used
+        existing = await db.vip_payments.find_one({"payment_id": payment_id})
+        if existing:
+            raise HTTPException(status_code=400, detail="This payment has already been used for activation")
+        
+        # Plan durations
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        duration_days = PLAN_DURATIONS.get(plan_type, 28)
+        now = datetime.now(timezone.utc)
+        
+        # Check for existing subscription - add remaining days
+        remaining_days = 0
+        expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+        if expiry:
+            try:
+                if isinstance(expiry, str):
+                    exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                else:
+                    exp_date = expiry
+                if exp_date.tzinfo is None:
+                    exp_date = exp_date.replace(tzinfo=timezone.utc)
+                if exp_date > now:
+                    remaining_days = (exp_date - now).days
+            except:
+                pass
+        
+        total_days = duration_days + remaining_days
+        new_expiry = now + timedelta(days=total_days)
+        
+        # Create a synthetic order record
+        order_id = f"manual_{payment_id}"
+        
+        await db.razorpay_orders.insert_one({
+            "order_id": order_id,
+            "user_id": user_id,
+            "plan_name": plan_name,
+            "plan_type": plan_type,
+            "amount": amount,
+            "status": "paid",
+            "payment_id": payment_id,
+            "payment_captured": True,
+            "created_at": now,
+            "paid_at": now,
+            "synced_via": "manual_activate",
+            "notes": "Manually activated - payment found in Razorpay but no order existed"
+        })
+        
+        # Update user subscription
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "subscription_plan": plan_name.lower(),
+                    "subscription_type": plan_type,
+                    "subscription_status": "active",
+                    "subscription_start": now.isoformat(),
+                    "subscription_expires": new_expiry,
+                    "subscription_expiry": new_expiry.isoformat(),
+                    "vip_expiry": new_expiry.isoformat(),
+                    "membership_type": "vip",
+                    "last_payment_id": payment_id,
+                    "last_payment_amount": amount,
+                    "last_payment_date": now.isoformat(),
+                    "activated_via": "manual_activate"
+                }
+            }
+        )
+        
+        # Log to vip_payments
+        await db.vip_payments.insert_one({
+            "user_id": user_id,
+            "order_id": order_id,
+            "payment_id": payment_id,
+            "amount": amount,
+            "subscription_plan": plan_name.lower(),
+            "plan_type": plan_type,
+            "status": "approved",
+            "payment_method": "razorpay",
+            "payment_captured": True,
+            "new_expiry": new_expiry.isoformat(),
+            "duration_days": total_days,
+            "remaining_days_added": remaining_days,
+            "approved_at": now.isoformat(),
+            "created_at": now.isoformat(),
+            "auto_activated": False,
+            "activation_source": "manual_activate",
+            "notes": "Manually activated by admin"
+        })
+        
+        logging.info(f"[MANUAL-ACTIVATE] ✅ Activated {user_name} ({user_email}), Plan: {plan_name}, Payment: {payment_id}")
+        
+        return {
+            "success": True,
+            "message": f"✅ Subscription activated for {user_name}!",
+            "user": {
+                "uid": user_id,
+                "name": user_name,
+                "email": user_email
+            },
+            "subscription": {
+                "plan": plan_name,
+                "type": plan_type,
+                "duration_days": duration_days,
+                "remaining_days_added": remaining_days,
+                "total_days": total_days,
+                "new_expiry": new_expiry.isoformat()
+            },
+            "payment": {
+                "id": payment_id,
+                "amount": amount
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[MANUAL-ACTIVATE] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/admin/razorpay/bulk-sync-captured")
 async def bulk_sync_captured_payments(request: Request):
     """

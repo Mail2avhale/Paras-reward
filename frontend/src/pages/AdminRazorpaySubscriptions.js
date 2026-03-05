@@ -28,6 +28,16 @@ const AdminRazorpaySubscriptions = ({ user }) => {
   const [sortBy, setSortBy] = useState('latest');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  
+  // Manual activation state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualPaymentId, setManualPaymentId] = useState('');
+  const [manualUserEmail, setManualUserEmail] = useState('');
+  const [manualPlan, setManualPlan] = useState('elite');
+  const [manualLoading, setManualLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchAmount, setSearchAmount] = useState('');
+  const [searchDate, setSearchDate] = useState('');
 
   useEffect(() => {
     fetchRazorpayConfig();
@@ -170,33 +180,106 @@ const AdminRazorpaySubscriptions = ({ user }) => {
     }
   };
 
-  // SYNC payments from Razorpay API
+  // SYNC payments from Razorpay API - BULK SYNC CAPTURED
   const syncPayments = async () => {
     try {
       setCleanupLoading(true);
-      toast.loading('Syncing with Razorpay...', { id: 'sync' });
+      toast.loading('Syncing captured payments from Razorpay...', { id: 'sync' });
       
-      const res = await axios.post(`${API}/admin/razorpay/sync-pending`);
+      const res = await axios.post(`${API}/admin/razorpay/bulk-sync-captured`, {});
       
       toast.dismiss('sync');
       
-      if (res.data.synced > 0) {
-        toast.success(`✅ Activated ${res.data.synced} subscriptions!`, { duration: 5000 });
+      if (res.data.newly_activated > 0) {
+        toast.success(`✅ Activated ${res.data.newly_activated} subscriptions!`, { duration: 5000 });
       } else {
-        toast.info(`No payments to activate (${res.data.total_pending} pending orders checked)`);
+        toast.info(`No new payments to activate (${res.data.total_captured_in_razorpay} captured, ${res.data.already_active} already active)`);
       }
       
-      if (res.data.errors && res.data.errors.length > 0) {
-        toast.error(`${res.data.errors.length} orders had errors`);
+      if (res.data.orders_not_in_db > 0) {
+        toast.warning(`${res.data.orders_not_in_db} payments have no order in DB - use Manual Activate`, { duration: 5000 });
       }
       
       fetchData();
     } catch (error) {
       toast.dismiss('sync');
       console.error('Error:', error);
-      toast.error(error.response?.data?.detail || 'Sync failed');
+      toast.error(error.response?.data?.detail || 'Sync failed - try again');
     } finally {
       setCleanupLoading(false);
+    }
+  };
+  
+  // Search payments in Razorpay
+  const searchRazorpayPayments = async () => {
+    try {
+      setManualLoading(true);
+      toast.loading('Searching Razorpay...', { id: 'search' });
+      
+      const res = await axios.post(`${API}/admin/razorpay/search-payment`, {
+        amount: searchAmount || null,
+        date: searchDate || null,
+        payment_id: manualPaymentId || null
+      });
+      
+      toast.dismiss('search');
+      
+      if (res.data.payments && res.data.payments.length > 0) {
+        setSearchResults(res.data.payments);
+        toast.success(`Found ${res.data.payments.length} payments`);
+      } else if (res.data.found && res.data.payment) {
+        setSearchResults([res.data.payment]);
+        toast.success('Payment found!');
+      } else {
+        setSearchResults([]);
+        toast.info('No payments found matching criteria');
+      }
+    } catch (error) {
+      toast.dismiss('search');
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Search failed');
+    } finally {
+      setManualLoading(false);
+    }
+  };
+  
+  // Manual activate subscription
+  const manualActivate = async (paymentId) => {
+    if (!manualUserEmail) {
+      toast.error('Please enter user email');
+      return;
+    }
+    
+    try {
+      setManualLoading(true);
+      toast.loading('Activating subscription...', { id: 'activate' });
+      
+      const res = await axios.post(`${API}/admin/razorpay/manual-activate`, {
+        payment_id: paymentId,
+        user_email: manualUserEmail,
+        plan_name: manualPlan,
+        plan_type: 'monthly',
+        admin_pin: '123456'
+      });
+      
+      toast.dismiss('activate');
+      
+      if (res.data.success) {
+        toast.success(`✅ ${res.data.message}`, { duration: 5000 });
+        setShowManualModal(false);
+        setManualPaymentId('');
+        setManualUserEmail('');
+        setSearchResults([]);
+        fetchData();
+      } else {
+        toast.error(res.data.message || 'Activation failed');
+      }
+    } catch (error) {
+      toast.dismiss('activate');
+      console.error('Error:', error);
+      toast.error(error.response?.data?.detail || 'Activation failed');
+    } finally {
+      setManualLoading(false);
     }
   };
 
@@ -346,13 +429,139 @@ const AdminRazorpaySubscriptions = ({ user }) => {
         </div>
       )}
 
-      {/* REMOVED: Fraud Cleanup, Delete Pending, Delete All buttons
-          These are dangerous and can cause data loss.
-          Use API directly if needed:
-          - POST /api/admin/razorpay-cleanup-fraudulent
-          - POST /api/admin/razorpay-delete-pending
-          - POST /api/admin/razorpay-delete-all
-      */}
+      {/* Manual Payment Activation - For edge cases */}
+      <div className="px-5 mt-4">
+        <button
+          onClick={() => setShowManualModal(true)}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 font-semibold hover:bg-purple-500/30 transition-all"
+        >
+          <Search className="w-5 h-5" />
+          <span>🔍 Manual Payment Search & Activate</span>
+        </button>
+        <p className="text-center text-xs text-gray-500 mt-2">
+          For payments made outside app flow (direct UPI, etc.)
+        </p>
+      </div>
+
+      {/* Manual Activation Modal */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gray-900 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          >
+            <h2 className="text-xl font-bold text-white mb-4">🔍 Search & Activate Payment</h2>
+            
+            <div className="space-y-4">
+              {/* Search by Payment ID */}
+              <div>
+                <label className="text-sm text-gray-400 mb-1 block">Payment ID (pay_xxx)</label>
+                <input
+                  type="text"
+                  placeholder="pay_xxx"
+                  value={manualPaymentId}
+                  onChange={(e) => setManualPaymentId(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white"
+                />
+              </div>
+              
+              {/* Or search by Amount + Date */}
+              <div className="text-center text-gray-500 text-sm">— OR —</div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">Amount (₹)</label>
+                  <input
+                    type="number"
+                    placeholder="799"
+                    value={searchAmount}
+                    onChange={(e) => setSearchAmount(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">Date</label>
+                  <input
+                    type="date"
+                    value={searchDate}
+                    onChange={(e) => setSearchDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white"
+                  />
+                </div>
+              </div>
+              
+              <button
+                onClick={searchRazorpayPayments}
+                disabled={manualLoading}
+                className="w-full py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 disabled:opacity-50"
+              >
+                {manualLoading ? 'Searching...' : '🔍 Search in Razorpay'}
+              </button>
+              
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-400">Found Payments:</h3>
+                  {searchResults.map((p) => (
+                    <div key={p.id} className="p-4 bg-gray-800 rounded-xl border border-gray-700">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs text-gray-500">{p.id}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          p.status === 'captured' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                        }`}>
+                          {p.status}
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-white mb-1">₹{p.amount}</p>
+                      <p className="text-sm text-gray-400">{p.email || p.contact || 'No contact'}</p>
+                      <p className="text-xs text-gray-500">{p.method} • {p.vpa || '-'}</p>
+                      <p className="text-xs text-gray-500 mt-1">{p.created_at}</p>
+                      
+                      {p.status === 'captured' && (
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                          <label className="text-xs text-gray-400 mb-1 block">Activate for User (Email):</label>
+                          <input
+                            type="email"
+                            placeholder="user@email.com"
+                            value={manualUserEmail}
+                            onChange={(e) => setManualUserEmail(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm mb-2"
+                          />
+                          <div className="flex gap-2 mb-2">
+                            <select
+                              value={manualPlan}
+                              onChange={(e) => setManualPlan(e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                            >
+                              <option value="startup">Startup</option>
+                              <option value="elite">Elite</option>
+                            </select>
+                          </div>
+                          <button
+                            onClick={() => manualActivate(p.id)}
+                            disabled={manualLoading || !manualUserEmail}
+                            className="w-full py-2 bg-emerald-500 text-white rounded-lg font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
+                          >
+                            ✅ Activate Subscription
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={() => { setShowManualModal(false); setSearchResults([]); }}
+              className="w-full mt-4 py-3 bg-gray-800 text-gray-400 rounded-xl"
+            >
+              Close
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-5 mt-4 space-y-3">
