@@ -449,8 +449,8 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
         
         response = requests.put(
             url,
-            json=payload,
-            headers=generate_eko_headers(),
+            data=payload,
+            headers=generate_eko_headers_for_get(),
             timeout=REQUEST_TIMEOUT
         )
         
