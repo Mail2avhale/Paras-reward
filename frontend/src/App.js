@@ -124,6 +124,7 @@ const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const BankRedeem = lazy(() => import("@/pages/BankRedeem"));
 const BankRedeemEdit = lazy(() => import("@/pages/BankRedeemEdit"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
+const DMTPage = lazy(() => import("@/pages/DMTPage"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
@@ -302,6 +303,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeem user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem/edit/:requestId" element={user ? <BankRedeemEdit user={user} /> : <Navigate to="/login" />} />
+            <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
+            <Route path="/bank-transfer" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             
