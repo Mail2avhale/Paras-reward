@@ -25,7 +25,11 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
 - Global & per-user limits configuration
 - Transaction viewer with filters
 - Error Monitor with Eko codes
-- Popup Message feature (scaffolding)
+- **Popup Message feature (COMPLETED ✅ March 5, 2026)**
+  - Admin can create, edit, toggle, delete popup messages
+  - Users see active popup after login (not on login page)
+  - Session storage prevents repeat showing
+  - Route: `/admin/popup-messages`
 
 ### 4. Chatbot (UPDATED ✅)
 - Money Transfer guide added
@@ -37,7 +41,8 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
 |-------|------|---------|
 | `/redeem?service=dmt` | RedeemPageV2 | Main Bank Transfer flow |
 | `/dmt` | DMTPage | Standalone DMT (backup) |
-| `/admin/dmt` | AdminDMTDashboard | Admin controls |
+| `/admin/dmt` | AdminDMTDashboard | Admin DMT controls |
+| `/admin/popup-messages` | AdminPopupMessages | Admin popup broadcast |
 
 ## Removed/Disabled
 - ❌ Old BankRedeem.js routes (redirected to new flow)
@@ -71,11 +76,14 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
 2. ✅ **P0 Bug Fix**: Recipients now display correctly on RedeemPageV2
 3. ✅ **P0 Bug Fix**: DMT ALWAYS uses direct transfer API (no admin approval)
 4. ✅ **Testing**: 29/29 tests passed (19 backend + 10 frontend)
+5. ✅ **P1 Complete**: Admin Popup Message feature (24/24 tests passed)
+   - Backend CRUD APIs at `/api/admin/popup/*`
+   - Admin UI at `/admin/popup-messages`
+   - User-facing popup shows after login only
 
 ## Pending/Future
-- P1: Admin Popup Message feature completion
 - P1: In-App Notifications (sonner toasts) for transfer status
-- P1: DMT v3 with Aadhaar/eKYC (if needed later)
+- P1: DMT v3 with Aadhaar OTP eKYC (planned after deploy)
 - P2: API route conflict cleanup (eko_payments.py vs eko_dmt_service.py)
 - P2: "Failed to delete plan" admin bug
 - P3: Email/Mobile OTP verification
