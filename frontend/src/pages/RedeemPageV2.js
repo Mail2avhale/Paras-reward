@@ -171,7 +171,7 @@ const SERVICE_CONFIG = {
     gradient: 'from-green-500 to-emerald-500',
     fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name'],
     category: 'transfer',
-    requiresAdmin: true
+    requiresAdmin: false
   }
 };
 
