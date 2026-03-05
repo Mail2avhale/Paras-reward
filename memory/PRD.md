@@ -92,6 +92,12 @@ Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) syst
    - Failure reason displayed when payment fails
    - "Try Again" retry button for failed payments
    - Alert banner for payment done but subscription not activated
+8. ✅ **P0 Verified**: DMT New User OTP Registration Flow (25/25 tests passed)
+   - Customer search → Registration → OTP send → OTP verify
+   - All backend APIs working
+   - Frontend shows proper registration form
+   - Button shows "Transfer to Bank" for DMT (not "Submit Request")
+   - "Direct instant transfer via IMPS" message shown
 
 ## Pending/Future
 - P1: In-App Notifications (sonner toasts) for transfer status
