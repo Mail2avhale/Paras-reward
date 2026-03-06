@@ -4,15 +4,17 @@ PARAS REWARD - NEW MINING ECONOMY SYSTEM
 
 Formula (Per Hour):
 - Base Rate = 20.83 PRC/hr (500 PRC/day ÷ 24)
-- Single Leg Bonus = 0.5 PRC/hr per active downline (max 500 users)
-- Team Boost = L1: +10%, L2: +5%, L3: +3%
+- Single Leg Bonus = 0.375 PRC/hr per PAID downline (max 500 users)
+- Team Boost = L1: +5%, L2: +3%, L3: +2%
 
-Final Mining Rate = (BaseRate + SingleLegBonus) × BoostMultiplier
+Final Mining Rate = BaseRate + SingleLegBonus + TeamBoost (ADDITIVE)
 
-Single Leg: Global pool sorted by user's created_at (joining date/time)
-Each user's downline = all active users who joined AFTER them
+Single Leg Rules:
+- Global pool sorted by user's created_at (joining date/time)
+- Each user's downline = PAID active users who joined AFTER them
+- FREE/Explorer users are NOT counted in single leg
 
-Active User = Subscription active + KYC verified + Active mining session
+Active User = Subscription PAID + KYC verified + Active mining session
 """
 
 from datetime import datetime, timezone, timedelta
@@ -26,8 +28,8 @@ DAILY_BASE_BONUS = 500
 HOURLY_BASE_RATE = DAILY_BASE_BONUS / 24  # 20.833...
 
 # Single Leg bonus per active downline user
-DAILY_SINGLE_LEG_BONUS_PER_USER = 12  # 12 PRC/day per user
-HOURLY_SINGLE_LEG_BONUS_PER_USER = DAILY_SINGLE_LEG_BONUS_PER_USER / 24  # 0.5 PRC/hour per user
+DAILY_SINGLE_LEG_BONUS_PER_USER = 9  # 9 PRC/day per user (changed from 12)
+HOURLY_SINGLE_LEG_BONUS_PER_USER = DAILY_SINGLE_LEG_BONUS_PER_USER / 24  # 0.375 PRC/hour per user
 
 # Maximum downline users to count
 MAX_SINGLE_LEG_USERS = 500
@@ -92,6 +94,8 @@ async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str)
                     "created_at": {"$gt": user_created_at},
                     "uid": {"$ne": user_uid},
                     "kyc_status": "verified",
+                    # MUST be a paid subscriber (NOT free/explorer)
+                    "subscription_plan": {"$nin": ["explorer", "free", "", None]},
                     # Must have active subscription
                     "$or": [
                         {"subscription_expiry": {"$gt": now.isoformat()}},
