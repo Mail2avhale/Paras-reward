@@ -755,7 +755,7 @@ async def debug_full_auth():
     
     # Test body for request_hash
     test_body = {
-        "source_ip": "127.0.0.1",
+        "source_ip": "34.44.149.98",
         "user_code": EKO_USER_CODE,
         "amount": "10",
         "client_ref_id": "TEST123456",
@@ -825,7 +825,7 @@ async def test_all_auth_methods(
     url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
     
     body = {
-        "source_ip": "127.0.0.1",
+        "source_ip": "34.44.149.98",
         "user_code": user_code,
         "amount": amount,
         "client_ref_id": client_ref_id,
@@ -958,7 +958,7 @@ async def debug_recharge_test():
         
         body = {
             "initiator_id": EKO_INITIATOR_ID,
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",
             "user_code": user_code,
             "amount": amount,
             "client_ref_id": client_ref_id,
@@ -1032,7 +1032,7 @@ async def test_recharge_exact_format(
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",  # Production whitelisted IP
             "user_code": user_code,
             "amount": amount,
             "client_ref_id": client_ref_id,
@@ -2412,7 +2412,7 @@ async def process_mobile_recharge(
             "operator_id": eko_operator_id,  # Use mapped numeric ID
             "amount": amount_str,
             "client_ref_id": txn_ref,
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",
             "latlong": "19.0760,72.8777",
             "user_code": user_code
         }
@@ -3365,7 +3365,7 @@ async def admin_direct_paybill(request: AdminPayBillRequest):
                 "operator_id": str(request.operator_id),
                 "amount": str(int(request.amount)),
                 "client_ref_id": txn_ref,
-                "source_ip": "127.0.0.1",
+                "source_ip": "34.44.149.98",
                 "latlong": "19.0760,72.8777",
                 "user_code": EKO_USER_CODE
             }
@@ -3453,7 +3453,7 @@ async def test_paybill_direct(mobile: str = "9936606966", amount: str = "29"):
         "operator_id": "90",
         "amount": amount_str,
         "client_ref_id": f"TEST{timestamp[-8:]}",
-        "source_ip": "127.0.0.1",
+        "source_ip": "34.44.149.98",
         "latlong": "19.0760,72.8777",
         "user_code": user_code
     }
@@ -3524,7 +3524,7 @@ async def bbps_pay_bill_form(
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",
             "user_code": EKO_USER_CODE,
             "amount": amount,
             "client_ref_id": reference_id,
@@ -3682,7 +3682,7 @@ async def execute_bbps_bill_payment(
         # Step 7: JSON body - SAME FORMAT as working mobile recharge
         client_ref_id = f"BBPS{int(time.time())}"
         payload = {
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",
             "user_code": EKO_USER_CODE,
             "amount": amount,
             "client_ref_id": client_ref_id,

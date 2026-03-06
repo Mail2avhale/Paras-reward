@@ -341,7 +341,7 @@ async def execute_eko_bbps(request_doc: dict, service_type: str) -> dict:
         url = f"{EKO_BASE_URL}/v2/billpayments/paybill?initiator_id={EKO_INITIATOR_ID}"
         
         body = {
-            "source_ip": "127.0.0.1",
+            "source_ip": "34.44.149.98",
             "user_code": user_code,
             "amount": amount,
             "client_ref_id": client_ref_id,

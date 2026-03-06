@@ -43,7 +43,7 @@ EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici
 
 # Fixed values
 LATLONG = "19.0760,72.8777"  # Mumbai
-SOURCE_IP = "127.0.0.1"
+SOURCE_IP = "34.44.149.98"
 
 # Charge Configuration
 FLAT_FEE = 10  # ₹10 flat
