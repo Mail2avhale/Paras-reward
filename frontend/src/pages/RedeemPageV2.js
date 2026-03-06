@@ -852,10 +852,13 @@ const RedeemPageV2 = ({ user }) => {
     try {
       // Use new clean BBPS API: POST /api/bbps/fetch
       // Request format: { operator_id, account, mobile }
+      // For postpaid, mobile number IS the account number
+      const mobileForRequest = category === 'mobile_postpaid' ? consumerNumber : formData.mobile_number || "9999999999";
+      
       const response = await axios.post(`${API}/bbps/fetch`, {
         operator_id: operatorId,
         account: consumerNumber,
-        mobile: "9999999999"  // Required by Eko
+        mobile: mobileForRequest
       });
       
       if (response.data.success) {
