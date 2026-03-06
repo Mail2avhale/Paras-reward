@@ -65,29 +65,24 @@ def generate_headers() -> Dict[str, str]:
     """
     Generate authentication headers as per EKO documentation.
     
-    Algorithm:
-    1. timestamp = current time in milliseconds
-    2. encoded_key = Base64(authenticator_key)
-    3. secret_key = Base64(HMAC_SHA256(encoded_key, timestamp))
-    
-    Reference: https://developers.eko.in/docs/authentication
+    CORRECT Algorithm (from user's debug guide):
+    1. timestamp = current time in SECONDS (not milliseconds)
+    2. raw = developer_key + timestamp + authenticator_key
+    3. secret_key = Base64(SHA256(raw))
     """
-    timestamp = str(int(time.time() * 1000))
+    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
     
-    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
-    
+    # Correct formula: SHA256 of concatenated string
+    raw = DEVELOPER_KEY + timestamp + AUTH_KEY
     secret_key = base64.b64encode(
-        hmac.new(
-            encoded_key.encode(),
-            timestamp.encode(),
-            hashlib.sha256
-        ).digest()
+        hashlib.sha256(raw.encode()).digest()
     ).decode()
     
     return {
         "developer_key": DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
+        "initiator_id": INITIATOR_ID,
         "Content-Type": "application/json"
     }
 
