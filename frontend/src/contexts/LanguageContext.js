@@ -223,16 +223,17 @@ const translations = {
     bn: 'পুরস্কার অর্জন করুন',
     pa: 'ਇਨਾਮ ਕਮਾਓ'
   },
+  // tapGame translation kept for backward compatibility but text changed to Invite Friends
   tapGame: {
-    en: 'Tap Game',
-    hi: 'टैप गेम',
-    mr: 'टॅप गेम',
-    gu: 'ટેપ ગેમ',
-    ta: 'டேப் கேம்',
-    te: 'ట్యాప్ గేమ్',
-    kn: 'ಟ್ಯಾಪ್ ಗೇಮ್',
-    bn: 'ট্যাপ গেম',
-    pa: 'ਟੈਪ ਗੇਮ'
+    en: 'Invite',
+    hi: 'आमंत्रित करें',
+    mr: 'आमंत्रित करा',
+    gu: 'આમંત્રિત કરો',
+    ta: 'அழைக்க',
+    te: 'ఆహ్వానించు',
+    kn: 'ಆಹ್ವಾನಿಸಿ',
+    bn: 'আমন্ত্রণ',
+    pa: 'ਸੱਦੋ'
   },
   shop: {
     en: 'Shop',
@@ -2884,18 +2885,6 @@ const translations = {
     pa: 'ਫ੍ਰੀ ਯੂਜ਼ਰ: PRC 2 ਦਿਨਾਂ ਲਈ ਵੈਧ'
   },
 
-  // ==================== TAP GAME ====================
-  tapGame: {
-    en: 'Tap Game',
-    hi: 'टैप गेम',
-    mr: 'टॅप गेम',
-    gu: 'ટેપ ગેમ',
-    ta: 'டேப் கேம்',
-    te: 'ట్యాప్ గేమ్',
-    kn: 'ಟ್ಯಾಪ್ ಗೇಮ್',
-    bn: 'ট্যাপ গেম',
-    pa: 'ਟੈਪ ਗੇਮ'
-  },
   tapToEarn: {
     en: 'Tap to Earn',
     hi: 'टैप करें और कमाएं',

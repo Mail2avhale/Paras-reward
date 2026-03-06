@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
-  Home, UserPlus, Gamepad2, User, Zap, Crown, Eye, EyeOff,
+  Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
   ChevronRight, Sparkles, ShoppingBag, CreditCard, Info,
   Sun, Moon, Sunrise, Sunset, Banknote, Building2, ShieldAlert
 } from 'lucide-react';
@@ -252,7 +252,7 @@ const DashboardModern = ({ user, onLogout }) => {
     const routes = {
       'home': '/dashboard',
       'rewards': '/daily-rewards',
-      'game': '/game',
+      'referrals': '/referrals',
       'profile': '/profile'
     };
     if (routes[tabName]) {
@@ -824,8 +824,8 @@ const DashboardModern = ({ user, onLogout }) => {
         <div className="grid grid-cols-4 gap-3">
           {[
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
-            { icon: Gamepad2, label: t('play'), route: '/game', gradient: 'from-pink-600 to-rose-700' },
-            { icon: UserPlus, label: t('invite'), route: '/referrals', gradient: 'from-blue-600 to-indigo-700' },
+            { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
+            { icon: CreditCard, label: t('redeem'), route: '/redeem', gradient: 'from-blue-600 to-indigo-700' },
             { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-emerald-600 to-teal-700' },
           ].map((action, index) => (
             <motion.button
@@ -1239,10 +1239,10 @@ const DashboardModern = ({ user, onLogout }) => {
             onClick={() => handleNavigation('rewards')}
           />
           <BottomNavItem 
-            icon={Gamepad2} 
-            label={t('tapGame')} 
-            isActive={activeTab === 'game'} 
-            onClick={() => handleNavigation('game')}
+            icon={Users} 
+            label={t('referrals')} 
+            isActive={activeTab === 'referrals'} 
+            onClick={() => handleNavigation('referrals')}
           />
           <BottomNavItem 
             icon={User} 
