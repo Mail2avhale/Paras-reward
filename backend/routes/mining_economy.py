@@ -356,22 +356,41 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     single_leg_count = await get_single_leg_downline_count(db, user_created_at, uid)
     single_leg_bonus = single_leg_count * HOURLY_SINGLE_LEG_BONUS_PER_USER
     
-    # Step 2: Calculate base rate (with single leg)
+    # Step 2: Calculate base rate (with single leg) - this is the "Base Rate" shown to user
     base_rate_with_single_leg = HOURLY_BASE_RATE + single_leg_bonus
     
-    # Step 3: Get Team Boost Multiplier
+    # Step 3: Get Team Boost (L1, L2, L3 bonuses in PRC/hr)
+    # These are ADDED, not multiplied
     boost_multiplier, boost_breakdown = await get_team_boost_multiplier(db, uid)
     
-    # Step 4: Calculate final rate
-    final_hourly_rate = base_rate_with_single_leg * boost_multiplier
+    # Calculate L1, L2, L3 bonuses in PRC/hr (percentage of base_rate_with_single_leg)
+    l1_bonus_prc = boost_breakdown.get('level_1', {}).get('boost', 0) * base_rate_with_single_leg
+    l2_bonus_prc = boost_breakdown.get('level_2', {}).get('boost', 0) * base_rate_with_single_leg
+    l3_bonus_prc = boost_breakdown.get('level_3', {}).get('boost', 0) * base_rate_with_single_leg
+    
+    total_level_bonus = l1_bonus_prc + l2_bonus_prc + l3_bonus_prc
+    
+    # Step 4: Calculate final rate = Base Rate + L1 + L2 + L3 (ADDITION, not multiplication)
+    # NEW FORMULA: Total = BaseRate(daily+single_leg) + L1_bonus + L2_bonus + L3_bonus
+    final_hourly_rate = base_rate_with_single_leg + total_level_bonus
     per_minute_rate = final_hourly_rate / 60
+    
+    # Update boost_breakdown with PRC/hr values for each level
+    for level_key in ['level_1', 'level_2', 'level_3']:
+        if level_key in boost_breakdown:
+            boost_pct = boost_breakdown[level_key].get('boost', 0)
+            boost_breakdown[level_key]['bonus_prc'] = round(boost_pct * base_rate_with_single_leg, 4)
     
     breakdown = {
         'base_rate': round(HOURLY_BASE_RATE, 4),
         'single_leg_users': single_leg_count,
         'single_leg_bonus': round(single_leg_bonus, 4),
         'base_with_single_leg': round(base_rate_with_single_leg, 4),
-        'boost_multiplier': round(boost_multiplier, 4),
+        'l1_bonus': round(l1_bonus_prc, 4),
+        'l2_bonus': round(l2_bonus_prc, 4),
+        'l3_bonus': round(l3_bonus_prc, 4),
+        'total_level_bonus': round(total_level_bonus, 4),
+        'boost_multiplier': round(boost_multiplier, 4),  # Kept for backward compatibility
         'boost_breakdown': boost_breakdown,
         'final_rate': round(final_hourly_rate, 4),
         'per_minute_rate': round(per_minute_rate, 6),

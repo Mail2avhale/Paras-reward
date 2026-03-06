@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://payment-auth-debug.preview.emergentagent.com",
+    "url": "https://mining-formula-v2.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
