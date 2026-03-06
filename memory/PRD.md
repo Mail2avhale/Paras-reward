@@ -22,21 +22,56 @@ Complete E2E Flow:
 
 **Key Fixes (March 6, 2026)**:
 - ✅ NO HARDCODED VALUES - All config from environment variables
-- ✅ Dynamic IP detection from request headers (X-Forwarded-For, X-Real-IP)
+- ✅ Dynamic IP detection from request headers
 - ✅ Config validation on startup
-- ✅ Proper error messages in Marathi
 
-### 3. Admin Panel (COMPLETED ✅)
+### 3. Mining Economy System (UPDATED ✅ - March 6, 2026)
+
+**NEW FORMULA (Per Hour):**
+```
+BaseRate = 20.83 + (SingleLegUsers × 0.5) PRC/hour
+FinalRate = BaseRate × BoostMultiplier
+```
+
+**Constants:**
+| Parameter | Value |
+|-----------|-------|
+| Daily Base Bonus | 500 PRC (20.83 PRC/hr) |
+| Single Leg Bonus | 0.5 PRC/hr per user |
+| Max Single Leg Users | 500 |
+| L1 Team Boost | +10% per active user |
+| L2 Team Boost | +5% per active user |
+| L3 Team Boost | +3% per active user |
+
+**Single Leg Global Pool:**
+- All users sorted by `created_at` (joining date/time)
+- User's downline = active users who joined AFTER them
+- Active = Subscription active + KYC verified + Mining session active
+
+**Files Created/Modified:**
+- `/app/backend/routes/mining_economy.py` - NEW mining calculation module
+- `/app/backend/server.py` - Updated `calculate_mining_rate()` and `get_base_rate()`
+- `/app/backend/routes/referral.py` - Changed from 5 levels to 3 levels
+
+### 4. Admin Panel (COMPLETED ✅)
 - DMT Dashboard with enable/disable toggle
 - Global & per-user limits configuration
 - Transaction viewer with filters
 - Error Monitor with Eko codes
 - Popup Message feature
 
-### 4. Razorpay Integration (FIXED ✅ - Previous Session)
+### 5. Razorpay Integration (FIXED ✅)
 - Webhook configured correctly
 - Manual sync tools for payment activation
 - Subscription renewal adds remaining days
+
+### 6. Auto Burn (EXISTING ✅)
+- Daily 1% burn from wallet balance
+- Already implemented
+
+### 7. Redeem Limit (EXISTING ✅)
+- Base: 39,950 PRC/month
+- +20% per direct referral
 
 ## Environment Variables Required
 
@@ -49,70 +84,24 @@ EKO_USER_CODE=20810200
 EKO_BASE_URL=https://api.eko.in:25002/ekoicici
 ```
 
-### Important Notes for Production
-1. **IP Whitelisting**: Your production server IP must be whitelisted in Eko dashboard
-2. **No Hardcoded IPs**: Code now uses client IP from request headers
-3. **Config Validation**: APIs will fail gracefully if env vars missing
-
-## API Endpoints
-
-### DMT APIs (Prefix: /api/eko/dmt)
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | /health | Service health check |
-| GET | /wallet/{user_id} | Get PRC balance |
-| POST | /customer/search | Search/verify customer |
-| POST | /customer/register | Register new customer |
-| POST | /customer/resend-otp | Resend verification OTP |
-| POST | /customer/verify-otp | Verify OTP |
-| POST | /recipient/add | Add bank account |
-| GET | /recipients/{mobile} | Get saved recipients |
-| POST | /transfer | Execute money transfer |
-| GET | /status/{transaction_id} | Check transaction status |
-| GET | /transactions/{user_id} | Transaction history |
-| POST | /verify-account | Verify bank account (penny drop) |
-
-### BBPS APIs (Prefix: /api/bbps)
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | /health | Service health check |
-| GET | /operators/{category} | Get operators list |
-| GET | /operator-params/{operator_id} | Get operator parameters |
-| POST | /fetch | Fetch bill details |
-| POST | /pay | Pay bill |
-| GET | /status/{transaction_id} | Check payment status |
-
-## Error Codes (Eko)
-
-### Common Error Codes
-| Code | Message | User Action |
-|------|---------|-------------|
-| 0 | Success | - |
-| 403 | Authentication failed | Contact admin (IP whitelist issue) |
-| 463 | Customer not found | Register first |
-| 302 | Invalid OTP | Re-enter OTP |
-| 303 | OTP expired | Request new OTP |
-| 41 | Invalid IFSC | Check IFSC code |
-| 46 | Invalid account | Verify account details |
-| 347 | Insufficient balance | Add funds |
-| 544 | Bank unavailable | Try later |
-| 1468 | Bill fetch failed | Verify consumer number |
-
 ## Test Credentials
 - **User**: 9421331342 / PIN: 942133
-- **Admin**: admin@paras.com / PIN: 123456 or 153759
+- **Admin**: admin@paras.com
 
 ## Files Modified (March 6, 2026)
 1. `/app/backend/routes/eko_dmt_service.py` - Complete rewrite, no hardcoding
 2. `/app/backend/routes/bbps_services.py` - Removed hardcoded SOURCE_IP
-3. `/app/backend/.env` - Fixed EKO_AUTHENTICATOR_KEY
+3. `/app/backend/routes/mining_economy.py` - NEW: Mining economy calculation
+4. `/app/backend/server.py` - Updated mining rate calculation
+5. `/app/backend/routes/referral.py` - 5 levels → 3 levels
+6. `/app/backend/.env` - Fixed EKO_AUTHENTICATOR_KEY
 
 ## Known Issues
-1. **Preview Environment**: DMT returns 403 because IP not whitelisted with Eko
-2. **AEML, JPDCL Billers**: May require additional parameters - investigate operator-specific requirements
+1. **Preview Environment**: DMT/BBPS returns 403 (IP not whitelisted with Eko)
+2. **AEML, JPDCL Billers**: May require additional parameters
 
 ## Pending Tasks
-- P0: Test DMT flow after production deployment (IP whitelist)
+- P0: Test DMT flow after production deployment
 - P1: Investigate failing billers (AEML, JPDCL)
 - P2: Remove legacy eko_payments.py router
 - P2: Admin "Failed to delete plan" bug

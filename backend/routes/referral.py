@@ -237,31 +237,24 @@ async def get_multi_level_referral_stats(uid: str):
     """
     Get detailed multi-level referral statistics for a user
     Shows: total, active, inactive count for each level + mining speed bonus
+    
+    NEW SYSTEM (March 2026): Only 3 levels now
+    - Level 1: +10% per active user
+    - Level 2: +5% per active user
+    - Level 3: +3% per active user
     """
     now = datetime.now(timezone.utc)
     yesterday = now - timedelta(hours=24)
     
-    # Get multi-level referrals
-    referrals_by_level = await get_multi_level_referrals(uid, max_levels=5)
+    # Get multi-level referrals (3 levels only now)
+    referrals_by_level = await get_multi_level_referrals(uid, max_levels=3)
     
-    # Get referral bonus settings
-    settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
-    if settings and "referral_bonus_settings" in settings:
-        bonus_percentages = {
-            'level_1': settings["referral_bonus_settings"].get("level_1", 10),
-            'level_2': settings["referral_bonus_settings"].get("level_2", 5),
-            'level_3': settings["referral_bonus_settings"].get("level_3", 2.5),
-            'level_4': settings["referral_bonus_settings"].get("level_4", 1.5),
-            'level_5': settings["referral_bonus_settings"].get("level_5", 1),
-        }
-    else:
-        bonus_percentages = {
-            'level_1': 10,
-            'level_2': 5,
-            'level_3': 2.5,
-            'level_4': 1.5,
-            'level_5': 1,
-        }
+    # NEW: Fixed bonus percentages for 3 levels
+    bonus_percentages = {
+        'level_1': 10,   # +10%
+        'level_2': 5,    # +5%
+        'level_3': 3,    # +3%
+    }
     
     # Get base rate for calculating mining speed bonus
     base_rate = await get_base_rate()
@@ -272,7 +265,8 @@ async def get_multi_level_referral_stats(uid: str):
     total_inactive_all = 0
     total_mining_bonus = 0.0
     
-    for level_num in range(1, 6):
+    # Only 3 levels now (not 5)
+    for level_num in range(1, 4):
         level_key = f"level_{level_num}"
         level_users = referrals_by_level.get(level_key, [])
         
@@ -311,7 +305,7 @@ async def get_multi_level_referral_stats(uid: str):
             "inactive": inactive_count,
             "bonus_percentage": bonus_percentage,
             "mining_speed_bonus": round(level_mining_bonus, 4),
-            "mining_speed_bonus_display": f"+{round(level_mining_bonus, 2)} PRC/day"
+            "mining_speed_bonus_display": f"+{round(level_mining_bonus, 2)} PRC/hr"
         })
         
         total_all_levels += total_count
@@ -328,9 +322,9 @@ async def get_multi_level_referral_stats(uid: str):
             "total_active": total_active_all,
             "total_inactive": total_inactive_all,
             "total_mining_bonus": round(total_mining_bonus, 4),
-            "total_mining_bonus_display": f"+{round(total_mining_bonus, 2)} PRC/day",
+            "total_mining_bonus_display": f"+{round(total_mining_bonus, 2)} PRC/hr",
             "effective_mining_rate": round(base_rate + total_mining_bonus, 4),
-            "effective_mining_rate_display": f"{round(base_rate + total_mining_bonus, 2)} PRC/day"
+            "effective_mining_rate_display": f"{round(base_rate + total_mining_bonus, 2)} PRC/hr"
         },
         "bonus_percentages": bonus_percentages,
         "generated_at": now.isoformat()

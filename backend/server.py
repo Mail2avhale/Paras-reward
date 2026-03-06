@@ -3035,15 +3035,16 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
 
 
 async def get_base_rate():
-    """Calculate mining base rate based on total users"""
-    # Fetch total users
-    total_users = await db.users.count_documents({})
+    """
+    Get mining base rate for NEW ECONOMY SYSTEM
     
-    # Base rate starts at 50, decreases by 1 for every 200 users, min 20
-    rate_decrease = total_users // 200
-    current_base_rate = max(20, 50 - rate_decrease)
+    NEW FORMULA (March 2026):
+    Base Rate = 20.83 PRC/hour (500 PRC/day ÷ 24)
     
-    return current_base_rate
+    This is FIXED - no longer decreases with user count
+    """
+    from routes.mining_economy import HOURLY_BASE_RATE
+    return HOURLY_BASE_RATE  # 20.83 PRC/hour
 
 
 async def check_user_active_status(user_uid: str, user_data: dict = None) -> tuple:
@@ -4562,110 +4563,56 @@ async def get_delivery_charge(user, total_prc: float):
 
 async def calculate_mining_rate(uid: str):
     """
-    Calculate mining rate per minute with subscription multiplier and multi-level referral bonuses
+    Calculate mining rate using NEW MINING ECONOMY SYSTEM
     
-    OPTIMIZED: Uses Redis caching to avoid expensive referral calculations on every call
-    Cache TTL: 5 minutes (referral counts don't change frequently)
+    NEW FORMULA (March 2026):
+    ========================
+    BaseRate = 20.83 + (SingleLegUsers × 0.5) PRC/hour
+    FinalRate = BaseRate × BoostMultiplier
     
-    NEW FORMULA:
-    - Base Rate: 50 (decreases by 1 per 200 users, min 20)
-    - Daily Multiplier: Current day of month
-    - Subscription Multiplier: Explorer=1.0x, Startup=1.5x, Growth=2.0x, Elite=3.0x
-    - Referral Bonuses (5 levels) with Referral Subscription Weight:
-      * Level 1: +10% × referral_weight per active referral
-      * Level 2: +5% × referral_weight per active referral
-      * Level 3: +2.5% × referral_weight per active referral
-      * Level 4: +1.5% × referral_weight per active referral
-      * Level 5: +1.0% × referral_weight per active referral
+    Where:
+    - 20.83 = Daily bonus (500 PRC) ÷ 24 hours
+    - SingleLegUsers = Active users joined AFTER this user (max 500)
+    - 0.5 = Bonus per user per hour (12 PRC/day ÷ 24)
     
-    Daily_Reward = Day × ((BR × User_Multiplier) + Referral_Bonus)
+    BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
+    
+    Active = Subscription active + KYC verified + Active mining session
+    
+    Returns: (per_minute_rate, base_rate, total_active_referrals, referral_breakdown)
     """
-    # Try to get from cache first (TTL: 60 seconds)
-    cache_key = f"mining_rate:{uid}"
-    if cache:
-        cached_rate = await cache.get(cache_key)
-        if cached_rate:
-            return (
-                cached_rate.get('per_minute_rate', 0),
-                cached_rate.get('base_rate', 50),
-                cached_rate.get('total_active_referrals', 0),
-                cached_rate.get('referral_breakdown', {})
-            )
+    from routes.mining_economy import calculate_new_mining_rate, HOURLY_BASE_RATE
     
-    user = await db.users.find_one({"uid": uid})
-    if not user:
-        return 0, 0, 0, {}
+    # Use new mining economy calculation
+    hourly_rate, per_minute_rate, breakdown = await calculate_new_mining_rate(db, uid, cache)
     
-    # Get user's subscription plan and FIXED base rate (no multiplier, no date)
-    subscription_plan = user.get("subscription_plan", "explorer").lower()
-    plan_config = SUBSCRIPTION_PLANS.get(subscription_plan, SUBSCRIPTION_PLANS["explorer"])
-    base_rate = plan_config.get("mining_rate", 30)  # Fixed hourly rate from plan
-    
-    # Get multi-level active referrals with their subscription weights
-    active_referrals_by_level = await count_active_referrals_by_level_with_weights(uid)
-    
-    # Get referral bonus settings from database (or use defaults)
-    settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
-    if settings and "referral_bonus_settings" in settings:
-        referral_bonus_percentages = {
-            'level_1': settings["referral_bonus_settings"].get("level_1", 10) / 100,
-            'level_2': settings["referral_bonus_settings"].get("level_2", 5) / 100,
-            'level_3': settings["referral_bonus_settings"].get("level_3", 2.5) / 100,
-            'level_4': settings["referral_bonus_settings"].get("level_4", 1.5) / 100,
-            'level_5': settings["referral_bonus_settings"].get("level_5", 1) / 100,
-        }
-    else:
-        # Default referral bonuses
-        referral_bonus_percentages = {
-            'level_1': 0.10,  # 10%
-            'level_2': 0.05,  # 5%
-            'level_3': 0.025, # 2.5%
-            'level_4': 0.015, # 1.5%
-            'level_5': 0.01   # 1.0%
-        }
-    
-    total_referral_bonus = 0
+    # Convert breakdown to old format for backward compatibility
     referral_breakdown = {}
-    
-    for level, level_data in active_referrals_by_level.items():
-        count = level_data.get('count', 0)
-        weighted_count = level_data.get('weighted_count', count)  # Sum of referral weights
-        
-        if count > 0:
-            bonus_percentage = referral_bonus_percentages.get(level, 0)
-            # Use weighted count for bonus calculation (hourly bonus)
-            level_bonus = weighted_count * bonus_percentage * base_rate
-            total_referral_bonus += level_bonus
-            referral_breakdown[level] = {
-                'count': count,  # Active paid users (contributing to bonus)
-                'active_count': level_data.get('active_count', 0),  # ALL active users (same as Invite page)
-                'weighted_count': weighted_count,
-                'paid_count': level_data.get('paid_count', count),  # Total paid users
-                'free_count': level_data.get('free_count', 0),  # Total free users
-                'total_count': level_data.get('total_count', 0),  # Total users at level
-                'percentage': bonus_percentage * 100,
-                'bonus': level_bonus  # This is already hourly bonus
+    if breakdown.get('boost_breakdown'):
+        for level_key, level_data in breakdown['boost_breakdown'].items():
+            referral_breakdown[level_key] = {
+                'count': level_data.get('active', 0),
+                'active_count': level_data.get('active', 0),
+                'total_count': level_data.get('count', 0),
+                'percentage': {
+                    'level_1': 10,
+                    'level_2': 5,
+                    'level_3': 3
+                }.get(level_key, 0),
+                'bonus': level_data.get('boost', 0) * breakdown.get('base_with_single_leg', HOURLY_BASE_RATE)
             }
     
-    # FIXED FORMULA: Mining_Speed = Base_Rate + Referral_Bonus (no multiplier, no date)
-    mining_rate_per_hour = base_rate + total_referral_bonus
+    # Add single leg info to breakdown
+    referral_breakdown['single_leg'] = {
+        'count': breakdown.get('single_leg_users', 0),
+        'bonus': breakdown.get('single_leg_bonus', 0)
+    }
     
-    # Per minute rate (for internal calculations)
-    per_minute_rate = mining_rate_per_hour / 60
+    total_active = sum(
+        d.get('active', 0) for d in breakdown.get('boost_breakdown', {}).values()
+    )
     
-    # Total active referrals across all levels
-    total_active_referrals = sum(ld.get('count', 0) for ld in active_referrals_by_level.values())
-    
-    # Cache the result for 5 minutes to avoid expensive recalculations
-    if cache:
-        await cache.set(cache_key, {
-            'per_minute_rate': per_minute_rate,
-            'base_rate': base_rate,
-            'total_active_referrals': total_active_referrals,
-            'referral_breakdown': referral_breakdown
-        }, ttl=60)  # 1 minute cache
-    
-    return per_minute_rate, base_rate, total_active_referrals, referral_breakdown
+    return per_minute_rate, hourly_rate, total_active, referral_breakdown
 
 async def update_mined_coins(uid: str):
     """Update user's mined coins based on time elapsed"""
