@@ -2124,8 +2124,9 @@ SUBSCRIPTION_PLANS = {
         "is_free": True,
         "default_price": 0
     },
+    # Startup plan discontinued - kept for backward compatibility of existing users
     "startup": {
-        "name": "Startup",
+        "name": "Startup (Discontinued)",
         "mining_rate": 30,  # Fixed 30 PRC/hr
         "multiplier": 1.5,
         "referral_weight": 0.50,
@@ -2134,7 +2135,8 @@ SUBSCRIPTION_PLANS = {
         "daily_max_prc": 50,
         "can_redeem": True,
         "is_free": False,
-        "default_price": 299
+        "default_price": 299,
+        "discontinued": True
     },
     # Growth plan discontinued - kept for backward compatibility of existing users
     "growth": {
@@ -42676,6 +42678,10 @@ api_router.include_router(admin_dmt_router)
 # Admin Popup Messages Router
 set_admin_popup_db(db)
 api_router.include_router(admin_popup_router)
+
+# Gift Subscription Router
+from routes.gift_subscription import router as gift_router
+api_router.include_router(gift_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)

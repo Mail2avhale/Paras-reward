@@ -66,22 +66,20 @@ const SubscriptionPlans = ({ user }) => {
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
 
-  // Special Offer Prices
+  // Special Offer Prices - Startup discontinued
   const specialOffers = {
-    startup: { original: 500, offer: 299, discount: 40 },
+    // startup discontinued
     // growth discontinued
     elite: { original: 2000, offer: 799, discount: 60 }
   };
 
   const planIcons = {
     explorer: Users,
-    startup: Rocket,
     elite: Crown
   };
 
   const planColors = {
     explorer: 'from-gray-500 to-gray-600',
-    startup: 'from-blue-500 to-indigo-600',
     elite: 'from-amber-500 to-orange-600'
   };
 
@@ -925,7 +923,6 @@ const SubscriptionPlans = ({ user }) => {
                   <tr className="text-gray-400 border-b border-gray-800">
                     <th className="text-left py-2">{t('feature')}</th>
                     <th className="text-center py-2">Explorer</th>
-                    <th className="text-center py-2">Startup</th>
                     <th className="text-center py-2 text-amber-500">Elite</th>
                   </tr>
                 </thead>
@@ -933,31 +930,26 @@ const SubscriptionPlans = ({ user }) => {
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('rewardRate')}</td>
                     <td className="text-center">1.0x</td>
-                    <td className="text-center">1.5x</td>
                     <td className="text-center text-amber-400">3.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('dailyTapsLimit')}</td>
                     <td className="text-center">100</td>
-                    <td className="text-center">200</td>
                     <td className="text-center text-amber-400">400</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('referralWeight')}</td>
                     <td className="text-center">1.0x</td>
-                    <td className="text-center">1.2x</td>
                     <td className="text-center text-amber-400">2.0x</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-2">{t('canRedeem')}</td>
                     <td className="text-center text-red-400">✗</td>
                     <td className="text-center text-emerald-400">✓</td>
-                    <td className="text-center text-emerald-400">✓</td>
                   </tr>
                   <tr>
                     <td className="py-2">{t('prcExpires')}</td>
                     <td className="text-center text-red-400">2 {t('days')}</td>
-                    <td className="text-center text-emerald-400">{t('never')}</td>
                     <td className="text-center text-emerald-400">{t('never')}</td>
                   </tr>
                 </tbody>

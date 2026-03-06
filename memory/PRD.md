@@ -1,29 +1,17 @@
 # PARAS Reward Portal - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) system for Paras Reward Portal where users can redeem their PRC (Paras Reward Coins) for real-world services like bill payments and bank transfers.
+Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) system for Paras Reward Portal where users can redeem their PRC (Paras Reward Coins) for real-world services.
 
 ## Core Features
 
 ### 1. BBPS Module (COMPLETED ✅)
 - Universal bill payment engine for Electricity, DTH, FASTag, Loan/EMI, Gas, LPG
-- Robust Eko API error handling with user-friendly Marathi messages
-- A-Z sorted operator lists
-- **March 6, 2026**: Removed all hardcoded values (SOURCE_IP, credentials)
+- Robust Eko API error handling
 
 ### 2. DMT Module (REWRITTEN ✅ - March 6, 2026)
-Complete E2E Flow:
-1. **Customer Search** → Check if mobile registered with Eko
-2. **Customer Registration** → Register new sender with name
-3. **OTP Verification** → Complete registration via OTP
-4. **Add Recipient** → Add bank account (IFSC, Account Number)
-5. **Money Transfer** → Execute IMPS transfer
-6. **Transaction Status** → Check pending/completed status
-
-**Key Fixes (March 6, 2026)**:
-- ✅ NO HARDCODED VALUES - All config from environment variables
-- ✅ Dynamic IP detection from request headers
-- ✅ Config validation on startup
+- Complete E2E flow with NO hardcoded values
+- Customer Search → Registration → OTP → Add Recipient → Transfer
 
 ### 3. Mining Economy System (UPDATED ✅ - March 6, 2026)
 
@@ -43,66 +31,68 @@ FinalRate = BaseRate × BoostMultiplier
 | L2 Team Boost | +5% per active user |
 | L3 Team Boost | +3% per active user |
 
-**Single Leg Global Pool:**
-- All users sorted by `created_at` (joining date/time)
-- User's downline = active users who joined AFTER them
-- Active = Subscription active + KYC verified + Mining session active
+### 4. Gift Subscription Feature (NEW ✅ - March 6, 2026)
 
-**Files Created/Modified:**
-- `/app/backend/routes/mining_economy.py` - NEW mining calculation module
-- `/app/backend/server.py` - Updated `calculate_mining_rate()` and `get_base_rate()`
-- `/app/backend/routes/referral.py` - Changed from 5 levels to 3 levels
+**Feature:** Parent can gift 24hr Elite subscription to L1 referrals
 
-### 4. Admin Panel (COMPLETED ✅)
-- DMT Dashboard with enable/disable toggle
-- Global & per-user limits configuration
-- Transaction viewer with filters
-- Error Monitor with Eko codes
-- Popup Message feature
+| Parameter | Value |
+|-----------|-------|
+| Cost | 600 PRC |
+| Duration | 24 hours |
+| Plan Given | Elite |
+| Eligible | Only unsubscribed L1 referrals |
+| Multiple Gifts | Allowed |
+| Notification | Yes (to child) |
 
-### 5. Razorpay Integration (FIXED ✅)
-- Webhook configured correctly
-- Manual sync tools for payment activation
-- Subscription renewal adds remaining days
+**API Endpoints:**
+- `GET /api/gift/eligible-referrals/{parent_uid}` - Get eligible L1 referrals
+- `POST /api/gift/send` - Send gift subscription
+- `GET /api/gift/history/{user_uid}` - Gift history
 
-### 6. Auto Burn (EXISTING ✅)
-- Daily 1% burn from wallet balance
-- Already implemented
+### 5. Subscription Plans (UPDATED ✅ - March 6, 2026)
 
-### 7. Redeem Limit (EXISTING ✅)
-- Base: 39,950 PRC/month
-- +20% per direct referral
+**Startup Plan (₹299) - DISCONTINUED**
+- Removed from all frontend pages
+- Existing users still work (backward compatibility)
 
-## Environment Variables Required
+**Available Plans:**
+| Plan | Price | Features |
+|------|-------|----------|
+| Explorer | Free | Basic mining, PRC expires in 2 days |
+| Elite | ₹799/month | 3x rewards, no PRC expiry, redeems enabled |
 
-### EKO Configuration (backend/.env)
-```
-EKO_DEVELOPER_KEY=7c179a397b4710e71b2248d1f5892d19
-EKO_INITIATOR_ID=9936606966
-EKO_AUTHENTICATOR_KEY=7a2529f5-3587-4add-a2df-3d0606d62460
-EKO_USER_CODE=20810200
-EKO_BASE_URL=https://api.eko.in:25002/ekoicici
-```
+### 6. Referral Levels (UPDATED ✅ - March 6, 2026)
+
+**Changed from 5 levels to 3 levels:**
+- L1: +10% per active user
+- L2: +5% per active user
+- L3: +3% per active user
+- ~~L4: Removed~~
+- ~~L5: Removed~~
+
+## Files Modified (March 6, 2026)
+
+### Backend:
+1. `/app/backend/routes/mining_economy.py` - NEW: Mining calculation
+2. `/app/backend/routes/gift_subscription.py` - NEW: Gift feature
+3. `/app/backend/server.py` - Updated mining rate, startup discontinued
+4. `/app/backend/routes/referral.py` - 5→3 levels
+
+### Frontend:
+1. `Mining.js` - Removed L4, L5
+2. `ReferralsEnhanced.js` - Added Gift button & modal, removed L4/L5
+3. `ReferralEarningsHistory.js` - 3 levels only
+4. `NetworkTreeAdvanced.js` - 3 levels only
+5. `AINetworkReferral.js` - 3 levels only
+6. `SubscriptionPlans.js` - Removed Startup plan
+7. `FAQ.js` - Updated to 3-level bonus info
 
 ## Test Credentials
 - **User**: 9421331342 / PIN: 942133
 - **Admin**: admin@paras.com
 
-## Files Modified (March 6, 2026)
-1. `/app/backend/routes/eko_dmt_service.py` - Complete rewrite, no hardcoding
-2. `/app/backend/routes/bbps_services.py` - Removed hardcoded SOURCE_IP
-3. `/app/backend/routes/mining_economy.py` - NEW: Mining economy calculation
-4. `/app/backend/server.py` - Updated mining rate calculation
-5. `/app/backend/routes/referral.py` - 5 levels → 3 levels
-6. `/app/backend/.env` - Fixed EKO_AUTHENTICATOR_KEY
-
-## Known Issues
-1. **Preview Environment**: DMT/BBPS returns 403 (IP not whitelisted with Eko)
-2. **AEML, JPDCL Billers**: May require additional parameters
-
 ## Pending Tasks
 - P0: Test DMT flow after production deployment
-- P1: Investigate failing billers (AEML, JPDCL)
+- P1: Investigate failing BBPS billers (AEML, JPDCL)
 - P2: Remove legacy eko_payments.py router
-- P2: Admin "Failed to delete plan" bug
 - P3: Email/Mobile OTP verification

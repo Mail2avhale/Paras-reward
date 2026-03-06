@@ -264,6 +264,14 @@ const ReferralsEnhanced = ({ user }) => {
   const [showNetworkAnalytics, setShowNetworkAnalytics] = useState(false);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Gift Subscription State
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [eligibleForGift, setEligibleForGift] = useState([]);
+  const [giftLoading, setGiftLoading] = useState(false);
+  const [sendingGift, setSendingGift] = useState(null);
+  const [giftParentBalance, setGiftParentBalance] = useState(0);
+  const GIFT_COST = 600;
 
   useEffect(() => {
     if (user?.uid) {
@@ -272,6 +280,51 @@ const ReferralsEnhanced = ({ user }) => {
       setTimeout(() => fetchLiveActivity(), 2000);
     }
   }, [user]);
+
+  // Fetch eligible referrals for gift subscription
+  const fetchEligibleForGift = async () => {
+    try {
+      setGiftLoading(true);
+      const response = await axios.get(`${API}/gift/eligible-referrals/${user.uid}`);
+      setEligibleForGift(response.data.eligible_referrals || []);
+      setGiftParentBalance(response.data.parent_prc_balance || 0);
+    } catch (e) {
+      console.error('Failed to fetch eligible referrals:', e);
+      toast.error('Failed to load eligible referrals');
+    } finally {
+      setGiftLoading(false);
+    }
+  };
+
+  // Send gift subscription
+  const sendGiftSubscription = async (childUid, childName) => {
+    if (giftParentBalance < GIFT_COST) {
+      toast.error(`Insufficient PRC! Need ${GIFT_COST} PRC`);
+      return;
+    }
+    
+    try {
+      setSendingGift(childUid);
+      const response = await axios.post(`${API}/gift/send`, {
+        parent_uid: user.uid,
+        child_uid: childUid
+      });
+      
+      if (response.data.success) {
+        toast.success(`🎁 ${childName} ला 24hr Elite subscription gift केली!`);
+        triggerConfetti();
+        // Refresh eligible list
+        await fetchEligibleForGift();
+        // Update parent balance locally
+        setGiftParentBalance(response.data.gift_details?.parent_new_balance || giftParentBalance - GIFT_COST);
+      }
+    } catch (e) {
+      console.error('Gift failed:', e);
+      toast.error(e.response?.data?.detail || 'Gift subscription failed');
+    } finally {
+      setSendingGift(null);
+    }
+  };
 
   // Fetch live activity (recent referral achievements) - low priority
   const fetchLiveActivity = async () => {
@@ -1037,7 +1090,7 @@ Download now & start earning!`;
           
           {/* Pyramid visualization with expandable sections */}
           <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((level) => {
+            {[1, 2, 3].map((level) => {
               const config = levelConfig[level];
               const levelData = referralLevels.find(l => l.level === level) || { count: 0, active_count: 0, users: [] };
               const totalUsers = levelData.count || levelData.users?.length || 0;
@@ -1212,6 +1265,29 @@ Download now & start earning!`;
             </div>
           </div>
           <ChevronRight className="w-6 h-6 text-emerald-400" />
+        </button>
+      </div>
+
+      {/* NEW: Gift Subscription Button */}
+      <div className="px-5 mb-6">
+        <button
+          onClick={() => {
+            setShowGiftModal(true);
+            fetchEligibleForGift();
+          }}
+          className="w-full bg-gradient-to-r from-pink-500/20 to-rose-600/10 border border-pink-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-pink-500/30 hover:to-rose-600/20 transition-all"
+          data-testid="gift-subscription-btn"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
+              <Gift className="w-6 h-6 text-pink-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-bold">🎁 Gift 24hr Subscription</p>
+              <p className="text-pink-400 text-sm">Gift Elite plan to L1 referrals • 600 PRC</p>
+            </div>
+          </div>
+          <ChevronRight className="w-6 h-6 text-pink-400" />
         </button>
       </div>
 
@@ -1964,6 +2040,130 @@ Download now & start earning!`;
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Gift Subscription Modal */}
+      <AnimatePresence>
+        {showGiftModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+            onClick={() => setShowGiftModal(false)}
+          >
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-gray-900 rounded-3xl w-full max-w-md max-h-[80vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-pink-500/20 to-rose-500/20 p-5 border-b border-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-pink-500/30 flex items-center justify-center">
+                      <Gift className="w-6 h-6 text-pink-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-white text-lg font-bold">Gift 24hr Subscription</h2>
+                      <p className="text-pink-400 text-sm">{GIFT_COST} PRC per gift</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowGiftModal(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                {/* Balance Info */}
+                <div className="mt-4 flex items-center justify-between bg-gray-800/50 rounded-xl p-3">
+                  <span className="text-gray-400 text-sm">Your PRC Balance</span>
+                  <span className={`font-bold ${giftParentBalance >= GIFT_COST ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {giftParentBalance} PRC
+                  </span>
+                </div>
+              </div>
+              
+              {/* Eligible Referrals List */}
+              <div className="p-5 overflow-y-auto max-h-[50vh]">
+                {giftLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : eligibleForGift.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Gift className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-400 font-medium">No eligible referrals</p>
+                    <p className="text-gray-500 text-sm mt-1">Only unsubscribed L1 referrals can receive gifts</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-gray-400 text-sm mb-3">
+                      {eligibleForGift.length} referral(s) eligible for gift
+                    </p>
+                    {eligibleForGift.map((ref) => (
+                      <div 
+                        key={ref.uid}
+                        className="bg-gray-800/50 border border-gray-700 rounded-xl p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold">
+                              {ref.name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{ref.name || 'Unknown'}</p>
+                              <p className="text-gray-500 text-xs">{ref.mobile || ref.email}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => sendGiftSubscription(ref.uid, ref.name)}
+                            disabled={sendingGift === ref.uid || giftParentBalance < GIFT_COST}
+                            className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+                              giftParentBalance < GIFT_COST
+                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                : sendingGift === ref.uid
+                                ? 'bg-pink-500/50 text-white cursor-wait'
+                                : 'bg-pink-500 text-white hover:bg-pink-600'
+                            }`}
+                          >
+                            {sendingGift === ref.uid ? (
+                              <span className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Sending...
+                              </span>
+                            ) : (
+                              '🎁 Gift'
+                            )}
+                          </button>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-400">
+                            {ref.subscription_plan || 'Explorer'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Will get 24hr Elite access
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer Info */}
+              <div className="p-4 bg-gray-800/30 border-t border-gray-800">
+                <p className="text-gray-500 text-xs text-center">
+                  🎁 Gift subscription gives 24 hours of Elite plan features
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
