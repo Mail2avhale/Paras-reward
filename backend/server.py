@@ -4597,18 +4597,14 @@ async def calculate_mining_rate(uid: str):
                 'active_count': level_data.get('active', 0),
                 'total_count': level_data.get('count', 0),
                 'percentage': {
-                    'level_1': 10,
-                    'level_2': 5,
-                    'level_3': 3
+                    'level_1': 5,
+                    'level_2': 3,
+                    'level_3': 2
                 }.get(level_key, 0),
                 'bonus': level_data.get('boost', 0) * breakdown.get('base_with_single_leg', HOURLY_BASE_RATE)
             }
     
-    # Add single leg info to breakdown
-    referral_breakdown['single_leg'] = {
-        'count': breakdown.get('single_leg_users', 0),
-        'bonus': breakdown.get('single_leg_bonus', 0)
-    }
+    # Note: single_leg info stored separately, not in referral_breakdown to avoid claim_mining errors
     
     total_active = sum(
         d.get('active', 0) for d in breakdown.get('boost_breakdown', {}).values()
@@ -7080,9 +7076,11 @@ async def claim_mining(uid: str):
     
     # Create referral bonus transactions - ONE PER LEVEL for proper tracking
     if referral_bonus_portion > 0 and referral_breakdown:
-        total_breakdown_bonus = sum(ld.get('bonus', 0) for ld in referral_breakdown.values())
+        # Filter out non-level keys like 'single_leg'
+        level_breakdown = {k: v for k, v in referral_breakdown.items() if k.startswith('level_')}
+        total_breakdown_bonus = sum(ld.get('bonus', 0) for ld in level_breakdown.values())
         
-        for level_key, level_data in referral_breakdown.items():
+        for level_key, level_data in level_breakdown.items():
             level_bonus = level_data.get('bonus', 0)
             if level_bonus > 0 and total_breakdown_bonus > 0:
                 # Calculate this level's share of the total referral bonus portion
