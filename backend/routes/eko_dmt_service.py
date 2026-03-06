@@ -3,11 +3,14 @@ PARAS REWARD - EKO DMT (Domestic Money Transfer) Service
 ========================================================
 Complete Production-Ready Backend for Bank Transfers
 
+IMPORTANT: NO HARDCODED VALUES - All config from environment variables
+
 Flow:
 1. Customer Search/Registration
-2. Add Recipient (Bank Account)
-3. Money Transfer
-4. Transaction Status Check
+2. OTP Verification (if needed)
+3. Add Recipient (Bank Account)
+4. Money Transfer
+5. Transaction Status Check
 
 PRC Conversion:
 - 100 PRC = ₹1 INR
@@ -19,10 +22,9 @@ Security:
 - OTP verification for transfers
 - Daily limits enforcement
 - Duplicate transaction prevention
-- IP logging
 """
 
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
@@ -39,17 +41,34 @@ from bson import ObjectId
 # Database connection
 from pymongo import MongoClient
 
-# ==================== CONFIGURATION ====================
+# ==================== CONFIGURATION (ALL FROM ENV) ====================
 
 router = APIRouter(prefix="/eko/dmt", tags=["DMT - Bank Transfer"])
 
-# EKO Production Configuration
-EKO_BASE_URL = "https://api.eko.in:25002/ekoicici"
-EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "7c179a397b4710e71b2248d1f5892d19")
-EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
-EKO_AUTH_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "7a2529f5-3587-4add-a2df-3d0606d62460")
-EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
-SOURCE_IP = "34.44.149.98"
+# EKO Configuration - ALL from environment, NO defaults in production
+EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
+EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
+EKO_AUTH_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
+EKO_USER_CODE = os.environ.get("EKO_USER_CODE")
+
+# Validate required config on startup
+def validate_eko_config():
+    """Validate all required Eko configuration is present"""
+    missing = []
+    if not EKO_DEVELOPER_KEY:
+        missing.append("EKO_DEVELOPER_KEY")
+    if not EKO_INITIATOR_ID:
+        missing.append("EKO_INITIATOR_ID")
+    if not EKO_AUTH_KEY:
+        missing.append("EKO_AUTHENTICATOR_KEY")
+    if not EKO_USER_CODE:
+        missing.append("EKO_USER_CODE")
+    
+    if missing:
+        logging.error(f"[DMT] Missing required environment variables: {', '.join(missing)}")
+        return False
+    return True
 
 # PRC Conversion
 PRC_TO_INR_RATE = 100  # 100 PRC = ₹1
@@ -63,6 +82,25 @@ DB_NAME = os.environ.get("DB_NAME", "test_database")
 # Request timeout
 REQUEST_TIMEOUT = 60
 
+# ==================== ERROR CODES ====================
+
+EKO_ERROR_MESSAGES = {
+    0: "Success",
+    403: "Authentication failed. Please contact support.",
+    463: "Customer not found. Registration required.",
+    327: "Verification pending. Please complete OTP verification.",
+    302: "Invalid OTP. Please try again.",
+    303: "OTP expired. Please request a new OTP.",
+    342: "Recipient already registered.",
+    41: "Invalid IFSC code.",
+    46: "Invalid account details.",
+    347: "Insufficient balance.",
+    544: "Bank server unavailable. Please try later.",
+    53: "IMPS not available for this transaction.",
+    317: "NEFT not allowed for this account.",
+    314: "Monthly limit exceeded.",
+}
+
 # ==================== DATABASE CONNECTION ====================
 
 def get_db():
@@ -70,20 +108,43 @@ def get_db():
     client = MongoClient(MONGO_URL)
     return client[DB_NAME]
 
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP from request headers or connection"""
+    # Check X-Forwarded-For header (for proxied requests)
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    
+    # Check X-Real-IP header
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    
+    # Fallback to direct connection IP
+    if request.client:
+        return request.client.host
+    
+    return "unknown"
+
+
 # ==================== AUTHENTICATION ====================
 
-def generate_eko_headers() -> Dict[str, str]:
+def generate_eko_headers(request: Request = None) -> Dict[str, str]:
     """
-    Generate EKO authentication headers.
+    Generate EKO authentication headers for DMT.
     
-    CORRECT Formula (as per Eko documentation):
+    DMT Authentication Formula (as per Eko documentation):
     1. timestamp = current time in SECONDS (not milliseconds)
     2. raw = developer_key + timestamp + authenticator_key
     3. secret_key = Base64(SHA256(raw))
     """
-    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
+    if not validate_eko_config():
+        raise ValueError("EKO configuration not properly set")
     
-    # Correct formula: SHA256 of concatenated string
+    timestamp = str(int(time.time()))  # SECONDS for DMT
+    
+    # SHA256 of concatenated string
     raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
     secret_key = base64.b64encode(
         hashlib.sha256(raw.encode()).digest()
@@ -94,22 +155,27 @@ def generate_eko_headers() -> Dict[str, str]:
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
         "initiator_id": EKO_INITIATOR_ID,
-        "Content-Type": "application/json"
+        "Content-Type": "application/x-www-form-urlencoded"
     }
+
+
+def generate_eko_headers_json(request: Request = None) -> Dict[str, str]:
+    """Generate headers for JSON requests"""
+    headers = generate_eko_headers(request)
+    headers["Content-Type"] = "application/json"
+    return headers
 
 
 def generate_eko_headers_for_get() -> Dict[str, str]:
     """
     Generate EKO authentication headers for GET requests.
     GET requests should not have Content-Type header.
-    
-    CORRECT Formula:
-    raw = developer_key + timestamp + authenticator_key
-    secret_key = Base64(SHA256(raw))
     """
-    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
+    if not validate_eko_config():
+        raise ValueError("EKO configuration not properly set")
     
-    # Correct formula: SHA256 of concatenated string
+    timestamp = str(int(time.time()))  # SECONDS for DMT
+    
     raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
     secret_key = base64.b64encode(
         hashlib.sha256(raw.encode()).digest()
@@ -164,6 +230,13 @@ class CustomerRegisterRequest(BaseModel):
     user_id: str
 
 
+class CustomerOTPRequest(BaseModel):
+    """Request for OTP operations"""
+    user_id: str
+    mobile: str = Field(..., min_length=10, max_length=10)
+    otp: Optional[str] = Field(None, min_length=4, max_length=6)
+
+
 class AddRecipientRequest(BaseModel):
     """Request to add bank recipient"""
     mobile: str = Field(..., min_length=10, max_length=10)
@@ -192,7 +265,6 @@ class TransferRequest(BaseModel):
     mobile: str = Field(..., min_length=10, max_length=10)
     recipient_id: str = Field(..., description="EKO recipient ID")
     prc_amount: int = Field(..., gt=0, description="PRC amount to redeem")
-    pin: Optional[str] = Field(None, description="User PIN for verification")
     
     @validator('prc_amount')
     def validate_prc(cls, v):
@@ -204,13 +276,7 @@ class TransferRequest(BaseModel):
         return v
 
 
-class TransactionStatusRequest(BaseModel):
-    """Request to check transaction status"""
-    tid: str = Field(..., description="EKO Transaction ID")
-    client_ref_id: str = Field(..., description="Client reference ID")
-
-
-# ==================== RESPONSE MODELS ====================
+# ==================== RESPONSE HELPERS ====================
 
 def create_success_response(data: Dict, message: str = "Success") -> Dict:
     return {
@@ -228,29 +294,12 @@ def create_error_response(code: int, message: str, user_message: str = None) -> 
         "status": "FAILED",
         "error_code": code,
         "message": message,
-        "user_message": user_message or message,
+        "user_message": user_message or EKO_ERROR_MESSAGES.get(code, message),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
 # ==================== HELPER FUNCTIONS ====================
-
-def get_bank_code_from_ifsc(ifsc: str) -> Optional[str]:
-    """Get bank code from IFSC using EKO API"""
-    try:
-        url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}"
-        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=30)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == 0:
-                return data.get("data", {}).get("bank_code")
-        
-        return None
-    except Exception as e:
-        logging.error(f"[DMT] Error getting bank code: {e}")
-        return None
-
 
 def check_daily_limit(db, user_id: str) -> tuple:
     """
@@ -259,7 +308,6 @@ def check_daily_limit(db, user_id: str) -> tuple:
     """
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     
-    # Sum all successful DMT transactions today
     pipeline = [
         {
             "$match": {
@@ -295,9 +343,11 @@ def log_dmt_transaction(db, log_data: Dict):
 @router.get("/health")
 def health():
     """DMT Service Health Check"""
+    config_valid = validate_eko_config()
     return {
-        "status": "DMT SERVICE RUNNING",
-        "version": "1.0",
+        "status": "DMT SERVICE RUNNING" if config_valid else "CONFIG ERROR",
+        "config_valid": config_valid,
+        "version": "2.0",
         "prc_rate": f"{PRC_TO_INR_RATE} PRC = ₹1",
         "min_redeem": f"₹{MIN_REDEEM_INR}",
         "max_daily": f"₹{MAX_DAILY_INR}"
@@ -308,14 +358,7 @@ def health():
 
 @router.get("/wallet/{user_id}")
 def get_wallet(user_id: str):
-    """
-    Get user's PRC wallet balance and INR equivalent.
-    
-    Response:
-    - prc_balance: Current PRC balance
-    - inr_equivalent: INR value (PRC / 100)
-    - can_redeem: Whether user has enough for minimum redeem
-    """
+    """Get user's PRC wallet balance and INR equivalent."""
     db = get_db()
     
     user = db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
@@ -326,7 +369,6 @@ def get_wallet(user_id: str):
     prc_balance = user.get("prc_balance", 0)
     inr_equivalent = prc_balance / PRC_TO_INR_RATE
     
-    # Check daily limit
     is_allowed, remaining_limit, used_today = check_daily_limit(db, user_id)
     
     return create_success_response({
@@ -353,8 +395,11 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
     
     EKO API: GET /v1/customers/mobile_number:{mobile}
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable. Please contact support.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     logging.info(f"[DMT] Customer Search: {req.mobile}, User: {req.user_id}, IP: {client_ip}")
     
@@ -364,10 +409,23 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
         response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Customer Search Response: {response.status_code}")
+        logging.debug(f"[DMT] Response Body: {response.text[:500]}")
         
         if response.status_code == 403:
-            logging.error(f"[DMT] 403 Forbidden - IP may not be whitelisted with Eko")
-            return create_error_response(403, "Authentication failed", "Bank Transfer सेवा सध्या उपलब्ध नाही. कृपया नंतर पुन्हा प्रयत्न करा.")
+            logging.error(f"[DMT] 403 Forbidden - Authentication failed or IP not whitelisted. IP: {client_ip}")
+            return create_error_response(
+                403, 
+                "Authentication failed", 
+                "Bank Transfer सेवा सध्या उपलब्ध नाही. कृपया Admin शी संपर्क करा."
+            )
+        
+        if response.status_code != 200:
+            logging.error(f"[DMT] HTTP {response.status_code}: {response.text}")
+            return create_error_response(
+                response.status_code,
+                f"API Error: {response.status_code}",
+                "Service temporarily unavailable. Please try again."
+            )
         
         result = response.json()
         eko_status = result.get("status")
@@ -406,10 +464,11 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
             }, "Customer not found - Registration required")
         
         else:
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Customer search failed"))
             return create_error_response(
                 eko_status,
                 result.get("message", "Customer search failed"),
-                "Unable to verify customer. Please try again."
+                user_msg
             )
             
     except requests.exceptions.Timeout:
@@ -426,12 +485,13 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
     """
     Register new customer in EKO system.
     
-    Required for first-time DMT users.
-    
     EKO API: PUT /v1/customers/mobile_number:{mobile}
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     logging.info(f"[DMT] Customer Registration: {req.mobile}, Name: {req.first_name} {req.last_name}")
     
@@ -443,17 +503,16 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "pipe": "9",  # Standard pipe for DMT
-            "source_ip": SOURCE_IP
+            "source_ip": client_ip
         }
         
-        response = requests.put(
-            url,
-            data=payload,
-            headers=generate_eko_headers_for_get(),
-            timeout=REQUEST_TIMEOUT
-        )
+        headers = generate_eko_headers(request)
+        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Registration Response: {response.status_code}")
+        
+        if response.status_code == 403:
+            return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
         result = response.json()
         eko_status = result.get("status")
@@ -476,30 +535,20 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
                 "customer_id": customer_data.get("customer_id"),
                 "mobile": req.mobile,
                 "name": f"{req.first_name} {req.last_name}",
-                "otp_required": customer_data.get("state") == 1,  # OTP verification may be needed
+                "otp_required": customer_data.get("state") == 1,
                 "message": result.get("message", "Customer registered successfully")
             }, "Customer registered")
         
         else:
-            return create_error_response(
-                eko_status,
-                result.get("message", "Registration failed"),
-                "Unable to register. Please check details and try again."
-            )
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Registration failed"))
+            return create_error_response(eko_status, result.get("message", "Registration failed"), user_msg)
             
     except Exception as e:
         logging.error(f"[DMT] Registration Error: {e}")
         return create_error_response(500, str(e), "Registration failed. Please try again.")
 
 
-# ==================== STEP 2.5: CUSTOMER OTP VERIFICATION ====================
-
-class CustomerOTPRequest(BaseModel):
-    """Request for OTP operations"""
-    user_id: str
-    mobile: str = Field(..., min_length=10, max_length=10)
-    otp: Optional[str] = Field(None, min_length=4, max_length=6)
-
+# ==================== STEP 2.5: OTP VERIFICATION ====================
 
 @router.post("/customer/resend-otp")
 async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
@@ -508,8 +557,11 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
     
     EKO API: POST /v1/customers/mobile_number:{mobile}/otp
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     logging.info(f"[DMT] Resend OTP: {req.mobile}")
     
@@ -520,13 +572,13 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "pipe": "9",
-            "source_ip": SOURCE_IP
+            "source_ip": client_ip
         }
         
-        response = requests.post(url, data=payload, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        headers = generate_eko_headers(request)
+        response = requests.post(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Resend OTP Response: {response.status_code}")
-        logging.info(f"[DMT] Resend OTP Raw Response: {response.text}")
         
         if response.status_code != 200:
             return create_error_response(
@@ -539,43 +591,16 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
         eko_status = result.get("status")
         eko_data = result.get("data", {})
         
-        # Check if OTP is returned in response (for testing/sandbox)
-        otp_in_response = eko_data.get("otp") or result.get("otp")
-        otp_ref_id = eko_data.get("otp_ref_id") or result.get("otp_ref_id")
-        verification_token = eko_data.get("verification_token") or result.get("verification_token")
-        
-        if otp_in_response:
-            logging.info(f"[DMT] *** OTP FOUND IN RESPONSE: {otp_in_response} ***")
-        
         if eko_status == 0:
-            eko_message = result.get("message", "OTP sent successfully")
-            logging.info(f"[DMT] OTP Success - Eko Message: {eko_message}")
-            
-            response_data = {
+            return create_success_response({
                 "otp_sent": True,
                 "mobile": req.mobile,
-                "message": eko_message,
-                "eko_response_message": eko_message,
-                "eko_raw_response": result,  # Include full raw response
-                "note": "OTP should arrive within 1-2 minutes. If not received, check DND status or try resending."
-            }
-            
-            # Include OTP if present in response (sandbox/testing mode)
-            if otp_in_response:
-                response_data["otp"] = otp_in_response
-                response_data["otp_note"] = "OTP returned in API response (testing mode)"
-            if otp_ref_id:
-                response_data["otp_ref_id"] = otp_ref_id
-            if verification_token:
-                response_data["verification_token"] = verification_token
-            
-            return create_success_response(response_data, "OTP sent")
+                "message": result.get("message", "OTP sent successfully"),
+                "otp_ref_id": eko_data.get("otp_ref_id")
+            }, "OTP sent")
         else:
-            return create_error_response(
-                eko_status,
-                result.get("message", "Failed to send OTP"),
-                "Unable to send OTP. Please try again."
-            )
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Failed to send OTP"))
+            return create_error_response(eko_status, result.get("message", "Failed to send OTP"), user_msg)
             
     except Exception as e:
         logging.error(f"[DMT] Resend OTP Error: {e}")
@@ -589,8 +614,11 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
     
     EKO API: PUT /v1/customers/verification/otp:{otp}
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     if not req.otp:
         return create_error_response(400, "OTP is required", "Please enter the OTP.")
@@ -606,10 +634,11 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "pipe": "9",
-            "source_ip": SOURCE_IP
+            "source_ip": client_ip
         }
         
-        response = requests.put(url, data=payload, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        headers = generate_eko_headers(request)
+        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Verify OTP Response: {response.status_code}")
         
@@ -645,11 +674,8 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
                 "message": result.get("message", "Customer verified successfully")
             }, "Customer verified")
         else:
-            return create_error_response(
-                eko_status,
-                result.get("message", "OTP verification failed"),
-                "Invalid OTP. Please check and try again."
-            )
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, "Invalid OTP. Please check and try again.")
+            return create_error_response(eko_status, result.get("message", "OTP verification failed"), user_msg)
             
     except Exception as e:
         logging.error(f"[DMT] Verify OTP Error: {e}")
@@ -663,33 +689,21 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
     """
     Add bank account as recipient for money transfer.
     
-    Returns recipient_id needed for transfer.
-    
-    EKO API: PUT /v1/customers/mobile_number:{mobile}/recipients
+    EKO API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_no:{account}
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     logging.info(f"[DMT] Add Recipient: {req.recipient_name}, Account: ***{req.account_number[-4:]}, IFSC: {req.ifsc}")
     
     try:
         # Get bank code from IFSC
-        bank_code = get_bank_code_from_ifsc(req.ifsc)
+        bank_code = req.ifsc[:4]  # First 4 characters of IFSC
         
-        if not bank_code:
-            # Try to extract from IFSC (first 4 chars usually map to bank)
-            bank_code = req.ifsc[:4]
-        
-        # Use correct URL format with acc_no in path
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients/acc_no:{req.account_number}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        # Generate request hash for recipient add
-        timestamp = str(int(time.time() * 1000))
-        hash_string = f"{timestamp}{req.account_number}{req.ifsc}"
-        request_hash = generate_request_hash(hash_string)
-        
-        headers = generate_eko_headers_for_get()
-        headers["request_hash"] = request_hash
         
         payload = {
             "recipient_name": req.recipient_name,
@@ -699,12 +713,16 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             "recipient_type": "1",  # 1 = Bank Account
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "source_ip": SOURCE_IP
+            "source_ip": client_ip
         }
         
+        headers = generate_eko_headers(request)
         response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Add Recipient Response: {response.status_code}")
+        
+        if response.status_code == 403:
+            return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
         result = response.json()
         eko_status = result.get("status")
@@ -761,11 +779,8 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             }, "Recipient already exists")
         
         else:
-            return create_error_response(
-                eko_status,
-                result.get("message", "Failed to add recipient"),
-                "Unable to add bank account. Please verify IFSC and account number."
-            )
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Failed to add recipient"))
+            return create_error_response(eko_status, result.get("message", "Failed to add recipient"), user_msg)
             
     except Exception as e:
         logging.error(f"[DMT] Add Recipient Error: {e}")
@@ -781,6 +796,9 @@ async def get_recipients(mobile: str, user_id: str):
     
     EKO API: GET /v1/customers/mobile_number:{mobile}/recipients
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     logging.info(f"[DMT] Get Recipients: {mobile}")
     
     try:
@@ -790,13 +808,15 @@ async def get_recipients(mobile: str, user_id: str):
         
         logging.info(f"[DMT] Recipients Response: {response.status_code}")
         
-        # Handle non-200 responses
         if response.status_code == 404:
             return create_success_response({
                 "count": 0,
                 "recipients": [],
                 "message": "No recipients found. Add a bank account to get started."
             }, "No recipients found")
+        
+        if response.status_code == 403:
+            return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
         if response.status_code != 200:
             return create_error_response(
@@ -818,7 +838,6 @@ async def get_recipients(mobile: str, user_id: str):
             }, "No recipients found")
         
         if eko_status == 0:
-            # Handle different response formats
             data = result.get("data", {})
             if isinstance(data, list):
                 recipients = data
@@ -844,7 +863,6 @@ async def get_recipients(mobile: str, user_id: str):
             }, f"Found {len(formatted_recipients)} recipients")
         
         elif eko_status == 463 or eko_status == 404:
-            # Customer not found or no recipients
             return create_success_response({
                 "count": 0,
                 "recipients": [],
@@ -852,11 +870,8 @@ async def get_recipients(mobile: str, user_id: str):
             }, "No recipients found")
         
         else:
-            return create_error_response(
-                eko_status,
-                result.get("message", "Failed to get recipients"),
-                "Unable to load saved accounts."
-            )
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, "Failed to get recipients")
+            return create_error_response(eko_status, result.get("message", "Failed to get recipients"), user_msg)
             
     except Exception as e:
         logging.error(f"[DMT] Get Recipients Error: {e}")
@@ -881,8 +896,11 @@ async def transfer_money(req: TransferRequest, request: Request):
     
     EKO API: POST /v1/transactions
     """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     client_ref_id = f"DMT{int(time.time() * 1000)}{uuid.uuid4().hex[:8].upper()}"
     
     # Convert PRC to INR
@@ -971,11 +989,10 @@ async def transfer_money(req: TransferRequest, request: Request):
         
         # Generate request hash
         timestamp = str(int(time.time() * 1000))
-        # Format: timestamp + amount + recipient_id + client_ref_id
         hash_string = f"{timestamp}{int(amount_inr)}{req.recipient_id}{client_ref_id}"
         request_hash = generate_request_hash(hash_string)
         
-        headers = generate_eko_headers()
+        headers = generate_eko_headers_json(request)
         headers["request_hash"] = request_hash
         
         payload = {
@@ -983,11 +1000,11 @@ async def transfer_money(req: TransferRequest, request: Request):
             "recipient_id": req.recipient_id,
             "amount": str(int(amount_inr)),
             "client_ref_id": client_ref_id,
-            "channel": "2",  # 2 = IMPS (faster), 1 = NEFT
+            "channel": "2",  # 2 = IMPS
             "state": "1",
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "source_ip": SOURCE_IP,
+            "source_ip": client_ip,
             "latlong": "19.9975,73.7898"
         }
         
@@ -996,6 +1013,11 @@ async def transfer_money(req: TransferRequest, request: Request):
         response = requests.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Transfer Response: {response.status_code}")
+        
+        if response.status_code == 403:
+            # Refund PRC on auth failure
+            refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Authentication failed")
+            return create_error_response(403, "Authentication failed", "Service temporarily unavailable. PRC refunded.")
         
         result = response.json()
         eko_status = result.get("status")
@@ -1029,14 +1051,11 @@ async def transfer_money(req: TransferRequest, request: Request):
         }
         
         if eko_status == 0:
-            # Check tx_status for final state
+            # Process based on tx_status
             if tx_status == 0:
                 # SUCCESS
                 update_data["status"] = "completed"
-                db.dmt_transactions.update_one(
-                    {"transaction_id": client_ref_id},
-                    {"$set": update_data}
-                )
+                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
                 
                 return create_success_response({
                     "transaction_id": client_ref_id,
@@ -1052,29 +1071,9 @@ async def transfer_money(req: TransferRequest, request: Request):
             elif tx_status == 1:
                 # FAILED - Refund PRC
                 update_data["status"] = "failed"
+                refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer failed")
                 update_data["prc_refunded"] = req.prc_amount
-                
-                # Refund PRC
-                db.users.update_one(
-                    {"uid": req.user_id},
-                    {
-                        "$inc": {"prc_balance": req.prc_amount},
-                        "$push": {
-                            "prc_transactions": {
-                                "type": "dmt_refund",
-                                "amount": req.prc_amount,
-                                "reference": client_ref_id,
-                                "reason": "Transfer failed",
-                                "timestamp": datetime.now(timezone.utc)
-                            }
-                        }
-                    }
-                )
-                
-                db.dmt_transactions.update_one(
-                    {"transaction_id": client_ref_id},
-                    {"$set": update_data}
-                )
+                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
                 
                 return create_error_response(
                     eko_status,
@@ -1083,12 +1082,9 @@ async def transfer_money(req: TransferRequest, request: Request):
                 )
             
             elif tx_status == 2:
-                # PENDING - Keep PRC deducted, will be refunded if ultimately fails
+                # PENDING
                 update_data["status"] = "pending"
-                db.dmt_transactions.update_one(
-                    {"transaction_id": client_ref_id},
-                    {"$set": update_data}
-                )
+                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
                 
                 return create_success_response({
                     "transaction_id": client_ref_id,
@@ -1096,50 +1092,17 @@ async def transfer_money(req: TransferRequest, request: Request):
                     "status": "PENDING",
                     "amount_inr": amount_inr,
                     "prc_deducted": req.prc_amount,
-                    "message": "Transfer is being processed. Status will be updated shortly.",
-                    "check_status_url": f"/api/eko/dmt/status/{client_ref_id}"
+                    "message": "Transfer is being processed. Status will be updated shortly."
                 }, "Transfer initiated - Pending confirmation")
             
-            elif tx_status in [3, 4]:
-                # REFUND_PENDING or REFUNDED
-                update_data["status"] = "refunded" if tx_status == 4 else "refund_pending"
-                update_data["prc_refunded"] = req.prc_amount
-                
-                # Refund PRC
-                db.users.update_one(
-                    {"uid": req.user_id},
-                    {
-                        "$inc": {"prc_balance": req.prc_amount},
-                        "$push": {
-                            "prc_transactions": {
-                                "type": "dmt_refund",
-                                "amount": req.prc_amount,
-                                "reference": client_ref_id,
-                                "reason": "Transfer refunded by bank",
-                                "timestamp": datetime.now(timezone.utc)
-                            }
-                        }
-                    }
-                )
-                
-                db.dmt_transactions.update_one(
-                    {"transaction_id": client_ref_id},
-                    {"$set": update_data}
-                )
-                
-                return create_error_response(
-                    eko_status,
-                    "Transfer refunded",
-                    f"Transfer was refunded by bank. {req.prc_amount} PRC credited back."
-                )
-            
             else:
-                # Unknown status - keep as processing
+                # Other status - REFUND states
                 update_data["status"] = "processing"
-                db.dmt_transactions.update_one(
-                    {"transaction_id": client_ref_id},
-                    {"$set": update_data}
-                )
+                if tx_status in [3, 4]:  # Refund states
+                    refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer refunded by bank")
+                    update_data["prc_refunded"] = req.prc_amount
+                
+                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
                 
                 return create_success_response({
                     "transaction_id": client_ref_id,
@@ -1150,59 +1113,23 @@ async def transfer_money(req: TransferRequest, request: Request):
         
         else:
             # EKO Error - Refund PRC
+            refund_prc(db, req.user_id, req.prc_amount, client_ref_id, f"EKO Error: {result.get('message')}")
             update_data["status"] = "failed"
             update_data["prc_refunded"] = req.prc_amount
+            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
             
-            # Refund PRC
-            db.users.update_one(
-                {"uid": req.user_id},
-                {
-                    "$inc": {"prc_balance": req.prc_amount},
-                    "$push": {
-                        "prc_transactions": {
-                            "type": "dmt_refund",
-                            "amount": req.prc_amount,
-                            "reference": client_ref_id,
-                            "reason": f"EKO Error: {result.get('message')}",
-                            "timestamp": datetime.now(timezone.utc)
-                        }
-                    }
-                }
-            )
-            
-            db.dmt_transactions.update_one(
-                {"transaction_id": client_ref_id},
-                {"$set": update_data}
-            )
-            
-            error_message = result.get("message", "Transfer failed")
-            
-            # Map common EKO errors
-            error_messages = {
-                347: "Insufficient balance in merchant account.",
-                41: "Invalid IFSC code.",
-                46: "Invalid bank account details.",
-                544: "Bank server unavailable. Try again later.",
-                53: "IMPS not available. Try NEFT.",
-                317: "NEFT not allowed for this account."
-            }
-            
-            user_msg = error_messages.get(eko_status, error_message)
-            
+            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Transfer failed"))
             return create_error_response(
                 eko_status,
-                error_message,
+                result.get("message", "Transfer failed"),
                 f"Transfer failed. {req.prc_amount} PRC refunded. Reason: {user_msg}"
             )
             
     except requests.exceptions.Timeout:
-        # Timeout - Don't refund immediately, check status later
+        # Don't refund on timeout - status unknown
         db.dmt_transactions.update_one(
             {"transaction_id": client_ref_id},
-            {"$set": {
-                "status": "timeout",
-                "updated_at": datetime.now(timezone.utc)
-            }}
+            {"$set": {"status": "timeout", "updated_at": datetime.now(timezone.utc)}}
         )
         
         return create_error_response(
@@ -1215,21 +1142,7 @@ async def transfer_money(req: TransferRequest, request: Request):
         logging.error(f"[DMT] Transfer Error: {e}")
         
         # Refund PRC on error
-        db.users.update_one(
-            {"uid": req.user_id},
-            {
-                "$inc": {"prc_balance": req.prc_amount},
-                "$push": {
-                    "prc_transactions": {
-                        "type": "dmt_refund",
-                        "amount": req.prc_amount,
-                        "reference": client_ref_id,
-                        "reason": f"System error: {str(e)}",
-                        "timestamp": datetime.now(timezone.utc)
-                    }
-                }
-            }
-        )
+        refund_prc(db, req.user_id, req.prc_amount, client_ref_id, f"System error: {str(e)}")
         
         db.dmt_transactions.update_one(
             {"transaction_id": client_ref_id},
@@ -1248,18 +1161,36 @@ async def transfer_money(req: TransferRequest, request: Request):
         )
 
 
+def refund_prc(db, user_id: str, amount: int, ref_id: str, reason: str):
+    """Refund PRC to user"""
+    db.users.update_one(
+        {"uid": user_id},
+        {
+            "$inc": {"prc_balance": amount},
+            "$push": {
+                "prc_transactions": {
+                    "type": "dmt_refund",
+                    "amount": amount,
+                    "reference": ref_id,
+                    "reason": reason,
+                    "timestamp": datetime.now(timezone.utc)
+                }
+            }
+        }
+    )
+    logging.info(f"[DMT] PRC Refunded: {amount} to user {user_id}, reason: {reason}")
+
+
 # ==================== STEP 6: TRANSACTION STATUS ====================
 
 @router.get("/status/{transaction_id}")
 async def get_transaction_status(transaction_id: str, user_id: str):
-    """
-    Check status of a DMT transaction.
+    """Check status of a DMT transaction."""
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
     
-    Uses both local DB and EKO API for latest status.
-    """
     db = get_db()
     
-    # Get from local DB first
     txn = db.dmt_transactions.find_one(
         {"transaction_id": transaction_id, "user_id": user_id},
         {"_id": 0}
@@ -1270,7 +1201,7 @@ async def get_transaction_status(transaction_id: str, user_id: str):
     
     eko_tid = txn.get("eko_tid")
     
-    # If we have EKO TID, check with EKO for latest status
+    # If pending, check with EKO for latest status
     if eko_tid and txn.get("status") in ["pending", "processing", "timeout"]:
         try:
             url = f"{EKO_BASE_URL}/v1/transactions/{eko_tid}?initiator_id={EKO_INITIATOR_ID}"
@@ -1283,7 +1214,6 @@ async def get_transaction_status(transaction_id: str, user_id: str):
                     tx_data = result.get("data", {})
                     tx_status = tx_data.get("tx_status")
                     
-                    # Update local record
                     new_status = {
                         0: "completed",
                         1: "failed",
@@ -1302,27 +1232,12 @@ async def get_transaction_status(transaction_id: str, user_id: str):
                         }}
                     )
                     
-                    # If failed/refunded and PRC not yet refunded, refund now
+                    # Refund if failed
                     if new_status in ["failed", "refunded", "refund_pending"] and not txn.get("prc_refunded"):
-                        prc_amount = txn.get("prc_amount")
-                        db.users.update_one(
-                            {"uid": user_id},
-                            {
-                                "$inc": {"prc_balance": prc_amount},
-                                "$push": {
-                                    "prc_transactions": {
-                                        "type": "dmt_refund",
-                                        "amount": prc_amount,
-                                        "reference": transaction_id,
-                                        "reason": "Transfer failed/refunded",
-                                        "timestamp": datetime.now(timezone.utc)
-                                    }
-                                }
-                            }
-                        )
+                        refund_prc(db, user_id, txn.get("prc_amount"), transaction_id, "Transfer failed/refunded")
                         db.dmt_transactions.update_one(
                             {"transaction_id": transaction_id},
-                            {"$set": {"prc_refunded": prc_amount}}
+                            {"$set": {"prc_refunded": txn.get("prc_amount")}}
                         )
                     
                     txn["status"] = new_status
@@ -1349,9 +1264,7 @@ async def get_transaction_status(transaction_id: str, user_id: str):
 
 @router.get("/transactions/{user_id}")
 async def get_transactions(user_id: str, limit: int = 20, skip: int = 0):
-    """
-    Get DMT transaction history for user.
-    """
+    """Get DMT transaction history for user."""
     db = get_db()
     
     transactions = list(db.dmt_transactions.find(
@@ -1361,7 +1274,6 @@ async def get_transactions(user_id: str, limit: int = 20, skip: int = 0):
     
     total = db.dmt_transactions.count_documents({"user_id": user_id})
     
-    # Format transactions
     formatted = []
     for t in transactions:
         formatted.append({
@@ -1387,13 +1299,12 @@ async def get_transactions(user_id: str, limit: int = 20, skip: int = 0):
 
 @router.post("/verify-account")
 async def verify_bank_account(account: str, ifsc: str, user_id: str, request: Request):
-    """
-    Verify bank account before adding as recipient.
+    """Verify bank account before adding as recipient."""
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
     
-    Uses EKO's penny drop verification.
-    """
     db = get_db()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     
     logging.info(f"[DMT] Account Verification: ***{account[-4:]}, IFSC: {ifsc}")
     
@@ -1401,6 +1312,9 @@ async def verify_bank_account(account: str, ifsc: str, user_id: str, request: Re
         url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}/accounts/{account}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
         response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=60)
+        
+        if response.status_code == 403:
+            return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
         result = response.json()
         
@@ -1424,10 +1338,11 @@ async def verify_bank_account(account: str, ifsc: str, user_id: str, request: Re
             }, "Account verified successfully")
         
         else:
+            user_msg = EKO_ERROR_MESSAGES.get(result.get("status"), "Unable to verify account")
             return create_error_response(
                 result.get("status"),
                 result.get("message", "Verification failed"),
-                "Unable to verify account. Please check account number and IFSC."
+                user_msg
             )
             
     except Exception as e:

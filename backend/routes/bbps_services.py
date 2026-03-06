@@ -45,18 +45,57 @@ from .eko_error_handler import (
 
 router = APIRouter(prefix="/bbps", tags=["BBPS Services"])
 
-# ==================== EKO PRODUCTION CONFIG ====================
+# ==================== EKO PRODUCTION CONFIG (ALL FROM ENV) ====================
+import os
 
-BASE_URL = "https://api.eko.in:25002/ekoicici"
-DEVELOPER_KEY = "7c179a397b4710e71b2248d1f5892d19"
-INITIATOR_ID = "9936606966"
-AUTH_KEY = "7a2529f5-3587-4add-a2df-3d0606d62460"
-SOURCE_IP = "34.44.149.98"
-USER_CODE = "20810200"
+BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
+INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID")
+AUTH_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY")
+USER_CODE = os.environ.get("EKO_USER_CODE")
 DEFAULT_LATLONG = "19.9975,73.7898"
 
 # Request timeout in seconds
 REQUEST_TIMEOUT = 60
+
+
+def validate_bbps_config():
+    """Validate all required Eko configuration is present"""
+    missing = []
+    if not DEVELOPER_KEY:
+        missing.append("EKO_DEVELOPER_KEY")
+    if not INITIATOR_ID:
+        missing.append("EKO_INITIATOR_ID")
+    if not AUTH_KEY:
+        missing.append("EKO_AUTHENTICATOR_KEY")
+    if not USER_CODE:
+        missing.append("EKO_USER_CODE")
+    
+    if missing:
+        logging.error(f"[BBPS] Missing required environment variables: {', '.join(missing)}")
+        return False
+    return True
+
+
+def get_client_ip_bbps(request=None) -> str:
+    """Get client IP from request - NO hardcoding"""
+    if request:
+        # Check X-Forwarded-For header (for proxied requests)
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        
+        # Check X-Real-IP header
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip
+        
+        # Fallback to direct connection IP
+        if hasattr(request, 'client') and request.client:
+            return request.client.host
+    
+    # Return empty string - let Eko use server IP
+    return ""
 
 
 # ==================== AUTHENTICATION ====================
@@ -272,6 +311,9 @@ def fetch_bill(data: FetchBillRequest):
     
     Works for: Electricity, DTH, FASTag, EMI, Water, etc.
     """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     client_ref_id = f"FETCH{int(time.time() * 1000)}"
     
     try:
@@ -281,7 +323,6 @@ def fetch_bill(data: FetchBillRequest):
             "operator_id": data.operator_id,
             "utility_acc_no": data.account,
             "confirmation_mobile_no": data.mobile,
-            "source_ip": SOURCE_IP,
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
@@ -429,6 +470,9 @@ def pay_bill(data: PayBillRequest):
     
     Works for: Electricity, DTH, FASTag, EMI, Water, Mobile, etc.
     """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
     client_ref_id = f"PAY{int(time.time() * 1000)}"
     
     # Pre-validation
@@ -460,7 +504,6 @@ def pay_bill(data: PayBillRequest):
             "operator_id": data.operator_id,
             "utility_acc_no": data.account,
             "confirmation_mobile_no": data.mobile,
-            "source_ip": SOURCE_IP,
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
