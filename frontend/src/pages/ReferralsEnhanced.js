@@ -556,14 +556,14 @@ const ReferralsEnhanced = ({ user }) => {
   const shareOnWhatsApp = () => {
     const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
-✨ Use my referral code: ${referralCode}
+✨ Use my invite code: ${referralCode}
 🔗 ${referralLink}
 
 💰 Earn PRC Daily
 🛒 Shop & Save  
 💳 Pay Bills
 🎁 Redeem Gift Vouchers
-👥 5-Level Referral Bonus
+👥 Boost Mining with Friends
 
 Download now & start earning!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
@@ -572,14 +572,14 @@ Download now & start earning!`;
   const shareNative = async () => {
     const message = `🎁 Join PARAS REWARD - India's Next-Generation Trusted Reward Platform!
 
-✨ Use my referral code: ${referralCode}
+✨ Use my invite code: ${referralCode}
 🔗 ${referralLink}
 
 💰 Earn PRC Daily
 🛒 Shop & Save  
 💳 Pay Bills
 🎁 Redeem Gift Vouchers
-👥 5-Level Referral Bonus
+👥 Boost Mining with Friends
 
 Download now & start earning!`;
     
@@ -737,8 +737,8 @@ Download now & start earning!`;
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-white text-xl font-bold">Invite & Earn</h1>
-              <p className="text-gray-500 text-sm">Grow your network</p>
+              <h1 className="text-white text-xl font-bold">Invite Friends</h1>
+              <p className="text-gray-500 text-sm">Boost your mining speed</p>
             </div>
           </div>
           <button
@@ -1292,7 +1292,7 @@ Download now & start earning!`;
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">How Referrals Work</h2>
+              <h2 className="text-xl font-bold text-white">How It Works</h2>
               <button onClick={() => setShowHowItWorks(false)} className="text-gray-500 hover:text-white">✕</button>
             </div>
             
@@ -1322,8 +1322,8 @@ Download now & start earning!`;
                   <span className="text-emerald-400 font-bold">3</span>
                 </div>
                 <div>
-                  <p className="text-white font-semibold">Earn Bonuses</p>
-                  <p className="text-gray-400 text-sm">Get % of their earnings as bonus!</p>
+                  <p className="text-white font-semibold">Friends Stay Active</p>
+                  <p className="text-gray-400 text-sm">They use the app daily</p>
                 </div>
               </div>
               
@@ -1332,15 +1332,15 @@ Download now & start earning!`;
                   <span className="text-purple-400 font-bold">4</span>
                 </div>
                 <div>
-                  <p className="text-white font-semibold">5-Level Network</p>
-                  <p className="text-gray-400 text-sm">Earn from 5 levels of referrals!</p>
+                  <p className="text-white font-semibold">Mining Speed Boost</p>
+                  <p className="text-gray-400 text-sm">Your mining speed increases up to +10%!</p>
                 </div>
               </div>
             </div>
             
             <div className="mt-6 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
               <p className="text-amber-400 text-sm text-center">
-                <strong>Pro Tip:</strong> You only earn bonus when your referrals are actively earning PRC!
+                <strong>Note:</strong> Mining boost applies when your invited friends are actively using the app!
               </p>
             </div>
             

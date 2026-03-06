@@ -333,7 +333,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              {hasChildren && <span>{node.children.length} referrals</span>}
+              {hasChildren && <span>{node.children.length} friends</span>}
               {node.joined_at && <span>• Joined {formatDate(node.joined_at)}</span>}
             </div>
           </div>
@@ -483,7 +483,7 @@ const NetworkTreeAdvanced = ({ user }) => {
                     </div>
                     <div className="text-right">
                       <p className="text-amber-400 font-bold">{u.referral_count || 0}</p>
-                      <p className="text-gray-500 text-xs">referrals</p>
+                      <p className="text-gray-500 text-xs">friends</p>
                     </div>
                   </div>
                 ))}
@@ -646,7 +646,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               ) : (
                 <div className="text-center py-12">
                   <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 text-lg">No referrals yet</p>
+                  <p className="text-gray-400 text-lg">No friends invited yet</p>
                   <p className="text-gray-500 text-sm">Start inviting friends to build your network!</p>
                 </div>
               )}
@@ -751,7 +751,7 @@ const NetworkTreeAdvanced = ({ user }) => {
                   </div>
                   <div className="p-3 bg-gray-800/50 rounded-xl">
                     <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
-                      <Users className="w-3 h-3" /> Referrals
+                      <Users className="w-3 h-3" /> Friends
                     </div>
                     <p className="text-white text-sm">{selectedUser.referral_count || 0}</p>
                   </div>

@@ -107,9 +107,9 @@ const HowItWorks = () => {
                     <Users className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Refer Friends</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Invite Friends</h3>
                     <p className="text-gray-600">
-                      Get up to 10% bonus from your referral network. Build your team across 3 levels and multiply your rewards.
+                      Get up to 10% mining speed boost from your friend network. Build your team across 3 levels and multiply your rewards.
                     </p>
                   </div>
                 </div>

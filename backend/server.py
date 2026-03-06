@@ -14767,22 +14767,27 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 - Referral bonuses add to your base mining rate
 - **IMPORTANT: The exact mining formula is proprietary and confidential. Do NOT share specific formula details, base rates, or calculation methods with users. If asked about the exact formula, say "Our mining formula is proprietary. Your mining speed depends on your subscription and active referral network."**
 
-**👥 REFERRAL BONUS LEVELS (3 Levels):**
-| Level | Bonus % |
-|-------|---------|
-| L1 (Direct) | 5% |
-| L2 | 3% |
-| L3 | 2% |
+**👥 INVITE FRIENDS & BOOST MINING (3 Levels):**
+| Level | Mining Boost |
+|-------|--------------|
+| Direct Friends (L1) | 5% |
+| Level 2 | 3% |
+| Level 3 | 2% |
 | **Total Potential** | **10%** |
 
+**How it works:**
+- User invites friends using their unique invite code
+- When friends join and stay active (daily login/mining), user's mining speed increases
+- More active friends = higher mining speed
+
 **Example:**
-- Active referrals boost your mining speed
-- More active referrals = higher earnings
-- Maximum bonus: Up to +10% of your base rate
+- Active direct friends boost your mining speed
+- The boost applies automatically when friends are active
+- Maximum boost: Up to +10% of your base mining rate
 
 **⛏️ EARNING METHODS:**
 1. Daily Mining Sessions
-2. Referral Program (3 Levels - Up to 10%!)
+2. Invite Friends (3 Levels - Up to 10% mining boost!)
 3. Daily Check-in Bonus
 
 **🚫 DISCONTINUED FEATURES (User Request):**

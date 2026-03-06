@@ -701,15 +701,15 @@ const RewardsHome = () => {
               },
               {
                 q: "How do I earn PRC coins?",
-                a: "Earn PRC through: Daily Mining (automatic), Tap Games, Daily Rewards, and Referral Bonuses. Premium members earn up to 5x more!"
+                a: "Earn PRC through: Daily Mining (automatic), Daily Rewards, and Invite Friends bonus. Premium members earn up to 5x more!"
               },
               {
                 q: "What can I redeem my PRC for?",
                 a: "Redeem PRC for: Amazon/Flipkart Gift Vouchers, Mobile Recharges, DTH Recharges, Bill Payments. VIP members can also redeem to bank (subject to limits and charges)."
               },
               {
-                q: "How does the referral program work?",
-                a: "Share your referral code with friends. Earn bonus PRC when they join and complete activities. Our 5-level referral system lets you earn from your network!"
+                q: "How does inviting friends work?",
+                a: "Share your invite code with friends. When they join and stay active in the app, your mining speed increases! Boost up to 10% with active friends."
               },
               {
                 q: "Is my data safe?",
@@ -769,7 +769,7 @@ const RewardsHome = () => {
               <h4 className="font-semibold mb-4">Features</h4>
               <ul className="space-y-2 text-gray-400 text-sm">
                 <li>Daily Check-in</li>
-                <li>Referral Program</li>
+                <li>Invite Friends</li>
                 <li>Gift Vouchers</li>
                 <li>Bill Payments</li>
               </ul>

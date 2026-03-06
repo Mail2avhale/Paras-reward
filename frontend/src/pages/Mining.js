@@ -970,9 +970,9 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">L1</div>
               <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 1 Referrals</p>
+                <p className="text-zinc-200 text-sm font-medium">Direct Friends</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_1?.total_count || 0} invited • {referralBreakdown?.level_1?.active_count || 0} active • {(referralBreakdown?.level_1?.total_count || 0) - (referralBreakdown?.level_1?.active_count || 0)} inactive
+                  {referralBreakdown?.level_1?.total_count || 0} invited • {referralBreakdown?.level_1?.active_count || 0} active
                 </p>
               </div>
             </div>
@@ -986,9 +986,9 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">L2</div>
               <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 2 Referrals</p>
+                <p className="text-zinc-200 text-sm font-medium">Level 2 Friends</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_2?.total_count || 0} invited • {referralBreakdown?.level_2?.active_count || 0} active • {(referralBreakdown?.level_2?.total_count || 0) - (referralBreakdown?.level_2?.active_count || 0)} inactive
+                  {referralBreakdown?.level_2?.total_count || 0} invited • {referralBreakdown?.level_2?.active_count || 0} active
                 </p>
               </div>
             </div>
@@ -1002,9 +1002,9 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">L3</div>
               <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 3 Referrals</p>
+                <p className="text-zinc-200 text-sm font-medium">Level 3 Friends</p>
                 <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_3?.total_count || 0} invited • {referralBreakdown?.level_3?.active_count || 0} active • {(referralBreakdown?.level_3?.total_count || 0) - (referralBreakdown?.level_3?.active_count || 0)} inactive
+                  {referralBreakdown?.level_3?.total_count || 0} invited • {referralBreakdown?.level_3?.active_count || 0} active
                 </p>
               </div>
             </div>

@@ -36,7 +36,7 @@ const FAQ = () => {
       questions: [
         {
           question: "How do I earn PRC points?",
-          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Referrals (earn when friends join and engage), and Daily login activities."
+          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Inviting Friends (boost mining when friends join and stay active), and Daily login activities."
         },
         {
           question: "How to increase reward rate?",
@@ -103,20 +103,20 @@ const FAQ = () => {
       ]
     },
     {
-      category: 'Referrals',
+      category: 'Invite Friends',
       icon: Users,
       questions: [
         {
-          question: "How does the referral system work?",
-          answer: "Share your unique referral code or link with friends. When they register using your code and become active users, you earn bonus PRC coins and increased mining rates."
+          question: "How does inviting friends work?",
+          answer: "Share your unique invite code or link with friends. When they register using your code and become active users, your mining speed increases!"
         },
         {
-          question: "What is the 3-level referral bonus?",
-          answer: "You earn bonus from 3 levels of referrals: Level 1 (direct): 5%, Level 2: 3%, Level 3: 2%. Total potential bonus up to 10%!"
+          question: "How much mining boost can I get?",
+          answer: "You get mining speed boost from 3 levels of friends: Direct friends: 5%, Level 2: 3%, Level 3: 2%. Total potential boost up to 10%!"
         },
         {
-          question: "When do I receive referral bonus?",
-          answer: "Referral bonus is credited when your referred user completes their daily mining session. The bonus is automatically added to your PRC balance."
+          question: "When does the mining boost apply?",
+          answer: "Mining boost applies when your invited friends are actively using the app (daily login/mining). The boost is automatically reflected in your mining speed."
         }
       ]
     },

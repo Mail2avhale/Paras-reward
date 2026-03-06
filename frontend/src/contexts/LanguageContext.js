@@ -110,15 +110,15 @@ const translations = {
     pa: 'ਮਾਰਕੀਟਪਲੇਸ'
   },
   referrals: {
-    en: 'Referrals',
-    hi: 'रेफरल',
-    mr: 'रेफरल्स',
-    gu: 'રેફરલ્સ',
-    ta: 'பரிந்துரைகள்',
-    te: 'రెఫరల్స్',
-    kn: 'ರೆಫರಲ್‌ಗಳು',
-    bn: 'রেফারেল',
-    pa: 'ਰੈਫਰਲ'
+    en: 'Invite Friends',
+    hi: 'दोस्तों को आमंत्रित करें',
+    mr: 'मित्रांना आमंत्रित करा',
+    gu: 'મિત્રોને આમંત્રિત કરો',
+    ta: 'நண்பர்களை அழைக்கவும்',
+    te: 'స్నేహితులను ఆహ్వానించండి',
+    kn: 'ಸ್ನೇಹಿತರನ್ನು ಆಹ್ವಾನಿಸಿ',
+    bn: 'বন্ধুদের আমন্ত্রণ করুন',
+    pa: 'ਦੋਸਤਾਂ ਨੂੰ ਸੱਦੋ'
   },
   network: {
     en: 'Network',
@@ -791,17 +791,7 @@ const translations = {
     bn: 'রিডিম সেবা আনলক করুন',
     pa: 'ਰੀਡੀਮ ਸੇਵਾਵਾਂ ਅਨਲੌਕ ਕਰੋ'
   },
-  referrals: {
-    en: 'Referrals',
-    hi: 'रेफरल',
-    mr: 'रेफरल',
-    gu: 'રેફરલ',
-    ta: 'பரிந்துரைகள்',
-    te: 'రిఫరల్స్',
-    kn: 'ರೆಫರಲ್ಸ್',
-    bn: 'রেফারেল',
-    pa: 'ਰੈਫਰਲ'
-  },
+  // Note: Using 'referrals' key for backward compatibility but showing "Invite Friends"
   mobile: {
     en: 'Mobile',
     hi: 'मोबाइल',
@@ -1065,19 +1055,19 @@ const translations = {
     pa: 'ਸਾਂਝਾ ਕਰੋ ਤੇ ਕਮਾਓ'
   },
   copyReferralCode: {
-    en: 'Copy Referral Code',
+    en: 'Copy Invite Code',
     hi: 'रेफरल कोड कॉपी करें',
-    mr: 'रेफरल कोड कॉपी करा',
-    gu: 'રેફરલ કોડ કૉપી કરો',
-    ta: 'பரிந்துரை குறியீட்டை நகலெடுக்கவும்',
-    te: 'రెఫరల్ కోడ్ కాపీ చేయండి',
-    kn: 'ರೆಫರಲ್ ಕೋಡ್ ನಕಲಿಸಿ',
-    bn: 'রেফারেল কোড কপি করুন',
-    pa: 'ਰੈਫਰਲ ਕੋਡ ਕਾਪੀ ਕਰੋ'
+    mr: 'इनव्हाइट कोड कॉपी करा',
+    gu: 'ઇન્વાઇટ કોડ કૉપી કરો',
+    ta: 'அழைப்பு குறியீட்டை நகலெடுக்கவும்',
+    te: 'ఇన్వైట్ కోడ్ కాపీ చేయండి',
+    kn: 'ಇನ್ವೈಟ್ ಕೋಡ್ ನಕಲಿಸಿ',
+    bn: 'ইনভাইট কোড কপি করুন',
+    pa: 'ਇਨਵਾਈਟ ਕੋਡ ਕਾਪੀ ਕਰੋ'
   },
 
-  // ==================== TAP GAME ====================
-  tapToEarn: {
+  // ==================== INVITE FRIENDS (formerly Tap Game section removed) ====================
+  inviteFriends: {
     en: 'Tap to Earn PRC',
     hi: 'PRC कमाने के लिए टैप करें',
     mr: 'PRC मिळवण्यासाठी टॅप करा',
@@ -1306,7 +1296,7 @@ const translations = {
 
   // ==================== REFERRAL ====================
   yourReferralCode: {
-    en: 'Your Referral Code',
+    en: 'Your Invite Code',
     hi: 'आपका रेफरल कोड',
     mr: 'तुमचा रेफरल कोड',
     gu: 'તમારો રેફરલ કોડ',
@@ -1317,7 +1307,7 @@ const translations = {
     pa: 'ਤੁਹਾਡਾ ਰੈਫਰਲ ਕੋਡ'
   },
   totalReferrals: {
-    en: 'Total Referrals',
+    en: 'Friends Invited',
     hi: 'कुल रेफरल',
     mr: 'एकूण रेफरल्स',
     gu: 'કુલ રેફરલ્સ',
@@ -1328,7 +1318,7 @@ const translations = {
     pa: 'ਕੁੱਲ ਰੈਫਰਲ'
   },
   referralEarnings: {
-    en: 'Referral Earnings',
+    en: 'Mining Boost',
     hi: 'रेफरल कमाई',
     mr: 'रेफरल कमाई',
     gu: 'રેફરલ કમાણી',
