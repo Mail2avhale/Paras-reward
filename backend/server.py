@@ -43172,22 +43172,22 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Auto-sync Razorpay payments every 5 minutes (reduced from 10)
+        # Auto-sync Razorpay payments every 1 minute for faster activation
         scheduler.add_job(
             auto_sync_razorpay_payments,
             'interval',
-            minutes=5,
+            minutes=1,
             id='auto_sync_razorpay',
-            name='Auto sync Razorpay payments every 5 minutes',
+            name='Auto sync Razorpay payments every 1 minute',
             replace_existing=True
         )
         
-        # Captured payments sync - runs every 10 minutes
-        # This catches payments where webhook failed
+        # Captured payments sync - runs every 2 minutes
+        # This catches payments where webhook failed or user closed modal
         scheduler.add_job(
             auto_sync_captured_from_razorpay,
             'interval',
-            minutes=10,
+            minutes=2,
             id='auto_sync_captured',
             name='Sync captured payments from Razorpay API',
             replace_existing=True
@@ -43213,8 +43213,8 @@ async def startup_db():
         print("   - ⚡ Inactive user PRC burn: Weekly Sunday at 4 AM")
         print("   - 🗑️ Account hard delete: Daily at 3:30 AM")
         print("   - 🔓 Auto lockout clear: Daily at 12 PM & 12 AM")
-        print("   - 🔄 Razorpay auto-sync: Every 5 minutes")
-        print("   - 💳 Razorpay captured-sync: Every 10 minutes")
+        print("   - 🔄 Razorpay auto-sync: Every 1 minute (faster activation)")
+        print("   - 💳 Razorpay captured-sync: Every 2 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
         
         # Trigger initial Razorpay sync 30 seconds after startup
