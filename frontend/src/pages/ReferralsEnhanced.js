@@ -240,7 +240,7 @@ const ReferralsEnhanced = ({ user }) => {
       badgeTextClass: 'text-blue-300'
     },
     3: { 
-      percent: 2.5, 
+      percent: 3, 
       label: 'Level 3', 
       color: 'emerald', 
       icon: '🌟',
@@ -249,28 +249,6 @@ const ReferralsEnhanced = ({ user }) => {
       hoverClass: 'hover:bg-emerald-500/30',
       badgeBgClass: 'bg-emerald-500/30',
       badgeTextClass: 'text-emerald-300'
-    },
-    4: { 
-      percent: 1.5, 
-      label: 'Level 4', 
-      color: 'purple', 
-      icon: '💎',
-      bgClass: 'bg-purple-500/20',
-      borderClass: 'border-purple-500/30',
-      hoverClass: 'hover:bg-purple-500/30',
-      badgeBgClass: 'bg-purple-500/30',
-      badgeTextClass: 'text-purple-300'
-    },
-    5: { 
-      percent: 1, 
-      label: 'Level 5', 
-      color: 'pink', 
-      icon: '🏆',
-      bgClass: 'bg-pink-500/20',
-      borderClass: 'border-pink-500/30',
-      hoverClass: 'hover:bg-pink-500/30',
-      badgeBgClass: 'bg-pink-500/30',
-      badgeTextClass: 'text-pink-300'
     }
   };
 

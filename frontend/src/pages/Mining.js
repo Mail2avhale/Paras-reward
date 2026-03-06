@@ -1013,38 +1013,6 @@ const DailyRewards = ({ user }) => {
             </p>
           </div>
           
-          {/* Level 4 */}
-          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">L4</div>
-              <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 4 Referrals</p>
-                <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_4?.total_count || 0} invited • {referralBreakdown?.level_4?.active_count || 0} active • {(referralBreakdown?.level_4?.total_count || 0) - (referralBreakdown?.level_4?.active_count || 0)} inactive
-                </p>
-              </div>
-            </div>
-            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_4?.bonus || 0) > 0 ? 'text-pink-400' : 'text-zinc-600'}`}>
-              +{(referralBreakdown?.level_4?.bonus || 0).toFixed(2)} PRC/hr
-            </p>
-          </div>
-          
-          {/* Level 5 */}
-          <div className="flex items-center justify-between py-2 border-b border-zinc-800/50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">L5</div>
-              <div>
-                <p className="text-zinc-200 text-sm font-medium">Level 5 Referrals</p>
-                <p className="text-zinc-500 text-xs">
-                  {referralBreakdown?.level_5?.total_count || 0} invited • {referralBreakdown?.level_5?.active_count || 0} active • {(referralBreakdown?.level_5?.total_count || 0) - (referralBreakdown?.level_5?.active_count || 0)} inactive
-                </p>
-              </div>
-            </div>
-            <p className={`font-mono text-sm font-semibold ${(referralBreakdown?.level_5?.bonus || 0) > 0 ? 'text-cyan-400' : 'text-zinc-600'}`}>
-              +{(referralBreakdown?.level_5?.bonus || 0).toFixed(2)} PRC/hr
-            </p>
-          </div>
-          
           {/* Total */}
           <div className="flex items-center justify-between pt-3 mt-2 border-t-2 border-amber-500/30">
             <div className="flex items-center gap-3">

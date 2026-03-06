@@ -44,9 +44,7 @@ const getLevelColor = (level) => {
   const colors = [
     'from-amber-500 to-orange-500',   // L1
     'from-blue-500 to-cyan-500',      // L2
-    'from-emerald-500 to-green-500',  // L3
-    'from-purple-500 to-pink-500',    // L4
-    'from-rose-500 to-red-500'        // L5
+    'from-emerald-500 to-green-500'   // L3
   ];
   return colors[level - 1] || colors[0];
 };
@@ -55,9 +53,7 @@ const getLevelBadgeColor = (level) => {
   const colors = [
     'bg-amber-500/20 text-amber-400 border-amber-500/30',
     'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    'bg-rose-500/20 text-rose-400 border-rose-500/30'
+    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
   ];
   return colors[level - 1] || colors[0];
 };
@@ -555,8 +551,6 @@ const NetworkTreeAdvanced = ({ user }) => {
               <option value="1">Level 1</option>
               <option value="2">Level 2</option>
               <option value="3">Level 3</option>
-              <option value="4">Level 4</option>
-              <option value="5">Level 5</option>
             </select>
 
             {/* Plan Filter */}

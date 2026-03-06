@@ -115,8 +115,8 @@ const FAQ = () => {
           answer: "Share your unique referral code or link with friends. When they register using your code and become active users, you earn bonus PRC coins and increased mining rates."
         },
         {
-          question: "What is the 5-level referral bonus?",
-          answer: "You earn bonus from 5 levels of referrals: Level 1 (direct): 10%, Level 2: 5%, Level 3: 3%, Level 4: 2%, Level 5: 1%. Total potential bonus up to 21%!"
+          question: "What is the 3-level referral bonus?",
+          answer: "You earn bonus from 3 levels of referrals: Level 1 (direct): 10%, Level 2: 5%, Level 3: 3%. Total potential bonus up to 18%!"
         },
         {
           question: "When do I receive referral bonus?",
