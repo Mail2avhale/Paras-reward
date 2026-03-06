@@ -366,7 +366,8 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
         logging.info(f"[DMT] Customer Search Response: {response.status_code}")
         
         if response.status_code == 403:
-            return create_error_response(403, "Authentication failed", "Service temporarily unavailable")
+            logging.error(f"[DMT] 403 Forbidden - IP may not be whitelisted with Eko")
+            return create_error_response(403, "Authentication failed", "Bank Transfer सेवा सध्या उपलब्ध नाही. कृपया नंतर पुन्हा प्रयत्न करा.")
         
         result = response.json()
         eko_status = result.get("status")
