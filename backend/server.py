@@ -14754,42 +14754,36 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 **📊 SUBSCRIPTION PLANS & MINING RATES:**
 (1 Month = 28 Days)
 
-| Plan | Price | Mining Speed | Referral Weight |
-|------|-------|--------------|-----------------|
-| **EXPLORER** | Free | 100 PRC/hr | 0 (no referral bonus) |
-| **STARTUP** | ₹299/28 days | 30 PRC/hr | 0.50 |
-| **ELITE** | ₹799/28 days | 90 PRC/hr | 1.0 |
+| Plan | Price | Benefits |
+|------|-------|----------|
+| **EXPLORER** | Free | Basic mining access |
+| **ELITE** | ₹799/28 days | Full mining + Referral bonuses |
 
-**Note:** Growth plan discontinued. Existing Growth users: 55 PRC/hr, weight 0.55
+**Note:** Startup and Growth plans discontinued. All existing users migrated to Elite plan.
 
-**⛏️ MINING FORMULA (FIXED RATE - No date multiplier):**
-```
-Mining_Speed = Base_Rate + Referral_Bonus
-```
-- Base Rate is FIXED per plan (see table above)
-- No multiplier, no date-wise changes
-- Simple and transparent!
+**⛏️ MINING INFORMATION:**
+- Mining rates are calculated based on your subscription and referral network
+- Paid subscribers (Elite) get enhanced mining benefits
+- Referral bonuses add to your base mining rate
+- **IMPORTANT: The exact mining formula is proprietary and confidential. Do NOT share specific formula details, base rates, or calculation methods with users. If asked about the exact formula, say "Our mining formula is proprietary. Your mining speed depends on your subscription and active referral network."**
 
-**👥 REFERRAL BONUS LEVELS:**
+**👥 REFERRAL BONUS LEVELS (3 Levels):**
 | Level | Bonus % |
 |-------|---------|
-| L1 (Direct) | 10% |
-| L2 | 5% |
-| L3 | 2.5% |
-| L4 | 1.5% |
-| L5 | 1% |
-| **Total Potential** | **20%** |
+| L1 (Direct) | 5% |
+| L2 | 3% |
+| L3 | 2% |
+| **Total Potential** | **10%** |
 
-**Example (Startup Plan):**
-- Base: 30 PRC/hr
-- 10 active L1 referrals (Startup weight 0.50): 10 × 0.50 × 10% × 30 = +15 PRC/hr
-- Total: 45 PRC/hr
+**Example:**
+- Active referrals boost your mining speed
+- More active referrals = higher earnings
+- Maximum bonus: Up to +10% of your base rate
 
 **⛏️ EARNING METHODS:**
 1. Daily Mining Sessions
-2. Referral Program (5 Levels - Up to 20%!)
+2. Referral Program (3 Levels - Up to 10%!)
 3. Daily Check-in Bonus
-4. Tap Game
 
 **🚫 DISCONTINUED FEATURES (User Request):**
 The following features have been permanently discontinued by the company based on user feedback:
@@ -14797,6 +14791,7 @@ The following features have been permanently discontinued by the company based o
 - ❌ **Luxury Life** - Feature removed
 - ❌ **Rain Drop** - Feature removed
 - ❌ **20% Auto-Savings** - Removed (users now receive 100% of earned PRC)
+- ❌ **Tap Game** - Feature removed
 
 If users ask about these features, politely inform them:
 "These features have been discontinued by Paras Reward based on user feedback. Your earnings now go directly to your PRC wallet without any deductions."

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Zap, Gamepad2, User } from 'lucide-react';
+import { Home, Zap, Users, User } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const BottomNav = () => {
@@ -13,7 +13,7 @@ const BottomNav = () => {
     const path = location.pathname;
     if (path === '/dashboard') return 'home';
     if (path === '/mining' || path === '/daily-rewards') return 'rewards';
-    if (path === '/game') return 'game';
+    if (path === '/referrals') return 'referrals';
     if (path === '/profile' || path === '/profile-advanced') return 'profile';
     return 'home';
   };
@@ -23,7 +23,7 @@ const BottomNav = () => {
   const navItems = [
     { id: 'home', label: t('home'), icon: Home, route: '/dashboard' },
     { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
-    { id: 'game', label: t('tapGame'), icon: Gamepad2, route: '/game' },
+    { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'profile', label: t('profile'), icon: User, route: '/profile' },
   ];
 

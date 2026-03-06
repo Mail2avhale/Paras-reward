@@ -21,7 +21,7 @@ const getPageKeyFromPath = (pathname) => {
     // marketplace removed
     '/subscription': 'subscription',
     '/profile': 'profile',
-    '/game': 'game',
+    // tap game removed
     '/redeem': 'bill-payments',
     '/bill-payments': 'bill-payments',
     '/gift-vouchers': 'gift-vouchers',

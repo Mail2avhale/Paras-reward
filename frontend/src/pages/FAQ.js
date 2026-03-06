@@ -14,7 +14,7 @@ const FAQ = () => {
       questions: [
         {
           question: "What is Paras Reward?",
-          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement, tap games, and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be redeemed for services like mobile recharges and bill payments through our partners."
+          answer: "PARAS REWARD is a digital engagement platform where users earn virtual reward points (PRC) through activities like daily engagement and referrals. The term 'mining' refers to our virtual reward system - NOT cryptocurrency mining. Points can be redeemed for services like mobile recharges and bill payments through our partners."
         },
         {
           question: "What is PRC (Paras Reward Coin)?",
@@ -36,15 +36,11 @@ const FAQ = () => {
       questions: [
         {
           question: "How do I earn PRC points?",
-          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Tap game (play daily for bonus points), Referrals (earn when friends join and engage), and Daily login activities."
+          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Referrals (earn when friends join and engage), and Daily login activities."
         },
         {
           question: "How to increase reward rate?",
-          answer: "You can increase your reward rate by: Referring friends to join, Upgrading to a paid plan (Startup/Growth/Elite), and Maintaining consistent daily activity."
-        },
-        {
-          question: "What is the Tap Game?",
-          answer: "The Tap Game is a daily interactive feature where you tap the screen to earn bonus PRC points. Free users get 100 taps/day, paid plans get up to 400 taps/day."
+          answer: "You can increase your reward rate by: Referring friends to join, Upgrading to Elite plan (₹799/month), and Maintaining consistent daily activity."
         }
       ]
     },

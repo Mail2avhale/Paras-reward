@@ -1176,7 +1176,7 @@ Download now & start earning!`;
           {/* Total Potential */}
           <div className="mt-4 pt-4 border-t border-gray-700/50 flex items-center justify-between">
             <span className="text-gray-400 text-sm">Maximum Earning Potential</span>
-            <span className="text-amber-400 font-bold">Up to +20% bonus</span>
+            <span className="text-amber-400 font-bold">Up to +10% bonus</span>
           </div>
         </div>
       </div>
@@ -1432,7 +1432,7 @@ Download now & start earning!`;
                 transition={{ delay: 0.6 }}
                 className="text-white/70 text-sm mb-4"
               >
-                Keep inviting to unlock up to <strong>+20% bonus!</strong>
+                Keep inviting to unlock up to <strong>+10% bonus!</strong>
               </motion.p>
               
               <motion.button

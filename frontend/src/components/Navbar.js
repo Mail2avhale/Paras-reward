@@ -52,9 +52,6 @@ const Navbar = ({ user, onLogout }) => {
                 <Link to="/mining" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.mining')}
                 </Link>
-                <Link to="/game" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
-                  Tap Game
-                </Link>
                 <Link to="/referrals" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">
                   {t('nav.referrals')}
                 </Link>
@@ -182,9 +179,6 @@ const Navbar = ({ user, onLogout }) => {
                   <>
                     <DropdownMenuItem asChild>
                       <Link to="/mining" className="cursor-pointer">Mining</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/game" className="cursor-pointer">Tap Game</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/referrals" className="cursor-pointer">Referrals</Link>

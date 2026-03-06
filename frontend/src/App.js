@@ -99,7 +99,7 @@ if (typeof window !== 'undefined') {
   preloadCriticalPages();
 }
 
-const TapGame = lazy(() => import("@/pages/TapGameAdvanced"));
+// TapGame removed - feature deprecated
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
 // Marketplace removed - feature deprecated
 const Orders = lazy(() => import("@/pages/Orders"));
@@ -268,7 +268,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/support" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SupportTickets user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/daily-rewards" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DailyRewards user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/mining" element={<Navigate to="/daily-rewards" />} /> {/* Redirect old route */}
-            <Route path="/game" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <TapGame user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            {/* TapGame removed - feature deprecated */}
+            <Route path="/game" element={<Navigate to="/dashboard" replace />} />
             {/* Removed: Treasure Hunt and Scratch Card games */}
             <Route path="/referrals" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Referrals user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             <Route path="/referrals/dashboard" element={<Navigate to="/referrals" replace />} />

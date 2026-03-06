@@ -86,13 +86,7 @@ export const SEOConfigs = {
     url: "https://www.parasreward.com/daily-rewards",
     noIndex: true
   },
-  tapGame: {
-    title: "Tap Game - Play & Win PRC Rewards",
-    description: "Play our exciting tap game and earn PRC points! Higher streaks = bigger rewards. Start playing now!",
-    keywords: "tap game, earn rewards playing games, prc game india",
-    url: "https://www.parasreward.com/game",
-    noIndex: true
-  },
+  // tapGame removed - feature deprecated
   referrals: {
     title: "Referrals - Invite Friends & Earn Bonus PRC",
     description: "Earn 10% bonus on every referral! Share your code, grow your team, and earn passive rewards.",

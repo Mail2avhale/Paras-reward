@@ -103,27 +103,13 @@ const HowItWorks = () => {
 
               <Card className="p-6 bg-white shadow-lg hover:shadow-xl transition-all">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Play className="h-6 w-6 text-pink-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Tap Game</h3>
-                    <p className="text-gray-600">
-                      Play the daily tap game and earn up to 100 PRC points per day. Simple tap mechanics, instant rewards.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 bg-white shadow-lg hover:shadow-xl transition-all">
-                <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Users className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Refer Friends</h3>
                     <p className="text-gray-600">
-                      Get 10% bonus on your friend's earning rate. Invite up to 200 friends and multiply your rewards.
+                      Get up to 10% bonus from your referral network. Build your team across 3 levels and multiply your rewards.
                     </p>
                   </div>
                 </div>
