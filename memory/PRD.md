@@ -1,98 +1,55 @@
-# PARAS Reward Portal - Product Requirements Document
+# PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive BBPS (Bill Payment) and DMT (Domestic Money Transfer) system for Paras Reward Portal where users can redeem their PRC (Paras Reward Coins) for real-world services.
+A mining reward application with subscription-based economy. Users mine PRC tokens daily based on:
+- Base rate (500 PRC/day = 20.83 PRC/hr)
+- Single leg bonus (users who joined after them)
+- Team boost from 3 levels of referrals (L1=5%, L2=3%, L3=2%)
 
-## Core Features
+### Key Requirements
+1. **Mining Economy:** Additive formula: `Total = Base + L1_bonus + L2_bonus + L3_bonus`
+2. **Subscription:** ₹799/month Elite plan required for bonuses
+3. **Gift Feature:** Gift 24hr subscription to L1 referrals for 600 PRC
+4. **BBPS/DMT:** Bill payments and money transfer services via Eko API
 
-### 1. BBPS Module (COMPLETED ✅)
-- Universal bill payment engine for Electricity, DTH, FASTag, Loan/EMI, Gas, LPG
-- Robust Eko API error handling
+## What's Been Implemented
 
-### 2. DMT Module (REWRITTEN ✅ - March 6, 2026)
-- Complete E2E flow with NO hardcoded values
-- Customer Search → Registration → OTP → Add Recipient → Transfer
+### March 2026
+- [x] New mining economy with additive formula (P0 fix)
+- [x] `calculate_mining_rate()` returns correct base_rate (not final rate)
+- [x] Level bonuses: L1=5%, L2=3%, L3=2% per active user
+- [x] Subscription consolidation: Removed ₹299/₹549 plans, migrated to Elite
+- [x] Gift 24hr subscription feature
+- [x] UI cleanup: Removed L4/L5 references, Earnings History page, AI Coach card
+- [x] Hardcoded IP removal from BBPS/DMT services
 
-### 3. Mining Economy System (UPDATED ✅ - March 6, 2026)
+## API Endpoints
 
-**NEW FORMULA (Per Hour):**
-```
-BaseRate = 20.83 + (SingleLegUsers × 0.5) PRC/hour
-FinalRate = BaseRate × BoostMultiplier
-```
+### Mining
+- `GET /api/mining/status/{uid}` - Returns mining_rate, base_rate, referral_breakdown
+- `POST /api/mining/start/{uid}` - Start mining session
+- `POST /api/mining/claim/{uid}` - Claim mined PRC
 
-**Constants:**
-| Parameter | Value |
-|-----------|-------|
-| Daily Base Bonus | 500 PRC (20.83 PRC/hr) |
-| Single Leg Bonus | 0.5 PRC/hr per user |
-| Max Single Leg Users | 500 |
-| L1 Team Boost | +10% per active user |
-| L2 Team Boost | +5% per active user |
-| L3 Team Boost | +3% per active user |
+### Auth
+- `POST /api/auth/login` - Login with email/phone and PIN
+- `POST /api/gift-subscription` - Gift 24hr subscription to L1 referral
 
-### 4. Gift Subscription Feature (NEW ✅ - March 6, 2026)
+## Key Files
+- `backend/routes/mining_economy.py` - Mining calculation logic
+- `backend/server.py` - Main API endpoints
+- `frontend/src/pages/Mining.js` - Mining UI
 
-**Feature:** Parent can gift 24hr Elite subscription to L1 referrals
+## Pending Issues (P1)
+1. **BBPS Billers:** AEML, JPDCL fail to fetch bills
+2. **DMT in Preview:** 403 errors due to IP whitelist (environment issue)
 
-| Parameter | Value |
-|-----------|-------|
-| Cost | 600 PRC |
-| Duration | 24 hours |
-| Plan Given | Elite |
-| Eligible | Only unsubscribed L1 referrals |
-| Multiple Gifts | Allowed |
-| Notification | Yes (to child) |
-
-**API Endpoints:**
-- `GET /api/gift/eligible-referrals/{parent_uid}` - Get eligible L1 referrals
-- `POST /api/gift/send` - Send gift subscription
-- `GET /api/gift/history/{user_uid}` - Gift history
-
-### 5. Subscription Plans (UPDATED ✅ - March 6, 2026)
-
-**Startup Plan (₹299) - DISCONTINUED**
-- Removed from all frontend pages
-- Existing users still work (backward compatibility)
-
-**Available Plans:**
-| Plan | Price | Features |
-|------|-------|----------|
-| Explorer | Free | Basic mining, PRC expires in 2 days |
-| Elite | ₹799/month | 3x rewards, no PRC expiry, redeems enabled |
-
-### 6. Referral Levels (UPDATED ✅ - March 6, 2026)
-
-**Changed from 5 levels to 3 levels:**
-- L1: +10% per active user
-- L2: +5% per active user
-- L3: +3% per active user
-- ~~L4: Removed~~
-- ~~L5: Removed~~
-
-## Files Modified (March 6, 2026)
-
-### Backend:
-1. `/app/backend/routes/mining_economy.py` - NEW: Mining calculation
-2. `/app/backend/routes/gift_subscription.py` - NEW: Gift feature
-3. `/app/backend/server.py` - Updated mining rate, startup discontinued
-4. `/app/backend/routes/referral.py` - 5→3 levels
-
-### Frontend:
-1. `Mining.js` - Removed L4, L5
-2. `ReferralsEnhanced.js` - Added Gift button & modal, removed L4/L5
-3. `ReferralEarningsHistory.js` - 3 levels only
-4. `NetworkTreeAdvanced.js` - 3 levels only
-5. `AINetworkReferral.js` - 3 levels only
-6. `SubscriptionPlans.js` - Removed Startup plan
-7. `FAQ.js` - Updated to 3-level bonus info
+## Backlog
+- Payment Status Check on Login
+- DMT v3 with Aadhaar/eKYC
+- PRC Vault to Balance migration
+- Email/OTP verification
+- KYC image storage migration
 
 ## Test Credentials
-- **User**: 9421331342 / PIN: 942133
-- **Admin**: admin@paras.com
-
-## Pending Tasks
-- P0: Test DMT flow after production deployment
-- P1: Investigate failing BBPS billers (AEML, JPDCL)
-- P2: Remove legacy eko_payments.py router
-- P3: Email/Mobile OTP verification
+- Admin: admin@paras.com / PIN: 153759
+- Test: testmining@paras.com / PIN: 123456

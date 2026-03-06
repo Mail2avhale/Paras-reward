@@ -4588,6 +4588,9 @@ async def calculate_mining_rate(uid: str):
     # Use new mining economy calculation
     hourly_rate, per_minute_rate, breakdown = await calculate_new_mining_rate(db, uid, cache)
     
+    # Get the ACTUAL base rate (20.83 + single_leg bonus) - NOT the final rate!
+    actual_base_rate = breakdown.get('base_with_single_leg', HOURLY_BASE_RATE)
+    
     # Convert breakdown to old format for backward compatibility
     referral_breakdown = {}
     if breakdown.get('boost_breakdown'):
@@ -4601,7 +4604,7 @@ async def calculate_mining_rate(uid: str):
                     'level_2': 3,
                     'level_3': 2
                 }.get(level_key, 0),
-                'bonus': level_data.get('boost', 0) * breakdown.get('base_with_single_leg', HOURLY_BASE_RATE)
+                'bonus': level_data.get('bonus_prc', level_data.get('boost', 0) * actual_base_rate)
             }
     
     # Note: single_leg info stored separately, not in referral_breakdown to avoid claim_mining errors
@@ -4610,7 +4613,8 @@ async def calculate_mining_rate(uid: str):
         d.get('active', 0) for d in breakdown.get('boost_breakdown', {}).values()
     )
     
-    return per_minute_rate, hourly_rate, total_active, referral_breakdown
+    # Return: per_minute_rate, ACTUAL base_rate (not final!), total_active, referral_breakdown
+    return per_minute_rate, actual_base_rate, total_active, referral_breakdown
 
 async def update_mined_coins(uid: str):
     """Update user's mined coins based on time elapsed"""
