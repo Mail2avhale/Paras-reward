@@ -10,7 +10,6 @@ import {
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { AIReferralCoach } from '@/components/AINetworkReferral';
 import { InfoTooltip } from '@/components/InfoTooltip';
 
 // Network Tree Node Component - defined outside to avoid re-creation
@@ -934,37 +933,6 @@ Download now & start earning!`;
           </div>
         </div>
       )}
-
-      {/* AI Referral Coach */}
-      <div className="px-5 mb-6">
-        <AIReferralCoach 
-          user={user} 
-          networkStats={{
-            level_1: referralLevels.find(l => l.level === 1)?.count || 0,
-            total_referrals: referralStats.total,
-            inactive_count: referralStats.total - referralStats.active
-          }}
-          onSuggestionClick={(action) => {
-            switch (action) {
-              case 'Share Now':
-              case 'Share Status':
-                shareOnWhatsApp();
-                break;
-              case 'Share Offer':
-                shareNative();
-                break;
-              case 'Go VIP':
-                navigate('/subscription');
-                break;
-              case 'Send Reminder':
-                toast.info('Reminder feature coming soon!');
-                break;
-              default:
-                break;
-            }
-          }}
-        />
-      </div>
 
       {/* Current Badge & Progress */}
       {referralStats.total > 0 && (
