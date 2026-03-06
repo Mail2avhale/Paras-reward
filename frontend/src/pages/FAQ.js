@@ -54,11 +54,11 @@ const FAQ = () => {
       questions: [
         {
           question: "What subscription plans are available?",
-          answer: "We offer 4 plans: Explorer (Free), Startup (₹299/month), Growth (₹549/month), and Elite (₹799/month). Paid plans include higher reward rates, more daily taps, and redemption access."
+          answer: "We offer 2 plans: Explorer (Free) and Elite (₹799/month). Elite plan includes 3x reward rates, more daily taps, and redemption access."
         },
         {
           question: "Do free users' PRC points expire?",
-          answer: "Yes, Explorer (free) users' PRC points expire after 2 days of inactivity. Paid plan users (Startup/Growth/Elite) have permanent point validity."
+          answer: "Yes, Explorer (free) users' PRC points expire after 2 days of inactivity. Elite plan users have permanent point validity."
         },
         {
           question: "Can free users redeem rewards?",

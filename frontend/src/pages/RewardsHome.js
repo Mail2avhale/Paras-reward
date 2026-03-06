@@ -394,19 +394,6 @@ const RewardsHome = () => {
       ]
     },
     {
-      name: 'Startup',
-      price: '299',
-      originalPrice: '500',
-      icon: Zap,
-      color: 'from-blue-500 to-blue-600',
-      features: [
-        { text: '1.5x Point Rate', included: true },
-        { text: '50 Points/day', included: true },
-        { text: 'Redeem Vouchers', included: true },
-        { text: 'Luxury Savings', included: true }
-      ]
-    },
-    {
       name: 'Elite',
       price: '799',
       originalPrice: '2000',

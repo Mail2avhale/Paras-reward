@@ -177,14 +177,10 @@ const AdminRedeemSettings = ({ user }) => {
           {/* Preview */}
           <div className="mt-4 p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-lg">
             <h3 className="text-sm font-semibold text-emerald-400 mb-2">Preview Limits</h3>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-2 gap-2 text-center">
               <div className="bg-gray-800/50 p-2 rounded">
-                <p className="text-xs text-gray-400">Startup (₹299)</p>
-                <p className="text-emerald-400 font-bold">{calculateLimit(299).toLocaleString()} PRC</p>
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded">
-                <p className="text-xs text-gray-400">Growth (₹549)</p>
-                <p className="text-emerald-400 font-bold">{calculateLimit(549).toLocaleString()} PRC</p>
+                <p className="text-xs text-gray-400">Explorer (Free)</p>
+                <p className="text-gray-500 font-bold">No Redeem</p>
               </div>
               <div className="bg-gray-800/50 p-2 rounded">
                 <p className="text-xs text-gray-400">Elite (₹799)</p>

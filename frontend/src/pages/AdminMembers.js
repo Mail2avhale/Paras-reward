@@ -243,10 +243,10 @@ const AdminMembers = () => {
             className="bg-gradient-to-br from-blue-900/50 to-blue-950/50 border border-blue-700/50 rounded-2xl p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 bg-blue-600/30 text-blue-300 rounded-full text-sm font-medium">STARTUP</span>
+              <span className="px-3 py-1 bg-blue-600/30 text-blue-300 rounded-full text-sm font-medium">STARTUP (Discontinued)</span>
             </div>
             <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.startup?.count || 0}</p>
-            <p className="text-blue-400/70 text-sm mt-1">₹299/month</p>
+            <p className="text-blue-400/70 text-sm mt-1">Legacy users</p>
           </motion.div>
           
           <motion.div
