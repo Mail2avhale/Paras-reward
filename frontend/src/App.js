@@ -107,7 +107,7 @@ const Orders = lazy(() => import("@/pages/Orders"));
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: WalletNew (withdrawal functionality removed)
 // Removed: Leaderboard (feature removed for AdMob compliance)
-const ReferralEarningsHistory = lazy(() => import("@/pages/ReferralEarningsHistory"));
+// Removed: ReferralEarningsHistory (feature removed)
 const ProfileAdvanced = lazy(() => import("@/pages/ProfileAdvanced"));
 // Removed: ReferralDashboard, ReferralDashboardAI - using ReferralsEnhanced
 const FlashSalesPage = lazy(() => import("@/pages/FlashSalesPage"));
@@ -284,7 +284,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
             {/* Removed: Leaderboard page for AdMob compliance */}
-            <Route path="/referral-earnings" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ReferralEarningsHistory user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            {/* Removed: ReferralEarningsHistory page */}
             {/* Removed: Gamification/Achievements page for AdMob compliance */}
             <Route path="/profile" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ProfileAdvanced user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Legacy route redirect - keeping for backward compatibility */}

@@ -34,9 +34,9 @@ MAX_SINGLE_LEG_USERS = 500
 
 # Team Boost Multipliers (3 Levels)
 TEAM_BOOST_LEVELS = {
-    'level_1': 0.10,  # +10% per L1 active user
-    'level_2': 0.05,  # +5% per L2 active user
-    'level_3': 0.03,  # +3% per L3 active user
+    'level_1': 0.05,  # +5% per L1 active user
+    'level_2': 0.03,  # +3% per L2 active user
+    'level_3': 0.02,  # +2% per L3 active user
 }
 
 # Free/Explorer plans that don't qualify

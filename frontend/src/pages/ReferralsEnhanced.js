@@ -213,7 +213,7 @@ const ReferralsEnhanced = ({ user }) => {
   // Level configuration with hardcoded Tailwind classes (dynamic classes don't work with Tailwind purge)
   const levelConfig = {
     1: { 
-      percent: 10, 
+      percent: 5, 
       label: 'Direct', 
       color: 'amber', 
       icon: '👤',
@@ -224,7 +224,7 @@ const ReferralsEnhanced = ({ user }) => {
       badgeTextClass: 'text-amber-300'
     },
     2: { 
-      percent: 5, 
+      percent: 3, 
       label: 'Level 2', 
       color: 'blue', 
       icon: '👥',
@@ -235,7 +235,7 @@ const ReferralsEnhanced = ({ user }) => {
       badgeTextClass: 'text-blue-300'
     },
     3: { 
-      percent: 3, 
+      percent: 2, 
       label: 'Level 3', 
       color: 'emerald', 
       icon: '🌟',
@@ -1244,26 +1244,6 @@ Download now & start earning!`;
             </div>
           </div>
           <ChevronRight className="w-6 h-6 text-pink-400" />
-        </button>
-      </div>
-
-      {/* View Earnings History */}
-      <div className="px-5 mb-6">
-        <button
-          onClick={() => navigate('/referral-earnings')}
-          className="w-full bg-gradient-to-r from-purple-500/20 to-purple-600/10 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-purple-500/30 hover:to-purple-600/20 transition-all"
-          data-testid="view-earnings-history"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <History className="w-6 h-6 text-purple-400" />
-            </div>
-            <div className="text-left">
-              <p className="text-white font-bold">Earnings History</p>
-              <p className="text-purple-400 text-sm">View detailed bonus transactions</p>
-            </div>
-          </div>
-          <ChevronRight className="w-6 h-6 text-purple-400" />
         </button>
       </div>
 

@@ -127,8 +127,8 @@ const NetworkTreeAdvanced = ({ user }) => {
     if (!allUsers.length) return null;
     
     const total = allUsers.length;
-    const byLevel = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    const byPlan = { free: 0, startup: 0, growth: 0, elite: 0 };
+    const byLevel = { 1: 0, 2: 0, 3: 0 };
+    const byPlan = { free: 0, elite: 0 };
     const activeUsers = [];
     const inactiveUsers = [];
     const recentJoins = [];
@@ -137,16 +137,19 @@ const NetworkTreeAdvanced = ({ user }) => {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
     allUsers.forEach(u => {
-      // By level
-      if (u.level >= 1 && u.level <= 5) byLevel[u.level]++;
+      // By level (only 1-3)
+      if (u.level >= 1 && u.level <= 3) byLevel[u.level]++;
       
-      // By plan
+      // By plan (only elite and free now)
       const plan = u.subscription_plan?.toLowerCase() || 'free';
-      if (plan === 'explorer' || !u.subscription_plan) byPlan.free++;
-      else if (byPlan[plan] !== undefined) byPlan[plan]++;
+      if (plan === 'elite') {
+        byPlan.elite++;
+      } else {
+        byPlan.free++;
+      }
       
-      // Active vs Inactive
-      const isPaid = ['startup', 'growth', 'elite'].includes(plan);
+      // Active vs Inactive (only elite is active)
+      const isPaid = plan === 'elite';
       if (isPaid) {
         activeUsers.push(u);
       } else {
@@ -437,7 +440,7 @@ const NetworkTreeAdvanced = ({ user }) => {
               Level Distribution
             </h3>
             <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map(level => {
+              {[1, 2, 3].map(level => {
                 const count = analytics.byLevel[level] || 0;
                 const percentage = analytics.total > 0 ? (count / analytics.total) * 100 : 0;
                 return (

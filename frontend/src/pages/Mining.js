@@ -934,10 +934,10 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center gap-1">
               <p className="text-zinc-500 text-xs">{globalT('referralWeight')}</p>
               <InfoTooltip>
-                <p>Bonus mining rate from your paid referrals. Each paid referral adds +10% to your mining speed (max 100%)</p>
+                <p>Bonus mining rate from your referrals. L1: +5%, L2: +3%, L3: +2%</p>
               </InfoTooltip>
             </div>
-            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">+{Math.min((userData?.referral_count || 0) * 10, 100)}%</p>
+            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">+{Math.min((userData?.referral_count || 0) * 5, 100)}%</p>
           </motion.div>
         </div>
       </div>

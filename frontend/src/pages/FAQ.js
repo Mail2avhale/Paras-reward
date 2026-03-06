@@ -116,7 +116,7 @@ const FAQ = () => {
         },
         {
           question: "What is the 3-level referral bonus?",
-          answer: "You earn bonus from 3 levels of referrals: Level 1 (direct): 10%, Level 2: 5%, Level 3: 3%. Total potential bonus up to 18%!"
+          answer: "You earn bonus from 3 levels of referrals: Level 1 (direct): 5%, Level 2: 3%, Level 3: 2%. Total potential bonus up to 10%!"
         },
         {
           question: "When do I receive referral bonus?",
