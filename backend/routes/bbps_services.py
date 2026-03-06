@@ -63,19 +63,25 @@ REQUEST_TIMEOUT = 60
 
 def generate_headers() -> Dict[str, str]:
     """
-    Generate authentication headers as per EKO documentation.
+    Generate authentication headers as per EKO BBPS documentation.
     
-    CORRECT Algorithm (from user's debug guide):
-    1. timestamp = current time in SECONDS (not milliseconds)
-    2. raw = developer_key + timestamp + authenticator_key
-    3. secret_key = Base64(SHA256(raw))
+    BBPS uses DIFFERENT algorithm than DMT:
+    1. timestamp = current time in MILLISECONDS (not seconds like DMT)
+    2. encoded_key = Base64(authenticator_key)
+    3. secret_key = Base64(HMAC_SHA256(encoded_key, timestamp))
+    
+    Reference: https://developers.eko.in/reference/pay-bills-api
     """
-    timestamp = str(int(time.time()))  # SECONDS, not milliseconds
+    timestamp = str(round(time.time() * 1000))  # MILLISECONDS for BBPS
     
-    # Correct formula: SHA256 of concatenated string
-    raw = DEVELOPER_KEY + timestamp + AUTH_KEY
+    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+    
     secret_key = base64.b64encode(
-        hashlib.sha256(raw.encode()).digest()
+        hmac.new(
+            encoded_key.encode(),
+            timestamp.encode(),
+            hashlib.sha256
+        ).digest()
     ).decode()
     
     return {
@@ -83,7 +89,31 @@ def generate_headers() -> Dict[str, str]:
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
         "initiator_id": INITIATOR_ID,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json"  # BBPS uses JSON for fetch, form-urlencoded for pay
+    }
+
+
+def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
+    """
+    Generate authentication headers for bill PAYMENT (uses form-urlencoded).
+    Payment API requires request_hash in addition to regular auth.
+    """
+    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+    
+    secret_key = base64.b64encode(
+        hmac.new(
+            encoded_key.encode(),
+            timestamp.encode(),
+            hashlib.sha256
+        ).digest()
+    ).decode()
+    
+    return {
+        "developer_key": DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp,
+        "initiator_id": INITIATOR_ID,
+        "Content-Type": "application/x-www-form-urlencoded"  # Payment uses form data
     }
 
 
@@ -415,9 +445,13 @@ def pay_bill(data: PayBillRequest):
     try:
         url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
         
-        # Generate headers with request_hash
-        headers = generate_headers()
-        timestamp = headers["secret-key-timestamp"]
+        # Generate timestamp first for consistent hash generation
+        timestamp = str(round(time.time() * 1000))
+        
+        # Generate headers with correct timestamp
+        headers = generate_headers_for_payment(timestamp)
+        
+        # Generate request_hash using same timestamp
         request_hash = generate_request_hash(timestamp, data.account, data.amount)
         headers["request_hash"] = request_hash
         
@@ -439,7 +473,8 @@ def pay_bill(data: PayBillRequest):
         
         logging.info(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
         
-        response = requests.post(url, json=body, headers=headers, timeout=REQUEST_TIMEOUT)
+        # Use data= for form-urlencoded (as per Eko docs for payment)
+        response = requests.post(url, data=body, headers=headers, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS PAY] HTTP Status: {response.status_code}")
         
