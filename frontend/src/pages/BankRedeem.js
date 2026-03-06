@@ -682,7 +682,7 @@ const BankRedeem = ({ user }) => {
                   <p className="text-3xl font-bold text-white">{(userData?.prc_balance || 0).toLocaleString()}</p>
                 </div>
               </div>
-              <p className="text-amber-300/70 text-xs">PRC (10 PRC = ₹1)</p>
+              <p className="text-amber-300/70 text-xs">PRC Reward Points</p>
             </div>
 
             {/* How It Works */}

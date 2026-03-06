@@ -67,16 +67,16 @@ const FAQ = () => {
       icon: Gift,
       questions: [
         {
-          question: "How to redeem PRC to cash?",
-          answer: "Only VIP members can redeem PRC for cash. Go to Wallet section, select Redemption amount, provide your UPI details, and submit the request. Redemptions are processed within 48-72 hours."
+          question: "How to redeem PRC points?",
+          answer: "Verified members can redeem PRC points for services. Go to Redeem section, select the service type (Bill Payment, Voucher, or Bank Transfer for eligible users), and submit the request."
         },
         {
-          question: "What is the PRC to INR conversion rate?",
-          answer: "10 PRC = ₹1 INR. This conversion rate is fixed and applies to all transactions and redemptions on the platform."
+          question: "What is the estimated value of PRC?",
+          answer: "PRC is an in-app reward point. The estimated redeem value is approximately ₹1 for every 10 PRC, subject to availability and platform terms."
         },
         {
           question: "What is the minimum Redemption amount?",
-          answer: "The minimum Redemption amount from the Cashback Wallet is ₹10. A Redemption fee of ₹5 applies to each transaction."
+          answer: "The minimum redemption varies by service type. Check the Redeem page for current limits and applicable service fees."
         },
         {
           question: "How does product redemption work?",

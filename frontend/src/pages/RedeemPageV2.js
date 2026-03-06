@@ -2701,18 +2701,18 @@ const RedeemPageV2 = ({ user }) => {
               <div className="flex items-center gap-3 mb-4">
                 <Wallet className="h-8 w-8 text-amber-400" />
                 <div>
-                  <p className="text-amber-300/70 text-xs uppercase">Available Balance</p>
-                  <p className="text-3xl font-bold text-white">{(userData?.prc_balance || 0).toLocaleString()}</p>
+                  <p className="text-amber-300/70 text-xs uppercase">Reward Points</p>
+                  <p className="text-3xl font-bold text-white">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
                 </div>
               </div>
-              <p className="text-amber-300/70 text-xs">PRC (10 PRC = ₹1)</p>
+              <p className="text-amber-300/70 text-xs">Use for bill payments, vouchers & more</p>
             </div>
             
             {/* Charges Info */}
             <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-3xl p-6 border border-blue-500/20">
               <h3 className="font-bold text-blue-400 mb-3 flex items-center gap-2">
                 <Info className="h-5 w-5" />
-                Charges
+                Service Charges
               </h3>
               <ul className="text-xs text-blue-300 space-y-2">
                 <li className="flex justify-between">
@@ -2720,14 +2720,15 @@ const RedeemPageV2 = ({ user }) => {
                   <span className="font-semibold">₹10 (flat)</span>
                 </li>
                 <li className="flex justify-between">
-                  <span>Admin Charges</span>
+                  <span>Service Charges</span>
                   <span className="font-semibold">20% of amount</span>
                 </li>
                 <li className="flex justify-between border-t border-blue-500/20 pt-2 mt-2">
-                  <span>PRC Rate</span>
-                  <span className="font-semibold">10 PRC = ₹1</span>
+                  <span>Est. Redeem Value</span>
+                  <span className="font-semibold">~₹1 per 10 PRC*</span>
                 </li>
               </ul>
+              <p className="text-[10px] text-blue-400/60 mt-2">*Subject to terms & availability</p>
             </div>
           </div>
         </div>

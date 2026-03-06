@@ -918,7 +918,7 @@ const DailyRewards = ({ user }) => {
             <div className="flex items-center gap-1">
               <p className="text-zinc-500 text-xs">Lifetime Earnings</p>
               <InfoTooltip>
-                <p>Includes: Mining rewards, Referral bonuses & Cashback</p>
+                <p>Includes: Mining rewards & Friend bonuses</p>
               </InfoTooltip>
             </div>
             <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>

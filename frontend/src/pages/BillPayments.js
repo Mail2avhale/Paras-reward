@@ -1389,7 +1389,7 @@ const BillPayments = ({ user, onLogout }) => {
                     <p className="text-3xl font-bold text-white">{currentUser?.prc_balance?.toLocaleString() || 0}</p>
                   </div>
                 </div>
-                <p className="text-amber-300/70 text-xs">PRC (10 PRC = ₹1)</p>
+                <p className="text-amber-300/70 text-xs">PRC Reward Points</p>
               </div>
             </div>
 

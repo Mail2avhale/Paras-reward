@@ -625,9 +625,9 @@ const DashboardModern = ({ user, onLogout }) => {
                 >
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
-                <p className="text-gray-500 text-[10px] tracking-widest">BALANCE</p>
+                <p className="text-gray-500 text-[10px] tracking-widest">REWARD POINTS</p>
                 <InfoTooltip>
-                  <p>Your available PRC. Use it for bill payments, vouchers, or marketplace purchases. 10 PRC = ₹1</p>
+                  <p>Your PRC reward points. Redeem for bill payments, vouchers, or marketplace purchases.</p>
                 </InfoTooltip>
               </div>
               <div className="flex items-baseline gap-2">
@@ -1096,8 +1096,8 @@ const DashboardModern = ({ user, onLogout }) => {
                       <Banknote className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-white/60 text-xs uppercase tracking-wider">PRC Balance</p>
-                      <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()}</p>
+                      <p className="text-white/60 text-xs uppercase tracking-wider">PRC Reward Points</p>
+                      <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()} PRC</p>
                     </div>
                   </div>
                   
@@ -1105,12 +1105,12 @@ const DashboardModern = ({ user, onLogout }) => {
                   <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-emerald-200/80 text-xs">Redeem up to (100% limit)</p>
-                        <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}</p>
+                        <p className="text-emerald-200/80 text-xs">Estimated Redeem Value</p>
+                        <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}*</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-emerald-200/60 text-xs">Rate</p>
-                        <p className="text-emerald-300 text-sm font-medium">10 PRC = ₹1</p>
+                        <p className="text-emerald-200/60 text-[10px]">*Approx. value</p>
+                        <p className="text-emerald-300 text-xs font-medium">Subject to terms</p>
                       </div>
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ const DashboardModern = ({ user, onLogout }) => {
                     data-testid="redeem-to-bank-btn"
                   >
                     <Building2 className="w-5 h-5" />
-                    Redeem PRC
+                    Redeem Points
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -1175,13 +1175,13 @@ const DashboardModern = ({ user, onLogout }) => {
                   <div className={`${isKycRejected ? 'bg-red-900/30' : 'bg-amber-900/30'} backdrop-blur rounded-xl p-4 mb-4`}>
                     <p className="text-white/90 text-sm leading-relaxed">
                       {isKycRejected 
-                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable PRC redemption.'
-                        : 'Complete your KYC verification to unlock the Redeem feature. Your PRC balance will be waiting for you!'
+                        ? 'Your KYC verification was rejected. Please update your documents and resubmit to enable point redemption.'
+                        : 'Complete your KYC verification to unlock the Redeem feature. Your reward points will be waiting for you!'
                       }
                     </p>
                     <div className="mt-3 flex items-center gap-2">
                       <Banknote className="w-4 h-4 text-white/60" />
-                      <span className="text-white/70 text-xs">Your Balance: <span className="text-white font-semibold">{stats.prcBalance.toLocaleString()} PRC</span></span>
+                      <span className="text-white/70 text-xs">Your Points: <span className="text-white font-semibold">{stats.prcBalance.toLocaleString()} PRC</span></span>
                     </div>
                   </div>
                   
