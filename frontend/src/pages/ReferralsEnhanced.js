@@ -17,17 +17,13 @@ const TreeNode = ({ node, depth = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(depth < 2);
   const hasChildren = node?.children && node.children.length > 0;
   const subscriptionPlan = node?.subscription_plan || 'explorer';
-  const isActive = node?.is_active || ['startup', 'growth', 'elite'].includes(subscriptionPlan?.toLowerCase());
+  const isActive = node?.is_active || ['elite'].includes(subscriptionPlan?.toLowerCase());
   
   // Get plan display info
   const getPlanBadge = () => {
     switch(subscriptionPlan) {
       case 'elite':
         return { label: '👑 Elite', bgColor: 'bg-purple-500/20', textColor: 'text-purple-400' };
-      case 'growth':
-        return { label: '🚀 Growth', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' };
-      case 'startup':
-        return { label: '⭐ Startup', bgColor: 'bg-amber-500/20', textColor: 'text-amber-400' };
       default:
         return null;
     }
@@ -413,7 +409,7 @@ const ReferralsEnhanced = ({ user }) => {
         const activeCount = responseData.total_active || levels.reduce((sum, l) => sum + (l.active_count || 0), 0);
         const vipCount = levels.reduce((sum, level) => {
           const users = level.users || [];
-          return sum + users.filter(u => ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase())).length;
+          return sum + users.filter(u => ['elite'].includes(u.subscription_plan?.toLowerCase())).length;
         }, 0);
         
         // DEBUG: Log response for troubleshooting
@@ -611,8 +607,6 @@ Download now & start earning!`;
   const planWeights = {
     explorer: 0,
     free: 0,
-    startup: 0.30,
-    growth: 0.55,
     elite: 1.0
   };
 
@@ -1155,16 +1149,10 @@ Download now & start earning!`;
                                 <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${
                                   u.subscription_plan === 'elite' 
                                     ? 'bg-purple-500/20 text-purple-400' 
-                                    : u.subscription_plan === 'growth'
-                                      ? 'bg-blue-500/20 text-blue-400'
-                                      : u.subscription_plan === 'startup'
-                                        ? 'bg-amber-500/20 text-amber-400'
-                                        : 'bg-gray-500/20 text-gray-400'
+                                    : 'bg-gray-500/20 text-gray-400'
                                 }`}>
                                   {u.subscription_plan === 'elite' ? '👑 Elite' : 
-                                   u.subscription_plan === 'growth' ? '🚀 Growth' : 
-                                   u.subscription_plan === 'startup' ? '⭐ Startup' : 
-                                   u.subscription_plan}
+                                   u.subscription_plan || 'Explorer'}
                                 </span>
                               )}
                               <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -1827,8 +1815,6 @@ Download now & start earning!`;
                     <div className="space-y-2">
                       {[
                         { key: 'elite', label: 'Elite', color: 'purple', icon: '👑' },
-                        { key: 'growth', label: 'Growth', color: 'blue', icon: '🚀' },
-                        { key: 'startup', label: 'Startup', color: 'amber', icon: '⭐' },
                         { key: 'explorer', label: 'Explorer (Free)', color: 'gray', icon: '🌱' }
                       ].map(plan => {
                         const count = networkAnalytics.subscription_distribution[plan.key] || 0;
@@ -1859,14 +1845,12 @@ Download now & start earning!`;
                       Level Distribution
                     </h4>
                     <div className="space-y-2">
-                      {networkAnalytics.level_distribution?.map(level => (
+                      {networkAnalytics.level_distribution?.filter(level => level.level <= 3).map(level => (
                         <div key={level.level} className="flex items-center gap-2">
                           <span className={`w-8 text-xs px-2 py-0.5 rounded text-center ${
                             level.level === 1 ? 'bg-amber-500/20 text-amber-400' :
                             level.level === 2 ? 'bg-blue-500/20 text-blue-400' :
-                            level.level === 3 ? 'bg-emerald-500/20 text-emerald-400' :
-                            level.level === 4 ? 'bg-purple-500/20 text-purple-400' :
-                            'bg-pink-500/20 text-pink-400'
+                            'bg-emerald-500/20 text-emerald-400'
                           }`}>
                             L{level.level}
                           </span>
