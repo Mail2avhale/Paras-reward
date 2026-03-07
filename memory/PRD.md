@@ -10,6 +10,7 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 - **KYC Verification**: Aadhaar + PAN verification for withdrawals
 - **BBPS Integration**: Bill payments using Eko API
 - **DMT Integration**: Domestic Money Transfer using Eko API
+- **Bank Withdrawal via Chatbot**: Hidden withdrawal system (NEW)
 - **Recurring Deposits**: PRC savings with interest
 
 ## Tech Stack
@@ -24,69 +25,63 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 
 ### December 2025 - Major Refactoring Session
 
-#### Features Removed (Complete)
+#### Features Removed
 1. **Marketplace** - All product, cart, order, checkout routes removed (~2,130 lines)
 2. **Luxury Life** - Auto-save for luxury products feature removed (~700 lines)
 3. **TAP Game** - Tap-to-earn game feature removed (~130 lines)
+4. **Direct Bank Transfer UI** - Removed from RedeemPageV2 (moved to chatbot)
 
-#### Code Refactoring (Complete)
-1. **KYC Routes Extracted** - `routes/kyc.py` created (~350 lines)
-2. **Unused Route Files Deleted** - social.py, support.py, admin_ledger.py
-3. **BBPS/DMT Separation** - Clean separation of payment services
+#### Code Refactoring
+1. **KYC Routes Extracted** - `routes/kyc.py` created
+2. **BBPS/DMT Separation** - Clean separation of payment services
+3. **Unused Route Files Deleted** - social.py, support.py, admin_ledger.py
 
-#### BBPS/DMT Separation
-**BBPS (Bill Payment):**
-- `routes/bbps_services.py` (980 lines) - Clean BBPS implementation
+#### 🆕 Bank Withdrawal via Chatbot (NEW)
 
-**DMT (Money Transfer):**
-- `routes/eko_dmt_service.py` (1,350 lines) - DMT v1
-- `routes/eko_dmt_v3.py` (863 lines) - DMT v3 with OTP
-- `routes/eko_dmt_icici.py` (858 lines) - ICICI specific
-- `routes/admin_dmt_routes.py` (701 lines) - Admin management
+**User Flow:**
+```
+1. User: "Bank withdrawal करायचे आहे"
+2. Bot checks: KYC verified + Balance sufficient + Min ₹500
+3. Bot shows: Balance, fees calculation
+4. User provides: Account holder name, Account number, Bank name, IFSC
+5. User confirms
+6. Request ID generated (WD-YYYYMMDD-XXXXXX)
+7. Admin processes via DMT in 5-7 days
+8. Status updates via chatbot
+```
 
-**Common Utilities:**
-- `routes/eko_common.py` (220 lines) - Shared auth/request functions
-- `routes/eko_error_handler.py` (612 lines) - Error handling
+**Fee Structure:**
+- Processing Fee: ₹10 (flat)
+- Admin Charge: 20% of amount
+- Example: ₹500 withdrawal → User receives: ₹390
 
-**Archived:**
-- `routes/_archive_eko_payments_legacy.py` (4,386 lines) - DISABLED
+**Requirements:**
+- ✅ KYC Verified
+- ✅ Minimum ₹500
+- ✅ 10 PRC = ₹1
 
-#### Subscription E2E Flow (Verified)
-**Flow:**
-1. User selects plan → `/api/razorpay/create-order`
-2. Razorpay checkout opens
-3. User completes payment
-4. Frontend calls `/api/razorpay/verify-payment`
-5. Backend: DOUBLE VERIFICATION (signature + Razorpay API)
-6. Subscription activated + remaining days added
-7. Records in: transactions, vip_payments, razorpay_orders
+**Files Created:**
+- `routes/chatbot_withdrawal.py` - Backend API (400+ lines)
+- `AdminChatbotWithdrawals.js` - Admin panel (500+ lines)
 
-**Security:**
-- CODE_VERSION: "2.0-SECURE"
-- DOUBLE_VERIFICATION_ENABLED
-- Amount verification (±₹1 tolerance)
-- Duplicate payment prevention
-
-#### Stats
-- **server.py**: 43,143 → 39,105 lines (~4,040 lines removed)
-- **Route files**: 46 active files
+**Admin Panel Features:**
+- Pending/Processing/Completed/Rejected tabs
+- Request details with user & bank info
+- Approve → Process via DMT → Complete
+- Reject with reason (PRC refunded)
 
 ---
 
 ## Testing Status
 
-### Iteration 108 - BBPS/DMT Separation
-- Backend: 16/16 passed ✅
+### Iteration 110 - Chatbot Withdrawal
+- Backend: 26/26 passed ✅
 - Frontend: 20/20 passed ✅
+- Total: 46/46 passed ✅
 
-### Iteration 109 - Subscription E2E
-- Backend: 34/34 passed (1 skipped) ✅
-- Frontend: 16/16 passed ✅
-
-**Test Files Created:**
-- `/app/backend/tests/test_bbps_dmt_separation.py`
-- `/app/backend/tests/test_razorpay_subscription_e2e.py`
-- `/app/tests/e2e/razorpay-subscription-e2e.spec.ts`
+### Previous Iterations
+- Iteration 108 (BBPS/DMT): 36/36 passed ✅
+- Iteration 109 (Subscription E2E): 50/51 passed ✅
 
 ---
 
@@ -97,11 +92,11 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 
 ### P1 - High Priority
 - [ ] BBPS billers (AEML, JPDCL) fail to fetch bills
-- [ ] Continue server.py refactoring (Mining, Subscription routes)
+- [ ] Production deploy with all changes
 
 ### P2 - Medium Priority
 - [ ] "Payment Status Check on Login" safeguard
-- [ ] DMT APIs blocked in preview (IP whitelisting)
+- [ ] DMT APIs in preview (IP now whitelisted ✅)
 
 ### P3 - Low Priority
 - [ ] Eko DMT v3 with Aadhaar/eKYC
@@ -111,20 +106,21 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 
 ## API Endpoints (Key)
 
-### Razorpay/Subscription
-- `GET /api/razorpay/config` - Get Razorpay public key
-- `POST /api/razorpay/create-order` - Create payment order
-- `POST /api/razorpay/verify-payment` - Verify and activate subscription
-- `POST /api/razorpay/webhook` - Handle Razorpay webhooks
-- `GET /api/razorpay/payment-history/{uid}` - User payment history
+### Chatbot Withdrawal (NEW)
+- `GET /api/chatbot-redeem/eligibility/{uid}` - Check eligibility
+- `GET /api/chatbot-redeem/calculate-fees?amount=500` - Calculate fees
+- `POST /api/chatbot-redeem/request` - Create withdrawal request
+- `GET /api/chatbot-redeem/status/{request_id}` - Check status
+- `GET /api/chatbot-redeem/history/{uid}` - User history
+- `GET /api/chatbot-redeem/admin/pending` - Admin pending list
+- `POST /api/chatbot-redeem/admin/process/{request_id}` - Admin process
 
 ### Other
 - `/api/health` - Health check
 - `/api/bbps/*` - BBPS bill payments
 - `/api/eko/dmt/*` - DMT money transfer
 - `/api/kyc/*` - KYC operations
-- `/api/mining/*` - Mining operations
 
 ## Credentials (Test)
 - Admin (Production): admin@paras.com / PIN: 153759
-- Test User (Preview): Database specific
+
