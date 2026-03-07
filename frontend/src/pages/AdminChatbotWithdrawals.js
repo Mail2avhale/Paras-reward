@@ -138,6 +138,45 @@ const AdminChatbotWithdrawals = ({ user }) => {
     }
   };
 
+  // Auto DMT Transfer via Eko API
+  const handleExecuteAutoDMT = async (requestId) => {
+    if (!confirm('Are you sure you want to execute Auto DMT transfer?\n\nThis will:\n1. Call Eko DMT API\n2. Transfer money to bank account\n3. Generate UTR automatically')) {
+      return;
+    }
+    
+    setProcessing(true);
+    try {
+      const response = await fetch(`${API}/chatbot-redeem/admin/execute-dmt/${requestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_uid: user.uid,
+          transfer_mode: 'IMPS'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(`Transfer Successful! UTR: ${result.data?.utr_number || 'Generated'}`);
+        fetchRequests();
+        setSelectedRequest(null);
+      } else {
+        // Show detailed error
+        const errorMsg = result.message || 'Transfer failed';
+        const errorType = result.error_type || 'UNKNOWN';
+        toast.error(`${errorMsg}\n(Error: ${errorType})`, { duration: 8000 });
+        
+        // Refresh to show updated error in request
+        fetchRequests();
+      }
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400', icon: Clock, label: 'Pending' },
@@ -313,18 +352,29 @@ const AdminChatbotWithdrawals = ({ user }) => {
                         </>
                       )}
                       {req.status === 'processing' && (
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
-                          onClick={() => {
-                            const txnId = prompt('Enter DMT Transaction ID:');
-                            if (txnId) handleCompleteDMT(req.request_id, txnId);
-                          }}
-                          disabled={processing}
-                        >
-                          <Send className="w-4 h-4 mr-1" />
-                          Complete
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => handleExecuteAutoDMT(req.request_id)}
+                            disabled={processing}
+                            title="Execute Auto DMT via Eko"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const txnId = prompt('Enter UTR (12 digits):');
+                              if (txnId) handleCompleteDMT(req.request_id, txnId);
+                            }}
+                            disabled={processing}
+                            title="Enter UTR Manually"
+                          >
+                            <Hash className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -425,6 +475,27 @@ const AdminChatbotWithdrawals = ({ user }) => {
                 </div>
               )}
 
+              {/* DMT Status/Error */}
+              {(selectedRequest.last_dmt_error || selectedRequest.utr_number) && (
+                <div className={`rounded-lg p-4 ${selectedRequest.utr_number ? 'bg-green-500/10 border border-green-500/30' : 'bg-orange-500/10 border border-orange-500/30'}`}>
+                  <h3 className={`font-medium mb-2 ${selectedRequest.utr_number ? 'text-green-400' : 'text-orange-400'}`}>
+                    {selectedRequest.utr_number ? '✅ Transfer Completed' : '⚠️ Last DMT Attempt'}
+                  </h3>
+                  {selectedRequest.utr_number && (
+                    <p className="text-white font-mono">UTR: {selectedRequest.utr_number}</p>
+                  )}
+                  {selectedRequest.eko_tid && (
+                    <p className="text-gray-300 text-sm">Eko TID: {selectedRequest.eko_tid}</p>
+                  )}
+                  {selectedRequest.last_dmt_error && !selectedRequest.utr_number && (
+                    <p className="text-orange-300">{selectedRequest.last_dmt_error}</p>
+                  )}
+                  {selectedRequest.dmt_attempt_count > 0 && (
+                    <p className="text-gray-400 text-sm mt-1">Attempts: {selectedRequest.dmt_attempt_count}</p>
+                  )}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 {selectedRequest.status === 'pending' && (
@@ -449,17 +520,35 @@ const AdminChatbotWithdrawals = ({ user }) => {
                   </>
                 )}
                 {selectedRequest.status === 'processing' && (
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-700 flex-1"
-                    onClick={() => {
-                      const txnId = prompt('Enter DMT Transaction ID after successful transfer:');
-                      if (txnId) handleCompleteDMT(selectedRequest.request_id, txnId);
-                    }}
-                    disabled={processing}
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Mark as Completed (After DMT)
-                  </Button>
+                  <>
+                    {/* Auto DMT Transfer Button */}
+                    <Button
+                      className="bg-emerald-600 hover:bg-emerald-700 flex-1"
+                      onClick={() => handleExecuteAutoDMT(selectedRequest.request_id)}
+                      disabled={processing}
+                    >
+                      {processing ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-2" />
+                      )}
+                      Execute Auto DMT
+                    </Button>
+                    
+                    {/* Manual UTR Entry Button */}
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-blue-500 text-blue-400 hover:bg-blue-500/20"
+                      onClick={() => {
+                        const txnId = prompt('Enter UTR/Transaction ID (12 digits):');
+                        if (txnId) handleCompleteDMT(selectedRequest.request_id, txnId);
+                      }}
+                      disabled={processing}
+                    >
+                      <Hash className="w-4 h-4 mr-2" />
+                      Enter UTR Manual
+                    </Button>
+                  </>
                 )}
                 <Button variant="outline" onClick={() => setSelectedRequest(null)}>
                   Close
