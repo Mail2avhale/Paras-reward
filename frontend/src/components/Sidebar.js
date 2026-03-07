@@ -16,8 +16,7 @@ import {
   ChevronRight,
   Star,
   FileText,
-  Shield,
-  Landmark
+  Shield
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -65,7 +64,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/redeem' },
-    { id: 'bank-redeem', label: 'Redeem to Bank Account', icon: Landmark, route: '/redeem?service=dmt' },
+    // Bank Redeem removed - now handled via chatbot only
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];
