@@ -12,11 +12,6 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 - **DMT Integration**: Domestic Money Transfer using Eko API
 - **Recurring Deposits**: PRC savings with interest
 
-## User Personas
-1. **End Users**: Mine PRC, pay bills, transfer money, invite friends
-2. **Admins**: Manage users, verify KYC, handle withdrawals, view analytics
-3. **Managers**: Regional management, order handling, reports
-
 ## Tech Stack
 - **Frontend**: React.js with Shadcn/UI components
 - **Backend**: FastAPI (Python)
@@ -27,91 +22,72 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 
 ## What's Been Implemented
 
-### December 2025 - Major Refactoring
+### December 2025 - Major Refactoring Session
 
 #### Features Removed (Complete)
-1. **Marketplace** - All product, cart, order, checkout routes removed
-   - Backend: ~2,130 lines deleted
-   - Frontend: Orders.js, AdminOrders.js deleted
-   - Navigation updated to redirect /orders to /dashboard
-
-2. **Luxury Life** - Auto-save for luxury products feature removed
-   - Backend: ~700 lines deleted
-   - Frontend: Migration UI removed from ParasRecurringDeposit.js
-
-3. **TAP Game** - Tap-to-earn game feature removed
-   - Backend: ~130 lines deleted
-   - Frontend: Already removed in previous session
+1. **Marketplace** - All product, cart, order, checkout routes removed (~2,130 lines)
+2. **Luxury Life** - Auto-save for luxury products feature removed (~700 lines)
+3. **TAP Game** - Tap-to-earn game feature removed (~130 lines)
 
 #### Code Refactoring (Complete)
 1. **KYC Routes Extracted** - `routes/kyc.py` created (~350 lines)
-   - `/api/kyc/submit/{uid}` - Submit KYC documents
-   - `/api/kyc/status/{uid}` - Get KYC status
-   - `/api/kyc/list` - List all KYC submissions (admin)
-   - `/api/kyc/details/{uid}` - Get full KYC details (admin)
-   - `/api/kyc/verify/{uid}` - Verify/Approve KYC (admin)
-   - `/api/kyc/reject/{uid}` - Reject KYC (admin)
-   - `/api/kyc/stats` - Get KYC statistics (admin)
+2. **Unused Route Files Deleted** - social.py, support.py, admin_ledger.py
+3. **BBPS/DMT Separation** - Clean separation of payment services
 
-2. **Unused Route Files Deleted**
-   - routes/social.py - Routes exist in server.py
-   - routes/support.py - Routes exist in server.py
-   - routes/admin_ledger.py - Never used, routes in server.py
+#### BBPS/DMT Separation (NEW)
+**BBPS (Bill Payment):**
+- `routes/bbps_services.py` (980 lines) - Clean BBPS implementation
+
+**DMT (Money Transfer):**
+- `routes/eko_dmt_service.py` (1,350 lines) - DMT v1
+- `routes/eko_dmt_v3.py` (863 lines) - DMT v3 with OTP
+- `routes/eko_dmt_icici.py` (858 lines) - ICICI specific
+- `routes/admin_dmt_routes.py` (701 lines) - Admin management
+
+**Common Utilities:**
+- `routes/eko_common.py` (220 lines) - NEW: Shared auth/request functions
+- `routes/eko_error_handler.py` (612 lines) - Error handling
+
+**Archived:**
+- `routes/_archive_eko_payments_legacy.py` (4,386 lines) - DISABLED
 
 #### Stats
-- **server.py**: 43,143 → 39,103 lines (~4,040 lines removed)
-- **Route files**: 48 → 45 files
+- **server.py**: 43,143 → 39,105 lines (~4,040 lines removed)
+- **Route files**: 46 active files
 
 ---
 
 ## Prioritized Backlog
 
 ### P0 - Critical
-- [ ] Razorpay auto-subscription fails on production server
-  - Fix applied in preview (faster sync), needs production deployment
+- [ ] Razorpay auto-subscription fails on production (fix in preview, needs deployment)
 
 ### P1 - High Priority
 - [ ] BBPS billers (AEML, JPDCL) fail to fetch bills
-- [ ] Continue server.py refactoring:
-  - Mining routes (~1,300 lines)
-  - User Profile routes (~550 lines)
-  - Subscription routes (~2,400 lines)
-  - Admin Ledger routes (~4,600 lines)
+- [ ] Continue server.py refactoring (Mining, Subscription routes)
 
 ### P2 - Medium Priority
 - [ ] "Payment Status Check on Login" safeguard
-- [ ] Remove legacy eko_payments.py router conflict
 - [ ] DMT APIs blocked in preview (IP whitelisting)
 
 ### P3 - Low Priority
 - [ ] Eko DMT v3 with Aadhaar/eKYC
-- [ ] PRC Vault migration script for production
 - [ ] Email/Mobile OTP verification on signup
-- [ ] KYC/Receipt images migration (base64 to file storage)
-
----
-
-## Known Issues
-1. **Razorpay Production** - Auto-activation fails sometimes (sync delay)
-2. **DMT Preview** - IP not whitelisted by Eko
-3. **BBPS** - Some billers have non-standard parameters
 
 ---
 
 ## Testing Status
-- **Last Test**: iteration_100.json - All tests passed (39/39)
-- **Backend Tests**: 19/19 passed
+- **Last Test**: iteration_108.json - All 36 tests passed
+- **Backend Tests**: 16/16 passed (BBPS/DMT separation verified)
 - **Frontend Tests**: 20/20 passed
-
----
 
 ## API Endpoints (Key)
 - `/api/health` - Health check
-- `/api/kyc/*` - KYC operations (extracted to routes/kyc.py)
+- `/api/bbps/*` - BBPS bill payments (NEW clean routes)
+- `/api/eko/dmt/*` - DMT money transfer (clean routes)
+- `/api/kyc/*` - KYC operations (extracted)
 - `/api/mining/*` - Mining operations
 - `/api/leaderboard` - Leaderboard
-- `/api/support/*` - Support tickets
-- `/api/admin/*` - Admin operations
 
 ## Credentials (Test)
 - Admin (Production): admin@paras.com / PIN: 153759
