@@ -10,8 +10,8 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 - **KYC Verification**: Aadhaar + PAN verification for withdrawals
 - **BBPS Integration**: Bill payments using Eko API
 - **DMT Integration**: Domestic Money Transfer using Eko API
-- **Bank Withdrawal via Chatbot**: Hidden withdrawal system
-- **Payment Issue Auto-Fix via Chatbot**: Auto-resolve subscription payment issues (NEW)
+- **Bank Withdrawal via Chatbot**: Hidden withdrawal system with OTP verification
+- **Payment Issue Auto-Fix via Chatbot**: Auto-resolve subscription payment issues
 - **Recurring Deposits**: PRC savings with interest
 
 ## Tech Stack
@@ -19,10 +19,26 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **Payments**: Razorpay for subscriptions, Eko for BBPS/DMT
+- **Hosting**: Emergent Infrastructure
 
 ---
 
 ## What's Been Implemented
+
+### March 7, 2026 - Server.py Refactoring Phase 1
+
+#### Code Extraction Complete
+1. **Admin Ledger System** - Extracted 900 lines to `routes/admin_ledger.py`
+   - Income Ledgers (Subscription, Commission, Penalty, Interest, Ad Revenue)
+   - Expense Ledgers (Redeem Payout, Operational)
+   - Cash & Bank Ledgers
+   - Deposit & Stockist Ledgers
+   - Summary & Reconciliation (P&L, Balance Sheet)
+
+#### Performance Metrics
+- **server.py reduced**: 39,662 → 38,762 lines (900 lines removed)
+- **Preview environment load time**: 1.76 seconds (excellent)
+- **All APIs functional**: ✅
 
 ### December 2025 - Major Refactoring Session
 
@@ -32,97 +48,59 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 3. **TAP Game** - Tap-to-earn removed (~130 lines)
 4. **Direct Bank Transfer UI** - Moved to chatbot
 
-#### 🆕 Bank Withdrawal via Chatbot
+#### Bank Withdrawal via Chatbot
 **User Flow:**
 ```
-"Bank withdrawal करायचे" → KYC check → Balance check → 
-Bank details collect → Confirm → Request ID → Admin processes
+"Bank withdrawal करायचे" → KYC check → Eko OTP verification → 
+Balance check → Bank details collect → Confirm → Request ID → Admin processes
 ```
 **Fees:** ₹10 flat + 20% admin charge
 
-#### 🆕 Payment Issue Auto-Fix via Chatbot (NEW)
-
+#### Payment Issue Auto-Fix via Chatbot
 **Problem Solved:** "Payment झाले पण subscription activate नाही"
-
-**User Flow:**
-```
-User: "Payment problem"
-Bot: Collects - Amount, Date, Payment ID/UTR
-Bot: Verifies with Razorpay API
-Bot: Auto-activates subscription if confirmed
-User: "✅ Subscription activated!"
-```
-
-**Features:**
 - Razorpay API verification
 - Auto subscription activation
 - 30-day time limit
 - Rate limiting (5 attempts/day)
-- Audit logging
-
-**API Endpoints:**
-- `GET /api/chatbot-payment-fix/check-pending/{uid}` - Check pending orders
-- `POST /api/chatbot-payment-fix/search-payment` - Search by amount+date+payment_id
-- `POST /api/chatbot-payment-fix/resolve-payment` - Verify & activate
-- `GET /api/chatbot-payment-fix/resolution-history/{uid}` - User history
-- `GET /api/chatbot-payment-fix/admin/stats` - Admin statistics
-
-**Files Created:**
-- `routes/chatbot_payment_fix.py` (450+ lines)
-
----
-
-## Testing Status
-
-### Latest Tests
-- **Chatbot Payment Fix**: All endpoints verified ✅
-  - Rate limiting: Working (5/day)
-  - Time limit: Working (30 days)
-  - Razorpay verification: Configured
-
-### Previous Iterations
-- Iteration 110 (Chatbot Withdrawal): 46/46 passed ✅
-- Iteration 109 (Subscription E2E): 50/51 passed ✅
-- Iteration 108 (BBPS/DMT): 36/36 passed ✅
-
----
-
-## Chatbot Capabilities Summary
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Bank Withdrawal** | ✅ | Request withdrawal via chatbot |
-| **Payment Issue Fix** | ✅ | Auto-resolve subscription payment issues |
-| **Bill Payments Guide** | ✅ | Step-by-step guidance |
-| **Diagnostic Mode** | ✅ | Real-time user data analysis |
-| **Multi-language** | ✅ | English, Hindi, Marathi |
 
 ---
 
 ## Prioritized Backlog
 
-### P0 - Critical (BLOCKED - Preview Environment Only)
-- [ ] **Eko DMT API** - Authentication code FIXED ✅. Preview IP (`34.170.12.145`) not whitelisted. Production IPs (`34.44.149.98`, `34.10.166.75`) ARE whitelisted. **Test on production server to verify.**
+### P0 - Critical (BLOCKED)
+- [ ] **Eko DMT API Testing** - Preview IP `34.170.12.145` not whitelisted in Eko portal
+  - Code is correct, authentication fixed
+  - User must whitelist IP to test
 
 ### P1 - High Priority
-- [ ] BBPS billers (AEML, JPDCL) fix - Some operators failing to fetch bills
-- [ ] Continue server.py refactoring (currently ~38k lines)
-- [ ] Production deploy with chatbot features
+- [ ] **Production Environment Issues** - User reported API timeouts, auto-navigation bugs
+  - Cannot debug without production access
+  - server.py refactoring may help when deployed
+- [ ] **Continue server.py Refactoring** - Extract more sections:
+  - LIVE PLATFORM STATS (~804 lines)
+  - PRC ECONOMY CONTROLS (~367 lines)
+  - PHASE 2 ACCOUNTING (~900 lines)
+- [ ] BBPS billers (AEML, JPDCL) fix
 
 ### P2 - Medium Priority
-- [ ] Admin DMT processing workflow enhancement
-- [ ] Payment check on login safeguard
+- [ ] Payment Status Check on Login safeguard
+- [ ] Remove `_archive_eko_payments_legacy.py` after verifying no dependencies
 
 ### P3 - Low Priority
 - [ ] Eko DMT v3 with Aadhaar/eKYC
-- [ ] Email/Mobile OTP verification
+- [ ] Email/Mobile OTP verification on signup
 - [ ] KYC images migration (base64 to file storage)
 
 ---
 
 ## API Endpoints Summary
 
-### Chatbot Features (NEW)
+### New Routes (Extracted)
+| Route File | Prefix | Description |
+|------------|--------|-------------|
+| `admin_ledger.py` | `/api/admin/ledger` | Complete Ledger System |
+
+### Chatbot Features
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/chatbot-redeem/*` | Various | Bank withdrawal via chatbot |
@@ -135,7 +113,39 @@ User: "✅ Subscription activated!"
 - `/api/kyc/*` - KYC operations
 - `/api/razorpay/*` - Subscription payments
 
+---
+
+## Testing Status
+- **Latest Iteration**: server.py refactoring verified
+- **Ledger APIs**: All endpoints tested ✅
+- **Previous**: Iteration 110 (Chatbot Withdrawal): 46/46 passed ✅
+
+---
+
 ## Credentials (Test)
-- Admin (Production): admin@paras.com / PIN: 153759
+- **Admin (Production)**: admin@paras.com / PIN: 153759
+- **Test User (Preview)**: 9876543210 / PIN: 123456
 
+---
 
+## Architecture After Refactoring
+
+```
+/app/backend/
+├── server.py (38,762 lines - still needs more extraction)
+├── routes/
+│   ├── admin_ledger.py (NEW - 900 lines extracted)
+│   ├── chatbot_withdrawal.py
+│   ├── chatbot_payment_fix.py
+│   ├── eko_common.py (auth fixed)
+│   ├── eko_dmt_service.py (flow corrected)
+│   └── ... (other routes)
+└── .env
+
+/app/frontend/
+├── .env (GENERATE_SOURCEMAP=false for optimization)
+└── src/
+    ├── App.js (lazy loaded AIContextualHelp)
+    └── components/
+        └── Chatbot/Chatbot.js (redesigned UI)
+```
