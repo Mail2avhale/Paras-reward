@@ -1739,40 +1739,16 @@ const RedeemPageV2 = ({ user }) => {
                 {/* ============================================ */}
                 {selectedService === 'mobile_recharge' && (
                   <>
-                    {/* Step 1: Recharge Type */}
+                    {/* Mobile Prepaid Recharge - No type selection needed */}
+                    <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-3 mb-2">
+                      <p className="text-amber-400 text-sm font-medium">📱 Mobile Prepaid Recharge</p>
+                      <p className="text-gray-400 text-xs">For postpaid bills, use Bill Payments section</p>
+                    </div>
+                    
+                    {/* Step 1: Mobile Number with Auto-Detect */}
                     <div>
                       <Label className="text-gray-300 text-sm mb-2 block">
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
-                        Recharge Type
-                      </Label>
-                      <div className="flex gap-3">
-                        {['prepaid', 'postpaid'].map(type => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData, recharge_type: type, amount: '', operator: '', circle: '' });
-                              setBillDetails(null);
-                              setBillError(null);
-                              setAutoDetection(null);
-                              setAutoDetectedPlans([]);
-                            }}
-                            className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${
-                              formData.recharge_type === type
-                                ? 'bg-amber-500 text-black'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                            }`}
-                          >
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Step 2: Mobile Number with Auto-Detect */}
-                    <div>
-                      <Label className="text-gray-300 text-sm mb-2 block">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
                         Mobile Number * <span className="text-blue-400 text-xs ml-1">(Auto-detects operator)</span>
                       </Label>
                       <div className="flex gap-2">
@@ -1801,28 +1777,11 @@ const RedeemPageV2 = ({ user }) => {
                             <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
                           </div>
                         )}
-                        {formData.recharge_type === 'postpaid' && formData.mobile_number.length === 10 && !autoDetecting && (
-                          <Button
-                            type="button"
-                            onClick={fetchBillDetails}
-                            disabled={fetchingBill}
-                            className="h-12 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl disabled:opacity-50"
-                            data-testid="fetch-bill-btn"
-                          >
-                            {fetchingBill ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                              <Search className="h-5 w-5" />
-                            )}
-                          </Button>
-                        )}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         {formData.mobile_number.length < 10 
                           ? 'Enter 10 digits to auto-detect operator'
-                          : formData.recharge_type === 'postpaid' 
-                            ? 'Click 🔍 to fetch bill details' 
-                            : 'Operator auto-detected below'}
+                          : 'Operator auto-detected below'}
                       </p>
                     </div>
                     
@@ -1850,11 +1809,11 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                     )}
                     
-                    {/* Step 3: Override Operator (optional) */}
+                    {/* Step 2: Override Operator (optional) */}
                     {formData.mobile_number.length === 10 && (
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
                           Operator {autoDetection ? '(Auto-filled, change if incorrect)' : '*'}
                           {loadingOperators && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
                         </Label>
@@ -1875,11 +1834,11 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                     )}
                     
-                    {/* Step 4: Circle (for prepaid, auto-filled from detection) */}
-                    {formData.operator && formData.mobile_number.length === 10 && formData.recharge_type === 'prepaid' && (
+                    {/* Step 3: Circle (for prepaid, auto-filled from detection) */}
+                    {formData.operator && formData.mobile_number.length === 10 && (
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">4</span>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
                           Circle {autoDetection?.circle ? '(Auto-detected)' : '*'}
                         </Label>
                         <select
@@ -1896,37 +1855,8 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                     )}
                     
-                    {/* Bill Details for Postpaid */}
-                    {billDetails && formData.recharge_type === 'postpaid' && (
-                      <div className="animate-fadeIn bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle className="h-5 w-5 text-green-400" />
-                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-gray-400">Customer Name</p>
-                            <p className="text-white font-medium">{billDetails.customerName}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400">Bill Amount</p>
-                            <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {billError && formData.recharge_type === 'postpaid' && (
-                      <div className="animate-fadeIn bg-gradient-to-br from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-2xl p-4">
-                        <div className="flex items-center gap-2">
-                          <XCircle className="h-5 w-5 text-red-400" />
-                          <span className="text-red-400 font-medium">{billError}</span>
-                        </div>
-                      </div>
-                    )}
-                    
                     {/* Popular Plans (from auto-detection) */}
-                    {autoDetectedPlans.length > 0 && formData.operator && formData.recharge_type === 'prepaid' && (
+                    {autoDetectedPlans.length > 0 && formData.operator && (
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-black text-xs font-bold mr-2">✓</span>
@@ -1953,11 +1883,11 @@ const RedeemPageV2 = ({ user }) => {
                       </div>
                     )}
                     
-                    {/* Step 5: Amount */}
+                    {/* Step 4: Amount */}
                     {formData.operator && formData.mobile_number.length === 10 && (
                       <div className="animate-fadeIn">
                         <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">{formData.recharge_type === 'prepaid' ? '5' : '4'}</span>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">4</span>
                           Amount (₹) *
                           {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled)</span>}
                         </Label>
@@ -1973,7 +1903,7 @@ const RedeemPageV2 = ({ user }) => {
                             data-testid="amount-input"
                           />
                         </div>
-                        {formData.recharge_type === 'prepaid' && !autoDetectedPlans.length && (
+                        {!autoDetectedPlans.length && (
                           <p className="text-xs text-gray-500 mt-1">Popular: ₹199, ₹299, ₹399, ₹599</p>
                         )}
                       </div>
