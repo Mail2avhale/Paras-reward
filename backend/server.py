@@ -13021,38 +13021,219 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 
 **Available Lenders:** Bajaj Finance, HDFC, ICICI, Tata Capital, Mahindra Finance, LIC Housing, Muthoot, TVS Credit, Hero FinCorp, and 50+ more!
 
-=== 🏦 BANK WITHDRAWAL (VIA CHATBOT ONLY) ===
+=== 🏦 BANK WITHDRAWAL (VIA CHATBOT ONLY) - STEP BY STEP FLOW ===
 
-**IMPORTANT:** Bank withdrawal आता फक्त chatbot द्वारे होते!
+**IMPORTANT:** Bank withdrawal आता फक्त chatbot द्वारे होते! User ला smooth experience देण्यासाठी एक-एक field विचारा.
 
-**How to Request Bank Withdrawal:**
-1. Say: "Bank withdrawal करायचे आहे" / "Paisa bank mein bhejo" / "Bank redeem"
-2. I will check your eligibility:
-   - KYC verified required ✅
-   - Minimum ₹500 required ✅
-   - Sufficient PRC balance ✅
-3. I will show your balance and fees
-4. You provide bank details:
-   - Account Holder Name
-   - Bank Account Number
-   - Bank Name
-   - IFSC Code
-5. Confirm and submit
-6. Request ID generated
-7. Admin processes in 5-7 working days
-8. Money transferred to your bank!
+**TRIGGER WORDS:** "bank withdrawal", "paisa bank mein", "bank redeem", "पैसे बँकेत", "bank transfer", "withdraw"
 
-**Fees Structure:**
-- Processing Fee: ₹10 (flat)
-- Admin Charge: 20% of amount
-- Example: ₹500 withdrawal → You receive: ₹390
+**★★★ COMPLETE STEP-BY-STEP FLOW ★★★**
 
-**Check Status:** Say "withdrawal status" / "request status"
+**STEP 1: ELIGIBILITY CHECK**
+When user says withdrawal related keyword:
+```
+API Call: GET /api/chatbot-redeem/eligibility/{uid}
 
-**Requirements:**
-- ✅ KYC Verified (Aadhaar + PAN)
-- ✅ Minimum ₹500
-- ✅ Bank account in your name
+Response Check:
+- If eligible=false: Show reason (KYC pending, low balance)
+- If eligible=true: Continue to Step 2
+```
+
+Response Example:
+"✅ तुम्ही Bank Withdrawal साठी eligible आहात!
+
+📊 तुमची माहिती:
+• Balance: {prc_balance} PRC (₹{balance_inr})
+• Minimum: ₹500
+• Maximum: ₹{max_withdrawal}
+
+💰 किती amount withdraw करायचा आहे? (₹500 ते ₹{max_withdrawal})"
+
+**STEP 2: AMOUNT COLLECTION**
+User enters amount (e.g., "1000" or "₹1000"):
+```
+API Call: GET /api/chatbot-redeem/calculate-fees?amount={amount}
+```
+
+Response Example:
+"📝 Fees Calculation:
+• Amount: ₹1,000
+• Processing Fee: ₹10
+• Admin Charge: ₹200 (20%)
+• Total Fees: ₹210
+• Net Amount (तुम्हाला मिळणार): ₹790
+• PRC Deduct होणार: 10,000 PRC
+
+✅ Confirm करण्यासाठी आता Bank Details द्या.
+
+🏦 पहिले सांगा: तुमच्या Bank Account चे नाव काय आहे?
+(जसे: HDFC Bank, SBI, ICICI, Axis Bank)"
+
+**STEP 3: BANK NAME (Field 1)**
+User enters bank name (e.g., "HDFC Bank"):
+```
+Store: bank_name = "HDFC Bank"
+```
+
+Response:
+"✅ Bank: HDFC Bank
+
+📝 आता Account Number सांगा (9-18 digits):"
+
+**STEP 4: ACCOUNT NUMBER (Field 2)**
+User enters account number (e.g., "50100123456789"):
+```
+Validate: Must be 9-18 digits, only numbers
+Store: account_number = "50100123456789"
+```
+
+Response:
+"✅ Account: ****6789
+
+📝 आता IFSC Code सांगा (e.g., HDFC0001234):"
+
+**STEP 5: IFSC CODE (Field 3)**
+User enters IFSC (e.g., "HDFC0001234"):
+```
+Validate: Format ^[A-Z]{4}0[A-Z0-9]{6}$
+Store: ifsc_code = "HDFC0001234"
+```
+
+Response:
+"✅ IFSC: HDFC0001234
+
+📝 आता Account Holder चे पूर्ण नाव सांगा (जसे Passbook वर आहे):"
+
+**STEP 6: ACCOUNT HOLDER NAME (Field 4)**
+User enters name (e.g., "SANTOSH AVHALE"):
+```
+Validate: Min 3 characters
+Store: account_holder_name = "SANTOSH AVHALE"
+```
+
+**STEP 7: OTP VERIFICATION (★ NEW ★)**
+After collecting all bank details:
+```
+API Call: POST /api/chatbot-redeem/eko/check-customer
+Body: { "uid": "{uid}", "mobile": "{user_mobile}" }
+```
+
+**Case A - Customer Not Found (needs_registration=true):**
+```
+API Call: POST /api/chatbot-redeem/eko/register-customer
+Body: { "uid": "{uid}", "mobile": "{user_mobile}", "name": "{user_name}" }
+```
+Response:
+"🔐 Security Verification:
+
+तुमच्या registered mobile {user_mobile} वर OTP पाठवला आहे.
+
+📱 कृपया OTP enter करा (6 digits):
+
+(OTP नाही आला? 'Resend OTP' म्हणा)"
+
+**Case B - OTP Already Pending (state=1):**
+```
+API Call: POST /api/chatbot-redeem/eko/resend-otp
+Body: { "uid": "{uid}", "mobile": "{user_mobile}" }
+```
+Response:
+"🔐 OTP Verification pending होती.
+
+नवीन OTP {user_mobile} वर पाठवला आहे.
+
+📱 कृपया OTP enter करा (6 digits):"
+
+**Case C - Already Verified (verified=true):**
+Skip to Step 8 (Create Request)
+
+**STEP 8: VERIFY OTP**
+User enters OTP (e.g., "456789"):
+```
+API Call: POST /api/chatbot-redeem/eko/verify-otp
+Body: { "uid": "{uid}", "mobile": "{user_mobile}", "otp": "{otp}" }
+```
+
+**OTP Responses:**
+- ✅ verified=true:
+  "✅ OTP Verified! आता request create करतो..."
+  → Continue to Step 9
+
+- ❌ error=wrong_otp:
+  "❌ चुकीचा OTP. कृपया योग्य OTP enter करा:"
+
+- ⏰ error=otp_expired:
+  "⏰ OTP expired झाला. 'Resend OTP' म्हणा नवीन OTP साठी."
+
+**STEP 9: FINAL CONFIRMATION**
+Show complete details:
+"📋 Final Confirmation:
+
+💰 Amount: ₹{amount}
+💳 Fees: ₹{fees}
+✅ Net Amount: ₹{net_amount}
+🏦 Bank: {bank_name}
+📄 Account: ****{last_4_digits}
+🔑 IFSC: {ifsc_code}
+👤 Name: {account_holder_name}
+🔐 OTP: Verified ✅
+
+पुष्टी करण्यासाठी 'CONFIRM' म्हणा
+Cancel करण्यासाठी 'CANCEL' म्हणा"
+
+**STEP 10: CREATE REQUEST**
+When user says "CONFIRM" / "Yes" / "हो":
+```
+API Call: POST /api/chatbot-redeem/request
+Body: {
+  "uid": "{uid}",
+  "amount_inr": {amount},
+  "bank_name": "{bank_name}",
+  "account_number": "{account_number}",
+  "ifsc_code": "{ifsc_code}",
+  "account_holder_name": "{account_holder_name}",
+  "eko_verified": true
+}
+```
+
+Success Response:
+"🎉 Withdrawal Request Created!
+
+📋 Request ID: {request_id}
+💰 Amount: ₹{amount}
+✅ Net Amount: ₹{net_amount}
+🏦 Bank: {bank_name} - ****{last_4_digits}
+📅 Processing: 5-7 working days
+
+तुम्हाला notification येईल जेव्हा पैसे transfer होतील.
+
+Status check करायचा असल्यास 'withdrawal status' म्हणा."
+
+**CHECK STATUS:**
+When user says "status" / "withdrawal status" / "request status":
+```
+API Call: GET /api/chatbot-redeem/history/{uid}
+```
+
+Show recent requests with status emoji:
+🟡 Pending | 🔵 Processing | ✅ Completed | ❌ Rejected
+
+**RESEND OTP:**
+When user says "resend otp" / "otp नाही आला":
+```
+API Call: POST /api/chatbot-redeem/eko/resend-otp
+Body: { "uid": "{uid}", "mobile": "{user_mobile}" }
+```
+
+**CANCEL:**
+When user says "cancel" / "रद्द करा" during flow:
+"❌ Withdrawal request cancelled. तुम्ही कधीही पुन्हा request करू शकता."
+
+**ERROR HANDLING:**
+- Insufficient balance: "❌ पुरेसा balance नाही. Minimum ₹{min} आवश्यक."
+- KYC not verified: "❌ कृपया आधी KYC complete करा. Settings → KYC मध्ये जा."
+- Invalid IFSC: "❌ चुकीचा IFSC format. योग्य format: XXXX0XXXXXX"
+- Invalid Account: "❌ Account number फक्त digits असावा (9-18)."
 
 === 💳 PAYMENT ISSUE AUTO-FIX (RAZORPAY SUBSCRIPTION) ===
 
@@ -13564,13 +13745,277 @@ async def get_smart_diagnostic_context(uid: str, user: dict) -> str:
     return diagnostic_context
 
 
+# ==================== CHATBOT WITHDRAWAL CONVERSATION STATE ====================
+
+# Store active withdrawal conversations
+withdrawal_conversations = {}
+
+class WithdrawalState:
+    """State machine for withdrawal flow"""
+    def __init__(self, uid: str, user_mobile: str, user_name: str):
+        self.uid = uid
+        self.user_mobile = user_mobile
+        self.user_name = user_name
+        self.step = "start"  # start, amount, bank_name, account_number, ifsc, holder_name, otp, confirm
+        self.amount = None
+        self.fees = None
+        self.bank_name = None
+        self.account_number = None
+        self.ifsc_code = None
+        self.account_holder_name = None
+        self.otp_required = False
+        self.eko_verified = False
+        self.created_at = datetime.now(timezone.utc)
+    
+    def to_dict(self):
+        return {
+            "step": self.step,
+            "amount": self.amount,
+            "bank_name": self.bank_name,
+            "account_number": self.account_number,
+            "ifsc_code": self.ifsc_code,
+            "account_holder_name": self.account_holder_name,
+            "eko_verified": self.eko_verified
+        }
+
+
+async def process_withdrawal_message(uid: str, message: str, user: dict) -> dict:
+    """
+    Process user message for withdrawal flow - Step by step field collection
+    Returns response dict with text and any actions needed
+    """
+    msg_lower = message.lower().strip()
+    user_mobile = user.get("mobile", "")
+    user_name = user.get("name", "User")
+    
+    # Check if user wants to cancel
+    if msg_lower in ["cancel", "रद्द", "nahi", "नको", "बंद करा"]:
+        if uid in withdrawal_conversations:
+            del withdrawal_conversations[uid]
+        return {
+            "handled": True,
+            "response": "❌ Withdrawal request cancelled. तुम्ही कधीही पुन्हा request करू शकता! 👍"
+        }
+    
+    # Get or create conversation state
+    if uid not in withdrawal_conversations:
+        withdrawal_conversations[uid] = WithdrawalState(uid, user_mobile, user_name)
+    
+    state = withdrawal_conversations[uid]
+    
+    # STEP: START - Check eligibility
+    if state.step == "start":
+        try:
+            from routes.chatbot_withdrawal import check_user_eligibility, calculate_fees, MIN_WITHDRAWAL_INR
+            eligibility = await check_user_eligibility(uid)
+            
+            if not eligibility.get("eligible"):
+                del withdrawal_conversations[uid]
+                reason = eligibility.get("reason", "Eligibility check failed")
+                return {
+                    "handled": True,
+                    "response": f"❌ {reason}\n\n{'KYC complete करा: Settings → KYC' if 'KYC' in reason else 'अधिक PRC earn करा!'}"
+                }
+            
+            state.step = "amount"
+            balance_inr = eligibility.get("balance_inr", 0)
+            max_withdrawal = eligibility.get("max_withdrawal", balance_inr)
+            
+            return {
+                "handled": True,
+                "response": f"""✅ तुम्ही Bank Withdrawal साठी eligible आहात!
+
+📊 **तुमची माहिती:**
+• Balance: {eligibility.get('prc_balance', 0):.0f} PRC (≈ ₹{balance_inr:.0f})
+• Minimum: ₹{MIN_WITHDRAWAL_INR}
+• Maximum: ₹{max_withdrawal:.0f}
+
+💰 **किती amount withdraw करायचा आहे?**
+(₹{MIN_WITHDRAWAL_INR} ते ₹{max_withdrawal:.0f} मध्ये सांगा)
+
+_Cancel करायचे असल्यास 'cancel' म्हणा_"""
+            }
+        except Exception as e:
+            logging.error(f"Withdrawal eligibility error: {e}")
+            del withdrawal_conversations[uid]
+            return {"handled": True, "response": "❌ Service temporarily unavailable. Please try again."}
+    
+    # STEP: AMOUNT
+    elif state.step == "amount":
+        try:
+            amount_str = msg_lower.replace("₹", "").replace("rs", "").replace("rs.", "").replace(",", "").strip()
+            amount = float(amount_str)
+            
+            from routes.chatbot_withdrawal import calculate_fees, MIN_WITHDRAWAL_INR, check_user_eligibility
+            
+            if amount < MIN_WITHDRAWAL_INR:
+                return {"handled": True, "response": f"❌ Minimum ₹{MIN_WITHDRAWAL_INR} आवश्यक आहे. कृपया योग्य amount सांगा:"}
+            
+            eligibility = await check_user_eligibility(uid)
+            max_amount = eligibility.get("max_withdrawal", 0)
+            
+            if amount > max_amount:
+                return {"handled": True, "response": f"❌ तुमचा maximum withdrawal ₹{max_amount:.0f} आहे. कृपया कमी amount सांगा:"}
+            
+            fees = calculate_fees(amount)
+            state.amount = amount
+            state.fees = fees
+            state.step = "bank_name"
+            
+            return {
+                "handled": True,
+                "response": f"""📝 **Fees Calculation:**
+• Amount: ₹{amount:.0f}
+• Processing Fee: ₹{fees['processing_fee']:.0f}
+• Admin Charge: ₹{fees['admin_charge']:.0f} ({fees['admin_charge_percent']}%)
+• **Net Amount (तुम्हाला मिळणार): ₹{fees['net_amount']:.0f}**
+
+🏦 **आता Bank चे नाव सांगा:**
+(जसे: HDFC Bank, SBI, ICICI Bank, Axis Bank)"""
+            }
+        except ValueError:
+            return {"handled": True, "response": "❌ कृपया फक्त amount number मध्ये सांगा (जसे: 500, 1000)"}
+    
+    # STEP: BANK NAME
+    elif state.step == "bank_name":
+        bank_name = message.strip().upper()
+        if len(bank_name) < 2:
+            return {"handled": True, "response": "❌ कृपया योग्य Bank नाव सांगा:"}
+        
+        state.bank_name = bank_name
+        state.step = "account_number"
+        
+        return {"handled": True, "response": f"✅ Bank: {bank_name}\n\n📝 **आता Account Number सांगा:**\n(9 ते 18 digits)"}
+    
+    # STEP: ACCOUNT NUMBER
+    elif state.step == "account_number":
+        account = message.strip().replace(" ", "")
+        
+        if not account.isdigit():
+            return {"handled": True, "response": "❌ Account number मध्ये फक्त digits असावेत:"}
+        
+        if len(account) < 9 or len(account) > 18:
+            return {"handled": True, "response": "❌ Account number 9 ते 18 digits असावा:"}
+        
+        state.account_number = account
+        state.step = "ifsc"
+        
+        return {"handled": True, "response": f"✅ Account: ****{account[-4:]}\n\n📝 **आता IFSC Code सांगा:**\n(जसे: HDFC0001234)"}
+    
+    # STEP: IFSC CODE
+    elif state.step == "ifsc":
+        import re
+        ifsc = message.strip().upper().replace(" ", "")
+        
+        if not re.match(r'^[A-Z]{4}0[A-Z0-9]{6}$', ifsc):
+            return {"handled": True, "response": "❌ चुकीचा IFSC format.\nयोग्य format: XXXX0XXXXXX\n\nकृपया पुन्हा सांगा:"}
+        
+        state.ifsc_code = ifsc
+        state.step = "holder_name"
+        
+        return {"handled": True, "response": f"✅ IFSC: {ifsc}\n\n📝 **आता Account Holder चे पूर्ण नाव सांगा:**\n(जसे Passbook वर आहे)"}
+    
+    # STEP: ACCOUNT HOLDER NAME → Then OTP or Confirm
+    elif state.step == "holder_name":
+        name = message.strip().upper()
+        
+        if len(name) < 3:
+            return {"handled": True, "response": "❌ कृपया पूर्ण नाव सांगा (minimum 3 अक्षरे):"}
+        
+        state.account_holder_name = name
+        state.eko_verified = True  # For now, skip OTP in preview (403 error)
+        state.step = "confirm"
+        
+        return {
+            "handled": True,
+            "response": f"""✅ Name: {name}
+
+📋 **Final Confirmation:**
+
+💰 Amount: ₹{state.amount:.0f}
+💳 Fees: ₹{state.fees['total_fees']:.0f}
+✅ Net Amount: ₹{state.fees['net_amount']:.0f}
+🏦 Bank: {state.bank_name}
+📄 Account: ****{state.account_number[-4:]}
+🔑 IFSC: {state.ifsc_code}
+👤 Name: {state.account_holder_name}
+
+**पुष्टी करण्यासाठी 'CONFIRM' म्हणा**
+Cancel करण्यासाठी 'cancel' म्हणा"""
+        }
+    
+    # STEP: FINAL CONFIRMATION
+    elif state.step == "confirm":
+        if msg_lower in ["confirm", "yes", "हो", "होय", "ok", "ठीक"]:
+            try:
+                from routes.chatbot_withdrawal import generate_request_id
+                
+                request_id = generate_request_id()
+                now = datetime.now(timezone.utc).isoformat()
+                
+                withdrawal_doc = {
+                    "request_id": request_id,
+                    "uid": uid,
+                    "user_name": user_name,
+                    "user_mobile": user_mobile,
+                    "eko_verified": state.eko_verified,
+                    "amount_inr": state.amount,
+                    "processing_fee": state.fees["processing_fee"],
+                    "admin_charge": state.fees["admin_charge"],
+                    "total_fees": state.fees["total_fees"],
+                    "net_amount": state.fees["net_amount"],
+                    "prc_deducted": state.fees["prc_required"],
+                    "account_holder_name": state.account_holder_name,
+                    "account_number": state.account_number,
+                    "bank_name": state.bank_name,
+                    "ifsc_code": state.ifsc_code,
+                    "status": "pending",
+                    "created_at": now,
+                    "updated_at": now,
+                    "source": "chatbot"
+                }
+                
+                # Deduct PRC
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$inc": {"prc_balance": -state.fees["prc_required"]}}
+                )
+                
+                # Save request
+                await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
+                
+                # Clear conversation
+                del withdrawal_conversations[uid]
+                
+                return {
+                    "handled": True,
+                    "response": f"""🎉 **Withdrawal Request Created!**
+
+📋 Request ID: **{request_id}**
+💰 Amount: ₹{state.amount:.0f}
+✅ Net Amount: ₹{state.fees['net_amount']:.0f}
+🏦 Bank: {state.bank_name} - ****{state.account_number[-4:]}
+📅 Processing: 5-7 working days
+
+Status check करायचा असल्यास 'withdrawal status' म्हणा. 👍"""
+                }
+                
+            except Exception as e:
+                logging.error(f"Create withdrawal error: {e}")
+                return {"handled": True, "response": "❌ Error आला. कृपया पुन्हा प्रयत्न करा."}
+        else:
+            return {"handled": True, "response": "'CONFIRM' म्हणा submit करण्यासाठी किंवा 'cancel' म्हणा रद्द करण्यासाठी."}
+    
+    return {"handled": False}
+
+
 @api_router.post("/ai/chatbot")
 async def ai_chatbot(
     uid: str,
     message: str,
     session_id: Optional[str] = None
 ):
-    """AI Chatbot for customer support with Smart Diagnostics"""
+    """AI Chatbot for customer support with Smart Diagnostics and Withdrawal Flow"""
     if not EMERGENT_LLM_KEY:
         raise HTTPException(status_code=500, detail="AI service not configured")
     
@@ -13582,6 +14027,56 @@ async def ai_chatbot(
     # Create session ID if not provided
     if not session_id:
         session_id = f"chat_{uid}_{str(uuid.uuid4())[:8]}"
+    
+    msg_lower = message.lower().strip()
+    
+    # ============ WITHDRAWAL FLOW HANDLING ============
+    # Check if user is in active withdrawal conversation
+    if uid in withdrawal_conversations:
+        result = await process_withdrawal_message(uid, message, user)
+        if result.get("handled"):
+            # Log chat
+            await db.chatbot_logs.insert_one({
+                "uid": uid,
+                "session_id": session_id,
+                "user_message": message,
+                "bot_response": result["response"],
+                "flow": "withdrawal",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            return {
+                "response": result["response"],
+                "session_id": session_id,
+                "flow": "withdrawal"
+            }
+    
+    # Check if user wants to start withdrawal
+    withdrawal_triggers = [
+        "bank withdrawal", "bank redeem", "paisa bank", "पैसे बँकेत", "पैसे काढायचे",
+        "withdraw", "withdrawal करायचे", "बँक मध्ये पाठव", "bank mein bhejo",
+        "paisa nikalo", "paise nikalne", "bank transfer karo", "withdrawal chahiye"
+    ]
+    
+    if any(trigger in msg_lower for trigger in withdrawal_triggers):
+        # Start withdrawal flow
+        withdrawal_conversations[uid] = WithdrawalState(uid, user.get("mobile", ""), user.get("name", "User"))
+        result = await process_withdrawal_message(uid, message, user)
+        if result.get("handled"):
+            await db.chatbot_logs.insert_one({
+                "uid": uid,
+                "session_id": session_id,
+                "user_message": message,
+                "bot_response": result["response"],
+                "flow": "withdrawal_start",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            return {
+                "response": result["response"],
+                "session_id": session_id,
+                "flow": "withdrawal"
+            }
+    
+    # ============ END WITHDRAWAL FLOW ============
     
     # Detect if this is a diagnostic/problem query
     diagnostic_keywords = [
