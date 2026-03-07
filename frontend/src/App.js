@@ -11,7 +11,8 @@ import ToastContainer from "@/components/ToastContainer";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import AIContextualHelp from "@/components/AIContextualHelp";
+// Lazy load heavy components
+const AIContextualHelp = lazy(() => import("@/components/AIContextualHelp"));
 // HoliCelebration removed as per user request
 // import HoliCelebration from "@/components/HoliCelebration";
 
@@ -412,7 +413,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
           <>
             <TopBar user={user} onLogout={handleLogout} />
             <BottomNav />
-            <AIContextualHelp user={user} />
+            <Suspense fallback={null}>
+              <AIContextualHelp user={user} />
+            </Suspense>
           </>
         )}
         {/* Admin Popup Message - Shows for logged-in users only */}

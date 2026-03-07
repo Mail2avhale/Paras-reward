@@ -373,9 +373,15 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       }
     } catch (error) {
       console.error('Chatbot error:', error);
+      const errorMessage = error.response?.status === 404 
+        ? 'कृपया पुन्हा login करा आणि try करा.' 
+        : error.response?.status === 500
+        ? 'Server busy आहे. कृपया थोड्या वेळाने try करा.'
+        : 'Connection issue. कृपया पुन्हा try करा.';
+      
       setMessages(prev => [...prev, {
         type: 'bot',
-        text: 'Sorry, there was a technical issue. Please try again. 🔄',
+        text: `⚠️ ${errorMessage}`,
         timestamp: new Date(),
         isError: true
       }]);
@@ -479,118 +485,84 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
         data-testid="chatbot-container"
       >
-        <Card className="h-full max-h-[70vh] sm:max-h-[550px] shadow-2xl border-0 overflow-hidden flex flex-col rounded-2xl">
-          {/* Enhanced Header */}
+        <Card className="h-full max-h-[75vh] sm:max-h-[600px] shadow-2xl border-0 overflow-hidden flex flex-col rounded-2xl">
+          {/* Compact Header */}
           <div 
-            className="text-white p-4 flex-shrink-0 relative overflow-hidden"
+            className="text-white px-3 py-2 flex-shrink-0"
             style={{
               background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%)',
             }}
           >
-            {/* Animated background pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-2xl"></div>
-            </div>
-            
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3">
-                <motion.div 
-                  className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden bg-white"
-                  animate={{ rotate: [0, 3, -3, 0] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-white">
                   <img 
                     src="/chatbot-icon.png" 
                     alt="PRC Bot" 
-                    className="w-12 h-12 object-contain"
+                    className="w-9 h-9 object-contain"
                   />
-                </motion.div>
+                </div>
                 <div>
-                  <h3 className="font-bold text-xl tracking-tight flex items-center gap-2">
+                  <h3 className="font-bold text-base flex items-center gap-1.5">
                     PRC Bot
-                    <span className="text-[10px] bg-white/25 px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide">AI Assistant</span>
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                   </h3>
-                  <p className="text-sm text-white/80 flex items-center gap-2 mt-0.5">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
-                      <span className="font-medium">Online</span>
-                    </span>
-                    <span className="text-white/50">•</span>
-                    <span className="flex items-center gap-1">
-                      <span>🎤</span>
-                      <span className="font-medium">Voice Ready</span>
-                    </span>
-                  </p>
+                  <p className="text-xs text-white/70">AI Assistant • Voice Ready</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                {/* Voice Toggle */}
+              <div className="flex items-center gap-0.5">
                 <button 
                   onClick={() => setVoiceEnabled(!voiceEnabled)}
-                  className={`p-2.5 rounded-xl transition-all ${voiceEnabled ? 'bg-white/25' : 'bg-white/10'} hover:bg-white/30`}
+                  className={`p-2 rounded-lg transition-all ${voiceEnabled ? 'bg-white/25' : 'bg-white/10'}`}
                   title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
                 >
-                  {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                  {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                 </button>
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-2.5 hover:bg-white/25 rounded-xl transition-all"
+                  className="p-2 hover:bg-white/20 rounded-lg"
                 >
-                  {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 <button 
                   onClick={() => { setIsOpen(false); stopSpeaking(); }}
-                  className="p-2.5 hover:bg-white/25 rounded-xl transition-all"
+                  className="p-2 hover:bg-white/20 rounded-lg"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Enhanced Proactive Tips Banner */}
+          {/* Compact Tips Banner */}
           {proactiveTips.length > 0 && messages.length <= 1 && (
-            <div className="px-4 py-3 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 border-b-2 border-amber-200/50">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Lightbulb className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">💡 AI Tip for you</p>
-                  <p className="text-sm font-semibold text-amber-900 mt-0.5">{proactiveTips[0]?.text}</p>
-                  {proactiveTips[0]?.action && (
-                    <button 
-                      onClick={() => proactiveTips[0]?.route && handleActionClick(proactiveTips[0].route)}
-                      className="mt-2 text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 transition-colors"
-                    >
-                      {proactiveTips[0].action} <ArrowRight className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
+            <div className="px-3 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200/50">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💡</span>
+                <p className="text-xs font-medium text-amber-800 flex-1">{proactiveTips[0]?.text}</p>
               </div>
             </div>
           )}
 
-          {/* Enhanced Messages Area */}
-          <div className={`flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 via-white to-slate-50 space-y-4 min-h-0 ${isExpanded ? '' : 'max-h-[220px] sm:max-h-[300px]'}`}>
+          {/* Messages Area */}
+          <div className={`flex-1 overflow-y-auto p-3 bg-gradient-to-b from-slate-50 to-white space-y-3 min-h-0 ${isExpanded ? '' : 'max-h-[280px] sm:max-h-[350px]'}`}>
             {messages.map((msg, index) => (
               <motion.div 
                 key={index}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex items-start gap-3 max-w-[90%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
+                <div className={`flex items-start gap-2 max-w-[88%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     msg.type === 'user' 
                       ? 'bg-gradient-to-br from-purple-500 to-indigo-600' 
                       : 'bg-gradient-to-br from-indigo-500 to-purple-600'
                   }`}>
                     {msg.type === 'user' ? (
-                      <User className="w-5 h-5 text-white" />
+                      <User className="w-4 h-4 text-white" />
                     ) : (
-                      <Bot className="w-5 h-5 text-white" />
+                      <Bot className="w-4 h-4 text-white" />
                     )}
                   </div>
                   <div className="flex-1">
@@ -740,62 +712,54 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Enhanced Quick Questions */}
+          {/* Compact Quick Questions */}
           {messages.length <= 1 && (
-            <div className="px-4 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-t-2 flex-shrink-0">
-              <p className="text-xs font-bold text-gray-600 mb-3 flex items-center gap-2 uppercase tracking-wide">
-                <Target className="w-4 h-4 text-purple-500" /> 
-                🚀 Quick Start - Ask me anything!
-              </p>
-              <div className="grid grid-cols-2 gap-2.5">
+            <div className="px-3 py-2 bg-gray-50 border-t flex-shrink-0">
+              <p className="text-xs font-medium text-gray-500 mb-2">🚀 Quick questions:</p>
+              <div className="grid grid-cols-2 gap-1.5">
                 {quickQuestions.map((q, i) => (
-                  <motion.button
+                  <button
                     key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
                     onClick={() => handleQuickQuestion(q.text)}
-                    className="text-left p-3 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 hover:shadow-md transition-all text-sm flex items-center gap-2.5"
+                    className="text-left p-2 bg-white rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all text-xs flex items-center gap-1.5"
                   >
-                    <span className="text-lg">{q.icon}</span>
-                    <span className="text-gray-800 font-semibold truncate">{q.text}</span>
-                  </motion.button>
+                    <span>{q.icon}</span>
+                    <span className="text-gray-700 truncate">{q.text}</span>
+                  </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Enhanced Input Area */}
-          <div className="p-4 bg-white border-t-2 flex-shrink-0">
-            <div className="flex gap-2.5">
+          {/* Compact Input Area */}
+          <div className="p-3 bg-white border-t flex-shrink-0">
+            <div className="flex gap-2">
               {/* Voice Recording Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isLoading}
-                className={`p-3.5 rounded-xl transition-all shadow-sm ${
+                className={`p-2.5 rounded-lg transition-all ${
                   isRecording 
-                    ? 'bg-red-500 text-white animate-pulse shadow-red-200' 
-                    : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 hover:from-purple-100 hover:to-indigo-100 hover:text-purple-600 border border-gray-200'
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-600'
                 }`}
                 title={isRecording ? 'Stop recording' : 'Start voice input'}
               >
                 {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </motion.button>
+              </button>
               
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Type or speak your message..."
-                className="flex-1 rounded-xl border-2 border-gray-200 focus:border-purple-400 focus:ring-purple-400 text-sm font-medium"
+                placeholder="Message..."
+                className="flex-1 rounded-lg border-gray-200 focus:border-purple-400 text-sm"
                 disabled={isLoading || isRecording}
               />
               <Button 
                 onClick={() => sendMessage()}
                 disabled={isLoading || !inputMessage.trim() || isRecording}
-                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-5 shadow-lg shadow-purple-200 transition-all"
+                className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4"
               >
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -804,9 +768,6 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 )}
               </Button>
             </div>
-            <p className="text-[11px] text-gray-500 text-center mt-3 font-medium">
-              🎤 Voice enabled • <span className="text-purple-600">English</span>, <span className="text-orange-600">हिंदी</span>, <span className="text-green-600">मराठी</span> supported
-            </p>
           </div>
         </Card>
       </motion.div>
