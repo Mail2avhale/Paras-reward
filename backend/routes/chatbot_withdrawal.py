@@ -107,9 +107,11 @@ class EkoVerifyOTPRequest(BaseModel):
 
 class AdminProcessRequest(BaseModel):
     admin_uid: str
-    action: str  # 'approve', 'reject', 'process_dmt'
+    action: str  # 'approve', 'reject', 'process_dmt', 'execute_dmt'
     rejection_reason: Optional[str] = None
     dmt_transaction_id: Optional[str] = None
+    utr_number: Optional[str] = None
+    transfer_mode: Optional[str] = "IMPS"  # IMPS or NEFT
 
 # ==================== EKO HELPER FUNCTIONS ====================
 
@@ -915,3 +917,382 @@ async def get_withdrawal_stats():
             "count": 0
         }
     }
+
+
+# ==================== EKO DMT TRANSFER EXECUTION ====================
+
+@router.post("/admin/execute-dmt/{request_id}")
+async def execute_dmt_transfer(request_id: str, request: Request):
+    """
+    Execute Eko DMT bank transfer for a withdrawal request.
+    
+    This endpoint:
+    1. Gets the approved withdrawal request
+    2. Calls Eko DMT API to transfer money
+    3. On success: Updates request with UTR, marks as completed
+    4. On failure: Returns error details, keeps status as processing
+    
+    Flow: Admin clicks "Complete" → This API → Eko DMT → Bank → UTR
+    """
+    try:
+        data = await request.json()
+        admin_uid = data.get("admin_uid", "")
+        transfer_mode = data.get("transfer_mode", "IMPS")  # IMPS or NEFT
+        
+        # Get the withdrawal request
+        request_doc = await db.chatbot_withdrawal_requests.find_one({"request_id": request_id})
+        
+        if not request_doc:
+            raise HTTPException(status_code=404, detail="Withdrawal request not found")
+        
+        # Verify status
+        if request_doc.get("status") not in ["pending", "processing"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot process request with status: {request_doc.get('status')}"
+            )
+        
+        # Get transfer details
+        user_mobile = request_doc.get("user_mobile", "")
+        amount = request_doc.get("net_amount", 0)  # Net amount after fees
+        account_number = request_doc.get("account_number", "")
+        ifsc_code = request_doc.get("ifsc_code", "")
+        account_holder = request_doc.get("account_holder", "")
+        recipient_id = request_doc.get("eko_recipient_id", "")
+        
+        if not all([user_mobile, amount, account_number, ifsc_code]):
+            raise HTTPException(
+                status_code=400,
+                detail="Missing bank details. Cannot process transfer."
+            )
+        
+        # Check minimum amount
+        if amount < 100:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Transfer amount ₹{amount} is below minimum ₹100"
+            )
+        
+        now = datetime.now(timezone.utc)
+        
+        # ============ STEP 1: Add/Verify Recipient if not exists ============
+        if not recipient_id:
+            logging.info(f"[DMT-EXECUTE] Adding recipient for {request_id}")
+            
+            recipient_result = await _add_eko_recipient(
+                sender_mobile=user_mobile,
+                account_number=account_number,
+                ifsc_code=ifsc_code,
+                account_holder=account_holder
+            )
+            
+            if not recipient_result.get("success"):
+                # Save error and return
+                await db.chatbot_withdrawal_requests.update_one(
+                    {"request_id": request_id},
+                    {"$set": {
+                        "last_dmt_attempt": now.isoformat(),
+                        "last_dmt_error": recipient_result.get("message", "Failed to add recipient"),
+                        "dmt_error_code": recipient_result.get("error_code", "RECIPIENT_ERROR")
+                    }}
+                )
+                return {
+                    "success": False,
+                    "message": f"Failed to add bank recipient: {recipient_result.get('message')}",
+                    "error_type": "RECIPIENT_ERROR",
+                    "details": recipient_result
+                }
+            
+            recipient_id = recipient_result.get("recipient_id", "")
+            
+            # Save recipient ID for future use
+            await db.chatbot_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {"eko_recipient_id": recipient_id}}
+            )
+        
+        # ============ STEP 2: Execute Money Transfer ============
+        logging.info(f"[DMT-EXECUTE] Initiating transfer for {request_id}: ₹{amount} via {transfer_mode}")
+        
+        transfer_result = await _execute_eko_transfer(
+            sender_mobile=user_mobile,
+            recipient_id=recipient_id,
+            amount=int(amount),
+            transfer_mode=transfer_mode,
+            client_ref_id=request_id
+        )
+        
+        # ============ STEP 3: Handle Result ============
+        if transfer_result.get("success"):
+            utr_number = transfer_result.get("utr_number", "")
+            eko_tid = transfer_result.get("tid", "")
+            
+            # Success! Update request as completed
+            await db.chatbot_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "completed",
+                    "utr_number": utr_number,
+                    "eko_tid": eko_tid,
+                    "dmt_status": "success",
+                    "dmt_response": transfer_result,
+                    "processed_by": admin_uid,
+                    "processed_at": now.isoformat(),
+                    "completed_at": now.isoformat(),
+                    "updated_at": now.isoformat()
+                }}
+            )
+            
+            # Update transaction log
+            await db.transactions.update_one(
+                {"reference_id": request_id},
+                {"$set": {"status": "completed", "utr_number": utr_number}}
+            )
+            
+            logging.info(f"[DMT-EXECUTE] ✅ Transfer successful: {request_id} UTR: {utr_number}")
+            
+            return {
+                "success": True,
+                "message": "Bank transfer completed successfully!",
+                "data": {
+                    "request_id": request_id,
+                    "utr_number": utr_number,
+                    "eko_tid": eko_tid,
+                    "amount": amount,
+                    "transfer_mode": transfer_mode,
+                    "bank_account": f"****{account_number[-4:]}" if account_number else "",
+                    "ifsc": ifsc_code
+                }
+            }
+        else:
+            # Transfer failed
+            error_message = transfer_result.get("message", "Transfer failed")
+            error_code = transfer_result.get("error_code", "TRANSFER_FAILED")
+            
+            # Save error details but keep status as processing for retry
+            await db.chatbot_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "last_dmt_attempt": now.isoformat(),
+                    "last_dmt_error": error_message,
+                    "dmt_error_code": error_code,
+                    "dmt_response": transfer_result,
+                    "updated_at": now.isoformat()
+                },
+                "$inc": {"dmt_attempt_count": 1}}
+            )
+            
+            logging.error(f"[DMT-EXECUTE] ❌ Transfer failed: {request_id} - {error_message}")
+            
+            return {
+                "success": False,
+                "message": error_message,
+                "error_type": error_code,
+                "details": transfer_result,
+                "retry_allowed": True
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[DMT-EXECUTE] Exception: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transfer execution error: {str(e)}")
+
+
+async def _add_eko_recipient(sender_mobile: str, account_number: str, ifsc_code: str, account_holder: str) -> dict:
+    """Add a recipient/beneficiary in Eko system"""
+    try:
+        headers = get_eko_headers()
+        
+        # Eko Add Recipient API
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/acc_ifsc:{account_number}_{ifsc_code}"
+        
+        payload = {
+            "recipient_name": account_holder,
+            "recipient_mobile": sender_mobile  # Can be same as sender
+        }
+        
+        response = requests.put(url, headers=headers, data=payload, timeout=30)
+        result = response.json()
+        
+        logging.info(f"[EKO-RECIPIENT] Response: {result}")
+        
+        # Eko response codes
+        # 0 = Success
+        # 302 = Recipient already exists
+        if result.get("response_status_id") in [0, "0"]:
+            return {
+                "success": True,
+                "recipient_id": result.get("data", {}).get("recipient_id", ""),
+                "message": "Recipient added successfully"
+            }
+        elif result.get("response_status_id") in [302, "302"]:
+            # Already exists - get recipient ID
+            recipient_id = result.get("data", {}).get("recipient_id", "")
+            return {
+                "success": True,
+                "recipient_id": recipient_id,
+                "message": "Recipient already exists"
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message", "Failed to add recipient"),
+                "error_code": result.get("response_status_id", "UNKNOWN"),
+                "raw_response": result
+            }
+            
+    except requests.Timeout:
+        return {"success": False, "message": "Eko API timeout", "error_code": "TIMEOUT"}
+    except Exception as e:
+        return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
+
+
+async def _execute_eko_transfer(sender_mobile: str, recipient_id: str, amount: int, transfer_mode: str, client_ref_id: str) -> dict:
+    """Execute money transfer via Eko DMT API"""
+    try:
+        headers = get_eko_headers()
+        
+        # Eko Money Transfer API
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/{recipient_id}/transfer"
+        
+        # Channel mapping
+        channel = "2"  # 2 = IMPS, 1 = NEFT
+        if transfer_mode.upper() == "NEFT":
+            channel = "1"
+        
+        payload = {
+            "amount": str(amount),
+            "channel": channel,
+            "client_ref_id": client_ref_id,
+            "state": "1",  # 1 = Maharashtra (default)
+            "latlong": "0,0"  # Can be updated with actual location
+        }
+        
+        response = requests.post(url, headers=headers, data=payload, timeout=60)
+        result = response.json()
+        
+        logging.info(f"[EKO-TRANSFER] Response for {client_ref_id}: {result}")
+        
+        # Eko Transfer Response Codes
+        # 0 = Success
+        # 1/2/3 = Pending (check status)
+        # Others = Failure
+        response_status = result.get("response_status_id")
+        
+        if response_status in [0, "0"]:
+            # Success
+            data = result.get("data", {})
+            return {
+                "success": True,
+                "utr_number": data.get("bank_ref_num", data.get("utr", "")),
+                "tid": data.get("tid", ""),
+                "txstatus_desc": data.get("txstatus_desc", "SUCCESS"),
+                "message": "Transfer successful",
+                "raw_response": result
+            }
+        elif response_status in [1, 2, 3, "1", "2", "3"]:
+            # Pending - need to check status
+            data = result.get("data", {})
+            return {
+                "success": False,
+                "pending": True,
+                "tid": data.get("tid", ""),
+                "message": "Transfer pending. Please check status.",
+                "error_code": "PENDING",
+                "raw_response": result
+            }
+        else:
+            # Failure
+            return {
+                "success": False,
+                "message": result.get("message", "Transfer failed"),
+                "error_code": str(response_status),
+                "raw_response": result
+            }
+            
+    except requests.Timeout:
+        return {"success": False, "message": "Transfer timeout. Please check status.", "error_code": "TIMEOUT"}
+    except Exception as e:
+        return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
+
+
+@router.post("/admin/complete-manual/{request_id}")
+async def complete_withdrawal_manual(request_id: str, request: Request):
+    """
+    Manually complete a withdrawal with UTR number.
+    Use this when transfer was done outside the system.
+    """
+    try:
+        data = await request.json()
+        admin_uid = data.get("admin_uid", "")
+        utr_number = data.get("utr_number", "").strip()
+        remarks = data.get("remarks", "")
+        
+        if not utr_number:
+            raise HTTPException(status_code=400, detail="UTR number is required")
+        
+        # Validate UTR format (12 digits)
+        cleaned_utr = ''.join(filter(str.isdigit, utr_number))
+        if len(cleaned_utr) != 12:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid UTR format. Expected 12 digits, got {len(cleaned_utr)}"
+            )
+        
+        # Get request
+        request_doc = await db.chatbot_withdrawal_requests.find_one({"request_id": request_id})
+        if not request_doc:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if request_doc.get("status") == "completed":
+            raise HTTPException(status_code=400, detail="Request already completed")
+        
+        # Check UTR uniqueness
+        existing = await db.chatbot_withdrawal_requests.find_one({
+            "utr_number": cleaned_utr,
+            "request_id": {"$ne": request_id}
+        })
+        if existing:
+            raise HTTPException(status_code=400, detail="UTR number already used for another request")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Update request
+        await db.chatbot_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "completed",
+                "utr_number": cleaned_utr,
+                "dmt_status": "manual",
+                "admin_remarks": remarks,
+                "processed_by": admin_uid,
+                "processed_at": now.isoformat(),
+                "completed_at": now.isoformat(),
+                "updated_at": now.isoformat()
+            }}
+        )
+        
+        # Update transaction log
+        await db.transactions.update_one(
+            {"reference_id": request_id},
+            {"$set": {"status": "completed", "utr_number": cleaned_utr}}
+        )
+        
+        logging.info(f"[MANUAL-COMPLETE] {request_id} marked complete with UTR: {cleaned_utr}")
+        
+        return {
+            "success": True,
+            "message": "Withdrawal marked as completed",
+            "data": {
+                "request_id": request_id,
+                "utr_number": cleaned_utr,
+                "amount": request_doc.get("net_amount")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[MANUAL-COMPLETE] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
