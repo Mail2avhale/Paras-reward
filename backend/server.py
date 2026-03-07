@@ -81,6 +81,7 @@ from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_d
 from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
+from routes.eko_aadhaar_dmt import router as eko_aadhaar_router
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -38207,6 +38208,7 @@ api_router.include_router(gift_router)
 
 # Leaderboard Router - ENABLED (only in routes/leaderboard.py)
 api_router.include_router(leaderboard_router)
+api_router.include_router(eko_aadhaar_router)
 
 # Social and Support routers removed - routes/social.py and routes/support.py deleted
 # Social and support routes exist in server.py with complete implementations

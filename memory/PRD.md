@@ -96,6 +96,10 @@ Balance check → Bank details collect → Confirm → Request ID → Admin proc
 
 ### P0 - Critical 
 - [x] **Chatbot OTP Verification Flow** - ✅ COMPLETE (March 7, 2026)
+- [x] **Aadhaar DMT v3 Implementation** - ✅ COMPLETE (March 7, 2026)
+  - Backend APIs: `/api/aadhaar-dmt/send-otp`, `/verify-otp`, `/status/{uid}`, `/limits-info`
+  - Frontend: Verification choice step (Mobile OTP vs Aadhaar OTP)
+  - Limits: Mobile OTP = ₹25,000/month, Aadhaar OTP = ₹2,00,000/month
 - [ ] **Eko DMT API Production Testing** - Preview IP `34.170.12.145` not whitelisted, production IP is whitelisted
 
 ### P1 - High Priority
@@ -162,7 +166,8 @@ Balance check → Bank details collect → Confirm → Request ID → Admin proc
 ├── server.py (38,762 lines - still needs more extraction)
 ├── routes/
 │   ├── admin_ledger.py (900 lines extracted)
-│   ├── chatbot_withdrawal.py (Eko OTP + Admin DMT)
+│   ├── chatbot_withdrawal.py (Eko OTP + Admin DMT + Customer Registration)
+│   ├── eko_aadhaar_dmt.py (NEW - Aadhaar eKYC DMT v3)
 │   ├── chatbot_payment_fix.py
 │   ├── eko_common.py (auth fixed)
 │   ├── eko_dmt_service.py (flow corrected)
@@ -176,8 +181,8 @@ Balance check → Bank details collect → Confirm → Request ID → Admin proc
 └── src/
     ├── App.js (lazy loaded AIContextualHelp)
     └── components/
-        ├── AIChatbotEnhanced.js (updated with withdrawal intent detection)
-        ├── ChatbotWithdrawalFlow.js (NEW - OTP + Bank details flow)
+        ├── AIChatbotEnhanced.js (withdrawal intent detection)
+        ├── ChatbotWithdrawalFlow.js (OTP + Aadhaar + Bank details flow)
         └── Chatbot/Chatbot.js (redesigned UI)
 
 /app/tests/e2e/

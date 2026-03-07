@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { 
   Loader2, CheckCircle, XCircle, RefreshCw, Phone, 
   Banknote, Building, User, Lock, ArrowRight, ArrowLeft,
-  AlertTriangle, Info, Shield
+  AlertTriangle, Info, Shield, CreditCard, Smartphone, Fingerprint
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,9 +29,12 @@ const MAX_OTP_ATTEMPTS = 3;
 // Step definitions for withdrawal flow
 const STEPS = {
   ELIGIBILITY: 'eligibility',
+  VERIFICATION_CHOICE: 'verification_choice',  // NEW: Choose Mobile OTP or Aadhaar
   CUSTOMER_CHECK: 'customer_check',
   REGISTRATION: 'registration',
   OTP_VERIFY: 'otp_verify',
+  AADHAAR_ENTRY: 'aadhaar_entry',  // NEW: Enter Aadhaar number
+  AADHAAR_OTP: 'aadhaar_otp',      // NEW: Verify Aadhaar OTP
   BANK_DETAILS: 'bank_details',
   AMOUNT: 'amount',
   CONFIRM: 'confirm',
@@ -76,6 +79,15 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
   
   // Withdrawal result
   const [withdrawalResult, setWithdrawalResult] = useState(null);
+  
+  // Aadhaar verification state (NEW)
+  const [verificationType, setVerificationType] = useState(null); // 'mobile' or 'aadhaar'
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarOtpRefId, setAadhaarOtpRefId] = useState('');
+  const [aadhaarVerified, setAadhaarVerified] = useState(false);
+  const [aadhaarKycName, setAadhaarKycName] = useState('');
+  const [dmtLimit, setDmtLimit] = useState(25000); // Default: ₹25,000
 
   // Cooldown timer for OTP resend
   useEffect(() => {
@@ -105,9 +117,21 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
           ...prev,
           account_holder_name: response.data.user_name || user.name || ''
         }));
-        setCurrentStep(STEPS.CUSTOMER_CHECK);
-        // Auto-check Eko customer status
-        checkEkoCustomer(response.data.mobile);
+        
+        // Check Aadhaar verification status
+        try {
+          const aadhaarStatus = await axios.get(`${API}/aadhaar-dmt/status/${user.uid}`);
+          if (aadhaarStatus.data.aadhaar_verified) {
+            setAadhaarVerified(true);
+            setDmtLimit(aadhaarStatus.data.dmt_limit || 200000);
+            setAadhaarKycName(aadhaarStatus.data.kyc_name || '');
+          }
+        } catch (e) {
+          console.log('Aadhaar status check failed, using default limit');
+        }
+        
+        // Go to verification choice step
+        setCurrentStep(STEPS.VERIFICATION_CHOICE);
       }
     } catch (err) {
       console.error('Eligibility check failed:', err);
@@ -303,6 +327,137 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
     }
   };
 
+  // ==================== AADHAAR VERIFICATION APIs ====================
+
+  const sendAadhaarOtp = async () => {
+    if (!aadhaarNumber || aadhaarNumber.replace(/\s/g, '').length !== 12) {
+      toast.error('कृपया 12 digit Aadhaar number enter करा');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API}/aadhaar-dmt/send-otp`, {
+        uid: user.uid,
+        mobile: eligibility?.mobile,
+        aadhaar_number: aadhaarNumber.replace(/\s/g, ''),
+        consent: true
+      });
+      
+      if (response.data.success) {
+        if (response.data.already_verified) {
+          // Already verified, skip to bank details
+          setAadhaarVerified(true);
+          setDmtLimit(200000);
+          toast.success('Aadhaar already verified! ₹2,00,000 limit active.');
+          setCurrentStep(STEPS.BANK_DETAILS);
+        } else if (response.data.otp_sent) {
+          setAadhaarOtpRefId(response.data.otp_ref_id || '');
+          setCurrentStep(STEPS.AADHAAR_OTP);
+          toast.success('OTP तुमच्या Aadhaar-linked mobile वर पाठवला!');
+        }
+      } else {
+        setError(response.data.message || 'Failed to send OTP');
+      }
+    } catch (err) {
+      console.error('Aadhaar OTP send failed:', err);
+      setError(err.response?.data?.detail || 'Failed to send Aadhaar OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyAadhaarOtp = async () => {
+    if (!aadhaarOtp || aadhaarOtp.length < 4) {
+      toast.error('कृपया valid OTP enter करा');
+      return;
+    }
+    
+    if (otpAttempts >= MAX_OTP_ATTEMPTS) {
+      setError(`Maximum ${MAX_OTP_ATTEMPTS} attempts exceeded. Please try again.`);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setOtpAttempts(prev => prev + 1);
+    
+    try {
+      const response = await axios.post(`${API}/aadhaar-dmt/verify-otp`, {
+        uid: user.uid,
+        mobile: eligibility?.mobile,
+        aadhaar_number: aadhaarNumber.replace(/\s/g, ''),
+        otp: aadhaarOtp,
+        otp_ref_id: aadhaarOtpRefId
+      });
+      
+      if (response.data.success && response.data.verified) {
+        setAadhaarVerified(true);
+        setDmtLimit(200000);
+        setAadhaarKycName(response.data.kyc_name || '');
+        toast.success('🎉 Aadhaar verified! ₹2,00,000/month limit unlocked!');
+        setCurrentStep(STEPS.BANK_DETAILS);
+      } else {
+        setError(response.data.message || 'Invalid OTP');
+        setAadhaarOtp('');
+      }
+    } catch (err) {
+      console.error('Aadhaar OTP verify failed:', err);
+      setError(err.response?.data?.detail || 'Verification failed');
+      setAadhaarOtp('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendAadhaarOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API}/aadhaar-dmt/resend-otp`, {
+        uid: user.uid,
+        mobile: eligibility?.mobile,
+        aadhaar_number: aadhaarNumber.replace(/\s/g, ''),
+        consent: true
+      });
+      
+      if (response.data.success && response.data.otp_sent) {
+        setOtpAttempts(0);
+        setResendCooldown(60);
+        setAadhaarOtp('');
+        setAadhaarOtpRefId(response.data.otp_ref_id || '');
+        toast.success('New OTP sent!');
+      } else {
+        setError(response.data.message || 'Failed to resend OTP');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to resend OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle verification type selection
+  const handleVerificationChoice = (type) => {
+    setVerificationType(type);
+    if (type === 'mobile') {
+      // Standard mobile OTP flow
+      setCurrentStep(STEPS.CUSTOMER_CHECK);
+      checkEkoCustomer(eligibility?.mobile);
+    } else if (type === 'aadhaar') {
+      // Aadhaar verification flow
+      if (aadhaarVerified) {
+        // Already verified, skip to bank details
+        setCurrentStep(STEPS.BANK_DETAILS);
+      } else {
+        setCurrentStep(STEPS.AADHAAR_ENTRY);
+      }
+    }
+  };
+
   const submitWithdrawal = async () => {
     // Validate all fields
     if (!bankDetails.account_holder_name || !bankDetails.account_number || 
@@ -352,14 +507,27 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
   // ==================== RENDER HELPERS ====================
 
   const renderStepIndicator = () => {
-    const steps = [
-      { key: STEPS.ELIGIBILITY, label: 'Check' },
-      { key: STEPS.CUSTOMER_CHECK, label: 'Verify' },
-      { key: STEPS.OTP_VERIFY, label: 'OTP' },
-      { key: STEPS.BANK_DETAILS, label: 'Bank' },
-      { key: STEPS.AMOUNT, label: 'Amount' },
-      { key: STEPS.CONFIRM, label: 'Confirm' }
-    ];
+    // Dynamic steps based on verification type
+    let steps;
+    if (verificationType === 'aadhaar') {
+      steps = [
+        { key: STEPS.ELIGIBILITY, label: 'Check' },
+        { key: STEPS.AADHAAR_ENTRY, label: 'Aadhaar' },
+        { key: STEPS.AADHAAR_OTP, label: 'OTP' },
+        { key: STEPS.BANK_DETAILS, label: 'Bank' },
+        { key: STEPS.AMOUNT, label: 'Amount' },
+        { key: STEPS.CONFIRM, label: 'Confirm' }
+      ];
+    } else {
+      steps = [
+        { key: STEPS.ELIGIBILITY, label: 'Check' },
+        { key: STEPS.CUSTOMER_CHECK, label: 'Verify' },
+        { key: STEPS.OTP_VERIFY, label: 'OTP' },
+        { key: STEPS.BANK_DETAILS, label: 'Bank' },
+        { key: STEPS.AMOUNT, label: 'Amount' },
+        { key: STEPS.CONFIRM, label: 'Confirm' }
+      ];
+    }
     
     const currentIndex = steps.findIndex(s => s.key === currentStep);
     
@@ -432,6 +600,257 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
           </Button>
         </div>
       )}
+    </motion.div>
+  );
+
+  // NEW: Verification Choice Step
+  const renderVerificationChoiceStep = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      <div className="text-center pb-2">
+        <Shield className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-gray-800">Verification Method निवडा</h3>
+        <p className="text-gray-500 text-sm mt-1">
+          Higher limits साठी Aadhaar verification recommend
+        </p>
+      </div>
+      
+      {/* Option Cards */}
+      <div className="space-y-3">
+        {/* Aadhaar Option - Recommended */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => handleVerificationChoice('aadhaar')}
+          className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+            aadhaarVerified 
+              ? 'border-green-500 bg-green-50' 
+              : 'border-purple-500 bg-purple-50 hover:bg-purple-100'
+          }`}
+          data-testid="aadhaar-option-btn"
+        >
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              aadhaarVerified ? 'bg-green-100' : 'bg-purple-100'
+            }`}>
+              <Fingerprint className={`w-6 h-6 ${aadhaarVerified ? 'text-green-600' : 'text-purple-600'}`} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800">Aadhaar Verification</span>
+                {aadhaarVerified ? (
+                  <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Verified</span>
+                ) : (
+                  <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Recommended</span>
+                )}
+              </div>
+              <p className="text-green-600 font-semibold text-sm mt-1">
+                Limit: ₹2,00,000/month
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                {aadhaarVerified 
+                  ? '✅ Already verified! Higher limit active.'
+                  : 'OTP on Aadhaar-linked mobile'}
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-gray-400" />
+          </div>
+        </motion.button>
+
+        {/* Mobile Option */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => handleVerificationChoice('mobile')}
+          className="w-full p-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-left hover:bg-gray-100 transition-all"
+          data-testid="mobile-option-btn"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+              <Smartphone className="w-6 h-6 text-gray-600" />
+            </div>
+            <div className="flex-1">
+              <span className="font-bold text-gray-800">Mobile OTP</span>
+              <p className="text-yellow-600 font-semibold text-sm mt-1">
+                Limit: ₹25,000/month
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                Basic verification with mobile OTP
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-gray-400" />
+          </div>
+        </motion.button>
+      </div>
+      
+      {/* Balance Info */}
+      <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+        <p className="text-blue-700 text-sm text-center">
+          <Info className="w-4 h-4 inline mr-1" />
+          Balance: <span className="font-bold">₹{eligibility?.balance_inr?.toFixed(0) || 0}</span>
+        </p>
+      </div>
+    </motion.div>
+  );
+
+  // NEW: Aadhaar Entry Step
+  const renderAadhaarEntryStep = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      <div className="text-center pb-2">
+        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <CreditCard className="w-8 h-8 text-purple-600" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-800">Enter Aadhaar Number</h3>
+        <p className="text-gray-500 text-sm mt-1">
+          OTP तुमच्या Aadhaar-linked mobile वर येईल
+        </p>
+      </div>
+      
+      <div>
+        <label className="text-xs font-medium text-gray-500 mb-1 block">Aadhaar Number (12 digits)</label>
+        <Input
+          type="text"
+          value={aadhaarNumber}
+          onChange={(e) => {
+            // Format with spaces: XXXX XXXX XXXX
+            const clean = e.target.value.replace(/\D/g, '').slice(0, 12);
+            const formatted = clean.replace(/(\d{4})(?=\d)/g, '$1 ');
+            setAadhaarNumber(formatted);
+          }}
+          placeholder="XXXX XXXX XXXX"
+          className="text-center text-xl tracking-widest h-14"
+          maxLength={14}
+          autoFocus
+          data-testid="aadhaar-input"
+        />
+      </div>
+      
+      {/* Consent Checkbox */}
+      <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+        <div className="flex items-start gap-2">
+          <CheckCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-amber-700 text-xs">
+            By proceeding, you consent to Aadhaar verification as per UIDAI guidelines. 
+            Your data will be securely verified for DMT services.
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex gap-3">
+        <Button 
+          variant="outline"
+          onClick={() => setCurrentStep(STEPS.VERIFICATION_CHOICE)}
+          className="flex-1"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back
+        </Button>
+        <Button 
+          onClick={sendAadhaarOtp}
+          disabled={loading || aadhaarNumber.replace(/\s/g, '').length !== 12}
+          className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600"
+          data-testid="send-aadhaar-otp-btn"
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          ) : (
+            <ArrowRight className="w-5 h-5 mr-2" />
+          )}
+          Send OTP
+        </Button>
+      </div>
+      
+      {error && (
+        <p className="text-red-600 text-sm text-center">{error}</p>
+      )}
+    </motion.div>
+  );
+
+  // NEW: Aadhaar OTP Step
+  const renderAadhaarOtpStep = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-4"
+    >
+      <div className="text-center pb-2">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Lock className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-800">Aadhaar OTP Verify करा</h3>
+        <p className="text-gray-500 text-sm">
+          OTP तुमच्या <span className="font-semibold text-purple-600">Aadhaar-linked mobile</span> वर पाठवला आहे
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Aadhaar: {aadhaarNumber.slice(0, 4)} XXXX XXXX
+        </p>
+      </div>
+      
+      <div>
+        <Input
+          type="text"
+          maxLength={6}
+          value={aadhaarOtp}
+          onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, ''))}
+          placeholder="Enter 6 digit OTP"
+          className="text-center text-2xl tracking-widest h-14"
+          autoFocus
+          data-testid="aadhaar-otp-input"
+        />
+        <p className="text-gray-400 text-xs text-center mt-2">
+          Attempts: {otpAttempts}/{MAX_OTP_ATTEMPTS}
+        </p>
+      </div>
+      
+      <Button 
+        onClick={verifyAadhaarOtp}
+        disabled={loading || aadhaarOtp.length < 4 || otpAttempts >= MAX_OTP_ATTEMPTS}
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 py-5"
+        data-testid="verify-aadhaar-otp-btn"
+      >
+        {loading ? (
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        ) : (
+          <CheckCircle className="w-5 h-5 mr-2" />
+        )}
+        Verify & Unlock ₹2L Limit
+      </Button>
+      
+      <div className="flex justify-center">
+        <Button 
+          variant="ghost"
+          onClick={resendAadhaarOtp}
+          disabled={resendCooldown > 0 || loading}
+          className="text-purple-600"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+        </Button>
+      </div>
+      
+      {error && (
+        <div className="p-3 bg-red-50 rounded-xl border border-red-200">
+          <p className="text-red-600 text-sm text-center">{error}</p>
+        </div>
+      )}
+      
+      <Button 
+        variant="outline"
+        onClick={() => {
+          setAadhaarOtp('');
+          setOtpAttempts(0);
+          setCurrentStep(STEPS.AADHAAR_ENTRY);
+        }}
+        className="w-full"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" /> Change Aadhaar Number
+      </Button>
     </motion.div>
   );
 
@@ -928,7 +1347,11 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
             </div>
             <div>
               <h2 className="font-bold">Bank Withdrawal</h2>
-              <p className="text-xs text-white/70">Secure transfer via Eko</p>
+              <p className="text-xs text-white/70">
+                {aadhaarVerified 
+                  ? '✅ Aadhaar Verified • ₹2L limit' 
+                  : 'Secure transfer via Eko'}
+              </p>
             </div>
           </div>
           <Button 
@@ -943,7 +1366,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
       </div>
       
       {/* Step Indicator */}
-      {currentStep !== STEPS.SUBMITTED && (
+      {currentStep !== STEPS.SUBMITTED && currentStep !== STEPS.VERIFICATION_CHOICE && (
         <div className="p-4 bg-gray-50 border-b">
           {renderStepIndicator()}
         </div>
@@ -953,6 +1376,9 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
       <div className="p-4 max-h-[60vh] overflow-y-auto">
         <AnimatePresence mode="wait">
           {currentStep === STEPS.ELIGIBILITY && renderEligibilityStep()}
+          {currentStep === STEPS.VERIFICATION_CHOICE && renderVerificationChoiceStep()}
+          {currentStep === STEPS.AADHAAR_ENTRY && renderAadhaarEntryStep()}
+          {currentStep === STEPS.AADHAAR_OTP && renderAadhaarOtpStep()}
           {currentStep === STEPS.CUSTOMER_CHECK && renderCustomerCheckStep()}
           {currentStep === STEPS.REGISTRATION && renderRegistrationStep()}
           {currentStep === STEPS.OTP_VERIFY && renderOtpStep()}
