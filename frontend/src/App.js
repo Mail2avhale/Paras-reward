@@ -212,6 +212,7 @@ const TermsConditions = lazy(() => import("@/pages/TermsConditions"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const RefundPolicy = lazy(() => import("@/pages/RefundPolicy"));
 const RewardsHome = lazy(() => import("@/pages/RewardsHome"));
+const PRCStatement = lazy(() => import("@/pages/PRCStatement"));
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -283,6 +284,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
             {/* Orders removed - Marketplace deprecated (December 2025) */}
             <Route path="/orders" element={<Navigate to="/dashboard" replace />} />
+            {/* PRC Redeem Statement */}
+            <Route path="/prc-statement" element={user ? <Suspense fallback={<LoadingFallback />}><PRCStatement user={user} /></Suspense> : <Navigate to="/login" />} />
             {/* Removed: Activity page */}
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />

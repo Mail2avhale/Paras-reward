@@ -7,7 +7,6 @@ import {
   User,
   ShoppingBag,
   Gift,
-  Receipt,
   Trophy,
   Users,
   Crown,
@@ -61,10 +60,11 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     { id: 'rewards', label: t('rewards'), icon: Zap, route: '/daily-rewards' },
     // Tap Game removed - feature deprecated
     // Marketplace removed - feature deprecated
-    { id: 'orders', label: t('myOrders'), icon: Receipt, route: '/orders' },
+    // Orders removed - feature deprecated
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/redeem' },
     // Bank Redeem removed - now handled via chatbot only
+    { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },
     { id: 'referrals', label: t('referrals'), icon: Users, route: '/referrals' },
     { id: 'subscription', label: t('subscription'), icon: Crown, route: '/subscription' },
   ];

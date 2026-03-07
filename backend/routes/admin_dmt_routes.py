@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 import logging
 import io
 import csv
+import uuid
 
 # Create router
 router = APIRouter(prefix="/admin/dmt", tags=["Admin - DMT Management"])
@@ -698,4 +699,391 @@ async def get_user_transactions(
         raise
     except Exception as e:
         logging.error(f"[ADMIN-DMT] User transactions error: {e}")
+        return {"success": False, "message": str(e)}
+
+
+# ========== BANK WITHDRAWAL REQUEST MANAGEMENT ==========
+
+@router.get("/bank-requests")
+async def get_bank_withdrawal_requests(
+    status: str = Query(None, description="Filter by status: pending, approved, rejected, completed"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get bank withdrawal requests from chatbot"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        skip = (page - 1) * limit
+        
+        # Get requests with user info
+        pipeline = [
+            {"$match": query},
+            {"$sort": {"created_at": -1}},
+            {"$skip": skip},
+            {"$limit": limit},
+            {"$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "uid",
+                "as": "user_info"
+            }},
+            {"$unwind": {"path": "$user_info", "preserveNullAndEmptyArrays": True}},
+            {"$project": {
+                "_id": 0,
+                "request_id": 1,
+                "user_id": 1,
+                "user_name": "$user_info.name",
+                "user_mobile": "$user_info.mobile",
+                "bank_name": 1,
+                "account_number": 1,
+                "ifsc_code": 1,
+                "account_holder": 1,
+                "amount_inr": 1,
+                "prc_used": 1,
+                "status": 1,
+                "utr_number": 1,
+                "eko_tid": 1,
+                "created_at": 1,
+                "approved_at": 1,
+                "completed_at": 1,
+                "rejection_reason": 1
+            }}
+        ]
+        
+        requests = await db.bank_withdrawal_requests.aggregate(pipeline).to_list(limit)
+        total = await db.bank_withdrawal_requests.count_documents(query)
+        
+        # Get summary counts
+        pending_count = await db.bank_withdrawal_requests.count_documents({"status": "pending"})
+        approved_count = await db.bank_withdrawal_requests.count_documents({"status": "approved"})
+        completed_count = await db.bank_withdrawal_requests.count_documents({"status": "completed"})
+        
+        return {
+            "success": True,
+            "data": {
+                "requests": requests,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "summary": {
+                    "pending": pending_count,
+                    "approved": approved_count,
+                    "completed": completed_count
+                }
+            }
+        }
+    except Exception as e:
+        logging.error(f"[ADMIN-DMT] Bank requests fetch error: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/bank-requests/{request_id}/approve")
+async def approve_bank_withdrawal(request_id: str, request: Request):
+    """Approve a bank withdrawal request - ready for transfer"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        
+        # Find the request
+        bank_request = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+        if not bank_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if bank_request.get("status") != "pending":
+            raise HTTPException(status_code=400, detail=f"Request already {bank_request.get('status')}")
+        
+        # Update to approved status
+        now = datetime.now(timezone.utc)
+        await db.bank_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "approved",
+                "approved_at": now.isoformat(),
+                "approved_by": admin_id
+            }}
+        )
+        
+        # Log action
+        await db.admin_audit_logs.insert_one({
+            "admin_uid": admin_id,
+            "action": "bank_withdrawal_approved",
+            "entity_type": "bank_withdrawal_request",
+            "entity_id": request_id,
+            "details": {
+                "amount_inr": bank_request.get("amount_inr"),
+                "prc_used": bank_request.get("prc_used"),
+                "user_id": bank_request.get("user_id")
+            },
+            "timestamp": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": "Bank withdrawal approved",
+            "data": {
+                "request_id": request_id,
+                "amount_inr": bank_request.get("amount_inr"),
+                "bank_name": bank_request.get("bank_name"),
+                "account_number": bank_request.get("account_number"),
+                "ifsc_code": bank_request.get("ifsc_code")
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-DMT] Approve error: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/bank-requests/{request_id}/execute-transfer")
+async def execute_bank_transfer(request_id: str, request: Request):
+    """Execute the actual bank transfer via Eko DMT API"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        transfer_mode = data.get("transfer_mode", "IMPS")  # IMPS or NEFT
+        
+        # Find the approved request
+        bank_request = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+        if not bank_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if bank_request.get("status") != "approved":
+            raise HTTPException(status_code=400, detail=f"Request must be approved first. Current status: {bank_request.get('status')}")
+        
+        # Import Eko transfer function
+        from routes.eko_dmt_service import execute_money_transfer
+        
+        # Execute transfer
+        transfer_result = await execute_money_transfer(
+            sender_mobile=bank_request.get("user_mobile", ""),
+            recipient_id=bank_request.get("recipient_id", ""),
+            amount=bank_request.get("amount_inr", 0),
+            transfer_mode=transfer_mode,
+            client_ref_id=request_id,
+            user_id=bank_request.get("user_id")
+        )
+        
+        now = datetime.now(timezone.utc)
+        
+        if transfer_result.get("success"):
+            # Update request with UTR
+            await db.bank_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "status": "completed",
+                    "completed_at": now.isoformat(),
+                    "completed_by": admin_id,
+                    "utr_number": transfer_result.get("utr_number", ""),
+                    "eko_tid": transfer_result.get("tid", ""),
+                    "eko_response": transfer_result
+                }}
+            )
+            
+            # Log successful transfer
+            await db.admin_audit_logs.insert_one({
+                "admin_uid": admin_id,
+                "action": "bank_transfer_completed",
+                "entity_type": "bank_withdrawal_request",
+                "entity_id": request_id,
+                "details": {
+                    "amount_inr": bank_request.get("amount_inr"),
+                    "utr_number": transfer_result.get("utr_number"),
+                    "tid": transfer_result.get("tid")
+                },
+                "timestamp": now.isoformat()
+            })
+            
+            return {
+                "success": True,
+                "message": "Bank transfer completed successfully",
+                "data": {
+                    "request_id": request_id,
+                    "utr_number": transfer_result.get("utr_number"),
+                    "tid": transfer_result.get("tid"),
+                    "amount_inr": bank_request.get("amount_inr")
+                }
+            }
+        else:
+            # Transfer failed - keep as approved for retry
+            await db.bank_withdrawal_requests.update_one(
+                {"request_id": request_id},
+                {"$set": {
+                    "last_transfer_attempt": now.isoformat(),
+                    "transfer_error": transfer_result.get("message", "Transfer failed"),
+                    "eko_response": transfer_result
+                }}
+            )
+            
+            return {
+                "success": False,
+                "message": transfer_result.get("message", "Transfer failed"),
+                "data": transfer_result
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-DMT] Execute transfer error: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/bank-requests/{request_id}/complete-manual")
+async def complete_bank_withdrawal_manual(request_id: str, request: Request):
+    """Mark bank withdrawal as completed with manual UTR entry"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        utr_number = data.get("utr_number", "").strip()
+        remarks = data.get("remarks", "")
+        
+        if not utr_number:
+            raise HTTPException(status_code=400, detail="UTR number is required")
+        
+        # Validate UTR format (12 digits)
+        cleaned_utr = ''.join(filter(str.isdigit, utr_number))
+        if len(cleaned_utr) != 12:
+            raise HTTPException(status_code=400, detail=f"Invalid UTR format. Expected 12 digits, got {len(cleaned_utr)}")
+        
+        # Find the request
+        bank_request = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+        if not bank_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if bank_request.get("status") not in ["pending", "approved"]:
+            raise HTTPException(status_code=400, detail=f"Cannot complete request with status: {bank_request.get('status')}")
+        
+        # Check UTR uniqueness
+        existing_utr = await db.bank_withdrawal_requests.find_one({
+            "utr_number": cleaned_utr,
+            "request_id": {"$ne": request_id}
+        })
+        if existing_utr:
+            raise HTTPException(status_code=400, detail="UTR number already used for another request")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Update request
+        await db.bank_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": now.isoformat(),
+                "completed_by": admin_id,
+                "utr_number": cleaned_utr,
+                "completion_method": "manual",
+                "admin_remarks": remarks
+            }}
+        )
+        
+        # Log action
+        await db.admin_audit_logs.insert_one({
+            "admin_uid": admin_id,
+            "action": "bank_withdrawal_completed_manual",
+            "entity_type": "bank_withdrawal_request",
+            "entity_id": request_id,
+            "details": {
+                "amount_inr": bank_request.get("amount_inr"),
+                "utr_number": cleaned_utr,
+                "remarks": remarks
+            },
+            "timestamp": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": "Bank withdrawal marked as completed",
+            "data": {
+                "request_id": request_id,
+                "utr_number": cleaned_utr,
+                "amount_inr": bank_request.get("amount_inr")
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-DMT] Manual complete error: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/bank-requests/{request_id}/reject")
+async def reject_bank_withdrawal(request_id: str, request: Request):
+    """Reject a bank withdrawal request and refund PRC"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id")
+        reason = data.get("reason", "Admin rejected")
+        
+        # Find the request
+        bank_request = await db.bank_withdrawal_requests.find_one({"request_id": request_id})
+        if not bank_request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if bank_request.get("status") not in ["pending", "approved"]:
+            raise HTTPException(status_code=400, detail=f"Cannot reject request with status: {bank_request.get('status')}")
+        
+        now = datetime.now(timezone.utc)
+        prc_used = bank_request.get("prc_used", 0)
+        user_id = bank_request.get("user_id")
+        
+        # Refund PRC to user
+        if prc_used > 0 and user_id:
+            await db.users.update_one(
+                {"uid": user_id},
+                {"$inc": {"prc_balance": prc_used}}
+            )
+            
+            # Log refund transaction
+            await db.transactions.insert_one({
+                "transaction_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "transaction_type": "refund",
+                "amount": prc_used,
+                "description": f"Refund for rejected bank withdrawal (Request: {request_id})",
+                "reference_id": request_id,
+                "created_at": now.isoformat()
+            })
+        
+        # Update request
+        await db.bank_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "rejected",
+                "rejected_at": now.isoformat(),
+                "rejected_by": admin_id,
+                "rejection_reason": reason,
+                "refunded": True,
+                "refunded_at": now.isoformat()
+            }}
+        )
+        
+        # Log action
+        await db.admin_audit_logs.insert_one({
+            "admin_uid": admin_id,
+            "action": "bank_withdrawal_rejected",
+            "entity_type": "bank_withdrawal_request",
+            "entity_id": request_id,
+            "details": {
+                "amount_inr": bank_request.get("amount_inr"),
+                "prc_refunded": prc_used,
+                "reason": reason
+            },
+            "timestamp": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": "Bank withdrawal rejected and PRC refunded",
+            "data": {
+                "request_id": request_id,
+                "prc_refunded": prc_used
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-DMT] Reject error: {e}")
         return {"success": False, "message": str(e)}

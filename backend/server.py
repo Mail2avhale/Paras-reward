@@ -80,6 +80,7 @@ from routes.leaderboard import router as leaderboard_router, set_db as set_leade
 from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_db as set_chatbot_withdrawal_db
 from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
+from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -38189,6 +38190,10 @@ api_router.include_router(chatbot_payment_fix_router)
 # Admin Ledger Router (Complete Ledger System - Audit Ready)
 set_admin_ledger_db(db)
 api_router.include_router(admin_ledger_router)
+
+# PRC Statement Router (User-facing Redeem/Refund Statement)
+set_prc_statement_db(db)
+api_router.include_router(prc_statement_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)
