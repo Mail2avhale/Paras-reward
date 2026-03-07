@@ -74,6 +74,9 @@ from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
 from routes.eko_dmt_icici import router as dmt_icici_router, set_db as set_dmt_icici_db
 from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
+from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
+from routes.social import router as social_router, set_db as set_social_db
+from routes.support import router as support_router, set_db as set_support_db
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -42679,11 +42682,23 @@ api_router.include_router(admin_dmt_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)
+set_leaderboard_db(db)
+set_social_db(db)
+set_support_db(db)
 api_router.include_router(admin_popup_router)
 
 # Gift Subscription Router
 from routes.gift_subscription import router as gift_router
 api_router.include_router(gift_router)
+
+# Leaderboard Router
+api_router.include_router(leaderboard_router)
+
+# Social Router (Follow, Messages)
+api_router.include_router(social_router)
+
+# Support Tickets Router
+api_router.include_router(support_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
