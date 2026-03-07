@@ -1,17 +1,11 @@
 {
-  "summary": "BBPS Universal Module Testing Complete. All 28 backend tests and 20/21 frontend tests passed. The BBPS endpoints for Electricity (89 operators), DTH (5 operators), FASTag (20 operators, category 22), and EMI (294 operators, category 21) are working correctly. Category mappings were verified as fixed. The bill fetch test was skipped due to Eko API timeout (known third-party latency issue).",
+  "summary": "Feature Removal & KYC Refactoring - All tests pass. Verified: Marketplace routes (404), Luxury Life routes (404), TAP Game routes (redirects correctly), KYC routes via routes/kyc.py (all working), Mining routes (functional), Leaderboard routes (functional), Health check (operational), Admin dashboard (no orders section).",
   "mode": "generate",
-  "baseline_commit": "1b9ef33a1763262cfa6aa58a3338ed64887b2b78",
-  "head_commit": "77adb721c825368f716315dff16d140009dd94b4",
+  "baseline_commit": "6f6c10b74eb0e93bcb2a2e60eec09a3769c0eeb3",
+  "head_commit": "f8fd3875c8a611d702c37a0e9f2069b39d4a3802",
   "backend_issues": {
     "critical": [],
-    "minor": [
-      {
-        "endpoint": "/api/bbps/fetch",
-        "issue": "Eko BBPS bill fetch API has 60-120 second timeout. This is third-party (Eko) server latency, NOT an application bug.",
-        "priority": "LOW"
-      }
-    ]
+    "minor": []
   },
   "frontend_issues": {
     "ui_bugs": [],
@@ -19,40 +13,35 @@
     "design_issues": []
   },
   "regression_results": {
-    "total_specs": 49,
-    "passed": 48,
+    "total_specs": 39,
+    "passed": 39,
     "failed": 0,
-    "skipped": 1,
-    "note": "28 pytest backend tests all passed. 20/21 Playwright API tests passed, 1 skipped (Eko timeout)."
+    "skipped": 0
   },
   "specs_created": [
-    "/app/backend/tests/test_bbps_universal_module.py",
-    "/app/tests/e2e/bbps-universal-module.spec.ts"
+    "/app/backend/tests/test_feature_removal_refactoring.py",
+    "/app/tests/e2e/feature-removal-verification.spec.ts"
   ],
   "specs_updated": [],
-  "quarantined_tests": [
-    {
-      "test": "Bill fetch endpoint accepts valid request",
-      "reason": "Eko BBPS fetch API timeout (60-120s), not app bug"
-    }
-  ],
+  "quarantined_tests": [],
   "test_report_links": [
-    "/app/test_reports/pytest/bbps_universal_module_results.xml",
-    "/app/backend/tests/test_bbps_universal_module.py",
-    "/app/tests/e2e/bbps-universal-module.spec.ts"
+    "/app/test_reports/pytest/feature_removal_results.xml",
+    "/app/backend/tests/test_feature_removal_refactoring.py",
+    "/app/tests/e2e/feature-removal-verification.spec.ts"
   ],
   "action_items": [],
   "updated_files": [
-    "/app/backend/tests/test_bbps_universal_module.py",
-    "/app/tests/e2e/bbps-universal-module.spec.ts"
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_feature_removal_refactoring.py",
+    "/app/tests/e2e/feature-removal-verification.spec.ts"
   ],
   "success_rate": {
-    "backend": "100% - All 28 BBPS tests passed",
-    "frontend": "95% - 20/21 tests passed, 1 skipped (Eko timeout)"
+    "backend": "100% (19/19 tests passed)",
+    "frontend": "100% (20/20 tests passed)"
   },
   "seed_data_creation": "None",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "## BBPS Universal Module - Testing Complete\n\n### Backend Tests (28/28 PASSED):\n- BBPS Health: /api/bbps/health - Working\n- Electricity: /api/bbps/operators/electricity - 89 operators\n- DTH: /api/bbps/operators/dth - 5 operators\n- FASTag: /api/bbps/operators/fastag - 20 operators (category 22 VERIFIED)\n- EMI: /api/bbps/operators/emi - 294 operators (category 21 VERIFIED)\n- Operator Params: BSES (22), Dish TV (16), Axis FASTag (326), Bajaj EMI (340) - All working\n- Bill Fetch Validation: Working (actual fetch times out due to Eko latency)\n- Redeem Services: 18 services returned\n- Charges Calculation: Platform fee ₹10 + 20% admin charge working\n\n### Frontend API Tests (20/21 PASSED, 1 SKIPPED):\n- All operator endpoints verified via Playwright API tests\n- Redeem request validation tested\n- Bill fetch skipped due to Eko 60-120s timeout\n\n### Category Mapping Verification:\n- FASTag is category 22 (NOT 5) - 20 operators confirm this\n- EMI is category 21 (NOT 6) - 294 operators confirm this\n\n### Eko Integration:\n- Uses hardcoded credentials in bbps_services.py (DEVELOPER_KEY, AUTH_KEY)\n- Bill fetch timeout is Eko server-side, not app issue",
-  "rca_of_issue": "No issues found. BBPS module is working correctly."
+  "context_for_next_testing_agent": "## Feature Removal & KYC Refactoring - All Tests Passing\n\n### Backend API Tests (19/19 PASSED):\n- TestFeatureRemoval: Marketplace, Luxury Life, TAP Game routes all return 404\n- TestHealthCheck: /api/health returns healthy status\n- TestKYCRoutes: All KYC endpoints working (/api/kyc/status, /api/kyc/stats, /api/kyc/list)\n- TestMiningRoutes: Mining endpoints accessible\n- TestLeaderboardRoutes: Leaderboard returning ranked data\n- TestAdminStatsEndpoint: Admin stats working\n- TestSubscriptionRoutes: Subscription plans endpoint functional\n- TestRouterRegistration: All routers properly registered\n\n### Frontend E2E Tests (20/20 PASSED):\n- Route Redirects: /marketplace, /orders, /game all redirect to /login (unauthenticated)\n- Homepage: Loads with stats cards, branding visible\n- Login page: Form elements working\n- Static pages: FAQ, How It Works, About, Contact, Privacy all accessible\n- API verification: Health, leaderboard, KYC, marketplace 404 all verified\n\n### Key Findings:\n1. Marketplace feature completely removed - API returns 404\n2. Luxury Life feature completely removed - API returns 404\n3. TAP Game feature removed from frontend - routes redirect properly\n4. KYC routes successfully extracted to routes/kyc.py - all endpoints functional\n5. Admin dashboard working without orders section\n\n### Test Files Created:\n- /app/backend/tests/test_feature_removal_refactoring.py (19 tests)\n- /app/tests/e2e/feature-removal-verification.spec.ts (20 tests)",
+  "rca_of_issue": "No issues found. All feature removals implemented correctly."
 }
