@@ -6770,8 +6770,8 @@ async def get_deletion_status(uid: str):
         "message": "Account is scheduled for permanent deletion"
     }
 
-async def get_user(uid: str):
-    """Get user details"""
+async def get_user_as_model(uid: str):
+    """Get user details as Pydantic model"""
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

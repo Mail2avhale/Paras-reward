@@ -3,47 +3,56 @@
 ## Original Problem Statement
 A mining reward application with subscription-based economy. Users mine PRC tokens daily based on:
 - Base rate (500 PRC/day = 20.83 PRC/hr)
-- Single leg bonus (users who joined after them)
+- Single leg bonus (0.375 PRC/hr per PAID user, max 500)
 - Team boost from 3 levels of friends (L1=5%, L2=3%, L3=2% = **10% total**)
 
 ### Key Requirements
-1. **Mining Economy:** Additive formula: `Total = Base + L1_bonus + L2_bonus + L3_bonus`
+1. **Mining Economy:** Additive formula: `Total = Base + SingleLeg + TeamBoost`
 2. **Subscription:** ₹799/month Elite plan required for bonuses
-3. **Gift Feature:** Gift 24hr subscription to L1 friends for 600 PRC
-4. **BBPS/DMT:** Bill payments and money transfer services via Eko API
-5. **Mining Formula:** CONFIDENTIAL - Chatbot must NOT share exact formula
-6. **Google Play Policy:** 
+3. **Google Play Policy:** 
    - Use "Invite Friends" instead of "Referral"
-   - Use "Reward Points" instead of "Balance"
-   - Use "Estimated Redeem Value" not fixed "10 PRC = ₹1"
-   - No "Earn Money", "Referral Income", "Guaranteed Cash"
+   - Use "Reward Points" not "Balance"
+   - "Estimated Redeem Value" not fixed rate
+4. **Mining Formula:** CONFIDENTIAL - Chatbot must NOT share
 
 ## What's Been Implemented
 
-### March 2026 - Latest
-- [x] **Google Play Policy Safe PRC Card** - "Reward Points", "Estimated Redeem Value"
-- [x] **Tap Game REMOVED** - Bottom nav shows "Invite Friends" instead
+### March 2026 - Code Refactoring
+- [x] Created `/models/schemas.py` - All Pydantic models
+- [x] Created `/utils/helpers.py` - Common utility functions
+- [x] Fixed duplicate `get_user()` function
+- [x] Proper directory structure
+
+### March 2026 - Mining Changes
+- [x] Single leg bonus: 12 → **9 PRC/day** (0.375/hr per user)
+- [x] Single leg count: **Only PAID subscribers** (Free excluded)
+- [x] Razorpay auto-sync: 5 min → **1 min** (faster activation)
+
+### March 2026 - UI/Policy
+- [x] Google Play Policy Safe PRC Card
+- [x] Tap Game REMOVED from bottom nav
 - [x] "Referral" → "Invite Friends" everywhere
-- [x] Removed fixed currency conversion "10 PRC = ₹1" from user-facing pages
-- [x] Added disclaimers "*Subject to terms"
-- [x] Chatbot uses safe terminology
 
-### Earlier Changes
-- [x] New mining economy with additive formula
-- [x] Level bonuses: L1=5%, L2=3%, L3=2% (total 10%)
-- [x] Subscription consolidation to Elite plan only
-- [x] Mining formula is SECRET (chatbot trained)
+## Backend Structure
+```
+/app/backend/
+├── models/
+│   ├── __init__.py
+│   └── schemas.py          # Pydantic models
+├── routes/                  # 46 route files
+│   ├── mining_economy.py
+│   ├── referral.py
+│   └── ...
+├── utils/
+│   ├── helpers.py          # Common utilities
+│   └── query_optimizer.py
+├── services/
+└── server.py               # 43K lines (needs more refactoring)
+```
 
-## REMOVED Features
-- ❌ Tap Game (DELETED)
-- ❌ L4/L5 referral levels
-- ❌ Earnings History page
-- ❌ PRC Vault / Auto-Savings
-- ❌ Fixed "10 PRC = ₹1" text (user-facing)
-
-## Pending Issues (P1)
-1. **BBPS Billers:** AEML, JPDCL fail to fetch bills
-2. **DMT in Preview:** 403 errors due to IP whitelist
+## Pending Issues
+1. **BBPS Billers:** AEML, JPDCL fail
+2. **DMT Preview:** IP whitelist issue
 
 ## Test Credentials
 - Admin: admin@paras.com / PIN: 153759
