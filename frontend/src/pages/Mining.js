@@ -320,7 +320,8 @@ const DailyRewards = ({ user }) => {
   const { language } = useLanguage();
   
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState(null);
+  // Initialize userData with user prop to prevent subscription flickering
+  const [userData, setUserData] = useState(user);
   const [isMining, setIsMining] = useState(false);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
   const [sessionPRC, setSessionPRC] = useState(0);
@@ -343,7 +344,8 @@ const DailyRewards = ({ user }) => {
   const { t: globalT } = useLanguage();
   
   // Check if user is free user (explorer, free, or no plan)
-  const subscriptionPlan = userData?.subscription_plan || 'explorer';
+  // Use user prop first, then userData for more accurate initial display
+  const subscriptionPlan = userData?.subscription_plan || user?.subscription_plan || 'explorer';
   const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
 
   // Fetch user data and mining status

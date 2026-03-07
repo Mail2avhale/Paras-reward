@@ -83,15 +83,15 @@ const DashboardModern = ({ user, onLogout }) => {
   const [miningHistory, setMiningHistory] = useState([]);
   const [birthdayGreeting, setBirthdayGreeting] = useState(null);
 
-  // Stats
+  // Stats - Initialize with user prop data to prevent flickering
   const [stats, setStats] = useState({
-    prcBalance: 0,
-    totalMined: 0,
-    totalRedeemed: 0,
-    referralCount: 0,
-    subscriptionPlan: 'explorer',
-    subscriptionExpiry: null,
-    subscriptionStart: null
+    prcBalance: user?.prc_balance || 0,
+    totalMined: user?.total_mined || 0,
+    totalRedeemed: user?.total_redeemed || 0,
+    referralCount: user?.referral_count || 0,
+    subscriptionPlan: user?.subscription_plan || 'explorer',
+    subscriptionExpiry: user?.subscription_expiry || null,
+    subscriptionStart: user?.subscription_start || user?.vip_activation_date || null
   });
 
   // Helper function to get plan display name
@@ -107,6 +107,19 @@ const DashboardModern = ({ user, onLogout }) => {
 
   // Check if user has a paid plan
   const hasPaidPlan = ['startup', 'growth', 'elite'].includes(stats.subscriptionPlan);
+
+  // Update stats immediately when user prop changes (prevents subscription flickering)
+  useEffect(() => {
+    if (user?.subscription_plan) {
+      setStats(prev => ({
+        ...prev,
+        subscriptionPlan: user.subscription_plan,
+        subscriptionExpiry: user.subscription_expiry || prev.subscriptionExpiry,
+        subscriptionStart: user.subscription_start || user.vip_activation_date || prev.subscriptionStart,
+        prcBalance: user.prc_balance ?? prev.prcBalance
+      }));
+    }
+  }, [user?.subscription_plan, user?.subscription_expiry, user?.prc_balance]);
 
   // Fetch dashboard data - optimized with parallel requests
   useEffect(() => {
