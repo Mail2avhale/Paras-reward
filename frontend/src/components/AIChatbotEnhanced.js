@@ -413,61 +413,48 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
         {showPulse && (
           <>
             <motion.div
-              className="absolute inset-0 rounded-full bg-purple-500"
+              className="absolute inset-0 rounded-full bg-blue-500"
               animate={{ scale: [1, 2.5], opacity: [0.4, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
             <motion.div
-              className="absolute inset-0 rounded-full bg-purple-500"
+              className="absolute inset-0 rounded-full bg-blue-400"
               animate={{ scale: [1, 2], opacity: [0.3, 0] }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
             />
           </>
         )}
         
-        {/* Main button */}
+        {/* Main button with custom PRC Bot image */}
         <motion.button
           onClick={() => { setIsOpen(true); setShowPulse(false); }}
-          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center overflow-hidden"
+          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center overflow-hidden bg-white border-2 border-blue-400"
           style={{
-            background: 'linear-gradient(135deg, #8b5cf6, #6366f1, #4f46e5)',
-            boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)',
+            boxShadow: '0 8px 32px rgba(59, 130, 246, 0.4)',
           }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           data-testid="chatbot-toggle-btn"
         >
-          {/* Animated gradient overlay */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-            animate={{ x: [-100, 100] }}
-            transition={{ duration: 2, repeat: Infinity }}
+          <img 
+            src="/chatbot-icon.png" 
+            alt="PRC Bot" 
+            className="w-14 h-14 object-contain relative z-10"
           />
-          
-          <Bot className="w-8 h-8 text-white relative z-10" />
-          
-          {/* AI badge */}
-          <motion.span 
-            className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            AI
-          </motion.span>
         </motion.button>
         
         {/* Floating label */}
         <motion.div
-          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-4 py-2 rounded-xl shadow-xl whitespace-nowrap"
+          className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm px-4 py-2 rounded-xl shadow-xl whitespace-nowrap"
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: showPulse ? 1 : 0, x: showPulse ? 0 : 10 }}
           transition={{ delay: 2 }}
         >
           <span className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-yellow-400" />
-            Need help? Ask me! 🤖
+            मदत हवी? मला विचारा!
           </span>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-gray-900 rotate-45" />
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-blue-600 rotate-45" />
         </motion.div>
       </motion.div>
     );
@@ -509,24 +496,20 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <motion.div 
-                  className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                  style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)' }}
+                  className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden bg-white"
                   animate={{ rotate: [0, 3, -3, 0] }}
                   transition={{ duration: 4, repeat: Infinity }}
                 >
-                  <Bot className="w-8 h-8" />
-                  <motion.div
-                    className="absolute -top-1 -right-1"
-                    animate={{ scale: [1, 1.3, 1], rotate: [0, 180, 360] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    <Sparkles className="w-5 h-5 text-yellow-300" />
-                  </motion.div>
+                  <img 
+                    src="/chatbot-icon.png" 
+                    alt="PRC Bot" 
+                    className="w-12 h-12 object-contain"
+                  />
                 </motion.div>
                 <div>
                   <h3 className="font-bold text-xl tracking-tight flex items-center gap-2">
-                    Paras AI
-                    <span className="text-[10px] bg-white/25 px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide">Assistant</span>
+                    PRC Bot
+                    <span className="text-[10px] bg-white/25 px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide">AI Assistant</span>
                   </h3>
                   <p className="text-sm text-white/80 flex items-center gap-2 mt-0.5">
                     <span className="flex items-center gap-1">

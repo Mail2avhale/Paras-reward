@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Star, Gift, ArrowUpRight, Clock,
   Home, UserPlus, Users, User, Zap, Crown, Eye, EyeOff,
-  ChevronRight, Sparkles, ShoppingBag, CreditCard, Info,
+  ChevronRight, Sparkles, ShoppingBag, CreditCard,
   Sun, Moon, Sunrise, Sunset, Banknote, Building2, ShieldAlert
 } from 'lucide-react';
 import PRCExpiryTimer from '@/components/PRCExpiryTimer';
@@ -15,7 +15,6 @@ import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/Pro
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
-import { InfoTooltip } from '@/components/InfoTooltip';
 import NotificationBell from '@/components/NotificationBell';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -626,9 +625,6 @@ const DashboardModern = ({ user, onLogout }) => {
                   {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <p className="text-gray-500 text-[10px] tracking-widest">REWARD POINTS</p>
-                <InfoTooltip>
-                  <p>Your PRC reward points. Redeem for bill payments, vouchers, or marketplace purchases.</p>
-                </InfoTooltip>
               </div>
               <div className="flex items-baseline gap-2">
                 <span 
@@ -674,9 +670,6 @@ const DashboardModern = ({ user, onLogout }) => {
               <div className="text-right">
                 <div className="flex items-center gap-1 justify-end">
                   <p className="text-gray-600 text-[8px] tracking-widest mb-0.5">MULTIPLIER</p>
-                  <InfoTooltip>
-                    <p>Mining speed multiplier based on your plan. Elite: 3x, Growth: 2x, Startup: 1.5x, Explorer: 1x</p>
-                  </InfoTooltip>
                 </div>
                 <p className={`text-sm font-bold ${
                   stats.subscriptionPlan === 'elite' ? 'text-amber-400' :
