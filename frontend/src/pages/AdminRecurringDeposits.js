@@ -112,27 +112,7 @@ const AdminRecurringDeposits = ({ user }) => {
     }
   };
 
-  const bulkMigrateLuxury = async () => {
-    if (!window.confirm('This will convert ALL users\' Luxury Life savings to RD accounts. Continue?')) {
-      return;
-    }
-    
-    try {
-      toast.info('Starting bulk migration...');
-      const response = await fetch(`${API}/rd/admin/bulk-migrate-luxury`, {
-        method: 'POST'
-      });
-      const data = await response.json();
-      if (data.success) {
-        toast.success(`Migrated ${data.migrated_count} users (${formatCurrency(data.total_migrated_amount)} PRC)`);
-        fetchRds();
-      } else {
-        toast.error(data.detail || 'Migration failed');
-      }
-    } catch (error) {
-      toast.error('Failed to migrate');
-    }
-  };
+  // bulkMigrateLuxury removed - Luxury Life feature deprecated
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN').format(Math.round(amount || 0));
@@ -237,13 +217,7 @@ const AdminRecurringDeposits = ({ user }) => {
             <Clock className="w-4 h-4" />
             Check Matured
           </button>
-          <button
-            onClick={bulkMigrateLuxury}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white text-sm font-medium flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Migrate All Luxury
-          </button>
+          {/* Migrate All Luxury button removed - feature deprecated */}
           <button
             onClick={fetchRds}
             className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"

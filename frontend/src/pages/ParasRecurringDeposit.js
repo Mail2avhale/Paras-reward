@@ -27,9 +27,8 @@ const ParasRecurringDeposit = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [selectedRd, setSelectedRd] = useState(null);
   const [showMigrateModal, setShowMigrateModal] = useState(false);
-  const [luxurySavings, setLuxurySavings] = useState(null);
+  // Luxury Life savings migration removed - feature deprecated
   const [processing, setProcessing] = useState(false);
-  const [autoMigrating, setAutoMigrating] = useState(false);
 
   // Create RD form state
   const [newRd, setNewRd] = useState({
@@ -46,7 +45,7 @@ const ParasRecurringDeposit = () => {
 
   useEffect(() => {
     fetchRdsData();
-    checkAndAutoMigrateLuxury();
+    // Luxury Life auto-migration removed - feature deprecated
   }, []);
 
   const fetchRdsData = async () => {
@@ -65,34 +64,7 @@ const ParasRecurringDeposit = () => {
     }
   };
 
-  // Auto-migrate Luxury Life savings to RD
-  const checkAndAutoMigrateLuxury = async () => {
-    try {
-      const response = await fetch(`${API}/luxury-life/savings/${user.uid}`);
-      const data = await response.json();
-      
-      if (data.total_savings > 100 && !data.migrated_to_rd) {
-        // Auto-migrate
-        setAutoMigrating(true);
-        setLuxurySavings(data);
-        
-        const migrateResponse = await fetch(`${API}/rd/migrate-from-luxury/${user.uid}`, {
-          method: 'POST'
-        });
-        
-        const migrateData = await migrateResponse.json();
-        if (migrateData.success) {
-          toast.success(`Successfully converted ${formatCurrency(data.total_savings)} PRC to Savings Vault!`);
-          setLuxurySavings(null);
-          fetchRdsData();
-        }
-        setAutoMigrating(false);
-      }
-    } catch (error) {
-      console.error('Error checking/migrating luxury savings:', error);
-      setAutoMigrating(false);
-    }
-  };
+  // Luxury Life auto-migration function removed - feature deprecated
 
   const handleCreateRd = async () => {
     if (newRd.monthlyDeposit < 100) {
