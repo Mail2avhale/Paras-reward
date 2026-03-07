@@ -1,0 +1,43 @@
+{
+  "summary": "BBPS/DMT Route Separation - All 36 tests pass. Verified: BBPS routes (/api/bbps/health, /api/bbps/error-codes), DMT routes (/api/eko/dmt/health), Legacy Eko routes disabled (/api/eko/balance returns 404, /api/eko/operators returns 404), KYC routes (/api/kyc/stats), Mining routes, Health check, Leaderboard. Legacy eko_payments.py archived as _archive_eko_payments_legacy.py with router disabled. eko_common.py utilities created for shared Eko API functions.",
+  "mode": "generate",
+  "baseline_commit": "f8fd3875c8a611d702c37a0e9f2069b39d4a3802",
+  "head_commit": "074646b2066b8ec0db719c85614ed305a9e741ce",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 36,
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_bbps_dmt_separation.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/bbps_dmt_separation_results.xml",
+    "/app/backend/tests/test_bbps_dmt_separation.py",
+    "/app/tests/e2e/feature-removal-verification.spec.ts"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_bbps_dmt_separation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (20/20 tests passed - feature-removal-verification.spec.ts)"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## BBPS/DMT Route Separation - All Tests Passing\n\n### Key Changes Verified:\n1. Legacy eko_payments.py renamed to _archive_eko_payments_legacy.py - router disabled\n2. New eko_common.py created with shared Eko API utilities (make_eko_request, auth helpers)\n3. BBPS routes working at /api/bbps/* prefix\n4. DMT routes working at /api/eko/dmt/* prefix\n5. Legacy /api/eko/* routes properly return 404\n\n### Backend API Tests (16/16 PASSED):\n- TestHealthCheck: /api/health returns healthy\n- TestBBPSRoutes: /api/bbps/health, /api/bbps/error-codes working\n- TestDMTRoutes: /api/eko/dmt/health working with proper config\n- TestLegacyEkoRoutesDisabled: /api/eko/balance, /api/eko/operators return 404\n- TestKYCRoutes: /api/kyc/stats working\n- TestMiningRoutes: /api/mining/status accessible\n- TestLeaderboardRoutes: /api/leaderboard returning data\n- TestEkoCommonUtilities: BBPS fetch, pay, operators endpoints exist\n- TestRouterRegistration: All routers properly registered\n\n### Frontend E2E Tests (20/20 PASSED):\n- Feature removal routes redirect properly\n- Homepage loads with stats\n- Public pages accessible\n- API endpoints verified through browser\n\n### Test Files:\n- Backend: /app/backend/tests/test_bbps_dmt_separation.py (16 tests)\n- Frontend: /app/tests/e2e/feature-removal-verification.spec.ts (20 tests)"
+}
