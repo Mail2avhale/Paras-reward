@@ -15,7 +15,6 @@ import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/Pro
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
-import NotificationBell from '@/components/NotificationBell';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -293,9 +292,6 @@ const DashboardModern = ({ user, onLogout }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Notification Bell */}
-            <NotificationBell userId={user?.uid} />
-            
             {hasPaidPlan && (
               <div className={`px-3 py-1 rounded-full ${
                 stats.subscriptionPlan === 'elite' ? 'bg-gradient-to-r from-amber-500 to-yellow-500' :
