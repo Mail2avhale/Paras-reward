@@ -1106,120 +1106,214 @@ async def execute_dmt_transfer(request_id: str, request: Request):
 
 
 async def _add_eko_recipient(sender_mobile: str, account_number: str, ifsc_code: str, account_holder: str) -> dict:
-    """Add a recipient/beneficiary in Eko system"""
+    """
+    Add a recipient/beneficiary in Eko DMT v1 system.
+    
+    Eko API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_no:{account}
+    """
     try:
-        headers = get_eko_headers()
+        if not is_eko_configured():
+            return {"success": False, "message": "Eko service not configured", "error_code": "CONFIG_ERROR"}
         
-        # Eko Add Recipient API
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/acc_ifsc:{account_number}_{ifsc_code}"
+        # Sanitize account holder name (1-50 chars, uppercase, no special chars)
+        clean_name = ' '.join(account_holder.split())[:50].upper()
+        clean_name = re.sub(r'[^A-Z\s]', '', clean_name).strip()
+        if len(clean_name) < 1:
+            clean_name = "CUSTOMER"
         
-        payload = {
-            "recipient_name": account_holder,
-            "recipient_mobile": sender_mobile  # Can be same as sender
+        # Get bank code from IFSC (first 4 chars)
+        bank_code = ifsc_code[:4].upper()
+        
+        # Generate headers with timestamp
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "initiator_id": EKO_INITIATOR_ID,
+            "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        response = requests.put(url, headers=headers, data=payload, timeout=30)
+        # Eko Add Recipient API - correct URL format
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/acc_no:{account_number}"
+        url += f"?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        payload = {
+            "recipient_name": clean_name,
+            "recipient_mobile": sender_mobile,
+            "ifsc": ifsc_code.upper(),
+            "bank_code": bank_code,
+            "recipient_type": "1",  # 1 = Bank Account
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        logging.info(f"[EKO-RECIPIENT] Adding: {clean_name}, Account: ***{account_number[-4:]}, IFSC: {ifsc_code}")
+        
+        response = requests.put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         result = response.json()
         
-        logging.info(f"[EKO-RECIPIENT] Response: {result}")
+        logging.info(f"[EKO-RECIPIENT] Response Status: {response.status_code}, Body: {result}")
         
-        # Eko response codes
-        # 0 = Success
-        # 302 = Recipient already exists
-        if result.get("response_status_id") in [0, "0"]:
+        # Handle Eko response
+        eko_status = result.get("status", result.get("response_status_id"))
+        
+        if eko_status in [0, "0"]:
+            # Success
+            recipient_data = result.get("data", {})
             return {
                 "success": True,
-                "recipient_id": result.get("data", {}).get("recipient_id", ""),
+                "recipient_id": recipient_data.get("recipient_id", ""),
+                "is_verified": recipient_data.get("is_verified", False),
                 "message": "Recipient added successfully"
             }
-        elif result.get("response_status_id") in [302, "302"]:
-            # Already exists - get recipient ID
-            recipient_id = result.get("data", {}).get("recipient_id", "")
+        elif eko_status in [342, "342"]:
+            # Recipient already exists - this is OK
+            recipient_data = result.get("data", {})
             return {
                 "success": True,
-                "recipient_id": recipient_id,
+                "recipient_id": recipient_data.get("recipient_id", ""),
                 "message": "Recipient already exists"
             }
         else:
+            error_msg = result.get("message", "Failed to add recipient")
             return {
                 "success": False,
-                "message": result.get("message", "Failed to add recipient"),
-                "error_code": result.get("response_status_id", "UNKNOWN"),
+                "message": error_msg,
+                "error_code": str(eko_status),
                 "raw_response": result
             }
             
     except requests.Timeout:
-        return {"success": False, "message": "Eko API timeout", "error_code": "TIMEOUT"}
+        logging.error("[EKO-RECIPIENT] Timeout")
+        return {"success": False, "message": "Eko API timeout - please retry", "error_code": "TIMEOUT"}
+    except requests.RequestException as e:
+        logging.error(f"[EKO-RECIPIENT] Request error: {e}")
+        return {"success": False, "message": f"Network error: {str(e)}", "error_code": "NETWORK_ERROR"}
     except Exception as e:
+        logging.error(f"[EKO-RECIPIENT] Exception: {e}")
         return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
 
 
 async def _execute_eko_transfer(sender_mobile: str, recipient_id: str, amount: int, transfer_mode: str, client_ref_id: str) -> dict:
-    """Execute money transfer via Eko DMT API"""
+    """
+    Execute money transfer via Eko DMT v1 API.
+    
+    Eko API: POST /v1/transactions
+    
+    Returns UTR number on success.
+    """
     try:
-        headers = get_eko_headers()
+        if not is_eko_configured():
+            return {"success": False, "message": "Eko service not configured", "error_code": "CONFIG_ERROR"}
         
-        # Eko Money Transfer API
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/{recipient_id}/transfer"
+        # Generate timestamp for auth
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
         
-        # Channel mapping
-        channel = "2"  # 2 = IMPS, 1 = NEFT
-        if transfer_mode.upper() == "NEFT":
-            channel = "1"
+        # Generate request_hash for transfer (per Eko docs)
+        # request_hash = HMAC-SHA256(timestamp + recipient_id + amount + user_code)
+        hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
+        request_hash = hmac.new(
+            EKO_AUTH_KEY.encode('utf-8'),
+            hash_string.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+        request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
         
-        payload = {
-            "amount": str(amount),
-            "channel": channel,
-            "client_ref_id": client_ref_id,
-            "state": "1",  # 1 = Maharashtra (default)
-            "latlong": "0,0"  # Can be updated with actual location
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "initiator_id": EKO_INITIATOR_ID,
+            "request_hash": request_hash_b64,
+            "Content-Type": "application/json"
         }
         
-        response = requests.post(url, headers=headers, data=payload, timeout=60)
+        # Channel: 2 = IMPS, 1 = NEFT
+        channel = "2" if transfer_mode.upper() == "IMPS" else "1"
+        
+        # Eko Transfer API
+        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        payload = {
+            "customer_id": sender_mobile,
+            "recipient_id": recipient_id,
+            "amount": str(amount),
+            "client_ref_id": client_ref_id,
+            "channel": channel,
+            "state": "1",
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "latlong": "19.9975,73.7898"
+        }
+        
+        logging.info(f"[EKO-TRANSFER] Executing: Rs.{amount} via {transfer_mode} to recipient {recipient_id}")
+        
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
         result = response.json()
         
-        logging.info(f"[EKO-TRANSFER] Response for {client_ref_id}: {result}")
+        logging.info(f"[EKO-TRANSFER] Response: {result}")
         
-        # Eko Transfer Response Codes
-        # 0 = Success
-        # 1/2/3 = Pending (check status)
-        # Others = Failure
-        response_status = result.get("response_status_id")
+        # Parse Eko response
+        eko_status = result.get("status", result.get("response_status_id"))
+        tx_data = result.get("data", {})
+        tx_status = tx_data.get("tx_status")
+        eko_tid = tx_data.get("tid", "")
+        bank_ref = tx_data.get("bank_ref_num", "")
         
-        if response_status in [0, "0"]:
-            # Success
-            data = result.get("data", {})
-            return {
-                "success": True,
-                "utr_number": data.get("bank_ref_num", data.get("utr", "")),
-                "tid": data.get("tid", ""),
-                "txstatus_desc": data.get("txstatus_desc", "SUCCESS"),
-                "message": "Transfer successful",
-                "raw_response": result
-            }
-        elif response_status in [1, 2, 3, "1", "2", "3"]:
-            # Pending - need to check status
-            data = result.get("data", {})
-            return {
-                "success": False,
-                "pending": True,
-                "tid": data.get("tid", ""),
-                "message": "Transfer pending. Please check status.",
-                "error_code": "PENDING",
-                "raw_response": result
-            }
+        if eko_status in [0, "0"]:
+            if tx_status == 0:
+                # SUCCESS
+                return {
+                    "success": True,
+                    "utr_number": bank_ref,
+                    "tid": eko_tid,
+                    "tx_status": "SUCCESS",
+                    "message": "Transfer successful!",
+                    "raw_response": result
+                }
+            elif tx_status == 1:
+                # FAILED
+                return {
+                    "success": False,
+                    "tid": eko_tid,
+                    "message": tx_data.get("txstatus_desc", "Transfer failed"),
+                    "error_code": "TX_FAILED",
+                    "raw_response": result
+                }
+            elif tx_status == 2:
+                # PENDING
+                return {
+                    "success": False,
+                    "pending": True,
+                    "tid": eko_tid,
+                    "message": "Transfer pending - check status later",
+                    "error_code": "PENDING",
+                    "raw_response": result
+                }
+            else:
+                return {
+                    "success": False,
+                    "tid": eko_tid,
+                    "message": f"Unknown status: {tx_status}",
+                    "error_code": f"TX_{tx_status}",
+                    "raw_response": result
+                }
         else:
-            # Failure
             return {
                 "success": False,
                 "message": result.get("message", "Transfer failed"),
-                "error_code": str(response_status),
+                "error_code": str(eko_status),
                 "raw_response": result
             }
             
     except requests.Timeout:
-        return {"success": False, "message": "Transfer timeout. Please check status.", "error_code": "TIMEOUT"}
+        return {"success": False, "message": "Timeout - check status manually", "error_code": "TIMEOUT"}
     except Exception as e:
+        logging.error(f"[EKO-TRANSFER] Exception: {e}")
         return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
 
 
