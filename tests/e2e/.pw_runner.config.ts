@@ -2,13 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260307_145139/test-results',
+  outputDir: '/root/.emergent/automation_output/20260307_182356/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260307_145139/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260307_182356/results.json' }],
   ],
   use: {
     baseURL: 'https://perf-fix-login.preview.emergentagent.com',

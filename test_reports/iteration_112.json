@@ -1,0 +1,56 @@
+{
+  "summary": "Login Performance Fix Testing Complete. All tests pass - Backend (13/13) and Frontend E2E (7/7). Verified: 1) Login API response time <0.5s (was 30+ seconds before), 2) profile_picture excluded from login response, 3) New /users/{uid}/profile-picture endpoint works correctly, 4) /api/user/{uid} and /api/users/{uid} exclude profile_picture, 5) Frontend login flow works fast (<5 seconds total).",
+  "mode": "generate",
+  "baseline_commit": "d2e6e0324064e748a2513fca055b4ab38ccc45d3",
+  "head_commit": "e452787379f71d13171287ae16e6f638b31178a9",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "Login response contains profile_picture field with None value (due to Pydantic model defaults). While the large base64 data is excluded, the key still exists. Minor performance impact only.",
+        "priority": "LOW"
+      },
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "Mobile numbers with special characters (+91-xxx) cause MongoDB regex error (OperationFailure: Regular expression is invalid). Known limitation - special chars in identifier break the regex pattern.",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_login_performance_fix.py",
+    "/app/tests/e2e/login-performance-fix.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/login_performance_fix.xml",
+    "/app/backend/tests/test_login_performance_fix.py",
+    "/app/tests/e2e/login-performance-fix.spec.ts"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_login_performance_fix.py",
+    "/app/tests/e2e/login-performance-fix.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 passed)",
+    "frontend": "100% (7/7 passed)"
+  },
+  "seed_data_creation": "No seed data created - tests use existing admin user credentials admin@paras.com/153759",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Login Performance Fix Tests Complete\n\n### Key Findings:\n1. **Performance Fix Working**: Login API now returns in <0.5s (was 30+ seconds due to 246KB base64 profile_picture)\n2. **Response Size**: Login response is now ~2.5KB (previously 250KB+)\n3. **New Endpoint**: GET /api/users/{uid}/profile-picture returns profile picture separately\n4. **Exclusions Working**: Both /api/user/{uid} and /api/users/{uid} exclude profile_picture from response\n\n### Test Files Created:\n- Backend: /app/backend/tests/test_login_performance_fix.py (13 tests)\n  - TestLoginPerformance: response time, size, profile_picture absence\n  - TestProfilePictureEndpoint: new endpoint structure and 404 handling\n  - TestUserEndpointExcludesProfilePicture: user endpoints validation\n  - TestLoginFlowEndToEnd: full login flow tests\n\n- Frontend: /app/tests/e2e/login-performance-fix.spec.ts (7 tests)\n  - Login page load time\n  - Login completion time (<5s)\n  - Dashboard load after login\n  - Profile page navigation\n  - API response validation\n\n### Minor Issues Found (not blocking):\n1. Pydantic model adds profile_picture: None to response (key exists but no data)\n2. Mobile numbers with special chars (+91-xxx) break MongoDB regex in login\n\n### Test Credentials:\n- Email: admin@paras.com\n- PIN: 153759\n- User Role: admin (redirects to /admin after login)"
+}

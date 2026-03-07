@@ -485,7 +485,7 @@ async def login(
             {"mobile": identifier},
             {"uid": identifier}
         ]
-    }, {"_id": 0})
+    }, {"_id": 0, "profile_picture": 0})  # PERFORMANCE: Exclude profile_picture (large base64)
     
     if not user:
         record_login_attempt(identifier, False)
