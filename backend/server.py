@@ -5240,9 +5240,16 @@ async def login(
             except:
                 pass
     
-    # Remove password hash from response
+    # Remove sensitive/large fields from response
     if "password_hash" in user:
         del user["password_hash"]
+    
+    # PERFORMANCE FIX: Remove profile_picture from login response
+    # Profile pictures can be very large (base64 encoded images)
+    # This was causing 28+ second login times in production
+    # Profile picture should be fetched separately via /api/users/{uid}/profile-picture
+    if "profile_picture" in user:
+        del user["profile_picture"]
     
     # Build response with tokens
     response_data = User(**user).model_dump()
@@ -7367,7 +7374,10 @@ async def get_user_data(uid: str):
         if cached_user:
             return cached_user
     
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0})
+    # PERFORMANCE FIX: Exclude profile_picture from user fetch
+    # Profile pictures can be very large base64 strings causing slow responses
+    # Use /api/users/{uid}/profile-picture endpoint for profile pictures
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "profile_picture": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

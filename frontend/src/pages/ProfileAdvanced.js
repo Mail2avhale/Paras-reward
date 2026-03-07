@@ -434,6 +434,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);  // Separate state for profile picture
   // Auto-open edit mode if ?edit=true in URL
   const [editMode, setEditMode] = useState(searchParams.get('edit') === 'true');
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -499,8 +500,21 @@ const ProfileAdvanced = ({ user, onLogout }) => {
   useEffect(() => {
     if (user?.uid) {
       fetchUserData();
+      fetchProfilePicture();  // Fetch profile picture separately
     }
   }, [user]);
+
+  const fetchProfilePicture = async () => {
+    try {
+      const response = await axios.get(`${API}/users/${user.uid}/profile-picture`);
+      if (response.data?.profile_picture) {
+        setProfilePicture(response.data.profile_picture);
+      }
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      // Silently fail - will show default avatar
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -735,6 +749,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
       
       toast.success('Profile picture updated!');
       fetchUserData();
+      fetchProfilePicture();  // Refresh profile picture
     } catch (error) {
       console.error('Quick upload error:', error);
       toast.error('Failed to upload picture');
@@ -807,8 +822,8 @@ const ProfileAdvanced = ({ user, onLogout }) => {
           <div className="relative inline-block mb-4">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 p-1">
               <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center overflow-hidden">
-                {userData?.profile_picture ? (
-                  <img src={userData.profile_picture} alt="" className="w-full h-full object-cover" />
+                {profilePicture ? (
+                  <img src={profilePicture} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-gray-400" />
                 )}

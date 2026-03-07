@@ -68,9 +68,25 @@ async def get_user(uid: str):
     
     user.pop("password_hash", None)
     user.pop("reset_token", None)
+    # PERFORMANCE: Remove profile_picture from general user fetch
+    # Use /users/{uid}/profile-picture endpoint instead
+    user.pop("profile_picture", None)
     user["_id"] = str(user["_id"])
     
     return user
+
+
+@router.get("/users/{uid}/profile-picture")
+async def get_user_profile_picture(uid: str):
+    """Get user's profile picture separately - to avoid loading large base64 in main requests"""
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "profile_picture": 1, "name": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "profile_picture": user.get("profile_picture"),
+        "has_picture": user.get("profile_picture") is not None
+    }
 
 
 @router.get("/users/children/{uid}")

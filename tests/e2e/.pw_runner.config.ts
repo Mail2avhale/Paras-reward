@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260307_145139/results.json' }],
   ],
   use: {
-    baseURL: 'https://prc-redeem-hub.preview.emergentagent.com',
+    baseURL: 'https://perf-fix-login.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

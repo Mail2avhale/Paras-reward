@@ -22,7 +22,7 @@ import os
 import time
 import json
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-redeem-hub.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://perf-fix-login.preview.emergentagent.com')
 
 
 @pytest.fixture

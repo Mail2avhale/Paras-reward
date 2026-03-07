@@ -1,214 +1,181 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to refactor the monolithic backend, remove legacy features, and add new chatbot-driven functionalities. During this session, the user prioritized several tasks:
-1.  **Fix Production Instability:** Address the slow performance and various bugs reported on the production server.
-2.  **Refactor :** Continue breaking down the large backend file to improve performance.
-3.  **Implement Admin DMT Flow:** Create a complete end-to-end journey for admins to approve a chatbot withdrawal request, trigger a bank transfer via Eko DMT v1, and generate a UTR. This includes error handling and a manual override.
-4.  **Implement PRC Redeem Statement:** Create a new page for users to view their PRC (Points) redeem and refund history with filters and a CSV download option.
-5.  **Implement BBPS Service Checks:** Ensure BBPS service codes and formats are checked against Eko's standards.
-6.  **UI Cleanup:** Remove the Redeem to Bank Account and My Orders menu items from the user-facing UI, as these flows are now deprecated or handled by the chatbot.
+The user's initial goal was to refactor the monolithic backend, fix production instability, and add new chatbot-driven functionalities. During this session, several new high-priority tasks emerged:
+
+1.  **Fix Production Performance (P0):** The user reported that the production application has become extremely slow, with login taking an excessive amount of time.
+2.  **Fix Admin Auto DMT Flow (P0):** The user reported that the Auto DMT feature was failing for specific users with a customer_id does not exist error.
+3.  **Implement Eko DMT v3 with Aadhaar (P1):** The user requested the implementation of Eko's DMT v3 service, which uses Aadhaar for KYC to enable higher transaction limits (up to ₹2,00,000/month).
+4.  **Implement Chatbot OTP Flow (Completed):** The initial P0 task was to build the missing user-facing OTP verification flow for bank withdrawals inside the chatbot.
+5.  **Address BBPS Service Code Issues (P2):** The user requested a check on service codes and formats for failing BBPS billers.
 
 **PRODUCT REQUIREMENTS:**
--   **Admin DMT Flow:** The admin panel must provide a clear and functional interface to manage chatbot withdrawal requests. Admins must be able to approve requests and then execute a bank transfer using the Eko DMT v1 API (Auto DMT). The system must handle Eko API errors gracefully and display them to the admin. A manual UTR entry option must be available as a fallback.
--   **PRC Redeem Statement:** Users must have a dedicated page to track all their PRC redemption and refund transactions, including dates, narration, and summary totals.
--   **Performance:** The production application's initial load time (~20 seconds) is unacceptably slow and must be improved.
--   **Eko Integration:** The entire Eko DMT flow, from user request in the chatbot to admin approval and execution, must be E2E functional. This requires implementing the user-side OTP verification flow in the chatbot.
+-   **Performance:** The production application's login and initial load time must be drastically improved from the current ~30 seconds. The app must be responsive and usable.
+-   **Admin DMT Flow:** Admins must be able to handle withdrawal requests for users who are not yet registered with Eko. The panel should provide a way to register the user and then proceed with the transfer.
+-   **Aadhaar DMT v3:** The chatbot withdrawal flow must be updated to offer users a choice between the standard OTP verification (lower limit) and a new Aadhaar-based e-KYC verification for higher transaction limits.
+-   **Eko Integration:** The entire Eko DMT flow must be functional end-to-end, including registration, OTP/Aadhaar verification, and admin execution.
 
-**User's preferred language**: The user communicates in a mix of **Marathi** and English. The next agent **MUST** be prepared to understand and respond primarily in **Marathi**, using English for technical terms.
+**User's preferred language**: The user communicates primarily in **Marathi**, mixed with English for technical terms. The next agent **MUST** understand and respond in **Marathi**.
 
 **what currently exists?**
 -   A FastAPI backend and React frontend.
--   The backend  file has been partially refactored, with the ~900-line Ledger System extracted into a new file: .
--   New backend APIs for the Admin DMT flow have been created in , including endpoints to get requests, approve, execute an auto-transfer via Eko, and complete manually with a UTR.
--   A new PRC Redeem Statement feature is fully implemented, with a backend API () and a frontend page ().
--   The frontend Admin Panel UI for chatbot withdrawals has been updated to include an Execute Auto DMT button and a section to display API errors.
--   The My Orders and Redeem to Bank Account links have been removed from the user-facing .
--   **Crucially, the backend APIs for Eko's user-side OTP verification exist, but the corresponding frontend UI flow in the chatbot () is missing.** This is the root cause of the Auto DMT failure.
+-   The initial P0 task is complete: The chatbot now includes a full-featured withdrawal flow in a new component (), which was successfully tested by the testing agent.
+-   A fix for the admin DMT flow has been implemented. This includes a new backend API () and a new Register Customer in Eko workflow in the admin panel UI (). This fix has not been verified by the user in production.
+-   The groundwork for Eko DMT v3 with Aadhaar has been laid. This includes a new backend route file () with placeholder APIs and an updated chatbot UI in  that presents the user with a choice between standard and Aadhaar verification.
+-   A critical performance issue has been identified: the production login API () takes ~28 seconds to respond, primarily due to a very large base64-encoded  being included in the login response payload.
 
 **Last working item**:
--   **Last item agent was working:** The agent was about to implement the missing user-facing Eko OTP verification flow within the frontend chatbot component (). The user was frustrated that the E2E flow was incomplete, and the agent correctly identified that the frontend was missing the necessary steps to guide the user through OTP verification before a withdrawal request could be properly initiated.
+-   **Last item agent was working:** The agent was actively debugging the P0 production performance issue. Using , the agent successfully diagnosed that the  endpoint on the production server is taking ~28 seconds to respond. The agent identified that a large base64-encoded  in the JSON response is the most likely cause of this severe latency.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. After implementing the multi-step OTP verification UI in the chatbot, the testing agent should be used to create a test that simulates the entire user withdrawal request flow.
+-   **Agent Testing Done:** Y (via curl on production API)
+-   **Which testing method agent to use?** Backend testing. The agent should modify the backend code to fix the performance issue and then use  with timing to verify that the  response time is significantly reduced.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** Frontend Chatbot Eko OTP Flow is Missing (P0)
--   **Issue 2:** Production environment is unstable and slow (P0)
--   **Issue 3:** Eko DMT APIs fail in the preview environment due to IP whitelist issue (P0)
--   **Issue 4:** Some BBPS billers (AEML, JPDCL) fail to fetch bills (P2)
--   **Issue 5:** Razorpay auto-subscription fails on the production server (P2)
+-   **Issue 1:** Production Login API is extremely slow (~28 seconds) (P0)
+-   **Issue 2:** Admin Auto DMT fails for users not registered in Eko (P0)
+-   **Issue 3:** BBPS biller service codes/formats need verification (P2)
+-   **Issue 4:** Razorpay auto-subscription fails on production (P2)
 
 **Issues Detail:**
--   **Issue 1: Frontend Chatbot Eko OTP Flow is Missing**
-    -   **Attempted fixes:** The agent identified the issue at the end of the session after investigating why Auto DMT was failing in production. The root cause is that users are not completing Eko's OTP verification because the UI for it does not exist in the chatbot.
+-   **Issue 1: Production Login API is extremely slow (~28 seconds)**
+    -   **Attempted fixes:** The agent identified the root cause by testing the live production API with . The response from  took 27.5 seconds and contained a very large base64 string for the  field.
     -   **Next debug checklist:**
-        1.  Modify .
-        2.  Implement a multi-step conversation flow that calls the existing backend APIs: , , and .
-        3.  The UI should prompt the user for the OTP sent to their mobile.
-        4.  Only after successful OTP verification should the chatbot proceed to ask for the amount and bank details.
-    -   **Why fix this issue and what will be achieved with the fix?** This is the highest priority development task. It will unblock the entire Auto DMT feature, making the bank withdrawal flow functional from end to end as intended.
+        1.  Locate the  function in .
+        2.  Find where the user document, including the , is being fetched and added to the response payload.
+        3.  **Remove the  field from the data returned by the login endpoint.**
+        4.  Verify that the frontend does not break after this change. The profile picture should be fetched via a separate, dedicated API endpoint if needed, not during login.
+        5.  Test the production login API again with  to confirm the response time is drastically reduced (e.g., under 1-2 seconds).
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical production-down issue making the application unusable. Fixing it will restore basic login functionality and improve user experience.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend.
+    -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: Production environment is unstable and slow**
-    -   **Attempted fixes:** The agent confirmed the production home page load time is ~20 seconds. Some backend refactoring was done (extracting ledger system) as a step toward improving performance.
-    -   **Next debug checklist:**
-        1.  Continue refactoring the monolithic  file. The LIVE PLATFORM STATS section is the next candidate.
-        2.  Investigate production logs for slow database queries or other bottlenecks during the initial page load.
-        3.  Once the API is responsive, systematically test the user's other reported issues: automatic redirection to EXPLORE or ELITE and mining not auto-starting.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical production issue impacting user experience. Fixing it will make the app usable.
-    -   **Status:** IN PROGRESS
+-   **Issue 2: Admin Auto DMT fails for users not registered in Eko**
+    -   **Attempted fixes:** The agent implemented a complete fix: a backend API () was created, and the admin panel UI () was updated to include a Register Customer button and a corresponding OTP modal. The code was implemented and debugged for the preview environment.
+    -   **Next debug checklist:** This feature is ready for user validation. The agent must ask the user to test this flow on the production server for the user who was previously failing (e.g., 9702735116).
+    -   **Why fix this issue and what will be achieved with the fix?** This will unblock the admin DMT flow for a key edge case, making the withdrawal system more robust.
+    -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
-
--   **Issue 3: Eko DMT APIs fail in the preview environment due to IP whitelist issue**
-    -   **Attempted fixes:** The Eko integration code has been correctly implemented. However, all API calls from the preview server fail. The agent confirmed this is an environmental block.
-    -   **Next debug checklist:**
-        1.  The user **must** be informed again that the preview server's IP address () **must be whitelisted** in their Eko portal. No further code changes can fix this.
-        2.  Once whitelisted, perform a test call (e.g., Customer Search) to confirm connectivity.
-    -   **Why fix this issue and what will be achieved with the fix?** Unblocks all development and testing of the critical bank withdrawal feature in the preview environment.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** External dependency (User action required).
-
--   **Issue 4: Some BBPS billers fail to fetch bills**
-    -   **Attempted fixes:** None in this session.
-    -   **Next debug checklist:** Per user request, check the Eko Get Operator Info API for failing operators (AEML, JPDCL) to verify parameter requirements and formats.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** None.
-
--   **Issue 5: Razorpay auto-subscription fails on the production server**
-    -   **Attempted fixes:** A chatbot-based workaround is in place. The root cause was not investigated.
-    -   **Next debug checklist:** Lower priority. Investigate frontend  call network logs on the production server.
-    -   **Status:** IN PROGRESS (Workaround implemented)
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Should Test frontend/backend/both after fix?** User Testing.
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Complete Code Refactoring of  (P1)**
-    -   **Where to resume:** The file is still ~38,700 lines long. The next step is to extract the LIVE PLATFORM STATS section (~804 lines) into its own route file under .
-    -   **What will be achieved with this?** A more modular, maintainable backend, faster hot reloads, and likely improved server performance.
+-   **Task 1: Complete Eko Aadhaar DMT v3 Implementation (P1)**
+    -   **Where to resume:** The frontend UI in  is ready to trigger the Aadhaar flow. The backend file  contains placeholder APIs. The next step is to implement the actual Eko v3 API logic within these backend functions.
+    -   **What will be achieved with this?** Users will be able to perform high-value bank transfers, a key feature requested by the user.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on something:** P0 production issue should be resolved first.
+
+-   **Task 2: Continue Code Refactoring of  (P1)**
+    -   **Where to resume:** This task is directly related to Issue 1. After fixing the immediate login performance issue, the next step is to continue breaking down the monolith. The LIVE PLATFORM STATS section remains a good candidate for extraction into a new route file.
+    -   **What will be achieved with this?** A more modular, maintainable backend, and prevention of future performance bottlenecks.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** BBPS: All services code check, format check as per Eko. (User-requested)
+-   **P1:** BBPS: All services code check, format check as per Eko for failing billers (AEML, JPDCL).
 -   **P1:** Implement Payment Status Check on Login as a server-side safeguard for Razorpay.
 
 **Future Tasks:**
--   **P1:** Implement Eko DMT v3 with Aadhaar/eKYC.
+-   **P2:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution. (This is now higher priority due to the performance issue it caused).
 -   **P2:** Run PRC Vault to PRC Balance Migration Script on Production.
 -   **P3:** Add Email/Mobile OTP verification on signup.
--   **P3:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
 -   **P3:** Delete the  file.
 
 **Completed work in this session**
--   **Backend Refactoring ():**
-    -   Extracted the ~900-line COMPLETE LEDGER SYSTEM from  into a new, dedicated router file: .
--   **Feature: Admin DMT Bank Transfer Flow (Backend):**
-    -   Created and integrated the full backend logic in  for admins to manage withdrawal requests.
-    -   Added  to automatically transfer money via Eko DMT v1.
-    -   Added  as a fallback for manual UTR entry.
-    -   The  endpoint correctly handles Eko API errors and saves them to the database.
--   **Feature: PRC Redeem Statement:**
-    -   Created a backend API  in  to fetch user transaction history.
-    -   Created a new frontend page  to display the statement with filters (date, type), summary cards, and a CSV download button.
--   **Frontend UI/UX Fixes:**
-    -   Added an Execute Auto DMT button and an error display section to the Admin Panel withdrawal details page ().
-    -   Removed the My Orders link and route.
-    -   Removed the Redeem to Bank Account link, ensuring the flow is now handled exclusively by the chatbot.
+-   **Feature: Chatbot Eko OTP Withdrawal Flow:**
+    -   Created  to handle the multi-step bank withdrawal process.
+    -   Integrated this flow into the main chatbot component ().
+    -   The entire flow was validated with the testing agent and passed all 78 tests.
+-   **Feature: Admin Eko Customer Registration:**
+    -   Created a backend API  to register users with Eko.
+    -   Updated the Admin Panel UI to include a Register Customer button and workflow, allowing admins to resolve customer not found errors.
+-   **Feature: Aadhaar DMT v3 Scaffolding:**
+    -   Created a new backend route file  with placeholder APIs.
+    -   Updated the chatbot UI to allow users to choose between standard OTP and Aadhaar e-KYC for withdrawals.
+-   **Bug Investigation:**
+    -   Diagnosed the root cause of the critical production performance degradation, tracing it to a large base64 image in the login API response.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Admin Panel Failed to delete plan Error:** A low-priority bug mentioned in a previous handoff was not investigated.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Eko DMT API failures.
+-   **Issue recurrence in previous fork:** Eko DMT API failures due to IP whitelisting.
 -   **Recurrence count:** High.
--   **Status:** BLOCKED. The root cause is confirmed to be the preview server's IP () not being whitelisted by Eko. The application code for authentication and transfer is correct, but it cannot be tested in preview until the user takes action.
+-   **Status:** RESOLVED (for Production), BLOCKED (for Preview). The user confirmed the production IP is whitelisted. The issue persists for the preview environment (), and no Eko API testing should be attempted there.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Monolith Decomposition:** Actively refactoring  by extracting logical business units (like Ledger) into separate router files. This is a primary strategy for improving performance.
--   **Stateful Admin Flow:** The admin withdrawal process is a multi-step flow (Pending -> Processing -> Completed/Rejected) with different actions available at each stage (Approve, Execute DMT, Manual UTR, Reject).
--   **E2E Feature Implementation:** Building features that span the entire stack, from a user-facing React component to a FastAPI backend service that integrates with a third-party API (Eko).
+-   **Performance Debugging:** Using tools like  to diagnose live production API latency and analyze response payloads to find bottlenecks.
+-   **Monolith Decomposition:** The ongoing process of breaking  into smaller, manageable routers to improve performance and maintainability.
+-   **Conditional UI Flow:** Implementing dynamic user interfaces (like in the chatbot) that present different paths based on user choice (e.g., OTP vs. Aadhaar).
 
 **key DB schema**
--   **chatbot_withdrawal_requests:** This collection is now the source of truth for the admin flow. It has been updated to include:
-    -    (e.g., 'success', 'failed', 'manual')
-    -    (stores the error message from Eko)
-    -    (tracks retry attempts)
-    -   
+-   **users:** Contains the  field as a base64 string, which is the cause of the performance issue in the login flow.
 
 **All files of reference**
--   : **Highest priority file to modify.** Needs the Eko OTP verification UI flow.
--   : Contains the admin-facing APIs for the DMT flow.
--   : The monolith, still the source of performance issues and a target for further refactoring.
--   : The frontend for the admin panel where the new Auto DMT button was added.
--   : The new user-facing statement page.
+-   : **Highest priority file to modify.** Contains the  function that needs to be fixed to solve the P0 performance issue.
+-   : Contains the new frontend logic for both withdrawal types.
+-   : Contains the placeholder backend logic for the Aadhaar DMT v3 feature.
+-   : The admin panel UI where the customer registration fix was implemented.
+-   : The backend file containing the admin registration API.
 
 **Areas that need refactoring**:
--   ** remains the highest priority.** The file is still extremely large and impacts performance and developer velocity. The next logical section to extract is LIVE PLATFORM STATS.
--   **:** This file handles the entire chatbot logic. Once the OTP flow is added, it might be beneficial to break down the different conversation paths (e.g., withdrawal, support) into smaller, more manageable state machines or components.
+-   **'s login function:** This is not just refactoring but a critical bug fix. The practice of sending large base64 strings on login must be eliminated.
+-   **Base64 Image Storage:** The root cause of the performance issue highlights the need to migrate images from MongoDB base64 fields to a dedicated file storage solution (like a static file server or a cloud storage bucket) and serve them via URLs.
 
 **key api endpoints**
--   : (New) Executes bank transfer via Eko for a specific request.
--   : (New) Allows an admin to manually mark a request as complete with a UTR.
--   : (New) Fetches PRC redeem/refund history for a user.
--   The following existing APIs in  are used for the frontend OTP flow: , , .
+-   : **CRITICAL/BROKEN**. Currently takes ~28 seconds in production.
+-   : (New) Allows an admin to register a user with Eko. Needs user verification.
+-   : (New/Placeholder) Part of the scaffolded Aadhaar DMT v3 flow.
 
 **Critical Info for New Agent**
--   **TOP PRIORITY (P0): Implement the Chatbot OTP Flow.** The main reason the Auto DMT feature is failing is that the frontend chatbot does not have the UI to guide users through Eko's mandatory OTP verification. You must implement this multi-step flow in  using the existing backend APIs. This will fix the end-to-end withdrawal process.
--   **PRODUCTION IS SLOW:** The initial homepage load takes ~20 seconds. This is a critical performance issue. The primary strategy is to continue refactoring the massive  file.
--   **PREVIEW IS BLOCKED (EKO):** Do not waste time debugging Eko API errors in the preview environment. The errors (Invalid Sender/Initiator) are expected because the server's IP () is not whitelisted in the user's Eko portal. You must remind the user of this requirement if they ask about preview testing.
--   **USER LANGUAGE:** The user is frustrated. Respond clearly and concisely in **Marathi**. Acknowledge their feedback directly and focus on delivering the complete, working E2E DMT flow.
+-   **FIX PRODUCTION FIRST (P0):** Your absolute top priority is to fix the slow login. The app is unusable until this is resolved. The diagnosis is done: remove the  field from the  response in .
+-   **USER LANGUAGE IS MARATHI:** You must communicate in Marathi. Acknowledge user reports directly and provide clear updates on your progress in their language.
+-   **VERIFY ADMIN FIX:** After fixing the performance issue, ask the user to test the Auto DMT flow for the user who was previously failing. The code for the fix is already implemented.
+-   **Aadhaar DMT is IN PROGRESS:** The next major feature is to complete the Aadhaar DMT v3 implementation. The frontend is mostly ready; the backend APIs in  need to be filled with actual Eko v3 logic.
+-   **DO NOT TEST EKO IN PREVIEW:** The preview environment's IP is not whitelisted by Eko. Do not waste time debugging Eko API failures there. All Eko-related work must be tested in production.
 
 **documents and test reports created in this job**
--   None.
+-   : Test report from the testing agent, which successfully validated the initial implementation of the chatbot withdrawal flow.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks for a guide on the admin panel flow. (Completed)
-2.  **User:** Points out via video that the Auto DMT button is missing and only a manual completion button exists. (In Progress)
-3.  **Agent:** Acknowledges and adds the Auto DMT button to the frontend.
-4.  **User:** Expresses frustration that the work is incomplete and asks the agent to complete the E2E DMT flow from chatbot request to admin success/failure. Threatens a negative report. Provides production credentials. (Pending)
-5.  **Agent:** Acknowledges, logs into production, and attempts to execute the DMT transfer.
-6.  **Agent:** Discovers the transfer fails with an Eko error: Invalid Sender/Initiator.
-7.  **Agent:** Investigates and finds the root cause: the users associated with the requests have not completed Eko's OTP verification.
-8.  **Agent:** Asks the user if OTP verification is implemented in the chatbot. (Pending)
-9.  **User:** Asks if OTP verification is implemented and if they should deploy.
-10. **Agent:** Confirms backend APIs for OTP are ready, but after checking the frontend code, realizes the chatbot **UI flow for OTP verification is missing** and states their intention to implement it now. This is the last action.
+10.  (Agent attempts to finish after implementing admin registration fix)
+9. **User:** Asks to implement Eko DMT with Aadhaar for higher limits.
+8.  (Agent proposes plan for Aadhaar DMT)
+7. **User:** Specifies Aadhaar DMT should be in the chatbot only.
+6.  (Agent attempts to finish after scaffolding Aadhaar DMT)
+5. **User:** **CRITICAL P0 BUG REPORT.** Reports production is extremely slow and unusable. Provides credentials and suspects a database issue.
+4.  (Agent starts debugging)
+3.  (Agent confirms preview is healthy)
+2.  (Agent logs into production and confirms it's stuck)
+1.  (Agent uses  to test the login API and discovers the 28-second response time and the base64 image cause).
 
 **Project Health Check:**
 -   **Broken:**
-    -   **Eko Auto DMT Flow:** The end-to-end flow is broken because the user-facing chatbot is missing the UI for OTP verification.
-    -   **Production Initial Load:** The home page is unacceptably slow (~20s load time).
-    -   **Eko Integration (in Preview):** All API calls are blocked by a missing IP whitelist in the Eko portal.
+    -   **Production Login/Performance (P0):** The application is virtually unusable due to a ~28-second login time.
 -   **Mocked:**
-    -   None.
+    -   The Aadhaar DMT v3 backend APIs are currently placeholders.
 
 **3rd Party Integrations**
--   **Eko (v1 DMT & BBPS API):** The backend code for DMT v1 is now fully implemented, including admin execution and error handling. However, the E2E flow is **blocked** by the missing frontend OTP verification UI. The integration is also blocked in the preview environment pending an IP whitelist.
--   **Razorpay:** Used for subscriptions. A workaround for activation failures is in place.
+-   **Eko (v1 DMT & BBPS API):** The DMT v1 flow is implemented but has edge cases being fixed (admin registration). The E2E user flow is complete.
+-   **Eko (v3 DMT with Aadhaar):** Implementation is in progress. Frontend scaffolding is done, backend is placeholder.
+-   **Razorpay:** Used for subscriptions. Known activation failures exist.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (for the initial chatbot flow, which passed).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** None in this session, but existing production performance issues persist.
+-   **Known regressions:** A major performance regression has occurred in production, making the app unusable.
 
 **Credentials to test flow:**
--   **Admin User (Production):**  /  (PIN)
--   **Test User (Preview):**  / 
+-   **Production Admin:**  / PIN: 
+-   **Production User:**  / PIN:  (This seems to be an admin user as well)
 
 **What agent forgot to execute**
--   The agent did not initially build the complete end-to-end DMT feature as requested. It took user frustration and a failed production test to uncover that the crucial frontend component of the Eko OTP verification flow was missing entirely. The next agent must prioritize fixing this omission.</analysis>
+-   The agent correctly pivoted to user-reported issues. The primary miss was not anticipating that the architectural flaw of storing large base64 images and returning them on login would eventually lead to a critical production failure. The focus must now be on rectifying this architectural debt.</analysis>
