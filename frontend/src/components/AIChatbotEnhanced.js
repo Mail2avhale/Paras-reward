@@ -19,20 +19,20 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Quick Action Button Component
 const QuickActionButton = ({ icon: Icon, label, onClick, variant = "default" }) => (
   <motion.button
-    whileHover={{ scale: 1.02 }}
+    whileHover={{ scale: 1.02, y: -1 }}
     whileTap={{ scale: 0.98 }}
     onClick={onClick}
-    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${
       variant === "primary" 
-        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg"
+        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-200"
         : variant === "success"
-        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white"
-        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-green-200"
+        : "bg-white text-gray-700 border border-gray-200 hover:border-purple-300 hover:bg-purple-50"
     }`}
   >
     <Icon className="w-4 h-4" />
     <span>{label}</span>
-    <ArrowRight className="w-3 h-3" />
+    <ArrowRight className="w-3 h-3 ml-1" />
   </motion.button>
 );
 
@@ -492,39 +492,52 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
         data-testid="chatbot-container"
       >
-        <Card className="h-full max-h-[65vh] sm:max-h-[500px] shadow-2xl border-0 overflow-hidden flex flex-col">
-          {/* Header */}
+        <Card className="h-full max-h-[70vh] sm:max-h-[550px] shadow-2xl border-0 overflow-hidden flex flex-col rounded-2xl">
+          {/* Enhanced Header */}
           <div 
-            className="text-white p-4 flex-shrink-0"
+            className="text-white p-4 flex-shrink-0 relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1, #4f46e5)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%)',
             }}
           >
-            <div className="flex items-center justify-between">
+            {/* Animated background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-2xl"></div>
+            </div>
+            
+            <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <motion.div 
-                  className="relative w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.2)' }}
-                  animate={{ rotate: [0, 5, -5, 0] }}
+                  className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)' }}
+                  animate={{ rotate: [0, 3, -3, 0] }}
                   transition={{ duration: 4, repeat: Infinity }}
                 >
-                  <Bot className="w-7 h-7" />
+                  <Bot className="w-8 h-8" />
                   <motion.div
                     className="absolute -top-1 -right-1"
                     animate={{ scale: [1, 1.3, 1], rotate: [0, 180, 360] }}
                     transition={{ duration: 3, repeat: Infinity }}
                   >
-                    <Sparkles className="w-4 h-4 text-yellow-300" />
+                    <Sparkles className="w-5 h-5 text-yellow-300" />
                   </motion.div>
                 </motion.div>
                 <div>
-                  <h3 className="font-bold text-lg flex items-center gap-2">
+                  <h3 className="font-bold text-xl tracking-tight flex items-center gap-2">
                     Paras AI
-                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Assistant</span>
+                    <span className="text-[10px] bg-white/25 px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide">Assistant</span>
                   </h3>
-                  <p className="text-xs text-purple-200 flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Online • 🎤 Voice Enabled
+                  <p className="text-sm text-white/80 flex items-center gap-2 mt-0.5">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
+                      <span className="font-medium">Online</span>
+                    </span>
+                    <span className="text-white/50">•</span>
+                    <span className="flex items-center gap-1">
+                      <span>🎤</span>
+                      <span className="font-medium">Voice Ready</span>
+                    </span>
                   </p>
                 </div>
               </div>
@@ -532,20 +545,20 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 {/* Voice Toggle */}
                 <button 
                   onClick={() => setVoiceEnabled(!voiceEnabled)}
-                  className={`p-2 rounded-lg transition-colors ${voiceEnabled ? 'bg-white/20' : 'bg-white/10'}`}
+                  className={`p-2.5 rounded-xl transition-all ${voiceEnabled ? 'bg-white/25' : 'bg-white/10'} hover:bg-white/30`}
                   title={voiceEnabled ? 'Disable voice' : 'Enable voice'}
                 >
                   {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                 </button>
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-2.5 hover:bg-white/25 rounded-xl transition-all"
                 >
                   {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                 </button>
                 <button 
                   onClick={() => { setIsOpen(false); stopSpeaking(); }}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  className="p-2.5 hover:bg-white/25 rounded-xl transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -553,21 +566,31 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
             </div>
           </div>
 
-          {/* Proactive Tips Banner */}
+          {/* Enhanced Proactive Tips Banner */}
           {proactiveTips.length > 0 && messages.length <= 1 && (
-            <div className="px-4 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-100">
-              <div className="flex items-start gap-2">
-                <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-amber-800">AI Tip for you:</p>
-                  <p className="text-xs text-amber-700">{proactiveTips[0]?.text}</p>
+            <div className="px-4 py-3 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 border-b-2 border-amber-200/50">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Lightbulb className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">💡 AI Tip for you</p>
+                  <p className="text-sm font-semibold text-amber-900 mt-0.5">{proactiveTips[0]?.text}</p>
+                  {proactiveTips[0]?.action && (
+                    <button 
+                      onClick={() => proactiveTips[0]?.route && handleActionClick(proactiveTips[0].route)}
+                      className="mt-2 text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 transition-colors"
+                    >
+                      {proactiveTips[0].action} <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Messages */}
-          <div className={`flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-gray-50 to-white space-y-3 min-h-0 ${isExpanded ? '' : 'max-h-[200px] sm:max-h-[280px]'}`}>
+          {/* Enhanced Messages Area */}
+          <div className={`flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 via-white to-slate-50 space-y-4 min-h-0 ${isExpanded ? '' : 'max-h-[220px] sm:max-h-[300px]'}`}>
             {messages.map((msg, index) => (
               <motion.div 
                 key={index}
@@ -575,8 +598,8 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 animate={{ opacity: 1, y: 0 }}
                 className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex items-start gap-2 max-w-[90%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                <div className={`flex items-start gap-3 max-w-[90%] ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${
                     msg.type === 'user' 
                       ? 'bg-gradient-to-br from-purple-500 to-indigo-600' 
                       : 'bg-gradient-to-br from-indigo-500 to-purple-600'
@@ -591,28 +614,28 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                     {/* Diagnostic Badge */}
                     {msg.isDiagnostic && msg.type === 'bot' && (
                       <div className="flex items-center gap-1 mb-2">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-full shadow-sm">
                           <Sparkles className="w-3 h-3" />
-                          Smart Diagnosis
+                          🔍 Smart Diagnosis
                         </span>
                       </div>
                     )}
                     <div className={`rounded-2xl px-4 py-3 ${
                       msg.type === 'user' 
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-md' 
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-md shadow-lg shadow-purple-200' 
                         : msg.isError 
-                          ? 'bg-red-100 text-red-800 rounded-bl-md'
+                          ? 'bg-gradient-to-br from-red-50 to-rose-50 text-red-800 rounded-bl-md border-2 border-red-200'
                           : msg.isDiagnostic
-                            ? 'bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 shadow-md rounded-bl-md border border-emerald-200'
-                            : 'bg-white text-gray-800 shadow-md rounded-bl-md border border-gray-100'
+                            ? 'bg-gradient-to-br from-emerald-50 to-teal-50 text-gray-800 shadow-lg rounded-bl-md border-2 border-emerald-200'
+                            : 'bg-white text-gray-800 shadow-lg rounded-bl-md border border-gray-100'
                     }`}>
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                      <p className={`text-sm whitespace-pre-wrap leading-relaxed ${msg.type === 'bot' ? 'font-medium' : ''}`}>{msg.text}</p>
                       
                       {/* Speaker button for bot messages */}
                       {msg.type === 'bot' && !msg.isError && voiceEnabled && (
                         <button
                           onClick={() => audioPlaying === index ? stopSpeaking() : speakText(msg.text, index)}
-                          className="mt-2 flex items-center gap-1 text-xs text-purple-500 hover:text-purple-700"
+                          className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors"
                         >
                           {audioPlaying === index ? (
                             <>
@@ -620,7 +643,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                             </>
                           ) : (
                             <>
-                              <Volume2 className="w-3 h-3" /> Listen
+                              <Volume2 className="w-3 h-3" /> 🔊 Listen
                             </>
                           )}
                         </button>
@@ -642,12 +665,12 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                       </div>
                     )}
                     
-                    {/* AI Suggestions */}
+                    {/* AI Suggestions - Enhanced */}
                     {msg.suggestions && msg.suggestions.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs text-gray-500 flex items-center gap-1 ml-1">
-                          <Lightbulb className="w-3 h-3 text-yellow-500" />
-                          AI Suggestions for you:
+                      <div className="mt-4 space-y-2">
+                        <p className="text-xs font-bold text-gray-600 flex items-center gap-1.5 ml-1 uppercase tracking-wide">
+                          <Lightbulb className="w-4 h-4 text-yellow-500" />
+                          ✨ AI Suggestions
                         </p>
                         {msg.suggestions.map((suggestion, i) => (
                           <motion.button
@@ -656,24 +679,24 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.1 }}
                             onClick={() => suggestion.route ? handleActionClick(suggestion.route) : sendMessage(suggestion.action)}
-                            className="w-full text-left p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100 hover:border-purple-300 transition-all group"
+                            className="w-full text-left p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 rounded-xl border-2 border-purple-100 hover:border-purple-400 hover:shadow-md transition-all group"
                           >
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">{suggestion.icon}</span>
-                                <span className="text-sm text-gray-700">{suggestion.text}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">{suggestion.icon}</span>
+                                <span className="text-sm font-semibold text-gray-800">{suggestion.text}</span>
                               </div>
-                              <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                              <ChevronRight className="w-5 h-5 text-purple-500 group-hover:translate-x-1 transition-transform" />
                             </div>
                           </motion.button>
                         ))}
                       </div>
                     )}
                     
-                    {/* Quick FAQ Buttons */}
+                    {/* Quick FAQ Buttons - Enhanced */}
                     {msg.quickFAQ && msg.quickFAQ.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs text-gray-500 mb-2 ml-1">Quick Questions:</p>
+                      <div className="mt-4">
+                        <p className="text-xs font-bold text-gray-600 mb-2.5 ml-1 uppercase tracking-wide">🔗 Quick Questions</p>
                         <div className="flex flex-wrap gap-2">
                           {msg.quickFAQ.map((faq, i) => (
                             <motion.button
@@ -682,9 +705,9 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: i * 0.05 }}
                               onClick={() => sendMessage(faq.q)}
-                              className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all flex items-center gap-1"
+                              className="px-4 py-2 bg-white border-2 border-gray-200 rounded-xl text-xs font-semibold text-gray-700 hover:bg-purple-50 hover:border-purple-400 hover:text-purple-700 transition-all flex items-center gap-1.5 shadow-sm"
                             >
-                              <span>{faq.icon}</span>
+                              <span className="text-base">{faq.icon}</span>
                               <span>{faq.q}</span>
                             </motion.button>
                           ))}
@@ -692,7 +715,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                       </div>
                     )}
                     
-                    <p className={`text-[10px] mt-1 ml-1 ${msg.type === 'user' ? 'text-right text-purple-300' : 'text-gray-400'}`}>
+                    <p className={`text-[11px] mt-2 ml-1 font-medium ${msg.type === 'user' ? 'text-right text-purple-300' : 'text-gray-400'}`}>
                       {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
@@ -734,13 +757,14 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Questions */}
+          {/* Enhanced Quick Questions */}
           {messages.length <= 1 && (
-            <div className="px-4 py-3 bg-gray-50 border-t flex-shrink-0">
-              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                <Target className="w-3 h-3" /> Quick questions:
+            <div className="px-4 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-t-2 flex-shrink-0">
+              <p className="text-xs font-bold text-gray-600 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                <Target className="w-4 h-4 text-purple-500" /> 
+                🚀 Quick Start - Ask me anything!
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {quickQuestions.map((q, i) => (
                   <motion.button
                     key={i}
@@ -748,29 +772,29 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 }}
                     onClick={() => handleQuickQuestion(q.text)}
-                    className="text-left p-2.5 bg-white rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all text-sm flex items-center gap-2"
+                    className="text-left p-3 bg-white rounded-xl border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 hover:shadow-md transition-all text-sm flex items-center gap-2.5"
                   >
-                    <span>{q.icon}</span>
-                    <span className="text-gray-700 truncate">{q.text}</span>
+                    <span className="text-lg">{q.icon}</span>
+                    <span className="text-gray-800 font-semibold truncate">{q.text}</span>
                   </motion.button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Input */}
-          <div className="p-4 bg-white border-t flex-shrink-0">
-            <div className="flex gap-2">
+          {/* Enhanced Input Area */}
+          <div className="p-4 bg-white border-t-2 flex-shrink-0">
+            <div className="flex gap-2.5">
               {/* Voice Recording Button */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isLoading}
-                className={`p-3 rounded-xl transition-all ${
+                className={`p-3.5 rounded-xl transition-all shadow-sm ${
                   isRecording 
-                    ? 'bg-red-500 text-white animate-pulse' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-600'
+                    ? 'bg-red-500 text-white animate-pulse shadow-red-200' 
+                    : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 hover:from-purple-100 hover:to-indigo-100 hover:text-purple-600 border border-gray-200'
                 }`}
                 title={isRecording ? 'Stop recording' : 'Start voice input'}
               >
@@ -782,13 +806,13 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Type or speak your message..."
-                className="flex-1 rounded-xl border-gray-200 focus:border-purple-400 focus:ring-purple-400"
+                className="flex-1 rounded-xl border-2 border-gray-200 focus:border-purple-400 focus:ring-purple-400 text-sm font-medium"
                 disabled={isLoading || isRecording}
               />
               <Button 
                 onClick={() => sendMessage()}
                 disabled={isLoading || !inputMessage.trim() || isRecording}
-                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-4"
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 px-5 shadow-lg shadow-purple-200 transition-all"
               >
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -797,8 +821,8 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 )}
               </Button>
             </div>
-            <p className="text-[10px] text-gray-400 text-center mt-2">
-              🎤 Voice enabled • English, हिंदी, मराठी supported
+            <p className="text-[11px] text-gray-500 text-center mt-3 font-medium">
+              🎤 Voice enabled • <span className="text-purple-600">English</span>, <span className="text-orange-600">हिंदी</span>, <span className="text-green-600">मराठी</span> supported
             </p>
           </div>
         </Card>
