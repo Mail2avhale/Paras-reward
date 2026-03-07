@@ -957,7 +957,8 @@ async def execute_dmt_transfer(request_id: str, request: Request):
         amount = request_doc.get("net_amount", 0)  # Net amount after fees
         account_number = request_doc.get("account_number", "")
         ifsc_code = request_doc.get("ifsc_code", "")
-        account_holder = request_doc.get("account_holder", "")
+        # Try both field names for account holder
+        account_holder = request_doc.get("account_holder") or request_doc.get("account_holder_name") or request_doc.get("user_name", "")
         recipient_id = request_doc.get("eko_recipient_id", "")
         
         if not all([user_mobile, amount, account_number, ifsc_code]):
@@ -972,6 +973,11 @@ async def execute_dmt_transfer(request_id: str, request: Request):
                 status_code=400,
                 detail=f"Transfer amount ₹{amount} is below minimum ₹100"
             )
+        
+        # Sanitize account holder name (Eko requires 1-50 chars)
+        if account_holder:
+            # Remove extra spaces and limit to 50 chars
+            account_holder = ' '.join(account_holder.split())[:50]
         
         now = datetime.now(timezone.utc)
         
