@@ -14539,36 +14539,9 @@ async def get_all_transactions_admin(
         }
     }
 
-# ========== LEADERBOARD ROUTES ==========
-@api_router.get("/leaderboard")
-async def get_leaderboard():
-    """Get leaderboard - CACHED 2 min"""
-    # Check cache first
-    cache_key = "leaderboard_top100"
-    cached = await cache.get(cache_key)
-    if cached:
-        return cached
-    
-    users = await db.users.find(
-        {"is_active": True},
-        {"_id": 0, "uid": 1, "name": 1, "profile_picture": 1, "total_mined": 1, "membership_type": 1}
-    ).sort("total_mined", -1).limit(100).to_list(100)
-    
-    leaderboard = []
-    for idx, user in enumerate(users, 1):
-        leaderboard.append({
-            "uid": user["uid"],
-            "name": user["name"],
-            "profile_picture": user.get("profile_picture"),
-            "total_prc": user.get("total_mined", 0),
-            "rank": idx,
-            "is_vip": user.get("membership_type") == "vip"
-        })
-    
-    # Cache for 2 minutes (leaderboard updates aren't critical real-time)
-    await cache.set(cache_key, leaderboard, ttl=120)
-    
-    return leaderboard
+# ========== LEADERBOARD ROUTES (MOVED TO routes/leaderboard.py) ==========
+# These routes are now handled by the leaderboard router
+# Keeping this comment for reference
 
 # ========== AI CHATBOT & KYC AUTO-VERIFICATION ==========
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
@@ -34261,99 +34234,8 @@ async def get_user_streak(user_id: str):
     streak_data.pop("_id", None)
     return streak_data
 
-# Leaderboard
-@api_router.get("/leaderboard/miners")
-async def get_top_miners(period: str = "all_time", limit: int = 100):
-    """Get top miners leaderboard"""
-    
-    # Calculate time filter
-    time_filter = {}
-    if period == "weekly":
-        from datetime import timedelta
-        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        time_filter = {"created_at": {"$gte": week_ago}}
-    elif period == "monthly":
-        from datetime import timedelta
-        month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-        time_filter = {"created_at": {"$gte": month_ago}}
-    
-    # Aggregate mining totals
-    pipeline = [
-        {"$match": {**{"type": {"$in": ["mining", "tap_game"]}}, **time_filter}},
-        {"$group": {
-            "_id": "$user_id",
-            "total_mined": {"$sum": "$amount"}
-        }},
-        {"$sort": {"total_mined": -1}},
-        {"$limit": limit}
-    ]
-    
-    results = await db.transactions.aggregate(pipeline).to_list(limit)
-    
-    # Get user details
-    leaderboard = []
-    for idx, result in enumerate(results, 1):
-        user = await db.users.find_one({"uid": result["_id"]})
-        if user:
-            leaderboard.append({
-                "rank": idx,
-                "user_id": result["_id"],
-                "name": user.get("name", "Unknown"),
-                "total_mined": round(result["total_mined"], 2),
-                "membership_type": user.get("membership_type", "free")
-            })
-    
-    return {"leaderboard": leaderboard, "period": period}
-
-@api_router.get("/leaderboard/referrers")
-async def get_top_referrers(limit: int = 100):
-    """Get top referrers leaderboard"""
-    
-    # Aggregate referral counts
-    pipeline = [
-        {"$match": {"referred_by": {"$exists": True, "$ne": None}}},
-        {"$group": {
-            "_id": "$referred_by",
-            "total_referrals": {"$sum": 1}
-        }},
-        {"$sort": {"total_referrals": -1}},
-        {"$limit": limit}
-    ]
-    
-    results = await db.users.aggregate(pipeline).to_list(limit)
-    
-    # Get user details
-    leaderboard = []
-    for idx, result in enumerate(results, 1):
-        user = await db.users.find_one({"uid": result["_id"]})
-        if user:
-            leaderboard.append({
-                "rank": idx,
-                "user_id": result["_id"],
-                "name": user.get("name", "Unknown"),
-                "total_referrals": result["total_referrals"],
-                "membership_type": user.get("membership_type", "free")
-            })
-    
-    return {"leaderboard": leaderboard}
-
-@api_router.get("/leaderboard/earners")
-async def get_top_earners(limit: int = 100):
-    """Get top earners leaderboard by cashback balance"""
-    
-    users = await db.users.find({}).sort("cashback_balance", -1).limit(limit).to_list(limit)
-    
-    leaderboard = []
-    for idx, user in enumerate(users, 1):
-        leaderboard.append({
-            "rank": idx,
-            "user_id": user["uid"],
-            "name": user.get("name", "Unknown"),
-            "cashback_balance": round(user.get("cashback_balance", 0), 2),
-            "membership_type": user.get("membership_type", "free")
-        })
-    
-    return {"leaderboard": leaderboard}
+# Leaderboard routes MOVED to routes/leaderboard.py
+# Keeping comment for reference - miners, referrers, earners endpoints
 
 
 # ========== FLASH SALES ==========
@@ -42691,14 +42573,19 @@ api_router.include_router(admin_popup_router)
 from routes.gift_subscription import router as gift_router
 api_router.include_router(gift_router)
 
-# Leaderboard Router
+# Leaderboard Router - ENABLED (only in routes/leaderboard.py)
 api_router.include_router(leaderboard_router)
 
-# Social Router (Follow, Messages)
-api_router.include_router(social_router)
+# Social Router - DISABLED: server.py has complete implementation with:
+# - Follow/Unfollow with notifications
+# - Activity feed (global & network)
+# - Messaging with enhanced features
+# - Social search and suggestions
+# api_router.include_router(social_router)
 
-# Support Tickets Router
-api_router.include_router(support_router)
+# Support Tickets Router - DISABLED: server.py has more sophisticated implementation
+# with separate replies collection and Pydantic models (SupportTicket, SupportTicketReply)
+# api_router.include_router(support_router)
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)

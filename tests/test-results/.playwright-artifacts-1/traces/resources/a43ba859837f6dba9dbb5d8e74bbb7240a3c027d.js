@@ -444,7 +444,7 @@ var _jsxFileName = "/app/frontend/src/pages/Mining.js",
 
 // PRCBurnAlert removed - free users no longer collect PRC
 
-const API = `${"https://mining-formula-v2.preview.emergentagent.com"}/api`;
+const API = `${"https://razorpay-auto-sync.preview.emergentagent.com"}/api`;
 
 // Animated counter component for live PRC display - ALWAYS shows positive values
 const AnimatedCounter = ({

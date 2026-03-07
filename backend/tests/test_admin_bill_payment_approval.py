@@ -19,7 +19,7 @@ import os
 import uuid
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mining-formula-v2.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://razorpay-auto-sync.preview.emergentagent.com')
 ADMIN_UID = "8175c02a-4fbd-409c-8d47-d864e979f59f"
 
 @pytest.fixture
