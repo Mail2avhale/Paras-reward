@@ -130,30 +130,59 @@ def get_client_ip(request: Request) -> str:
 
 # ==================== AUTHENTICATION ====================
 
+def generate_secret_key(timestamp_ms: str) -> str:
+    """
+    Generate Eko secret-key as per official documentation.
+    
+    Formula (from Eko docs):
+    1. Encode key using base64
+    2. Generate timestamp in MILLISECONDS 
+    3. Compute HMAC-SHA256(base64_key, timestamp)
+    4. Encode result using base64
+    
+    Reference: https://developers.eko.in/docs/authentication
+    """
+    # Step 1: Base64 encode the authenticator key
+    key_bytes = EKO_AUTH_KEY.encode('utf-8')
+    encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+    
+    # Step 2: Use timestamp as message
+    message = timestamp_ms.encode('utf-8')
+    
+    # Step 3: HMAC-SHA256 with encoded key as the key
+    signature = hmac.new(
+        encoded_key.encode('utf-8'),
+        message,
+        hashlib.sha256
+    ).digest()
+    
+    # Step 4: Base64 encode the signature
+    secret_key = base64.b64encode(signature).decode('utf-8')
+    
+    return secret_key
+
+
 def generate_eko_headers(request: Request = None) -> Dict[str, str]:
     """
     Generate EKO authentication headers for DMT.
     
-    DMT Authentication Formula (as per Eko documentation):
-    1. timestamp = current time in SECONDS (not milliseconds)
-    2. raw = developer_key + timestamp + authenticator_key
-    3. secret_key = Base64(SHA256(raw))
+    As per Eko documentation:
+    - secret-key-timestamp: current time in MILLISECONDS
+    - secret-key: HMAC-SHA256(base64(auth_key), timestamp) -> base64
     """
     if not validate_eko_config():
         raise ValueError("EKO configuration not properly set")
     
-    timestamp = str(int(time.time()))  # SECONDS for DMT
+    # Timestamp in MILLISECONDS (as per Eko docs)
+    timestamp_ms = str(int(time.time() * 1000))
     
-    # SHA256 of concatenated string
-    raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
-    secret_key = base64.b64encode(
-        hashlib.sha256(raw.encode()).digest()
-    ).decode()
+    # Generate secret key using correct formula
+    secret_key = generate_secret_key(timestamp_ms)
     
     return {
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
-        "secret-key-timestamp": timestamp,
+        "secret-key-timestamp": timestamp_ms,
         "initiator_id": EKO_INITIATOR_ID,
         "Content-Type": "application/x-www-form-urlencoded"
     }
@@ -174,36 +203,45 @@ def generate_eko_headers_for_get() -> Dict[str, str]:
     if not validate_eko_config():
         raise ValueError("EKO configuration not properly set")
     
-    timestamp = str(int(time.time()))  # SECONDS for DMT
+    # Timestamp in MILLISECONDS
+    timestamp_ms = str(int(time.time() * 1000))
     
-    raw = EKO_DEVELOPER_KEY + timestamp + EKO_AUTH_KEY
-    secret_key = base64.b64encode(
-        hashlib.sha256(raw.encode()).digest()
-    ).decode()
+    # Generate secret key
+    secret_key = generate_secret_key(timestamp_ms)
     
     return {
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
-        "secret-key-timestamp": timestamp,
+        "secret-key-timestamp": timestamp_ms,
         "initiator_id": EKO_INITIATOR_ID
     }
 
 
-def generate_request_hash(data_string: str) -> str:
+def generate_request_hash(timestamp_ms: str, utility_acc_no: str, amount: str, user_code: str) -> str:
     """
-    Generate request_hash for DMT transactions.
+    Generate request_hash for POST/transaction requests.
     
-    Formula: Base64(HMAC_SHA256(encoded_key, data_string))
+    Formula (from Eko docs):
+    1. Base64 encode the key
+    2. Concatenate: timestamp + utility_acc_no + amount + user_code
+    3. HMAC-SHA256(base64_key, concatenated_string)
+    4. Base64 encode result
     """
-    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode()).decode()
+    # Base64 encode the key
+    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8')).decode('utf-8')
     
-    request_hash = base64.b64encode(
-        hmac.new(
-            encoded_key.encode(),
-            data_string.encode(),
-            hashlib.sha256
-        ).digest()
-    ).decode()
+    # Concatenate the string
+    concat_string = timestamp_ms + utility_acc_no + amount + user_code
+    
+    # HMAC-SHA256
+    signature = hmac.new(
+        encoded_key.encode('utf-8'),
+        concat_string.encode('utf-8'),
+        hashlib.sha256
+    ).digest()
+    
+    # Base64 encode
+    request_hash = base64.b64encode(signature).decode('utf-8')
     
     return request_hash
 
@@ -987,13 +1025,28 @@ async def transfer_money(req: TransferRequest, request: Request):
         # Step 6: Execute EKO Transfer
         url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        # Generate request hash
-        timestamp = str(int(time.time() * 1000))
-        hash_string = f"{timestamp}{int(amount_inr)}{req.recipient_id}{client_ref_id}"
-        request_hash = generate_request_hash(hash_string)
+        # Generate timestamp and request hash (per Eko docs)
+        timestamp_ms = str(int(time.time() * 1000))
         
-        headers = generate_eko_headers_json(request)
-        headers["request_hash"] = request_hash
+        # For DMT transfer: request_hash uses (timestamp + recipient_id + amount + user_code)
+        # Note: Eko docs show utility_acc_no for BBPS, for DMT we use recipient_id
+        request_hash = generate_request_hash(
+            timestamp_ms=timestamp_ms,
+            utility_acc_no=req.recipient_id,  # recipient_id for DMT
+            amount=str(int(amount_inr)),
+            user_code=EKO_USER_CODE
+        )
+        
+        # Generate headers with same timestamp
+        secret_key = generate_secret_key(timestamp_ms)
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "initiator_id": EKO_INITIATOR_ID,
+            "Content-Type": "application/json",
+            "request_hash": request_hash
+        }
         
         payload = {
             "customer_id": req.mobile,

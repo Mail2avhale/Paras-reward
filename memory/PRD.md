@@ -101,8 +101,8 @@ User: "✅ Subscription activated!"
 
 ## Prioritized Backlog
 
-### P0 - Critical (BLOCKED)
-- [ ] **Eko DMT IP Whitelist Required** - Current preview server IP: `34.170.12.145` needs to be whitelisted in Eko portal. Without this, Bank Withdrawal via chatbot cannot process actual transfers.
+### P0 - Critical (BLOCKED - Preview Environment Only)
+- [ ] **Eko DMT API** - Authentication code FIXED ✅. Preview IP (`34.170.12.145`) not whitelisted. Production IPs (`34.44.149.98`, `34.10.166.75`) ARE whitelisted. **Test on production server to verify.**
 
 ### P1 - High Priority
 - [ ] BBPS billers (AEML, JPDCL) fix - Some operators failing to fetch bills
