@@ -20,7 +20,7 @@ import os
 import time
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://monolith-refactor-13.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://prc-redeem-hub.preview.emergentagent.com')
 
 TEST_USER_EMAIL = "testuser@test.com"
 TEST_USER_PASSWORD = "test123"

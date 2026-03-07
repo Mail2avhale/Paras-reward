@@ -10,9 +10,11 @@ import {
   Loader2, Sparkles, HelpCircle, Zap, TrendingUp,
   Gift, Crown, ChevronRight, Lightbulb, Target,
   Volume2, VolumeX, Maximize2, Minimize2, Mic, MicOff,
-  Play, Square, ArrowRight, Home, Users, ShoppingBag
+  Play, Square, ArrowRight, Home, Users, ShoppingBag,
+  Banknote
 } from 'lucide-react';
 import { toast } from 'sonner';
+import ChatbotWithdrawalFlow from './ChatbotWithdrawalFlow';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -125,6 +127,18 @@ const parseResponseForActions = (text) => {
   return actions.slice(0, 2); // Max 2 action buttons
 };
 
+// Check if message is a bank withdrawal request
+const isWithdrawalIntent = (message) => {
+  const lowerMsg = message.toLowerCase();
+  const withdrawalKeywords = [
+    'bank withdrawal', 'bank redeem', 'withdraw to bank', 'पैसे काढायचे',
+    'बँक withdrawal', 'बँक मध्ये पैसे', 'पैसे transfer', 'withdraw money',
+    'bank account', 'बँक अकाउंट', 'account मध्ये', 'bank transfer करायचे',
+    'redeem to bank', 'cash out', 'पैसे बँक', 'withdrawal करायचे'
+  ];
+  return withdrawalKeywords.some(keyword => lowerMsg.includes(keyword));
+};
+
 const AIChatbotEnhanced = ({ user, userStats }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,6 +159,9 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   
   // Proactive tips
   const [proactiveTips, setProactiveTips] = useState([]);
+  
+  // Bank withdrawal flow state
+  const [showWithdrawalFlow, setShowWithdrawalFlow] = useState(false);
   
   const messagesEndRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -328,6 +345,27 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
   const sendMessage = async (messageText = inputMessage) => {
     if (!messageText.trim() || isLoading) return;
 
+    // Check for bank withdrawal intent - trigger dedicated flow
+    if (isWithdrawalIntent(messageText)) {
+      const userMessage = {
+        type: 'user',
+        text: messageText,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+      setInputMessage('');
+      
+      // Add bot response about starting withdrawal flow
+      const botMessage = {
+        type: 'bot',
+        text: '🏦 **Bank Withdrawal Request Detected!**\n\nमी तुम्हाला bank withdrawal process मध्ये guide करतो. हा secure flow Eko DMT द्वारे आहे.\n\n✅ OTP verification\n✅ Bank details collection\n✅ Secure transfer\n\n👇 खालील button वर click करा:',
+        timestamp: new Date(),
+        showWithdrawalButton: true
+      };
+      setMessages(prev => [...prev, botMessage]);
+      return;
+    }
+
     const userMessage = {
       type: 'user',
       text: messageText,
@@ -397,7 +435,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
 
   const quickQuestions = [
     { icon: '🔍', text: "माझी समस्या शोधा" },
-    { icon: '💰', text: "Bank redeem का fail?" },
+    { icon: '💰', text: "Bank withdrawal करायचे" },
     { icon: '🎮', text: "Mining not working?" },
     { icon: '👥', text: "Referral bonus कुठे?" }
   ];
@@ -620,6 +658,23 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                       </div>
                     )}
                     
+                    {/* Bank Withdrawal Button */}
+                    {msg.showWithdrawalButton && (
+                      <div className="mt-4">
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          onClick={() => setShowWithdrawalFlow(true)}
+                          className="w-full py-4 px-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-3 hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg shadow-green-200"
+                          data-testid="start-withdrawal-btn"
+                        >
+                          <Banknote className="w-6 h-6" />
+                          <span>Start Bank Withdrawal</span>
+                          <ArrowRight className="w-5 h-5" />
+                        </motion.button>
+                      </div>
+                    )}
+                    
                     {/* AI Suggestions - Enhanced */}
                     {msg.suggestions && msg.suggestions.length > 0 && (
                       <div className="mt-4 space-y-2">
@@ -771,6 +826,46 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
           </div>
         </Card>
       </motion.div>
+      
+      {/* Bank Withdrawal Flow Modal */}
+      {showWithdrawalFlow && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="w-full max-w-md"
+          >
+            <ChatbotWithdrawalFlow
+              user={user}
+              onComplete={(result) => {
+                setShowWithdrawalFlow(false);
+                // Add success message to chat
+                setMessages(prev => [...prev, {
+                  type: 'bot',
+                  text: `🎉 **Withdrawal Request Submitted!**\n\nRequest ID: ${result?.request_id || 'N/A'}\nAmount: ₹${result?.details?.amount || 0}\nNet Amount: ₹${result?.details?.net_amount || 0}\n\n📌 Processing time: 5-7 working days\n\nतुम्ही request status chatbot मध्ये track करू शकता!`,
+                  timestamp: new Date()
+                }]);
+                toast.success('Withdrawal request submitted!');
+              }}
+              onCancel={() => {
+                setShowWithdrawalFlow(false);
+                // Add cancellation message
+                setMessages(prev => [...prev, {
+                  type: 'bot',
+                  text: 'Withdrawal flow cancelled. तुम्ही कधीही "Bank withdrawal करायचे" असे type करून पुन्हा try करू शकता.',
+                  timestamp: new Date()
+                }]);
+              }}
+            />
+          </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 };

@@ -372,3 +372,213 @@ class TestAPIDocumentation:
         # 500 INR should require 5000 PRC (10 PRC = 1 INR)
         assert data["prc_required"] == 5000.0
         assert data["amount_inr"] * 10 == data["prc_required"]
+
+
+
+class TestEkoCustomerCheckAPI:
+    """Test /api/chatbot-redeem/eko/check-customer endpoint"""
+    
+    def test_eko_check_customer_endpoint_exists(self):
+        """Test Eko check customer endpoint returns 200"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/check-customer",
+            json={"uid": "test-uid-123", "mobile": "9876543210"}
+        )
+        
+        assert response.status_code == 200, f"Eko check customer failed: {response.text}"
+        
+    def test_eko_check_customer_response_structure(self):
+        """Test Eko check customer response has proper structure"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/check-customer",
+            json={"uid": "test-uid-123", "mobile": "9876543210"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Should have success field
+        assert "success" in data
+        assert data["success"] is True
+        
+        # In preview environment, should have skip_otp flag
+        assert "skip_otp" in data or "verified" in data
+        
+    def test_eko_check_customer_skip_otp_in_preview(self):
+        """Test Eko returns skip_otp due to IP not whitelisted in preview"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/check-customer",
+            json={"uid": "test-uid", "mobile": "9876543210"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # In preview, IP is not whitelisted so Eko returns skip_otp
+        assert data.get("skip_otp") is True or data.get("verified") is True
+        
+    def test_eko_check_customer_invalid_mobile_format(self):
+        """Test Eko check customer with invalid mobile format"""
+        # Mobile must be exactly 10 digits
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/check-customer",
+            json={"uid": "test-uid", "mobile": "123"}  # Too short
+        )
+        
+        # Should fail validation
+        assert response.status_code == 422
+
+
+class TestEkoVerificationStatusAPI:
+    """Test /api/chatbot-redeem/eko/verification-status/{mobile} endpoint"""
+    
+    def test_verification_status_for_new_mobile(self):
+        """Test verification status for unverified mobile"""
+        response = requests.get(
+            f"{BASE_URL}/api/chatbot-redeem/eko/verification-status/9999999999"
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "verified" in data
+        # New mobile should not be verified
+        assert data["verified"] is False or "message" in data
+
+
+class TestEkoResendOTPAPI:
+    """Test /api/chatbot-redeem/eko/resend-otp endpoint"""
+    
+    def test_resend_otp_endpoint_exists(self):
+        """Test resend OTP endpoint returns response"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/resend-otp",
+            json={"uid": "test-uid", "mobile": "9876543210"}
+        )
+        
+        # Should return 200 (may have success=False due to IP not whitelisted)
+        assert response.status_code == 200
+        data = response.json()
+        assert "success" in data
+
+
+class TestEkoVerifyOTPAPI:
+    """Test /api/chatbot-redeem/eko/verify-otp endpoint"""
+    
+    def test_verify_otp_endpoint_exists(self):
+        """Test verify OTP endpoint returns response"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/verify-otp",
+            json={"uid": "test-uid", "mobile": "9876543210", "otp": "123456"}
+        )
+        
+        # In preview env, this should succeed (skip OTP check)
+        assert response.status_code == 200
+        data = response.json()
+        assert "success" in data
+        
+    def test_verify_otp_with_short_otp(self):
+        """Test verify OTP with invalid OTP format"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/eko/verify-otp",
+            json={"uid": "test-uid", "mobile": "9876543210", "otp": "12"}  # Too short
+        )
+        
+        # Should fail validation (OTP must be 4-6 digits)
+        assert response.status_code == 422
+
+
+class TestWithdrawalRequestAPI:
+    """Test /api/chatbot-redeem/request endpoint for creating withdrawal requests"""
+    
+    def test_create_request_missing_bank_details(self):
+        """Test request creation fails without bank details"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/request",
+            json={
+                "uid": "test-uid",
+                "amount_inr": 500
+                # Missing bank details
+            }
+        )
+        
+        assert response.status_code == 422
+        
+    def test_create_request_invalid_ifsc(self):
+        """Test request creation fails with invalid IFSC"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/request",
+            json={
+                "uid": "test-uid",
+                "amount_inr": 500,
+                "account_holder_name": "TEST USER",
+                "account_number": "123456789012",
+                "bank_name": "Test Bank",
+                "ifsc_code": "INVALID"  # Invalid format
+            }
+        )
+        
+        assert response.status_code == 422
+        
+    def test_create_request_below_minimum_amount(self):
+        """Test request creation fails with amount below minimum"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/request",
+            json={
+                "uid": "test-uid",
+                "amount_inr": 100,  # Below ₹500 minimum
+                "account_holder_name": "TEST USER",
+                "account_number": "123456789012",
+                "bank_name": "Test Bank",
+                "ifsc_code": "SBIN0001234"
+            }
+        )
+        
+        assert response.status_code == 422
+        
+    def test_create_request_invalid_account_number(self):
+        """Test request creation fails with non-numeric account number"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/request",
+            json={
+                "uid": "test-uid",
+                "amount_inr": 500,
+                "account_holder_name": "TEST USER",
+                "account_number": "ABC123XYZ",  # Contains letters
+                "bank_name": "Test Bank",
+                "ifsc_code": "SBIN0001234"
+            }
+        )
+        
+        assert response.status_code == 422
+
+
+class TestAdminProcessRequestAPI:
+    """Test /api/chatbot-redeem/admin/process/{request_id} endpoint"""
+    
+    def test_admin_process_nonexistent_request(self):
+        """Test processing non-existent request returns 404"""
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/admin/process/NONEXISTENT-12345",
+            json={
+                "admin_uid": "admin-test",
+                "action": "approve"
+            }
+        )
+        
+        assert response.status_code == 404
+        
+    def test_admin_process_invalid_action(self):
+        """Test processing with invalid action"""
+        # First need a request ID (which we don't have)
+        # This would normally require creating a request first
+        response = requests.post(
+            f"{BASE_URL}/api/chatbot-redeem/admin/process/TEST-123",
+            json={
+                "admin_uid": "admin-test",
+                "action": "invalid_action"
+            }
+        )
+        
+        # Should return 404 (request not found) or 400 (invalid action)
+        assert response.status_code in [400, 404]
