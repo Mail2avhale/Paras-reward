@@ -7218,7 +7218,8 @@ async def get_user_dashboard_combined(uid: str):
             return cached
     
     # Get user data (this already does all the heavy lifting)
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password": 0})
+    # PERFORMANCE: Exclude profile_picture from dashboard query
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password": 0, "profile_picture": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
