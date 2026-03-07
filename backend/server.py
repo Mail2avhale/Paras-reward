@@ -63,7 +63,8 @@ from routes.user_logs import router as user_logs_router, set_db as set_user_logs
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
-from routes.eko_payments import router as eko_router, set_db as set_eko_db
+# Legacy Eko router - archived, keeping import for set_db dependency
+from routes._archive_eko_payments_legacy import router as eko_router, set_db as set_eko_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
@@ -25152,7 +25153,7 @@ async def process_bill_payment_request(request: Request):
             "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
         ]
         
-        from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        from routes.eko_common import make_eko_request, EKO_INITIATOR_ID
         import asyncio
         
         # Eko Operator ID mapping (operator_name -> eko_operator_id)
@@ -25694,7 +25695,7 @@ async def process_bill_payment_request(request: Request):
             "fastag_recharge", "credit_card_bill", "loan_emi", "municipal_tax"
         ]
         
-        from routes.eko_payments import make_eko_request, EKO_INITIATOR_ID
+        from routes.eko_common import make_eko_request, EKO_INITIATOR_ID
         import asyncio
         
         user_doc = await db.users.find_one({"uid": user_id}, {"full_name": 1, "name": 1})
@@ -38497,9 +38498,10 @@ api_router.include_router(notifications_router)
 set_razorpay_db(db)
 api_router.include_router(razorpay_router)
 
-# Eko Bill Payment & DMT Router
+# Legacy Eko Bill Payment & DMT Router - DISABLED (replaced by clean implementations)
+# Routes are now in: bbps_services.py (BBPS) and eko_dmt_service.py (DMT)
 set_eko_db(db)
-api_router.include_router(eko_router)
+# api_router.include_router(eko_router)  # Legacy - keeping set_db for any remaining dependencies
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)
