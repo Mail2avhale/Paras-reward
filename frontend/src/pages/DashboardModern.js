@@ -992,15 +992,6 @@ const DashboardModern = ({ user, onLogout }) => {
               <span className="text-[10px] text-gray-300 text-center">{t('electricity')}</span>
             </button>
             <button 
-              onClick={() => navigate('/redeem?service=dmt')}
-              className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <span className="text-xl">🏦</span>
-              </div>
-              <span className="text-[10px] text-gray-300 text-center">Bank A/C</span>
-            </button>
-            <button 
               onClick={() => navigate('/redeem?service=emi')}
               className="flex flex-col items-center gap-1.5 p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
             >
