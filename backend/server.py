@@ -76,8 +76,7 @@ from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_ad
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
-from routes.social import router as social_router, set_db as set_social_db
-from routes.support import router as support_router, set_db as set_support_db
+# Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -38535,8 +38534,7 @@ api_router.include_router(admin_dmt_router)
 # Admin Popup Messages Router
 set_admin_popup_db(db)
 set_leaderboard_db(db)
-set_social_db(db)
-set_support_db(db)
+# set_social_db and set_support_db removed - files deleted
 api_router.include_router(admin_popup_router)
 
 # Gift Subscription Router
@@ -38546,16 +38544,8 @@ api_router.include_router(gift_router)
 # Leaderboard Router - ENABLED (only in routes/leaderboard.py)
 api_router.include_router(leaderboard_router)
 
-# Social Router - DISABLED: server.py has complete implementation with:
-# - Follow/Unfollow with notifications
-# - Activity feed (global & network)
-# - Messaging with enhanced features
-# - Social search and suggestions
-# api_router.include_router(social_router)
-
-# Support Tickets Router - DISABLED: server.py has more sophisticated implementation
-# with separate replies collection and Pydantic models (SupportTicket, SupportTicketReply)
-# api_router.include_router(support_router)
+# Social and Support routers removed - routes/social.py and routes/support.py deleted
+# Social and support routes exist in server.py with complete implementations
 
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
