@@ -36,7 +36,7 @@ var _jsxFileName = "/app/frontend/src/components/NotificationBell.js",
 
 
 
-const API = `${"https://razorpay-auto-sync.preview.emergentagent.com"}/api`;
+const API = `${"https://sub-resolution.preview.emergentagent.com"}/api`;
 const NotificationBell = ({
   userId
 }) => {

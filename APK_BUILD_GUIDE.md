@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://razorpay-auto-sync.preview.emergentagent.com",
+    "url": "https://sub-resolution.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

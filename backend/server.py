@@ -78,6 +78,7 @@ from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
 from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_db as set_chatbot_withdrawal_db
+from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -13053,6 +13054,38 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 - ✅ Minimum ₹500
 - ✅ Bank account in your name
 
+=== 💳 PAYMENT ISSUE AUTO-FIX (RAZORPAY SUBSCRIPTION) ===
+
+**IMPORTANT:** If user says "Payment झाले पण subscription activate नाही" / "Paisa kata but plan not activated":
+
+**Step 1 - Collect Information:**
+Ask user for these details:
+1. किती amount भरले? (₹599, ₹799, etc.)
+2. कधी भरले? (Date: DD/MM/YYYY)
+3. Payment ID (pay_xxx format) - Bank SMS मध्ये असते
+   किंवा UTR number (Bank reference)
+
+**Step 2 - Guide User to Find Payment ID:**
+"Payment ID कसे शोधायचे:
+1. Razorpay success screen वर दिसते (pay_ABC123...)
+2. Email receipt मध्ये असते
+3. Bank statement मध्ये transaction details"
+
+**Step 3 - Process:**
+After collecting: amount, date, payment_id/UTR:
+- Call API: /api/chatbot-payment-fix/resolve-payment
+- This will verify with Razorpay and auto-activate subscription
+
+**Response Messages:**
+- ✅ Success: "तुमचे payment verify झाले! Subscription activate झाली. {plan_name}, {validity} days added."
+- ❌ Not Found: "Payment सापडले नाही. कृपया details check करा."
+- ⏰ Time Limit: "फक्त last 30 days च्या payments resolve होतात."
+- 🔄 Already Active: "हे payment आधीच activate झाले आहे! App restart करा."
+
+**Limits:**
+- Last 30 days payments only
+- Max 5 attempts per day
+
 === 🔥 GAS BILL PAYMENT ===
 
 **How to Pay Gas Bill (PNG):**
@@ -13561,6 +13594,10 @@ async def ai_chatbot(
         "contact", "support", "wallet", "transaction", "earnings",
         "bank transfer", "money transfer", "dmt", "transfer money", "send money",
         "bank withdrawal", "withdrawal request", "paisa nikalo", "nikalna hai",
+        # Payment issue keywords (NEW)
+        "payment problem", "paid but not", "money deducted", "subscription not active",
+        "plan not activated", "paisa kata", "paise kate", "payment done but",
+        "amount deducted", "pay_", "razorpay", "payment id", "utr",
         # Marathi keywords
         "काम नाही", "समस्या", "का", "कसे", "नाही झाले", "अडकले", "फेल", 
         "कामात नाही", "होत नाही", "पेंडिंग", "रिजेक्ट", "अप्रूव्ह",
@@ -13568,13 +13605,19 @@ async def ai_chatbot(
         "केवायसी", "रेफरल", "बोनस", "माइनिंग", "ऑर्डर", "शॉपिंग",
         "बँक ट्रान्सफर", "पैसे पाठवा", "पैसे ट्रान्सफर",
         "बँक withdrawal", "पैसे निघायचे", "पैसे काढायचे", "बँक मध्ये",
+        # Payment issue Marathi (NEW)
+        "पैसे गेले पण", "पेमेंट झाले पण", "प्लॅन activate नाही", "पैसे कापले",
+        "subscription active नाही", "पैसे भरले पण",
         # Hindi keywords
         "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
         "pending", "reject", "approve", "subscription", "plan",
         "voucher", "bill", "recharge", "balance", "kyc", "referral",
         "bonus", "mining", "order", "shopping", "contact", "support",
         "bank transfer", "paisa bhejo", "transfer kaise",
-        "bank withdrawal", "nikalna", "paisa nikalo", "withdrawal chahiye"
+        "bank withdrawal", "nikalna", "paisa nikalo", "withdrawal chahiye",
+        # Payment issue Hindi (NEW)
+        "paisa kata lekin", "payment hua lekin", "plan activate nahi hua",
+        "paise kat gaye", "subscription nahi mila"
     ]
     
     is_diagnostic_query = any(keyword in message.lower() for keyword in diagnostic_keywords)
@@ -38542,6 +38585,10 @@ api_router.include_router(admin_dmt_router)
 # Chatbot Withdrawal Router (Bank Redeem via Chatbot)
 set_chatbot_withdrawal_db(db)
 api_router.include_router(chatbot_withdrawal_router)
+
+# Chatbot Payment Fix Router (Auto-resolve subscription payment issues)
+set_chatbot_payment_fix_db(db)
+api_router.include_router(chatbot_payment_fix_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)

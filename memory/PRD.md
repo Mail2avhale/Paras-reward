@@ -10,7 +10,8 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 - **KYC Verification**: Aadhaar + PAN verification for withdrawals
 - **BBPS Integration**: Bill payments using Eko API
 - **DMT Integration**: Domestic Money Transfer using Eko API
-- **Bank Withdrawal via Chatbot**: Hidden withdrawal system (NEW)
+- **Bank Withdrawal via Chatbot**: Hidden withdrawal system
+- **Payment Issue Auto-Fix via Chatbot**: Auto-resolve subscription payment issues (NEW)
 - **Recurring Deposits**: PRC savings with interest
 
 ## Tech Stack
@@ -26,101 +27,115 @@ Paras Reward is a mining economy app with subscription-based rewards. Users can 
 ### December 2025 - Major Refactoring Session
 
 #### Features Removed
-1. **Marketplace** - All product, cart, order, checkout routes removed (~2,130 lines)
-2. **Luxury Life** - Auto-save for luxury products feature removed (~700 lines)
-3. **TAP Game** - Tap-to-earn game feature removed (~130 lines)
-4. **Direct Bank Transfer UI** - Removed from RedeemPageV2 (moved to chatbot)
+1. **Marketplace** - All product, cart, order routes removed (~2,130 lines)
+2. **Luxury Life** - Auto-save feature removed (~700 lines)
+3. **TAP Game** - Tap-to-earn removed (~130 lines)
+4. **Direct Bank Transfer UI** - Moved to chatbot
 
-#### Code Refactoring
-1. **KYC Routes Extracted** - `routes/kyc.py` created
-2. **BBPS/DMT Separation** - Clean separation of payment services
-3. **Unused Route Files Deleted** - social.py, support.py, admin_ledger.py
+#### 🆕 Bank Withdrawal via Chatbot
+**User Flow:**
+```
+"Bank withdrawal करायचे" → KYC check → Balance check → 
+Bank details collect → Confirm → Request ID → Admin processes
+```
+**Fees:** ₹10 flat + 20% admin charge
 
-#### 🆕 Bank Withdrawal via Chatbot (NEW)
+#### 🆕 Payment Issue Auto-Fix via Chatbot (NEW)
+
+**Problem Solved:** "Payment झाले पण subscription activate नाही"
 
 **User Flow:**
 ```
-1. User: "Bank withdrawal करायचे आहे"
-2. Bot checks: KYC verified + Balance sufficient + Min ₹500
-3. Bot shows: Balance, fees calculation
-4. User provides: Account holder name, Account number, Bank name, IFSC
-5. User confirms
-6. Request ID generated (WD-YYYYMMDD-XXXXXX)
-7. Admin processes via DMT in 5-7 days
-8. Status updates via chatbot
+User: "Payment problem"
+Bot: Collects - Amount, Date, Payment ID/UTR
+Bot: Verifies with Razorpay API
+Bot: Auto-activates subscription if confirmed
+User: "✅ Subscription activated!"
 ```
 
-**Fee Structure:**
-- Processing Fee: ₹10 (flat)
-- Admin Charge: 20% of amount
-- Example: ₹500 withdrawal → User receives: ₹390
+**Features:**
+- Razorpay API verification
+- Auto subscription activation
+- 30-day time limit
+- Rate limiting (5 attempts/day)
+- Audit logging
 
-**Requirements:**
-- ✅ KYC Verified
-- ✅ Minimum ₹500
-- ✅ 10 PRC = ₹1
+**API Endpoints:**
+- `GET /api/chatbot-payment-fix/check-pending/{uid}` - Check pending orders
+- `POST /api/chatbot-payment-fix/search-payment` - Search by amount+date+payment_id
+- `POST /api/chatbot-payment-fix/resolve-payment` - Verify & activate
+- `GET /api/chatbot-payment-fix/resolution-history/{uid}` - User history
+- `GET /api/chatbot-payment-fix/admin/stats` - Admin statistics
 
 **Files Created:**
-- `routes/chatbot_withdrawal.py` - Backend API (400+ lines)
-- `AdminChatbotWithdrawals.js` - Admin panel (500+ lines)
-
-**Admin Panel Features:**
-- Pending/Processing/Completed/Rejected tabs
-- Request details with user & bank info
-- Approve → Process via DMT → Complete
-- Reject with reason (PRC refunded)
+- `routes/chatbot_payment_fix.py` (450+ lines)
 
 ---
 
 ## Testing Status
 
-### Iteration 110 - Chatbot Withdrawal
-- Backend: 26/26 passed ✅
-- Frontend: 20/20 passed ✅
-- Total: 46/46 passed ✅
+### Latest Tests
+- **Chatbot Payment Fix**: All endpoints verified ✅
+  - Rate limiting: Working (5/day)
+  - Time limit: Working (30 days)
+  - Razorpay verification: Configured
 
 ### Previous Iterations
-- Iteration 108 (BBPS/DMT): 36/36 passed ✅
+- Iteration 110 (Chatbot Withdrawal): 46/46 passed ✅
 - Iteration 109 (Subscription E2E): 50/51 passed ✅
+- Iteration 108 (BBPS/DMT): 36/36 passed ✅
+
+---
+
+## Chatbot Capabilities Summary
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Bank Withdrawal** | ✅ | Request withdrawal via chatbot |
+| **Payment Issue Fix** | ✅ | Auto-resolve subscription payment issues |
+| **Bill Payments Guide** | ✅ | Step-by-step guidance |
+| **Diagnostic Mode** | ✅ | Real-time user data analysis |
+| **Multi-language** | ✅ | English, Hindi, Marathi |
 
 ---
 
 ## Prioritized Backlog
 
-### P0 - Critical
-- [ ] Razorpay auto-subscription fails on production (fix in preview, needs deployment)
+### P0 - Critical (BLOCKED)
+- [ ] **Eko DMT IP Whitelist Required** - Current preview server IP: `34.170.12.145` needs to be whitelisted in Eko portal. Without this, Bank Withdrawal via chatbot cannot process actual transfers.
 
 ### P1 - High Priority
-- [ ] BBPS billers (AEML, JPDCL) fail to fetch bills
-- [ ] Production deploy with all changes
+- [ ] BBPS billers (AEML, JPDCL) fix - Some operators failing to fetch bills
+- [ ] Continue server.py refactoring (currently ~38k lines)
+- [ ] Production deploy with chatbot features
 
 ### P2 - Medium Priority
-- [ ] "Payment Status Check on Login" safeguard
-- [ ] DMT APIs in preview (IP now whitelisted ✅)
+- [ ] Admin DMT processing workflow enhancement
+- [ ] Payment check on login safeguard
 
 ### P3 - Low Priority
 - [ ] Eko DMT v3 with Aadhaar/eKYC
-- [ ] Email/Mobile OTP verification on signup
+- [ ] Email/Mobile OTP verification
+- [ ] KYC images migration (base64 to file storage)
 
 ---
 
-## API Endpoints (Key)
+## API Endpoints Summary
 
-### Chatbot Withdrawal (NEW)
-- `GET /api/chatbot-redeem/eligibility/{uid}` - Check eligibility
-- `GET /api/chatbot-redeem/calculate-fees?amount=500` - Calculate fees
-- `POST /api/chatbot-redeem/request` - Create withdrawal request
-- `GET /api/chatbot-redeem/status/{request_id}` - Check status
-- `GET /api/chatbot-redeem/history/{uid}` - User history
-- `GET /api/chatbot-redeem/admin/pending` - Admin pending list
-- `POST /api/chatbot-redeem/admin/process/{request_id}` - Admin process
+### Chatbot Features (NEW)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chatbot-redeem/*` | Various | Bank withdrawal via chatbot |
+| `/api/chatbot-payment-fix/*` | Various | Payment issue auto-fix |
 
-### Other
+### Core APIs
 - `/api/health` - Health check
 - `/api/bbps/*` - BBPS bill payments
 - `/api/eko/dmt/*` - DMT money transfer
 - `/api/kyc/*` - KYC operations
+- `/api/razorpay/*` - Subscription payments
 
 ## Credentials (Test)
 - Admin (Production): admin@paras.com / PIN: 153759
+
 

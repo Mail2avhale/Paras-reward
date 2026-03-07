@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://razorpay-auto-sync.preview.emergentagent.com/setup
+   https://sub-resolution.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

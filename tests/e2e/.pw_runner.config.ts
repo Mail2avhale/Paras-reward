@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260307_061902/results.json' }],
   ],
   use: {
-    baseURL: 'https://razorpay-auto-sync.preview.emergentagent.com',
+    baseURL: 'https://sub-resolution.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
