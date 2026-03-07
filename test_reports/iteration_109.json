@@ -1,0 +1,50 @@
+{
+  "summary": "Razorpay Subscription Payment E2E Test - Full test suite created for subscription/payment flow. All API endpoints tested: config, create-order, verify-payment, payment-history, subscription plans. DOUBLE VERIFICATION security confirmed. Backend: 34/35 passed (1 skipped - debug endpoint needs real user). Frontend: 16/16 passed.",
+  "mode": "generate",
+  "baseline_commit": "074646b2066b8ec0db719c85614ed305a9e741ce",
+  "head_commit": "6fc768a260897a80584bc3edab5979af42028637",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "SubscriptionPlans",
+        "issues": ["Welcome popup appears on page load and may block initial interactions - user needs to dismiss it first"]
+      }
+    ]
+  },
+  "regression_results": {
+    "total_specs": 51,
+    "passed": 50,
+    "failed": 0,
+    "skipped": 1
+  },
+  "specs_created": [
+    "/app/backend/tests/test_razorpay_subscription_e2e.py",
+    "/app/tests/e2e/razorpay-subscription-e2e.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/razorpay_subscription_e2e_results.xml",
+    "/app/backend/tests/test_razorpay_subscription_e2e.py",
+    "/app/tests/e2e/razorpay-subscription-e2e.spec.ts"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_razorpay_subscription_e2e.py",
+    "/app/tests/e2e/razorpay-subscription-e2e.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (34/34 passed, 1 skipped)",
+    "frontend": "100% (16/16 passed)"
+  },
+  "seed_data_creation": "Test orders created with unique IDs using timestamps",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Razorpay Subscription E2E Test Suite Complete\n\n### Features Tested:\n1. **Razorpay Config API** - Returns live key (rzp_live_*), enabled status, DOUBLE_VERIFICATION_ENABLED security\n2. **Create Order API** - Creates orders with correct amount in paise, stores in database\n3. **Verify Payment API** - Rejects invalid signatures (tested negative cases)\n4. **Payment History API** - Returns payments with status_message and status_color\n5. **Subscription Plans API** - Returns Explorer (free) and Elite (paid) with pricing\n6. **Update Order Status API** - Can update to failed/cancelled/timeout/dismissed\n7. **Admin Subscriptions API** - Returns orders and stats with failed_orders count\n8. **Sync Payments API** - Works with admin PIN, syncs pending payments\n9. **Toggle Gateway API** - Can enable/disable Razorpay with admin PIN\n\n### UI Tests:\n- Subscription page loads with plans\n- Plan cards visible with data-testid\n- Duration selection flow\n- Payment method options (Razorpay + Manual UPI)\n- Payment history section\n\n### Important Notes:\n1. Subscription page requires authentication - test user login may not work\n2. Welcome popup appears on page load and needs to be dismissed\n3. Monthly subscription is 28 days per PLAN_DURATIONS constant\n4. Payment verification has DOUBLE verification (signature + Razorpay API status check)\n5. Remaining days from existing subscription are added to new subscription\n\n### Test Files:\n- Backend: /app/backend/tests/test_razorpay_subscription_e2e.py (35 tests)\n- Frontend: /app/tests/e2e/razorpay-subscription-e2e.spec.ts (16 tests)"
+}
