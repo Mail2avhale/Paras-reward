@@ -1396,3 +1396,363 @@ async def complete_withdrawal_manual(request_id: str, request: Request):
     except Exception as e:
         logging.error(f"[MANUAL-COMPLETE] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== ADMIN: REGISTER CUSTOMER IN EKO ====================
+
+@router.post("/admin/register-customer/{request_id}")
+async def admin_register_customer_eko(request_id: str, request: Request):
+    """
+    Admin API to register a customer in Eko DMT system.
+    
+    This is used when a withdrawal request fails because the customer
+    is not registered in Eko. This API:
+    1. Gets customer details from the request
+    2. Calls Eko Customer Registration API
+    3. Sends OTP to customer's mobile
+    4. Returns status (OTP sent / already registered / error)
+    
+    After this, admin should ask user to share OTP received on mobile,
+    then call verify-otp API before executing DMT.
+    """
+    try:
+        data = await request.json()
+        
+        # Get the withdrawal request
+        request_doc = await db.chatbot_withdrawal_requests.find_one({"request_id": request_id})
+        
+        if not request_doc:
+            raise HTTPException(status_code=404, detail="Withdrawal request not found")
+        
+        user_mobile = request_doc.get("user_mobile", "")
+        user_name = request_doc.get("user_name") or request_doc.get("account_holder_name", "")
+        
+        if not user_mobile:
+            raise HTTPException(status_code=400, detail="User mobile not found in request")
+        
+        logging.info(f"[ADMIN-REGISTER] Registering customer {user_mobile} for request {request_id}")
+        
+        # ============ STEP 1: Check if customer already exists ============
+        try:
+            from .eko_common import get_eko_headers, EKO_BASE_URL, EKO_INITIATOR_ID, EKO_USER_CODE
+            
+            headers = get_eko_headers()
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            
+            # Customer inquiry
+            inquiry_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{user_mobile}"
+            
+            import httpx
+            async with httpx.AsyncClient(timeout=30) as client:
+                inquiry_response = await client.get(
+                    inquiry_url,
+                    headers=headers,
+                    params={
+                        "initiator_id": EKO_INITIATOR_ID,
+                        "user_code": EKO_USER_CODE
+                    }
+                )
+                
+                inquiry_data = inquiry_response.json()
+                logging.info(f"[ADMIN-REGISTER] Customer inquiry response: {inquiry_data}")
+                
+                # Check response
+                response_code = inquiry_data.get("response_status_id", -1)
+                
+                if response_code == 0:
+                    # Customer already exists and verified
+                    return {
+                        "success": True,
+                        "already_registered": True,
+                        "customer_verified": True,
+                        "message": "Customer already registered and verified in Eko. You can proceed with DMT.",
+                        "customer_id": inquiry_data.get("data", {}).get("customer_id")
+                    }
+                
+                elif response_code == 330:
+                    # Customer exists but OTP pending
+                    return {
+                        "success": True,
+                        "already_registered": True,
+                        "customer_verified": False,
+                        "otp_required": True,
+                        "message": "Customer exists but OTP verification pending. Ask user for OTP or resend.",
+                        "otp_ref_id": inquiry_data.get("data", {}).get("otp_ref_id")
+                    }
+        
+        except Exception as e:
+            logging.warning(f"[ADMIN-REGISTER] Inquiry error (proceeding to register): {e}")
+        
+        # ============ STEP 2: Register customer (sends OTP) ============
+        try:
+            register_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{user_mobile}"
+            
+            # Clean name for Eko (1-50 chars, alphanumeric + space)
+            clean_name = ''.join(c for c in user_name if c.isalnum() or c.isspace())[:50].strip()
+            if not clean_name:
+                clean_name = "Customer"
+            
+            register_data = {
+                "initiator_id": EKO_INITIATOR_ID,
+                "user_code": EKO_USER_CODE,
+                "name": clean_name,
+                "pipe": "9"  # Default pipe for DMT
+            }
+            
+            async with httpx.AsyncClient(timeout=30) as client:
+                register_response = await client.put(
+                    register_url,
+                    headers=headers,
+                    data=register_data
+                )
+                
+                register_result = register_response.json()
+                logging.info(f"[ADMIN-REGISTER] Registration response: {register_result}")
+                
+                response_code = register_result.get("response_status_id", -1)
+                message = register_result.get("message", "")
+                
+                if response_code == 0 or "otp" in message.lower() or "sent" in message.lower():
+                    # OTP sent successfully
+                    otp_ref_id = register_result.get("data", {}).get("otp_ref_id", "")
+                    
+                    # Save OTP ref ID to request
+                    await db.chatbot_withdrawal_requests.update_one(
+                        {"request_id": request_id},
+                        {"$set": {
+                            "eko_otp_ref_id": otp_ref_id,
+                            "eko_registration_status": "otp_sent",
+                            "eko_registration_timestamp": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    return {
+                        "success": True,
+                        "otp_sent": True,
+                        "message": f"OTP sent to {user_mobile}. Ask user to share the OTP.",
+                        "otp_ref_id": otp_ref_id,
+                        "next_step": "verify_otp"
+                    }
+                
+                elif response_code == 464:
+                    # Customer already exists
+                    return {
+                        "success": True,
+                        "already_registered": True,
+                        "message": "Customer already exists in Eko. Try executing DMT again.",
+                        "next_step": "execute_dmt"
+                    }
+                
+                else:
+                    # Registration failed
+                    return {
+                        "success": False,
+                        "message": message or "Customer registration failed",
+                        "error_type": "REGISTRATION_FAILED",
+                        "eko_response": register_result
+                    }
+                    
+        except Exception as e:
+            logging.error(f"[ADMIN-REGISTER] Registration error: {e}")
+            return {
+                "success": False,
+                "message": f"Registration error: {str(e)}",
+                "error_type": "REGISTRATION_ERROR"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-REGISTER] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/verify-customer-otp/{request_id}")
+async def admin_verify_customer_otp(request_id: str, request: Request):
+    """
+    Admin API to verify customer OTP after registration.
+    
+    Admin gets OTP from user (via call/WhatsApp) and enters here.
+    After successful verification, DMT can be executed.
+    """
+    try:
+        data = await request.json()
+        otp = data.get("otp", "").strip()
+        
+        if not otp or len(otp) < 4:
+            raise HTTPException(status_code=400, detail="Valid OTP required")
+        
+        # Get the withdrawal request
+        request_doc = await db.chatbot_withdrawal_requests.find_one({"request_id": request_id})
+        
+        if not request_doc:
+            raise HTTPException(status_code=404, detail="Withdrawal request not found")
+        
+        user_mobile = request_doc.get("user_mobile", "")
+        otp_ref_id = request_doc.get("eko_otp_ref_id", "")
+        
+        if not user_mobile:
+            raise HTTPException(status_code=400, detail="User mobile not found")
+        
+        logging.info(f"[ADMIN-VERIFY-OTP] Verifying OTP for {user_mobile}, request {request_id}")
+        
+        # ============ Call Eko OTP Verification ============
+        try:
+            from .eko_common import get_eko_headers, EKO_BASE_URL, EKO_INITIATOR_ID, EKO_USER_CODE
+            
+            headers = get_eko_headers()
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            
+            verify_url = f"{EKO_BASE_URL}/v1/customers/verification/otp:{otp}"
+            
+            verify_data = {
+                "initiator_id": EKO_INITIATOR_ID,
+                "user_code": EKO_USER_CODE,
+                "id_type": "mobile_number",
+                "id": user_mobile,
+                "otp_ref_id": otp_ref_id,
+                "otp": otp
+            }
+            
+            import httpx
+            async with httpx.AsyncClient(timeout=30) as client:
+                verify_response = await client.put(
+                    verify_url,
+                    headers=headers,
+                    data=verify_data
+                )
+                
+                verify_result = verify_response.json()
+                logging.info(f"[ADMIN-VERIFY-OTP] Response: {verify_result}")
+                
+                response_code = verify_result.get("response_status_id", -1)
+                message = verify_result.get("message", "")
+                
+                if response_code == 0 or "success" in message.lower() or "verified" in message.lower():
+                    # Verification successful
+                    customer_id = verify_result.get("data", {}).get("customer_id", "")
+                    
+                    # Update request
+                    await db.chatbot_withdrawal_requests.update_one(
+                        {"request_id": request_id},
+                        {"$set": {
+                            "eko_customer_id": customer_id,
+                            "eko_customer_verified": True,
+                            "eko_registration_status": "verified",
+                            "eko_verification_timestamp": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    return {
+                        "success": True,
+                        "verified": True,
+                        "message": "Customer verified successfully! You can now execute DMT.",
+                        "customer_id": customer_id,
+                        "next_step": "execute_dmt"
+                    }
+                
+                elif response_code == 330 or "invalid" in message.lower() or "wrong" in message.lower():
+                    return {
+                        "success": False,
+                        "verified": False,
+                        "message": "Invalid OTP. Please check and try again.",
+                        "error_type": "INVALID_OTP"
+                    }
+                
+                else:
+                    return {
+                        "success": False,
+                        "message": message or "OTP verification failed",
+                        "error_type": "VERIFICATION_FAILED",
+                        "eko_response": verify_result
+                    }
+                    
+        except Exception as e:
+            logging.error(f"[ADMIN-VERIFY-OTP] Error: {e}")
+            return {
+                "success": False,
+                "message": f"Verification error: {str(e)}",
+                "error_type": "VERIFICATION_ERROR"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN-VERIFY-OTP] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/customer-status/{mobile}")
+async def get_customer_eko_status(mobile: str):
+    """
+    Check if a customer is registered and verified in Eko.
+    Used by admin to check customer status before DMT.
+    """
+    try:
+        # Clean mobile
+        clean_mobile = ''.join(c for c in mobile if c.isdigit())[-10:]
+        
+        if len(clean_mobile) != 10:
+            raise HTTPException(status_code=400, detail="Invalid mobile number")
+        
+        from .eko_common import get_eko_headers, EKO_BASE_URL, EKO_INITIATOR_ID, EKO_USER_CODE
+        
+        headers = get_eko_headers()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        inquiry_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{clean_mobile}"
+        
+        import httpx
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(
+                inquiry_url,
+                headers=headers,
+                params={
+                    "initiator_id": EKO_INITIATOR_ID,
+                    "user_code": EKO_USER_CODE
+                }
+            )
+            
+            result = response.json()
+            response_code = result.get("response_status_id", -1)
+            
+            if response_code == 0:
+                # Customer registered and verified
+                return {
+                    "success": True,
+                    "registered": True,
+                    "verified": True,
+                    "customer_id": result.get("data", {}).get("customer_id"),
+                    "message": "Customer registered and verified"
+                }
+            
+            elif response_code == 330:
+                # Customer exists but OTP pending
+                return {
+                    "success": True,
+                    "registered": True,
+                    "verified": False,
+                    "otp_pending": True,
+                    "message": "Customer exists but OTP verification pending"
+                }
+            
+            else:
+                # Customer not registered
+                return {
+                    "success": True,
+                    "registered": False,
+                    "verified": False,
+                    "message": "Customer not registered in Eko"
+                }
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[CUSTOMER-STATUS] Error: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "registered": False,
+            "verified": False
+        }

@@ -7,7 +7,8 @@ import { Badge } from '../components/ui/badge';
 import {
   RefreshCw, Search, Clock, CheckCircle, XCircle, 
   AlertTriangle, Banknote, User, Building, Hash,
-  Calendar, IndianRupee, Send, Eye, Filter
+  Calendar, IndianRupee, Send, Eye, Filter,
+  UserPlus, MessageSquare, Phone, Shield, Loader2
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -22,6 +23,12 @@ const AdminChatbotWithdrawals = ({ user }) => {
   const [processing, setProcessing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  
+  // Eko Customer Registration states
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [customerStatus, setCustomerStatus] = useState(null);
+  const [checkingCustomer, setCheckingCustomer] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -172,6 +179,106 @@ const AdminChatbotWithdrawals = ({ user }) => {
       }
     } catch (error) {
       toast.error('Network error. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Check Eko Customer Status
+  const checkCustomerStatus = async (mobile) => {
+    setCheckingCustomer(true);
+    setCustomerStatus(null);
+    try {
+      const response = await fetch(`${API}/chatbot-redeem/admin/customer-status/${mobile}`);
+      const result = await response.json();
+      setCustomerStatus(result);
+      
+      if (result.verified) {
+        toast.success('✅ Customer verified in Eko. Ready for DMT!');
+      } else if (result.registered && result.otp_pending) {
+        toast.warning('⚠️ Customer registered but OTP pending');
+      } else if (!result.registered) {
+        toast.info('ℹ️ Customer not registered in Eko');
+      }
+    } catch (error) {
+      toast.error('Failed to check customer status');
+      setCustomerStatus({ success: false, message: 'Check failed' });
+    } finally {
+      setCheckingCustomer(false);
+    }
+  };
+
+  // Register Customer in Eko (sends OTP)
+  const handleRegisterCustomer = async (requestId) => {
+    if (!confirm('This will send OTP to customer\'s mobile.\n\nAfter OTP is sent, you need to:\n1. Call/WhatsApp the customer\n2. Ask them for the OTP\n3. Enter OTP to verify\n\nContinue?')) {
+      return;
+    }
+    
+    setProcessing(true);
+    try {
+      const response = await fetch(`${API}/chatbot-redeem/admin/register-customer/${requestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_uid: user.uid })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        if (result.already_registered && result.customer_verified) {
+          toast.success('✅ Customer already verified! Proceed with DMT.');
+          setCustomerStatus({ registered: true, verified: true });
+        } else if (result.otp_sent) {
+          toast.success(`📱 OTP sent to customer! Ask them for the OTP.`);
+          setShowOtpModal(true);
+          setCustomerStatus({ registered: true, verified: false, otp_pending: true });
+        } else if (result.already_registered) {
+          toast.info('Customer already registered. Try DMT or verify OTP.');
+          setCustomerStatus({ registered: true, verified: false });
+        }
+      } else {
+        toast.error(result.message || 'Registration failed');
+      }
+      
+      fetchRequests();
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Verify Customer OTP
+  const handleVerifyOtp = async (requestId) => {
+    if (!otpValue || otpValue.length < 4) {
+      toast.error('Please enter valid OTP (4-6 digits)');
+      return;
+    }
+    
+    setProcessing(true);
+    try {
+      const response = await fetch(`${API}/chatbot-redeem/admin/verify-customer-otp/${requestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_uid: user.uid,
+          otp: otpValue
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.verified) {
+        toast.success('✅ Customer verified! You can now execute DMT.');
+        setShowOtpModal(false);
+        setOtpValue('');
+        setCustomerStatus({ registered: true, verified: true });
+        fetchRequests();
+      } else {
+        toast.error(result.message || 'Invalid OTP. Try again.');
+      }
+    } catch (error) {
+      toast.error('Verification failed. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -496,6 +603,80 @@ const AdminChatbotWithdrawals = ({ user }) => {
                 </div>
               )}
 
+              {/* Eko Customer Registration Section - Show for processing requests with DMT errors */}
+              {selectedRequest.status === 'processing' && (
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                  <h3 className="text-purple-400 font-medium mb-3 flex items-center gap-2">
+                    <Shield className="w-4 h-4" /> Eko Customer Verification
+                  </h3>
+                  
+                  {/* Customer Status Check */}
+                  <div className="mb-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => checkCustomerStatus(selectedRequest.user_mobile)}
+                      disabled={checkingCustomer}
+                      className="mr-2"
+                    >
+                      {checkingCustomer ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4 mr-2" />
+                      )}
+                      Check Eko Status
+                    </Button>
+                    
+                    {customerStatus && (
+                      <span className={`text-sm ml-2 ${
+                        customerStatus.verified ? 'text-green-400' :
+                        customerStatus.registered ? 'text-yellow-400' : 'text-red-400'
+                      }`}>
+                        {customerStatus.verified ? '✅ Verified' :
+                         customerStatus.otp_pending ? '⏳ OTP Pending' :
+                         customerStatus.registered ? '📝 Registered' : '❌ Not Registered'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Registration / OTP Buttons */}
+                  {(!customerStatus || !customerStatus.verified) && (
+                    <div className="flex flex-wrap gap-2">
+                      {(!customerStatus || !customerStatus.registered) && (
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700"
+                          onClick={() => handleRegisterCustomer(selectedRequest.request_id)}
+                          disabled={processing}
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Register & Send OTP
+                        </Button>
+                      )}
+                      
+                      {customerStatus?.otp_pending && (
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => setShowOtpModal(true)}
+                          disabled={processing}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Enter OTP
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Help Text */}
+                  <p className="text-gray-400 text-xs mt-3">
+                    <Phone className="w-3 h-3 inline mr-1" />
+                    If customer not verified, register them first. OTP will be sent to their mobile ({selectedRequest.user_mobile}).
+                    Call/WhatsApp them to get OTP.
+                  </p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-gray-700">
                 {selectedRequest.status === 'pending' && (
@@ -599,6 +780,72 @@ const AdminChatbotWithdrawals = ({ user }) => {
                 Cancel
               </Button>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* OTP Verification Modal */}
+      {showOtpModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md p-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-400" />
+              Verify Customer OTP
+            </h2>
+            
+            <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
+              <p className="text-gray-400 text-sm">
+                <span className="text-white font-medium">Customer:</span> {selectedRequest.user_name}
+              </p>
+              <p className="text-gray-400 text-sm">
+                <span className="text-white font-medium">Mobile:</span> {selectedRequest.user_mobile}
+              </p>
+            </div>
+            
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+              <p className="text-blue-300 text-sm">
+                📱 OTP has been sent to customer's mobile. Call or WhatsApp them to get the OTP.
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="text-gray-400 text-sm block mb-2">Enter OTP (4-6 digits) *</label>
+              <Input
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Enter OTP received by customer"
+                className="text-center text-xl tracking-widest"
+                maxLength={6}
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={() => handleVerifyOtp(selectedRequest.request_id)}
+                disabled={processing || otpValue.length < 4}
+              >
+                {processing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                )}
+                Verify OTP
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setOtpValue('');
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+            
+            <p className="text-gray-500 text-xs mt-3 text-center">
+              After verification, you can proceed with Auto DMT transfer.
+            </p>
           </Card>
         </div>
       )}
