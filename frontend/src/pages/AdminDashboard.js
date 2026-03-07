@@ -27,7 +27,7 @@ const AdminDashboard = ({ user }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [deliveryStats, setDeliveryStats] = useState(null);
-  const [recentOrders, setRecentOrders] = useState([]);
+  // Orders removed - Marketplace deprecated
   const [pendingKYC, setPendingKYC] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,16 +38,16 @@ const AdminDashboard = ({ user }) => {
     
     try {
       // Single combined API call + parallel secondary calls
-      const [statsRes, deliveryRes, ordersRes, kycRes] = await Promise.all([
+      const [statsRes, deliveryRes, kycRes] = await Promise.all([
         axios.get(`${API}/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
-        axios.get(`${API}/admin/orders/all?limit=5`).catch(() => ({ data: { orders: [] } })),
+        // Orders API removed - Marketplace deprecated
         axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
-      setRecentOrders(ordersRes.data.orders || []);
+      // Orders removed - Marketplace deprecated
       const allKyc = Array.isArray(kycRes.data) ? kycRes.data : (kycRes.data?.users || []);
       setPendingKYC(allKyc.filter(k => k.status === 'pending').slice(0, 5));
     } catch (error) {
@@ -198,14 +198,7 @@ const AdminDashboard = ({ user }) => {
           color="emerald"
           onClick={() => navigate('/admin/prc-analytics')}
         />
-        <HeroStatCard
-          icon={ShoppingCart}
-          label="Total Orders"
-          value={stats?.orders?.total || 0}
-          subValue={`${stats?.orders?.pending || 0} pending`}
-          color="amber"
-          onClick={() => navigate('/admin/orders')}
-        />
+        {/* Orders card removed - Marketplace deprecated */}
       </div>
 
       {/* Subscription Breakdown - Beautiful Progress Bars */}
@@ -335,7 +328,7 @@ const AdminDashboard = ({ user }) => {
           <QuickActionCard icon={Users} label="Users" color="blue" onClick={() => navigate('/admin/users')} />
           <QuickActionCard icon={Crown} label="Subs" badge={stats?.vip_payments?.pending} color="purple" onClick={() => navigate('/admin/subscriptions')} />
           <QuickActionCard icon={BadgeCheck} label="KYC" badge={stats?.kyc?.pending} color="cyan" onClick={() => navigate('/admin/kyc')} />
-          <QuickActionCard icon={ShoppingCart} label="Orders" badge={stats?.orders?.pending} color="amber" onClick={() => navigate('/admin/orders')} />
+          {/* Orders QuickAction removed - Marketplace deprecated */}
           <QuickActionCard icon={Wallet} label="Wallets" color="teal" onClick={() => navigate('/admin/company-wallets')} />
           <QuickActionCard icon={Shield} label="Security" color="red" onClick={() => navigate('/admin/security')} />
           <QuickActionCard icon={AlertTriangle} label="PRC Ctrl" color="orange" onClick={() => navigate('/admin/prc-economy')} />
@@ -343,58 +336,8 @@ const AdminDashboard = ({ user }) => {
         </div>
       </Card>
 
-      {/* Recent Orders & Delivery */}
+      {/* KYC & Activity Section - Orders section removed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <Card className="p-4 bg-gray-900/50 border-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Package className="w-5 h-5 text-amber-400" />
-              Recent Orders
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')} className="text-blue-400 hover:text-blue-300">
-              View All <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-          
-          {recentOrders.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              <p>No orders yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recentOrders.slice(0, 5).map((order) => (
-                <div key={order.order_id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800/70 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      order.status === 'delivered' ? 'bg-emerald-500/20' :
-                      order.status === 'out_for_delivery' ? 'bg-blue-500/20' :
-                      order.status === 'cancelled' ? 'bg-red-500/20' : 'bg-amber-500/20'
-                    }`}>
-                      {order.status === 'delivered' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
-                       order.status === 'out_for_delivery' ? <Truck className="w-5 h-5 text-blue-400" /> :
-                       order.status === 'cancelled' ? <XCircle className="w-5 h-5 text-red-400" /> :
-                       <Clock className="w-5 h-5 text-amber-400" />}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-medium">#{order.order_id?.slice(0, 8)}</p>
-                      <p className="text-gray-500 text-xs">{order.items?.length || 0} items</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white font-semibold">{order.total_prc?.toLocaleString()} PRC</p>
-                    <p className={`text-xs capitalize ${
-                      order.status === 'delivered' ? 'text-emerald-400' :
-                      order.status === 'cancelled' ? 'text-red-400' : 'text-amber-400'
-                    }`}>{order.status?.replace('_', ' ')}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
         {/* Pending KYC Preview */}
         <Card className="p-4 bg-gray-900/50 border-gray-800">
           <div className="flex items-center justify-between mb-4">

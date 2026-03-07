@@ -42,14 +42,9 @@ const AdminSettings = ({ user }) => {
   const [uploadingQR, setUploadingQR] = useState(false);
   const qrInputRef = useRef(null);
 
-  // Marketplace Settings State
-  const [marketplaceSettings, setMarketplaceSettings] = useState({
-    prc_to_inr_rate: 0.1,
-    min_order_prc: 100,
-    max_order_prc: 100000,
-    free_delivery_threshold: 500
-  });
-  const [savingMarketplace, setSavingMarketplace] = useState(false);
+  // Marketplace Settings State - REMOVED (Marketplace deprecated)
+  // const [marketplaceSettings, setMarketplaceSettings] = useState({...});
+  // const [savingMarketplace, setSavingMarketplace] = useState(false);
 
   // Redemption Charges State
   const [redemptionCharges, setRedemptionCharges] = useState({
@@ -110,20 +105,7 @@ const AdminSettings = ({ user }) => {
       console.error('Error fetching payment config:', error);
     }
 
-    // Fetch marketplace settings
-    try {
-      const marketplaceResponse = await axios.get(`${API}/admin/settings/marketplace`);
-      if (marketplaceResponse.data) {
-        setMarketplaceSettings({
-          prc_to_inr_rate: marketplaceResponse.data.prc_to_inr_rate || 0.1,
-          min_order_prc: marketplaceResponse.data.min_order_prc || 100,
-          max_order_prc: marketplaceResponse.data.max_order_prc || 100000,
-          free_delivery_threshold: marketplaceResponse.data.free_delivery_threshold || 500
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching marketplace settings:', error);
-    }
+    // Marketplace settings fetch - REMOVED (Marketplace deprecated)
 
     // Fetch redemption charge settings
     try {
@@ -281,18 +263,7 @@ const AdminSettings = ({ user }) => {
     setMarketplaceSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveMarketplaceSettings = async () => {
-    setSavingMarketplace(true);
-    try {
-      await axios.put(`${API}/admin/settings/marketplace`, marketplaceSettings);
-      toast.success('Marketplace settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving marketplace settings:', error);
-      toast.error('Failed to save marketplace settings');
-    } finally {
-      setSavingMarketplace(false);
-    }
-  };
+  // handleSaveMarketplaceSettings - REMOVED (Marketplace deprecated)
 
   const handleQRUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -1008,130 +979,7 @@ const AdminSettings = ({ user }) => {
           </div>
         </Card>
 
-        {/* Marketplace Settings */}
-        <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-              <ShoppingCart className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-100">Marketplace Settings</h2>
-              <p className="text-gray-400">Configure PRC conversion rate and marketplace limits</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* PRC to INR Conversion Rate */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-amber-400 mb-3">
-                <Coins className="h-5 w-5" />
-                PRC to INR Conversion Rate
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.001"
-                    value={marketplaceSettings.prc_to_inr_rate}
-                    onChange={(e) => handleMarketplaceSettingsChange('prc_to_inr_rate', parseFloat(e.target.value) || 0.1)}
-                    className="w-full px-4 py-3 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
-                  />
-                </div>
-              </div>
-              <div className="mt-3 p-3 bg-gray-900 rounded-lg border border-amber-200">
-                <p className="text-sm text-amber-400">
-                  <strong>Current Rate:</strong> 1 PRC = ₹{marketplaceSettings.prc_to_inr_rate?.toFixed(2)}
-                </p>
-                <p className="text-sm text-amber-600 mt-1">
-                  Example: <span className="font-semibold">{Math.round(1/marketplaceSettings.prc_to_inr_rate)} PRC = ₹1</span>
-                </p>
-                <p className="text-xs text-amber-500 mt-2">
-                  💡 For 10 PRC = ₹1, set rate to 0.10
-                </p>
-              </div>
-            </div>
-
-            {/* Free Delivery Threshold */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-500/30 rounded-xl p-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-green-300 mb-3">
-                <Truck className="h-5 w-5" />
-                Free Delivery Threshold (PRC)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={marketplaceSettings.free_delivery_threshold}
-                onChange={(e) => handleMarketplaceSettingsChange('free_delivery_threshold', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-900 text-gray-200 font-mono text-lg"
-              />
-              <p className="text-sm text-green-600 mt-2">
-                Orders above {marketplaceSettings.free_delivery_threshold} PRC get free delivery
-              </p>
-            </div>
-
-            {/* Min Order PRC */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                <IndianRupee className="h-4 w-4" />
-                Minimum Order (PRC)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={marketplaceSettings.min_order_prc}
-                onChange={(e) => handleMarketplaceSettingsChange('min_order_prc', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Max Order PRC */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                <IndianRupee className="h-4 w-4" />
-                Maximum Order (PRC)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={marketplaceSettings.max_order_prc}
-                onChange={(e) => handleMarketplaceSettingsChange('max_order_prc', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Conversion Calculator */}
-          <div className="mt-6 p-4 bg-gray-800 rounded-xl">
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">Quick Conversion Reference</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[100, 500, 1000, 5000].map(prc => (
-                <div key={prc} className="bg-gray-700 rounded-lg p-3 text-center">
-                  <p className="text-amber-400 font-bold">{prc} PRC</p>
-                  <p className="text-white text-lg font-semibold">= ₹{(prc * marketplaceSettings.prc_to_inr_rate).toFixed(2)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="mt-6 pt-6 border-t border-gray-700">
-            <Button
-              onClick={handleSaveMarketplaceSettings}
-              disabled={savingMarketplace}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 font-semibold"
-            >
-              {savingMarketplace ? (
-                'Saving...'
-              ) : (
-                <>
-                  <Save className="h-5 w-5 mr-2" />
-                  Save Marketplace Settings
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
+        {/* Marketplace Settings - REMOVED (Marketplace deprecated December 2025) */}
       </div>
     </div>
   );

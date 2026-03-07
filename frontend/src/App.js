@@ -101,8 +101,8 @@ if (typeof window !== 'undefined') {
 
 // TapGame removed - feature deprecated
 const Referrals = lazy(() => import("@/pages/ReferralsEnhanced"));
-// Marketplace removed - feature deprecated
-const Orders = lazy(() => import("@/pages/Orders"));
+// Marketplace & Orders removed - feature deprecated (December 2025)
+// const Orders = lazy(() => import("@/pages/Orders"));
 // VIPMembership removed - replaced by SubscriptionPlans (new 4-tier system)
 const SubscriptionPlans = lazy(() => import("@/pages/SubscriptionPlans"));
 // Removed: WalletNew (withdrawal functionality removed)
@@ -151,7 +151,8 @@ const AdminFraudDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackC
 const AdminVideoAds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
 const AdminFixedExpenses = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
 const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
-const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
+// AdminOrders removed - Marketplace deprecated (December 2025)
+// const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
 const AdminSupport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
 const AdminContactSubmissions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminContactSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
@@ -278,7 +279,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Marketplace removed - feature deprecated */}
             <Route path="/marketplace" element={<Navigate to="/dashboard" replace />} />
             <Route path="/flash-sales" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FlashSalesPage user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
-            <Route path="/orders" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Orders user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            {/* Orders removed - Marketplace deprecated (December 2025) */}
+            <Route path="/orders" element={<Navigate to="/dashboard" replace />} />
             {/* Removed: Activity page */}
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
@@ -373,7 +375,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/policies" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPolicies user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/kyc" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminKYC user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/payments" element={<Navigate to="/admin/subscriptions" replace />} />
-                <Route path="/admin/orders" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminOrders user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* Admin Orders removed - Marketplace deprecated (December 2025) */}
+                <Route path="/admin/orders" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/marketplace" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/delivery-partners" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/support" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

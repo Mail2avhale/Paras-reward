@@ -23,8 +23,8 @@ const MENU_TO_PERMISSION = {
   'user-controls': 'user_360',
   'analytics': 'analytics',
   'kyc': 'kyc',
-  'orders': 'orders',
-  'marketplace': 'marketplace',
+  // 'orders': 'orders', // Marketplace deprecated
+  // 'marketplace': 'marketplace', // Marketplace deprecated
   'video-ads': 'video_ads',
   // 'stockists': 'stockist', // Removed - stockist system deprecated
   'support': 'support',
@@ -154,7 +154,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
-    { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders' },
+    // Orders removed - Marketplace deprecated (December 2025)
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
@@ -246,7 +246,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/users': 'users',
     '/admin/user-360': 'users',
     '/admin/members': 'users',
-    '/admin/orders': 'orders',
+    // '/admin/orders': 'orders', // Marketplace deprecated
     // marketplace removed
     '/admin/support': 'support',
     '/admin/fraud-dashboard': 'fraud',
