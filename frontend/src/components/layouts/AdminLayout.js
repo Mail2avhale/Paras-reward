@@ -9,7 +9,7 @@ import {
   Menu, X, Shield, Wallet, TrendingUp, ChevronDown,
   Globe, Phone, Mail, Image, Share2, Cpu, ToggleLeft,
   AlertTriangle, Smartphone, Building, Crown, AlertOctagon, Database, Eye,
-  ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare
+  ShieldAlert, CheckCircle, Building2, Zap, Receipt, Send, MessageSquare, Banknote
 } from 'lucide-react';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
@@ -157,6 +157,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     // Orders removed - Marketplace deprecated (December 2025)
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
+    { id: 'chatbot-withdrawals', label: 'Chatbot Withdrawals', icon: Banknote, path: '/admin/chatbot-withdrawals' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },

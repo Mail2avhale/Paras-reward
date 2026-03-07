@@ -154,6 +154,7 @@ const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "
 // AdminOrders removed - Marketplace deprecated (December 2025)
 // const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
 const AdminSupport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
+const AdminChatbotWithdrawals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminChatbotWithdrawals"));
 const AdminContactSubmissions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminContactSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
 // AdminMarketplace removed - feature deprecated
@@ -380,6 +381,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/marketplace" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/delivery-partners" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/support" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/chatbot-withdrawals" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminChatbotWithdrawals user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/contact-submissions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSubmissions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/contact-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSettings user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} />

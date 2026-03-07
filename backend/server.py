@@ -77,6 +77,7 @@ from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_ad
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
+from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_db as set_chatbot_withdrawal_db
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -13019,36 +13020,38 @@ When user asks about a problem, use their REAL-TIME data for diagnosis:
 
 **Available Lenders:** Bajaj Finance, HDFC, ICICI, Tata Capital, Mahindra Finance, LIC Housing, Muthoot, TVS Credit, Hero FinCorp, and 50+ more!
 
-=== 🏦 REDEEM TO BANK - WHAT & HOW ===
+=== 🏦 BANK WITHDRAWAL (VIA CHATBOT ONLY) ===
 
-**What is Redeem to Bank?**
-- Convert your PRC to real money (₹)
-- Transfer directly to your bank account
-- 10 PRC = ₹1 INR
+**IMPORTANT:** Bank withdrawal आता फक्त chatbot द्वारे होते!
 
-**How to Redeem PRC to Bank:**
-1. Go to "Redeem" section
-2. Select "🏦 Bank Redeem"
-3. Enter amount to redeem (min ₹100)
-4. Confirm your bank details:
-   - Account Number
-   - IFSC Code
+**How to Request Bank Withdrawal:**
+1. Say: "Bank withdrawal करायचे आहे" / "Paisa bank mein bhejo" / "Bank redeem"
+2. I will check your eligibility:
+   - KYC verified required ✅
+   - Minimum ₹500 required ✅
+   - Sufficient PRC balance ✅
+3. I will show your balance and fees
+4. You provide bank details:
    - Account Holder Name
-5. Submit request
-6. Admin processes within 24-48 hours
-7. Money transferred to your bank!
+   - Bank Account Number
+   - Bank Name
+   - IFSC Code
+5. Confirm and submit
+6. Request ID generated
+7. Admin processes in 5-7 working days
+8. Money transferred to your bank!
+
+**Fees Structure:**
+- Processing Fee: ₹10 (flat)
+- Admin Charge: 20% of amount
+- Example: ₹500 withdrawal → You receive: ₹390
+
+**Check Status:** Say "withdrawal status" / "request status"
 
 **Requirements:**
 - ✅ KYC Verified (Aadhaar + PAN)
-- ✅ Minimum 1000 PRC (₹100)
+- ✅ Minimum ₹500
 - ✅ Bank account in your name
-- ✅ Weekly limit: Based on subscription plan
-
-**Weekly Redeem Limits:**
-| Service | Weekly Limit |
-|---------|-------------|
-| EMI / Bank Redeem | **1 time** (all plans) |
-| All Other Services | **Unlimited** |
 
 === 🔥 GAS BILL PAYMENT ===
 
@@ -13557,18 +13560,21 @@ async def ai_chatbot(
         "voucher", "gift", "bill", "recharge", "order", "shopping",
         "contact", "support", "wallet", "transaction", "earnings",
         "bank transfer", "money transfer", "dmt", "transfer money", "send money",
+        "bank withdrawal", "withdrawal request", "paisa nikalo", "nikalna hai",
         # Marathi keywords
         "काम नाही", "समस्या", "का", "कसे", "नाही झाले", "अडकले", "फेल", 
         "कामात नाही", "होत नाही", "पेंडिंग", "रिजेक्ट", "अप्रूव्ह",
         "सबस्क्रिप्शन", "प्लॅन", "व्हाउचर", "बिल", "रिचार्ज", "बॅलन्स",
         "केवायसी", "रेफरल", "बोनस", "माइनिंग", "ऑर्डर", "शॉपिंग",
         "बँक ट्रान्सफर", "पैसे पाठवा", "पैसे ट्रान्सफर",
+        "बँक withdrawal", "पैसे निघायचे", "पैसे काढायचे", "बँक मध्ये",
         # Hindi keywords
         "kyaa", "kaam nahi", "kyun", "kaise", "problem", "issue",
         "pending", "reject", "approve", "subscription", "plan",
         "voucher", "bill", "recharge", "balance", "kyc", "referral",
         "bonus", "mining", "order", "shopping", "contact", "support",
-        "bank transfer", "paisa bhejo", "transfer kaise"
+        "bank transfer", "paisa bhejo", "transfer kaise",
+        "bank withdrawal", "nikalna", "paisa nikalo", "withdrawal chahiye"
     ]
     
     is_diagnostic_query = any(keyword in message.lower() for keyword in diagnostic_keywords)
@@ -38532,6 +38538,10 @@ api_router.include_router(dmt_v3_router)  # EKO DMT v3 with proper OTP
 # Admin DMT Management Router
 set_admin_dmt_db(db)
 api_router.include_router(admin_dmt_router)
+
+# Chatbot Withdrawal Router (Bank Redeem via Chatbot)
+set_chatbot_withdrawal_db(db)
+api_router.include_router(chatbot_withdrawal_router)
 
 # Admin Popup Messages Router
 set_admin_popup_db(db)

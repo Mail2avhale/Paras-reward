@@ -163,16 +163,17 @@ const SERVICE_CONFIG = {
     category: 'housing'
   },
   
-  // Money Transfer (Admin Approval Required)
-  dmt: { 
-    name: 'Bank Transfer', 
-    icon: Banknote, 
-    color: 'green',
-    gradient: 'from-green-500 to-emerald-500',
-    fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name'],
-    category: 'transfer',
-    requiresAdmin: false
-  }
+  // Money Transfer (REMOVED - Now handled via Chatbot)
+  // dmt service disabled - users can request bank withdrawal via chatbot
+  // dmt: { 
+  //   name: 'Bank Transfer', 
+  //   icon: Banknote, 
+  //   color: 'green',
+  //   gradient: 'from-green-500 to-emerald-500',
+  //   fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name'],
+  //   category: 'transfer',
+  //   requiresAdmin: false
+  // }
 };
 
 // Static operator data (will be replaced with Eko API data)

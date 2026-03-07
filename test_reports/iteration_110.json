@@ -1,0 +1,53 @@
+{
+  "summary": "Chatbot Bank Withdrawal System - All tests passed. Backend APIs (26/26) and Frontend E2E tests (20/20) verified. Fee calculation with ₹10 flat + 20% admin charge working correctly. Minimum ₹500 withdrawal enforced. Admin stats/pending/all endpoints functional. Bank Transfer UI removed from RedeemPageV2 (DMT commented out in SERVICE_CONFIG).",
+  "mode": "generate",
+  "baseline_commit": "6fc768a260897a80584bc3edab5979af42028637",
+  "head_commit": "8a38cc98c66b90d4f5ade574ea65e09dd9a9979b",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "AdminChatbotWithdrawals",
+        "issues": ["Missing data-testid attributes for automated testing - recommend adding data-testid to buttons, table rows, and filter controls"]
+      }
+    ]
+  },
+  "regression_results": {
+    "total_specs": 46,
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_chatbot_withdrawal.py",
+    "/app/tests/e2e/chatbot-withdrawal.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/chatbot_withdrawal_results.xml",
+    "/app/backend/tests/test_chatbot_withdrawal.py",
+    "/app/tests/e2e/chatbot-withdrawal.spec.ts"
+  ],
+  "action_items": [
+    "Consider adding data-testid attributes to AdminChatbotWithdrawals.js for better automated testing coverage",
+    "Bank Transfer (DMT) code still exists in RedeemPageV2 but is commented out - consider cleanup if permanently removed"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_chatbot_withdrawal.py",
+    "/app/tests/e2e/chatbot-withdrawal.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100% (26/26 passed)",
+    "frontend": "100% (20/20 passed)"
+  },
+  "seed_data_creation": "No seed data created - tests use non-existent user IDs for negative case testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Chatbot Bank Withdrawal System Tests Complete\n\n### APIs Tested:\n1. **Fee Calculation** - /api/chatbot-redeem/calculate-fees\n   - Processing Fee: ₹10 flat\n   - Admin Charge: 20% of amount\n   - Minimum: ₹500\n   - PRC to INR: 10:1\n\n2. **Eligibility Check** - /api/chatbot-redeem/eligibility/{uid}\n   - Returns KYC status and balance check\n\n3. **Admin APIs**:\n   - /api/chatbot-redeem/admin/stats - Counts by status + completed summary\n   - /api/chatbot-redeem/admin/pending - Pending requests with pagination\n   - /api/chatbot-redeem/admin/all - All requests with status filter\n   - /api/chatbot-redeem/admin/request/{id} - Request details\n   - /api/chatbot-redeem/admin/process/{id} - Process withdrawal\n\n4. **User APIs**:\n   - /api/chatbot-redeem/history/{uid} - User's request history\n   - /api/chatbot-redeem/saved-accounts/{uid} - Saved bank accounts\n   - /api/chatbot-redeem/status/{request_id} - Request status\n\n### UI Changes:\n- Bank Transfer (DMT) service commented out in RedeemPageV2.js SERVICE_CONFIG\n- AdminChatbotWithdrawals.js page added at /admin/chatbot-withdrawals\n- Route protected, requires admin role\n\n### Test Files:\n- Backend: /app/backend/tests/test_chatbot_withdrawal.py (26 tests)\n- Frontend: /app/tests/e2e/chatbot-withdrawal.spec.ts (20 tests)"
+}
