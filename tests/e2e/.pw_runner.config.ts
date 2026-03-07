@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260307_061902/results.json' }],
   ],
   use: {
-    baseURL: 'https://sub-resolution.preview.emergentagent.com',
+    baseURL: 'https://monolith-refactor-13.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

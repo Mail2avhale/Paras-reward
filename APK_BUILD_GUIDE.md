@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://sub-resolution.preview.emergentagent.com",
+    "url": "https://monolith-refactor-13.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

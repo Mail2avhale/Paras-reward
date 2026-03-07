@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://sub-resolution.preview.emergentagent.com/setup
+   https://monolith-refactor-13.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

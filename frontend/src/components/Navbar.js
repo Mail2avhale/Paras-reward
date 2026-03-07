@@ -91,12 +91,7 @@ const Navbar = ({ user, onLogout }) => {
                   <Link to="/support" className="cursor-pointer">Support</Link>
                 </DropdownMenuItem>
                 
-                {/* Orders - Only for regular users */}
-                {isRegularUser && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/orders" className="cursor-pointer">My Orders</Link>
-                  </DropdownMenuItem>
-                )}
+                {/* Orders removed - Marketplace deprecated */}
                 
                 <DropdownMenuSeparator />
                 
@@ -208,12 +203,7 @@ const Navbar = ({ user, onLogout }) => {
                   <Link to="/support" className="cursor-pointer">Support</Link>
                 </DropdownMenuItem>
                 
-                {/* Orders - Only for regular users */}
-                {isRegularUser && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/orders" className="cursor-pointer">My Orders</Link>
-                  </DropdownMenuItem>
-                )}
+                {/* Orders removed - Marketplace deprecated */}
                 
                 <DropdownMenuSeparator />
                 

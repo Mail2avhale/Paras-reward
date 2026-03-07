@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://sub-resolution.preview.emergentagent.com';
+const BASE_URL = 'https://monolith-refactor-13.preview.emergentagent.com';
 
 const DMT_TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',
