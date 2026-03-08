@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://responsive-dash-14.preview.emergentagent.com';
 
 test.describe('BBPS Universal Module - API Tests', () => {
   

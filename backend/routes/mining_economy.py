@@ -186,6 +186,7 @@ async def get_team_boost_multiplier(db, user_uid: str) -> Tuple[float, Dict]:
     """
     try:
         now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
         
         breakdown = {
             'level_1': {'count': 0, 'active': 0, 'boost': 0.0},
@@ -193,56 +194,117 @@ async def get_team_boost_multiplier(db, user_uid: str) -> Tuple[float, Dict]:
             'level_3': {'count': 0, 'active': 0, 'boost': 0.0}
         }
         
-        # Level 1: Direct referrals
-        l1_users = await db.users.find(
-            {"referred_by": user_uid},
-            {"_id": 0, "uid": 1, "subscription_expiry": 1, "subscription_expires": 1, 
-             "vip_expiry": 1, "kyc_status": 1, "mining_active": 1, "mining_session_end": 1}
-        ).to_list(None)
+        # OPTIMIZED: Single aggregation pipeline for L1 active count
+        # Instead of fetching all users and looping in Python
+        l1_pipeline = [
+            {"$match": {"referred_by": user_uid}},
+            {"$project": {
+                "uid": 1,
+                "is_active": {
+                    "$and": [
+                        {"$eq": ["$kyc_status", "verified"]},
+                        {"$or": [
+                            {"$gt": [{"$ifNull": ["$subscription_expiry", "1970-01-01"]}, now_iso]},
+                            {"$gt": [{"$ifNull": ["$subscription_expires", "1970-01-01"]}, now_iso]},
+                            {"$gt": [{"$ifNull": ["$vip_expiry", "1970-01-01"]}, now_iso]}
+                        ]},
+                        {"$or": [
+                            {"$eq": ["$mining_active", True]},
+                            {"$gt": [{"$ifNull": ["$mining_session_end", "1970-01-01"]}, now_iso]}
+                        ]}
+                    ]
+                }
+            }},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": 1},
+                "active": {"$sum": {"$cond": ["$is_active", 1, 0]}},
+                "active_uids": {"$push": {"$cond": ["$is_active", "$uid", "$$REMOVE"]}}
+            }}
+        ]
         
-        breakdown['level_1']['count'] = len(l1_users)
-        l1_uids = []
+        l1_result = await db.users.aggregate(l1_pipeline).to_list(1)
         
-        for user in l1_users:
-            if is_user_active(user, now):
-                breakdown['level_1']['active'] += 1
-                l1_uids.append(user['uid'])
+        if l1_result:
+            breakdown['level_1']['count'] = l1_result[0].get('total', 0)
+            breakdown['level_1']['active'] = l1_result[0].get('active', 0)
+            breakdown['level_1']['boost'] = breakdown['level_1']['active'] * TEAM_BOOST_LEVELS['level_1']
+            l1_active_uids = l1_result[0].get('active_uids', [])
+        else:
+            l1_active_uids = []
         
-        breakdown['level_1']['boost'] = breakdown['level_1']['active'] * TEAM_BOOST_LEVELS['level_1']
-        
-        # Level 2: Referrals of L1
-        if l1_uids:
-            l2_users = await db.users.find(
-                {"referred_by": {"$in": l1_uids}},
-                {"_id": 0, "uid": 1, "subscription_expiry": 1, "subscription_expires": 1,
-                 "vip_expiry": 1, "kyc_status": 1, "mining_active": 1, "mining_session_end": 1}
-            ).to_list(None)
+        # L2: Referrals of active L1 users
+        if l1_active_uids:
+            l2_pipeline = [
+                {"$match": {"referred_by": {"$in": l1_active_uids[:500]}}},  # Limit to 500 for performance
+                {"$project": {
+                    "uid": 1,
+                    "is_active": {
+                        "$and": [
+                            {"$eq": ["$kyc_status", "verified"]},
+                            {"$or": [
+                                {"$gt": [{"$ifNull": ["$subscription_expiry", "1970-01-01"]}, now_iso]},
+                                {"$gt": [{"$ifNull": ["$subscription_expires", "1970-01-01"]}, now_iso]},
+                                {"$gt": [{"$ifNull": ["$vip_expiry", "1970-01-01"]}, now_iso]}
+                            ]},
+                            {"$or": [
+                                {"$eq": ["$mining_active", True]},
+                                {"$gt": [{"$ifNull": ["$mining_session_end", "1970-01-01"]}, now_iso]}
+                            ]}
+                        ]
+                    }
+                }},
+                {"$group": {
+                    "_id": None,
+                    "total": {"$sum": 1},
+                    "active": {"$sum": {"$cond": ["$is_active", 1, 0]}},
+                    "active_uids": {"$push": {"$cond": ["$is_active", "$uid", "$$REMOVE"]}}
+                }}
+            ]
             
-            breakdown['level_2']['count'] = len(l2_users)
-            l2_uids = []
+            l2_result = await db.users.aggregate(l2_pipeline).to_list(1)
             
-            for user in l2_users:
-                if is_user_active(user, now):
-                    breakdown['level_2']['active'] += 1
-                    l2_uids.append(user['uid'])
+            if l2_result:
+                breakdown['level_2']['count'] = l2_result[0].get('total', 0)
+                breakdown['level_2']['active'] = l2_result[0].get('active', 0)
+                breakdown['level_2']['boost'] = breakdown['level_2']['active'] * TEAM_BOOST_LEVELS['level_2']
+                l2_active_uids = l2_result[0].get('active_uids', [])
+            else:
+                l2_active_uids = []
             
-            breakdown['level_2']['boost'] = breakdown['level_2']['active'] * TEAM_BOOST_LEVELS['level_2']
-            
-            # Level 3: Referrals of L2
-            if l2_uids:
-                l3_users = await db.users.find(
-                    {"referred_by": {"$in": l2_uids}},
-                    {"_id": 0, "uid": 1, "subscription_expiry": 1, "subscription_expires": 1,
-                     "vip_expiry": 1, "kyc_status": 1, "mining_active": 1, "mining_session_end": 1}
-                ).to_list(None)
+            # L3: Referrals of active L2 users
+            if l2_active_uids:
+                l3_pipeline = [
+                    {"$match": {"referred_by": {"$in": l2_active_uids[:500]}}},
+                    {"$project": {
+                        "is_active": {
+                            "$and": [
+                                {"$eq": ["$kyc_status", "verified"]},
+                                {"$or": [
+                                    {"$gt": [{"$ifNull": ["$subscription_expiry", "1970-01-01"]}, now_iso]},
+                                    {"$gt": [{"$ifNull": ["$subscription_expires", "1970-01-01"]}, now_iso]},
+                                    {"$gt": [{"$ifNull": ["$vip_expiry", "1970-01-01"]}, now_iso]}
+                                ]},
+                                {"$or": [
+                                    {"$eq": ["$mining_active", True]},
+                                    {"$gt": [{"$ifNull": ["$mining_session_end", "1970-01-01"]}, now_iso]}
+                                ]}
+                            ]
+                        }
+                    }},
+                    {"$group": {
+                        "_id": None,
+                        "total": {"$sum": 1},
+                        "active": {"$sum": {"$cond": ["$is_active", 1, 0]}}
+                    }}
+                ]
                 
-                breakdown['level_3']['count'] = len(l3_users)
+                l3_result = await db.users.aggregate(l3_pipeline).to_list(1)
                 
-                for user in l3_users:
-                    if is_user_active(user, now):
-                        breakdown['level_3']['active'] += 1
-                
-                breakdown['level_3']['boost'] = breakdown['level_3']['active'] * TEAM_BOOST_LEVELS['level_3']
+                if l3_result:
+                    breakdown['level_3']['count'] = l3_result[0].get('total', 0)
+                    breakdown['level_3']['active'] = l3_result[0].get('active', 0)
+                    breakdown['level_3']['boost'] = breakdown['level_3']['active'] * TEAM_BOOST_LEVELS['level_3']
         
         # Calculate total multiplier
         total_boost = (

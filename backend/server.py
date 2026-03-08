@@ -7110,6 +7110,9 @@ async def claim_mining(uid: str):
     
     await db.users.update_one({"uid": uid}, update_op)
     
+    # OPTIMIZED: Collect all DB operations and run in parallel
+    parallel_tasks = []
+    
     # Create referral bonus transactions - ONE PER LEVEL for proper tracking
     if referral_bonus_portion > 0 and referral_breakdown:
         # Filter out non-level keys like 'single_leg'
@@ -7124,41 +7127,41 @@ async def claim_mining(uid: str):
                 level_num = int(level_key.replace('level_', ''))
                 active_count = level_data.get('active_count', 0)
                 
-                await db.transactions.insert_one({
+                parallel_tasks.append(db.transactions.insert_one({
                     "transaction_id": f"txn_ref_{uuid.uuid4()}",
                     "user_id": uid,
                     "type": "referral_bonus",
                     "amount": round(level_share, 4),
-                    "prc_earned": round(level_share, 4),  # For compatibility with earnings API
+                    "prc_earned": round(level_share, 4),
                     "level": level_num,
                     "description": f"Level {level_num} Bonus",
                     "timestamp": now.isoformat(),
                     "created_at": now.isoformat(),
                     "active_referrals": active_count,
                     "bonus_percent": level_data.get('bonus_percent', 0) * 100
-                })
+                }))
     
     # Create transaction record with expiry tracking
     transaction_id = f"txn_{uuid.uuid4()}"
-    await db.transactions.insert_one({
+    parallel_tasks.append(db.transactions.insert_one({
         "transaction_id": transaction_id,
         "user_id": uid,
-        "type": "mining",  # Changed from transaction_type to type for consistency
-        "amount": mined_amount,  # Changed from prc_amount to amount for consistency
+        "type": "mining",
+        "amount": mined_amount,
         "inr_amount": 0,
         "description": "Mining rewards claimed",
         "timestamp": now.isoformat(),
-        "expires_at": expiry_date,  # Track expiry
+        "expires_at": expiry_date,
         "expired": False,
         "balance_after": new_balance,
         "metadata": {
             "membership_type": membership_type,
             "validity": "2 days" if not is_vip else "lifetime"
         }
-    })
+    }))
     
     # Create wallet transaction record
-    await db.wallet_transactions.insert_one({
+    parallel_tasks.append(db.wallet_transactions.insert_one({
         "transaction_id": str(uuid.uuid4()),
         "user_id": uid,
         "type": "credit",
@@ -7168,18 +7171,22 @@ async def claim_mining(uid: str):
         "balance_after": new_balance,
         "created_at": now.isoformat(),
         "expires_at": expiry_date
-    })
+    }))
     
     # Create notification for mining claim
     validity_msg = " (Valid for 2 days - Upgrade to VIP for lifetime validity)" if not is_vip else " (Lifetime validity)"
-    await create_notification(
+    parallel_tasks.append(create_notification(
         user_id=uid,
         title="Mining Rewards Claimed! ⛏️",
         message=f"You've claimed {round(user_receives, 2)} PRC from mining{validity_msg}. New balance: {round(new_balance, 2)} PRC" + (f" ({round(luxury_deduction, 2)} PRC saved for RD)" if luxury_deduction > 0 else ""),
         notification_type="mining",
         related_id=None,
         icon="⛏️"
-    )
+    ))
+    
+    # OPTIMIZED: Execute all parallel tasks at once (non-blocking)
+    if parallel_tasks:
+        await asyncio.gather(*parallel_tasks, return_exceptions=True)
     
     # Return success response
     response = {

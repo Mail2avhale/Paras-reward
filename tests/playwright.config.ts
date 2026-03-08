@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: './test-results/results.json' }],
   ],
   use: {
-    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://perf-fix-login.preview.emergentagent.com',
+    baseURL: process.env.REACT_APP_BACKEND_URL || 'https://responsive-dash-14.preview.emergentagent.com',
     screenshot: 'on',
     trace: 'on-first-retry',
     headless: true,

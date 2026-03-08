@@ -20,7 +20,7 @@ import os
 import uuid
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://perf-fix-login.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://responsive-dash-14.preview.emergentagent.com').rstrip('/')
 
 
 class TestManualUPIDoesNotActivateSubscription:

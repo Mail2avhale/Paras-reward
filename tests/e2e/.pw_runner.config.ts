@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260307_184859/results.json' }],
   ],
   use: {
-    baseURL: 'https://perf-fix-login.preview.emergentagent.com',
+    baseURL: 'https://responsive-dash-14.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

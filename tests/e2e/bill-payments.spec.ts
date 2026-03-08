@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
-const BASE_URL = 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = 'https://responsive-dash-14.preview.emergentagent.com';
 
 // Reusable login helper
 async function loginTestUser(page: any) {

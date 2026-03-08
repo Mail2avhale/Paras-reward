@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * Note: Actual transactions will get 403 due to IP whitelisting in preview environment
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://responsive-dash-14.preview.emergentagent.com';
 
 // Admin credentials from test context
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';

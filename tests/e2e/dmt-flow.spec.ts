@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = 'https://responsive-dash-14.preview.emergentagent.com';
 
 const DMT_TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

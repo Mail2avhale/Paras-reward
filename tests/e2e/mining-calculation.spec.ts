@@ -20,7 +20,7 @@ const TEST_USER = {
   uid: 'root_cb83'
 };
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://responsive-dash-14.preview.emergentagent.com';
 
 test.describe('Mining Speed Calculation - API Tests', () => {
 

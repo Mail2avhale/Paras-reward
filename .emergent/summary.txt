@@ -1,59 +1,67 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to refactor the monolithic backend, fix production instability, and add new chatbot-driven functionalities. During this session, several new high-priority tasks emerged:
+The user's initial goal was to refactor the monolithic backend, fix production instability, and add new chatbot-driven functionalities. However, the session was dominated by a critical P0 task: fixing severe performance degradation in the production application, which made it nearly unusable.
 
-1.  **Fix Production Performance (P0):** The user reported that the production application has become extremely slow, with login taking an excessive amount of time.
-2.  **Fix Admin Auto DMT Flow (P0):** The user reported that the Auto DMT feature was failing for specific users with a customer_id does not exist error.
-3.  **Implement Eko DMT v3 with Aadhaar (P1):** The user requested the implementation of Eko's DMT v3 service, which uses Aadhaar for KYC to enable higher transaction limits (up to ₹2,00,000/month).
-4.  **Implement Chatbot OTP Flow (Completed):** The initial P0 task was to build the missing user-facing OTP verification flow for bank withdrawals inside the chatbot.
-5.  **Address BBPS Service Code Issues (P2):** The user requested a check on service codes and formats for failing BBPS billers.
+Throughout the session, the user also requested several other high-priority features and bug fixes:
+1.  **Fix Production Performance (P0):** The app was extremely slow, with login taking ~30-50 seconds and other pages (especially Mining and Dashboard) being unresponsive.
+2.  **Fix Subscription Flickering Bug (P0):** Users with an ELITE subscription were intermittently being shown as EXPLORER.
+3.  **Update UI and Business Logic (P1):**
+    *   Remove Lifetime Earnings and Referral Weight cards from the dashboard.
+    *   Update referral statistics to show Total Invited (L1 only), Your Circle (L1+L2+L3), and a corrected Active count (subscribed + active session).
+    *   Implement a new condition for PRC redemption: user must have at least one active, subscribed referral.
+    *   Update the Single-Leg Mining economy rules (5 PRC/user, max 800 users, new team boost percentages).
+    *   Change the Single-Leg Mining calculation logic to count active users from only the *first 800* downline members.
+    *   Change the Earned PRC stat to Redeemed and display the total redeemed amount.
+    *   Make the PRC statement show history from the user's joining date.
 
 **PRODUCT REQUIREMENTS:**
--   **Performance:** The production application's login and initial load time must be drastically improved from the current ~30 seconds. The app must be responsive and usable.
--   **Admin DMT Flow:** Admins must be able to handle withdrawal requests for users who are not yet registered with Eko. The panel should provide a way to register the user and then proceed with the transfer.
--   **Aadhaar DMT v3:** The chatbot withdrawal flow must be updated to offer users a choice between the standard OTP verification (lower limit) and a new Aadhaar-based e-KYC verification for higher transaction limits.
--   **Eko Integration:** The entire Eko DMT flow must be functional end-to-end, including registration, OTP/Aadhaar verification, and admin execution.
+-   **Performance:** The application must be fast and responsive. Login and critical API calls (mining status, claim) should respond in under 2-3 seconds, not 30-60 seconds.
+-   **Business Logic Accuracy:** The subscription status, referral counts, and mining calculations must be accurate and reflect the latest rules provided by the user.
+-   **UI Correctness:** The UI must display the correct information without flickering or showing outdated data.
 
 **User's preferred language**: The user communicates primarily in **Marathi**, mixed with English for technical terms. The next agent **MUST** understand and respond in **Marathi**.
 
 **what currently exists?**
 -   A FastAPI backend and React frontend.
--   The initial P0 task is complete: The chatbot now includes a full-featured withdrawal flow in a new component (), which was successfully tested by the testing agent.
--   A fix for the admin DMT flow has been implemented. This includes a new backend API () and a new Register Customer in Eko workflow in the admin panel UI (). This fix has not been verified by the user in production.
--   The groundwork for Eko DMT v3 with Aadhaar has been laid. This includes a new backend route file () with placeholder APIs and an updated chatbot UI in  that presents the user with a choice between standard and Aadhaar verification.
--   A critical performance issue has been identified: the production login API () takes ~28 seconds to respond, primarily due to a very large base64-encoded  being included in the login response payload.
+-   Numerous performance optimizations have been implemented in the backend:
+    -   The login endpoint () no longer returns the large , uses  for parallel database calls, and runs password hashing in a thread pool executor.
+    -   Expensive mining calculation functions (, ) are now cached using Redis.
+    -   The  function has been rewritten to use an optimized MongoDB aggregation pipeline, fixing a major performance bottleneck.
+    -   Redundant database calls have been removed from the mining status and claim endpoints.
+    -   The  function was rewritten with an aggregation pipeline to fix an N+1 query issue.
+    -   Database operations within the  function are now parallelized.
+-   The subscription flickering bug has been fixed in the frontend by correctly managing state in  and .
+-   All requested UI changes (removing/adding cards, updating labels) and business logic updates (redeem condition, new mining rules) have been implemented across multiple files.
 
 **Last working item**:
--   **Last item agent was working:** The agent was actively debugging the P0 production performance issue. Using , the agent successfully diagnosed that the  endpoint on the production server is taking ~28 seconds to respond. The agent identified that a large base64-encoded  in the JSON response is the most likely cause of this severe latency.
+-   **Last item agent was working:** The agent was performing a final, deep optimization of the backend to address the user's continued complaints about speed, even after initial fixes. Based on a  report, the agent identified and fixed two final critical bottlenecks: an N+1 query pattern when calculating team boosts () and sequential database calls during the mining claim process ().
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (via curl on production API)
--   **Which testing method agent to use?** Backend testing. The agent should modify the backend code to fix the performance issue and then use  with timing to verify that the  response time is significantly reduced.
+-   **Agent Testing Done:** Y (Locally via curl, which showed significant improvement)
+-   **Which testing method agent to use?** Both. Use the backend testing agent to run load tests on the , , and  endpoints to confirm sustained performance. Use the frontend testing agent to verify the overall UI responsiveness and ensure no regressions were introduced.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** Production Login API is extremely slow (~28 seconds) (P0)
--   **Issue 2:** Admin Auto DMT fails for users not registered in Eko (P0)
--   **Issue 3:** BBPS biller service codes/formats need verification (P2)
--   **Issue 4:** Razorpay auto-subscription fails on production (P2)
+-   **Issue 1: Overall Application Speed (P0)**
+-   **Issue 2: Admin Auto DMT fails for users not registered in Eko (P0)**
+-   **Issue 3: BBPS biller service codes/formats need verification (P2)**
+-   **Issue 4: Razorpay auto-subscription fails on production (P2)**
 
 **Issues Detail:**
--   **Issue 1: Production Login API is extremely slow (~28 seconds)**
-    -   **Attempted fixes:** The agent identified the root cause by testing the live production API with . The response from  took 27.5 seconds and contained a very large base64 string for the  field.
+-   **Issue 1: Overall Application Speed**
+    -   **Attempted fixes:** A massive effort was undertaken. Fixes include: removing base64 images from API responses, parallelizing async DB calls, moving bcrypt to a threadpool, implementing Redis caching for expensive queries, and rewriting slow Python loops with optimized MongoDB aggregation pipelines. The last set of fixes targeted the  and  functions.
     -   **Next debug checklist:**
-        1.  Locate the  function in .
-        2.  Find where the user document, including the , is being fetched and added to the response payload.
-        3.  **Remove the  field from the data returned by the login endpoint.**
-        4.  Verify that the frontend does not break after this change. The profile picture should be fetched via a separate, dedicated API endpoint if needed, not during login.
-        5.  Test the production login API again with  to confirm the response time is drastically reduced (e.g., under 1-2 seconds).
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical production-down issue making the application unusable. Fixing it will restore basic login functionality and improve user experience.
+        1.  The latest fixes are implemented but have not been deployed and tested by the user on production. The first step is to guide the user to **deploy the latest changes**.
+        2.  After deployment, perform a comprehensive performance test on production using  with timing on key endpoints: , , , .
+        3.  If the user still reports slowness, use the  again to analyze the production environment for any remaining bottlenecks. The previous successful fixes were guided by support and the troubleshoot agent.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the top priority. The app's usability and user retention depend on it being fast and responsive.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
 
 -   **Issue 2: Admin Auto DMT fails for users not registered in Eko**
-    -   **Attempted fixes:** The agent implemented a complete fix: a backend API () was created, and the admin panel UI () was updated to include a Register Customer button and a corresponding OTP modal. The code was implemented and debugged for the preview environment.
-    -   **Next debug checklist:** This feature is ready for user validation. The agent must ask the user to test this flow on the production server for the user who was previously failing (e.g., 9702735116).
-    -   **Why fix this issue and what will be achieved with the fix?** This will unblock the admin DMT flow for a key edge case, making the withdrawal system more robust.
+    -   **Attempted fixes:** A complete fix was implemented in the previous session (backend API + frontend UI).
+    -   **Next debug checklist:** Ask the user to test this flow on the production server for the user who was previously failing (e.g., 9702735116).
+    -   **Why fix this issue and what will be achieved with the fix?** Unblocks the admin withdrawal flow for a key edge case.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** User Testing.
@@ -61,43 +69,35 @@ The user's initial goal was to refactor the monolithic backend, fix production i
 
 **In progress Task List**:
 -   **Task 1: Complete Eko Aadhaar DMT v3 Implementation (P1)**
-    -   **Where to resume:** The frontend UI in  is ready to trigger the Aadhaar flow. The backend file  contains placeholder APIs. The next step is to implement the actual Eko v3 API logic within these backend functions.
-    -   **What will be achieved with this?** Users will be able to perform high-value bank transfers, a key feature requested by the user.
-    -   **Status:** IN PROGRESS
+    -   **Where to resume:** The frontend UI () is ready. The backend file  needs its placeholder APIs to be implemented with the actual Eko v3 logic.
+    -   **What will be achieved with this?** Users will be able to perform high-value bank transfers.
+    -   **Status:** NOT STARTED (in this session)
     -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on something:** P0 production issue should be resolved first.
-
--   **Task 2: Continue Code Refactoring of  (P1)**
-    -   **Where to resume:** This task is directly related to Issue 1. After fixing the immediate login performance issue, the next step is to continue breaking down the monolith. The LIVE PLATFORM STATS section remains a good candidate for extraction into a new route file.
-    -   **What will be achieved with this?** A more modular, maintainable backend, and prevention of future performance bottlenecks.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on something:** None.
+    -   **Blocked on something:** The P0 performance issues have taken precedence.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** BBPS: All services code check, format check as per Eko for failing billers (AEML, JPDCL).
--   **P1:** Implement Payment Status Check on Login as a server-side safeguard for Razorpay.
+-   **P1:** Verify all recent business logic changes with the user after deployment (new redeem condition, new mining rewards, updated referral stats).
+-   **P1:** BBPS: Check service codes and formats for failing billers (AEML, JPDCL).
+-   **P1:** Implement Payment Status Check on Login as a safeguard for Razorpay.
 
 **Future Tasks:**
--   **P2:** Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution. (This is now higher priority due to the performance issue it caused).
+-   **P2:** Migrate KYC/Receipt images from base64 strings in MongoDB to a proper file storage solution. This is the root cause of the initial performance issue and remains a critical architectural debt.
 -   **P2:** Run PRC Vault to PRC Balance Migration Script on Production.
 -   **P3:** Add Email/Mobile OTP verification on signup.
 -   **P3:** Delete the  file.
 
 **Completed work in this session**
--   **Feature: Chatbot Eko OTP Withdrawal Flow:**
-    -   Created  to handle the multi-step bank withdrawal process.
-    -   Integrated this flow into the main chatbot component ().
-    -   The entire flow was validated with the testing agent and passed all 78 tests.
--   **Feature: Admin Eko Customer Registration:**
-    -   Created a backend API  to register users with Eko.
-    -   Updated the Admin Panel UI to include a Register Customer button and workflow, allowing admins to resolve customer not found errors.
--   **Feature: Aadhaar DMT v3 Scaffolding:**
-    -   Created a new backend route file  with placeholder APIs.
-    -   Updated the chatbot UI to allow users to choose between standard OTP and Aadhaar e-KYC for withdrawals.
--   **Bug Investigation:**
-    -   Diagnosed the root cause of the critical production performance degradation, tracing it to a large base64 image in the login API response.
+-   **Performance Overhaul (P0):**
+    -   **Login API:** Reduced response time from ~30-50s to ~0.5s by removing , parallelizing DB calls (), and moving bcrypt hashing to a thread pool () in .
+    -   **Mining & Claiming APIs:** Reduced response times from ~30-120s to ~1-7s by removing redundant calculations in , adding Redis caching, and rewriting critical functions (, ) with optimized MongoDB aggregation pipelines in .
+-   **Bug Fix (P0):**
+    -   Resolved the subscription flickering issue (ELITE users showing as EXPLORER) in  and .
+-   **Feature & Logic Updates (P1):**
+    -   **UI:** Removed Your Stats cards () and updated referral cards logic and UI ().
+    -   **Redeem Condition:** Implemented a new rule requiring at least 1 active, subscribed referral to redeem PRC in .
+    -   **Mining Economy:** Updated single-leg mining rules (5 PRC/user, max 800 users) and team boost percentages (10/5/3) across the application. Implemented the user-specified Option B for single-leg calculation.
+    -   **UI Labels:** Changed Earned to Redeemed on  and updated the PRC statement start date on .
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Admin Panel Failed to delete plan Error:** A low-priority bug mentioned in a previous handoff was not investigated.
@@ -105,77 +105,91 @@ The user's initial goal was to refactor the monolithic backend, fix production i
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Eko DMT API failures due to IP whitelisting.
 -   **Recurrence count:** High.
--   **Status:** RESOLVED (for Production), BLOCKED (for Preview). The user confirmed the production IP is whitelisted. The issue persists for the preview environment (), and no Eko API testing should be attempted there.
+-   **Status:** RESOLVED (for Production), BLOCKED (for Preview). No Eko API testing should be attempted in the preview environment.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Performance Debugging:** Using tools like  to diagnose live production API latency and analyze response payloads to find bottlenecks.
--   **Monolith Decomposition:** The ongoing process of breaking  into smaller, manageable routers to improve performance and maintainability.
--   **Conditional UI Flow:** Implementing dynamic user interfaces (like in the chatbot) that present different paths based on user choice (e.g., OTP vs. Aadhaar).
+-   **MongoDB Performance Tuning:** Using aggregation pipelines to replace slow Python loops and fix N+1 query problems.
+-   **Asyncio Optimization:** Using  to run independent async database calls in parallel.
+-   **Event Loop Blocking:** Moving CPU-bound operations () to a  to keep the application responsive.
+-   **Caching Strategy:** Using Redis (/) to cache the results of expensive, repeatable calculations.
+-   **Production Debugging:** Diagnosing complex performance issues using , support agent feedback, and the .
 
 **key DB schema**
--   **users:** Contains the  field as a base64 string, which is the cause of the performance issue in the login flow.
+-   **users:** Contains fields like , , , and  that are critical for the new business logic. The  field (base64) still exists but is no longer sent on login.
+
+**changes in tech stack**
+-   No changes to the core stack.
+-   **Redis (Upstash)** is now a critical component for the backend caching strategy.
 
 **All files of reference**
--   : **Highest priority file to modify.** Contains the  function that needs to be fixed to solve the P0 performance issue.
--   : Contains the new frontend logic for both withdrawal types.
--   : Contains the placeholder backend logic for the Aadhaar DMT v3 feature.
--   : The admin panel UI where the customer registration fix was implemented.
--   : The backend file containing the admin registration API.
+-   : Contains optimized  and  endpoints.
+-   : Contains the fully optimized login endpoint.
+-   : Contains the core single-leg and team boost logic, which was rewritten for performance.
+-   : Contains the new redeem condition logic.
+-   , , : Frontend pages with major logic and UI changes.
 
 **Areas that need refactoring**:
--   **'s login function:** This is not just refactoring but a critical bug fix. The practice of sending large base64 strings on login must be eliminated.
--   **Base64 Image Storage:** The root cause of the performance issue highlights the need to migrate images from MongoDB base64 fields to a dedicated file storage solution (like a static file server or a cloud storage bucket) and serve them via URLs.
+-    is still a very large monolith despite some functions being moved out. It should be progressively broken down into more routers.
+-   The practice of storing images as base64 strings in MongoDB is a major architectural flaw and the root cause of the initial performance crisis. A task to migrate these to a file storage solution is in the backlog and should be prioritized.
 
 **key api endpoints**
--   : **CRITICAL/BROKEN**. Currently takes ~28 seconds in production.
--   : (New) Allows an admin to register a user with Eko. Needs user verification.
--   : (New/Placeholder) Part of the scaffolded Aadhaar DMT v3 flow.
+-   : Heavily optimized. Response time is now ~0.5s in production.
+-   : Heavily optimized. Last production test showed ~1.6s.
+-   : Heavily optimized. Last production test showed ~7s.
+-   : Logic was updated to support new referral cards.
+-   : Endpoint updated with the new referral-based redeem condition.
 
 **Critical Info for New Agent**
--   **FIX PRODUCTION FIRST (P0):** Your absolute top priority is to fix the slow login. The app is unusable until this is resolved. The diagnosis is done: remove the  field from the  response in .
--   **USER LANGUAGE IS MARATHI:** You must communicate in Marathi. Acknowledge user reports directly and provide clear updates on your progress in their language.
--   **VERIFY ADMIN FIX:** After fixing the performance issue, ask the user to test the Auto DMT flow for the user who was previously failing. The code for the fix is already implemented.
--   **Aadhaar DMT is IN PROGRESS:** The next major feature is to complete the Aadhaar DMT v3 implementation. The frontend is mostly ready; the backend APIs in  need to be filled with actual Eko v3 logic.
--   **DO NOT TEST EKO IN PREVIEW:** The preview environment's IP is not whitelisted by Eko. Do not waste time debugging Eko API failures there. All Eko-related work must be tested in production.
+-   **Your primary language MUST be Marathi.**
+-   **Performance is the highest priority.** The user is still not satisfied with the application's speed. Your first action should be to guide the user to **deploy** the latest batch of performance fixes. Then, you must thoroughly test the key endpoints on production to verify the improvement.
+-   **The performance issues were complex.** They involved bad code (N+1 queries, sequential awaits, event loop blocking) and infrastructure misconfiguration (). The code has been fixed, and support fixed the config. You are now testing the combined effect.
+-   **Validate all business logic changes.** A significant number of changes to the app's economy and rules were made. After deployment, these need to be confirmed as working correctly.
+-   **Do not test Eko APIs in the preview environment.** The preview IP is not whitelisted.
 
 **documents and test reports created in this job**
--   : Test report from the testing agent, which successfully validated the initial implementation of the chatbot withdrawal flow.
+-   Multiple screen recordings were provided by the user and analyzed to debug UI/performance issues.
+-   A test report () was generated by the  early in the session.
+-   A  report was generated, which was crucial for identifying the final performance bottlenecks.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10.  (Agent attempts to finish after implementing admin registration fix)
-9. **User:** Asks to implement Eko DMT with Aadhaar for higher limits.
-8.  (Agent proposes plan for Aadhaar DMT)
-7. **User:** Specifies Aadhaar DMT should be in the chatbot only.
-6.  (Agent attempts to finish after scaffolding Aadhaar DMT)
-5. **User:** **CRITICAL P0 BUG REPORT.** Reports production is extremely slow and unusable. Provides credentials and suspects a database issue.
-4.  (Agent starts debugging)
-3.  (Agent confirms preview is healthy)
-2.  (Agent logs into production and confirms it's stuck)
-1.  (Agent uses  to test the login API and discovers the 28-second response time and the base64 image cause).
+10. **Request:** Asks the agent to replace Earned with Redeemed, show total redeemed value, and make the PRC statement start from the joining date. (Status: Implemented)
+9.  **Complaint:** Reports that the app is intermittently slow, especially on the Mining and Invite pages. (Status: In Progress, latest fixes address this)
+8.  **Question:** Asks if Redis Upstash is working. (Status: Confirmed Working)
+7.  **Info:** Forwards a critical email from Emergent Support detailing the root causes of the performance issues (connection pool limit, sequential DB calls, blocking password hashing) and the required fixes. (Status: Implemented)
+6.  **Request:** Asks the agent to test on production after deployment. (Status: Tested, login was fast but other issues remained)
+5.  **Complaint:** Reports new issues on the Mining page (slow load, collect takes time, bonuses not loading) and provides a video. (Status: In Progress, latest fixes address this)
+4.  **Request:** Asks for an explanation of the new Option B single-leg mining logic. (Status: Explained)
+3.  **Confirmation:** Confirms that Option B is the correct logic to implement. (Status: Implemented)
+2.  **Request:** Asks the agent to test on production if the auto-burning job ran at 11 AM. (Status: Blocked by DB timeout, issue was root caused to slow queries)
+1.  **Complaint/Request:** Expresses dissatisfaction with the app speed and asks the agent to use the testing agent and common queries to find more improvements. (Status: In Progress, triggered final optimization round)
 
 **Project Health Check:**
--   **Broken:**
-    -   **Production Login/Performance (P0):** The application is virtually unusable due to a ~28-second login time.
+-   **Broken:** The user still considers the overall application speed unsatisfactory, despite significant improvements. The user's final verdict after the latest deployment is pending.
 -   **Mocked:**
-    -   The Aadhaar DMT v3 backend APIs are currently placeholders.
+    -   The Aadhaar DMT v3 backend APIs in  are placeholders.
 
 **3rd Party Integrations**
--   **Eko (v1 DMT & BBPS API):** The DMT v1 flow is implemented but has edge cases being fixed (admin registration). The E2E user flow is complete.
--   **Eko (v3 DMT with Aadhaar):** Implementation is in progress. Frontend scaffolding is done, backend is placeholder.
--   **Razorpay:** Used for subscriptions. Known activation failures exist.
+-   **Eko (v1 DMT & BBPS API):** Implemented.
+-   **Eko (v3 DMT with Aadhaar):** Scaffolding exists, but implementation is pending.
+-   **Razorpay:** Implemented, but has known issues.
+-   **Redis (Upstash):** Now a critical integration, used for caching expensive backend operations.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (for the initial chatbot flow, which passed).
--   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Testing agent used after significant changes:** YES, but early in the session. The most recent, critical performance fixes have not been validated by the testing agent.
+-   **Troubleshoot agent used after agent stuck in loop:** YES, this was critical in identifying the final bottlenecks.
 -   **Test files created:** None.
--   **Known regressions:** A major performance regression has occurred in production, making the app unusable.
+-   **Known regressions:** The initial performance degradation was a major regression. The current work is to fix that regression and improve baseline performance.
 
 **Credentials to test flow:**
--   **Production Admin:**  / PIN: 
--   **Production User:**  / PIN:  (This seems to be an admin user as well)
+-   **Admin:**  / PIN: 
+-   **Users:**  / PIN:  |  / PIN:  |  / PIN: 
 
 **What agent forgot to execute**
--   The agent correctly pivoted to user-reported issues. The primary miss was not anticipating that the architectural flaw of storing large base64 images and returning them on login would eventually lead to a critical production failure. The focus must now be on rectifying this architectural debt.</analysis>
+-   The agent correctly prioritized the P0 performance crisis over all other tasks. As a result, lower priority tasks from the initial handoff were not addressed:
+    -   Implementing Eko Aadhaar DMT v3.
+    -   Investigating BBPS biller codes.
+    -   Investigating the Razorpay auto-subscription issue.
+    -   Asking the user to verify the Admin Auto DMT fix from the previous session.</analysis>

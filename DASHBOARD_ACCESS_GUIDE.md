@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://perf-fix-login.preview.emergentagent.com/setup
+   https://responsive-dash-14.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

@@ -10,7 +10,7 @@ import { test, expect, Page } from '@playwright/test';
  * Fix: Initialize state from user prop instead of hardcoded 'explorer'
  */
 
-const BASE_URL = process.env.BASE_URL || 'https://perf-fix-login.preview.emergentagent.com';
+const BASE_URL = process.env.BASE_URL || 'https://responsive-dash-14.preview.emergentagent.com';
 
 // Test user with ELITE subscription
 const TEST_USER_EMAIL = 'elite_test@test.com';
