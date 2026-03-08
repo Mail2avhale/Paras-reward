@@ -12,6 +12,167 @@ import { InfoTooltip } from '@/components/InfoTooltip';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// ============================================
+// HAPTIC FEEDBACK UTILITY
+// ============================================
+const triggerHaptic = (type = 'light') => {
+  if ('vibrate' in navigator) {
+    const patterns = {
+      light: [10],
+      medium: [20],
+      heavy: [30],
+      success: [10, 50, 10, 50, 30],
+      collect: [15, 30, 15, 30, 50, 100]
+    };
+    navigator.vibrate(patterns[type] || patterns.light);
+  }
+};
+
+// ============================================
+// PUSH NOTIFICATION UTILITY
+// ============================================
+const requestNotificationPermission = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+};
+
+const sendSessionEndNotification = () => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('⛏️ Mining Session Complete!', {
+      body: 'Your PRC rewards are ready to collect!',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-48x48.png',
+      tag: 'mining-session-end',
+      requireInteraction: true,
+      vibrate: [200, 100, 200]
+    });
+  }
+};
+
+// ============================================
+// ENHANCED PARTICLE SYSTEM
+// ============================================
+const MiningParticles = ({ isActive, intensity = 1 }) => {
+  const particles = Array.from({ length: Math.floor(12 * intensity) }, (_, i) => ({
+    id: i,
+    delay: Math.random() * 2,
+    duration: 2 + Math.random() * 2,
+    x: Math.random() * 100,
+    size: 2 + Math.random() * 4
+  }));
+
+  if (!isActive) return null;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.x}%`,
+            width: p.size,
+            height: p.size,
+            background: `radial-gradient(circle, rgba(251, 191, 36, 0.9) 0%, rgba(245, 158, 11, 0.6) 50%, transparent 100%)`
+          }}
+          initial={{ y: '100%', opacity: 0, scale: 0 }}
+          animate={{
+            y: '-100%',
+            opacity: [0, 1, 1, 0],
+            scale: [0.5, 1.2, 1, 0.5],
+            x: [0, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20]
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: 'easeOut'
+          }}
+        />
+      ))}
+      {/* Glowing orbs */}
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={`orb-${i}`}
+          className="absolute w-3 h-3 rounded-full bg-amber-400/40 blur-sm"
+          style={{ left: `${20 + i * 30}%` }}
+          animate={{
+            y: ['80%', '20%', '80%'],
+            opacity: [0.3, 0.8, 0.3],
+            scale: [1, 1.5, 1]
+          }}
+          transition={{
+            duration: 3 + i,
+            delay: i * 0.5,
+            repeat: Infinity,
+            ease: 'easeInOut'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// ENHANCED FLOATING COINS (Collect Animation)
+// ============================================
+const CollectCoinsAnimation = ({ show, amount, onComplete }) => {
+  const coins = Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    angle: (i * 45) * (Math.PI / 180),
+    distance: 60 + Math.random() * 40
+  }));
+
+  if (!show) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+        {/* Central burst */}
+        <motion.div
+          initial={{ scale: 0, opacity: 1 }}
+          animate={{ scale: 3, opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          className="absolute w-20 h-20 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300"
+          onAnimationComplete={onComplete}
+        />
+        
+        {/* Flying coins */}
+        {coins.map((coin) => (
+          <motion.div
+            key={coin.id}
+            className="absolute"
+            initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+            animate={{
+              scale: [0, 1.2, 1, 0.8],
+              x: Math.cos(coin.angle) * coin.distance,
+              y: [0, Math.sin(coin.angle) * coin.distance - 30, Math.sin(coin.angle) * coin.distance + 50],
+              opacity: [1, 1, 1, 0],
+              rotate: [0, 180, 360]
+            }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/50">
+              <span className="text-amber-900 font-bold text-xs">₽</span>
+            </div>
+          </motion.div>
+        ))}
+        
+        {/* Amount text popup */}
+        <motion.div
+          initial={{ scale: 0, y: 0 }}
+          animate={{ scale: [0, 1.2, 1], y: -80 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="absolute text-2xl font-bold text-amber-400 drop-shadow-lg"
+        >
+          +{amount?.toFixed(2)} PRC
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
 // Animated counter component for live PRC display - ALWAYS shows positive values
 const AnimatedCounter = ({ value, decimals = 4 }) => {
   const [displayValue, setDisplayValue] = useState(Math.max(0, value));
@@ -336,12 +497,25 @@ const DailyRewards = ({ user }) => {
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
   const [baseRate, setBaseRate] = useState(0); // Individual base mining rate
   
+  // NEW: Enhanced animation states
+  const [showCollectAnimation, setShowCollectAnimation] = useState(false);
+  const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
   const progressRef = useRef(null);
+  const sessionEndNotifiedRef = useRef(false);
   
   // Get global translation function
   const { t: globalT } = useLanguage();
+  
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission().then(() => {
+      setNotificationEnabled(Notification.permission === 'granted');
+    });
+  }, []);
   
   // Check if user is free user (explorer, free, or no plan)
   // Use user prop first, then userData for more accurate initial display
@@ -471,11 +645,31 @@ const DailyRewards = ({ user }) => {
             setIsMining(false);
             setSessionProgress(100);
             smartToast.success('Session complete! Collect your rewards.');
+            
+            // Send push notification when session ends
+            if (!sessionEndNotifiedRef.current) {
+              sendSessionEndNotification();
+              triggerHaptic('success');
+              sessionEndNotifiedRef.current = true;
+            }
+            
             clearInterval(timerRef.current);
             if (liveCounterRef.current) clearInterval(liveCounterRef.current);
             if (progressRef.current) clearInterval(progressRef.current);
             return 0;
           }
+          
+          // Send notification 5 minutes before session ends
+          if (prev <= 300 && prev > 295 && !sessionEndNotifiedRef.current) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('⏰ Mining Session Ending Soon!', {
+                body: '5 minutes remaining. Collect your PRC soon!',
+                icon: '/icons/icon-192x192.png',
+                tag: 'mining-session-warning'
+              });
+            }
+          }
+          
           return prev - 5;
         });
         
@@ -522,6 +716,9 @@ const DailyRewards = ({ user }) => {
   }, [isMining, miningRate, sessionStartTime]);
 
   const startSession = async () => {
+    // Haptic feedback on button press
+    triggerHaptic('medium');
+    
     setIsStarting(true);
     try {
       const response = await axios.post(`${API}/mining/start/${user.uid}`);
@@ -531,7 +728,13 @@ const DailyRewards = ({ user }) => {
         setSessionPRC(0);
         setSessionStartTime(Date.now());
         setSessionProgress(0); // Reset progress to 0
+        
+        // Success haptic
+        triggerHaptic('success');
         smartToast.success('Session started! Earning PRC...');
+        
+        // Reset notification flag
+        sessionEndNotifiedRef.current = false;
         
         // Refresh user data
         setTimeout(() => fetchUserData(), 500);
@@ -552,8 +755,12 @@ const DailyRewards = ({ user }) => {
   const collectRewards = async () => {
     if (sessionPRC < 0.01) {
       smartToast.error('Not enough PRC to collect');
+      triggerHaptic('light');
       return;
     }
+    
+    // Haptic feedback on button press
+    triggerHaptic('medium');
     
     setIsCollecting(true);
     try {
@@ -563,6 +770,15 @@ const DailyRewards = ({ user }) => {
       const data = response.data;
       const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
       
+      // Store claimed amount for animation
+      setLastCollectedAmount(claimed);
+      
+      // Trigger enhanced coin animation
+      setShowCollectAnimation(true);
+      
+      // Haptic success feedback
+      triggerHaptic('collect');
+      
       // Trigger confetti celebration!
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 1000);
@@ -571,6 +787,9 @@ const DailyRewards = ({ user }) => {
       
       // IMPORTANT: Immediately reset sessionPRC to 0 to avoid negative display
       setSessionPRC(0);
+      
+      // Reset notification flag for new session
+      sessionEndNotifiedRef.current = false;
       
       // Reset session using response data - this ensures immediate UI update
       if (data.session_reset) {
@@ -682,17 +901,48 @@ const DailyRewards = ({ user }) => {
     <div className="min-h-screen bg-zinc-950 pb-24">
       {/* Header - Premium Dark Theme */}
       <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-zinc-400" />
-          </button>
-          <div>
-            <h1 className="text-zinc-100 text-xl font-semibold tracking-tight">{globalT('dailyRewards')}</h1>
-            <p className="text-zinc-500 text-sm">{globalT('collectRewards')}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => {
+                triggerHaptic('light');
+                navigate('/dashboard');
+              }}
+              className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-zinc-400" />
+            </button>
+            <div>
+              <h1 className="text-zinc-100 text-xl font-semibold tracking-tight">{globalT('dailyRewards')}</h1>
+              <p className="text-zinc-500 text-sm">{globalT('collectRewards')}</p>
+            </div>
           </div>
+          
+          {/* Notification Status Badge */}
+          <button
+            onClick={async () => {
+              triggerHaptic('light');
+              if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                setNotificationEnabled(permission === 'granted');
+                if (permission === 'granted') {
+                  smartToast.success('🔔 Notifications enabled!');
+                }
+              } else if (Notification.permission === 'denied') {
+                smartToast.error('Please enable notifications in browser settings');
+              }
+            }}
+            className={`p-2 rounded-full transition-colors ${
+              notificationEnabled 
+                ? 'bg-emerald-500/10 text-emerald-400' 
+                : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'
+            }`}
+            title={notificationEnabled ? 'Notifications enabled' : 'Enable notifications'}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -709,6 +959,16 @@ const DailyRewards = ({ user }) => {
               : 'bg-zinc-900/40 border-zinc-800 shadow-2xl shadow-black/40'
           }`}
         >
+          {/* ENHANCED: Mining Particles Effect */}
+          <MiningParticles isActive={isMining} intensity={hasPaidPlan ? 1.5 : 1} />
+          
+          {/* ENHANCED: Collect Coins Animation */}
+          <CollectCoinsAnimation 
+            show={showCollectAnimation} 
+            amount={lastCollectedAmount}
+            onComplete={() => setShowCollectAnimation(false)}
+          />
+          
           {/* Subtle ambient glow when mining */}
           {isMining && (
             <div className="absolute inset-0 opacity-20 pointer-events-none">
