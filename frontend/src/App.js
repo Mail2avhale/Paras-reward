@@ -528,7 +528,7 @@ function App() {
     }, 500);
   };
 
-  // Session validation - check every 30 seconds
+  // Session validation - check every 30 seconds (with initial delay to allow login to complete)
   useEffect(() => {
     if (!user?.uid) return;
     
@@ -554,11 +554,15 @@ function App() {
       }
     };
     
-    // Validate immediately and then every 30 seconds
-    validateSession();
+    // IMPORTANT: Delay first validation by 5 seconds to allow login process to complete
+    // This prevents race condition where validation runs before session_token is saved to DB
+    const initialDelay = setTimeout(validateSession, 5000);
     const interval = setInterval(validateSession, 30000);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
   }, [user?.uid]);
 
   if (loading) {
