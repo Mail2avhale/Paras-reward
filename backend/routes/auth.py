@@ -654,12 +654,7 @@ async def login(
     is_paid_subscriber = user_plan in ["elite", "growth", "startup"]
     is_vip = user.get("membership_type") == "vip"
     
-    # Only reset PRC for free users who are not paid subscribers
-    if not is_paid_subscriber and not is_vip and user.get("prc_balance", 0) > 0:
-        await db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
-        user["prc_balance"] = 0
-    
-    # Generate JWT tokens for all users
+    # Generate JWT tokens for all users (sync operation - fast)
     token_id = str(uuid.uuid4())
     token_data = {
         "uid": user["uid"],
@@ -670,7 +665,39 @@ async def login(
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
     
-    # Create session for admin users
+    # OPTIMIZED: Collect ALL post-login DB operations and run in parallel
+    now_iso = datetime.now(timezone.utc).isoformat()
+    post_login_tasks = []
+    
+    # Task 1: Reset PRC for free users (if needed)
+    if not is_paid_subscriber and not is_vip and user.get("prc_balance", 0) > 0:
+        post_login_tasks.append(
+            db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
+        )
+        user["prc_balance"] = 0
+    
+    # Task 2: Update last_login + login_count
+    update_data = {"last_login": now_iso}
+    if device_id:
+        update_data["device_id"] = device_id
+    if ip_address:
+        update_data["ip_address"] = ip_address
+    post_login_tasks.append(
+        db.users.update_one({"uid": user["uid"]}, {"$set": update_data, "$inc": {"login_count": 1}})
+    )
+    
+    # Task 3: Log activity (fire-and-forget style via task list)
+    post_login_tasks.append(
+        log_activity(
+            user_id=user["uid"],
+            action_type="login",
+            description=f"User logged in from {real_ip}",
+            metadata={"device_id": device_id, "identifier": identifier},
+            ip_address=real_ip
+        )
+    )
+    
+    # Task 4: Admin session and logging (if admin)
     if user.get("role") in ["admin", "sub_admin"]:
         session_data = {
             "session_id": str(uuid.uuid4()),
@@ -680,39 +707,25 @@ async def login(
             "ip_address": real_ip,
             "user_agent": user_agent,
             "device_id": device_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "last_activity": datetime.now(timezone.utc).isoformat(),
+            "created_at": now_iso,
+            "last_activity": now_iso,
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)).isoformat()
         }
-        await db.admin_sessions.insert_one(session_data)
-        
-        await log_admin_action(
-            admin_uid=user["uid"],
-            action="login",
-            entity_type="auth",
-            details={"device_id": device_id, "identifier": identifier},
-            ip_address=real_ip,
-            user_agent=user_agent
+        post_login_tasks.append(db.admin_sessions.insert_one(session_data))
+        post_login_tasks.append(
+            log_admin_action(
+                admin_uid=user["uid"],
+                action="login",
+                entity_type="auth",
+                details={"device_id": device_id, "identifier": identifier},
+                ip_address=real_ip,
+                user_agent=user_agent
+            )
         )
     
-    update_data = {"last_login": datetime.now(timezone.utc).isoformat()}
-    if device_id:
-        update_data["device_id"] = device_id
-    if ip_address:
-        update_data["ip_address"] = ip_address
-    
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": update_data, "$inc": {"login_count": 1}}
-    )
-    
-    await log_activity(
-        user_id=user["uid"],
-        action_type="login",
-        description=f"User logged in from {real_ip}",
-        metadata={"device_id": device_id, "identifier": identifier},
-        ip_address=real_ip
-    )
+    # Run ALL post-login DB operations in parallel
+    if post_login_tasks:
+        await asyncio.gather(*post_login_tasks, return_exceptions=True)
     
     # Convert datetime strings
     for field in ["created_at", "updated_at", "last_login", "membership_expiry"]:
