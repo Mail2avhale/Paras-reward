@@ -19783,41 +19783,65 @@ async def complete_profit_withdrawal(withdrawal_id: str, request: Request):
 
 @api_router.get("/admin/dashboard/kpis")
 async def get_admin_kpis(request: Request):
-    """Get comprehensive KPIs for admin dashboard"""
+    """Get comprehensive KPIs for admin dashboard - OPTIMIZED with parallel queries"""
     # Verify admin access
     admin_uid = request.headers.get("X-User-ID")
     if admin_uid:
         await verify_admin(admin_uid)
     
-    # Total users
-    total_users = await db.users.count_documents({})
-    active_users = await db.users.count_documents({"is_active": True})
+    # OPTIMIZED: Run ALL count queries in parallel using asyncio.gather
+    count_queries = await asyncio.gather(
+        db.users.count_documents({}),                                    # total_users
+        db.users.count_documents({"is_active": True}),                   # active_users
+        db.users.count_documents({"membership_type": "vip"}),            # vip_count
+        db.users.count_documents({"mining_active": True}),               # active_miners
+        db.cashback_withdrawals.count_documents({"status": "pending"}),  # pending_cashback
+        db.profit_withdrawals.count_documents({"status": "pending"}),    # pending_profit
+        db.orders.count_documents({"status": "pending"}),                # pending_orders
+        db.orders.count_documents({}),                                   # total_orders
+        db.vip_payments.count_documents({"status": "approved"}),         # vip_payments
+        return_exceptions=True
+    )
     
-    # VIP count
-    vip_count = await db.users.count_documents({"membership_type": "vip"})
+    total_users, active_users, vip_count, active_miners, \
+    pending_cashback_withdrawals, pending_profit_withdrawals, \
+    pending_orders, total_orders, total_vip_payments = count_queries
     
-    # Active miners (users with active mining sessions)
-    active_miners = await db.users.count_documents({"mining_active": True})
+    # Handle exceptions (convert to 0)
+    total_users = total_users if isinstance(total_users, int) else 0
+    active_users = active_users if isinstance(active_users, int) else 0
+    vip_count = vip_count if isinstance(vip_count, int) else 0
+    active_miners = active_miners if isinstance(active_miners, int) else 0
+    pending_cashback_withdrawals = pending_cashback_withdrawals if isinstance(pending_cashback_withdrawals, int) else 0
+    pending_profit_withdrawals = pending_profit_withdrawals if isinstance(pending_profit_withdrawals, int) else 0
+    pending_orders = pending_orders if isinstance(pending_orders, int) else 0
+    total_orders = total_orders if isinstance(total_orders, int) else 0
+    total_vip_payments = total_vip_payments if isinstance(total_vip_payments, int) else 0
     
-    # PRC stats
-    all_users = await db.users.find({}, {"prc_balance": 1, "total_mined": 1}).to_list(10000)
-    total_prc_issued = sum(user.get("total_mined", 0) for user in all_users)
-    total_prc_balance = sum(user.get("prc_balance", 0) for user in all_users)
+    # OPTIMIZED: Use aggregation pipelines instead of fetching all docs
+    prc_agg, cashback_agg = await asyncio.gather(
+        db.users.aggregate([
+            {"$group": {
+                "_id": None,
+                "total_mined": {"$sum": {"$ifNull": ["$total_mined", 0]}},
+                "total_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}}
+            }}
+        ]).to_list(1),
+        db.users.aggregate([
+            {"$group": {
+                "_id": None,
+                "total_cashback": {"$sum": {"$ifNull": ["$cashback_wallet_balance", 0]}}
+            }}
+        ]).to_list(1),
+        return_exceptions=True
+    )
+    
+    # Extract aggregation results
+    total_prc_issued = prc_agg[0].get("total_mined", 0) if prc_agg and not isinstance(prc_agg, Exception) else 0
+    total_prc_balance = prc_agg[0].get("total_balance", 0) if prc_agg and not isinstance(prc_agg, Exception) else 0
     total_prc_redeemed = total_prc_issued - total_prc_balance
+    total_cashback = cashback_agg[0].get("total_cashback", 0) if cashback_agg and not isinstance(cashback_agg, Exception) else 0
     
-    # Cashback stats
-    all_cashback = await db.users.find({}, {"cashback_wallet_balance": 1}).to_list(10000)
-    total_cashback = sum(user.get("cashback_wallet_balance", 0) for user in all_cashback)
-    
-    # Pending withdrawals
-    pending_cashback_withdrawals = await db.cashback_withdrawals.count_documents({"status": "pending"})
-    pending_profit_withdrawals = await db.profit_withdrawals.count_documents({"status": "pending"})
-    
-    # Pending orders
-    pending_orders = await db.orders.count_documents({"status": "pending"})
-    
-    # Total membership fees collected
-    total_vip_payments = await db.vip_payments.count_documents({"status": "approved"})
     total_membership_fees = total_vip_payments * 1000  # ₹1000 per VIP
     
     return {
@@ -19840,7 +19864,7 @@ async def get_admin_kpis(request: Request):
         },
         "orders": {
             "pending": pending_orders,
-            "total": await db.orders.count_documents({})
+            "total": total_orders
         }
     }
 
