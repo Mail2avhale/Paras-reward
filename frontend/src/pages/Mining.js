@@ -116,58 +116,305 @@ const MiningParticles = ({ isActive, intensity = 1 }) => {
 
 // ============================================
 // ENHANCED FLOATING COINS (Collect Animation)
+// SUPER DELUXE VERSION - Happy User Experience
 // ============================================
 const CollectCoinsAnimation = ({ show, amount, onComplete }) => {
-  const coins = Array.from({ length: 8 }, (_, i) => ({
-    id: i,
+  // Multiple layers of coins for depth effect
+  const innerCoins = Array.from({ length: 6 }, (_, i) => ({
+    id: `inner-${i}`,
+    angle: (i * 60) * (Math.PI / 180),
+    distance: 50,
+    delay: 0,
+    size: 'lg'
+  }));
+  
+  const outerCoins = Array.from({ length: 12 }, (_, i) => ({
+    id: `outer-${i}`,
+    angle: (i * 30 + 15) * (Math.PI / 180),
+    distance: 100,
+    delay: 0.1,
+    size: 'md'
+  }));
+  
+  const tinyCoins = Array.from({ length: 20 }, (_, i) => ({
+    id: `tiny-${i}`,
+    angle: (i * 18) * (Math.PI / 180),
+    distance: 140 + Math.random() * 40,
+    delay: 0.15,
+    size: 'sm'
+  }));
+
+  // Sparkles
+  const sparkles = Array.from({ length: 30 }, (_, i) => ({
+    id: `sparkle-${i}`,
+    x: (Math.random() - 0.5) * 250,
+    y: (Math.random() - 0.5) * 250,
+    delay: Math.random() * 0.3,
+    duration: 0.5 + Math.random() * 0.5
+  }));
+
+  // Stars burst
+  const stars = Array.from({ length: 8 }, (_, i) => ({
+    id: `star-${i}`,
     angle: (i * 45) * (Math.PI / 180),
-    distance: 60 + Math.random() * 40
+    distance: 120
   }));
 
   if (!show) return null;
 
+  const getCoinSize = (size) => {
+    switch(size) {
+      case 'lg': return 'w-10 h-10';
+      case 'md': return 'w-7 h-7';
+      case 'sm': return 'w-5 h-5';
+      default: return 'w-8 h-8';
+    }
+  };
+
   return (
     <AnimatePresence>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-        {/* Central burst */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 overflow-hidden">
+        
+        {/* Background Flash */}
+        <motion.div
+          className="absolute inset-0 bg-amber-400"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.3, 0] }}
+          transition={{ duration: 0.4 }}
+        />
+        
+        {/* Multi-ring Burst Effect */}
+        {[0, 1, 2].map((ring) => (
+          <motion.div
+            key={`ring-${ring}`}
+            className="absolute rounded-full border-4 border-amber-400/60"
+            initial={{ width: 0, height: 0, opacity: 1 }}
+            animate={{ 
+              width: [0, 200 + ring * 80], 
+              height: [0, 200 + ring * 80], 
+              opacity: [1, 0.6, 0],
+              borderWidth: [4, 2, 0]
+            }}
+            transition={{ duration: 0.8, delay: ring * 0.1, ease: 'easeOut' }}
+          />
+        ))}
+        
+        {/* Central Golden Explosion */}
         <motion.div
           initial={{ scale: 0, opacity: 1 }}
-          animate={{ scale: 3, opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          className="absolute w-20 h-20 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300"
+          animate={{ scale: [0, 1.5, 3], opacity: [1, 0.8, 0] }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="absolute w-24 h-24 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(251,191,36,1) 0%, rgba(245,158,11,0.8) 40%, rgba(217,119,6,0.4) 70%, transparent 100%)'
+          }}
           onAnimationComplete={onComplete}
         />
         
-        {/* Flying coins */}
-        {coins.map((coin) => (
+        {/* Inner Glow Pulse */}
+        <motion.div
+          className="absolute w-32 h-32 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(254,243,199,0.8) 0%, rgba(251,191,36,0.4) 50%, transparent 100%)'
+          }}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: [0, 2, 2.5], opacity: [0, 0.6, 0] }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+
+        {/* SPARKLES - Glitter Effect */}
+        {sparkles.map((sparkle) => (
+          <motion.div
+            key={sparkle.id}
+            className="absolute"
+            initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+            animate={{
+              scale: [0, 1.5, 0],
+              x: sparkle.x,
+              y: sparkle.y,
+              opacity: [0, 1, 0]
+            }}
+            transition={{ 
+              duration: sparkle.duration, 
+              delay: sparkle.delay,
+              ease: 'easeOut'
+            }}
+          >
+            <div className="w-2 h-2 rotate-45 bg-gradient-to-br from-yellow-200 to-amber-400 shadow-lg shadow-amber-400/50" />
+          </motion.div>
+        ))}
+
+        {/* STARS - 8-point Stars */}
+        {stars.map((star, i) => (
+          <motion.div
+            key={star.id}
+            className="absolute"
+            initial={{ scale: 0, x: 0, y: 0, opacity: 1, rotate: 0 }}
+            animate={{
+              scale: [0, 1.2, 0.8, 0],
+              x: Math.cos(star.angle) * star.distance,
+              y: Math.sin(star.angle) * star.distance,
+              opacity: [1, 1, 0.8, 0],
+              rotate: [0, 180, 360]
+            }}
+            transition={{ duration: 1, delay: 0.1, ease: 'easeOut' }}
+          >
+            <svg className="w-6 h-6 text-yellow-300 drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0l2.5 7.5H22l-6 4.5 2.5 7.5-6-4.5-6 4.5 2.5-7.5-6-4.5h7.5z" />
+            </svg>
+          </motion.div>
+        ))}
+
+        {/* INNER COINS - Large coins close to center */}
+        {innerCoins.map((coin) => (
           <motion.div
             key={coin.id}
             className="absolute"
             initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
             animate={{
-              scale: [0, 1.2, 1, 0.8],
+              scale: [0, 1.3, 1.1, 0.9],
               x: Math.cos(coin.angle) * coin.distance,
-              y: [0, Math.sin(coin.angle) * coin.distance - 30, Math.sin(coin.angle) * coin.distance + 50],
+              y: [0, Math.sin(coin.angle) * coin.distance - 20, Math.sin(coin.angle) * coin.distance + 30],
               opacity: [1, 1, 1, 0],
-              rotate: [0, 180, 360]
+              rotate: [0, 180, 360, 540]
             }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
+            transition={{ duration: 0.9, delay: coin.delay, ease: 'easeOut' }}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/50">
-              <span className="text-amber-900 font-bold text-xs">₽</span>
+            <div className={`${getCoinSize(coin.size)} rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-500 flex items-center justify-center shadow-xl shadow-amber-500/60 border-2 border-yellow-200/50`}>
+              <span className="text-amber-800 font-black text-sm">₽</span>
             </div>
           </motion.div>
         ))}
-        
-        {/* Amount text popup */}
+
+        {/* OUTER COINS - Medium coins spreading out */}
+        {outerCoins.map((coin) => (
+          <motion.div
+            key={coin.id}
+            className="absolute"
+            initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+            animate={{
+              scale: [0, 1.2, 1, 0.6],
+              x: Math.cos(coin.angle) * coin.distance,
+              y: [0, Math.sin(coin.angle) * coin.distance - 40, Math.sin(coin.angle) * coin.distance + 60],
+              opacity: [1, 1, 0.8, 0],
+              rotate: [0, -180, -360]
+            }}
+            transition={{ duration: 1.1, delay: coin.delay, ease: 'easeOut' }}
+          >
+            <div className={`${getCoinSize(coin.size)} rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center shadow-lg shadow-orange-500/40 border border-yellow-300/40`}>
+              <span className="text-orange-800 font-bold text-xs">₽</span>
+            </div>
+          </motion.div>
+        ))}
+
+        {/* TINY COINS - Small coins flying far */}
+        {tinyCoins.map((coin) => (
+          <motion.div
+            key={coin.id}
+            className="absolute"
+            initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+            animate={{
+              scale: [0, 1, 0.5],
+              x: Math.cos(coin.angle) * coin.distance,
+              y: Math.sin(coin.angle) * coin.distance + 80,
+              opacity: [1, 0.7, 0],
+              rotate: [0, 360, 720]
+            }}
+            transition={{ duration: 1.3, delay: coin.delay, ease: 'easeOut' }}
+          >
+            <div className={`${getCoinSize(coin.size)} rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 shadow-md shadow-amber-400/30`} />
+          </motion.div>
+        ))}
+
+        {/* MONEY RAIN - Falling coins from top */}
+        {[...Array(10)].map((_, i) => (
+          <motion.div
+            key={`rain-${i}`}
+            className="absolute"
+            style={{ left: `${10 + i * 9}%`, top: '-20px' }}
+            initial={{ y: -50, opacity: 0, rotate: 0 }}
+            animate={{
+              y: [-50, 300],
+              opacity: [0, 1, 1, 0],
+              rotate: [0, 360],
+              x: [0, (Math.random() - 0.5) * 40]
+            }}
+            transition={{ 
+              duration: 1.5, 
+              delay: 0.3 + i * 0.08,
+              ease: 'easeIn'
+            }}
+          >
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 shadow-lg shadow-amber-400/40 flex items-center justify-center">
+              <span className="text-amber-800 font-bold text-[10px]">₽</span>
+            </div>
+          </motion.div>
+        ))}
+
+        {/* AMOUNT TEXT - Big celebratory popup */}
         <motion.div
+          className="absolute flex flex-col items-center"
           initial={{ scale: 0, y: 0 }}
-          animate={{ scale: [0, 1.2, 1], y: -80 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="absolute text-2xl font-bold text-amber-400 drop-shadow-lg"
+          animate={{ 
+            scale: [0, 1.4, 1.2, 1],
+            y: [-20, -100, -90]
+          }}
+          transition={{ duration: 0.8, delay: 0.2, ease: 'backOut' }}
         >
-          +{amount?.toFixed(2)} PRC
+          {/* Celebration text */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-lg font-bold text-yellow-200 mb-1"
+            style={{ textShadow: '0 2px 10px rgba(251,191,36,0.5)' }}
+          >
+            🎉 Collected! 🎉
+          </motion.div>
+          
+          {/* Amount */}
+          <motion.div
+            className="text-3xl font-black bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-300 bg-clip-text text-transparent"
+            style={{ 
+              textShadow: '0 4px 20px rgba(251,191,36,0.6)',
+              WebkitBackgroundClip: 'text'
+            }}
+            animate={{
+              scale: [1, 1.1, 1],
+            }}
+            transition={{ duration: 0.5, delay: 0.5, repeat: 2 }}
+          >
+            +{amount?.toFixed(2)} PRC
+          </motion.div>
+          
+          {/* Subtitle */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-sm text-amber-300/80 mt-1"
+          >
+            Added to your balance
+          </motion.div>
         </motion.div>
+
+        {/* Floating Hearts/Sparkles around amount */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={`heart-${i}`}
+            className="absolute"
+            initial={{ opacity: 0, scale: 0, y: -60 }}
+            animate={{
+              opacity: [0, 1, 0],
+              scale: [0, 1, 0.5],
+              y: [-60, -120 - i * 15],
+              x: [(i % 2 === 0 ? -1 : 1) * (30 + i * 10)]
+            }}
+            transition={{ duration: 1.2, delay: 0.5 + i * 0.1 }}
+          >
+            <span className="text-xl">{i % 2 === 0 ? '✨' : '💰'}</span>
+          </motion.div>
+        ))}
       </div>
     </AnimatePresence>
   );
