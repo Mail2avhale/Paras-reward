@@ -4,17 +4,25 @@ PARAS REWARD - NEW MINING ECONOMY SYSTEM
 
 Formula (Per Hour):
 - Base Rate = 20.83 PRC/hr (500 PRC/day ÷ 24)
-- Single Leg Bonus = 0.375 PRC/hr per PAID downline (max 500 users)
-- Team Boost = L1: +5%, L2: +3%, L3: +2%
+- Single Leg Bonus = 0.208 PRC/hr per active downline (5 PRC/day per user, max 800 users)
+- Team Boost = L1: +10%, L2: +5%, L3: +3%
 
-Final Mining Rate = BaseRate + SingleLegBonus + TeamBoost (ADDITIVE)
+Final Mining Rate = (BaseRate + SingleLegBonus) × BoostMultiplier
 
 Single Leg Rules:
 - Global pool sorted by user's created_at (joining date/time)
-- Each user's downline = PAID active users who joined AFTER them
-- FREE/Explorer users are NOT counted in single leg
+- Each user's downline = active users who joined AFTER them
+- Only ACTIVE users count (Subscription active + KYC verified + Account valid)
+- Maximum 800 downline users counted
 
-Active User = Subscription PAID + KYC verified + Active mining session
+SINGLE-LEG MINING TABLE:
+Downline Users → PRC/day
+0 → 0, 1 → 5, 5 → 25, 10 → 50, 20 → 100, 50 → 250
+100 → 500, 200 → 1000, 400 → 2000, 800 → 4000
+
+Maximum Base Mining = 4500 PRC/day (500 base + 4000 single-leg)
+
+BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
 """
 
 from datetime import datetime, timezone, timedelta
@@ -27,18 +35,18 @@ import logging
 DAILY_BASE_BONUS = 500
 HOURLY_BASE_RATE = DAILY_BASE_BONUS / 24  # 20.833...
 
-# Single Leg bonus per active downline user
-DAILY_SINGLE_LEG_BONUS_PER_USER = 9  # 9 PRC/day per user (changed from 12)
-HOURLY_SINGLE_LEG_BONUS_PER_USER = DAILY_SINGLE_LEG_BONUS_PER_USER / 24  # 0.375 PRC/hour per user
+# Single Leg bonus per active downline user (UPDATED: 5 PRC/day per user)
+DAILY_SINGLE_LEG_BONUS_PER_USER = 5  # 5 PRC/day per user (changed from 9)
+HOURLY_SINGLE_LEG_BONUS_PER_USER = DAILY_SINGLE_LEG_BONUS_PER_USER / 24  # 0.208 PRC/hour per user
 
-# Maximum downline users to count
-MAX_SINGLE_LEG_USERS = 500
+# Maximum downline users to count (UPDATED: 800 users)
+MAX_SINGLE_LEG_USERS = 800
 
-# Team Boost Multipliers (3 Levels)
+# Team Boost Multipliers (3 Levels) - UPDATED
 TEAM_BOOST_LEVELS = {
-    'level_1': 0.05,  # +5% per L1 active user
-    'level_2': 0.03,  # +3% per L2 active user
-    'level_3': 0.02,  # +2% per L3 active user
+    'level_1': 0.10,  # +10% per L1 active user (changed from 5%)
+    'level_2': 0.05,  # +5% per L2 active user (changed from 3%)
+    'level_3': 0.03,  # +3% per L3 active user (changed from 2%)
 }
 
 # Free/Explorer plans that don't qualify
@@ -52,7 +60,15 @@ async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str)
     Single Leg Logic:
     - All users sorted by created_at (joining date/time)
     - User's downline = users who joined AFTER them
-    - Only ACTIVE users count (subscription + KYC + mining session)
+    - Maximum 800 users counted (cap at 800)
+    
+    Active User Requirements (ALL must be true):
+    - Subscription is active (Startup/Growth/Elite)
+    - KYC is verified
+    - Account is valid (has active mining session)
+    
+    Single-Leg Formula: SingleLegMining = ActiveDownlineUsers × 5 PRC/day
+    Maximum: 800 × 5 = 4000 PRC/day
     
     Args:
         db: Database connection
@@ -60,7 +76,7 @@ async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str)
         user_uid: User's UID (to exclude self)
     
     Returns:
-        Count of active downline users (max 500)
+        Count of active downline users (max 800)
     """
     try:
         now = datetime.now(timezone.utc)
@@ -138,11 +154,16 @@ async def get_team_boost_multiplier(db, user_uid: str) -> Tuple[float, Dict]:
     """
     Calculate Team Boost Multiplier from 3 levels of referrals
     
-    L1 = Direct referrals (+10% each)
-    L2 = Referrals of L1 (+5% each)
-    L3 = Referrals of L2 (+3% each)
+    L1 = Direct referrals (+10% each) - UPDATED
+    L2 = Referrals of L1 (+5% each) - UPDATED
+    L3 = Referrals of L2 (+3% each) - UPDATED
     
     BoostMultiplier = 1 + (L1_active × 0.10) + (L2_active × 0.05) + (L3_active × 0.03)
+    
+    Active User Requirements:
+    - Subscription is active (not explorer/free)
+    - KYC is verified
+    - Account is valid (has active mining session)
     
     Returns:
         Tuple of (multiplier, breakdown dict)
@@ -281,11 +302,18 @@ def is_user_active(user: Dict, now: datetime) -> bool:
 
 async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, float, Dict]:
     """
-    Calculate mining rate using NEW economy formula
+    Calculate mining rate using NEW economy formula (UPDATED March 2026)
     
     Formula:
-    BaseRate = 20.83 + (SingleLegUsers × 0.5) PRC/hour
-    FinalRate = BaseRate × BoostMultiplier
+    DailyMiningPRC = (500 + ActiveDownlineUsers × 5) × BoostMultiplier
+    
+    Where:
+    - Base Rate = 500 PRC/day (20.83 PRC/hr)
+    - Single Leg = 5 PRC/day per active downline user (max 800 users)
+    - BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
+    
+    Maximum Base Mining = 4500 PRC/day (before team boost)
+    - 500 base + (800 × 5) = 4500 PRC/day
     
     Args:
         db: Database connection
@@ -363,21 +391,21 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     # Step 2: Calculate base rate (with single leg) - this is the "Base Rate" shown to user
     base_rate_with_single_leg = HOURLY_BASE_RATE + single_leg_bonus
     
-    # Step 3: Get Team Boost (L1, L2, L3 bonuses in PRC/hr)
-    # These are ADDED, not multiplied
+    # Step 3: Get Team Boost Multiplier (L1: 10%, L2: 5%, L3: 3%)
+    # UPDATED: Now using MULTIPLICATIVE formula
     boost_multiplier, boost_breakdown = await get_team_boost_multiplier(db, uid)
     
-    # Calculate L1, L2, L3 bonuses in PRC/hr (percentage of base_rate_with_single_leg)
+    # Step 4: Calculate final rate using MULTIPLICATIVE formula
+    # FinalRate = (BaseRate + SingleLegBonus) × BoostMultiplier
+    # BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
+    final_hourly_rate = base_rate_with_single_leg * boost_multiplier
+    per_minute_rate = final_hourly_rate / 60
+    
+    # Calculate individual level bonuses for display (in PRC/hr)
     l1_bonus_prc = boost_breakdown.get('level_1', {}).get('boost', 0) * base_rate_with_single_leg
     l2_bonus_prc = boost_breakdown.get('level_2', {}).get('boost', 0) * base_rate_with_single_leg
     l3_bonus_prc = boost_breakdown.get('level_3', {}).get('boost', 0) * base_rate_with_single_leg
-    
     total_level_bonus = l1_bonus_prc + l2_bonus_prc + l3_bonus_prc
-    
-    # Step 4: Calculate final rate = Base Rate + L1 + L2 + L3 (ADDITION, not multiplication)
-    # NEW FORMULA: Total = BaseRate(daily+single_leg) + L1_bonus + L2_bonus + L3_bonus
-    final_hourly_rate = base_rate_with_single_leg + total_level_bonus
-    per_minute_rate = final_hourly_rate / 60
     
     # Update boost_breakdown with PRC/hr values for each level
     for level_key in ['level_1', 'level_2', 'level_3']:
@@ -388,17 +416,20 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     breakdown = {
         'base_rate': round(HOURLY_BASE_RATE, 4),
         'single_leg_users': single_leg_count,
+        'single_leg_max': MAX_SINGLE_LEG_USERS,
         'single_leg_bonus': round(single_leg_bonus, 4),
+        'single_leg_daily': round(single_leg_count * DAILY_SINGLE_LEG_BONUS_PER_USER, 2),
         'base_with_single_leg': round(base_rate_with_single_leg, 4),
         'l1_bonus': round(l1_bonus_prc, 4),
         'l2_bonus': round(l2_bonus_prc, 4),
         'l3_bonus': round(l3_bonus_prc, 4),
         'total_level_bonus': round(total_level_bonus, 4),
-        'boost_multiplier': round(boost_multiplier, 4),  # Kept for backward compatibility
+        'boost_multiplier': round(boost_multiplier, 4),
         'boost_breakdown': boost_breakdown,
         'final_rate': round(final_hourly_rate, 4),
         'per_minute_rate': round(per_minute_rate, 6),
         'daily_estimate': round(final_hourly_rate * 24, 2),
+        'max_daily_base': round((DAILY_BASE_BONUS + MAX_SINGLE_LEG_USERS * DAILY_SINGLE_LEG_BONUS_PER_USER), 2),
         'is_free_user': False
     }
     

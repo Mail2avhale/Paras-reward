@@ -4576,19 +4576,19 @@ async def calculate_mining_rate(uid: str):
     """
     Calculate mining rate using NEW MINING ECONOMY SYSTEM
     
-    NEW FORMULA (March 2026):
-    ========================
-    BaseRate = 20.83 + (SingleLegUsers × 0.5) PRC/hour
-    FinalRate = BaseRate × BoostMultiplier
+    NEW FORMULA (March 2026 - UPDATED):
+    ===================================
+    DailyMiningPRC = (500 + ActiveDownlineUsers × 5) × BoostMultiplier
     
     Where:
-    - 20.83 = Daily bonus (500 PRC) ÷ 24 hours
-    - SingleLegUsers = Active users joined AFTER this user (max 500)
-    - 0.5 = Bonus per user per hour (12 PRC/day ÷ 24)
+    - 500 = Daily base bonus (20.83 PRC/hr)
+    - ActiveDownlineUsers = Active users joined AFTER this user (max 800)
+    - 5 PRC/day per downline user (0.208 PRC/hr)
+    - Max Single Leg = 800 × 5 = 4000 PRC/day
     
     BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
     
-    Active = Subscription active + KYC verified + Active mining session
+    Active User = Subscription active + KYC verified + Account valid
     
     Returns: (per_minute_rate, base_rate, total_active_referrals, referral_breakdown)
     """
@@ -4609,9 +4609,9 @@ async def calculate_mining_rate(uid: str):
                 'active_count': level_data.get('active', 0),
                 'total_count': level_data.get('count', 0),
                 'percentage': {
-                    'level_1': 5,
-                    'level_2': 3,
-                    'level_3': 2
+                    'level_1': 10,  # UPDATED: 10%
+                    'level_2': 5,   # UPDATED: 5%
+                    'level_3': 3    # UPDATED: 3%
                 }.get(level_key, 0),
                 'bonus': level_data.get('bonus_prc', level_data.get('boost', 0) * actual_base_rate)
             }
