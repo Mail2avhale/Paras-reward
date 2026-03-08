@@ -349,52 +349,61 @@ const DailyRewards = ({ user }) => {
   const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
 
   // Fetch user data and mining status
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (isInitialLoad = false) => {
     // Set a timeout to prevent infinite loading on slow networks
-    // OPTIMIZED: Reduced timeout from 10s to 5s for faster failure
+    // OPTIMIZED: 3 second timeout for faster failure, show cached data immediately
     const timeoutId = setTimeout(() => {
-      setLoading(false);
-      setUserData(user);
-      console.warn('Mining data fetch timeout - using fallback');
-    }, 5000); // 5 second timeout
+      if (isInitialLoad) {
+        setLoading(false);
+        setUserData(user);
+        console.warn('Mining data fetch timeout - using fallback');
+      }
+    }, 3000); // 3 second timeout
     
     try {
-      // Fetch user data, mining status, and redemption stats in parallel
-      const [userResponse, miningResponse, statsResponse] = await Promise.all([
-        axios.get(`${API}/user/${user.uid}`),
-        axios.get(`${API}/mining/status/${user.uid}`),
-        axios.get(`${API}/user/${user.uid}/redemption-stats`)
-      ]);
-      
-      const data = userResponse.data;
+      // Fetch mining status FIRST (most important for this page)
+      // Then fetch user data and stats in parallel
+      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 5000 });
       const miningData = miningResponse.data;
-      const statsData = statsResponse.data;
       
-      setUserData(data);
-      // Use the actual mining rate from backend (per hour)
+      // Immediately update mining state for faster UI
       setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
-      // Set lifetime earnings from redemption stats API for consistency
-      setLifetimeEarnings(statsData.total_earned || 0);
-      // Set referral breakdown from backend
       setReferralBreakdown(miningData.referral_breakdown || null);
-      // Set base rate (individual mining)
       setBaseRate(miningData.base_rate || 0);
       
-      // Check mining session status
+      // Auto-start mining display if session is active
       if (miningData.session_active && miningData.remaining_hours > 0) {
         setIsMining(true);
         setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
         const sessionStart = new Date(miningData.session_start).getTime();
         setSessionStartTime(sessionStart);
-        
-        // Calculate initial progress
-        const totalDuration = 24 * 60 * 60 * 1000; // 24 hours
+        const totalDuration = 24 * 60 * 60 * 1000;
         const elapsed = Date.now() - sessionStart;
         setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
-        
-        // Use mined_this_session from backend
         setSessionPRC(miningData.mined_this_session || 0);
-      } else if (data.mining_active && data.mining_session_end) {
+      }
+      
+      // Clear loading immediately after mining data
+      if (isInitialLoad) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      }
+      
+      // Fetch user data and stats in background (non-blocking)
+      const [userResponse, statsResponse] = await Promise.all([
+        axios.get(`${API}/user/${user.uid}`, { timeout: 5000 }),
+        axios.get(`${API}/user/${user.uid}/redemption-stats`, { timeout: 5000 }).catch(() => ({ data: {} }))
+      ]);
+      
+      const data = userResponse.data;
+      const statsData = statsResponse.data;
+      
+      setUserData(data);
+      // Set lifetime earnings from redemption stats API for consistency
+      setLifetimeEarnings(statsData.total_earned || 0);
+      
+      // Only update mining session if not already set by miningData (avoid overwrite)
+      if (!isMining && data.mining_active && data.mining_session_end) {
         const endTime = new Date(data.mining_session_end).getTime();
         const startTime = data.mining_start_time ? new Date(data.mining_start_time).getTime() : (endTime - 24*60*60*1000);
         const now = Date.now();
@@ -404,38 +413,34 @@ const DailyRewards = ({ user }) => {
           setIsMining(true);
           setSessionTimeRemaining(remaining);
           setSessionStartTime(startTime);
-          
-          // Calculate initial progress
           const totalDuration = 24 * 60 * 60 * 1000;
           const elapsed = now - startTime;
           setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
-          
-          setSessionPRC(miningData.mined_this_session || 0);
-        } else {
-          setIsMining(false);
-          setSessionTimeRemaining(0);
-          setSessionProgress(0);
         }
-      } else {
-        setIsMining(false);
-        setSessionTimeRemaining(0);
-        setSessionProgress(0);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
       setUserData(user);
     } finally {
       clearTimeout(timeoutId);
-      setLoading(false);
+      if (isInitialLoad) setLoading(false);
     }
-  }, [user]);
+  }, [user, isMining]);
 
   useEffect(() => {
     if (user?.uid) {
-      fetchUserData();
+      fetchUserData(true); // Initial load
     }
     
+    // Auto-refresh mining status every 30 seconds
+    const refreshInterval = setInterval(() => {
+      if (user?.uid) {
+        fetchUserData(false); // Background refresh
+      }
+    }, 30000);
+    
     return () => {
+      clearInterval(refreshInterval);
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -610,8 +615,49 @@ const DailyRewards = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="w-12 h-12 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-zinc-950 pb-24">
+        {/* Header Skeleton */}
+        <div className="px-5 pb-4 pt-20" style={{ paddingTop: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-zinc-800 animate-pulse"></div>
+            <div>
+              <div className="h-6 w-32 bg-zinc-800 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-24 bg-zinc-800/50 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Mining Card Skeleton */}
+        <div className="px-5 py-6">
+          <div className="relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 rounded-3xl p-6 border border-zinc-800/50">
+            {/* PRC Display Skeleton */}
+            <div className="text-center py-8">
+              <div className="h-4 w-20 bg-zinc-800 rounded mx-auto mb-4 animate-pulse"></div>
+              <div className="h-12 w-40 bg-amber-900/30 rounded-lg mx-auto mb-4 animate-pulse"></div>
+              <div className="h-4 w-32 bg-zinc-800/50 rounded mx-auto animate-pulse"></div>
+            </div>
+            
+            {/* Progress Bar Skeleton */}
+            <div className="my-6">
+              <div className="h-3 bg-zinc-800 rounded-full animate-pulse"></div>
+            </div>
+            
+            {/* Button Skeleton */}
+            <div className="h-14 bg-amber-900/30 rounded-2xl animate-pulse"></div>
+          </div>
+        </div>
+        
+        {/* Stats Skeleton */}
+        <div className="px-5 grid grid-cols-2 gap-4">
+          <div className="bg-zinc-900 rounded-2xl p-4 animate-pulse">
+            <div className="h-4 w-16 bg-zinc-800 rounded mb-2"></div>
+            <div className="h-6 w-24 bg-zinc-800 rounded"></div>
+          </div>
+          <div className="bg-zinc-900 rounded-2xl p-4 animate-pulse">
+            <div className="h-4 w-16 bg-zinc-800 rounded mb-2"></div>
+            <div className="h-6 w-24 bg-zinc-800 rounded"></div>
+          </div>
+        </div>
       </div>
     );
   }
