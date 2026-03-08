@@ -53,19 +53,19 @@ TEAM_BOOST_LEVELS = {
 FREE_PLANS = ['explorer', 'free', '', None]
 
 
-async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str) -> int:
+async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str) -> Tuple[int, int]:
     """
-    Get count of active users who joined AFTER this user (Single Leg Global Pool)
+    Get count of active users from FIRST 800 downline (Option B)
     
-    Single Leg Logic:
-    - All users sorted by created_at (joining date/time)
-    - User's downline = users who joined AFTER them
-    - Maximum 800 users counted (cap at 800)
+    Single Leg Logic (UPDATED):
+    Step 1: Find FIRST 800 users who joined AFTER this user (sorted by join date)
+    Step 2: From those 800, count how many are ACTIVE
+    Step 3: Single Leg Reward = Active Count × 5 PRC/day
     
     Active User Requirements (ALL must be true):
     - Subscription is active (Startup/Growth/Elite)
     - KYC is verified
-    - Account is valid (has active mining session)
+    - Mining session is active
     
     Single-Leg Formula: SingleLegMining = ActiveDownlineUsers × 5 PRC/day
     Maximum: 800 × 5 = 4000 PRC/day
@@ -76,78 +76,109 @@ async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str)
         user_uid: User's UID (to exclude self)
     
     Returns:
-        Count of active downline users (max 800)
+        Tuple of (active_count, total_downline_800)
     """
     try:
         now = datetime.now(timezone.utc)
         
-        # Query: Users joined AFTER this user, with active subscription
-        # Active = subscription not expired + KYC verified + has active mining session
-        
-        # Build the query for active users joined after this user
-        query = {
-            "created_at": {"$gt": user_created_at},
-            "uid": {"$ne": user_uid},  # Exclude self
-            # Subscription active check
-            "$or": [
-                {"subscription_expiry": {"$gt": now.isoformat()}},
-                {"subscription_expires": {"$gt": now.isoformat()}},
-                {"vip_expiry": {"$gt": now.isoformat()}}
-            ],
-            # KYC verified
-            "kyc_status": "verified",
-            # Active mining session
-            "$or": [
-                {"mining_active": True},
-                {"mining_session_end": {"$gt": now.isoformat()}}
-            ]
-        }
-        
-        # Use aggregation with $and for multiple $or conditions
-        pipeline = [
+        # Step 1: Get FIRST 800 users who joined AFTER this user (sorted by created_at)
+        # These are the fixed 800 downline users
+        first_800_pipeline = [
             {
                 "$match": {
                     "created_at": {"$gt": user_created_at},
-                    "uid": {"$ne": user_uid},
-                    "kyc_status": "verified",
-                    # MUST be a paid subscriber (NOT free/explorer)
-                    "subscription_plan": {"$nin": ["explorer", "free", "", None]},
-                    # Must have active subscription
-                    "$or": [
-                        {"subscription_expiry": {"$gt": now.isoformat()}},
-                        {"subscription_expires": {"$gt": now.isoformat()}},
-                        {"vip_expiry": {"$gt": now.isoformat()}}
-                    ]
+                    "uid": {"$ne": user_uid}
                 }
             },
             {
-                "$match": {
-                    # Must have active mining session
-                    "$or": [
-                        {"mining_active": True},
-                        {"mining_session_end": {"$gt": now.isoformat()}}
-                    ]
+                "$sort": {"created_at": 1}  # Sort by join date ascending
+            },
+            {
+                "$limit": MAX_SINGLE_LEG_USERS  # First 800 users only
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "uid": 1,
+                    "subscription_plan": 1,
+                    "subscription_expiry": 1,
+                    "subscription_expires": 1,
+                    "vip_expiry": 1,
+                    "kyc_status": 1,
+                    "mining_active": 1,
+                    "mining_session_end": 1
                 }
-            },
-            {
-                "$limit": MAX_SINGLE_LEG_USERS
-            },
-            {
-                "$count": "total"
             }
         ]
         
-        result = await db.users.aggregate(pipeline).to_list(1)
+        first_800_users = await db.users.aggregate(first_800_pipeline).to_list(MAX_SINGLE_LEG_USERS)
+        total_downline = len(first_800_users)
         
-        if result and len(result) > 0:
-            count = min(result[0].get("total", 0), MAX_SINGLE_LEG_USERS)
-            return count
+        if total_downline == 0:
+            return 0, 0
         
-        return 0
+        # Step 2: From those 800, count how many are ACTIVE
+        active_count = 0
+        
+        for user in first_800_users:
+            # Check if subscription is active (not free/explorer)
+            plan = (user.get('subscription_plan') or '').lower()
+            if plan in ['explorer', 'free', '', None]:
+                continue
+            
+            # Check subscription expiry
+            subscription_active = False
+            for field in ['subscription_expiry', 'subscription_expires', 'vip_expiry']:
+                expiry = user.get(field)
+                if expiry:
+                    try:
+                        if isinstance(expiry, str):
+                            expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                        else:
+                            expiry_dt = expiry
+                        
+                        if expiry_dt.tzinfo is None:
+                            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                        
+                        if expiry_dt > now:
+                            subscription_active = True
+                            break
+                    except:
+                        continue
+            
+            if not subscription_active:
+                continue
+            
+            # Check KYC verified
+            if user.get('kyc_status') != 'verified':
+                continue
+            
+            # Check mining session active
+            mining_active = user.get('mining_active', False)
+            session_end = user.get('mining_session_end')
+            
+            if mining_active:
+                active_count += 1
+            elif session_end:
+                try:
+                    if isinstance(session_end, str):
+                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                    else:
+                        session_end_dt = session_end
+                    
+                    if session_end_dt.tzinfo is None:
+                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                    
+                    if session_end_dt > now:
+                        active_count += 1
+                except:
+                    continue
+        
+        return active_count, total_downline
         
     except Exception as e:
         logging.error(f"[Mining] Single leg count error: {e}")
-        return 0
+        return 0, 0
 
 
 async def get_team_boost_multiplier(db, user_uid: str) -> Tuple[float, Dict]:
@@ -384,9 +415,9 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     if not user_created_at:
         user_created_at = now.isoformat()
     
-    # Step 1: Get Single Leg downline count
-    single_leg_count = await get_single_leg_downline_count(db, user_created_at, uid)
-    single_leg_bonus = single_leg_count * HOURLY_SINGLE_LEG_BONUS_PER_USER
+    # Step 1: Get Single Leg downline count (Option B: First 800 fix, then count active)
+    single_leg_active, single_leg_total = await get_single_leg_downline_count(db, user_created_at, uid)
+    single_leg_bonus = single_leg_active * HOURLY_SINGLE_LEG_BONUS_PER_USER
     
     # Step 2: Calculate base rate (with single leg) - this is the "Base Rate" shown to user
     base_rate_with_single_leg = HOURLY_BASE_RATE + single_leg_bonus
@@ -415,10 +446,12 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     
     breakdown = {
         'base_rate': round(HOURLY_BASE_RATE, 4),
-        'single_leg_users': single_leg_count,
+        'single_leg_active': single_leg_active,      # Active users from first 800
+        'single_leg_total': single_leg_total,        # Total downline (max 800)
+        'single_leg_users': single_leg_active,       # For backward compatibility
         'single_leg_max': MAX_SINGLE_LEG_USERS,
         'single_leg_bonus': round(single_leg_bonus, 4),
-        'single_leg_daily': round(single_leg_count * DAILY_SINGLE_LEG_BONUS_PER_USER, 2),
+        'single_leg_daily': round(single_leg_active * DAILY_SINGLE_LEG_BONUS_PER_USER, 2),
         'base_with_single_leg': round(base_rate_with_single_leg, 4),
         'l1_bonus': round(l1_bonus_prc, 4),
         'l2_bonus': round(l2_bonus_prc, 4),
