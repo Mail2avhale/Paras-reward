@@ -23,11 +23,17 @@ Downline Users → PRC/day
 Maximum Base Mining = 4500 PRC/day (500 base + 4000 single-leg)
 
 BoostMultiplier = 1 + (L1 × 0.10) + (L2 × 0.05) + (L3 × 0.03)
+
+CACHING: Mining rate cached for 60 seconds to reduce DB load
 """
 
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Tuple, Optional
 import logging
+
+# Cache for mining rate calculations (60 seconds TTL)
+_mining_rate_cache = {}
+MINING_CACHE_TTL = 60  # seconds
 
 # ==================== CONSTANTS ====================
 
@@ -333,16 +339,32 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
     Returns:
         Tuple of (hourly_rate, per_minute_rate, breakdown)
     """
-    # Check cache first
-    cache_key = f"new_mining_rate:{uid}"
-    if cache:
-        cached = await cache.get(cache_key)
-        if cached:
+    now = datetime.now(timezone.utc)
+    
+    # Check in-memory cache first (faster than Redis)
+    cache_key = f"mining_rate:{uid}"
+    if cache_key in _mining_rate_cache:
+        cached_data, cached_time = _mining_rate_cache[cache_key]
+        if (now - cached_time).total_seconds() < MINING_CACHE_TTL:
             return (
-                cached.get('hourly_rate', HOURLY_BASE_RATE),
-                cached.get('per_minute_rate', HOURLY_BASE_RATE / 60),
-                cached.get('breakdown', {})
+                cached_data.get('hourly_rate', HOURLY_BASE_RATE),
+                cached_data.get('per_minute_rate', HOURLY_BASE_RATE / 60),
+                cached_data.get('breakdown', {})
             )
+    
+    # Check Redis cache if available
+    redis_cache_key = f"new_mining_rate:{uid}"
+    if cache:
+        try:
+            cached = await cache.get(redis_cache_key)
+            if cached:
+                return (
+                    cached.get('hourly_rate', HOURLY_BASE_RATE),
+                    cached.get('per_minute_rate', HOURLY_BASE_RATE / 60),
+                    cached.get('breakdown', {})
+                )
+        except:
+            pass  # Cache unavailable, continue with calculation
     
     # Get user data
     user = await db.users.find_one(
@@ -445,13 +467,30 @@ async def calculate_new_mining_rate(db, uid: str, cache=None) -> Tuple[float, fl
         'is_free_user': False
     }
     
-    # Cache for 60 seconds
+    # Cache result in Redis (60 seconds)
     if cache:
-        await cache.set(cache_key, {
-            'hourly_rate': final_hourly_rate,
-            'per_minute_rate': per_minute_rate,
-            'breakdown': breakdown
-        }, ttl=60)
+        try:
+            await cache.set(redis_cache_key, {
+                'hourly_rate': final_hourly_rate,
+                'per_minute_rate': per_minute_rate,
+                'breakdown': breakdown
+            }, ttl=60)
+        except:
+            pass  # Cache unavailable
+    
+    # Also cache in memory (faster for repeated requests)
+    _mining_rate_cache[cache_key] = ({
+        'hourly_rate': final_hourly_rate,
+        'per_minute_rate': per_minute_rate,
+        'breakdown': breakdown
+    }, datetime.now(timezone.utc))
+    
+    # Clean old cache entries (keep only last 1000)
+    if len(_mining_rate_cache) > 1000:
+        oldest_keys = sorted(_mining_rate_cache.keys(), 
+                            key=lambda k: _mining_rate_cache[k][1])[:500]
+        for k in oldest_keys:
+            del _mining_rate_cache[k]
     
     return final_hourly_rate, per_minute_rate, breakdown
 
