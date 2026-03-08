@@ -112,7 +112,7 @@ const FAQ = () => {
         },
         {
           question: "How much mining boost can I get?",
-          answer: "You get mining speed boost from 3 levels of friends: Direct friends: 5%, Level 2: 3%, Level 3: 2%. Total potential boost up to 10%!"
+          answer: "You get mining speed boost from 3 levels of friends: Direct friends (L1): 10%, Level 2: 5%, Level 3: 3%. Total potential boost up to 18%!"
         },
         {
           question: "When does the mining boost apply?",

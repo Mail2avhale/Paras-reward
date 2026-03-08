@@ -217,7 +217,7 @@ const ReferralsEnhanced = ({ user }) => {
   // Level configuration with hardcoded Tailwind classes (dynamic classes don't work with Tailwind purge)
   const levelConfig = {
     1: { 
-      percent: 5, 
+      percent: 10, 
       label: 'Direct', 
       color: 'amber', 
       icon: '👤',
@@ -228,7 +228,7 @@ const ReferralsEnhanced = ({ user }) => {
       badgeTextClass: 'text-amber-300'
     },
     2: { 
-      percent: 3, 
+      percent: 5, 
       label: 'Level 2', 
       color: 'blue', 
       icon: '👥',
@@ -239,7 +239,7 @@ const ReferralsEnhanced = ({ user }) => {
       badgeTextClass: 'text-blue-300'
     },
     3: { 
-      percent: 2, 
+      percent: 3, 
       label: 'Level 3', 
       color: 'emerald', 
       icon: '🌟',
@@ -467,8 +467,6 @@ const ReferralsEnhanced = ({ user }) => {
             { level: 1, count: refCount, active_count: 0, users: [], bonus_percent: 10 },
             { level: 2, count: 0, active_count: 0, users: [], bonus_percent: 5 },
             { level: 3, count: 0, active_count: 0, users: [], bonus_percent: 3 },
-            { level: 4, count: 0, active_count: 0, users: [], bonus_percent: 2 },
-            { level: 5, count: 0, active_count: 0, users: [], bonus_percent: 1 },
           ];
           setReferralLevels(fallbackLevels);
         }
@@ -489,8 +487,6 @@ const ReferralsEnhanced = ({ user }) => {
           { level: 1, count: fallbackCount, active_count: 0, users: [], bonus_percent: 10 },
           { level: 2, count: 0, active_count: 0, users: [], bonus_percent: 5 },
           { level: 3, count: 0, active_count: 0, users: [], bonus_percent: 3 },
-          { level: 4, count: 0, active_count: 0, users: [], bonus_percent: 2 },
-          { level: 5, count: 0, active_count: 0, users: [], bonus_percent: 1 },
         ];
         setReferralLevels(fallbackLevels);
       }
@@ -1193,7 +1189,7 @@ Download now & start earning!`;
           {/* Total Potential */}
           <div className="mt-4 pt-4 border-t border-gray-700/50 flex items-center justify-between">
             <span className="text-gray-400 text-sm">Maximum Earning Potential</span>
-            <span className="text-amber-400 font-bold">Up to +10% bonus</span>
+            <span className="text-amber-400 font-bold">Up to +18% bonus</span>
           </div>
         </div>
       </div>
@@ -1350,7 +1346,7 @@ Download now & start earning!`;
                 </div>
                 <div>
                   <p className="text-white font-semibold">Mining Speed Boost</p>
-                  <p className="text-gray-400 text-sm">Your mining speed increases up to +10%!</p>
+                  <p className="text-gray-400 text-sm">Your mining speed increases up to +18%!</p>
                 </div>
               </div>
             </div>
@@ -1438,7 +1434,7 @@ Download now & start earning!`;
                   <div className="w-px h-10 bg-white/30"></div>
                   <div className="text-center">
                     <p className="text-3xl font-bold text-white">+10%</p>
-                    <p className="text-white/70 text-xs">Bonus</p>
+                    <p className="text-white/70 text-xs">L1 Bonus</p>
                   </div>
                 </div>
               </motion.div>
@@ -1449,7 +1445,7 @@ Download now & start earning!`;
                 transition={{ delay: 0.6 }}
                 className="text-white/70 text-sm mb-4"
               >
-                Keep inviting to unlock up to <strong>+10% bonus!</strong>
+                Keep inviting to unlock up to <strong>+18% bonus!</strong>
               </motion.p>
               
               <motion.button

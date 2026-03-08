@@ -709,7 +709,7 @@ const RewardsHome = () => {
               },
               {
                 q: "How does inviting friends work?",
-                a: "Share your invite code with friends. When they join and stay active in the app, your mining speed increases! Boost up to 10% with active friends."
+                a: "Share your invite code with friends. When they join and stay active in the app, your mining speed increases! Boost up to 18% with active friends (L1: 10%, L2: 5%, L3: 3%)."
               },
               {
                 q: "Is my data safe?",

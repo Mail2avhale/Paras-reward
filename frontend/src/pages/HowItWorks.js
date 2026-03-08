@@ -109,7 +109,7 @@ const HowItWorks = () => {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Invite Friends</h3>
                     <p className="text-gray-600">
-                      Get up to 10% mining speed boost from your friend network. Build your team across 3 levels and multiply your rewards.
+                      Get up to 18% mining speed boost from your friend network. Build your team across 3 levels (L1: 10%, L2: 5%, L3: 3%) and multiply your rewards.
                     </p>
                   </div>
                 </div>
