@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Environment prefix for cache keys to prevent cross-environment pollution
+CACHE_ENV_PREFIX = os.getenv('CACHE_ENV_PREFIX', 'preview')
+
 # Try to import upstash-redis first (HTTP-based, works everywhere)
 UPSTASH_AVAILABLE = False
 REDIS_AVAILABLE = False
@@ -97,10 +100,12 @@ class CacheManager:
         self.connection_type = "in_memory"
     
     async def get(self, key: str) -> Optional[Any]:
-        """Get value from cache"""
+        """Get value from cache with environment prefix"""
+        # Add environment prefix to prevent cross-environment cache pollution
+        prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         try:
             if self.use_redis and self.redis_client:
-                value = await self.redis_client.get(key)
+                value = await self.redis_client.get(prefixed_key)
                 if value:
                     # Upstash returns string, local redis with decode_responses also returns string
                     if isinstance(value, str):
@@ -111,19 +116,21 @@ class CacheManager:
                     return value
             else:
                 # In-memory fallback
-                if key in _memory_cache:
-                    expiry = _cache_expiry.get(key)
+                if prefixed_key in _memory_cache:
+                    expiry = _cache_expiry.get(prefixed_key)
                     if expiry and datetime.now(timezone.utc).timestamp() > expiry:
-                        del _memory_cache[key]
-                        del _cache_expiry[key]
+                        del _memory_cache[prefixed_key]
+                        del _cache_expiry[prefixed_key]
                         return None
-                    return _memory_cache.get(key)
+                    return _memory_cache.get(prefixed_key)
         except Exception as e:
             print(f"Cache get error: {e}")
         return None
     
     async def set(self, key: str, value: Any, ttl: int = None) -> bool:
-        """Set value in cache with optional TTL (seconds)"""
+        """Set value in cache with optional TTL (seconds) and environment prefix"""
+        # Add environment prefix to prevent cross-environment cache pollution
+        prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         ttl = ttl or self.default_ttl
         try:
             json_value = json.dumps(value, default=str)
@@ -131,10 +138,10 @@ class CacheManager:
             if self.use_redis and self.redis_client:
                 if self.use_upstash:
                     # Upstash uses setex method
-                    await self.redis_client.setex(key, ttl, json_value)
+                    await self.redis_client.setex(prefixed_key, ttl, json_value)
                 else:
                     # Local redis
-                    await self.redis_client.setex(key, ttl, json_value)
+                    await self.redis_client.setex(prefixed_key, ttl, json_value)
             else:
                 # In-memory fallback
                 _memory_cache[key] = value
@@ -145,31 +152,33 @@ class CacheManager:
             return False
     
     async def delete(self, key: str) -> bool:
-        """Delete key from cache"""
+        """Delete key from cache with environment prefix"""
+        prefixed_key = f"{CACHE_ENV_PREFIX}:{key}"
         try:
             if self.use_redis and self.redis_client:
-                await self.redis_client.delete(key)
+                await self.redis_client.delete(prefixed_key)
             else:
-                _memory_cache.pop(key, None)
-                _cache_expiry.pop(key, None)
+                _memory_cache.pop(prefixed_key, None)
+                _cache_expiry.pop(prefixed_key, None)
             return True
         except Exception as e:
             print(f"Cache delete error: {e}")
             return False
     
     async def delete_pattern(self, pattern: str) -> int:
-        """Delete all keys matching pattern"""
+        """Delete all keys matching pattern with environment prefix"""
+        prefixed_pattern = f"{CACHE_ENV_PREFIX}:{pattern}"
         try:
             if self.use_redis and self.redis_client:
                 if self.use_upstash:
                     # Upstash doesn't support SCAN, so we need to track keys differently
                     # For now, just delete the exact pattern key
-                    await self.redis_client.delete(pattern)
+                    await self.redis_client.delete(prefixed_pattern)
                     return 1
                 else:
                     # Local redis supports scan_iter
                     keys = []
-                    async for key in self.redis_client.scan_iter(match=pattern):
+                    async for key in self.redis_client.scan_iter(match=prefixed_pattern):
                         keys.append(key)
                     if keys:
                         await self.redis_client.delete(*keys)
@@ -177,7 +186,7 @@ class CacheManager:
             else:
                 # In-memory fallback
                 import fnmatch
-                keys_to_delete = [k for k in _memory_cache.keys() if fnmatch.fnmatch(k, pattern)]
+                keys_to_delete = [k for k in _memory_cache.keys() if fnmatch.fnmatch(k, prefixed_pattern)]
                 for k in keys_to_delete:
                     _memory_cache.pop(k, None)
                     _cache_expiry.pop(k, None)
