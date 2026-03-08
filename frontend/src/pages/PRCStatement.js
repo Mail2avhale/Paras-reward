@@ -13,10 +13,16 @@ const PRCStatement = ({ user }) => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   
-  // Filters
+  // Filters - Start from user's joining date (or 1 year ago if not available)
   const [startDate, setStartDate] = useState(() => {
+    // Try to get user's joining date
+    if (user?.created_at) {
+      const joinDate = new Date(user.created_at);
+      return joinDate.toISOString().split('T')[0];
+    }
+    // Fallback to 1 year ago
     const d = new Date();
-    d.setDate(d.getDate() - 30);
+    d.setFullYear(d.getFullYear() - 1);
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);

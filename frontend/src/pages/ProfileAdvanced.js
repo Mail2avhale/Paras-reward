@@ -875,7 +875,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <p className="text-gray-500 text-xs">Friends</p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-white">{(userData?.total_mined || 0).toFixed(0)}</p>
+            <p className="text-2xl font-bold text-white">{(userData?.total_redeemed || 0).toFixed(0)}</p>
             <p className="text-gray-500 text-xs">Redeemed</p>
           </div>
         </div>

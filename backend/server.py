@@ -7482,13 +7482,24 @@ async def get_user_data(uid: str):
     if gv_result:
         total_redeemed += gv_result[0].get("total", 0)
     
-    # Add PRC burns and rain losses from transactions
-    burn_loss_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": {"$in": ["prc_burn", "prc_rain_loss"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    # Add bank redeem (withdrawal) requests
+    bank_redeem_result = await db.bank_redeem_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
     ]).to_list(1)
-    if burn_loss_result:
-        total_redeemed += burn_loss_result[0].get("total", 0)
+    if bank_redeem_result:
+        total_redeemed += bank_redeem_result[0].get("total", 0)
+    
+    # Add chatbot redeem requests
+    chatbot_redeem_result = await db.chatbot_redeem_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
+    ]).to_list(1)
+    if chatbot_redeem_result:
+        total_redeemed += chatbot_redeem_result[0].get("total", 0)
+    
+    # Note: Removed PRC burns from total_redeemed as burns are not user-initiated redemptions
+    # Burns are automatic system operations, not user redemptions
     
     user["total_redeemed"] = round(total_redeemed, 2)
     
