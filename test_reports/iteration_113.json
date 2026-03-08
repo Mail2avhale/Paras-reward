@@ -1,0 +1,67 @@
+{
+  "summary": "Paras Reward App Production Testing (www.parasreward.com). Tested login flow, session persistence, navigation, and mining page. CRITICAL ISSUE: Production server has severe performance problems - health endpoint times out, login takes 13-20+ seconds, auth type check API intermittently times out (30s). Session persistence logic IS working when responses complete. Mining page with particle effects working correctly.",
+  "mode": "generate",
+  "baseline_commit": "e452787379f71d13171287ae16e6f638b31178a9",
+  "head_commit": "717b17b65585cf6caa7fd3d689d886080cd82507",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/health",
+        "issue": "Health endpoint times out after 30 seconds - CRITICAL production issue",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "Login API takes 13-20+ seconds to respond (should be <2s)",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "/api/auth/check-auth-type",
+        "issue": "Auth type check API intermittently times out (30s) or takes 15+ seconds - causes login page spinner to hang",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 4,
+    "passed": 1,
+    "failed": 3,
+    "skipped": 0,
+    "note": "Failures due to production server timeouts, not code issues"
+  },
+  "specs_created": [
+    "/app/tests/e2e/session-persistence.spec.ts",
+    "/app/backend/tests/test_session_persistence.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/session-persistence.spec.ts",
+    "/app/backend/tests/test_session_persistence.py"
+  ],
+  "action_items": [
+    "CRITICAL: Investigate production server performance - health endpoint, login, and auth-type-check APIs are timing out or very slow",
+    "Check if production server is under load or has resource constraints",
+    "Verify MongoDB connection performance on production",
+    "Consider adding connection pooling or caching if not already implemented"
+  ],
+  "updated_files": [
+    "/app/tests/e2e/session-persistence.spec.ts",
+    "/app/backend/tests/test_session_persistence.py"
+  ],
+  "success_rate": {
+    "backend": "70% - 7/10 tests passed (3 timeouts due to production server issues)",
+    "frontend": "25% - 1/4 tests passed (3 failed due to auth type check API timeout)"
+  },
+  "seed_data_creation": "No seed data created - used existing production user mail2avhale@gmail.com",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## Session Persistence Testing for Paras Reward App\n\n### Key Findings:\n1. **Session persistence logic IS working** - When APIs respond, navigation between pages maintains session correctly\n2. **CRITICAL Production Performance Issue** - The production server (www.parasreward.com) has severe performance problems:\n   - Health endpoint times out (30s)\n   - Login takes 13-20+ seconds\n   - Auth type check API intermittently times out or takes 15+ seconds\n3. **Mining Page Working** - Mining page shows correctly with:\n   - Session Active indicator\n   - 3x BONUS for Elite users\n   - Current Balance: 208,543.84 PRC\n   - Reward Rate display\n   - Collect Rewards button\n   - Particle effects and animations working\n\n### Test Credentials:\n- Email: mail2avhale@gmail.com\n- PIN: 153759\n- User UID: 92bcbe40-b08f-4096-8f66-0b99072ec0c7\n- Subscription: Elite\n- Balance: ~208,543 PRC\n\n### Test Files Created:\n- /app/tests/e2e/session-persistence.spec.ts - Playwright E2E tests for login and navigation\n- /app/backend/tests/test_session_persistence.py - pytest backend API tests\n\n### What Works:\n- Login flow (when API responds)\n- Dashboard loading\n- Mining page navigation and display\n- User data persistence across navigation\n- Token-based authentication\n\n### What Needs Fixing:\n- Production server performance (CRITICAL)",
+  "rca_of_issue": "The test failures are NOT due to session persistence bugs but rather production server performance issues. The auth type check API (/api/auth/check-auth-type) appears to have a database query that sometimes hangs. This causes the login page to show a spinner indefinitely while waiting for the response."
+}

@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260307_184859/test-results',
+  outputDir: '/root/.emergent/automation_output/20260308_203416/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260307_184859/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260308_203416/results.json' }],
   ],
   use: {
-    baseURL: 'https://responsive-dash-14.preview.emergentagent.com',
+    baseURL: 'https://www.parasreward.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
