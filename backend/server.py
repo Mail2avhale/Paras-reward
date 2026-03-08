@@ -38621,6 +38621,7 @@ async def initialize_database_indexes():
 @app.on_event("startup")
 async def startup_db():
     """Initialize database with default data and start scheduled tasks"""
+    import asyncio  # Ensure asyncio is available in this scope
     global db_ready
     print("🚀 Starting database initialization...")
     
