@@ -55,11 +55,11 @@ FREE_PLANS = ['explorer', 'free', '', None]
 
 async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str) -> Tuple[int, int]:
     """
-    Get count of active users from FIRST 800 downline (Option B)
+    Get count of active users from FIRST 800 downline (Option B) - OPTIMIZED
     
     Single Leg Logic (UPDATED):
     Step 1: Find FIRST 800 users who joined AFTER this user (sorted by join date)
-    Step 2: From those 800, count how many are ACTIVE
+    Step 2: From those 800, count how many are ACTIVE (using DB aggregation)
     Step 3: Single Leg Reward = Active Count × 5 PRC/day
     
     Active User Requirements (ALL must be true):
@@ -80,101 +80,80 @@ async def get_single_leg_downline_count(db, user_created_at: str, user_uid: str)
     """
     try:
         now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
         
-        # Step 1: Get FIRST 800 users who joined AFTER this user (sorted by created_at)
-        # These are the fixed 800 downline users
-        first_800_pipeline = [
+        # OPTIMIZED: Single aggregation pipeline to get both total and active count
+        # This avoids fetching 800 documents and looping in Python
+        pipeline = [
+            # Step 1: Find users joined AFTER this user
             {
                 "$match": {
                     "created_at": {"$gt": user_created_at},
                     "uid": {"$ne": user_uid}
                 }
             },
+            # Sort by join date ascending
+            {"$sort": {"created_at": 1}},
+            # Limit to first 800 users
+            {"$limit": MAX_SINGLE_LEG_USERS},
+            # Step 2: Add computed field for "is_active"
             {
-                "$sort": {"created_at": 1}  # Sort by join date ascending
+                "$addFields": {
+                    "is_paid": {
+                        "$and": [
+                            {"$ne": [{"$toLower": {"$ifNull": ["$subscription_plan", ""]}}, "explorer"]},
+                            {"$ne": [{"$toLower": {"$ifNull": ["$subscription_plan", ""]}}, "free"]},
+                            {"$ne": [{"$ifNull": ["$subscription_plan", ""]}, ""]},
+                            {"$ne": ["$subscription_plan", None]}
+                        ]
+                    },
+                    "is_subscription_valid": {
+                        "$or": [
+                            {"$gt": [{"$ifNull": ["$subscription_expiry", "1970-01-01"]}, now_iso]},
+                            {"$gt": [{"$ifNull": ["$subscription_expires", "1970-01-01"]}, now_iso]},
+                            {"$gt": [{"$ifNull": ["$vip_expiry", "1970-01-01"]}, now_iso]}
+                        ]
+                    },
+                    "is_kyc_verified": {"$eq": ["$kyc_status", "verified"]},
+                    "is_mining_active": {
+                        "$or": [
+                            {"$eq": ["$mining_active", True]},
+                            {"$gt": [{"$ifNull": ["$mining_session_end", "1970-01-01"]}, now_iso]}
+                        ]
+                    }
+                }
             },
+            # Group to get counts
             {
-                "$limit": MAX_SINGLE_LEG_USERS  # First 800 users only
-            },
-            {
-                "$project": {
-                    "_id": 0,
-                    "uid": 1,
-                    "subscription_plan": 1,
-                    "subscription_expiry": 1,
-                    "subscription_expires": 1,
-                    "vip_expiry": 1,
-                    "kyc_status": 1,
-                    "mining_active": 1,
-                    "mining_session_end": 1
+                "$group": {
+                    "_id": None,
+                    "total_downline": {"$sum": 1},
+                    "active_count": {
+                        "$sum": {
+                            "$cond": [
+                                {
+                                    "$and": [
+                                        "$is_paid",
+                                        "$is_subscription_valid",
+                                        "$is_kyc_verified",
+                                        "$is_mining_active"
+                                    ]
+                                },
+                                1,
+                                0
+                            ]
+                        }
+                    }
                 }
             }
         ]
         
-        first_800_users = await db.users.aggregate(first_800_pipeline).to_list(MAX_SINGLE_LEG_USERS)
-        total_downline = len(first_800_users)
+        result = await db.users.aggregate(pipeline).to_list(1)
         
-        if total_downline == 0:
-            return 0, 0
+        if result and len(result) > 0:
+            return result[0].get("active_count", 0), result[0].get("total_downline", 0)
         
-        # Step 2: From those 800, count how many are ACTIVE
-        active_count = 0
-        
-        for user in first_800_users:
-            # Check if subscription is active (not free/explorer)
-            plan = (user.get('subscription_plan') or '').lower()
-            if plan in ['explorer', 'free', '', None]:
-                continue
-            
-            # Check subscription expiry
-            subscription_active = False
-            for field in ['subscription_expiry', 'subscription_expires', 'vip_expiry']:
-                expiry = user.get(field)
-                if expiry:
-                    try:
-                        if isinstance(expiry, str):
-                            expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                        else:
-                            expiry_dt = expiry
-                        
-                        if expiry_dt.tzinfo is None:
-                            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                        
-                        if expiry_dt > now:
-                            subscription_active = True
-                            break
-                    except:
-                        continue
-            
-            if not subscription_active:
-                continue
-            
-            # Check KYC verified
-            if user.get('kyc_status') != 'verified':
-                continue
-            
-            # Check mining session active
-            mining_active = user.get('mining_active', False)
-            session_end = user.get('mining_session_end')
-            
-            if mining_active:
-                active_count += 1
-            elif session_end:
-                try:
-                    if isinstance(session_end, str):
-                        session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                    else:
-                        session_end_dt = session_end
-                    
-                    if session_end_dt.tzinfo is None:
-                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                    
-                    if session_end_dt > now:
-                        active_count += 1
-                except:
-                    continue
-        
-        return active_count, total_downline
+        return 0, 0
         
     except Exception as e:
         logging.error(f"[Mining] Single leg count error: {e}")
