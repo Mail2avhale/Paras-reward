@@ -30235,6 +30235,7 @@ async def get_referral_levels(user_id: str):
                 "name": u.get("name") or u.get("email", "").split("@")[0] or "User",
                 "email": u.get("email"),
                 "is_active": is_active,
+                "mining_active": u.get("mining_active", False),
                 "membership_type": u.get("membership_type", "free"),
                 "subscription_plan": u.get("subscription_plan", "explorer"),
                 "joined_at": u.get("created_at"),

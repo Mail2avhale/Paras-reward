@@ -5,7 +5,7 @@ import {
   Users, Copy, Check, Share2, ArrowLeft, Gift, Crown, TrendingUp, 
   ChevronRight, UserCheck, Zap, History, MessageCircle, Link2,
   Award, Sparkles, HelpCircle, ArrowRight, PartyPopper, ChevronDown, ChevronUp,
-  User, GitBranch, Circle, Brain, BarChart3, Target, Bell, Search, Activity, Info
+  User, GitBranch, Circle, Brain, BarChart3, Target, Bell, Search, Activity, Info, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -114,7 +114,11 @@ const ReferralsEnhanced = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
-  const [referralStats, setReferralStats] = useState({ total: 0, active: 0, vip: 0 });
+  const [referralStats, setReferralStats] = useState({ 
+    total: 0,        // L1 only (direct referrals)
+    active: 0,       // Subscribed + Active session only
+    yourCircle: 0    // L1 + L2 + L3 (total network)
+  });
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [referralLevels, setReferralLevels] = useState([]);
@@ -404,33 +408,43 @@ const ReferralsEnhanced = ({ user }) => {
         const levels = responseData.levels || [];
         setReferralLevels(levels);
         
-        // Use total from API response (more accurate)
-        const totalCount = responseData.total || levels.reduce((sum, l) => sum + (l.count || 0), 0);
-        const activeCount = responseData.total_active || levels.reduce((sum, l) => sum + (l.active_count || 0), 0);
-        const vipCount = levels.reduce((sum, level) => {
+        // L1 only for "Total Invited"
+        const l1Count = levels.find(l => l.level === 1)?.count || 0;
+        
+        // L1 + L2 + L3 for "Your Circle"
+        const yourCircleCount = levels
+          .filter(l => l.level <= 3)
+          .reduce((sum, l) => sum + (l.count || 0), 0);
+        
+        // Active = only subscribed (paid) AND active session users
+        const activeCount = levels.reduce((sum, level) => {
           const users = level.users || [];
-          return sum + users.filter(u => ['elite'].includes(u.subscription_plan?.toLowerCase())).length;
+          return sum + users.filter(u => 
+            ['startup', 'growth', 'elite'].includes(u.subscription_plan?.toLowerCase()) &&
+            u.mining_active === true
+          ).length;
         }, 0);
         
         // DEBUG: Log response for troubleshooting
         console.log('Referral Levels Response:', {
-          total: totalCount,
+          l1: l1Count,
+          yourCircle: yourCircleCount,
           active: activeCount,
           levels: levels.map(l => ({ level: l.level, count: l.count, active: l.active_count })),
           debug: responseData.debug_search_info
         });
         
-        // Check for milestone achievements
-        checkMilestoneAchievement(totalCount);
+        // Check for milestone achievements (use L1 count)
+        checkMilestoneAchievement(l1Count);
         
         // Check for first referral celebration
-        if (previousTotal !== null && previousTotal === 0 && totalCount === 1) {
+        if (previousTotal !== null && previousTotal === 0 && l1Count === 1) {
           setShowCelebration(true);
           triggerConfetti();
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
-        setPreviousTotal(totalCount);
-        setReferralStats({ total: totalCount, active: activeCount, vip: vipCount });
+        setPreviousTotal(l1Count);
+        setReferralStats({ total: l1Count, active: activeCount, yourCircle: yourCircleCount });
       } else {
         // Fallback: use user's referral count
         console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason);
@@ -444,7 +458,7 @@ const ReferralsEnhanced = ({ user }) => {
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
         setPreviousTotal(refCount);
-        setReferralStats({ total: refCount, active: 0, vip: 0 });
+        setReferralStats({ total: refCount, active: 0, yourCircle: refCount });
         
         // Create fallback levels with referral_count at level 1
         // This ensures the UI shows something even when API fails
@@ -467,7 +481,7 @@ const ReferralsEnhanced = ({ user }) => {
       // Use fallback data
       setUserData(user);
       const fallbackCount = user?.referral_count || 0;
-      setReferralStats({ total: fallbackCount, active: 0, vip: 0 });
+      setReferralStats({ total: fallbackCount, active: 0, yourCircle: fallbackCount });
       
       // Create fallback levels in case of error too
       if (fallbackCount > 0) {
@@ -822,16 +836,19 @@ Download now & start earning!`;
             <Users className="w-6 h-6 text-blue-400 mx-auto mb-2" />
             <p className="text-2xl font-bold text-white">{referralStats.total}</p>
             <p className="text-gray-500 text-xs">Total Invited</p>
+            <p className="text-gray-600 text-[10px]">(L1 Direct)</p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500/20 to-indigo-600/10 border border-purple-500/30 rounded-2xl p-4 text-center">
+            <Globe className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-purple-400">{referralStats.yourCircle}</p>
+            <p className="text-purple-400/70 text-xs">Your Circle</p>
+            <p className="text-purple-500/50 text-[10px]">(L1+L2+L3)</p>
           </div>
           <div className="bg-gray-900/70 border border-gray-800 rounded-2xl p-4 text-center">
             <UserCheck className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
             <p className="text-2xl font-bold text-emerald-400">{referralStats.active}</p>
             <p className="text-gray-500 text-xs">Active Users</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 rounded-2xl p-4 text-center">
-            <TrendingUp className="w-6 h-6 text-amber-400 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus.toFixed(1)}%</p>
-            <p className="text-amber-400/70 text-xs">Mining Bonus</p>
+            <p className="text-gray-600 text-[10px]">(Subscribed)</p>
           </div>
         </div>
       </div>
@@ -1638,15 +1655,18 @@ Download now & start earning!`;
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold text-white">{referralStats.total}</p>
-                  <p className="text-xs text-gray-500">Total Network</p>
+                  <p className="text-xs text-gray-500">Total Invited</p>
+                  <p className="text-[10px] text-gray-600">(L1 Direct)</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-purple-400">{referralStats.yourCircle}</p>
+                  <p className="text-xs text-gray-500">Your Circle</p>
+                  <p className="text-[10px] text-gray-600">(L1+L2+L3)</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-green-400">{referralStats.active}</p>
                   <p className="text-xs text-gray-500">Active Users</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-amber-400">+{totalActiveBonus.toFixed(1)}%</p>
-                  <p className="text-xs text-gray-500">Mining Bonus</p>
+                  <p className="text-[10px] text-gray-600">(Subscribed)</p>
                 </div>
               </div>
             </div>
