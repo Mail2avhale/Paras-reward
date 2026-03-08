@@ -907,43 +907,6 @@ const DailyRewards = ({ user }) => {
       )}
 
       {/* Quick Stats - Dark Theme */}
-      <div className="px-5 mb-6">
-        <h2 className="text-zinc-100 font-semibold text-lg mb-4">{globalT('yourStats')}</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4"
-          >
-            <TrendingUp className="w-7 h-7 text-emerald-500 mb-2" />
-            <div className="flex items-center gap-1">
-              <p className="text-zinc-500 text-xs">Lifetime Earnings</p>
-              <InfoTooltip>
-                <p>Includes: Mining rewards & Friend bonuses</p>
-              </InfoTooltip>
-            </div>
-            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">{(lifetimeEarnings + sessionPRC).toFixed(2)}</p>
-            <p className="text-emerald-500 text-xs">PRC</p>
-          </motion.div>
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-4"
-          >
-            <Gift className="w-7 h-7 text-amber-500 mb-2" />
-            <div className="flex items-center gap-1">
-              <p className="text-zinc-500 text-xs">{globalT('referralWeight')}</p>
-              <InfoTooltip>
-                <p>Bonus mining rate from your referrals. L1: +5%, L2: +3%, L3: +2%</p>
-              </InfoTooltip>
-            </div>
-            <p className="text-xl font-semibold text-zinc-100 font-mono tabular-nums">+{Math.min((userData?.referral_count || 0) * 5, 100)}%</p>
-          </motion.div>
-        </div>
-      </div>
-
       {/* Level-wise Mining Breakdown */}
       <div className="px-5">
         <h2 className="text-zinc-100 font-semibold text-lg mb-4 flex items-center gap-2">
