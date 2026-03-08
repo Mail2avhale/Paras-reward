@@ -6934,7 +6934,7 @@ async def get_mining_status(uid: str):
     if cached_status:
         return cached_status
     
-    user = await db.users.find_one({"uid": uid})
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "profile_picture": 0, "password_hash": 0, "pin_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -6945,8 +6945,10 @@ async def get_mining_status(uid: str):
     session_end = None
     mined_this_session = 0
     
+    # Calculate mining rate ONCE (expensive operation)
+    rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
+    
     # Check if mining session is active
-    # Handle backward compatibility: mining_active can be True or None (for old sessions)
     mining_active = user.get("mining_active")
     if user.get("mining_start_time") and (mining_active is True or mining_active is None):
         start_time = datetime.fromisoformat(user["mining_start_time"]) if isinstance(user["mining_start_time"], str) else user["mining_start_time"]
@@ -6955,53 +6957,45 @@ async def get_mining_status(uid: str):
         
         session_end_time = start_time + timedelta(hours=24)
         
-        # Check if session is still within 24 hours
         if now < session_end_time:
             session_active = True
             remaining_hours = (session_end_time - now).total_seconds() / 3600
             session_start = start_time.isoformat()
             session_end = session_end_time.isoformat()
             
-            # Calculate mined coins during this session
+            # Calculate mined coins during this session (use already calculated rate)
             elapsed_minutes = (now - start_time).total_seconds() / 60
-            rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
             mined_this_session = elapsed_minutes * rate_per_minute
         else:
-            # Session expired, mark as inactive
-            await db.users.update_one(
+            # Session expired, mark as inactive (fire and forget)
+            asyncio.create_task(db.users.update_one(
                 {"uid": uid},
                 {"$set": {"mining_active": False}}
-            )
+            ))
     
-    # Always calculate mining rate (potential rate even if not actively mining)
-    rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
     mining_rate_per_hour = rate_per_minute * 60
-    
-    # FIXED RATES - No multiplier, no day calculation
-    # base_rate is already the fixed hourly rate from plan
-    # referral_breakdown bonuses are already hourly
     
     # Convert referral breakdown (already hourly from calculate_mining_rate)
     hourly_breakdown = {}
     for level, data in referral_breakdown.items():
         hourly_breakdown[level] = {
-            'count': data.get('count', 0),  # Active paid users (contributing to bonus)
-            'active_count': data.get('active_count', 0),  # ALL active users (same as Invite page)
-            'paid_count': data.get('paid_count', data.get('count', 0)),  # Total paid users
-            'free_count': data.get('free_count', 0),  # Total free users
-            'total_count': data.get('total_count', 0),  # Total users at level
+            'count': data.get('count', 0),
+            'active_count': data.get('active_count', 0),
+            'paid_count': data.get('paid_count', data.get('count', 0)),
+            'free_count': data.get('free_count', 0),
+            'total_count': data.get('total_count', 0),
             'weighted_count': data.get('weighted_count', 0),
             'percentage': data.get('percentage', 0),
-            'bonus': data.get('bonus', 0)  # Already hourly from calculate_mining_rate
+            'bonus': data.get('bonus', 0)
         }
     
     result = {
         "current_balance": user.get("prc_balance", 0),
-        "mining_rate": mining_rate_per_hour,  # New field name
-        "mining_rate_per_hour": mining_rate_per_hour,  # Backward compatibility
-        "base_rate": base_rate,  # Fixed hourly base rate from plan
+        "mining_rate": mining_rate_per_hour,
+        "mining_rate_per_hour": mining_rate_per_hour,
+        "base_rate": base_rate,
         "active_referrals": active_referrals,
-        "referral_breakdown": hourly_breakdown,  # Hourly contributions
+        "referral_breakdown": hourly_breakdown,
         "total_mined": user.get("total_mined", 0),
         "session_active": session_active,
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
@@ -7095,12 +7089,9 @@ async def claim_mining(uid: str):
     if referral_breakdown:
         total_bonus = sum(ld.get('bonus', 0) for ld in referral_breakdown.values())
         # Calculate what portion of mined_amount came from referral bonus
-        # Formula: mining = day × ((BR × User_Multiplier) + Referral_Bonus)
-        # Referral portion = (Referral_Bonus / effective_rate) × mined_amount
-        if total_bonus > 0:
-            rate_per_minute, effective_base, _, _ = await calculate_mining_rate(uid)
-            if rate_per_minute > 0:
-                referral_bonus_portion = (total_bonus / (rate_per_minute * 1440)) * mined_amount
+        # Use already calculated rate_per_minute (don't call calculate_mining_rate again!)
+        if total_bonus > 0 and rate_per_minute > 0:
+            referral_bonus_portion = (total_bonus / (rate_per_minute * 1440)) * mined_amount
     
     # Build the update operation
     update_op = {
