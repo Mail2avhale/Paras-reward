@@ -10,6 +10,10 @@ Includes:
 - Password reset
 - Forgot PIN with OTP
 - Biometric authentication (WebAuthn)
+
+OPTIMIZATIONS (March 2026):
+- Password hashing runs in thread pool to avoid blocking async event loop
+- Independent database operations run in parallel with asyncio.gather
 """
 
 from fastapi import APIRouter, HTTPException, Request, Depends
@@ -21,6 +25,11 @@ import secrets
 import string
 import uuid
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# Thread pool for CPU-bound operations (bcrypt)
+_password_executor = ThreadPoolExecutor(max_workers=4)
 
 # Create router
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -438,7 +447,7 @@ async def login(
     device_id: Optional[str] = None,
     ip_address: Optional[str] = None
 ):
-    """User login with email/mobile and PIN/password"""
+    """User login with email/mobile and PIN/password - OPTIMIZED"""
     # Support both query params and JSON body
     if not identifier or not password:
         try:
@@ -457,24 +466,25 @@ async def login(
     
     logging.info(f"[LOGIN DEBUG] Attempt for: {identifier}, IP: {real_ip}")
     
-    # Fraud detection: IP login limit
-    ip_ok, ip_msg = await fraud_detector.check_ip_login_limit(real_ip)
+    # PARALLEL: Run fraud check and rate limit check together
+    ip_check_task = fraud_detector.check_ip_login_limit(real_ip)
+    db_lock_task = check_login_rate_limit_db(db, identifier)
+    
+    # In-memory rate limit (sync, fast)
+    allowed, locked_seconds, attempts_left, lockout_message = check_login_rate_limit(identifier)
+    if not allowed:
+        logging.warning(f"[LOGIN DEBUG] USER RATE LIMITED: {identifier}")
+        raise HTTPException(status_code=429, detail=lockout_message)
+    
+    # Await parallel checks
+    ip_ok, ip_msg = await ip_check_task
     if not ip_ok:
         logging.warning(f"[LOGIN DEBUG] IP BLOCKED for {identifier}: {ip_msg}")
         raise HTTPException(status_code=429, detail=ip_msg)
     
-    # Rate limit check
-    allowed, locked_seconds, attempts_left, lockout_message = check_login_rate_limit(identifier)
-    logging.info(f"[LOGIN DEBUG] Rate limit check for {identifier}: allowed={allowed}, locked_seconds={locked_seconds}, attempts_left={attempts_left}")
-    
-    if not allowed:
-        logging.warning(f"[LOGIN DEBUG] USER RATE LIMITED: {identifier}, message: {lockout_message}")
-        raise HTTPException(status_code=429, detail=lockout_message)
-    
-    # Database lockout check
-    db_allowed, db_locked_seconds, db_lockout_msg = await check_login_rate_limit_db(db, identifier)
+    db_allowed, db_locked_seconds, db_lockout_msg = await db_lock_task
     if not db_allowed:
-        logging.warning(f"[LOGIN DEBUG] USER DB LOCKED: {identifier}, message: {db_lockout_msg}")
+        logging.warning(f"[LOGIN DEBUG] USER DB LOCKED: {identifier}")
         raise HTTPException(status_code=429, detail=db_lockout_msg)
     
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
@@ -488,9 +498,9 @@ async def login(
     }, {"_id": 0, "profile_picture": 0})  # PERFORMANCE: Exclude profile_picture (large base64)
     
     if not user:
-        record_login_attempt(identifier, False)
-        await record_login_attempt_db(db, identifier, False, real_ip)
-        await create_security_alert(
+        # PARALLEL: Record failed login attempt
+        asyncio.create_task(record_login_attempt_db(db, identifier, False, real_ip))
+        asyncio.create_task(create_security_alert(
             alert_type="failed_login",
             severity="low",
             title="Failed Login Attempt",
@@ -498,21 +508,31 @@ async def login(
             details={"identifier": identifier, "reason": "user_not_found"},
             ip_address=real_ip,
             user_identifier=identifier
-        )
+        ))
+        record_login_attempt(identifier, False)
         raise HTTPException(
             status_code=404, 
             detail="Account not found. This email/mobile is not registered. Please Sign Up to create a new account."
         )
     
-    # Verify password - check pin_hash, password_hash (new format), and password (legacy format)
-    # Priority: pin_hash > password_hash > password (legacy)
+    # Verify password - RUN IN THREAD POOL to avoid blocking event loop
     stored_password = user.get("pin_hash") or user.get("password_hash") or user.get("password")
     if stored_password:
-        if not verify_password(password, stored_password):
+        # Run bcrypt verification in thread pool (non-blocking)
+        loop = asyncio.get_event_loop()
+        is_valid = await loop.run_in_executor(
+            _password_executor,
+            verify_password,
+            password,
+            stored_password
+        )
+        
+        if not is_valid:
             record_login_attempt(identifier, False)
-            await record_login_attempt_db(db, identifier, False, real_ip)
+            # PARALLEL: Record failed attempt and create alert
+            asyncio.create_task(record_login_attempt_db(db, identifier, False, real_ip))
             alert_severity = "medium" if attempts_left <= 2 else "low"
-            await create_security_alert(
+            asyncio.create_task(create_security_alert(
                 alert_type="failed_login",
                 severity=alert_severity,
                 title="Failed Password Attempt",
@@ -520,9 +540,9 @@ async def login(
                 details={"identifier": identifier, "email": user.get('email'), "attempts_left": attempts_left - 1},
                 ip_address=real_ip,
                 user_identifier=identifier
-            )
+            ))
             if attempts_left <= 1:
-                await create_security_alert(
+                asyncio.create_task(create_security_alert(
                     alert_type="brute_force",
                     severity="critical",
                     title="🚨 Account Locked - 2 Hour Lockout",
@@ -530,9 +550,9 @@ async def login(
                     details={"identifier": identifier, "email": user.get('email'), "lockout_hours": 2, "ip": real_ip},
                     ip_address=real_ip,
                     user_identifier=identifier
-                )
+                ))
             elif attempts_left <= 2:
-                await create_security_alert(
+                asyncio.create_task(create_security_alert(
                     alert_type="suspicious_login",
                     severity="high",
                     title="⚠️ Account Temporarily Locked",
@@ -540,7 +560,7 @@ async def login(
                     details={"identifier": identifier, "email": user.get('email'), "lockout_minutes": 15},
                     ip_address=real_ip,
                     user_identifier=identifier
-                )
+                ))
             raise HTTPException(status_code=401, detail=f"Wrong PIN. {attempts_left - 1} attempts remaining.")
     else:
         # No password/PIN stored - reject login
@@ -576,22 +596,17 @@ async def login(
     
     # Record successful login
     record_login_attempt(identifier, True)
-    await record_login_attempt_db(db, identifier, True, real_ip)
+    asyncio.create_task(record_login_attempt_db(db, identifier, True, real_ip))
     
     # ========== SINGLE SESSION ENFORCEMENT ==========
     # Generate unique session token for this login
     session_token = str(uuid.uuid4())
+    now_iso = datetime.now(timezone.utc).isoformat()
     
-    # Invalidate any existing sessions by updating user's session_token
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {"$set": {"session_token": session_token, "session_created_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    # Save login history
+    # PARALLEL: Run multiple independent database updates together
     login_history_entry = {
         "user_id": user["uid"],
-        "login_time": datetime.now(timezone.utc).isoformat(),
+        "login_time": now_iso,
         "ip_address": real_ip,
         "device_id": device_id or "unknown",
         "user_agent": user_agent[:200] if user_agent else "unknown",
@@ -599,17 +614,21 @@ async def login(
         "login_type": "pin",
         "success": True
     }
-    await db.login_history.insert_one(login_history_entry)
     
-    await db.users.update_one(
-        {"uid": user["uid"]},
-        {
-            "$set": {
-                "last_login": datetime.now(timezone.utc).isoformat(),
+    # Run independent DB operations in parallel using asyncio.gather
+    await asyncio.gather(
+        db.users.update_one(
+            {"uid": user["uid"]},
+            {"$set": {
+                "session_token": session_token,
+                "session_created_at": now_iso,
+                "last_login": now_iso,
                 "last_login_ip": real_ip,
                 "last_login_device": device_id or "unknown"
-            }
-        }
+            }}
+        ),
+        db.login_history.insert_one(login_history_entry),
+        return_exceptions=True
     )
     
     # VIP expiry check
