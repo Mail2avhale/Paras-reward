@@ -154,6 +154,11 @@ class RedeemRequest(BaseModel):
     recipient_name: str
     prc_amount: int
 
+class VerifyAccountRequest(BaseModel):
+    account: str
+    ifsc: str
+    customer_id: str = "9970100782"  # Default customer for verification
+
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -366,6 +371,88 @@ async def customer_register(req: CustomerRegisterRequest, request: Request):
         return create_response(False, "TIMEOUT", "Request timeout - try again")
     except Exception as e:
         logger.error(f"[DMT] Registration error: {e}")
+        return create_response(False, "ERROR", str(e))
+
+
+# ============================================================================
+# ACCOUNT VERIFICATION (Penny Drop)
+# ============================================================================
+
+@router.post("/account/verify")
+async def verify_bank_account(req: VerifyAccountRequest, request: Request):
+    """
+    Verify bank account before adding as recipient.
+    
+    This performs a penny drop verification to get the actual account holder name.
+    Important: Always verify account before transfer to avoid failed transactions.
+    
+    API: POST /v2/banks/ifsc:{ifsc}/accounts/{account}
+    """
+    if not req.account or not req.ifsc:
+        return create_response(False, "VALIDATION_ERROR", "Account number and IFSC required")
+    
+    logger.info(f"[DMT] Verify account: ***{req.account[-4:]}, IFSC: {req.ifsc}")
+    
+    try:
+        # Use v2 API for account verification
+        url = f"{EKO_BASE_URL.replace('/ekoicici', '/ekoicici')}/v2/banks/ifsc:{req.ifsc.upper()}/accounts/{req.account}"
+        
+        payload = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "customer_id": req.customer_id,
+            "user_code": EKO_USER_CODE,
+            "client_ref_id": f"AVS{int(time.time())}"
+        }
+        
+        response = requests.post(url, data=payload, headers=get_eko_headers(), timeout=60)
+        logger.info(f"[DMT] Account verification response: {response.status_code} - {response.text[:500]}")
+        
+        result = response.json()
+        eko_status = result.get("status")
+        response_type = result.get("response_type_id")
+        
+        data = result.get("data", {})
+        
+        # Success cases
+        if eko_status == 0:
+            # response_type_id 61 = Account details found with name
+            # response_type_id 345 = Already registered, name not available
+            if response_type == 61:
+                return create_response(True, "VERIFIED", "Account verified successfully", {
+                    "recipient_name": data.get("recipient_name", ""),
+                    "account": req.account,
+                    "ifsc": req.ifsc.upper(),
+                    "bank": data.get("bank", ""),
+                    "is_name_editable": data.get("is_name_editable", "0"),
+                    "verification_fee": data.get("fee", "0"),
+                    "tid": data.get("tid", "")
+                })
+            elif response_type == 345:
+                return create_response(True, "ALREADY_REGISTERED", result.get("message", "Recipient already registered"), {
+                    "recipient_name": data.get("recipient_name", ""),
+                    "account": req.account,
+                    "ifsc": req.ifsc.upper(),
+                    "is_name_editable": data.get("is_name_editable", "0"),
+                    "note": "Account already added. Name may not be verified."
+                })
+            else:
+                return create_response(True, "SUCCESS", result.get("message", "Verification completed"), data)
+        
+        # Error cases
+        if response_type == 1796:
+            return create_response(False, "VERIFICATION_NOT_AVAILABLE", "Account verification not available for this bank", {
+                "suggestion": "Add recipient directly and verify through small test transaction"
+            })
+        
+        return create_response(False, "VERIFICATION_FAILED", result.get("message", "Verification failed"), {
+            "eko_status": eko_status,
+            "response_type": response_type
+        })
+        
+    except requests.Timeout:
+        return create_response(False, "TIMEOUT", "Verification timeout - try again")
+    except Exception as e:
+        logger.error(f"[DMT] Account verification error: {e}")
         return create_response(False, "ERROR", str(e))
 
 
