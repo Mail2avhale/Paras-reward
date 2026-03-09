@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { 
   Flame, Settings, TrendingDown, Users, AlertTriangle,
-  RefreshCw, CheckCircle, ArrowLeft, Percent, Info, ShieldCheck
+  RefreshCw, CheckCircle, ArrowLeft, Percent, Info, ShieldCheck, Zap
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ const AdminPRCBurnControl = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [executing, setExecuting] = useState(false);
+  const [smartBurning, setSmartBurning] = useState(false);
+  const [smartBurnResult, setSmartBurnResult] = useState(null);
   
   // Settings state
   const [burnEnabled, setBurnEnabled] = useState(false);
@@ -115,6 +117,33 @@ const AdminPRCBurnControl = ({ user }) => {
       toast.error(error.response?.data?.detail || 'Burn execution failed');
     } finally {
       setExecuting(false);
+    }
+  };
+
+  // Smart Auto Burn - Checks if today's scheduled burn ran, if not runs it
+  const handleSmartBurn = async (force = false) => {
+    setSmartBurning(true);
+    setSmartBurnResult(null);
+    try {
+      const response = await axios.post(`${API}/admin/smart-burn`, {
+        admin_id: user?.uid,
+        force: force
+      });
+      
+      setSmartBurnResult(response.data);
+      
+      if (response.data.burn_executed) {
+        const burned = response.data.burn_result?.summary?.total_prc_burned || 0;
+        const users = response.data.burn_result?.summary?.total_users_affected || 0;
+        toast.success(`Smart Burn executed! ${burned.toLocaleString()} PRC burned from ${users} users`);
+      } else {
+        toast.info(response.data.message || 'Burn already completed today');
+      }
+      fetchPRCStats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Smart burn failed');
+    } finally {
+      setSmartBurning(false);
     }
   };
 
@@ -315,6 +344,96 @@ const AdminPRCBurnControl = ({ user }) => {
       </Card>
 
       {/* Warning Card */}
+      <Card className="mt-6 p-4 bg-amber-500/10 border-amber-500/30">
+
+      {/* Smart Auto Burn Section */}
+      <Card className="mt-6 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-green-500/20 rounded-lg">
+              <Zap className="w-6 h-6 text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-green-400 font-bold text-lg">Smart Auto Burn</h3>
+              <p className="text-green-200/70 text-sm mt-1">
+                Automatically checks if today's scheduled 0.5% burn ran. If not, executes it.
+              </p>
+              <p className="text-green-200/50 text-xs mt-1">
+                Scheduled: 11 AM & 11 PM IST daily
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => handleSmartBurn(false)}
+              disabled={smartBurning}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {smartBurning ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-2" />
+                  Run Smart Burn
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleSmartBurn(true)}
+              disabled={smartBurning}
+              variant="outline"
+              className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+            >
+              Force Run
+            </Button>
+          </div>
+        </div>
+        
+        {/* Smart Burn Result */}
+        {smartBurnResult && (
+          <div className="mt-4 p-3 bg-gray-900/50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div>
+                <p className="text-gray-500 text-xs">Today (IST)</p>
+                <p className="text-white font-medium">{smartBurnResult.today_date_ist}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Last Burn</p>
+                <p className="text-white font-medium">
+                  {smartBurnResult.last_burn?.last_burn_time_ist || 'Never'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Burn Needed?</p>
+                <p className={`font-medium ${smartBurnResult.burn_needed ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {smartBurnResult.burn_needed ? 'Yes' : 'No (Already done)'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Executed?</p>
+                <p className={`font-medium ${smartBurnResult.burn_executed ? 'text-green-400' : 'text-gray-400'}`}>
+                  {smartBurnResult.burn_executed ? '✅ Yes' : '⏭ Skipped'}
+                </p>
+              </div>
+            </div>
+            {smartBurnResult.burn_executed && smartBurnResult.burn_result?.summary && (
+              <div className="mt-3 pt-3 border-t border-gray-700 flex items-center gap-4">
+                <span className="text-green-400 font-bold">
+                  Burned: {smartBurnResult.burn_result.summary.total_prc_burned?.toLocaleString()} PRC
+                </span>
+                <span className="text-gray-400">
+                  from {smartBurnResult.burn_result.summary.total_users_affected} users
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Warning Card - Original */}
       <Card className="mt-6 p-4 bg-amber-500/10 border-amber-500/30">
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
