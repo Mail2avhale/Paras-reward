@@ -183,7 +183,7 @@ def inr_to_prc(inr_amount: float) -> int:
 async def log_transaction(user_id: str, reference_id: str, amount: float, 
                          recipient_id: str, status: str, response: dict, ip: str):
     """Log transaction for audit"""
-    if db:
+    if db is not None:
         await db.dmt_transactions.insert_one({
             "user_id": user_id,
             "reference_id": reference_id,
@@ -341,7 +341,7 @@ async def customer_register(req: CustomerRegisterRequest, request: Request):
             data = result.get("data", {})
             
             # Store customer in our database
-            if db:
+            if db is not None:
                 await db.dmt_customers.update_one(
                     {"mobile": req.mobile},
                     {"$set": {
@@ -395,6 +395,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
     try:
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients"
         
+        # JSON payload for PUT request
         payload = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
@@ -406,8 +407,13 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
         if req.bank_code:
             payload["bank_code"] = req.bank_code
         
-        response = requests.put(url, data=payload, headers=get_eko_headers(), timeout=REQUEST_TIMEOUT)
-        logger.info(f"[DMT] Add recipient response: {response.status_code} - {response.text[:300]}")
+        # Use JSON headers for PUT request
+        headers = get_eko_headers()
+        headers["Content-Type"] = "application/json"
+        headers["Accept"] = "application/json"
+        
+        response = requests.put(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        logger.info(f"[DMT] Add recipient response: {response.status_code} - {response.text[:500]}")
         
         result = response.json()
         eko_status = result.get("status")
@@ -417,7 +423,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
             recipient_id = data.get("recipient_id")
             
             # Store recipient in database
-            if db and recipient_id:
+            if db is not None and recipient_id:
                 await db.dmt_recipients.update_one(
                     {"recipient_id": str(recipient_id)},
                     {"$set": {
@@ -552,7 +558,7 @@ async def initiate_transfer(req: TransferRequest, request: Request):
         return create_response(False, "DAILY_LIMIT", f"Daily limit exceeded. Remaining: ₹{remaining}")
     
     # Check PRC balance
-    if db:
+    if db is not None:
         user = await db.users.find_one({"uid": req.user_id})
         if not user:
             return create_response(False, "USER_NOT_FOUND", "User not found")
@@ -592,7 +598,7 @@ async def initiate_transfer(req: TransferRequest, request: Request):
             bank_ref = data.get("bank_ref_num")
             
             # SUCCESS - Deduct PRC
-            if db:
+            if db is not None:
                 await db.users.update_one(
                     {"uid": req.user_id},
                     {"$inc": {"prc_balance": -req.prc_amount}}
@@ -756,7 +762,7 @@ async def redeem_prc(req: RedeemRequest, request: Request):
         return create_response(False, "MAX_AMOUNT", f"Maximum ₹{MAX_DAILY_INR} per transfer")
     
     # Check PRC balance
-    if db:
+    if db is not None:
         user = await db.users.find_one({"uid": req.user_id})
         if not user:
             return create_response(False, "USER_NOT_FOUND", "User not found")
@@ -843,7 +849,7 @@ async def redeem_prc(req: RedeemRequest, request: Request):
             # SUCCESS - Deduct PRC
             tx_data = tx_result.get("data", {})
             
-            if db:
+            if db is not None:
                 await db.users.update_one(
                     {"uid": req.user_id},
                     {"$inc": {"prc_balance": -req.prc_amount}}
