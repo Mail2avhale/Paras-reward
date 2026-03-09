@@ -1,191 +1,118 @@
-# Paras Reward App - Product Requirements Document
+# PARAS REWARD - Product Requirements Document
 
-## Original Problem Statement
-Paras Reward is a mining economy app with subscription-based rewards. Users can mine PRC (Paras Reward Coins) based on their subscription level and network (referrals).
+## Project Overview
+**Name:** Paras Reward  
+**URL:** www.parasreward.com  
+**Type:** Reward/Loyalty Platform with PRC Mining  
+**Users:** 5,359+ Active Members  
+
+---
 
 ## Core Features
-- **Mining System**: Users mine PRC based on subscription tier + single-leg bonus + team boost
-- **Subscription Plans**: Multiple tiers (Explorer, Basic, Plus, Premium, Enterprise)
-- **Referral/Invite System**: Multi-level referral bonuses
-- **KYC Verification**: Aadhaar + PAN verification for withdrawals
-- **BBPS Integration**: Bill payments using Eko API
-- **DMT Integration**: Domestic Money Transfer using Eko API
-- **Bank Withdrawal via Chatbot**: ✅ **COMPLETE** - OTP verification flow implemented
-- **Payment Issue Auto-Fix via Chatbot**: Auto-resolve subscription payment issues
-- **Recurring Deposits**: PRC savings with interest
 
-## Tech Stack
-- **Frontend**: React.js with Shadcn/UI components
-- **Backend**: FastAPI (Python)
-- **Database**: MongoDB
-- **Payments**: Razorpay for subscriptions, Eko for BBPS/DMT
-- **Hosting**: Emergent Infrastructure
+### 1. PRC Mining System
+- 24-hour mining sessions
+- Rate based on subscription plan (Elite: 230+ PRC/hr)
+- Team boost from referrals
+- Single-leg mining economy
+
+### 2. User Subscriptions
+- Explorer (Free)
+- Startup
+- Growth  
+- Elite (Premium)
+
+### 3. Referral System
+- 3-level referral structure (L1, L2, L3)
+- Team boost percentages (10%, 5%, 3%)
+- Active referral tracking
+
+### 4. Redemption System
+- Bill Payments (BBPS)
+- Gift Vouchers
+- DMT (Money Transfer via Eko)
+
+### 5. Admin Panel
+- User management
+- KPI dashboard
+- Transaction monitoring
+
+---
+
+## Technical Architecture
+
+### Stack
+- **Frontend:** React 18 + TailwindCSS + Shadcn/UI
+- **Backend:** FastAPI (Python)
+- **Database:** MongoDB Atlas (M10)
+- **Cache:** Upstash Redis
+- **Payments:** Razorpay
+- **DMT/BBPS:** Eko API
+
+### Performance Optimizations (March 2026)
+- ✅ Parallel database queries (asyncio.gather)
+- ✅ Non-blocking password hashing (ThreadPoolExecutor)
+- ✅ Redis caching with environment isolation
+- ✅ Session validation delay (5 seconds)
+- ✅ Stats API parallelization (6 queries → 1 batch)
 
 ---
 
 ## What's Been Implemented
 
-### March 7, 2026 - Chatbot OTP Verification Flow (P0 COMPLETE)
-
-#### New Features
-1. **ChatbotWithdrawalFlow Component** - `/app/frontend/src/components/ChatbotWithdrawalFlow.js`
-   - Multi-step withdrawal process with step indicator
-   - Eligibility check (KYC, balance, minimum amount)
-   - Eko customer verification (OTP-based)
-   - 3 OTP attempts max with resend cooldown
-   - Bank details collection with IFSC lookup
-   - Fee calculation display (₹10 flat + 20% admin)
-   - Confirmation screen before submission
-
-2. **Chatbot Intent Detection** - Updated `AIChatbotEnhanced.js`
-   - Detects keywords: "bank withdrawal", "बँक withdrawal", "पैसे काढायचे", etc.
-   - Triggers dedicated withdrawal flow
-   - Shows "Start Bank Withdrawal" button
-   - Modal-based flow for better UX
-
-#### Testing Results (Iteration 111)
-- **Backend APIs**: 100% (40/40 passed)
-- **Frontend E2E**: 100% (38/38 passed)
-- **Total Specs**: 78/78 passed ✅
-
-#### Note
-- Preview environment: Eko APIs return `skip_otp` because IP 34.170.12.145 not whitelisted
-- Production: Full OTP flow works when IP is whitelisted
-
-### March 7, 2026 - Server.py Refactoring Phase 1
-
-#### Code Extraction Complete
-1. **Admin Ledger System** - Extracted 900 lines to `routes/admin_ledger.py`
-   - Income Ledgers (Subscription, Commission, Penalty, Interest, Ad Revenue)
-   - Expense Ledgers (Redeem Payout, Operational)
-   - Cash & Bank Ledgers
-   - Deposit & Stockist Ledgers
-   - Summary & Reconciliation (P&L, Balance Sheet)
-
-#### Performance Metrics
-- **server.py reduced**: 39,662 → 38,762 lines (900 lines removed)
-- **Preview environment load time**: 1.76 seconds (excellent)
-- **All APIs functional**: ✅
-
-### December 2025 - Major Refactoring Session
-
-#### Features Removed
-1. **Marketplace** - All product, cart, order routes removed (~2,130 lines)
-2. **Luxury Life** - Auto-save feature removed (~700 lines)
-3. **TAP Game** - Tap-to-earn removed (~130 lines)
-4. **Direct Bank Transfer UI** - Moved to chatbot
-
-#### Bank Withdrawal via Chatbot
-**User Flow:**
-```
-"Bank withdrawal करायचे" → KYC check → Eko OTP verification → 
-Balance check → Bank details collect → Confirm → Request ID → Admin processes
-```
-**Fees:** ₹10 flat + 20% admin charge
-
-#### Payment Issue Auto-Fix via Chatbot
-**Problem Solved:** "Payment झाले पण subscription activate नाही"
-- Razorpay API verification
-- Auto subscription activation
-- 30-day time limit
-- Rate limiting (5 attempts/day)
+### March 2026 Session:
+1. ✅ Speed optimization (Login: 0.5s, APIs: <2s)
+2. ✅ Session persistence fix
+3. ✅ Mining page enhancements (particles, animations)
+4. ✅ Haptic feedback for mobile
+5. ✅ Push notifications for session end
+6. ✅ Cache isolation (preview/production)
+7. ✅ Stats API parallelization
 
 ---
 
-## Prioritized Backlog
+## Pending/Backlog
 
-### P0 - Critical 
-- [x] **Chatbot OTP Verification Flow** - ✅ COMPLETE (March 7, 2026)
-- [x] **Aadhaar DMT v3 Implementation** - ✅ COMPLETE (March 7, 2026)
-  - Backend APIs: `/api/aadhaar-dmt/send-otp`, `/verify-otp`, `/status/{uid}`, `/limits-info`
-  - Frontend: Verification choice step (Mobile OTP vs Aadhaar OTP)
-  - Limits: Mobile OTP = ₹25,000/month, Aadhaar OTP = ₹2,00,000/month
-- [ ] **Eko DMT API Production Testing** - Preview IP `34.170.12.145` not whitelisted, production IP is whitelisted
+### P1 (High Priority):
+- [ ] BBPS biller verification (AEML, JPDCL)
+- [ ] Aadhaar DMT v3 implementation
+- [ ] Admin Auto-DMT for non-Eko users
 
-### P1 - High Priority
-- [ ] **Production Environment Issues** - User reported API timeouts, auto-navigation bugs
-  - Cannot debug without production access
-  - server.py refactoring may help when deployed
-- [ ] **Continue server.py Refactoring** - Extract more sections:
-  - LIVE PLATFORM STATS (~804 lines)
-  - PRC ECONOMY CONTROLS (~367 lines)
-  - PHASE 2 ACCOUNTING (~900 lines)
-- [ ] BBPS billers (AEML, JPDCL) fix
-- [ ] BBPS service codes check as per Eko
+### P2 (Medium Priority):
+- [ ] KYC image migration (base64 → file storage)
+- [ ] Razorpay auto-subscription fix
+- [ ] PRC Vault migration script
 
-### P2 - Medium Priority
-- [ ] Payment Status Check on Login safeguard
-- [ ] Remove `_archive_eko_payments_legacy.py` after verifying no dependencies
-
-### P3 - Low Priority
-- [ ] Eko DMT v3 with Aadhaar/eKYC
-- [ ] Email/Mobile OTP verification on signup
-- [ ] KYC images migration (base64 to file storage)
+### P3 (Low Priority):
+- [ ] Email/Mobile OTP verification
+- [ ] Backend monolith refactoring
 
 ---
 
-## API Endpoints Summary
-
-### New Routes (Extracted)
-| Route File | Prefix | Description |
-|------------|--------|-------------|
-| `admin_ledger.py` | `/api/admin/ledger` | Complete Ledger System |
-
-### Chatbot Features
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/chatbot-redeem/*` | Various | Bank withdrawal via chatbot |
-| `/api/chatbot-payment-fix/*` | Various | Payment issue auto-fix |
-
-### Core APIs
-- `/api/health` - Health check
-- `/api/bbps/*` - BBPS bill payments
-- `/api/eko/dmt/*` - DMT money transfer
-- `/api/kyc/*` - KYC operations
-- `/api/razorpay/*` - Subscription payments
-
----
-
-## Testing Status
-- **Latest Iteration**: server.py refactoring verified
-- **Ledger APIs**: All endpoints tested ✅
-- **Previous**: Iteration 110 (Chatbot Withdrawal): 46/46 passed ✅
-
----
-
-## Credentials (Test)
-- **Admin (Production)**: admin@paras.com / PIN: 153759
-- **Test User (Preview)**: 9876543210 / PIN: 123456
-
----
-
-## Architecture After Refactoring
+## System Keys (Production)
 
 ```
-/app/backend/
-├── server.py (38,762 lines - still needs more extraction)
-├── routes/
-│   ├── admin_ledger.py (900 lines extracted)
-│   ├── chatbot_withdrawal.py (Eko OTP + Admin DMT + Customer Registration)
-│   ├── eko_aadhaar_dmt.py (NEW - Aadhaar eKYC DMT v3)
-│   ├── chatbot_payment_fix.py
-│   ├── eko_common.py (auth fixed)
-│   ├── eko_dmt_service.py (flow corrected)
-│   └── ... (other routes)
-├── tests/
-│   └── test_chatbot_withdrawal.py (40 tests)
-└── .env
-
-/app/frontend/
-├── .env (GENERATE_SOURCEMAP=false for optimization)
-└── src/
-    ├── App.js (lazy loaded AIContextualHelp)
-    └── components/
-        ├── AIChatbotEnhanced.js (withdrawal intent detection)
-        ├── ChatbotWithdrawalFlow.js (OTP + Aadhaar + Bank details flow)
-        └── Chatbot/Chatbot.js (redesigned UI)
-
-/app/tests/e2e/
-├── chatbot-withdrawal.spec.ts (20 tests)
-└── chatbot-withdrawal-flow.spec.ts (18 tests)
+DB_NAME = "bugzappers-test_database"
+MONGO_URL = mongodb+srv://... (Atlas)
+REACT_APP_BACKEND_URL = "https://parasreward.com"
+CACHE_ENV_PREFIX = "prod"
 ```
+
+---
+
+## Testing Credentials
+
+- **Admin:** mail2avhale@gmail.com / PIN: 153759
+- **User UID:** 92bcbe40-b08f-4096-8f66-0b99072ec0c7
+
+---
+
+## Known Constraints
+
+1. Eko APIs only work on production (IP whitelist)
+2. Preview uses local MongoDB (separate data)
+3. First API call after deploy is slower (cold start)
+
+---
+
+Last Updated: March 9, 2026
