@@ -60,18 +60,14 @@
 
 ## What's Been Implemented
 
-### March 2026 Session:
-1. ✅ Speed optimization (Login: 0.5s, APIs: <2s)
-2. ✅ Session persistence fix
-3. ✅ Mining page enhancements (particles, animations)
-4. ✅ Haptic feedback for mobile
-5. ✅ Push notifications for session end
-6. ✅ Cache isolation (preview/production)
-7. ✅ Stats API parallelization
+### March 2026 Session (continued):
 8. ✅ **Single Leg Mining Visibility** (March 9, 2026)
    - Backend API returns `single_leg_info` in mining status
-   - Frontend displays Single Leg Bonus in Mining Speed Breakdown
-   - Shows: active/total downline, PRC/hr bonus, PRC/day bonus
+   - Single Leg Bonus merged into base rate (hidden from UI per user request)
+9. ✅ **Backend Refactoring** (March 9, 2026)
+   - Mining routes extracted to `/app/backend/routes/mining.py`
+   - 667 lines removed from server.py (38854 → 38187 lines)
+   - Admin routes base module created at `/app/backend/routes/admin/`
 
 ---
 
