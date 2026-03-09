@@ -68,20 +68,27 @@
 5. ✅ Push notifications for session end
 6. ✅ Cache isolation (preview/production)
 7. ✅ Stats API parallelization
+8. ✅ **Single Leg Mining Visibility** (March 9, 2026)
+   - Backend API returns `single_leg_info` in mining status
+   - Frontend displays Single Leg Bonus in Mining Speed Breakdown
+   - Shows: active/total downline, PRC/hr bonus, PRC/day bonus
 
 ---
 
 ## Pending/Backlog
 
 ### P1 (High Priority):
+- [ ] Production Performance Monitoring - latent risk
+- [ ] DMT Account Verification step (pre-transfer)
 - [ ] BBPS biller verification (AEML, JPDCL)
-- [ ] Aadhaar DMT v3 implementation
-- [ ] Admin Auto-DMT for non-Eko users
+- [ ] Production Auto-Burning scheduler fix
 
 ### P2 (Medium Priority):
+- [ ] Mining Rate Display verification on production
 - [ ] KYC image migration (base64 → file storage)
 - [ ] Razorpay auto-subscription fix
 - [ ] PRC Vault migration script
+- [ ] Admin Auto-DMT for non-Eko users
 
 ### P3 (Low Priority):
 - [ ] Email/Mobile OTP verification
