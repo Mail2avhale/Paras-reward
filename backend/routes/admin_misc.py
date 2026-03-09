@@ -270,6 +270,105 @@ async def run_explorer_burn(request: Request):
     
     return {"success": True, **result}
 
+@router.post("/smart-burn")
+async def smart_burn_check_and_run(request: Request):
+    """
+    Smart Manual Burn Button - Checks if today's burn job ran, if not runs it.
+    
+    This is useful when:
+    - Scheduler didn't run due to server restart
+    - You want to manually ensure burn happened today
+    - Production scheduler issues
+    
+    Returns status of whether burn was needed and executed.
+    """
+    from server import run_prc_burn_job
+    
+    try:
+        data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    except:
+        data = {}
+    
+    admin_id = data.get("admin_id")
+    force_run = data.get("force", False)
+    
+    # Check last burn timestamp
+    ist_offset = timedelta(hours=5, minutes=30)
+    now_utc = datetime.now(timezone.utc)
+    now_ist = now_utc + ist_offset
+    today_date = now_ist.date()
+    
+    # Get last burn log from database
+    last_burn = None
+    if db is not None:
+        last_burn = await db.admin_logs.find_one(
+            {"action": {"$in": ["manual_prc_burn", "scheduled_prc_burn", "daily_percentage_burn", "smart_burn_executed"]}},
+            sort=[("timestamp", -1)]
+        )
+    
+    burn_needed = True
+    last_burn_info = None
+    
+    if last_burn:
+        last_burn_time = last_burn.get("timestamp")
+        if last_burn_time:
+            if isinstance(last_burn_time, str):
+                last_burn_time = datetime.fromisoformat(last_burn_time.replace('Z', '+00:00'))
+            
+            # Ensure timezone aware
+            if last_burn_time.tzinfo is None:
+                last_burn_time = last_burn_time.replace(tzinfo=timezone.utc)
+            
+            last_burn_ist = last_burn_time + ist_offset
+            last_burn_date = last_burn_ist.date()
+            
+            hours_ago = (now_utc - last_burn_time).total_seconds() / 3600
+            
+            last_burn_info = {
+                "last_burn_date": str(last_burn_date),
+                "last_burn_time_ist": last_burn_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+                "hours_ago": round(hours_ago, 1)
+            }
+            
+            # If burned today, no need to run again (unless forced)
+            if last_burn_date == today_date and not force_run:
+                burn_needed = False
+    
+    result = {
+        "success": True,
+        "today_date_ist": str(today_date),
+        "current_time_ist": now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+        "last_burn": last_burn_info,
+        "burn_needed": burn_needed,
+        "force_requested": force_run
+    }
+    
+    if burn_needed or force_run:
+        # Run the burn job
+        burn_result = await run_prc_burn_job()
+        result["burn_executed"] = True
+        result["burn_result"] = burn_result
+        
+        # Log this action
+        if db is not None:
+            await db.admin_logs.insert_one({
+                "admin_uid": admin_id,
+                "action": "smart_burn_executed",
+                "timestamp": now_utc,
+                "details": {
+                    "burn_needed": burn_needed,
+                    "force": force_run,
+                    "result": burn_result.get("summary", {})
+                }
+            })
+        
+        result["message"] = "Burn job executed successfully"
+    else:
+        result["burn_executed"] = False
+        result["message"] = f"Burn already completed today at {last_burn_info.get('last_burn_time_ist', 'unknown')}. Use force=true to run again."
+    
+    return result
+
 @router.post("/run-prc-burn")
 async def run_prc_burn_manual(request: Request):
     """
