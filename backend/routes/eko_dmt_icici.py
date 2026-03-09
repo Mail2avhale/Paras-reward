@@ -226,8 +226,26 @@ async def customer_search(req: CustomerSearchRequest, request: Request):
             "user_code": EKO_USER_CODE
         }
         
-        response = requests.get(url, params=params, headers=get_eko_headers(), timeout=REQUEST_TIMEOUT)
-        logger.info(f"[DMT] Customer search response: {response.status_code} - {response.text[:300]}")
+        headers = get_eko_headers()
+        logger.info(f"[DMT] Customer search URL: {url}")
+        logger.info(f"[DMT] Customer search headers: developer_key={headers.get('developer_key', '')[:8]}...")
+        
+        response = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
+        logger.info(f"[DMT] Customer search response: {response.status_code}")
+        logger.info(f"[DMT] Customer search body: {response.text[:500] if response.text else 'EMPTY'}")
+        
+        # Handle 403 Forbidden (IP not whitelisted)
+        if response.status_code == 403:
+            return create_response(False, "IP_NOT_WHITELISTED", "IP not whitelisted with Eko. Contact admin to whitelist preview IP.", {
+                "http_status": 403,
+                "raw_response": response.text[:200] if response.text else "Empty"
+            })
+        
+        # Handle empty response
+        if not response.text or not response.text.strip():
+            return create_response(False, "EMPTY_RESPONSE", "Eko API returned empty response", {
+                "http_status": response.status_code
+            })
         
         result = response.json()
         eko_status = result.get("status")
