@@ -916,9 +916,13 @@ def get_operator_params(operator_id: str):
     
     Returns field validation rules (regex, min/max length, field names).
     Essential for proper form validation before payment.
+    
+    API: GET /v2/billpayments/operators/{operator_id}
+    (NOT /operators/{id}/params - that's incorrect!)
     """
     try:
-        url = f"{BASE_URL}/v2/billpayments/operators/{operator_id}/params?initiator_id={INITIATOR_ID}"
+        # Correct Eko API endpoint (no /params suffix!)
+        url = f"{BASE_URL}/v2/billpayments/operators/{operator_id}?initiator_id={INITIATOR_ID}"
         
         response = requests.get(url, headers=generate_headers(), timeout=30)
         
@@ -931,7 +935,8 @@ def get_operator_params(operator_id: str):
         
         result = response.json()
         
-        # Eko params API can return data directly or with status wrapper
+        # Eko params API returns: {operator_name, data: [...params], operator_id, fetchBill, BBPS}
+        # Note: 'data' is an array of parameters, not a dict!
         if isinstance(result, dict) and result.get("status") is not None and result.get("status") != 0:
             return create_error_response(
                 result.get("status"),
@@ -939,18 +944,30 @@ def get_operator_params(operator_id: str):
                 "Unable to load form requirements for this provider."
             )
         
-        # Get params - could be direct result or in data field
-        params = result.get("data", result) if isinstance(result, dict) else {}
+        # Handle both response formats
+        if isinstance(result, dict):
+            operator_name = result.get("operator_name")
+            operator_id_resp = result.get("operator_id")
+            fetch_bill = result.get("fetchBill", 0)
+            is_bbps = result.get("BBPS", 0)
+            # 'data' is array of parameter objects
+            parameters = result.get("data", [])
+        else:
+            operator_name = None
+            operator_id_resp = operator_id
+            fetch_bill = 0
+            is_bbps = 0
+            parameters = []
         
         return {
             "success": True,
             "operator_id": operator_id,
-            "operator_name": params.get("name"),
-            "category": params.get("category"),
-            "billFetchResponse": params.get("billFetchResponse", 0),
-            "supports_bill_fetch": params.get("billFetchResponse", 0) == 1,
-            "parameters": params.get("parameters", []),
-            "raw_response": params
+            "operator_name": operator_name,
+            "billFetchResponse": fetch_bill,
+            "supports_bill_fetch": fetch_bill == 1,
+            "is_bbps": is_bbps == 1,
+            "parameters": parameters,
+            "raw_response": result
         }
         
     except Exception as e:
