@@ -126,6 +126,7 @@ const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
 const DMTPage = lazy(() => import("@/pages/DMTPage"));
+const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
@@ -315,6 +316,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
             <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
             <Route path="/bank-transfer" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
+            <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
             
             {/* Stock requests removed - stockist system deprecated */}
             
