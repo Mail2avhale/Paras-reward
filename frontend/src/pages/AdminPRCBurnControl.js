@@ -343,9 +343,6 @@ const AdminPRCBurnControl = ({ user }) => {
         </div>
       </Card>
 
-      {/* Warning Card */}
-      <Card className="mt-6 p-4 bg-amber-500/10 border-amber-500/30">
-
       {/* Smart Auto Burn Section */}
       <Card className="mt-6 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
         <div className="flex items-start justify-between">

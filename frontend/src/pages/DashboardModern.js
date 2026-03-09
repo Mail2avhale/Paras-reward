@@ -9,7 +9,6 @@ import {
   ChevronRight, Sparkles, ShoppingBag, CreditCard,
   Sun, Moon, Sunrise, Sunset, Banknote, Building2, ShieldAlert
 } from 'lucide-react';
-import PRCExpiryTimer from '@/components/PRCExpiryTimer';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
 import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
@@ -715,16 +714,7 @@ const DashboardModern = ({ user, onLogout }) => {
             </div>
           </div>
 
-          {/* PRC Expiry Warning for Free Users */}
-          {!hasPaidPlan && stats.prcBalance > 0 && (
-            <div className="relative z-10 px-5 pb-4 -mt-2">
-              <PRCExpiryTimer 
-                userId={user?.uid}
-                prcBalance={stats.prcBalance}
-                miningHistory={miningHistory}
-              />
-            </div>
-          )}
+          {/* PRC Expiry removed - PRC no longer expires */}
         </motion.div>
       </div>
 
