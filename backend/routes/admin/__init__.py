@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
+# Create router for backward compatibility with routes/__init__.py
+router = APIRouter(prefix="/admin", tags=["Admin Base"])
+
 # Module-level variables (set by server.py)
 db = None
 cache = None
