@@ -995,3 +995,164 @@ def get_error_codes():
         "status_codes": EKO_ERROR_MESSAGES,
         "tx_status": TX_STATUS_MESSAGES
     }
+
+
+# ==================== SERVICE ACTIVATION ====================
+
+@router.post("/activate-service/{service_code}")
+async def activate_service(service_code: int = 53):
+    """
+    Activate a service for the merchant/agent
+    
+    Service Codes:
+    - 53: BBPS (Bill Payments - Electricity, Gas, DTH, Mobile, etc.)
+    - 45: DMT (Domestic Money Transfer)
+    
+    IMPORTANT: This must be called once to activate services before using them!
+    """
+    import requests as req
+    
+    try:
+        # Generate fresh headers with correct Content-Type for form data
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        # URL for service activation
+        url = f"{BASE_URL}/v1/user/service/activate"
+        
+        # Body - form data
+        data = {
+            "service_code": str(service_code),
+            "initiator_id": INITIATOR_ID,
+            "user_code": USER_CODE,
+            "latlong": "19.0760,72.8777"
+        }
+        
+        logging.info(f"[BBPS] Activating service {service_code} for user {USER_CODE}")
+        logging.info(f"[BBPS] URL: {url}")
+        
+        # Make PUT request (as per Eko docs)
+        response = req.put(url, headers=headers, data=data, timeout=60)
+        
+        logging.info(f"[BBPS] Activation response: {response.status_code} - {response.text[:200]}")
+        
+        try:
+            result = response.json()
+        except:
+            result = {"raw": response.text, "parse_error": True}
+        
+        eko_status = result.get("status")
+        
+        if eko_status == 0:
+            return {
+                "success": True,
+                "message": f"Service {service_code} activated successfully!",
+                "service_code": service_code,
+                "user_code": USER_CODE,
+                "raw_response": result
+            }
+        elif eko_status == 24:
+            # Already activated
+            return {
+                "success": True,
+                "message": f"Service {service_code} is already activated",
+                "service_code": service_code,
+                "user_code": USER_CODE,
+                "already_active": True,
+                "raw_response": result
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message", "Activation failed"),
+                "error_code": str(eko_status),
+                "service_code": service_code,
+                "raw_response": result
+            }
+            
+    except Exception as e:
+        logging.error(f"[BBPS] Service activation error: {e}")
+        return {
+            "success": False,
+            "message": f"Activation failed: {str(e)}",
+            "service_code": service_code
+        }
+
+
+@router.get("/service-status/{service_code}")
+async def check_service_status(service_code: int = 53):
+    """
+    Check if a service is activated for the user
+    """
+    import requests as req
+    
+    try:
+        # Generate headers
+        timestamp = str(round(time.time() * 1000))
+        encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key.encode(), timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp
+        }
+        
+        # Check specific service status
+        url = f"{BASE_URL}/v1/user/services?initiator_id={INITIATOR_ID}&user_code={USER_CODE}"
+        
+        logging.info(f"[BBPS] Checking service status: {url}")
+        
+        response = req.get(url, headers=headers, timeout=30)
+        result = response.json()
+        
+        logging.info(f"[BBPS] Service status response: {result}")
+        
+        return {
+            "success": True,
+            "service_code": service_code,
+            "user_code": USER_CODE,
+            "initiator_id": INITIATOR_ID,
+            "services": result.get("data", {}).get("service_list", result.get("data", {}).get("services", [])),
+            "raw_response": result
+        }
+        
+    except Exception as e:
+        logging.error(f"[BBPS] Service status check error: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "service_code": service_code
+        }
+
+
+@router.post("/activate-all")
+async def activate_all_services():
+    """
+    Activate all required services (BBPS + DMT)
+    """
+    results = {
+        "bbps_53": await activate_service(53),
+        "dmt_45": await activate_service(45)
+    }
+    
+    all_success = all(r.get("success") or r.get("already_active") for r in results.values())
+    
+    return {
+        "success": all_success,
+        "message": "All services activated" if all_success else "Some services failed",
+        "results": results
+    }
+

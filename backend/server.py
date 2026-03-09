@@ -37616,7 +37616,7 @@ api_router.include_router(razorpay_router)
 # Legacy Eko Bill Payment & DMT Router - DISABLED (replaced by clean implementations)
 # Routes are now in: bbps_services.py (BBPS) and eko_dmt_service.py (DMT)
 set_eko_db(db)
-# api_router.include_router(eko_router)  # Legacy - keeping set_db for any remaining dependencies
+api_router.include_router(eko_router)  # Re-enabled for mobile recharge & BBPS processing
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)

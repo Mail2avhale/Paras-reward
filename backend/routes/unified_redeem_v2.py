@@ -230,7 +230,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         # Route based on service type
         if service_type == "mobile_recharge":
             # Mobile recharge uses existing verified function
-            from routes.eko_payments import test_recharge_exact_format
+            from routes._archive_eko_payments_legacy import test_recharge_exact_format
             result = await test_recharge_exact_format(mobile=utility_acc_no, operator=operator, amount=amount)
             
             if result.get("success"):
@@ -253,7 +253,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         
         elif service_type == "electricity":
             # Electricity uses same BBPS function as other bill payments
-            from routes.eko_payments import execute_bbps_bill_payment
+            from routes._archive_eko_payments_legacy import execute_bbps_bill_payment
             
             result = await execute_bbps_bill_payment(
                 utility_acc_no=utility_acc_no,
@@ -264,7 +264,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         
         elif service_type in ["dth", "gas", "emi", "water", "broadband", "landline", "credit_card", "insurance", "fastag", "education", "cable_tv", "municipal_tax", "housing_society", "lpg", "mobile_postpaid"]:
             # All BBPS services use the same function with official format
-            from routes.eko_payments import execute_bbps_bill_payment
+            from routes._archive_eko_payments_legacy import execute_bbps_bill_payment
             
             result = await execute_bbps_bill_payment(
                 utility_acc_no=utility_acc_no,
