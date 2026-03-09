@@ -722,6 +722,185 @@ async def get_saved_accounts(uid: str):
     
     return {"accounts": accounts}
 
+
+# ==================== USER CANCEL REDEEM REQUEST ====================
+
+@router.post("/cancel/{request_id}")
+async def cancel_redeem_request(request_id: str, request: Request):
+    """
+    User cancels their pending redeem request via chatbot.
+    
+    - Only PENDING requests can be cancelled
+    - PRC is refunded back to user
+    - Request marked as 'cancelled_by_user'
+    
+    This allows users to cancel without admin intervention.
+    """
+    try:
+        data = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    except:
+        data = {}
+    
+    uid = data.get("uid", "")
+    
+    # Find the request
+    request_doc = await db.chatbot_withdrawal_requests.find_one({"request_id": request_id})
+    
+    if not request_doc:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Verify ownership if uid provided
+    if uid and request_doc.get("uid") != uid:
+        raise HTTPException(status_code=403, detail="You can only cancel your own requests")
+    
+    # Only pending requests can be cancelled
+    current_status = request_doc.get("status", "")
+    if current_status != "pending":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot cancel request with status: {current_status}. Only pending requests can be cancelled."
+        )
+    
+    now = datetime.now(timezone.utc).isoformat()
+    prc_to_refund = request_doc.get("prc_deducted", 0)
+    user_uid = request_doc.get("uid")
+    
+    # Update request status
+    await db.chatbot_withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "status": "cancelled_by_user",
+            "cancelled_at": now,
+            "cancellation_reason": "User demand - cancelled via chatbot",
+            "updated_at": now
+        }}
+    )
+    
+    # Refund PRC to user
+    if prc_to_refund > 0 and user_uid:
+        await db.users.update_one(
+            {"uid": user_uid},
+            {"$inc": {"prc_balance": prc_to_refund}}
+        )
+        
+        # Log refund transaction
+        await db.transactions.insert_one({
+            "transaction_id": str(uuid.uuid4()),
+            "uid": user_uid,
+            "type": "withdrawal_cancelled_refund",
+            "amount_prc": prc_to_refund,
+            "reference_id": request_id,
+            "status": "completed",
+            "description": "Withdrawal cancelled by user - PRC refunded",
+            "created_at": now
+        })
+    
+    return {
+        "success": True,
+        "message": "Withdrawal request cancelled successfully. PRC refunded to your account.",
+        "data": {
+            "request_id": request_id,
+            "prc_refunded": prc_to_refund,
+            "status": "cancelled_by_user"
+        }
+    }
+
+
+@router.get("/pending/{uid}")
+async def get_user_pending_requests(uid: str):
+    """
+    Get all pending withdrawal requests for a user.
+    User can cancel any of these via chatbot.
+    """
+    pending_requests = await db.chatbot_withdrawal_requests.find(
+        {"uid": uid, "status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(length=50)
+    
+    # Mask sensitive data
+    for req in pending_requests:
+        if req.get("account_number"):
+            req["account_number"] = "****" + req["account_number"][-4:]
+    
+    return {
+        "success": True,
+        "pending_count": len(pending_requests),
+        "requests": pending_requests,
+        "message": f"You have {len(pending_requests)} pending withdrawal request(s). You can cancel any of them."
+    }
+
+
+@router.post("/cancel-all/{uid}")
+async def cancel_all_pending_requests(uid: str, request: Request):
+    """
+    Cancel ALL pending withdrawal requests for a user.
+    All PRC is refunded.
+    """
+    # Get all pending requests
+    pending_requests = await db.chatbot_withdrawal_requests.find(
+        {"uid": uid, "status": "pending"}
+    ).to_list(length=100)
+    
+    if not pending_requests:
+        return {
+            "success": True,
+            "message": "No pending requests to cancel.",
+            "cancelled_count": 0,
+            "prc_refunded": 0
+        }
+    
+    now = datetime.now(timezone.utc).isoformat()
+    total_prc_refund = 0
+    cancelled_ids = []
+    
+    for req in pending_requests:
+        request_id = req.get("request_id")
+        prc_amount = req.get("prc_deducted", 0)
+        
+        # Update status
+        await db.chatbot_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "cancelled_by_user",
+                "cancelled_at": now,
+                "cancellation_reason": "User demand - bulk cancel via chatbot",
+                "updated_at": now
+            }}
+        )
+        
+        total_prc_refund += prc_amount
+        cancelled_ids.append(request_id)
+    
+    # Refund all PRC at once
+    if total_prc_refund > 0:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$inc": {"prc_balance": total_prc_refund}}
+        )
+        
+        # Log bulk refund
+        await db.transactions.insert_one({
+            "transaction_id": str(uuid.uuid4()),
+            "uid": uid,
+            "type": "withdrawal_bulk_cancel_refund",
+            "amount_prc": total_prc_refund,
+            "reference_id": ",".join(cancelled_ids),
+            "status": "completed",
+            "description": f"Bulk cancel - {len(cancelled_ids)} requests cancelled by user",
+            "created_at": now
+        })
+    
+    return {
+        "success": True,
+        "message": f"Successfully cancelled {len(cancelled_ids)} pending request(s). All PRC refunded.",
+        "data": {
+            "cancelled_count": len(cancelled_ids),
+            "prc_refunded": total_prc_refund,
+            "cancelled_request_ids": cancelled_ids
+        }
+    }
+
+
 # ==================== ADMIN ENDPOINTS ====================
 
 @router.get("/admin/pending")

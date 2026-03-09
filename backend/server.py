@@ -4121,56 +4121,45 @@ async def daily_percentage_burn():
 
 async def run_prc_burn_job():
     """
-    Main PRC burn job - runs all burn operations
+    Main PRC burn job - runs ONLY daily percentage burn
     Called by scheduler at 11 AM and 11 PM IST
+    
+    IMPORTANT CHANGES (as per business requirement):
+    1. NO PRC EXPIRATION - Explorer/VIP expiry burns DISABLED
+    2. ONLY DAILY 0.5% BURN from available PRC balance
     """
     now = datetime.now(timezone.utc)
     logging.info(f"[PRC BURN JOB] Starting burn job at {now.isoformat()}")
     
     results = {
         "timestamp": now.isoformat(),
-        "explorer_burn": {},
-        "expired_vip_burn": {},
+        "explorer_burn": {"status": "DISABLED", "reason": "No PRC expiration policy"},
+        "expired_vip_burn": {"status": "DISABLED", "reason": "No PRC expiration policy"},
         "daily_percentage_burn": {}
     }
     
-    try:
-        # 1. Burn expired PRC for Explorer users (4hr validity)
-        results["explorer_burn"] = await burn_expired_prc_for_explorer_users()
-    except Exception as e:
-        logging.error(f"[PRC BURN] Explorer burn error: {e}")
-        results["explorer_burn"] = {"error": str(e)}
+    # DISABLED: Explorer burn (4hr validity) - No more PRC expiration
+    # results["explorer_burn"] = await burn_expired_prc_for_explorer_users()
+    
+    # DISABLED: Expired VIP burn (2 day validity) - No more PRC expiration  
+    # results["expired_vip_burn"] = await burn_expired_prc_for_expired_vip()
     
     try:
-        # 2. Burn expired PRC for Expired VIP users (2 day validity)
-        results["expired_vip_burn"] = await burn_expired_prc_for_expired_vip()
-    except Exception as e:
-        logging.error(f"[PRC BURN] Expired VIP burn error: {e}")
-        results["expired_vip_burn"] = {"error": str(e)}
-    
-    try:
-        # 3. Daily 0.5% burn for ALL users
+        # ONLY THIS: Daily 0.5% burn for ALL users from available PRC
         results["daily_percentage_burn"] = await daily_percentage_burn()
     except Exception as e:
         logging.error(f"[PRC BURN] Daily percentage burn error: {e}")
         results["daily_percentage_burn"] = {"error": str(e)}
     
-    # Calculate totals
-    total_users = (
-        results.get("explorer_burn", {}).get("users_affected", 0) +
-        results.get("expired_vip_burn", {}).get("users_affected", 0) +
-        results.get("daily_percentage_burn", {}).get("users_affected", 0)
-    )
-    total_burned = (
-        results.get("explorer_burn", {}).get("total_burned", 0) +
-        results.get("expired_vip_burn", {}).get("total_burned", 0) +
-        results.get("daily_percentage_burn", {}).get("total_burned", 0)
-    )
+    # Calculate totals (only from daily burn now)
+    total_users = results.get("daily_percentage_burn", {}).get("users_affected", 0)
+    total_burned = results.get("daily_percentage_burn", {}).get("total_burned", 0)
     
     results["summary"] = {
         "total_users_affected": total_users,
         "total_prc_burned": round(total_burned, 2),
-        "status": "completed"
+        "status": "completed",
+        "note": "Only daily 0.5% burn active. No PRC expiration."
     }
     
     logging.info(f"[PRC BURN JOB] Completed: {total_users} users, {total_burned:.2f} PRC burned")
@@ -7017,6 +7006,14 @@ async def claim_mining(uid: str):
     
     # Use helper function - subscription_plan is source of truth
     is_vip = is_paid_subscriber(user)
+    
+    # IMPORTANT: Free/Explorer users CANNOT collect PRC
+    if not is_vip:
+        subscription_plan = user.get("subscription_plan", "explorer")
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Free/Explorer users cannot collect PRC. Please upgrade to VIP to claim your mined coins. Current plan: {subscription_plan}"
+        )
     
     # Derive membership_type for backward compatibility in records
     subscription_plan = user.get("subscription_plan", "explorer")
