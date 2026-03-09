@@ -721,8 +721,7 @@ const DailyRewards = ({ user }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
-  const [baseRate, setBaseRate] = useState(0); // Individual base mining rate
-  const [singleLegInfo, setSingleLegInfo] = useState(null); // Single leg bonus info
+  const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes single leg bonus)
   
   // NEW: Enhanced animation states
   const [showCollectAnimation, setShowCollectAnimation] = useState(false);
@@ -771,7 +770,7 @@ const DailyRewards = ({ user }) => {
       setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
       setReferralBreakdown(miningData.referral_breakdown || null);
       setBaseRate(miningData.base_rate || 0);
-      setSingleLegInfo(miningData.single_leg_info || null);
+      // single_leg_info is included in base_rate, no separate display needed
       
       // Auto-start mining display if session is active
       if (miningData.session_active && miningData.remaining_hours > 0) {
@@ -1512,31 +1511,6 @@ const DailyRewards = ({ user }) => {
             </p>
           </div>
           
-          {/* Single Leg Bonus - Special Highlight */}
-          {singleLegInfo && (
-            <div className="flex items-center justify-between py-3 border-b border-pink-500/30 bg-gradient-to-r from-pink-500/5 to-purple-500/5 -mx-4 px-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center">
-                  <Gift className="w-4 h-4 text-pink-400" />
-                </div>
-                <div>
-                  <p className="text-pink-300 text-sm font-semibold">Single Leg Bonus</p>
-                  <p className="text-zinc-500 text-xs">
-                    {singleLegInfo.active_downline || 0} active / {singleLegInfo.total_downline || 0} total • Max {singleLegInfo.max_users || 800} users
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`font-mono text-sm font-semibold ${(singleLegInfo.bonus_prc_per_hour || 0) > 0 ? 'text-pink-400' : 'text-zinc-600'}`}>
-                  +{(singleLegInfo.bonus_prc_per_hour || 0).toFixed(2)} PRC/hr
-                </p>
-                <p className="text-zinc-500 text-xs">
-                  ≈ {(singleLegInfo.bonus_prc_per_day || 0).toFixed(0)} PRC/day
-                </p>
-              </div>
-            </div>
-          )}
-          
           {/* Total */}
           <div className="flex items-center justify-between pt-3 mt-2 border-t-2 border-amber-500/30">
             <div className="flex items-center gap-3">
@@ -1557,7 +1531,7 @@ const DailyRewards = ({ user }) => {
           <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
             <p className="text-blue-300 text-xs flex items-start gap-2">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Team bonus from active PAID users. Single Leg bonus: {singleLegInfo?.prc_per_user_per_day || 5} PRC/day per active downline (max {singleLegInfo?.max_users || 800}).</span>
+              <span>Bonus is calculated from active PAID users only. Free users don't contribute to mining speed.</span>
             </p>
           </div>
         </div>
