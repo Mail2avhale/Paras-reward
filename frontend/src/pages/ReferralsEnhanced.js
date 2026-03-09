@@ -132,54 +132,15 @@ const ReferralsEnhanced = ({ user }) => {
   const [applyingCode, setApplyingCode] = useState(false);
   const [showApplySection, setShowApplySection] = useState(false);
 
-  // Confetti celebration function
+  // Confetti celebration function - SIMPLIFIED for better performance
   const triggerConfetti = useCallback(() => {
-    // Fire confetti from multiple angles
-    const count = 200;
-    const defaults = {
-      origin: { y: 0.7 },
-      zIndex: 9999,
-    };
-
-    function fire(particleRatio, opts) {
-      confetti({
-        ...defaults,
-        ...opts,
-        particleCount: Math.floor(count * particleRatio),
-      });
-    }
-
-    // Gold and amber colors for brand consistency
-    fire(0.25, {
-      spread: 26,
-      startVelocity: 55,
+    // Single confetti burst for smoother performance
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
       colors: ['#f59e0b', '#fbbf24', '#d97706'],
-    });
-    
-    fire(0.2, {
-      spread: 60,
-      colors: ['#f59e0b', '#fbbf24', '#fcd34d'],
-    });
-    
-    fire(0.35, {
-      spread: 100,
-      decay: 0.91,
-      scalar: 0.8,
-      colors: ['#f59e0b', '#d97706', '#92400e'],
-    });
-    
-    fire(0.1, {
-      spread: 120,
-      startVelocity: 25,
-      decay: 0.92,
-      scalar: 1.2,
-      colors: ['#fbbf24', '#fcd34d', '#fef3c7'],
-    });
-    
-    fire(0.1, {
-      spread: 120,
-      startVelocity: 45,
-      colors: ['#a855f7', '#7c3aed', '#f59e0b'],
+      zIndex: 9999,
     });
   }, []);
 

@@ -51,15 +51,16 @@ const sendSessionEndNotification = () => {
 };
 
 // ============================================
-// ENHANCED PARTICLE SYSTEM
+// ENHANCED PARTICLE SYSTEM - OPTIMIZED
 // ============================================
 const MiningParticles = ({ isActive, intensity = 1 }) => {
-  const particles = Array.from({ length: Math.floor(12 * intensity) }, (_, i) => ({
+  // Reduced particle count for smoother performance
+  const particles = Array.from({ length: Math.floor(6 * intensity) }, (_, i) => ({
     id: i,
     delay: Math.random() * 2,
-    duration: 2 + Math.random() * 2,
+    duration: 3 + Math.random() * 2,
     x: Math.random() * 100,
-    size: 2 + Math.random() * 4
+    size: 3 + Math.random() * 3
   }));
 
   if (!isActive) return null;
@@ -69,44 +70,22 @@ const MiningParticles = ({ isActive, intensity = 1 }) => {
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full"
+          className="absolute rounded-full bg-amber-400/60"
           style={{
             left: `${p.x}%`,
             width: p.size,
             height: p.size,
-            background: `radial-gradient(circle, rgba(251, 191, 36, 0.9) 0%, rgba(245, 158, 11, 0.6) 50%, transparent 100%)`
           }}
-          initial={{ y: '100%', opacity: 0, scale: 0 }}
+          initial={{ y: '100%', opacity: 0 }}
           animate={{
             y: '-100%',
-            opacity: [0, 1, 1, 0],
-            scale: [0.5, 1.2, 1, 0.5],
-            x: [0, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20]
+            opacity: [0, 0.8, 0],
           }}
           transition={{
             duration: p.duration,
             delay: p.delay,
             repeat: Infinity,
-            ease: 'easeOut'
-          }}
-        />
-      ))}
-      {/* Glowing orbs */}
-      {[...Array(3)].map((_, i) => (
-        <motion.div
-          key={`orb-${i}`}
-          className="absolute w-3 h-3 rounded-full bg-amber-400/40 blur-sm"
-          style={{ left: `${20 + i * 30}%` }}
-          animate={{
-            y: ['80%', '20%', '80%'],
-            opacity: [0.3, 0.8, 0.3],
-            scale: [1, 1.5, 1]
-          }}
-          transition={{
-            duration: 3 + i,
-            delay: i * 0.5,
-            repeat: Infinity,
-            ease: 'easeInOut'
+            ease: 'linear'
           }}
         />
       ))}

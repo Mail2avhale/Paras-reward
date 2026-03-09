@@ -195,7 +195,7 @@ const AdminRedeemDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpack
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
 const AdminDMTDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminDMTDashboard"));
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
-const BillPayments = lazy(() => import("@/pages/BillPayments"));
+// BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 
