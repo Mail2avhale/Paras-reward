@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://eko-payments.preview.emergentagent.com/setup
+   https://burn-scheduler-fix.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

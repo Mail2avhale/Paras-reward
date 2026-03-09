@@ -68,6 +68,12 @@
    - Mining routes extracted to `/app/backend/routes/mining.py`
    - 667 lines removed from server.py (38854 → 38187 lines)
    - Admin routes base module created at `/app/backend/routes/admin/`
+10. ✅ **PRC Redeem Statement Enhancement** (March 9, 2026)
+    - Added DMT transactions to statement (`dmt_transactions` collection)
+    - Added Shop Orders to statement (`orders` collection)
+    - Added Service Type filter dropdown (BBPS, DMT, Gift Vouchers, Bank Withdrawals, Shop Orders)
+    - Backend: `/api/user/prc-statement/{uid}` endpoint updated with `category` parameter
+    - Frontend: PRCStatement.js updated with new icons (Send, ShoppingBag) and colors
 
 ---
 
@@ -76,11 +82,11 @@
 ### P1 (High Priority):
 - [ ] Production Performance Monitoring - latent risk
 - [ ] DMT Account Verification step (pre-transfer)
-- [ ] BBPS biller verification (AEML, JPDCL)
 - [ ] Production Auto-Burning scheduler fix
+- [ ] Backend monolith refactoring (server.py still 38000+ lines)
 
 ### P2 (Medium Priority):
-- [ ] Mining Rate Display verification on production
+- [ ] Mining Rate Display verification on production (Elite user)
 - [ ] KYC image migration (base64 → file storage)
 - [ ] Razorpay auto-subscription fix
 - [ ] PRC Vault migration script
@@ -88,7 +94,8 @@
 
 ### P3 (Low Priority):
 - [ ] Email/Mobile OTP verification
-- [ ] Backend monolith refactoring
+- [ ] Admin Panel "Failed to delete plan" error fix
+- [ ] BBPS biller verification (AEML, JPDCL)
 
 ---
 

@@ -26,15 +26,18 @@ async def get_prc_redeem_statement(
     end_date: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    transaction_type: Optional[str] = None  # redeem, refund, all
+    transaction_type: Optional[str] = None,  # redeem, refund, all
+    category: Optional[str] = None  # bill_payment, dmt, gift_voucher, bank_transfer, shop, all
 ):
     """
     Get PRC Redeem Statement for a user
     
     Returns:
     - Bill Payments (BBPS)
+    - DMT (Money Transfer)
     - Gift Vouchers
     - Bank Withdrawals
+    - Shop Orders
     - Refunds
     
     With date and narration for each entry
@@ -92,7 +95,47 @@ async def get_prc_redeem_statement(
                     "reference": bill.get("eko_tid", "")
                 })
         
-        # ========== 2. GIFT VOUCHERS ==========
+        # ========== 2. DMT TRANSACTIONS ==========
+        if transaction_type in [None, "all", "redeem"]:
+            dmt_query = {
+                "user_id": uid,
+                "status": {"$in": ["completed", "success"]},
+                "created_at": {"$gte": start_datetime, "$lte": end_datetime}
+            }
+            
+            dmt_transactions = await db.dmt_transactions.find(
+                dmt_query,
+                {"_id": 0, "transaction_id": 1, "recipient_id": 1, "mobile": 1,
+                 "amount_inr": 1, "prc_amount": 1, "status": 1, 
+                 "created_at": 1, "eko_tid": 1, "beneficiary_name": 1, "bank_name": 1}
+            ).sort("created_at", -1).to_list(500)
+            
+            for dmt in dmt_transactions:
+                beneficiary = dmt.get("beneficiary_name", "")
+                bank = dmt.get("bank_name", "")
+                recipient = dmt.get("recipient_id", "")[-4:] if dmt.get("recipient_id") else ""
+                
+                narration_parts = ["Money Transfer"]
+                if beneficiary:
+                    narration_parts.append(beneficiary)
+                if bank:
+                    narration_parts.append(f"({bank})")
+                elif recipient:
+                    narration_parts.append(f"(...{recipient})")
+                
+                entries.append({
+                    "id": dmt.get("transaction_id", ""),
+                    "date": dmt.get("created_at", ""),
+                    "type": "redeem",
+                    "category": "dmt",
+                    "narration": " - ".join(narration_parts) if len(narration_parts) > 1 else "Money Transfer",
+                    "prc_amount": -abs(dmt.get("prc_amount", 0)),
+                    "inr_value": dmt.get("amount_inr", 0),
+                    "status": dmt.get("status", "completed"),
+                    "reference": dmt.get("eko_tid", "") or dmt.get("transaction_id", "")
+                })
+        
+        # ========== 3. GIFT VOUCHERS ==========
         if transaction_type in [None, "all", "redeem"]:
             voucher_query = {
                 "user_id": uid,
@@ -125,7 +168,7 @@ async def get_prc_redeem_statement(
                     "reference": voucher.get("voucher_code", "")[:8] + "..." if voucher.get("voucher_code") else ""
                 })
         
-        # ========== 3. BANK WITHDRAWALS ==========
+        # ========== 4. BANK WITHDRAWALS ==========
         if transaction_type in [None, "all", "redeem"]:
             withdrawal_query = {
                 "user_id": uid,
@@ -159,7 +202,41 @@ async def get_prc_redeem_statement(
                     "reference": wd.get("utr_number", "")
                 })
         
-        # ========== 4. REFUNDS ==========
+        # ========== 5. SHOP/MARKETPLACE ORDERS ==========
+        if transaction_type in [None, "all", "redeem"]:
+            shop_query = {
+                "user_id": uid,
+                "status": {"$in": ["approved", "completed", "delivered", "shipped"]},
+                "$or": [
+                    {"created_at": {"$gte": start_datetime, "$lte": end_datetime}},
+                    {"approved_at": {"$gte": start_datetime, "$lte": end_datetime}}
+                ]
+            }
+            
+            shop_orders = await db.orders.find(
+                shop_query,
+                {"_id": 0, "order_id": 1, "product_name": 1, "product_title": 1,
+                 "total_prc": 1, "prc_used": 1, "total_amount": 1, "status": 1, 
+                 "created_at": 1, "approved_at": 1, "quantity": 1}
+            ).sort("created_at", -1).to_list(500)
+            
+            for order in shop_orders:
+                product = order.get("product_name") or order.get("product_title", "Shop Order")
+                qty = order.get("quantity", 1)
+                
+                entries.append({
+                    "id": order.get("order_id", ""),
+                    "date": order.get("approved_at") or order.get("created_at", ""),
+                    "type": "redeem",
+                    "category": "shop",
+                    "narration": f"Shop - {product}" + (f" x{qty}" if qty > 1 else ""),
+                    "prc_amount": -abs(order.get("total_prc", 0) or order.get("prc_used", 0)),
+                    "inr_value": order.get("total_amount", 0),
+                    "status": order.get("status", "completed"),
+                    "reference": order.get("order_id", "")
+                })
+        
+        # ========== 6. REFUNDS ==========
         if transaction_type in [None, "all", "refund"]:
             # Check transactions collection for refunds
             refund_query = {
@@ -219,6 +296,10 @@ async def get_prc_redeem_statement(
         
         # Sort all entries by date (newest first)
         entries.sort(key=lambda x: x.get("date", ""), reverse=True)
+        
+        # Apply category filter if specified
+        if category and category != 'all':
+            entries = [e for e in entries if e.get("category") == category]
         
         # Calculate totals
         total_redeemed = sum(abs(e["prc_amount"]) for e in entries if e["type"] == "redeem")

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Download, Filter, RefreshCw, Receipt, Gift, Building2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { ArrowLeft, Download, Filter, RefreshCw, Receipt, Gift, Building2, ArrowUpRight, ArrowDownLeft, Send, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -27,6 +27,7 @@ const PRCStatement = ({ user }) => {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [filterType, setFilterType] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const fetchStatement = useCallback(async () => {
     if (!user?.uid) return;
@@ -43,6 +44,9 @@ const PRCStatement = ({ user }) => {
       });
       if (filterType !== 'all') {
         params.append('transaction_type', filterType);
+      }
+      if (categoryFilter !== 'all') {
+        params.append('category', categoryFilter);
       }
       
       const response = await fetch(
@@ -61,7 +65,7 @@ const PRCStatement = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, token, startDate, endDate, page, filterType]);
+  }, [user?.uid, token, startDate, endDate, page, filterType, categoryFilter]);
 
   useEffect(() => {
     fetchStatement();
@@ -103,6 +107,8 @@ const PRCStatement = ({ user }) => {
       case 'bill_payment': return <Receipt className="w-4 h-4" />;
       case 'gift_voucher': return <Gift className="w-4 h-4" />;
       case 'bank_transfer': return <Building2 className="w-4 h-4" />;
+      case 'dmt': return <Send className="w-4 h-4" />;
+      case 'shop': return <ShoppingBag className="w-4 h-4" />;
       default: return <RefreshCw className="w-4 h-4" />;
     }
   };
@@ -112,6 +118,8 @@ const PRCStatement = ({ user }) => {
       case 'bill_payment': return 'bg-blue-500/20 text-blue-400';
       case 'gift_voucher': return 'bg-purple-500/20 text-purple-400';
       case 'bank_transfer': return 'bg-green-500/20 text-green-400';
+      case 'dmt': return 'bg-cyan-500/20 text-cyan-400';
+      case 'shop': return 'bg-orange-500/20 text-orange-400';
       case 'refund': return 'bg-yellow-500/20 text-yellow-400';
       default: return 'bg-gray-500/20 text-gray-400';
     }
@@ -197,6 +205,23 @@ const PRCStatement = ({ user }) => {
                 {type === 'all' ? 'All' : type === 'redeem' ? 'Redeemed' : 'Refunds'}
               </button>
             ))}
+          </div>
+          
+          {/* Category Filter */}
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Service Type</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 rounded-lg text-sm border border-gray-600 focus:border-emerald-500 outline-none"
+            >
+              <option value="all">All Services</option>
+              <option value="bill_payment">BBPS (Bill Payments)</option>
+              <option value="dmt">Money Transfer (DMT)</option>
+              <option value="gift_voucher">Gift Vouchers</option>
+              <option value="bank_transfer">Bank Withdrawals</option>
+              <option value="shop">Shop Orders</option>
+            </select>
           </div>
         </div>
 
