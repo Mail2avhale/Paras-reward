@@ -40,10 +40,10 @@ router = APIRouter(prefix="/dmt", tags=["EKO DMT ICICI v1"])
 # EKO PRODUCTION CONFIGURATION (ICICI Route)
 # ============================================================================
 
-EKO_BASE_URL = "https://api.eko.in:25002/ekoicici"
+EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "7c179a397b4710e71b2248d1f5892d19")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
-EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "7a2529f5-3587-4add-a2df-3d0606d62460")
+EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "mining-formula-v2")
 EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
 
 # Whitelisted IPs
