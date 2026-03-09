@@ -477,13 +477,13 @@ is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
 # Configure connection options - OPTIMIZED for production performance
 connection_options = {
-    'serverSelectionTimeoutMS': 5000,  # 5 second timeout (faster failure)
-    'connectTimeoutMS': 5000,  # 5 second connection timeout
+    'serverSelectionTimeoutMS': 3000,  # 3 second timeout (faster startup)
+    'connectTimeoutMS': 3000,  # 3 second connection timeout
     'socketTimeoutMS': 20000,  # 20 second socket timeout
     'maxPoolSize': 20,  # Reduced for single-worker (avoid connection overhead)
-    'minPoolSize': 2,   # Keep 2 connections warm
+    'minPoolSize': 1,   # Keep 1 connection warm (faster startup)
     'maxIdleTimeMS': 60000,  # Keep idle connections for 1 minute
-    'waitQueueTimeoutMS': 5000,  # Wait 5s max for connection
+    'waitQueueTimeoutMS': 3000,  # Wait 3s max for connection
     'retryWrites': True,  # Enable retryable writes
     'retryReads': True,  # Enable retryable reads
     'directConnection': not is_atlas,  # Use direct connection for local MongoDB
@@ -719,12 +719,13 @@ async def health_check():
 # Also expose health check under /api prefix for ingress routing
 @api_router.get("/health")
 async def api_health_check():
-    """Health check endpoint under /api prefix"""
+    """Health check endpoint - instant response, no DB check"""
     global db_ready
     return {
         "status": "healthy",
         "database": "connected" if db_ready else "connecting",
-        "service": "paras-reward-api"
+        "service": "paras-reward-api",
+        "version": "2.0"
     }
 
 @api_router.get("/health/db")
@@ -4104,9 +4105,9 @@ async def daily_percentage_burn():
             users_burned=users_affected,
             users_skipped=len(users_with_prc) - users_affected,
             total_prc_burned=total_burned,
-            notes=f"Daily {burn_pct}% burn at {now.strftime('%H:%M')} IST",
+            skipped_users_details=[],  # No skips in daily burn
             burned_users_details=burned_details[:100],
-            settings_used=BURN_SETTINGS
+            settings_used={**BURN_SETTINGS, "notes": f"Daily {burn_pct}% burn at {now.strftime('%H:%M')} IST"}
         )
     except Exception as e:
         logging.error(f"[BURN LOG] Failed to log: {e}")
@@ -38043,8 +38044,8 @@ async def startup_db():
     
     # Verify MongoDB connection with retry logic for Atlas
     # Atlas connections can take longer, especially on cold starts
-    max_retries = 10  # More retries for Atlas
-    retry_delay = 5   # Longer delay between retries
+    max_retries = 5  # Reduced retries for faster startup
+    retry_delay = 2   # Shorter delay between retries
     
     for attempt in range(max_retries):
         try:
