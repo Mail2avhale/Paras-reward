@@ -23,6 +23,7 @@ import os
 import time
 import hashlib
 import base64
+import hmac
 import logging
 import requests
 from datetime import datetime, timezone, timedelta
@@ -74,14 +75,35 @@ def get_db():
 
 def generate_secret_key():
     """
-    Generate EKO secret key.
-    Formula: base64(sha256(developer_key + timestamp + authenticator_key))
+    Generate EKO secret key using CORRECT algorithm.
+    
+    CORRECT Algorithm (from Eko Node.js reference):
+    1. Base64 encode the AUTHENTICATOR_KEY (not developer_key!)
+    2. Get current timestamp in MILLISECONDS
+    3. Compute HMAC-SHA256 of timestamp using the base64-encoded authenticator key
+    4. Base64 encode the HMAC result to get secret-key
+    
+    Returns:
+        tuple: (secret_key, timestamp_ms)
     """
-    timestamp = str(int(time.time()))
-    raw_string = EKO_DEVELOPER_KEY + timestamp + EKO_AUTHENTICATOR_KEY
-    hash_bytes = hashlib.sha256(raw_string.encode('utf-8')).digest()
-    secret_key = base64.b64encode(hash_bytes).decode('utf-8')
-    return secret_key, timestamp
+    # Step 1: Base64 encode the AUTHENTICATOR KEY (CRITICAL!)
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+    
+    # Step 2: Get timestamp in MILLISECONDS
+    timestamp_ms = str(int(time.time() * 1000))
+    
+    # Step 3: HMAC-SHA256 of timestamp using encoded authenticator key
+    hmac_obj = hmac.new(
+        encoded_key.encode('utf-8'),
+        timestamp_ms.encode('utf-8'),
+        hashlib.sha256
+    )
+    
+    # Step 4: Base64 encode the result
+    secret_key = base64.b64encode(hmac_obj.digest()).decode('utf-8')
+    
+    logger.info(f"[EKO AUTH] Timestamp: {timestamp_ms}, Key generated with authenticator")
+    return secret_key, timestamp_ms
 
 
 def get_eko_headers():
@@ -91,9 +113,7 @@ def get_eko_headers():
         "developer_key": EKO_DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "initiator_id": EKO_INITIATOR_ID,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-Forwarded-For": SOURCE_IP
+        "Content-Type": "application/x-www-form-urlencoded"
     }
 
 
