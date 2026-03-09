@@ -124,6 +124,7 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit"));
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
+const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
 const DMTPage = lazy(() => import("@/pages/DMTPage"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -401,6 +402,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             
             {/* New Redeem V2 Route - Unified Services */}
             <Route path="/redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <RedeemPageV2 user={user} />) : <Navigate to="/login" />} />
+            
+            {/* User Withdrawal History - View and cancel requests */}
+            <Route path="/withdrawal-history" element={user ? <Suspense fallback={<LoadingFallback />}><UserWithdrawalHistory user={user} /></Suspense> : <Navigate to="/login" />} />
             
             {/* Old bill-payments route redirects to new redeem page */}
             <Route path="/bill-payments" element={<Navigate to="/redeem" replace />} />

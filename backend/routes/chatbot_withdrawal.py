@@ -830,6 +830,160 @@ async def get_user_pending_requests(uid: str):
     }
 
 
+@router.get("/all/{uid}")
+async def get_all_user_requests(uid: str, status: str = None, limit: int = 50):
+    """
+    Get ALL withdrawal requests for a user (old and new).
+    
+    Query params:
+    - status: filter by status (pending, completed, cancelled_by_user, rejected, etc.)
+    - limit: max number of requests (default 50)
+    """
+    query = {"uid": uid}
+    
+    if status:
+        query["status"] = status
+    
+    requests = await db.chatbot_withdrawal_requests.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(length=limit)
+    
+    # Mask sensitive data and add display info
+    for req in requests:
+        if req.get("account_number"):
+            req["account_number_masked"] = "****" + req["account_number"][-4:]
+        
+        # Add cancellable flag
+        req["can_cancel"] = req.get("status") == "pending"
+        
+        # Format status for display
+        status_map = {
+            "pending": "🕐 Pending",
+            "processing": "⏳ Processing", 
+            "completed": "✅ Completed",
+            "cancelled_by_user": "❌ Cancelled",
+            "rejected": "🚫 Rejected",
+            "failed": "❌ Failed"
+        }
+        req["status_display"] = status_map.get(req.get("status"), req.get("status"))
+    
+    # Count by status
+    status_counts = {}
+    all_statuses = await db.chatbot_withdrawal_requests.aggregate([
+        {"$match": {"uid": uid}},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]).to_list(length=20)
+    
+    for s in all_statuses:
+        status_counts[s["_id"]] = s["count"]
+    
+    return {
+        "success": True,
+        "total_count": len(requests),
+        "status_counts": status_counts,
+        "requests": requests
+    }
+
+
+@router.post("/cancel-selected")
+async def cancel_selected_requests(request: Request):
+    """
+    Cancel multiple selected pending requests.
+    
+    Body:
+    {
+        "uid": "user-id",
+        "request_ids": ["req1", "req2", "req3"]
+    }
+    """
+    try:
+        data = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    
+    uid = data.get("uid", "")
+    request_ids = data.get("request_ids", [])
+    
+    if not uid:
+        raise HTTPException(status_code=400, detail="User ID required")
+    
+    if not request_ids or not isinstance(request_ids, list):
+        raise HTTPException(status_code=400, detail="request_ids list required")
+    
+    # Find all selected pending requests
+    pending_requests = await db.chatbot_withdrawal_requests.find({
+        "request_id": {"$in": request_ids},
+        "uid": uid,
+        "status": "pending"
+    }).to_list(length=100)
+    
+    if not pending_requests:
+        return {
+            "success": False,
+            "message": "No pending requests found to cancel.",
+            "cancelled_count": 0,
+            "prc_refunded": 0
+        }
+    
+    now = datetime.now(timezone.utc).isoformat()
+    total_prc_refund = 0
+    cancelled_ids = []
+    skipped_ids = []
+    
+    for req in pending_requests:
+        request_id = req.get("request_id")
+        prc_amount = req.get("prc_deducted", 0)
+        
+        # Update status
+        await db.chatbot_withdrawal_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {
+                "status": "cancelled_by_user",
+                "cancelled_at": now,
+                "cancellation_reason": "User demand - selected cancel",
+                "updated_at": now
+            }}
+        )
+        
+        total_prc_refund += prc_amount
+        cancelled_ids.append(request_id)
+    
+    # Find which IDs were not cancelled (not pending or not found)
+    skipped_ids = [rid for rid in request_ids if rid not in cancelled_ids]
+    
+    # Refund all PRC at once
+    if total_prc_refund > 0:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$inc": {"prc_balance": total_prc_refund}}
+        )
+        
+        # Log refund transaction
+        await db.transactions.insert_one({
+            "transaction_id": str(uuid.uuid4()),
+            "uid": uid,
+            "type": "withdrawal_selected_cancel_refund",
+            "amount_prc": total_prc_refund,
+            "reference_id": ",".join(cancelled_ids),
+            "status": "completed",
+            "description": f"Selected cancel - {len(cancelled_ids)} requests cancelled by user",
+            "created_at": now
+        })
+    
+    return {
+        "success": True,
+        "message": f"Successfully cancelled {len(cancelled_ids)} request(s). PRC refunded.",
+        "data": {
+            "cancelled_count": len(cancelled_ids),
+            "prc_refunded": total_prc_refund,
+            "cancelled_request_ids": cancelled_ids,
+            "skipped_request_ids": skipped_ids,
+            "skipped_reason": "Not pending or not found" if skipped_ids else None
+        }
+    }
+
+
 @router.post("/cancel-all/{uid}")
 async def cancel_all_pending_requests(uid: str, request: Request):
     """
