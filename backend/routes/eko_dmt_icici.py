@@ -198,7 +198,7 @@ async def log_transaction(user_id: str, reference_id: str, amount: float,
 
 async def get_user_daily_total(user_id: str) -> float:
     """Get user's total DMT amount for today"""
-    if not db:
+    if db is None:
         return 0
     
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -575,19 +575,42 @@ async def initiate_transfer(req: TransferRequest, request: Request):
     try:
         url = f"{EKO_BASE_URL}/v1/transactions"
         
+        # Generate request_hash for transaction security
+        encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
+        timestamp_ms = str(int(time.time() * 1000))
+        
+        # HMAC for secret-key
+        hmac_secret = hmac.new(encoded_key.encode('utf-8'), timestamp_ms.encode('utf-8'), hashlib.sha256)
+        secret_key = base64.b64encode(hmac_secret.digest()).decode('utf-8')
+        
+        # HMAC for request_hash (timestamp + utility_acc_no + amount + user_code)
+        concat_str = timestamp_ms + "" + str(int(inr_amount)) + EKO_USER_CODE
+        hmac_hash = hmac.new(encoded_key.encode('utf-8'), concat_str.encode('utf-8'), hashlib.sha256)
+        request_hash = base64.b64encode(hmac_hash.digest()).decode('utf-8')
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "request_hash": request_hash,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
         payload = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "customer_mobile": req.mobile,
+            "customer_id": req.mobile,
             "recipient_id": req.recipient_id,
-            "amount": int(inr_amount),
-            "reference_id": reference_id,
+            "amount": str(int(inr_amount)),
+            "client_ref_id": reference_id,
             "channel": "2",
-            "latlong": "0,0"
+            "state": "1",  # 1 = Commit transaction
+            "latlong": "19.0760,72.8777",
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        response = requests.post(url, data=payload, headers=get_eko_headers(), timeout=60)
-        logger.info(f"[DMT] Transfer response: {response.status_code} - {response.text}")
+        response = requests.post(url, data=payload, headers=headers, timeout=60)
+        logger.info(f"[DMT] Transfer response: {response.status_code} - {response.text[:500]}")
         
         result = response.json()
         eko_status = result.get("status")
@@ -706,7 +729,7 @@ async def get_wallet(user_id: str):
     
     Returns PRC balance and INR equivalent.
     """
-    if not db:
+    if db is None:
         return create_response(False, "ERROR", "Database not available")
     
     user = await db.users.find_one({"uid": user_id})
