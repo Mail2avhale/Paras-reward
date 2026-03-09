@@ -1,0 +1,87 @@
+{
+  "summary": "Single Leg Mining Bonus Feature Testing - Backend API fully working, frontend display code verified. Login API has 500 error preventing UI verification.",
+  "mode": "generate",
+  "baseline_commit": "717b17b65585cf6caa7fd3d689d886080cd82507",
+  "head_commit": "bdb50d56b29a238dadb33500df70743c29858d9c",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "Login API returns 500 Internal Server Error when attempting to login with valid test credentials",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Mining page UI verification",
+        "issue": "Cannot verify UI display of Single Leg Bonus section due to login API failure - frontend code review confirms implementation is correct",
+        "affected_selectors": ["text=Single Leg Bonus", "text=Mining Speed Breakdown"]
+      }
+    ],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 7,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 1,
+    "note": "1 test skipped intentionally due to login API 500 error"
+  },
+  "specs_created": [
+    "/app/tests/e2e/single-leg-mining.spec.ts",
+    "/app/backend/tests/test_single_leg_mining.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/single-leg-mining.spec.ts",
+    "/app/backend/tests/test_single_leg_mining.py",
+    "/app/test_reports/pytest/test_single_leg_mining.xml"
+  ],
+  "action_items": [
+    "FIX: Login API (/api/auth/login) returns 500 Internal Server Error - prevents UI testing",
+    "OPTIONAL: Add data-testid attributes to Mining.js Single Leg Bonus section for better test coverage"
+  ],
+  "updated_files": [
+    "/app/tests/e2e/single-leg-mining.spec.ts",
+    "/app/backend/tests/test_single_leg_mining.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 7/7 tests passed",
+    "frontend": "100% - 6/6 tests passed (1 skipped due to login API issue)"
+  },
+  "seed_data_creation": "None - used existing test user UID: 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "## Single Leg Mining Bonus Feature\n\n### What Was Tested:\n1. **Backend API /api/mining/status/{uid}** - FULLY WORKING\n   - Returns single_leg_info object with all required fields\n   - Fields: active_downline, total_downline, bonus_prc_per_day, bonus_prc_per_hour, max_users (800), prc_per_user_per_day (5)\n   - All 7 pytest tests pass\n\n2. **Frontend Mining.js** - CODE VERIFIED (UI not tested due to login issue)\n   - Lines 1515-1538 contain Single Leg Bonus display code\n   - Shows in Mining Speed Breakdown section\n   - Displays: '{active_downline} active / {total_downline} total • Max {max_users} users'\n   - Displays: '+{bonus_prc_per_hour} PRC/hr' and '≈ {bonus_prc_per_day} PRC/day'\n   - Uses special gradient styling (pink/purple)\n\n### Test Files Created:\n- /app/tests/e2e/single-leg-mining.spec.ts - 7 Playwright tests (6 pass, 1 skipped)\n- /app/backend/tests/test_single_leg_mining.py - 7 pytest tests (all pass)\n\n### Known Issues:\n- Login API (/api/auth/login) returns 500 error - prevents UI testing\n- No data-testid attributes in Mining.js\n\n### Test User:\n- UID: 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21\n- Email: test@parasreward.com\n- PIN: 942133\n- Subscription: elite",
+  "feature_verification": {
+    "backend_api": {
+      "endpoint": "/api/mining/status/{uid}",
+      "single_leg_info_structure": {
+        "active_downline": "number (count of active downline users)",
+        "total_downline": "number (total downline users)",
+        "bonus_prc_per_day": "number (daily bonus in PRC)",
+        "bonus_prc_per_hour": "number (hourly bonus in PRC)",
+        "max_users": "800 (constant)",
+        "prc_per_user_per_day": "5 (constant)"
+      },
+      "status": "WORKING"
+    },
+    "frontend_display": {
+      "file": "/app/frontend/src/pages/Mining.js",
+      "section": "Mining Speed Breakdown",
+      "ui_elements": [
+        "Single Leg Bonus row with Gift icon",
+        "Active/total downline count display",
+        "Max users display",
+        "PRC/hr and PRC/day bonus display",
+        "Special pink/purple gradient styling"
+      ],
+      "status": "CODE VERIFIED - UI testing blocked by login issue"
+    }
+  }
+}

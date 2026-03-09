@@ -1,198 +1,216 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to stabilize the production application, which has been suffering from severe, recurring performance issues, making it unusable for their 5,000 users. Concurrently, the user wants to implement and fix critical business functionalities, including Domestic Money Transfer (DMT) and Bharat Bill Payment System (BBPS).
-
-The high-priority tasks are:
-1.  **Stabilize Production Performance (P0):** The app randomly becomes extremely slow or gets stuck, with API responses timing out. This is the most critical issue causing user frustration and potential business loss.
-2.  **Complete DMT Integration (P1):** Implement the full Eko DMT flow, from customer search to beneficiary addition and successful money transfer. This is the user's current primary focus.
-3.  **Fix BBPS Integration (P2):** Resolve issues with the BBPS integration, where biller services are failing or timing out.
-4.  **Fix Business Logic Bugs (P2):** Ensure the mining rate displayed in the frontend is correct and not the default 1.0/hour.
+The user's primary goal is to stabilize the production application, which has been suffering from severe, recurring performance issues. Concurrently, the user wants to implement and fix critical business functionalities, including Domestic Money Transfer (DMT) and Bharat Bill Payment System (BBPS), and address key business logic flaws.
 
 **PRODUCT REQUIREMENTS:**
--   **Performance:** All critical APIs (Login, Mining Status/Claim, Dashboard) must respond consistently in under 2 seconds on production. The application must not hang or get stuck.
--   **Functionality:** The DMT and BBPS integrations must be fully functional and reliable.
--   **Accuracy:** The UI must display correct, real-time data, especially the user's mining rate.
+-   **Performance (P0):** The application must be stable and responsive, with critical APIs responding in under 2 seconds on production.
+-   **Functionality (P1):** The Eko DMT flow must be fully functional, from customer search to successful money transfer. The BBPS integration must be fixed.
+-   **Business Logic (P1):** Implement several critical changes: disable PRC coin expiration, block free users from mining, allow users to cancel their own redeem requests, and create an admin login as user feature.
+-   **Accuracy (P2):** The UI must display the correct mining rate for users, not the default 1.0/hour.
 
 **User's preferred language**: The user communicates in a mix of **Marathi** and English. The next agent **MUST** respond primarily in **Marathi** to ensure clear communication.
 
 **what currently exists?**
 -   A FastAPI backend and React frontend application.
--   Numerous performance optimizations have been implemented in the backend code, including parallelizing database queries (), moving bcrypt to a threadpool, and using optimized MongoDB aggregation pipelines.
--   The production environment configuration has been manually fixed to remove the  flag from the supervisor config, which was a major cause of slowness.
--   Redis caching is implemented and now uses an environment-specific prefix () to prevent data collisions between  and  environments.
--   The frontend Mining page has been enhanced with several UI/UX features, including skeleton loaders, particle effects, and coin animations.
--   The Eko DMT integration's customer search functionality is working in the preview environment after the correct IP was whitelisted.
+-   The Eko DMT integration is now mostly functional after extensive debugging of the authentication mechanism. The flow for customer search, beneficiary addition (for supported banks), and initiating a transfer is working in the preview environment.
+-   Several new features have been fully implemented and tested via :
+    -   An **Admin Impersonation** (Login as User) feature (backend API and frontend UI).
+    -   A **Smart Manual Burn** button for admins to trigger the daily PRC burn, which prevents duplicate runs.
+    -   A user-facing flow to **view and cancel pending withdrawal requests**, including a new page and backend APIs.
+-   Key business logic changes are complete: PRC expiration is disabled, and free/explorer users are blocked from claiming mining rewards.
+-   Significant frontend cleanup has been performed, including removing unused pages (, ), optimizing large components (, ), and fixing JSX errors.
 
 **Last working item**:
--   **Last item agent was working:** The agent was focused on achieving a successful end-to-end Domestic Money Transfer (DMT) using the Eko integration, as requested by the user (Only DMT till success).
+-   **Last item agent was working:** The agent was implementing a user request to make the Single Leg mining bonus more visible. This involved updating the backend mining status API to include  in its response.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (via curl)
--   **Which testing method agent to use?** backend testing agent. Use the backend testing agent to create a persistent test for the full DMT flow (customer search, add beneficiary, transfer). For step-by-step debugging, use manual  against the preview environment.
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** backend testing agent. First, test the  endpoint via  to ensure the new  field is present. Then, use the frontend testing agent to verify the information is displayed correctly on the Mining page UI.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
 -   **Issue 1: Production Performance Instability (P0)**
--   **Issue 2: DMT Flow Completion (P1)**
--   **Issue 3: Incorrect Mining Rate Display (P2)**
--   **Issue 4: BBPS Integration Failures (P2)**
+-   **Issue 2: DMT Transaction Failures (P1)**
+-   **Issue 3: Production Auto-Burning Job Failure (P1)**
+-   **Issue 4: Incorrect Mining Rate Display (P2)**
+-   **Issue 5: BBPS Integration Failures (P2)**
 
 **Issues Detail:**
 -   **Issue 1: Production Performance Instability**
-    -   **Attempted fixes:** This has been a recurring nightmare. Fixes included: code optimizations (asyncio.gather), removing the  flag in supervisor, isolating Redis cache between environments, and clearing user-specific rate limits. Despite these fixes, the user reports random slowdowns.
+    -   **Attempted fixes:** This is a recurring issue from the previous session. While no new major slowdowns were reported in this session, the underlying cause on production is not confirmed to be permanently resolved. It remains a latent risk.
     -   **Next debug checklist:**
-        1.  The last known cause was server-side rate limiting or resource exhaustion on the single worker. The issue appears randomly.
-        2.  Continuously monitor production API response times using  with timing.
-        3.  If slowness recurs, immediately check production backend logs for errors, rate-limiting messages, or signs of a blocked event loop.
-        4.  Use the  if the cause is not apparent from logs. The problem has historically been related to infrastructure/config, not just code.
-    -   **Why fix this issue and what will be achieved with the fix?** This is the highest priority. A stable and fast app is critical for user retention and business viability.
+        1.  Continuously monitor production API response times.
+        2.  If slowness recurs, immediately check production backend logs for errors or resource exhaustion.
+        3.  Use the  if the cause is not apparent from logs.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the highest priority for business viability and user retention.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: DMT Flow Completion**
-    -   **Attempted fixes:** The agent successfully debugged the customer search part of the flow after getting the correct preview IP () whitelisted by Eko. The agent was proceeding to the add beneficiary step.
+-   **Issue 2: DMT Transaction Failures**
+    -   **Attempted fixes:** The agent successfully implemented the full DMT flow. However, a transfer to a Union Bank account failed with a Refund Pending status, indicating a bank-side rejection.
     -   **Next debug checklist:**
-        1.  Resume the DMT flow from where it was left off: attempting to add a beneficiary for the found customer ().
-        2.  Use  in the preview environment (since the IP is whitelisted there) to call the  endpoint.
-        3.  If it fails, scrutinize the Eko API documentation for the exact payload required for adding a beneficiary. The previous error was a vague Please provide the value of the field.
-        4.  Once adding a beneficiary works, proceed to the final step: initiating a transaction.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a core business feature the user is waiting for.
+        1.  Implement a pre-transfer **Account Verification** step using the Eko API () that was already added to the code. This should be mandatory before initiating a transfer to prevent failures.
+        2.  Use the Eko transaction inquiry API () to get detailed rejection reasons for the failed Union Bank transfer.
+        3.  Work with the user to confirm the beneficiary account details are 100% correct.
+    -   **Why fix this issue and what will be achieved with the fix?** Makes the core DMT feature reliable and prevents loss of funds or user confusion.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y (due to IP whitelisting)
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
 
--   **Issue 3: Incorrect Mining Rate Display**
-    -   **Attempted fixes:** The agent identified the root cause as a shared Redis cache between preview and production. A fix was implemented by adding a  and the user was instructed to set it to  in the production system keys and redeploy.
+-   **Issue 3: Production Auto-Burning Job Failure**
+    -   **Attempted fixes:** The user reported Auto Burning hot nahi. The agent confirmed the scheduler starts in the preview environment and created a manual Smart Burn button as a workaround. The root cause on production is unknown.
     -   **Next debug checklist:**
-        1.  Verify with the user that the  system key is set to  on production.
-        2.  Test the  endpoint for an Elite user () on production.
-        3.  Confirm that the  field in the response is ~230 and not 1.0.
-        4.  Ask the user to check the mining page on production to confirm the correct rate is displayed.
-    -   **Why fix this issue and what will be achieved with the fix?** Corrects a critical business logic bug that impacts user earnings and trust.
+        1.  Check the production supervisor logs for the backend service around the time it starts up. Look for Scheduler started and Scheduler has been shut down messages.
+        2.  Suspect the  flag might still be active on production (a previous cause of issues) or that the server environment prevents the  from running correctly.
+    -   **Why fix this issue and what will be achieved with the fix?** Automates a core part of the app's tokenomics.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Blocked on other issue:** None.
+
+-   **Issue 4: Incorrect Mining Rate Display**
+    -   **Attempted fixes:** The previous agent added a . The current agent was immediately tasked with DMT and did not verify this fix.
+    -   **Next debug checklist:**
+        1.  Verify with the user that the  system key is set to  in the production environment.
+        2.  Test the  endpoint for an Elite user () on **production**.
+        3.  Confirm the  is correct (~230) and not .
+    -   **Why fix this issue and what will be achieved with the fix?** Corrects a critical bug affecting user earnings.
     -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
 
+-   **Issue 5: BBPS Integration Failures**
+    -   **Attempted fixes:** None in this session.
+    -   **Next debug checklist:**
+        1.  Review the code in  related to BBPS.
+        2.  Attempt a bill payment through the API and analyze the errors. The authentication fixes made for DMT may also apply here.
+    -   **Why fix this issue and what will be achieved with the fix?** Enables another core business feature.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Blocked on other issue:** None.
+
 **In progress Task List**:
--   **Task 1: Complete Eko DMT Implementation (P1)**
-    -   **Where to resume:** In , focus on implementing the logic to successfully add a beneficiary and then make a transfer. The immediate next step is to call the beneficiary addition endpoint.
-    -   **What will be achieved with this?** A fully functional Domestic Money Transfer feature.
+-   **Task 1: Display Single Leg Mining Info on Frontend (P1)**
+    -   **Where to resume:** The backend change in  to add  to the mining status response is complete. The next step is to modify  to consume and display this new data in the UI.
+    -   **What will be achieved with this?** Fulfills a direct user request for better visibility into their referral earnings.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** Verify the fix for the incorrect mining rate display on production.
--   **P1:** Fully test the BBPS integration now that performance is more stable.
+-   **P1:** Investigate and fix the root cause of the production auto-burning scheduler failure.
+-   **P1:** Fully test and fix the BBPS integration.
 -   **P2:** Ask the user to verify the Admin Auto DMT fix from the previous session for user .
 
 **Future Tasks:**
--   **P2:** Migrate KYC/Receipt images from base64 strings in MongoDB to a proper file storage solution. (This is critical architectural debt).
--   **P2:** Run PRC Vault to PRC Balance Migration Script on Production.
+-   **P2:** Migrate KYC/Receipt images from base64 strings in MongoDB to a proper file storage solution.
+-   **P2:** Run the PRC Vault to PRC Balance Migration Script on Production.
 -   **P3:** Add Email/Mobile OTP verification on signup.
+-   **P3:** Investigate the Admin Panel Failed to delete plan error.
+-   **P3:** Investigate Razorpay auto-subscription failures.
 
 **Completed work in this session**
--   **Production Stability:**
-    -   Identified and fixed the production supervisor config to remove the performance-killing  flag.
-    -   Identified and isolated the Redis cache between preview and production using a  to prevent data corruption.
-    -   Identified and cleared a user-specific rate limit on the server that was causing global slowdowns.
-    -   Optimized the  endpoint by parallelizing queries with .
-    -   Fixed malformed  files by quoting all values.
--   **DMT Integration:**
-    -   Successfully debugged and enabled the Eko DMT customer search functionality by identifying a changed preview IP and having the user get it whitelisted.
--   **Frontend Enhancements:**
-    -   Enhanced the Mining page with skeleton loaders, particle effects, and a unique coin collection animation for a better user experience.
-    -   Added logic for haptic feedback and session-end notifications (scaffolding).
--   **Bug Fixes:**
-    -   Resolved a login loop caused by a faulty  implementation.
-    -   Fixed  import errors that were preventing the backend from starting correctly in the preview environment.
+-   **DMT Integration:** Fully debugged and implemented the Eko DMT flow (Customer Search, Add Beneficiary, Initiate Transfer) after fixing complex HMAC authentication and IP whitelisting issues.
+-   **Admin Impersonation:** Implemented a Login as User feature for admins, including the backend API and a frontend modal in the Admin Panel.
+-   **PRC Burn Logic:** Created a Smart manual burn endpoint/button for admins that prevents duplicate daily burns.
+-   **User Withdrawal Management:** Built a new page () and corresponding APIs allowing users to view and cancel their pending withdrawal requests.
+-   **Business Logic Updates:**
+    -   Disabled PRC coin expiration logic.
+    -   Blocked Free and Explorer users from claiming mining rewards.
+-   **Frontend Deep Cleanup:**
+    -   Removed unused pages (,  route) and components ().
+    -   Optimized  and  by reducing performance-heavy animations.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1:** Admin Panel Failed to delete plan error was mentioned in a previous handoff but not investigated due to higher priority issues.
+-   **Issue 1:** Admin Panel Failed to delete plan error.
 -   **Issue 2:** Razorpay auto-subscription failures on production.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in this fork:**
-    -   **Production Performance Degradation:** This was the main recurring issue of the entire session, with multiple root causes identified and fixed sequentially. **Status: IN PROGRESS** (as it may reappear).
-    -   **Eko API Failures:** This recurred due to the preview IP address changing, requiring a new whitelisting. **Status: RESOLVED** (for now).
+    -   **Eko API Failures:** Recurred extensively at the start of the session. The root cause was a combination of IP whitelisting and a fundamentally incorrect authentication signature algorithm. **Status: RESOLVED** (The auth logic is now correct).
+    -   **Production Performance Degradation:** While no new incidents occurred, this remains a latent, high-risk issue. **Status: IN PROGRESS**.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Production Debugging:** Extensive use of , production log analysis, and the  to diagnose live, critical performance issues.
--   **Environment Isolation:** The importance of separating configurations (especially cache) between preview and production environments was a key lesson.
--   **Infrastructure vs. Code:** Many issues were rooted in infrastructure ( flag, rate limiting, IP whitelisting) rather than just application code.
--   **Redis Cache Management:** Implemented a strategy to prefix cache keys based on the environment to prevent data contamination.
+-   **3rd Party API Debugging:** In-depth debugging of the Eko API, including HMAC-SHA256 signature generation, handling  errors, and differentiating between staging and production environments.
+-   **Admin Impersonation:** A secure pattern using temporary session tokens was implemented to allow admins to log in as users for support.
+-   **Frontend Optimization:** A deep cleanup was performed, removing unused code/pages and reducing expensive animations to improve page load times and smoothness.
+-   **Stateful Backend Logic:** The Smart Burn feature uses a database collection () to maintain state and prevent duplicate actions.
 
 **key DB schema**
--   **users:** Contains the  field, which was critical in debugging the login loop.
-
-**changes in tech stack**
--   No changes to the core stack. Redis (Upstash) usage was refined for better environment isolation.
+-   **users:**  field is used to control access to mining claims.
+-   **redeem_requests:**  field is used to filter for pending requests and update them upon cancellation.
+-   **admin_actions:** (Implicitly created) to log admin impersonation actions.
+-   **prc_burn_history:** (Implicitly created) to log daily burns and enforce the run once rule.
 
 **All files of reference**
--   : Core file for the current high-priority task.
--   : Contains the new cache key prefixing logic.
--   : The file that was manually edited to fix a critical performance bottleneck.
--   : Contains all the new frontend enhancements.
--   : Now requires .
+-   : The core of the Eko integration.
+-   : Contains most of the new business logic APIs.
+-   : The new user-facing feature for managing withdrawals.
+-   : The UI for the new admin tool.
+-   : The target for the current in-progress task.
 
 **Areas that need refactoring**:
--   The practice of storing images as base64 strings in MongoDB is a major architectural flaw and should be prioritized for migration to a file storage solution.
--    remains a large monolithic file that could be further broken down.
+-    is still extremely large (+2600 lines) and should be broken into smaller, more manageable components.
+-    is a monolith containing many unrelated API routes and should be split into logical modules (e.g., , ).
 
 **key api endpoints**
--   : Now working in the preview environment.
--   : The next API to be implemented and tested.
--   : Needs to be verified on production to ensure the correct mining rate is returned post-cache fix.
--   All core APIs (, , ) are now confirmed to be fast on production *when the server is healthy*.
+-   : Functioning, but can fail due to bank rejections.
+-   : Implemented for checking transfer status.
+-   : Implemented to verify beneficiary accounts.
+-   : New feature for admin impersonation.
+-   : New feature for a stateful manual PRC burn.
+-   : New endpoint for users to cancel their own withdrawal requests.
+-   : New endpoint to power the withdrawal history page.
+-   : Recently modified to include .
 
 **Critical Info for New Agent**
--   **Your primary language MUST be Marathi.** The user is highly technical but prefers to communicate in Marathi.
--   **The Production Environment is Fragile.** The app's performance can degrade randomly. Do not assume a fix is permanent. The user is extremely frustrated with the instability. Your top priority is to provide stable solutions.
--   **Eko IP Whitelisting is a recurring task.** The preview environment's IP address can change. The latest known IP is . Be prepared to ask the user to whitelist a new IP if you get  errors from Eko.
--   **Focus on DMT.** The user's last instruction was to focus exclusively on getting the DMT flow to work successfully. Prioritize this task above all others unless a P0 performance issue re-emerges.
--   **Verify the  fix.** The user was asked to change this to  and redeploy. Your first step should be to confirm if this fixed the 1.0/hour mining rate bug on production.
+-   **Your primary language MUST be Marathi.** The user is highly technical but prefers to communicate in Marathi for clarity.
+-   **DMT is ALMOST there, but unreliable.** The core API flow works, but bank-side rejections are the new blocker. Prioritize implementing a mandatory pre-transfer account verification step to improve reliability.
+-   **Focus on the user's latest request.** The user wants to see their Single Leg bonus on the mining page. Your immediate task is to finish the frontend implementation for this.
+-   **The Production Environment is Fragile.** The root cause of the auto-burn scheduler failure is unknown, and the risk of performance degradation is always present. Be cautious with production changes.
 
 **documents and test reports created in this job**
--   Numerous screen recordings and screenshots were analyzed to debug issues.
--   A  report was used to identify the  flag issue.
--   A  report was generated, which highlighted the recurring performance issues.
+-   None. All testing was done manually via  and observing application behavior.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **Request:** Asks the agent to change  to  to fix the mining rate bug. (Status: User confirmed they will do it).
-9.  **Request:** States that deployment is done and to start working on DMT, confirming the environment IP has been whitelisted by Eko. (Status: In Progress).
-8.  **Request:** Asks to test the full DMT flow for a specific mobile number () and to focus only on DMT until it is successful. (Status: In Progress).
-7.  **Info:** Provides bank details for the beneficiary to be added in the DMT test flow. (Status: Noted).
-6.  **Question:** Asks for the min/max amount for a transaction. (Status: Answered).
-5.  **Complaint:** Reports two new issues after the app was fast: the speed randomly degrades again, and the mining base rate is showing an incorrect value of 1.0/hour. (Status: In Progress).
-4.  **Confirmation:** Thanks the agent and confirms the app is loading superfast. Asks the agent to lock all code and keys to prevent future issues. (Status: Noted).
-3.  **Complaint:** User reports the app is stuck again. (Status: Resolved by isolating Redis cache).
-2.  **Complaint:** User reports that the production frontend is calling the wrong database URL, causing the app to be stuck. (Status: Resolved, was a shared Redis cache issue).
-1.  **Complaint:** User reports deep harassment because the production database connection issue persists. (Status: Resolved).
+10. **Request:** Implement four major business logic changes: no PRC expiration, daily burning only, user-cancellable redeem requests, and block free users from mining. (Status: **Completed**)
+9.  **Request:** Explain and implement an Admin login as user feature. (Status: **Completed**)
+8.  **Confirmation:** Chooses the Integrated approach for the admin impersonation feature. (Status: **Completed**)
+7.  **Request:** Asks to test the chatbot feature for cancelling pending redeem requests. (Status: **Completed**)
+6.  **Request:** Asks for a UI where users can see all their requests (old and new) and cancel selected/all pending ones. (Status: **Completed**)
+5.  **Feedback:** Points out a UI error on the new withdrawal page and asks where the admin manual burn button is located. (Status: **Completed**)
+4.  **Request:** Asks to perform a deep cleanup of all VIP user-facing pages for faster loading and remove old/unused code. (Status: **Completed**)
+3.  **Request:** Asks for another deep cleanup pass, focusing on making the Mining and Referral pages smoother. (Status: **Completed**)
+2.  **Request:** Asks for a deep study of the Mining formula and to make the Single Leg part of the UI faster and smoother. (Status: **In Progress**)
+1.  **Confirmation:** Acknowledges that the agent will add the  to the backend mining status endpoint. (Status: **In Progress**)
 
 **Project Health Check:**
--   **Broken:** The Eko DMT flow is not fully implemented. Production stability is still a major concern. The BBPS integration is not verified.
--   **Mocked:** The Eko Aadhaar DMT v3 APIs in  are still placeholders.
+-   **Broken:** DMT transfers are unreliable due to bank-side rejections. The production auto-burn scheduler is not working. The BBPS integration is unverified and likely broken. Production stability remains a latent risk.
+-   **Mocked:** The  APIs are still placeholders.
 
 **3rd Party Integrations**
--   **Eko (v1 DMT & BBPS API):** Partially working. DMT customer search is functional in preview. BBPS is untested. IP whitelisting is a recurring requirement.
--   **Razorpay:** Implemented, but has known, uninvestigated issues.
--   **Redis (Upstash):** Critical for caching. Now configured with environment-specific prefixes.
+-   **Eko (v1 DMT & BBPS API):** DMT authentication is now stable. The core transfer flow is implemented but facing reliability issues due to bank rejections. BBPS functionality is untested.
+-   **Razorpay:** Implemented, but has known, uninvestigated issues from previous sessions.
+-   **Redis (Upstash):** Working correctly for caching.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. It was used for production testing and helped identify the recurring performance degradation.
--   **Troubleshoot agent used after agent stuck in loop:** YES. It was critical in identifying the production  flag issue.
+-   **Testing agent used after significant changes:** NO. The agent relied exclusively on manual  commands and visual inspection for all new features and fixes in this session.
+-   **Troubleshoot agent used after agent stuck in loop:** NO.
 -   **Test files created:** None.
--   **Known regressions:** The overall application performance is a known regression risk. Any change, code or config, can potentially bring back the slowness.
+-   **Known regressions:** The failure of the Union Bank transfer is a new regression in functionality, though the API itself works.
 
 **Credentials to test flow:**
 -   **Admin:**  / PIN: 
 -   **DMT Test User:** 
 
 **What agent forgot to execute**
--   Due to the constant P0 fire-fighting of performance issues, the agent did not get to investigate lower-priority tasks from the initial handoff, such as the Razorpay subscription bug and the Admin: Failed to delete plan error. This was a correct prioritization.</analysis>
+-   The agent did not explicitly verify the Incorrect Mining Rate Display fix on production, which was a P1 task from the previous handoff.
+-   The agent did not use the  for any of the major new features implemented (DMT flow, Admin Impersonation, Redeem Cancellation UI), which increases regression risk.
+-   Lower priority tasks like BBPS, Razorpay issues, and the Failed to delete plan admin error were not addressed.</analysis>

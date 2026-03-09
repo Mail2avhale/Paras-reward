@@ -6932,8 +6932,37 @@ async def get_mining_status(uid: str):
     session_end = None
     mined_this_session = 0
     
-    # Calculate mining rate ONCE (expensive operation)
-    rate_per_minute, base_rate, active_referrals, referral_breakdown = await calculate_mining_rate(uid)
+    # Get FULL mining breakdown including single leg info
+    from routes.mining_economy import calculate_new_mining_rate, HOURLY_BASE_RATE
+    hourly_rate, per_minute_rate, full_breakdown = await calculate_new_mining_rate(db, uid, cache)
+    
+    # Extract single leg info for frontend
+    single_leg_info = {
+        "active_downline": full_breakdown.get("single_leg", {}).get("active_downline", 0),
+        "total_downline": full_breakdown.get("single_leg", {}).get("total_downline", 0),
+        "bonus_prc_per_day": full_breakdown.get("single_leg", {}).get("bonus_prc_per_day", 0),
+        "bonus_prc_per_hour": full_breakdown.get("single_leg", {}).get("bonus_prc_per_hour", 0),
+        "max_users": 800,
+        "prc_per_user_per_day": 5
+    }
+    
+    # Extract boost breakdown for team levels
+    boost_breakdown = full_breakdown.get("boost_breakdown", {})
+    active_referrals = sum(d.get("active", 0) for d in boost_breakdown.values())
+    
+    # Convert boost breakdown to referral_breakdown format
+    referral_breakdown = {}
+    for level_key, level_data in boost_breakdown.items():
+        referral_breakdown[level_key] = {
+            'count': level_data.get('active', 0),
+            'active_count': level_data.get('active', 0),
+            'total_count': level_data.get('count', 0),
+            'percentage': {'level_1': 10, 'level_2': 5, 'level_3': 3}.get(level_key, 0),
+            'bonus': level_data.get('bonus_prc', 0)
+        }
+    
+    base_rate = full_breakdown.get("base_with_single_leg", HOURLY_BASE_RATE)
+    rate_per_minute = per_minute_rate
     
     # Check if mining session is active
     mining_active = user.get("mining_active")
@@ -6950,7 +6979,7 @@ async def get_mining_status(uid: str):
             session_start = start_time.isoformat()
             session_end = session_end_time.isoformat()
             
-            # Calculate mined coins during this session (use already calculated rate)
+            # Calculate mined coins during this session
             elapsed_minutes = (now - start_time).total_seconds() / 60
             mined_this_session = elapsed_minutes * rate_per_minute
         else:
@@ -6962,27 +6991,15 @@ async def get_mining_status(uid: str):
     
     mining_rate_per_hour = rate_per_minute * 60
     
-    # Convert referral breakdown (already hourly from calculate_mining_rate)
-    hourly_breakdown = {}
-    for level, data in referral_breakdown.items():
-        hourly_breakdown[level] = {
-            'count': data.get('count', 0),
-            'active_count': data.get('active_count', 0),
-            'paid_count': data.get('paid_count', data.get('count', 0)),
-            'free_count': data.get('free_count', 0),
-            'total_count': data.get('total_count', 0),
-            'weighted_count': data.get('weighted_count', 0),
-            'percentage': data.get('percentage', 0),
-            'bonus': data.get('bonus', 0)
-        }
-    
     result = {
         "current_balance": user.get("prc_balance", 0),
         "mining_rate": mining_rate_per_hour,
         "mining_rate_per_hour": mining_rate_per_hour,
         "base_rate": base_rate,
         "active_referrals": active_referrals,
-        "referral_breakdown": hourly_breakdown,
+        "referral_breakdown": referral_breakdown,
+        "single_leg_info": single_leg_info,
+        "boost_multiplier": full_breakdown.get("boost_multiplier", 1.0),
         "total_mined": user.get("total_mined", 0),
         "session_active": session_active,
         "remaining_hours": round(remaining_hours, 2) if session_active else 0,
