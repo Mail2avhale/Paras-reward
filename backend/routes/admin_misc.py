@@ -624,3 +624,245 @@ async def apply_monthly_fees(request: Request):
         "users_charged": users_charged,
         "total_collected": round(fees_collected, 2)
     }
+
+
+# ========== ADMIN LOGIN AS USER (IMPERSONATION) ==========
+
+@router.post("/login-as-user")
+async def admin_login_as_user(request: Request):
+    """
+    Admin Impersonation - Login as any user without PIN.
+    
+    Features:
+    - Only super admins can use this
+    - Generates temporary session token (1 hour validity)
+    - All actions logged as admin impersonation
+    - Returns user data + special impersonation token
+    
+    Usage:
+    1. Admin enters target user mobile/UID
+    2. System generates impersonation session
+    3. Frontend opens new window with user session
+    """
+    try:
+        data = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    
+    admin_uid = data.get("admin_uid", "")
+    admin_pin = data.get("admin_pin", "")
+    target_mobile = data.get("target_mobile", "")
+    target_uid = data.get("target_uid", "")
+    
+    if not admin_uid:
+        raise HTTPException(status_code=400, detail="Admin UID required")
+    
+    if not target_mobile and not target_uid:
+        raise HTTPException(status_code=400, detail="Target user mobile or UID required")
+    
+    # Verify admin
+    admin = await db.users.find_one({"uid": admin_uid})
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    
+    # Check admin role
+    admin_role = admin.get("role", "")
+    if admin_role not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can use this feature")
+    
+    # Verify admin PIN (optional but recommended)
+    if admin_pin:
+        stored_pin = admin.get("pin_hash", admin.get("pin", ""))
+        if stored_pin and str(admin_pin) != str(stored_pin):
+            raise HTTPException(status_code=401, detail="Invalid admin PIN")
+    
+    # Find target user
+    if target_mobile:
+        target_user = await db.users.find_one({"mobile": target_mobile})
+    else:
+        target_user = await db.users.find_one({"uid": target_uid})
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    
+    # Generate impersonation session token
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=1)  # 1 hour validity
+    
+    impersonation_token = f"IMP_{uuid.uuid4().hex}"
+    
+    # Create impersonation session record
+    session_record = {
+        "token": impersonation_token,
+        "admin_uid": admin_uid,
+        "admin_name": admin.get("name", "Admin"),
+        "target_uid": target_user.get("uid"),
+        "target_mobile": target_user.get("mobile"),
+        "target_name": target_user.get("name"),
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "is_active": True,
+        "actions_log": []
+    }
+    
+    await db.admin_impersonation_sessions.insert_one(session_record)
+    
+    # Update user's session token temporarily
+    await db.users.update_one(
+        {"uid": target_user.get("uid")},
+        {"$set": {
+            "session_token": impersonation_token,
+            "session_expires_at": expires_at.isoformat(),
+            "impersonated_by": admin_uid
+        }}
+    )
+    
+    # Log admin action
+    if log_admin_action:
+        await log_admin_action(
+            admin_uid=admin_uid,
+            action="login_as_user",
+            entity_type="user",
+            entity_id=target_user.get("uid"),
+            details={
+                "target_uid": target_user.get("uid"),
+                "target_mobile": target_user.get("mobile"),
+                "target_name": target_user.get("name"),
+                "session_token": impersonation_token[:10] + "...",
+                "expires_at": expires_at.isoformat()
+            }
+        )
+    
+    # Prepare user data (exclude sensitive fields)
+    user_data = {
+        "uid": target_user.get("uid"),
+        "name": target_user.get("name"),
+        "mobile": target_user.get("mobile"),
+        "email": target_user.get("email"),
+        "prc_balance": target_user.get("prc_balance", 0),
+        "subscription_plan": target_user.get("subscription_plan", "explorer"),
+        "kyc_status": target_user.get("kyc_status", "not_submitted"),
+        "session_token": impersonation_token,
+        "is_impersonation": True,
+        "impersonated_by_admin": admin.get("name", "Admin")
+    }
+    
+    return {
+        "success": True,
+        "message": f"Logged in as {target_user.get('name')} ({target_user.get('mobile')})",
+        "user": user_data,
+        "session_token": impersonation_token,
+        "expires_at": expires_at.isoformat(),
+        "expires_in_minutes": 60,
+        "warning": "⚠️ You are logged in as this user. All actions will be logged.",
+        "open_url": f"/dashboard?impersonation_token={impersonation_token}"
+    }
+
+
+@router.get("/impersonation-sessions")
+async def get_impersonation_sessions(admin_uid: str = None, active_only: bool = True):
+    """Get list of admin impersonation sessions"""
+    query = {}
+    
+    if admin_uid:
+        query["admin_uid"] = admin_uid
+    
+    if active_only:
+        query["is_active"] = True
+        query["expires_at"] = {"$gt": datetime.now(timezone.utc).isoformat()}
+    
+    sessions = await db.admin_impersonation_sessions.find(
+        query,
+        {"_id": 0, "token": 0}  # Don't expose token in list
+    ).sort("created_at", -1).to_list(length=50)
+    
+    return {
+        "success": True,
+        "sessions": sessions,
+        "count": len(sessions)
+    }
+
+
+@router.post("/end-impersonation")
+async def end_impersonation_session(request: Request):
+    """End an active impersonation session"""
+    try:
+        data = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    
+    token = data.get("token", "")
+    admin_uid = data.get("admin_uid", "")
+    
+    if not token:
+        raise HTTPException(status_code=400, detail="Session token required")
+    
+    # Find session
+    session = await db.admin_impersonation_sessions.find_one({"token": token})
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Update session
+    await db.admin_impersonation_sessions.update_one(
+        {"token": token},
+        {"$set": {
+            "is_active": False,
+            "ended_at": datetime.now(timezone.utc).isoformat(),
+            "ended_by": admin_uid
+        }}
+    )
+    
+    # Clear user's impersonation token
+    target_uid = session.get("target_uid")
+    if target_uid:
+        await db.users.update_one(
+            {"uid": target_uid, "session_token": token},
+            {"$unset": {
+                "impersonated_by": "",
+                "session_token": "",
+                "session_expires_at": ""
+            }}
+        )
+    
+    return {
+        "success": True,
+        "message": "Impersonation session ended"
+    }
+
+
+@router.get("/search-user-for-impersonation")
+async def search_user_for_impersonation(query: str):
+    """Search users by mobile, name, or email for impersonation"""
+    if not query or len(query) < 3:
+        raise HTTPException(status_code=400, detail="Search query must be at least 3 characters")
+    
+    # Search by mobile, name, or email
+    search_filter = {
+        "$or": [
+            {"mobile": {"$regex": query, "$options": "i"}},
+            {"name": {"$regex": query, "$options": "i"}},
+            {"email": {"$regex": query, "$options": "i"}}
+        ]
+    }
+    
+    users = await db.users.find(
+        search_filter,
+        {
+            "_id": 0,
+            "uid": 1,
+            "name": 1,
+            "mobile": 1,
+            "email": 1,
+            "subscription_plan": 1,
+            "prc_balance": 1,
+            "kyc_status": 1
+        }
+    ).limit(10).to_list(length=10)
+    
+    return {
+        "success": True,
+        "users": users,
+        "count": len(users)
+    }
+

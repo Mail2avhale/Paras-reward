@@ -8,9 +8,10 @@ import {
   Store, Award, ShoppingCart, Bell, Settings, DollarSign, Truck, Activity,
   Shield, Wallet, AlertTriangle, Crown, RefreshCw, ChevronRight,
   UserCheck, Clock, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight,
-  Zap, Gift, Star, Target, Percent, BadgeCheck
+  Zap, Gift, Star, Target, Percent, BadgeCheck, UserCog
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import AdminLoginAsUser from '@/components/AdminLoginAsUser';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -31,6 +32,7 @@ const AdminDashboard = ({ user }) => {
   const [pendingKYC, setPendingKYC] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showLoginAsUser, setShowLoginAsUser] = useState(false);
 
   const fetchDashboardData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -131,6 +133,16 @@ const AdminDashboard = ({ user }) => {
           <p className="text-gray-500 text-sm">Welcome back, {user?.name || 'Admin'}</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Login As User Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowLoginAsUser(true)}
+            className="text-orange-400 border-orange-500/50 hover:bg-orange-500/10"
+          >
+            <UserCog className="w-4 h-4 mr-2" />
+            Login As User
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -371,6 +383,13 @@ const AdminDashboard = ({ user }) => {
           )}
         </Card>
       </div>
+
+      {/* Login As User Dialog */}
+      <AdminLoginAsUser 
+        adminUser={user}
+        isOpen={showLoginAsUser}
+        onClose={() => setShowLoginAsUser(false)}
+      />
     </div>
   );
 };
