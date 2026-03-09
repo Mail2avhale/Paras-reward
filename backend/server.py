@@ -15440,7 +15440,7 @@ async def promote_user(email: str, role: str):
 # ==================== PUBLIC STATS ENDPOINT ====================
 @api_router.get("/stats")
 async def get_public_stats():
-    """Get public platform statistics for landing page - CACHED for performance"""
+    """Get public platform statistics for landing page - OPTIMIZED with parallel queries"""
     # Check cache first (5 minute TTL for landing page stats)
     cache_key = "public_stats"
     cached_stats = await cache.get(cache_key)
@@ -15448,59 +15448,61 @@ async def get_public_stats():
         return cached_stats
     
     try:
-        # Total registered users
-        total_users = await db.users.count_documents({})
+        # OPTIMIZED: Run ALL queries in parallel using asyncio.gather
+        results = await asyncio.gather(
+            # Total registered users
+            db.users.count_documents({}),
+            # VIP/Premium members
+            db.users.count_documents({"subscription_plan": {"$in": ["startup", "growth", "elite"]}}),
+            # PRC stats aggregation
+            db.users.aggregate([
+                {"$group": {"_id": None, 
+                    "total_mined": {"$sum": {"$ifNull": ["$total_mined", 0]}},
+                    "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}}
+                }}
+            ]).to_list(1),
+            # Bill payments
+            db.bill_payment_requests.aggregate([
+                {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+            ]).to_list(1),
+            # Gift vouchers
+            db.gift_voucher_requests.aggregate([
+                {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+            ]).to_list(1),
+            # Orders
+            db.orders.aggregate([
+                {"$match": {"status": {"$in": ["completed", "delivered"]}}},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$total_prc_price"]}}}}
+            ]).to_list(1),
+            return_exceptions=True
+        )
         
-        # VIP/Premium members (paid subscription users)
-        vip_members = await db.users.count_documents({
-            "subscription_plan": {"$in": ["startup", "growth", "elite"]}
-        })
+        # Extract results
+        total_users = results[0] if isinstance(results[0], int) else 0
+        vip_members = results[1] if isinstance(results[1], int) else 0
         
-        # Total PRC distributed - check multiple possible fields
-        # Try total_mined first, then prc_balance as fallback
-        prc_pipeline = [
-            {"$group": {"_id": None, 
-                "total_mined": {"$sum": {"$ifNull": ["$total_mined", 0]}},
-                "total_prc_balance": {"$sum": {"$ifNull": ["$prc_balance", 0]}}
-            }}
-        ]
-        prc_result = await db.users.aggregate(prc_pipeline).to_list(1)
-        
+        # PRC stats
+        prc_result = results[2] if isinstance(results[2], list) else []
         if prc_result:
-            # Use whichever is higher (total_mined shows lifetime, prc_balance shows current)
             total_mined = prc_result[0].get("total_mined", 0) or 0
             total_balance = prc_result[0].get("total_prc_balance", 0) or 0
             total_prc = max(total_mined, total_balance)
         else:
             total_prc = 0
         
-        # Total PRC redeemed (from approved bill payments + gift vouchers + orders)
+        # Total redeemed
         total_redeemed = 0
-        
-        # From bill payments (approved/completed)
-        bill_pipeline = [
-            {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
-        ]
-        bill_result = await db.bill_payment_requests.aggregate(bill_pipeline).to_list(1)
+        bill_result = results[3] if isinstance(results[3], list) else []
         if bill_result and bill_result[0].get("total"):
             total_redeemed += bill_result[0]["total"]
         
-        # From gift vouchers (approved/completed)
-        gift_pipeline = [
-            {"$match": {"status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
-        ]
-        gift_result = await db.gift_voucher_requests.aggregate(gift_pipeline).to_list(1)
+        gift_result = results[4] if isinstance(results[4], list) else []
         if gift_result and gift_result[0].get("total"):
             total_redeemed += gift_result[0]["total"]
         
-        # From orders (completed/delivered)
-        order_pipeline = [
-            {"$match": {"status": {"$in": ["completed", "delivered"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$total_prc_price"]}}}}
-        ]
-        order_result = await db.orders.aggregate(order_pipeline).to_list(1)
+        order_result = results[5] if isinstance(results[5], list) else []
         if order_result and order_result[0].get("total"):
             total_redeemed += order_result[0]["total"]
         
