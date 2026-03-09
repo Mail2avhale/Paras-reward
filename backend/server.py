@@ -37264,6 +37264,69 @@ async def execute_prc_burn_control(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.post("/admin/smart-burn")
+async def smart_burn(request: Request):
+    """
+    Smart PRC Burn - Checks if burn already done today, prevents duplicate burns.
+    
+    This is a "once per day" burn that:
+    1. Checks if burn was already executed today
+    2. If not, executes the daily 0.5% burn
+    3. Records the burn in prc_burn_history collection
+    """
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id", "system")
+        force = data.get("force", False)  # Force burn even if already done today
+        
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Check if burn was already done today
+        last_burn = await db.prc_burn_history.find_one(
+            {"burn_date": {"$gte": today_start}},
+            sort=[("burn_date", -1)]
+        )
+        
+        burn_needed = last_burn is None or force
+        burn_executed = False
+        burn_result = None
+        
+        if burn_needed:
+            # Execute the daily burn
+            burn_result = await run_prc_burn_job()
+            burn_executed = True
+            
+            # Record burn in history
+            await db.prc_burn_history.insert_one({
+                "burn_date": now,
+                "executed_by": admin_id,
+                "forced": force,
+                "result": burn_result,
+                "created_at": now
+            })
+        
+        # Get IST time for display
+        ist_offset = timedelta(hours=5, minutes=30)
+        
+        return {
+            "success": True,
+            "burn_needed": burn_needed,
+            "burn_executed": burn_executed,
+            "burn_result": burn_result,
+            "last_burn": {
+                "last_burn_time": last_burn.get("burn_date").isoformat() if last_burn else None,
+                "last_burn_time_ist": (last_burn.get("burn_date") + ist_offset).strftime("%Y-%m-%d %I:%M %p IST") if last_burn else "Never",
+                "last_executed_by": last_burn.get("executed_by") if last_burn else None
+            },
+            "message": "Burn executed successfully" if burn_executed else "Burn already done today (use force=true to override)"
+        }
+        
+    except Exception as e:
+        logging.error(f"[SMART BURN] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Smart burn failed: {str(e)}")
+
+
 # ========== REVERT PAYMENT REQUEST STATUS ==========
 
 @api_router.post("/admin/payment-request/revert-status")
