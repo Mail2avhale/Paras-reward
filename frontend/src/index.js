@@ -14,13 +14,36 @@ root.render(
   </React.StrictMode>,
 );
 
+// Clear old service worker caches on version mismatch
+const CURRENT_CACHE_VERSION = 'v6';
+
+async function clearOldCaches() {
+  if ('caches' in window) {
+    const cacheNames = await caches.keys();
+    const oldCaches = cacheNames.filter(name => !name.includes(CURRENT_CACHE_VERSION));
+    await Promise.all(oldCaches.map(name => {
+      console.log('Clearing old cache:', name);
+      return caches.delete(name);
+    }));
+  }
+}
+
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // Clear old caches first
+    clearOldCaches();
+    
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('SW registered: ', registration);
+        console.log('SW registered:', window.location.href);
+        
+        // Force update check on mobile (TWA/PWA)
+        if (registration.waiting) {
+          // New service worker is waiting - activate it immediately
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
         
         // Check for updates
         registration.addEventListener('updatefound', () => {
@@ -28,8 +51,9 @@ if ('serviceWorker' in navigator) {
           
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New service worker available
+              // New service worker available - activate it immediately for better UX
               console.log('New service worker available');
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
               
               // Only show update prompt once per session
               const lastPromptTime = sessionStorage.getItem('sw_update_prompt_time');
@@ -50,9 +74,14 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           console.log('Service worker controller changed');
         });
+        
+        // Check for updates every 5 minutes (for mobile users who keep app open)
+        setInterval(() => {
+          registration.update();
+        }, 5 * 60 * 1000);
       })
       .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
+        console.log('SW registration failed:', registrationError);
       });
   });
 }

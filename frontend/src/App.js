@@ -25,6 +25,9 @@ const AdminLayout = IS_USER_BUILD ? null : lazy(() => import("@/components/layou
 // ManagerLayout removed - Manager uses AdminLayout with permission-based access
 // StockistLayout removed - stockist system deprecated
 
+// Axios defaults for mobile - longer timeout
+axios.defaults.timeout = 30000; // 30 seconds for slow mobile networks
+
 // Axios response interceptor - suppress 404 toast errors for optional APIs
 axios.interceptors.response.use(
   response => response,
@@ -39,6 +42,11 @@ axios.interceptors.response.use(
     if (is404 && isOptionalEndpoint) {
       console.warn(`Optional API not found: ${url}`);
       return Promise.reject(error); // Reject but don't show toast
+    }
+    
+    // Handle timeout errors gracefully
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      console.warn('Request timeout:', url);
     }
     
     return Promise.reject(error);
@@ -56,6 +64,10 @@ axios.interceptors.request.use(
       config.headers = config.headers || {};
       config.headers['Cache-Control'] = 'no-cache';
       config.headers['Pragma'] = 'no-cache';
+    }
+    // Increase timeout for mobile users on slow connections
+    if (!config.timeout) {
+      config.timeout = 30000;
     }
     return config;
   },

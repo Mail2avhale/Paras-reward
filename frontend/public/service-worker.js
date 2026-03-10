@@ -64,16 +64,22 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Handle API requests (Network First, then Cache)
+  // Handle API requests (Network First with timeout, then Cache)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
+      // Add 15 second timeout for mobile networks
+      Promise.race([
+        fetch(request),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Network timeout')), 15000)
+        )
+      ])
         .then((response) => {
           // Clone the response
           const responseClone = response.clone();
           
-          // Cache GET requests only
-          if (request.method === 'GET') {
+          // Cache GET requests only (but NOT admin APIs to prevent stale data)
+          if (request.method === 'GET' && !url.pathname.includes('/admin/')) {
             caches.open(API_CACHE).then((cache) => {
               cache.put(request, responseClone);
             });
@@ -81,8 +87,20 @@ self.addEventListener('fetch', (event) => {
           
           return response;
         })
-        .catch(() => {
-          // If network fails, try cache
+        .catch((error) => {
+          console.log('Service Worker: Network failed or timeout', error.message);
+          
+          // If network fails, try cache (but skip for admin APIs)
+          if (url.pathname.includes('/admin/')) {
+            return new Response(JSON.stringify({ 
+              error: 'Network error', 
+              message: 'Please check your internet connection and refresh' 
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
           return caches.match(request).then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
@@ -98,7 +116,10 @@ self.addEventListener('fetch', (event) => {
               return caches.match('/offline.html');
             }
             
-            return new Response('Offline', { status: 503 });
+            return new Response(JSON.stringify({ error: 'Offline' }), { 
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
           });
         })
     );
