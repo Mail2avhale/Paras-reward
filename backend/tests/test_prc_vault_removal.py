@@ -11,7 +11,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bbps-services-ui.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://eko-compliance-check.preview.emergentagent.com')
 
 
 class TestAutoDetectOperatorAPI:

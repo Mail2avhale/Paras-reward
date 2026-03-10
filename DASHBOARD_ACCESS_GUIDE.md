@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://bbps-services-ui.preview.emergentagent.com/setup
+   https://eko-compliance-check.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

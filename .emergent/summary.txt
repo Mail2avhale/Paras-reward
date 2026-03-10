@@ -1,73 +1,178 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to stabilize the production application (), which has been suffering from severe, recurring performance issues causing it to get stuck. Concurrently, the user wants to fix and enhance critical business functionalities, including the PRC burn mechanism and the Domestic Money Transfer (DMT) flow. The user also requested an E2E explanation of the DMT flow, which they clarified is initiated via a Chatbot, not a Redeem Page. Finally, the user wanted to enable more bill payment (BBPS) services on the frontend.
+The user's primary goal is to stabilize the production application (), which has been suffering from severe, recurring performance and usability issues causing it to get stuck, especially on mobile. Concurrently, the user wants to fix and enhance critical business functionalities, including the PRC burn mechanism, the Domestic Money Transfer (DMT) flow, and the Referral/Mining pages. The user also requested an E2E test and verification of the DMT and BBPS flows against official Eko documentation, with a zero-tolerance policy for failures.
 
 **PRODUCT REQUIREMENTS:**
-*   **Stability (P0):** The application must be stable in production. It should not randomly get stuck or become unresponsive. Critical APIs must be fast.
-*   **Functionality (P0):** Fix the PRC burn mechanism on production. The automated job was failing and manual triggers were timing out.
-*   **Functionality (P1):** The Domestic Money Transfer (DMT) flow must be made reliable. The user requested implementing pre-transfer account verification and a refund mechanism.
-*   **Functionality (P2):** Enable more BBPS services like DTH, Electricity, and Gas on the frontend.
-*   **Documentation (P2):** Provide a comprehensive E2E explanation of the Chatbot-driven DMT flow.
-*   **Refactoring (P1):** The monolithic  backend file must be broken down into smaller, manageable modules.
+*   **Stability (P0):** The application must be stable in production. It should not randomly get stuck, show white screens, or become unresponsive, particularly on mobile devices. Critical APIs must be fast.
+*   **Functionality (P0):** Fix the Failed to load data and data 0 issues on the Admin and User dashboards.
+*   **Functionality (P0):** Fix the PRC mining session persistence issue where sessions would not continue after a page refresh.
+*   **Functionality (P0):** Fix the white screen that appears after clicking the PRC COLLECT button.
+*   **Functionality (P0):** Fix the Referral page which was timing out and not loading data.
+*   **Performance (P1):** Improve the mobile experience by removing performance-intensive animations from the Mining page.
+*   **E2E Verification (P0):** Conduct a full end-to-end verification of the Chatbot-driven DMT flow and all BBPS services, ensuring they strictly adhere to the Eko developer documentation.
+*   **UI/UX (P2):** Improve the design of the service cards on the Redeem page.
+*   **Refactoring (P1):** The monolithic  and large  files must be broken down.
 
 **User's preferred language**: The user communicates primarily in **Marathi**. The next agent **MUST** respond in **Marathi** to ensure clear and effective communication.
 
 **what currently exists?**
-*   A FastAPI backend and React frontend application deployed on .
-*   **The critical stability issue that caused the app to randomly get stuck has been resolved.** The root cause was identified as synchronous  calls to third-party APIs (Eko, BBPS) blocking the entire asyncio event loop. These have all been migrated to use the asynchronous  library.
-*   **Login and User API performance has been massively improved.** Slow  queries were replaced with indexed equality checks, and missing database indexes were added. API response times have improved from 20-30 seconds to under 1 second.
-*   The **PRC auto-burn function has been optimized** using , reducing execution time from over 2 minutes (timeout) to ~7 seconds. Manual triggering now works reliably.
-*   The **DMT flow has been enhanced** with a mandatory, frontend-integrated account verification step before adding a recipient. Backend APIs for handling DMT refunds have also been added.
-*   A new admin panel feature shows the status of the .
-*   Comprehensive documentation for the Chatbot-driven DMT flow exists at , and new development guidelines to prevent future stability issues are at .
+*   A FastAPI backend and React frontend application.
+*   Previous critical stability fixes (async migration, DB indexing) are in place.
+*   This session focused on fixing numerous frontend bugs and performance issues reported by the user.
+*   The Failed to load data / data 0 error on admin pages was fixed by implementing a global Axios interceptor to bust service worker cache for admin API calls.
+*   The app stuck issue on mobile was addressed by adding a force-update mechanism for the service worker in .
+*   The Referral page timeout was fixed by optimizing the backend API in  and removing a critical N+1 query bottleneck.
+*   The Mining page () was heavily optimized by removing almost all animations and fixing a critical bug that caused a white screen on PRC collection.
+*   The mining session persistence bug was resolved, ensuring sessions continue correctly after a page refresh.
+*   The  file had its service cards redesigned with a glass-morphism effect and duplicate categories were removed.
 
 **Last working item**:
--   **Last item agent was working:** Enabling more BBPS services (DTH, FASTag, etc.) on the frontend. The agent added new UI sections for Entertainment (DTH) and Transport (FASTag) to .
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y (Backend APIs were confirmed to fetch DTH operators on the preview environment. Frontend changes are visual and ready for deployment.)
--   **Which testing method agent to use?** Manual testing by user after deployment. The user should navigate to the Redeem/Rewards page on production and confirm the new Entertainment and Transport sections are visible.
+-   **Last item agent was working:** The user issued a high-stakes request for a complete, failure-proof, end-to-end verification of the DMT (Domestic Money Transfer) and BBPS (Bharat Bill Pay System) flows. The agent was tasked with ensuring the entire process, from chatbot initiation to admin handling, strictly follows Eko's official developer documentation. The agent began by reviewing the existing implementation in  and the  document, preparing to cross-reference it against the official Eko docs.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both. Given the user's zero-tolerance for failure, a comprehensive approach is required. Start with a manual E2E walkthrough, then use the  to create robust backend API tests (============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: /app
+plugins: anyio-4.11.0
+collected 1755 items / 8 errors
+
+==================================== ERRORS ====================================
+_________ ERROR collecting backend/tests/test_luxury_savings_split.py __________
+import file mismatch:
+imported module 'test_luxury_savings_split' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_luxury_savings_split.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_luxury_savings_split.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+___________ ERROR collecting backend/tests/test_mining_claim_flow.py ___________
+import file mismatch:
+imported module 'test_mining_claim_flow' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_mining_claim_flow.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_mining_claim_flow.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+________ ERROR collecting backend/tests/test_mining_referral_issues.py _________
+import file mismatch:
+imported module 'test_mining_referral_issues' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_mining_referral_issues.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_mining_referral_issues.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+___________ ERROR collecting backend/tests/test_network_analytics.py ___________
+import file mismatch:
+imported module 'test_network_analytics' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_network_analytics.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_network_analytics.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+________ ERROR collecting backend/tests/test_referrals_active_status.py ________
+import file mismatch:
+imported module 'test_referrals_active_status' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_referrals_active_status.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_referrals_active_status.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_____ ERROR collecting backend/tests/test_rejection_reason_account_age.py ______
+import file mismatch:
+imported module 'test_rejection_reason_account_age' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_rejection_reason_account_age.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_rejection_reason_account_age.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_______________ ERROR collecting backend/tests/test_user_360.py ________________
+import file mismatch:
+imported module 'test_user_360' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_user_360.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_user_360.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+_________ ERROR collecting backend/tests/test_vip_multi_plan_system.py _________
+import file mismatch:
+imported module 'test_vip_multi_plan_system' has this __file__ attribute:
+  /app/admin-deploy/backend/tests/test_vip_multi_plan_system.py
+which is not the same as the test file we want to collect:
+  /app/backend/tests/test_vip_multi_plan_system.py
+HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
+=============================== warnings summary ===============================
+admin-deploy/backend/tests/test_order_delivery_distribution.py:60
+  /app/admin-deploy/backend/tests/test_order_delivery_distribution.py:60: PytestCollectionWarning: cannot collect test class 'TestData' because it has a __init__ constructor (from: admin-deploy/backend/tests/test_order_delivery_distribution.py)
+    class TestData:
+
+backend/tests/test_eko_bill_payments.py:107
+  /app/backend/tests/test_eko_bill_payments.py:107: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.timeout(60)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR backend/tests/test_luxury_savings_split.py
+ERROR backend/tests/test_mining_claim_flow.py
+ERROR backend/tests/test_mining_referral_issues.py
+ERROR backend/tests/test_network_analytics.py
+ERROR backend/tests/test_referrals_active_status.py
+ERROR backend/tests/test_rejection_reason_account_age.py
+ERROR backend/tests/test_user_360.py
+ERROR backend/tests/test_vip_multi_plan_system.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
+======================== 2 warnings, 8 errors in 2.87s =========================) and frontend user flow tests () for both DMT and BBPS services.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Production Auto-Burning Job Scheduler Failure (P1)**
--   **Issue 2: PRC Burn History Logging Incorrect (P1)**
+-   **Issue 1: DMT & BBPS E2E Flow Verification (P0)**
+-   **Issue 2: Production Auto-Burning Job Scheduler Failure (P1)**
+-   **Issue 3: PRC Burn History Logging Incorrect (P1)**
 
 **Issues Detail:**
--   **Issue 1: Production Auto-Burning Job Scheduler Failure**
-    -   **Attempted fixes:** The burn job *function* () was successfully optimized and now runs in seconds when manually triggered. The agent also added a health check API to see the scheduler status. However, the root cause of the  not *automatically* triggering the job on the production environment was not resolved.
+-   **Issue 1: DMT & BBPS E2E Flow Verification**
+    -   **Attempted fixes:** This is the current task. The agent has started gathering context by reviewing internal documentation and code.
     -   **Next debug checklist:**
-        1.  Investigate the production hosting environment's limitations regarding background threads/tasks, which is a common reason for  failures in containerized deployments.
-        2.  Consider replacing the  with an external cron job service (like cron-job.org or a platform-native scheduler) that calls a secured API endpoint to trigger the burn.
-    -   **Why fix this issue and what will be achieved with the fix?** Automates a core part of the app's tokenomics, removing the need for daily manual admin intervention.
+        1.  Obtain and thoroughly review the latest official Eko developer documentation for the v1 DMT and BBPS APIs.
+        2.  Compare the documented flow (initiation, verification, transaction, status check, refund, commission) against the current implementation in  and .
+        3.  Identify and list all discrepancies, missing steps, or potential failure points (e.g., inadequate error handling, missing status checks).
+        4.  Implement the necessary fixes on the backend to align with the documentation.
+        5.  Perform a full E2E test using the testing agent.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical business function. A 100% reliable implementation will prevent financial losses, build user trust, and reduce manual intervention.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None.
 
--   **Issue 2: PRC Burn History Logging Incorrect**
-    -   **Attempted fixes:** The agent identified that after the successful burn optimization, the history entry was logging  for the burned amount. The issue was a key mismatch in the result object ( was used instead of the correct ). A fix has been applied to .
-    -   **Next debug checklist:**
-        1.  Deploy the fix to production.
-        2.  Trigger a Smart Burn from the admin panel.
-        3.  Verify that the new entry in the Burn Schedule History table shows the correct amount of PRC burned.
-    -   **Why fix this issue and what will be achieved with the fix?** Provides accurate accounting and visibility for the admin.
+-   **Issue 2: Production Auto-Burning Job Scheduler Failure**
+    -   **Attempted fixes:** The burn function itself is optimized, but the  does not trigger automatically in the production environment. No progress was made in this session.
+    -   **Next debug checklist:** Investigate production environment limitations for background threads. Consider replacing  with an external cron job service.
+    -   **Why fix this issue and what will be achieved with the fix?** Automates a core part of the app's tokenomics.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on other issue:** None.
+
+-   **Issue 3: PRC Burn History Logging Incorrect**
+    -   **Attempted fixes:** A code fix exists in  but has not been deployed or tested.
+    -   **Next debug checklist:** Deploy the fix, trigger a manual burn, and verify the history log in the admin panel.
+    -   **Why fix this issue and what will be achieved with the fix?** Ensures accurate accounting for the admin.
     -   **Status:** TESTING PENDING
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both (Backend API and Admin Frontend).
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Backend Monolith Refactoring (P1)**
-    -   **Where to resume:** This task saw no progress in this session as the focus was on critical stability. The next step remains to incrementally move routes from the 38,000-line  into dedicated files within the  directory and include them in .
-    -   **What will be achieved with this?** Will significantly improve code maintainability, reduce backend startup time, and further enhance deployment stability.
+-   **Task 1: Backend Monolith Refactoring () (P1)**
+    -   **Where to resume:** No progress in this session. The next step is to move routes from  into dedicated files in .
+    -   **What will be achieved with this?** Improved code maintainability and stability.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on something:** None.
+
+-   **Task 2: Frontend Refactoring () (P2)**
+    -   **Where to resume:** The file was partially refactored (component created, design updated), but at over 2,600 lines, it's still a monolith. The next step is to break down the remaining large sections into smaller, manageable components.
+    -   **What will be achieved with this?** Better code readability and easier future maintenance.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P0:** Deploy and conduct a full E2E test of the DMT flow on production, including the new Account Verification step.
-*   **P1:** Deploy and verify the new BBPS services (DTH, FASTag) are visible and functional on the production frontend.
-*   **P2:** Refactor the  file (over 2600 lines) into smaller, reusable components.
+*   **P1:** Deploy and verify the PRC Burn History Logging fix.
+*   **P1:** Continue refactoring .
+*   **P2:** Continue refactoring .
 
 **Future Tasks:**
 *   Migrate KYC/Receipt images from base64 strings in MongoDB to a file storage solution.
@@ -77,110 +182,92 @@ The user's primary goal is to stabilize the production application (), which has
 *   Investigate Razorpay auto-subscription failures.
 
 **Completed work in this session**
--   **CRITICAL STABILITY FIX:** Solved the app stuck issue by migrating all synchronous  calls to asynchronous  in , , and , preventing the event loop from being blocked.
--   **Login & API Performance Overhaul:**
-    -   Replaced slow  queries with fast, indexed equality checks in  and .
-    -   Added missing database indexes for , , , and  to .
-    -   Reduced API response times for login and user data from ~30 seconds to under 1 second.
--   **PRC Burn Mechanism Optimization:**
-    -   Rewrote the  function in  to use  operations.
-    -   Reduced execution time from a timeout (>2 mins) to ~7 seconds, making manual burns from the admin panel reliable.
--   **DMT Flow Enhancements:**
-    -   Implemented a mandatory account verification step in the frontend ().
-    -   Fixed the backend API () to correctly handle POST requests.
-    -   Added new backend endpoints (, ) in  to support the refund flow.
--   **Documentation:**
-    -   Created  with a detailed E2E explanation of the Chatbot-driven DMT process.
-    -   Created  to establish rules (e.g., no , use ) to prevent future stability regressions.
+-   **Referral Page Timeout Fix:** Resolved a critical timeout on the referral page by fixing an N+1 query problem in the  API endpoint in .
+-   **Admin Dashboard Data 0 Bug Fix:** Fixed an issue where admin pages showed 0 data by implementing a global cache-busting Axios interceptor in  and updating the service worker version.
+-   **Mobile App Stuck Bug Fix:** Addressed mobile-specific freezes by adding a force update mechanism for the service worker in .
+-   **Mining Page Overhaul ():**
+    -   **Performance:** Removed numerous performance-heavy animations as requested by the user, significantly improving page load speed.
+    -   **White Screen Bug:** Fixed the white screen on PRC Collect by removing calls to a missing  component.
+    -   **Session Persistence Bug:** Corrected state management logic to ensure the mining session state is reliably maintained across page refreshes.
+-   **UI/UX Improvements ():**
+    -   Redesigned the service category cards with a modern glass-morphism effect.
+    -   Refactored the page by removing duplicate categories and creating a reusable  component.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1:** Admin Panel Failed to delete plan error.
 -   **Issue 2:** Razorpay auto-subscription failures on production.
 
 **Known issue recurrence from previous fork**
--   **Production Auto-Burning Job Scheduler Failure:** While the burn job itself is now optimized and functional, the  still does not trigger it automatically on the production environment. This is a recurring environmental issue. **Status: IN PROGRESS**.
+-   **Production Auto-Burning Job Scheduler Failure:** The  still does not trigger automatically on production. This remains an open environmental issue. **Status: IN PROGRESS**.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Asyncio Event Loop Blocking:** The root cause of all stability issues was identified as synchronous I/O calls () blocking the main FastAPI event loop.
--   **Sync-to-Async Migration:** The critical fix was replacing all instances of the  library with the  for non-blocking third-party API calls.
--   **MongoDB Query Optimization:** Performance was drastically improved by removing slow, non-indexed  queries and replacing them with fast, direct equality checks on indexed fields (, ).
--   **Bulk Database Operations:** The PRC burn function was optimized from thousands of individual  calls to a few  operations, reducing execution time exponentially.
+-   **Backend N+1 Query Problem:** Identified and fixed a performance bottleneck in  where an API was making database calls inside a loop, causing timeouts.
+-   **Service Worker Caching:** Diagnosed and implemented solutions (cache-busting timestamps via Axios interceptors, cache versioning, forced updates) to combat aggressive PWA caching that caused stale data issues.
+-   **Frontend Performance:** Improved mobile responsiveness by strategically removing performance-intensive CSS/JS animations from the  component.
+-   **Component State Management:** Debugged and fixed race conditions and state initialization bugs in React components () to ensure session persistence.
 
 **key DB schema**
--   **users:** Added indexes on  and  to fix slow login queries.
--   **vip_payments:** Added index on .
--   **prc_burn_history:** The schema is correct, but the function populating it had a bug (now fixed, pending deployment).
--   **chatbot_withdrawal_requests:** Identified as the collection for the Chatbot DMT flow.
+-   No schema changes were made in this session.
 
 **All files of reference**
--   : Contains the optimized burn function and user/auth APIs.
--   : Contains optimized login logic.
--   : Refactored to use  and contains new refund APIs.
--   : Refactored to use .
--   : Refactored to use .
--   : Contains all new and existing indexes. This MUST be run on production.
--   : Contains the new DMT verification UI and BBPS sections.
--   : Contains critical rules for future development.
+-    (Contains the referral API fix)
+-    (Contains fixes for session, collection bug, and performance)
+-    (Contains UI redesign)
+-    (Contains global cache-busting and update logic)
+-    (Contains updated cache version)
+-    (Key file for the next task)
+-    (Documentation for the next task)
 
 **Areas that need refactoring**:
--   **:** Still over 38,000 lines. This remains the top priority for structural refactoring.
--   **:** Still over 2,600 lines and handles too much logic. It should be broken down into smaller components.
+-   **:** Remains a high-priority refactoring target due to its monolithic nature.
+-   **:** Despite improvements, it is still very large and needs to be broken down into more granular components.
 
 **key api endpoints**
--   : FIXED to accept a POST body for account verification.
--   : CREATED for initiating DMT refunds.
--   : CREATED for resending refund OTPs.
--   : CREATED to check the status of the .
--   : OPTIMIZED from 24s to <1s.
--   : OPTIMIZED from 15s to <1s.
--   : OPTIMIZED from 30s to <1s.
--   : OPTIMIZED from timeout to ~7s.
+-   : **OPTIMIZED**. Fixed a critical N+1 query problem that caused timeouts.
+-   : **FIXED** (at the frontend level). Addressed caching issues that caused stale data to be displayed.
+-   : **FIXED** (at the frontend level). Corrected state management logic that consumed this API's data to ensure session persistence.
 
 **Critical Info for New Agent**
--   **Your primary language MUST be Marathi.**
--   The #1 user priority, the app stuck issue, has been **SOLVED**. The root cause was synchronous  calls blocking the event loop. The app is now stable. Do not re-investigate this unless new, specific evidence appears.
--   A new guide exists at . You **MUST** follow its rules (especially use , not ) to prevent regressions.
--   The next priorities are deploying and verifying the pending fixes for **PRC Burn History Logging** and the **DMT Account Verification flow**.
--   After deployment, the updated index script at  **MUST** be executed on the production database to ensure performance gains are realized.
+-   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
+-   The user's new highest priority (P0) is the **E2E verification and hardening of the DMT and BBPS flows**. The user expects 100% compliance with Eko's official documentation and has a zero-tolerance policy for failure. This task is more critical than any other pending item.
+-   The application is now significantly more stable after fixing numerous frontend bugs related to caching, state management, and performance that caused the app to get stuck or show incorrect data.
+-   The  script mentioned in the previous handoff has still not been executed on production. This should be done to realize the performance benefits of the new DB indexes.
 
 **documents and test reports created in this job**
--   
--   
--    (updated)
--   
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **Request:** Check if the app will get stuck again after future changes and provide guidelines to prevent it. (Status: **Completed**, agent created )
-9.  **Confirmation:** App is running smoothly after deployment. (Status: **Completed**)
-8.  **Request:** User asks for next steps for improvement. (Status: **Agent Responded** with a plan)
-7.  **Bug Report:** App is auto-stuck again for no reason. (Status: **Resolved**, this was the final trigger to investigate the root  vs  issue).
-6.  **Confirmation:** Deployment done. (Status: **Completed**)
-5.  **Request:** User wants a full E2E explanation of the DMT flow, from user request to admin procedure. (Status: **Completed**, agent created )
-4.  **Bug Report:** User view gets stuck again. (Status: **Resolved**, agent identified slow user API and added timeouts/indexes)
-3.  **Clarification:** The DMT flow is through a chatbot, not the Bank Transfer button on the Redeem Page. Update documentation. (Status: **Completed**)
-2.  **Confirmation:** Deployment is done, and the user is asking to monitor the auto-burn job. (Status: **Agent investigated**, found it failed, and then optimized the burn function).
-1.  **Bug Report:** After deployment, the app is stuck on PRC collect. (Status: **Resolved**, agent found a syntax error in production code that was fixed in preview but not deployed correctly).
+-   **10. Request:** User requests a full, 100% failure-proof E2E test of the DMT and BBPS flows according to Eko documentation. (Status: **In Progress**, this is the current P0 task).
+-   **9. Clarification:** User wants the PRC collect button to simply collect and stay on the page, with no animations. (Status: **Completed**).
+-   **8. Bug Report:** User reports two critical bugs: 1) White screen on PRC collect. 2) Mining session does not persist on refresh. (Status: **Completed**, both fixed).
+-   **7. Request:** User asks to make the Redeem services cards beautiful and provides a video for inspiration. (Status: **Completed**).
+-   **6. Request:** User asks to remove all animations from the mining page except the progress bar to improve performance. (Status: **Completed**).
+-   **5. Confirmation:** User confirms the app is running smoothly after previous fixes. (Status: **Acknowledged**).
+-   **4. Bug Report:** User reports that the Mining page sometimes doesn't show the level bonus, and the Referral page doesn't load data. (Status: **Completed**, backend N+1 query fixed).
+-   **3. Bug Report:** User reports the app gets stuck on mobile but works on desktop. (Status: **Completed**, service worker force update implemented).
+-   **2. Bug Report:** User reports seeing Failed to load data or 0 data on various pages, sharing a screenshot of the admin members page. (Status: **Completed**, cache-busting implemented).
+-   **1. Priority Change:** User sets P2 tasks (DMT/BBPS verification, Frontend Refactoring) as the new priority. (Status: **Completed**).
 
 **Project Health Check:**
 -   **Broken:**
-    -   The production auto-burn **scheduler** () does not trigger automatically. The job itself works perfectly when triggered manually.
+    -   The production auto-burn **scheduler** () does not trigger automatically.
 -   **Mocked:**
-    -   Eko APIs do not work in the preview environment due to IP whitelisting, making pre-deployment testing difficult. All Eko-related features must be tested on production.
+    -   Eko APIs are not whitelisted for the preview environment, so all DMT/BBPS testing must be carefully validated before and after production deployment.
 
 **3rd Party Integrations**
--   **Eko (v1 DMT & BBPS API):** Now more stable and robust after migrating all API calls to asynchronous .
+-   **Eko (v1 DMT & BBPS API):** Core integration for money transfer and bill payments. Currently undergoing a full E2E review for reliability.
 -   **Razorpay:** Implemented but has known, uninvestigated issues.
--   **Redis (Upstash):** Working correctly for caching.
--   **MongoDB Atlas:** Production database. Connection is optimized.
+-   **Redis (Upstash):** Used for caching.
+-   **MongoDB Atlas:** Production database.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, used to run backend API tests which all passed.
--   **Troubleshoot agent used after agent stuck in loop:** YES, the troubleshoot agent was critical in identifying the root cause of the stability issue ( library blocking the event loop).
--   **Test files created:** None, but  was significantly updated.
--   **Known regressions:** None.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None.
+-   **Known regressions:** None from this session's changes.
 
 **Credentials to test flow:**
 -   **Admin:**  / PIN: 
@@ -188,4 +275,4 @@ The user's primary goal is to stabilize the production application (), which has
 -   **Test User for general UI testing:**  / PIN: 
 
 **What agent forgot to execute**
--   The agent created/updated the  script but did not execute it on the production database. This was left as a clear instruction for the user after deployment, but it is a critical pending step.</analysis>
+-   The  script has been pending execution on the production database for two forks. This is a critical step to ensure the database performance optimizations from the first fork are active in production.</analysis>

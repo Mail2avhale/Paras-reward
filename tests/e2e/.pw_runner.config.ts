@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260309_163634/results.json' }],
   ],
   use: {
-    baseURL: 'https://bbps-services-ui.preview.emergentagent.com',
+    baseURL: 'https://eko-compliance-check.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

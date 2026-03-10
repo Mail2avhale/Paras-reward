@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * Test user: testmember@paras.com / PIN: 123456 (Elite, 50000 PRC)
  */
 
-const BASE_URL = 'https://bbps-services-ui.preview.emergentagent.com';
+const BASE_URL = 'https://eko-compliance-check.preview.emergentagent.com';
 
 // Reusable login helper
 async function loginTestUser(page: any) {
