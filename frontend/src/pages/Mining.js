@@ -147,6 +147,30 @@ const BalanceCard = ({ label, value, icon: Icon, color, tooltip }) => (
   </div>
 );
 
+// Simple confetti particle for collect celebration
+const ConfettiParticle = ({ index, onComplete }) => {
+  const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
+  const color = colors[index % colors.length];
+  const angle = (index * 30) * (Math.PI / 180);
+  const distance = 80 + Math.random() * 40;
+  
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 800);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+  
+  return (
+    <div
+      className="absolute w-2 h-2 rounded-full animate-ping"
+      style={{
+        backgroundColor: color,
+        transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`,
+        opacity: 0.8
+      }}
+    />
+  );
+};
+
 const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
@@ -154,7 +178,15 @@ const DailyRewards = ({ user }) => {
   const [loading, setLoading] = useState(true);
   // Initialize userData with user prop to prevent subscription flickering
   const [userData, setUserData] = useState(user);
-  const [isMining, setIsMining] = useState(false);
+  // FIXED: Initialize isMining from user prop if available
+  const [isMining, setIsMining] = useState(() => {
+    // Check if user has active session from props
+    if (user?.mining_active && user?.mining_session_end) {
+      const endTime = new Date(user.mining_session_end).getTime();
+      return endTime > Date.now();
+    }
+    return false;
+  });
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
   const [sessionPRC, setSessionPRC] = useState(0);
   const [miningRate, setMiningRate] = useState(20.83); // Default to base rate (500/24)
@@ -222,15 +254,27 @@ const DailyRewards = ({ user }) => {
       // single_leg_info is included in base_rate, no separate display needed
       
       // Auto-start mining display if session is active
+      // FIXED: Always update session state from API response (source of truth)
       if (miningData.session_active && miningData.remaining_hours > 0) {
-        setIsMining(true);
-        setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
         const sessionStart = new Date(miningData.session_start).getTime();
-        setSessionStartTime(sessionStart);
         const totalDuration = 24 * 60 * 60 * 1000;
         const elapsed = Date.now() - sessionStart;
+        
+        setIsMining(true);
+        setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
+        setSessionStartTime(sessionStart);
         setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
         setSessionPRC(miningData.mined_this_session || 0);
+        
+        console.log('Session restored from API:', {
+          remaining: miningData.remaining_hours,
+          mined: miningData.mined_this_session
+        });
+      } else if (miningData.session_active === false) {
+        // API explicitly says no active session
+        setIsMining(false);
+        setSessionTimeRemaining(0);
+        setSessionProgress(0);
       }
       
       // Clear loading immediately after mining data
@@ -252,22 +296,8 @@ const DailyRewards = ({ user }) => {
       // Set lifetime earnings from redemption stats API for consistency
       setLifetimeEarnings(statsData.total_earned || 0);
       
-      // Only update mining session if not already set by miningData (avoid overwrite)
-      if (!isMining && data.mining_active && data.mining_session_end) {
-        const endTime = new Date(data.mining_session_end).getTime();
-        const startTime = data.mining_start_time ? new Date(data.mining_start_time).getTime() : (endTime - 24*60*60*1000);
-        const now = Date.now();
-        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-        
-        if (remaining > 0) {
-          setIsMining(true);
-          setSessionTimeRemaining(remaining);
-          setSessionStartTime(startTime);
-          const totalDuration = 24 * 60 * 60 * 1000;
-          const elapsed = now - startTime;
-          setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
-        }
-      }
+      // NOTE: Session state is managed by mining/status API (source of truth)
+      // User data is only used for balance and profile info
     } catch (error) {
       console.error('Error fetching user data:', error);
       
