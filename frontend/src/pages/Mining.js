@@ -147,29 +147,8 @@ const BalanceCard = ({ label, value, icon: Icon, color, tooltip }) => (
   </div>
 );
 
-// Simple confetti particle for collect celebration
-const ConfettiParticle = ({ index, onComplete }) => {
-  const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
-  const color = colors[index % colors.length];
-  const angle = (index * 30) * (Math.PI / 180);
-  const distance = 80 + Math.random() * 40;
-  
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 800);
-    return () => clearTimeout(timer);
-  }, [onComplete]);
-  
-  return (
-    <div
-      className="absolute w-2 h-2 rounded-full animate-ping"
-      style={{
-        backgroundColor: color,
-        transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`,
-        opacity: 0.8
-      }}
-    />
-  );
-};
+// Confetti disabled for performance
+const ConfettiParticle = () => null;
 
 const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
@@ -195,13 +174,11 @@ const DailyRewards = ({ user }) => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
   const [showFloatingCoin, setShowFloatingCoin] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [sessionProgress, setSessionProgress] = useState(0); // Real progress percentage
   const [referralBreakdown, setReferralBreakdown] = useState(null); // Level-wise breakdown
   const [baseRate, setBaseRate] = useState(0); // Individual base mining rate (includes single leg bonus)
   
-  // NEW: Enhanced animation states
-  const [showCollectAnimation, setShowCollectAnimation] = useState(false);
+  // Collect state
   const [lastCollectedAmount, setLastCollectedAmount] = useState(0);
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   
@@ -485,20 +462,14 @@ const DailyRewards = ({ user }) => {
       const data = response.data;
       const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
       
-      // Store claimed amount for animation
+      // Store claimed amount for display
       setLastCollectedAmount(claimed);
       
-      // Trigger enhanced coin animation
-      setShowCollectAnimation(true);
+      // Simple haptic feedback
+      triggerHaptic('success');
       
-      // Haptic success feedback
-      triggerHaptic('collect');
-      
-      // Trigger confetti celebration!
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 1000);
-      
-      smartToast.success(`🎉 Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
+      // Show success toast - NO animations
+      smartToast.success(`Collected ${claimed.toFixed(2)} PRC!`, { position: 'top-center' });
       
       // IMPORTANT: Immediately reset sessionPRC to 0 to avoid negative display
       setSessionPRC(0);
@@ -674,15 +645,7 @@ const DailyRewards = ({ user }) => {
               : 'bg-zinc-900/40 border-zinc-800 shadow-2xl shadow-black/40'
           }`}
         >
-          {/* ENHANCED: Mining Particles Effect */}
-          <MiningParticles isActive={isMining} intensity={hasPaidPlan ? 1.5 : 1} />
-          
-          {/* ENHANCED: Collect Coins Animation */}
-          <CollectCoinsAnimation 
-            show={showCollectAnimation} 
-            amount={lastCollectedAmount}
-            onComplete={() => setShowCollectAnimation(false)}
-          />
+          {/* Mining Particles disabled for performance */}
           
           {/* Subtle ambient glow when mining */}
           {isMining && (
@@ -691,17 +654,6 @@ const DailyRewards = ({ user }) => {
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-400 rounded-full blur-[80px]" />
             </div>
           )}
-          
-          {/* Confetti Burst on Collect - keep this for celebration */}
-          <AnimatePresence>
-            {showConfetti && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-                {[...Array(12)].map((_, i) => (
-                  <ConfettiParticle key={i} index={i} onComplete={() => setShowConfetti(false)} />
-                ))}
-              </div>
-            )}
-          </AnimatePresence>
 
           <div className="relative z-10">
             {/* Status Badge - Clean Dark Design */}
