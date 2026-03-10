@@ -28,7 +28,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
-import requests
+import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 import base64
 import hashlib
 import hmac
@@ -40,6 +40,16 @@ from bson import ObjectId
 
 # Database connection
 from pymongo import MongoClient
+
+# Global async HTTP client for connection pooling
+_http_client: Optional[httpx.AsyncClient] = None
+
+def get_http_client() -> httpx.AsyncClient:
+    """Get or create async HTTP client with connection pooling"""
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
+    return _http_client
 
 # ==================== CONFIGURATION (ALL FROM ENV) ====================
 
@@ -81,6 +91,23 @@ DB_NAME = os.environ.get("DB_NAME", "test_database")
 
 # Request timeout
 REQUEST_TIMEOUT = 60
+
+# ==================== ASYNC HTTP HELPERS ====================
+
+async def async_get(url: str, headers: dict = None, params: dict = None, timeout: int = REQUEST_TIMEOUT) -> httpx.Response:
+    """Non-blocking async GET request"""
+    client = get_http_client()
+    return await client.get(url, headers=headers, params=params, timeout=timeout)
+
+async def async_post(url: str, headers: dict = None, data: dict = None, json: dict = None, timeout: int = REQUEST_TIMEOUT) -> httpx.Response:
+    """Non-blocking async POST request"""
+    client = get_http_client()
+    return await client.post(url, headers=headers, data=data, json=json, timeout=timeout)
+
+async def async_put(url: str, headers: dict = None, data: dict = None, timeout: int = REQUEST_TIMEOUT) -> httpx.Response:
+    """Non-blocking async PUT request"""
+    client = get_http_client()
+    return await client.put(url, headers=headers, data=data, timeout=timeout)
 
 # ==================== ERROR CODES ====================
 
@@ -507,7 +534,7 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
     try:
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        response = await async_get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Customer Search Response: {response.status_code}")
         logging.debug(f"[DMT] Response Body: {response.text[:500]}")
@@ -599,7 +626,7 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
                 user_msg
             )
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
     except Exception as e:
         logging.error(f"[DMT] Customer Search Error: {e}")
@@ -648,7 +675,7 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
             payload["dob"] = req.dob
         
         headers = generate_eko_headers(request)
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Registration Response: {response.status_code}")
         logging.debug(f"[DMT] Registration Response Body: {response.text[:500]}")
@@ -706,7 +733,7 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Registration failed"))
             return create_error_response(eko_status, result.get("message", "Registration failed"), user_msg)
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
     except Exception as e:
         logging.error(f"[DMT] Registration Error: {e}")
@@ -745,7 +772,7 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
         }
         
         headers = generate_eko_headers(request)
-        response = requests.post(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await async_post(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Resend OTP Response: {response.status_code}")
         logging.debug(f"[DMT] Resend OTP Response Body: {response.text[:500]}")
@@ -786,7 +813,7 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Failed to send OTP"))
             return create_error_response(eko_status, result.get("message", "Failed to send OTP"), user_msg)
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
     except Exception as e:
         logging.error(f"[DMT] Resend OTP Error: {e}")
@@ -834,7 +861,7 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
         }
         
         headers = generate_eko_headers(request)
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Verify OTP Response: {response.status_code}")
         logging.debug(f"[DMT] Verify OTP Response Body: {response.text[:500]}")
@@ -890,7 +917,7 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "OTP verification failed"))
             return create_error_response(eko_status, result.get("message", "OTP verification failed"), user_msg)
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
     except Exception as e:
         logging.error(f"[DMT] Verify OTP Error: {e}")
@@ -932,7 +959,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
         }
         
         headers = generate_eko_headers(request)
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Add Recipient Response: {response.status_code}")
         
@@ -1019,7 +1046,7 @@ async def get_recipients(mobile: str, user_id: str):
     try:
         url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{mobile}/recipients?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
+        response = await async_get(url, headers=generate_eko_headers_for_get(), timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Recipients Response: {response.status_code}")
         
@@ -1240,7 +1267,7 @@ async def transfer_money(req: TransferRequest, request: Request):
         
         logging.info(f"[DMT] Executing Transfer: ₹{amount_inr} via {url}")
         
-        response = requests.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await async_post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Transfer Response: {response.status_code}")
         
@@ -1355,7 +1382,7 @@ async def transfer_money(req: TransferRequest, request: Request):
                 f"Transfer failed. {req.prc_amount} PRC refunded. Reason: {user_msg}"
             )
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         # Don't refund on timeout - status unknown
         db.dmt_transactions.update_one(
             {"transaction_id": client_ref_id},
@@ -1436,7 +1463,7 @@ async def get_transaction_status(transaction_id: str, user_id: str):
         try:
             url = f"{EKO_BASE_URL}/v1/transactions/{eko_tid}?initiator_id={EKO_INITIATOR_ID}"
             
-            response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=30)
+            response = await async_get(url, headers=generate_eko_headers_for_get(), timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -1549,7 +1576,7 @@ async def verify_bank_account(req: VerifyAccountRequest, request: Request):
     try:
         url = f"{EKO_BASE_URL}/v1/banks/ifsc:{ifsc}/accounts/{account}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        response = requests.get(url, headers=generate_eko_headers_for_get(), timeout=60)
+        response = await async_get(url, headers=generate_eko_headers_for_get(), timeout=60)
         
         if response.status_code == 403:
             return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
@@ -1643,7 +1670,7 @@ async def process_refund(req: RefundRequest, request: Request):
             "tid": eko_tid
         }
         
-        response = requests.post(url, headers=headers, data=data, timeout=60)
+        response = await async_post(url, headers=headers, data=data, timeout=60)
         result = response.json()
         
         # Log the refund attempt
@@ -1725,7 +1752,7 @@ async def resend_refund_otp(transaction_id: str, user_id: str, request: Request)
         headers = generate_eko_headers_for_get()
         params = {"initiator_id": EKO_INITIATOR_ID}
         
-        response = requests.get(url, headers=headers, params=params, timeout=30)
+        response = await async_get(url, headers=headers, params=params, timeout=30)
         result = response.json()
         
         if result.get("status") == 0:

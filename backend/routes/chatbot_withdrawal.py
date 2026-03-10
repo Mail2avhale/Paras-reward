@@ -51,7 +51,28 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import uuid
 import re
-import requests
+import httpx  # ASYNC HTTP - replaces blocking 'requests' library
+
+# Global async HTTP client for chatbot withdrawal
+_chatbot_http_client = None
+
+def get_chatbot_http_client():
+    global _chatbot_http_client
+    if _chatbot_http_client is None:
+        _chatbot_http_client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
+    return _chatbot_http_client
+
+async def chatbot_get(url: str, headers: dict = None, timeout: int = 60):
+    client = get_chatbot_http_client()
+    return await client.get(url, headers=headers, timeout=timeout)
+
+async def chatbot_post(url: str, headers: dict = None, data: dict = None, json: dict = None, timeout: int = 60):
+    client = get_chatbot_http_client()
+    return await client.post(url, headers=headers, data=data, json=json, timeout=timeout)
+
+async def chatbot_put(url: str, headers: dict = None, data: dict = None, timeout: int = 60):
+    client = get_chatbot_http_client()
+    return await client.put(url, headers=headers, data=data, timeout=timeout)
 import logging
 import os
 import hmac
@@ -267,7 +288,7 @@ async def check_eko_customer(req: EkoCheckRequest):
         headers = get_eko_headers()
         del headers["Content-Type"]  # GET request
         
-        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await chatbot_get(url, headers=headers, timeout=REQUEST_TIMEOUT)
         logging.info(f"[Withdrawal] Eko customer check: {response.status_code}")
         
         if response.status_code == 403:
@@ -316,7 +337,7 @@ async def check_eko_customer(req: EkoCheckRequest):
                 "message": "Unable to verify customer status"
             }
             
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return {"success": True, "skip_otp": True, "message": "Verification skipped (timeout)"}
     except Exception as e:
         logging.error(f"[Withdrawal] Eko check error: {e}")
@@ -340,7 +361,7 @@ async def register_eko_customer(req: EkoRegisterRequest):
         }
         
         headers = get_eko_headers()
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[Withdrawal] Eko register: {response.status_code}")
         
@@ -397,7 +418,7 @@ async def resend_eko_otp(req: EkoCheckRequest):
         payload = {"pipe": "9"}
         headers = get_eko_headers()
         
-        response = requests.post(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await chatbot_post(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         logging.info(f"[Withdrawal] Eko resend OTP: {response.status_code}")
         
         if response.status_code == 403:
@@ -442,7 +463,7 @@ async def verify_eko_otp(req: EkoVerifyOTPRequest):
         }
         
         headers = get_eko_headers()
-        response = requests.put(url, data=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[Withdrawal] Eko verify OTP: {response.status_code}")
         
@@ -1505,7 +1526,7 @@ async def _add_eko_recipient(sender_mobile: str, account_number: str, ifsc_code:
         
         logging.info(f"[EKO-RECIPIENT] Adding: {clean_name}, Account: ***{account_number[-4:]}, IFSC: {ifsc_code}")
         
-        response = requests.put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
+        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         result = response.json()
         
         logging.info(f"[EKO-RECIPIENT] Response Status: {response.status_code}, Body: {result}")
@@ -1539,10 +1560,10 @@ async def _add_eko_recipient(sender_mobile: str, account_number: str, ifsc_code:
                 "raw_response": result
             }
             
-    except requests.Timeout:
+    except httpx.TimeoutException:
         logging.error("[EKO-RECIPIENT] Timeout")
         return {"success": False, "message": "Eko API timeout - please retry", "error_code": "TIMEOUT"}
-    except requests.RequestException as e:
+    except httpx.RequestError as e:
         logging.error(f"[EKO-RECIPIENT] Request error: {e}")
         return {"success": False, "message": f"Network error: {str(e)}", "error_code": "NETWORK_ERROR"}
     except Exception as e:
@@ -1605,7 +1626,7 @@ async def _execute_eko_transfer(sender_mobile: str, recipient_id: str, amount: i
         
         logging.info(f"[EKO-TRANSFER] Executing: Rs.{amount} via {transfer_mode} to recipient {recipient_id}")
         
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        response = await chatbot_post(url, headers=headers, json=payload, timeout=60)
         result = response.json()
         
         logging.info(f"[EKO-TRANSFER] Response: {result}")
@@ -1663,7 +1684,7 @@ async def _execute_eko_transfer(sender_mobile: str, recipient_id: str, amount: i
                 "raw_response": result
             }
             
-    except requests.Timeout:
+    except httpx.TimeoutException:
         return {"success": False, "message": "Timeout - check status manually", "error_code": "TIMEOUT"}
     except Exception as e:
         logging.error(f"[EKO-TRANSFER] Exception: {e}")

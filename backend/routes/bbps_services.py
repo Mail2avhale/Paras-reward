@@ -23,13 +23,14 @@ Error Handling follows Eko Developer Documentation:
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, validator
 from typing import Optional, Dict, Any, List
-import requests
+import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 import base64
 import hashlib
 import hmac
 import time
 import logging
 import re
+import os
 
 from .eko_error_handler import (
     handle_eko_response,
@@ -45,8 +46,27 @@ from .eko_error_handler import (
 
 router = APIRouter(prefix="/bbps", tags=["BBPS Services"])
 
+# Global async HTTP client
+_bbps_http_client: Optional[httpx.AsyncClient] = None
+
+def get_bbps_http_client() -> httpx.AsyncClient:
+    """Get or create async HTTP client"""
+    global _bbps_http_client
+    if _bbps_http_client is None:
+        _bbps_http_client = httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
+    return _bbps_http_client
+
+async def bbps_get(url: str, headers: dict = None, timeout: int = 60) -> httpx.Response:
+    """Non-blocking async GET request for BBPS"""
+    client = get_bbps_http_client()
+    return await client.get(url, headers=headers, timeout=timeout)
+
+async def bbps_post(url: str, headers: dict = None, data: dict = None, timeout: int = 60) -> httpx.Response:
+    """Non-blocking async POST request for BBPS"""
+    client = get_bbps_http_client()
+    return await client.post(url, headers=headers, data=data, timeout=timeout)
+
 # ==================== EKO PRODUCTION CONFIG (ALL FROM ENV) ====================
-import os
 
 BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
 DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY")
@@ -297,7 +317,7 @@ def health():
 # ==================== FETCH BILL ====================
 
 @router.post("/fetch")
-def fetch_bill(data: FetchBillRequest):
+async def fetch_bill(data: FetchBillRequest):
     """
     Fetch bill details from EKO BBPS API.
     
@@ -332,7 +352,7 @@ def fetch_bill(data: FetchBillRequest):
         logging.info(f"[BBPS FETCH] client_ref={client_ref_id}, operator={data.operator_id}, account=***{data.account[-4:]}")
         
         headers = generate_headers()
-        response = requests.post(url, json=body, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await bbps_post(url, headers=headers, data=body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS FETCH] HTTP Status: {response.status_code}")
         
@@ -421,7 +441,7 @@ def fetch_bill(data: FetchBillRequest):
             "raw_response": result
         }
         
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         logging.error(f"[BBPS FETCH] Timeout after {REQUEST_TIMEOUT}s")
         return create_error_response(
             504,
@@ -429,7 +449,7 @@ def fetch_bill(data: FetchBillRequest):
             "The service provider is taking too long to respond. Please try again."
         )
     
-    except requests.exceptions.ConnectionError as e:
+    except httpx.ConnectError as e:
         logging.error(f"[BBPS FETCH] Connection error: {e}")
         return create_error_response(
             503,
@@ -449,7 +469,7 @@ def fetch_bill(data: FetchBillRequest):
 # ==================== PAY BILL ====================
 
 @router.post("/pay")
-def pay_bill(data: PayBillRequest):
+async def pay_bill(data: PayBillRequest):
     """
     Pay bill via EKO BBPS API.
     
@@ -517,7 +537,7 @@ def pay_bill(data: PayBillRequest):
         logging.info(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
         
         # Use data= for form-urlencoded (as per Eko docs for payment)
-        response = requests.post(url, data=body, headers=headers, timeout=REQUEST_TIMEOUT)
+        response = await bbps_post(url, headers=headers, data=body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS PAY] HTTP Status: {response.status_code}")
         
@@ -689,7 +709,7 @@ def pay_bill(data: PayBillRequest):
             "raw_response": result
         }
         
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         logging.error(f"[BBPS PAY] Timeout after {REQUEST_TIMEOUT}s")
         return {
             "success": False,
@@ -701,7 +721,7 @@ def pay_bill(data: PayBillRequest):
             "client_ref_id": client_ref_id
         }
     
-    except requests.exceptions.ConnectionError as e:
+    except httpx.ConnectError as e:
         logging.error(f"[BBPS PAY] Connection error: {e}")
         return create_error_response(
             503,
@@ -721,7 +741,7 @@ def pay_bill(data: PayBillRequest):
 # ==================== TRANSACTION STATUS INQUIRY ====================
 
 @router.get("/status/{tid}")
-def get_transaction_status(tid: str):
+async def get_transaction_status(tid: str):
     """
     Check transaction status via EKO API.
     
@@ -737,7 +757,7 @@ def get_transaction_status(tid: str):
         
         logging.info(f"[BBPS STATUS] Checking TID: {tid}")
         
-        response = requests.get(url, headers=generate_headers(), timeout=30)
+        response = await bbps_get(url, headers=generate_headers(), timeout=30)
         
         if response.status_code != 200:
             return create_error_response(
@@ -792,7 +812,7 @@ def get_transaction_status(tid: str):
 # ==================== GET OPERATORS ====================
 
 @router.get("/operators/{category}")
-def get_operators(category: str):
+async def get_operators(category: str):
     """
     Get operators list for a category.
     
@@ -854,7 +874,7 @@ def get_operators(category: str):
     try:
         url = f"{BASE_URL}/v2/billpayments/operators?initiator_id={INITIATOR_ID}&category={cat_id}"
         
-        response = requests.get(url, headers=generate_headers(), timeout=30)
+        response = await bbps_get(url, headers=generate_headers(), timeout=30)
         
         if response.status_code != 200:
             return create_error_response(
@@ -903,7 +923,7 @@ def get_operators(category: str):
             "operators": formatted
         }
         
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
     except Exception as e:
         logging.error(f"[BBPS OPERATORS] Error: {e}")
@@ -913,7 +933,7 @@ def get_operators(category: str):
 # ==================== GET OPERATOR PARAMETERS ====================
 
 @router.get("/operator-params/{operator_id}")
-def get_operator_params(operator_id: str):
+async def get_operator_params(operator_id: str):
     """
     Get required parameters for a specific operator.
     
@@ -927,7 +947,7 @@ def get_operator_params(operator_id: str):
         # Correct Eko API endpoint (no /params suffix!)
         url = f"{BASE_URL}/v2/billpayments/operators/{operator_id}?initiator_id={INITIATOR_ID}"
         
-        response = requests.get(url, headers=generate_headers(), timeout=30)
+        response = await bbps_get(url, headers=generate_headers(), timeout=30)
         
         if response.status_code != 200:
             return create_error_response(
