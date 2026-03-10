@@ -241,12 +241,15 @@ const CIRCLES = [
   { id: 'GA', name: 'Goa' }
 ];
 
-// Reusable Service Category Section Component
+// Reusable Service Category Section Component - Premium Glass Design
 const ServiceCategorySection = ({ title, services, selectedService, setSelectedService }) => {
   return (
-    <div>
-      <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">{title}</p>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+    <div className="mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-1 h-4 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
+        <p className="text-sm text-gray-300 font-semibold tracking-wide">{title}</p>
+      </div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
         {services.map(id => {
           const config = SERVICE_CONFIG[id];
           if (!config) return null;
@@ -257,26 +260,58 @@ const ServiceCategorySection = ({ title, services, selectedService, setSelectedS
             <button
               key={id}
               onClick={() => setSelectedService(id)}
-              className={`relative p-3 rounded-xl border transition-all duration-300 ${
+              className={`group relative overflow-hidden rounded-2xl transition-all duration-300 ${
                 isSelected
-                  ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                  : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                  ? 'scale-[1.02] shadow-xl'
+                  : 'hover:scale-[1.02] hover:shadow-lg'
               }`}
               data-testid={`service-${id}`}
             >
-              {isSelected && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
-                </div>
-              )}
-              <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+              {/* Background with gradient */}
+              <div className={`absolute inset-0 transition-opacity duration-300 ${
+                isSelected 
+                  ? 'opacity-100' 
+                  : 'opacity-0 group-hover:opacity-50'
               }`}>
-                <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
               </div>
-              <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                {config.name}
-              </p>
+              
+              {/* Glass card */}
+              <div className={`relative p-4 backdrop-blur-sm border transition-all duration-300 ${
+                isSelected
+                  ? 'bg-white/10 border-white/30'
+                  : 'bg-gray-800/60 border-gray-700/50 group-hover:bg-gray-800/80 group-hover:border-gray-600/50'
+              }`} style={{ borderRadius: 'inherit' }}>
+                
+                {/* Selection indicator */}
+                {isSelected && (
+                  <div className="absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                  </div>
+                )}
+                
+                {/* Icon container with glow effect */}
+                <div className={`relative w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                  isSelected 
+                    ? 'bg-white/20 shadow-lg' 
+                    : `bg-gradient-to-br ${config.gradient} opacity-80 group-hover:opacity-100`
+                }`}>
+                  {/* Glow effect */}
+                  {isSelected && (
+                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${config.gradient} blur-md opacity-50`} />
+                  )}
+                  <Icon className={`relative h-6 w-6 transition-all duration-300 ${
+                    isSelected ? 'text-white' : 'text-white'
+                  }`} />
+                </div>
+                
+                {/* Service name */}
+                <p className={`text-xs font-medium text-center leading-tight transition-colors duration-300 ${
+                  isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white'
+                }`}>
+                  {config.name}
+                </p>
+              </div>
             </button>
           );
         })}
