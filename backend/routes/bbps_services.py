@@ -824,7 +824,8 @@ def get_operators(category: str):
         "water": 11,
         "landline": 9,
         "broadband": 1,
-        "gas": 8,  # Some gas uses electricity category
+        "gas": 14,  # Piped Natural Gas (PNG)
+        "lpg": 23,  # LPG Cylinder booking
         
         # Financial
         "emi": 21,
@@ -836,7 +837,9 @@ def get_operators(category: str):
         # Transport & Others
         "fastag": 22,
         "housing_society": 12,
-        "municipal_tax": 12
+        "municipal_tax": 12,
+        "education": 13,
+        "hospital": 24
     }
     
     cat_id = category_map.get(category.lower())
