@@ -29761,7 +29761,7 @@ async def get_referral_levels(user_id: str):
         current_level_users = next_level_users
     
     # Build response with user details and activity status
-    # OPTIMIZED: Batch process user activity instead of N+1 queries
+    # OPTIMIZED: Use only user data fields, NO additional DB queries
     levels = []
     for level_num in range(1, 6):
         level_key = f"level_{level_num}"
@@ -29772,9 +29772,36 @@ async def get_referral_levels(user_id: str):
         
         for u in users:
             user_uid = u.get("uid")
-            # OPTIMIZED: Use user data directly instead of additional DB call
-            # check_user_active_status already receives user_data, so no N+1
-            is_active, active_reason = await check_user_active_status(user_uid, u)
+            # OPTIMIZED: Check active status from user data only (no extra DB calls)
+            # User is active if: mining_active=True AND session_end > now
+            is_active = False
+            active_reason = "inactive"
+            
+            mining_active = u.get("mining_active")
+            session_end = u.get("mining_session_end")
+            
+            if mining_active is True or mining_active == "true":
+                if session_end:
+                    try:
+                        if isinstance(session_end, str):
+                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                        elif isinstance(session_end, datetime):
+                            session_end_dt = session_end
+                        else:
+                            session_end_dt = None
+                        
+                        if session_end_dt:
+                            if session_end_dt.tzinfo is None:
+                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                            if session_end_dt > now:
+                                is_active = True
+                                active_reason = "mining_session_active"
+                    except:
+                        is_active = True
+                        active_reason = "mining_active_flag"
+                else:
+                    is_active = True
+                    active_reason = "mining_active_no_session"
             
             if is_active:
                 active_count += 1
