@@ -475,28 +475,44 @@ mongo_url = os.environ['MONGO_URL']
 # Detect if using MongoDB Atlas (contains mongodb+srv or mongodb.net)
 is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 
-# Configure connection options - OPTIMIZED for production performance
+# Configure connection options - OPTIMIZED for production performance & reliability
 connection_options = {
-    'serverSelectionTimeoutMS': 3000,  # 3 second timeout (faster startup)
-    'connectTimeoutMS': 3000,  # 3 second connection timeout
-    'socketTimeoutMS': 20000,  # 20 second socket timeout
-    'maxPoolSize': 20,  # Reduced for single-worker (avoid connection overhead)
-    'minPoolSize': 1,   # Keep 1 connection warm (faster startup)
-    'maxIdleTimeMS': 60000,  # Keep idle connections for 1 minute
-    'waitQueueTimeoutMS': 3000,  # Wait 3s max for connection
-    'retryWrites': True,  # Enable retryable writes
-    'retryReads': True,  # Enable retryable reads
-    'directConnection': not is_atlas,  # Use direct connection for local MongoDB
+    # ========== CONNECTION POOL SETTINGS ==========
+    'maxPoolSize': 50,          # Increased pool for concurrent requests (was 20)
+    'minPoolSize': 5,           # Keep 5 warm connections (was 1) - FASTER responses
+    'maxIdleTimeMS': 120000,    # 2 min idle timeout (was 1 min)
+    'waitQueueTimeoutMS': 10000, # Wait up to 10s for connection (was 3s)
+    'maxConnecting': 5,         # Allow 5 parallel connection attempts
+    
+    # ========== TIMEOUT SETTINGS ==========
+    'serverSelectionTimeoutMS': 10000,  # 10s to select server (was 3s)
+    'connectTimeoutMS': 10000,          # 10s to connect (was 3s)
+    'socketTimeoutMS': 30000,           # 30s socket timeout (was 20s)
+    
+    # ========== RELIABILITY SETTINGS ==========
+    'retryWrites': True,        # Auto-retry failed writes
+    'retryReads': True,         # Auto-retry failed reads
+    'heartbeatFrequencyMS': 10000,  # Check server health every 10s
+    
+    # ========== NETWORK OPTIMIZATION ==========
+    'compressors': ['zstd', 'snappy', 'zlib'],  # Network compression
+    'readPreference': 'primaryPreferred',        # Fallback to secondary if primary slow
+    
+    # ========== CONNECTION MODE ==========
+    'directConnection': not is_atlas,  # Direct connection for local MongoDB
 }
 
-# Add Atlas-specific options
+# Add Atlas-specific options for cloud MongoDB
 if is_atlas:
-    connection_options['w'] = 'majority'  # Write concern for data durability
-    connection_options['tls'] = True  # Enable TLS for Atlas
-    connection_options['tlsAllowInvalidCertificates'] = False  # Enforce valid certs
-    logging.info("🔒 MongoDB Atlas detected - using TLS connection")
+    connection_options.update({
+        'w': 'majority',                        # Write concern for durability
+        'tls': True,                            # TLS encryption
+        'tlsAllowInvalidCertificates': False,   # Enforce valid certs
+        'appName': 'paras-reward-api',          # App identifier in Atlas logs
+    })
+    logging.info("🔒 MongoDB Atlas detected - using optimized TLS connection")
 else:
-    logging.info("🏠 Local MongoDB detected")
+    logging.info("🏠 Local MongoDB detected - using direct connection")
 
 client = AsyncIOMotorClient(mongo_url, **connection_options)
 db = client[os.environ['DB_NAME']]
@@ -38042,29 +38058,41 @@ async def startup_db():
     print("📦 Initializing cache system...")
     await cache.initialize()
     
-    # Verify MongoDB connection with retry logic for Atlas
-    # Atlas connections can take longer, especially on cold starts
-    max_retries = 5  # Reduced retries for faster startup
-    retry_delay = 2   # Shorter delay between retries
+    # ========== CONNECTION WARMUP ==========
+    # Warm up the connection pool BEFORE any real requests
+    print("🔥 Warming up MongoDB connection pool...")
+    max_retries = 5
+    retry_delay = 2
     
     for attempt in range(max_retries):
         try:
-            # Ping database to verify connection
+            # Ping to establish first connection
             await client.admin.command('ping')
-            print(f"✅ MongoDB connection successful (attempt {attempt + 1}/{max_retries})")
+            print(f"✅ MongoDB ping successful (attempt {attempt + 1})")
+            
+            # Warm up multiple connections in parallel
+            warmup_tasks = []
+            for i in range(5):  # Warm up 5 connections
+                warmup_tasks.append(client.admin.command('ping'))
+            
+            await asyncio.gather(*warmup_tasks, return_exceptions=True)
+            print("🔥 Connection pool warmed up (5 connections ready)")
+            
+            # Quick test query to verify read operations
+            await db.users.find_one({}, {"_id": 1})
+            print("✅ Read operation verified")
+            
             db_ready = True
             break
+            
         except Exception as e:
             if attempt < max_retries - 1:
-                print(f"⚠️ MongoDB connection attempt {attempt + 1} failed: {e}")
+                print(f"⚠️ MongoDB warmup attempt {attempt + 1} failed: {e}")
                 print(f"   Retrying in {retry_delay} seconds...")
                 await asyncio.sleep(retry_delay)
             else:
-                # Don't raise exception - let the app start anyway
-                # The health endpoint will report DB status
                 print(f"⚠️ MongoDB initial connection pending after {max_retries} attempts")
                 print("   App will continue to retry in background")
-                # Start background task to keep trying
                 asyncio.create_task(retry_db_connection())
                 break
     

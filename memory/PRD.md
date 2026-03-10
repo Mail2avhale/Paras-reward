@@ -75,6 +75,14 @@
     - Backend: `/api/user/prc-statement/{uid}` endpoint updated with `category` parameter
     - Frontend: PRCStatement.js updated with new icons (Send, ShoppingBag) and colors
 
+11. ✅ **MongoDB Connection Optimization** (March 10, 2026)
+    - **Connection Pool**: Increased from 20 to 50 max connections, 5 warm connections
+    - **Timeouts**: Extended server selection timeout to 10s (was 3s)
+    - **Warmup**: Added parallel connection warmup on startup (5 connections)
+    - **Reliability**: Added heartbeat monitoring every 10s
+    - **Network**: Added compression (zstd, snappy, zlib) for Atlas
+    - **Read Preference**: Set to primaryPreferred for failover
+
 ---
 
 ## Pending/Backlog

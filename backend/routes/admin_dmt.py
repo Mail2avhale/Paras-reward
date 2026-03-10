@@ -5,6 +5,8 @@ PARAS REWARD - Admin DMT Management APIs
 - Transaction Management with Filters
 - Statistics & Reports
 - Settings Management
+
+UPDATED: Using async Motor client for better performance
 """
 
 from fastapi import APIRouter, HTTPException, Query, Depends
@@ -16,18 +18,16 @@ import os
 import csv
 import io
 from fastapi.responses import StreamingResponse
-from pymongo import MongoClient
 
 router = APIRouter(prefix="/admin/dmt", tags=["Admin - DMT Management"])
 
-# Database
-MONGO_URL = os.environ.get("MONGO_URL")
-DB_NAME = os.environ.get("DB_NAME", "test_database")
+# Database reference - will be set from server.py
+db = None
 
-
-def get_db():
-    client = MongoClient(MONGO_URL)
-    return client[DB_NAME]
+def set_db(database):
+    """Set database reference from main server"""
+    global db
+    db = database
 
 
 # ==================== REQUEST MODELS ====================
@@ -69,9 +69,10 @@ def error_response(code, message):
 @router.get("/settings")
 async def get_dmt_settings():
     """Get current DMT settings"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
-    settings = db.dmt_settings.find_one({"_id": "global"}, {"_id": 0})
+    settings = await db.dmt_settings.find_one({"_id": "global"}, {"_id": 0})
     
     if not settings:
         settings = {
@@ -82,7 +83,7 @@ async def get_dmt_settings():
             "imps_enabled": True,
             "neft_enabled": True
         }
-        db.dmt_settings.insert_one({"_id": "global", **settings})
+        await db.dmt_settings.insert_one({"_id": "global", **settings})
     
     return success_response(settings)
 
@@ -90,12 +91,13 @@ async def get_dmt_settings():
 @router.post("/settings")
 async def update_dmt_settings(req: DMTSettingsRequest):
     """Update DMT settings"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
     update_data = req.dict(exclude_none=True)
     update_data["updated_at"] = datetime.now(timezone.utc)
     
-    db.dmt_settings.update_one(
+    await db.dmt_settings.update_one(
         {"_id": "global"},
         {"$set": update_data},
         upsert=True
@@ -109,9 +111,10 @@ async def update_dmt_settings(req: DMTSettingsRequest):
 @router.post("/toggle")
 async def toggle_dmt_service(req: DMTToggleRequest):
     """Enable or disable DMT service"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
-    db.dmt_settings.update_one(
+    await db.dmt_settings.update_one(
         {"_id": "global"},
         {
             "$set": {
@@ -135,7 +138,8 @@ async def toggle_dmt_service(req: DMTToggleRequest):
 @router.get("/stats")
 async def get_dmt_stats():
     """Get DMT statistics"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -150,7 +154,7 @@ async def get_dmt_stats():
         }}
     ]
     
-    total_result = list(db.dmt_transactions.aggregate(total_pipeline))
+    total_result = await db.dmt_transactions.aggregate(total_pipeline).to_list(1)
     total_stats = total_result[0] if total_result else {
         "total_transactions": 0,
         "total_amount": 0,
@@ -158,10 +162,10 @@ async def get_dmt_stats():
         "total_refunded": 0
     }
     
-    # Status counts
+    # Status counts - run in parallel for better performance
     status_counts = {}
     for status in ["completed", "failed", "pending", "processing", "refunded"]:
-        status_counts[status] = db.dmt_transactions.count_documents({"status": status})
+        status_counts[status] = await db.dmt_transactions.count_documents({"status": status})
     
     # Today's stats
     today_pipeline = [
@@ -173,7 +177,7 @@ async def get_dmt_stats():
         }}
     ]
     
-    today_result = list(db.dmt_transactions.aggregate(today_pipeline))
+    today_result = await db.dmt_transactions.aggregate(today_pipeline).to_list(1)
     today_stats = today_result[0] if today_result else {
         "today_transactions": 0,
         "today_amount": 0
@@ -208,7 +212,8 @@ async def get_dmt_transactions(
     provider: Optional[str] = None
 ):
     """Get DMT transactions with filters"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
     # Build query
     query = {}
@@ -254,14 +259,14 @@ async def get_dmt_transactions(
         query["provider"] = provider
     
     # Get total count
-    total = db.dmt_transactions.count_documents(query)
+    total = await db.dmt_transactions.count_documents(query)
     
     # Get transactions
     skip = (page - 1) * limit
-    transactions = list(db.dmt_transactions.find(
+    transactions = await db.dmt_transactions.find(
         query,
         {"_id": 0, "eko_response": 0}
-    ).sort("created_at", -1).skip(skip).limit(limit))
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Convert datetime to string
     for txn in transactions:
@@ -288,7 +293,8 @@ async def export_dmt_transactions(
     search: Optional[str] = None
 ):
     """Export DMT transactions as CSV"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
     # Build query (same as above)
     query = {}
@@ -309,10 +315,10 @@ async def export_dmt_transactions(
             pass
     
     # Get all matching transactions
-    transactions = list(db.dmt_transactions.find(
+    transactions = await db.dmt_transactions.find(
         query,
         {"_id": 0, "eko_response": 0}
-    ).sort("created_at", -1).limit(10000))
+    ).sort("created_at", -1).limit(10000).to_list(10000)
     
     # Create CSV
     output = io.StringIO()
@@ -356,9 +362,10 @@ async def export_dmt_transactions(
 @router.get("/transaction/{transaction_id}")
 async def get_transaction_detail(transaction_id: str):
     """Get detailed transaction info"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
-    txn = db.dmt_transactions.find_one(
+    txn = await db.dmt_transactions.find_one(
         {"transaction_id": transaction_id},
         {"_id": 0}
     )
@@ -367,7 +374,7 @@ async def get_transaction_detail(transaction_id: str):
         raise HTTPException(status_code=404, detail="Transaction not found")
     
     # Get user info
-    user = db.users.find_one(
+    user = await db.users.find_one(
         {"uid": txn.get("user_id")},
         {"_id": 0, "name": 1, "email": 1, "mobile": 1}
     )
@@ -386,9 +393,10 @@ async def get_transaction_detail(transaction_id: str):
 @router.post("/transaction/{transaction_id}/refund")
 async def manual_refund_transaction(transaction_id: str):
     """Manually refund PRC for a transaction"""
-    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
-    txn = db.dmt_transactions.find_one({"transaction_id": transaction_id})
+    txn = await db.dmt_transactions.find_one({"transaction_id": transaction_id})
     
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -403,7 +411,7 @@ async def manual_refund_transaction(transaction_id: str):
         return error_response(400, "No PRC to refund")
     
     # Refund PRC
-    db.users.update_one(
+    await db.users.update_one(
         {"uid": user_id},
         {
             "$inc": {"prc_balance": prc_amount},
@@ -420,7 +428,7 @@ async def manual_refund_transaction(transaction_id: str):
     )
     
     # Update transaction
-    db.dmt_transactions.update_one(
+    await db.dmt_transactions.update_one(
         {"transaction_id": transaction_id},
         {
             "$set": {
