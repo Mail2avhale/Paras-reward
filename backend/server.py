@@ -7152,23 +7152,26 @@ async def get_user_data(uid: str):
         user["taps_today"] = 0
     
     # AUTO-SYNC KYC STATUS: Check if user has verified KYC in kyc_documents but not synced
+    # OPTIMIZED: Add timeout to prevent slow queries
     current_kyc_status = user.get("kyc_status")
     if current_kyc_status != "verified":
-        # Check if there's a verified KYC document for this user
-        verified_kyc = await db.kyc_documents.find_one({
-            "user_id": uid,
-            "status": {"$in": ["verified", "approved"]}
-        })
-        if verified_kyc:
-            # Update user's kyc_status to verified
-            await db.users.update_one(
-                {"uid": uid},
-                {"$set": {"kyc_status": "verified"}}
+        try:
+            # Check if there's a verified KYC document for this user
+            verified_kyc = await db.kyc_documents.find_one(
+                {"user_id": uid, "status": {"$in": ["verified", "approved"]}},
+                max_time_ms=2000  # 2 second timeout
             )
-            user["kyc_status"] = "verified"
-            print(f"[AUTO-SYNC KYC] Updated kyc_status for user {uid} to verified")
-        else:
-            # Default to pending if no KYC document found
+            if verified_kyc:
+                # Update user's kyc_status to verified (don't await - fire and forget)
+                db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {"kyc_status": "verified"}}
+                )
+                user["kyc_status"] = "verified"
+            else:
+                user["kyc_status"] = user.get("kyc_status") or "not_submitted"
+        except Exception as e:
+            print(f"[KYC SYNC] Skipped due to timeout: {e}")
             user["kyc_status"] = user.get("kyc_status") or "not_submitted"
     
     # OPTIMIZED: Use aggregation pipeline to get all counts in parallel
@@ -7254,43 +7257,50 @@ async def get_user_data(uid: str):
     
     # SYNC FIX: If user has approved VIP payment but subscription_plan is not set correctly
     # This can happen if payment was approved but user data wasn't synced properly
-    if subscription_plan == "explorer" or not subscription_expiry:
+    # PERFORMANCE: Only run this check if subscription looks incorrect AND not cached
+    if (subscription_plan == "explorer" or not subscription_expiry):
         # Check for approved subscription payment
-        latest_payment = await db.vip_payments.find_one(
-            {"user_id": uid, "status": "approved"},
-            sort=[("approved_at", -1)]
-        )
-        
-        if latest_payment:
-            # Get plan and expiry from approved payment
-            payment_plan = latest_payment.get("subscription_plan", "startup")
-            payment_expiry = latest_payment.get("subscription_end") or latest_payment.get("new_expiry")
-            payment_start = latest_payment.get("subscription_start") or latest_payment.get("approved_at") or latest_payment.get("vip_activated_at")
+        # OPTIMIZED: Add timeout and limit to prevent slow queries
+        try:
+            latest_payment = await db.vip_payments.find_one(
+                {"user_id": uid, "status": "approved"},
+                sort=[("approved_at", -1)],
+                max_time_ms=3000  # 3 second timeout
+            )
             
-            # Check if payment expiry is still valid
-            now = datetime.now(timezone.utc)
-            if payment_expiry:
-                try:
-                    expiry_dt = datetime.fromisoformat(str(payment_expiry).replace('Z', '+00:00'))
-                    if expiry_dt > now:
-                        # Valid subscription from payment - sync to user
-                        subscription_plan = payment_plan
-                        subscription_expiry = payment_expiry
-                        subscription_start = payment_start
-                        
-                        # Also update the user document for consistency
-                        await db.users.update_one(
-                            {"uid": uid},
-                            {"$set": {
-                                "subscription_plan": payment_plan,
-                                "subscription_expiry": payment_expiry,
-                                "vip_activated_at": payment_start,
-                                "membership_type": "vip"
-                            }}
-                        )
-                        print(f"[SYNC] Updated user {uid} subscription from approved payment: {payment_plan}")
-                except Exception as e:
-                    print(f"[SYNC] Error parsing payment expiry: {e}")
+            if latest_payment:
+                # Get plan and expiry from approved payment
+                payment_plan = latest_payment.get("subscription_plan", "startup")
+                payment_expiry = latest_payment.get("subscription_end") or latest_payment.get("new_expiry")
+                payment_start = latest_payment.get("subscription_start") or latest_payment.get("approved_at") or latest_payment.get("vip_activated_at")
+                
+                # Check if payment expiry is still valid
+                now = datetime.now(timezone.utc)
+                if payment_expiry:
+                    try:
+                        expiry_dt = datetime.fromisoformat(str(payment_expiry).replace('Z', '+00:00'))
+                        if expiry_dt > now:
+                            # Valid subscription from payment - sync to user
+                            subscription_plan = payment_plan
+                            subscription_expiry = payment_expiry
+                            subscription_start = payment_start
+                            
+                            # Also update the user document for consistency
+                            await db.users.update_one(
+                                {"uid": uid},
+                                {"$set": {
+                                    "subscription_plan": payment_plan,
+                                    "subscription_expiry": payment_expiry,
+                                    "vip_activated_at": payment_start,
+                                    "membership_type": "vip"
+                                }}
+                            )
+                            print(f"[SYNC] Updated user {uid} subscription from approved payment: {payment_plan}")
+                    except Exception as e:
+                        print(f"[SYNC] Error parsing payment expiry: {e}")
+        except Exception as e:
+            # If vip_payments query times out, just skip sync
+            print(f"[SYNC] VIP payment check skipped due to timeout: {e}")
     
     # Update user dict with correct values
     user["subscription_plan"] = subscription_plan

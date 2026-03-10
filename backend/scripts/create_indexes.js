@@ -89,6 +89,31 @@ db.login_attempts.createIndex({"identifier": 1, "timestamp": -1}, {background: t
 db.login_attempts.createIndex({"ip_address": 1}, {background: true, name: "ip_idx"});
 print("   ✅ indexes created\n");
 
+// ========== VIP PAYMENTS (CRITICAL for user API) ==========
+print("📁 vip_payments");
+db.vip_payments.createIndex({"user_id": 1, "status": 1}, {background: true, name: "user_status_idx"});
+db.vip_payments.createIndex({"user_id": 1, "approved_at": -1}, {background: true, name: "user_approved_idx"});
+db.vip_payments.createIndex({"status": 1, "created_at": -1}, {background: true, name: "status_date_idx"});
+print("   ✅ indexes created\n");
+
+// ========== KYC DOCUMENTS ==========
+print("📁 kyc_documents");
+db.kyc_documents.createIndex({"user_id": 1, "status": 1}, {background: true, name: "user_status_idx"});
+print("   ✅ indexes created\n");
+
+// ========== USERS (CRITICAL indexes) ==========
+print("📁 users");
+db.users.createIndex({"uid": 1}, {background: true, unique: true, name: "uid_unique_idx"});
+db.users.createIndex({"referred_by": 1}, {background: true, name: "referred_by_idx"});
+db.users.createIndex({"subscription_plan": 1}, {background: true, name: "plan_idx"});
+db.users.createIndex({"prc_balance": 1}, {background: true, name: "prc_balance_idx"});
+print("   ✅ indexes created\n");
+
+// ========== CHATBOT REDEEM REQUESTS ==========
+print("📁 chatbot_redeem_requests");
+db.chatbot_redeem_requests.createIndex({"user_id": 1, "status": 1}, {background: true, name: "user_status_idx"});
+print("   ✅ indexes created\n");
+
 // ========== FINAL REPORT ==========
 print("\n=== INDEX CREATION COMPLETE ===");
 print("Run db.collection.getIndexes() to verify indexes");
