@@ -68,7 +68,7 @@ from routes._archive_eko_payments_legacy import router as eko_router, set_db as 
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
-from routes.eko_dmt_service import router as dmt_router
+from routes.eko_dmt_service import router as dmt_router, set_db as set_eko_dmt_db
 # DMT v3 router disabled - using v1 APIs instead
 # from routes.eko_dmt_v3 import router as dmt_v3_router
 from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
@@ -764,6 +764,61 @@ async def db_health_check():
         return {
             "status": "unhealthy",
             "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+
+@api_router.get("/health/db/detailed")
+async def db_health_detailed():
+    """Detailed DB health with connection pool stats"""
+    try:
+        import time
+        
+        # Ping test
+        start = time.time()
+        await db.command("ping")
+        ping_ms = (time.time() - start) * 1000
+        
+        # Get server status
+        server_status = await client.admin.command("serverStatus")
+        
+        # Connection pool info
+        connections = server_status.get("connections", {})
+        
+        # Get collection stats for key collections
+        collection_stats = {}
+        for coll_name in ["users", "dmt_transactions", "orders", "bill_payment_requests"]:
+            try:
+                stats = await db.command("collStats", coll_name)
+                collection_stats[coll_name] = {
+                    "count": stats.get("count", 0),
+                    "size_mb": round(stats.get("size", 0) / 1024 / 1024, 2),
+                    "indexes": stats.get("nindexes", 0)
+                }
+            except:
+                collection_stats[coll_name] = {"error": "not found"}
+        
+        return {
+            "status": "healthy",
+            "ping_ms": round(ping_ms, 2),
+            "connections": {
+                "current": connections.get("current", 0),
+                "available": connections.get("available", 0),
+                "total_created": connections.get("totalCreated", 0)
+            },
+            "collections": collection_stats,
+            "pool_config": {
+                "maxPoolSize": 50,
+                "minPoolSize": 5,
+                "note": "Using optimized connection pool"
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Detailed health check failed: {e}")
+        return {
+            "status": "error",
             "error": str(e),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
@@ -7085,59 +7140,59 @@ async def get_user_data(uid: str):
     # Combines orders, bill_payments, gift_vouchers, and burns in single query
     total_redeemed = 0
     
-    # Use $facet to run multiple aggregations in parallel
-    pipeline = [
-        {"$facet": {
-            "orders": [
-                {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
-                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
-            ],
-            "bill_payments": [
-                {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-            ]
-        }}
-    ]
+    # PERFORMANCE FIX: Run all aggregations in parallel using asyncio.gather
+    # This reduces response time from 6 sequential calls to 1 parallel batch
+    import asyncio
     
-    # Run orders aggregation
-    orders_result = await db.orders.aggregate([
+    async def safe_aggregate(collection, pipeline):
+        """Safely run aggregation and return result or 0"""
+        try:
+            result = await collection.aggregate(pipeline).to_list(1)
+            return result[0].get("total", 0) if result else 0
+        except Exception as e:
+            print(f"[DB] Aggregation error: {e}")
+            return 0
+    
+    # Define all aggregation pipelines
+    orders_pipeline = [
         {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]).to_list(1)
-    if orders_result:
-        total_redeemed += orders_result[0].get("total", 0)
+    ]
     
-    # Run bill payments aggregation
-    bp_result = await db.bill_payment_requests.aggregate([
+    bp_pipeline = [
         {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-    ]).to_list(1)
-    if bp_result:
-        total_redeemed += bp_result[0].get("total", 0)
+    ]
     
-    # Run gift vouchers aggregation
-    gv_result = await db.gift_voucher_requests.aggregate([
+    gv_pipeline = [
         {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-    ]).to_list(1)
-    if gv_result:
-        total_redeemed += gv_result[0].get("total", 0)
+    ]
     
-    # Add bank redeem (withdrawal) requests
-    bank_redeem_result = await db.bank_redeem_requests.aggregate([
+    bank_pipeline = [
         {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
-    ]).to_list(1)
-    if bank_redeem_result:
-        total_redeemed += bank_redeem_result[0].get("total", 0)
+    ]
     
-    # Add chatbot redeem requests
-    chatbot_redeem_result = await db.chatbot_redeem_requests.aggregate([
+    chatbot_pipeline = [
         {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
-    ]).to_list(1)
-    if chatbot_redeem_result:
-        total_redeemed += chatbot_redeem_result[0].get("total", 0)
+    ]
+    
+    # Run ALL aggregations in parallel
+    results = await asyncio.gather(
+        safe_aggregate(db.orders, orders_pipeline),
+        safe_aggregate(db.bill_payment_requests, bp_pipeline),
+        safe_aggregate(db.gift_voucher_requests, gv_pipeline),
+        safe_aggregate(db.bank_redeem_requests, bank_pipeline),
+        safe_aggregate(db.chatbot_redeem_requests, chatbot_pipeline),
+        return_exceptions=True
+    )
+    
+    # Sum all results
+    for result in results:
+        if isinstance(result, (int, float)):
+            total_redeemed += result
     
     # Note: Removed PRC burns from total_redeemed as burns are not user-initiated redemptions
     # Burns are automatic system operations, not user redemptions
@@ -7242,8 +7297,13 @@ async def get_user_weekly_limits(uid: str):
             "credit_card_payment", "loan_emi", "gift_voucher", "shopping"
         ]
         
-        for service_type in service_types:
-            usage = await get_weekly_service_usage(uid, service_type)
+        # PERFORMANCE FIX: Fetch all service usages in parallel instead of sequential loop
+        import asyncio
+        usage_tasks = [get_weekly_service_usage(uid, service_type) for service_type in service_types]
+        usage_results = await asyncio.gather(*usage_tasks, return_exceptions=True)
+        
+        for i, service_type in enumerate(service_types):
+            usage = usage_results[i] if not isinstance(usage_results[i], Exception) else {"count": 0, "first_redemption_time": None}
             max_allowed = tier_limits.get(service_type, 1)
             current_count = usage["count"]
             
@@ -7317,64 +7377,77 @@ async def get_user_redemption_stats(uid: str):
         
         total_prc_redeemed = 0
         
-        # ========== 1. ORDERS REDEMPTION ==========
-        all_orders = await db.orders.find(
-            {"user_id": uid},
-            {"_id": 0, "total_prc": 1, "prc_amount": 1, "cashback_amount": 1, "status": 1}
-        ).to_list(1000)
+        # PERFORMANCE FIX: Run all aggregations in parallel
+        import asyncio
         
+        # ========== PARALLEL FETCH ALL DATA ==========
+        async def safe_aggregate(collection, pipeline):
+            try:
+                result = await collection.aggregate(pipeline).to_list(1)
+                return result[0].get("total", 0) if result else 0
+            except:
+                return 0
+        
+        # Define all pipelines
+        bp_pipeline = [
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]
+        
+        gv_pipeline = [
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]
+        
+        bank_pipeline = [
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "pending", "processing"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
+        ]
+        
+        loan_pipeline = [
+            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
+        ]
+        
+        credit_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain", "profit_share"]
+        earnings_pipeline = [
+            {"$match": {"user_id": uid, "type": {"$in": credit_types}}},
+            {"$group": {"_id": "$type", "total": {"$sum": "$amount"}}}
+        ]
+        
+        # Run ALL in parallel
+        results = await asyncio.gather(
+            db.orders.find(
+                {"user_id": uid},
+                {"_id": 0, "total_prc": 1, "prc_amount": 1, "cashback_amount": 1, "status": 1}
+            ).to_list(1000),
+            safe_aggregate(db.bill_payment_requests, bp_pipeline),
+            safe_aggregate(db.gift_voucher_requests, gv_pipeline),
+            safe_aggregate(db.bank_withdrawal_requests, bank_pipeline),
+            safe_aggregate(db.loan_payments, loan_pipeline),
+            db.transactions.aggregate(earnings_pipeline).to_list(100),
+            return_exceptions=True
+        )
+        
+        # Process results
+        all_orders = results[0] if not isinstance(results[0], Exception) else []
+        bp_total = results[1] if isinstance(results[1], (int, float)) else 0
+        gv_total = results[2] if isinstance(results[2], (int, float)) else 0
+        bank_total = results[3] if isinstance(results[3], (int, float)) else 0
+        loan_total = results[4] if isinstance(results[4], (int, float)) else 0
+        earnings_result = results[5] if not isinstance(results[5], Exception) else []
+        
+        # ========== 1. ORDERS REDEMPTION ==========
         orders_redeemed = sum(order.get("total_prc", order.get("prc_amount", 0)) for order in all_orders if order.get("status") not in ["cancelled", "refunded"])
         total_prc_redeemed += orders_redeemed
         total_cashback = sum(order.get("cashback_amount", 0) for order in all_orders if order.get("status") == "delivered")
         total_orders = len(all_orders)
         delivered_orders = len([o for o in all_orders if o.get("status") == "delivered"])
         
-        # ========== 2. BILL PAYMENTS REDEMPTION ==========
-        bill_payments = await db.bill_payment_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-        ]).to_list(1)
-        if bill_payments and bill_payments[0].get("total"):
-            total_prc_redeemed += bill_payments[0]["total"]
-        
-        # ========== 3. GIFT VOUCHERS REDEMPTION ==========
-        gift_vouchers = await db.gift_voucher_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-        ]).to_list(1)
-        if gift_vouchers and gift_vouchers[0].get("total"):
-            total_prc_redeemed += gift_vouchers[0]["total"]
-        
-        # ========== 4. BANK REDEEM REQUESTS ==========
-        bank_redeems = await db.bank_withdrawal_requests.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "pending", "processing"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-        ]).to_list(1)
-        if bank_redeems and bank_redeems[0].get("total"):
-            total_prc_redeemed += bank_redeems[0]["total"]
-        
-        # ========== 5. LOAN PAYMENTS (if any) ==========
-        loan_payments = await db.loan_payments.aggregate([
-            {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
-            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
-        ]).to_list(1)
-        if loan_payments and loan_payments[0].get("total"):
-            total_prc_redeemed += loan_payments[0]["total"]
+        # ========== 2-5. ADD ALL AGGREGATION RESULTS ==========
+        total_prc_redeemed += bp_total + gv_total + bank_total + loan_total
         
         # ========== EARNINGS STATS ==========
-        # Get all credit transactions
-        credit_types = ["mining", "tap_game", "referral", "cashback", "admin_credit", "prc_rain_gain", "profit_share"]
-        
-        earnings_pipeline = [
-            {"$match": {"user_id": uid, "type": {"$in": credit_types}}},
-            {"$group": {
-                "_id": "$type",
-                "total": {"$sum": "$amount"}
-            }}
-        ]
-        
-        earnings_result = await db.transactions.aggregate(earnings_pipeline).to_list(100)
-        
         # Build earnings breakdown
         earnings_breakdown = {
             "mining": 0,
@@ -37652,6 +37725,7 @@ api_router.include_router(kyc_router)
 api_router.include_router(bbps_router)
 
 # EKO DMT (Domestic Money Transfer) Router
+set_eko_dmt_db(db)  # Set DB for EKO DMT v1 (async)
 api_router.include_router(dmt_router)
 api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 (NO OTP)
 

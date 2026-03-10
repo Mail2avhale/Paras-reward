@@ -83,6 +83,16 @@
     - **Network**: Added compression (zstd, snappy, zlib) for Atlas
     - **Read Preference**: Set to primaryPreferred for failover
 
+12. ✅ **User Page DB Query Optimization** (March 10, 2026)
+    - **`/user/{uid}` endpoint**: Fixed N+1 query problem - 6 sequential aggregations → 1 parallel batch
+    - **`/user/{uid}/weekly-limits`**: 7 sequential service usage queries → 1 parallel batch
+    - **`/user/{uid}/redemption-stats`**: 6 DB calls → 1 parallel asyncio.gather
+    - **DMT Service (`eko_dmt_service.py`)**: Converted sync PyMongo → async Motor client
+    - **Added indexes**: `dmt_transactions`, `gift_voucher_requests`, `bank_redeem_requests`, `transactions`
+
+13. ✅ **New Health Monitoring Endpoint** (March 10, 2026)
+    - `/api/health/db/detailed` - Shows connection pool stats, collection sizes, index counts
+
 ---
 
 ## Pending/Backlog

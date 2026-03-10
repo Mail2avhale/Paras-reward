@@ -102,9 +102,21 @@ EKO_ERROR_MESSAGES = {
 }
 
 # ==================== DATABASE CONNECTION ====================
+# OPTIMIZED: Use shared async Motor client instead of creating new sync connection per request
+# The db reference will be set from server.py
 
+db = None  # Will be set via set_db() from server.py
+
+def set_db(database):
+    """Set the shared async database reference from server.py"""
+    global db
+    db = database
+
+# DEPRECATED: Legacy sync connection - kept for backward compatibility only
 def get_db():
-    """Get MongoDB database connection"""
+    """Get MongoDB database connection - DEPRECATED, use shared async db instead"""
+    import warnings
+    warnings.warn("get_db() is deprecated. Use async shared db instead.", DeprecationWarning)
     client = MongoClient(MONGO_URL)
     return client[DB_NAME]
 
@@ -345,9 +357,44 @@ def create_error_response(code: int, message: str, user_message: str = None) -> 
 
 # ==================== HELPER FUNCTIONS ====================
 
-def check_daily_limit(db, user_id: str) -> tuple:
+async def check_daily_limit_async(user_id: str) -> tuple:
     """
-    Check if user has exceeded daily limit.
+    Check if user has exceeded daily limit - ASYNC version.
+    Returns (is_allowed, remaining_limit, used_today)
+    Uses shared async Motor client for better performance.
+    """
+    if not db:
+        return False, 0, 0
+        
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    pipeline = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "service_type": "dmt",
+                "status": {"$in": ["completed", "processing", "pending"]},
+                "created_at": {"$gte": today_start}
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "total_inr": {"$sum": "$amount_inr"}
+            }
+        }
+    ]
+    
+    result = await db.dmt_transactions.aggregate(pipeline).to_list(1)
+    used_today = result[0]["total_inr"] if result else 0
+    remaining = MAX_DAILY_INR - used_today
+    
+    return remaining > 0, remaining, used_today
+
+
+def check_daily_limit(sync_db, user_id: str) -> tuple:
+    """
+    Check if user has exceeded daily limit - SYNC version (DEPRECATED).
     Returns (is_allowed, remaining_limit, used_today)
     """
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -369,17 +416,25 @@ def check_daily_limit(db, user_id: str) -> tuple:
         }
     ]
     
-    result = list(db.dmt_transactions.aggregate(pipeline))
+    result = list(sync_db.dmt_transactions.aggregate(pipeline))
     used_today = result[0]["total_inr"] if result else 0
     remaining = MAX_DAILY_INR - used_today
     
     return remaining > 0, remaining, used_today
 
 
-def log_dmt_transaction(db, log_data: Dict):
-    """Log DMT transaction for audit"""
+async def log_dmt_transaction_async(log_data: Dict):
+    """Log DMT transaction for audit - ASYNC version"""
+    if not db:
+        return
     log_data["timestamp"] = datetime.now(timezone.utc)
-    db.dmt_logs.insert_one(log_data)
+    await db.dmt_logs.insert_one(log_data)
+
+
+def log_dmt_transaction(sync_db, log_data: Dict):
+    """Log DMT transaction for audit - SYNC version (DEPRECATED)"""
+    log_data["timestamp"] = datetime.now(timezone.utc)
+    sync_db.dmt_logs.insert_one(log_data)
 
 
 # ==================== HEALTH CHECK ====================
@@ -401,11 +456,12 @@ def health():
 # ==================== WALLET ====================
 
 @router.get("/wallet/{user_id}")
-def get_wallet(user_id: str):
-    """Get user's PRC wallet balance and INR equivalent."""
-    db = get_db()
+async def get_wallet(user_id: str):
+    """Get user's PRC wallet balance and INR equivalent - ASYNC version."""
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
     
-    user = db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
+    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -413,7 +469,8 @@ def get_wallet(user_id: str):
     prc_balance = user.get("prc_balance", 0)
     inr_equivalent = prc_balance / PRC_TO_INR_RATE
     
-    is_allowed, remaining_limit, used_today = check_daily_limit(db, user_id)
+    # Use async version for daily limit check
+    is_allowed, remaining_limit, used_today = await check_daily_limit_async(user_id)
     
     return create_success_response({
         "prc_balance": prc_balance,
