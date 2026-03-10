@@ -749,7 +749,14 @@ async def login(
     if "password_hash" in user:
         del user["password_hash"]
     
+    # Store original role from DB before Pydantic model might default it
+    original_role = user.get("role", "user")
+    
     response_data = User(**user).model_dump()
+    
+    # CRITICAL: Ensure role from DB is preserved, not defaulted by Pydantic
+    # This prevents admin users from being incorrectly returned as 'user'
+    response_data["role"] = original_role
     
     # Add session token for single-session enforcement
     response_data["session_token"] = session_token

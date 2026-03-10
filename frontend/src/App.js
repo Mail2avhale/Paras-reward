@@ -490,12 +490,29 @@ function App() {
       const response = await fetch(`${BACKEND_URL}/api/user/${uid}`);
       if (response.ok) {
         const freshData = await response.json();
-        // Preserve role from stored user (API might not return it)
+        // CRITICAL: Preserve admin/sub_admin/manager role from stored user
+        // API might return 'user' as default, but we must keep elevated roles
         const storedUser = JSON.parse(localStorage.getItem("paras_user") || "{}");
+        const storedRole = storedUser.role;
+        const freshRole = freshData.role;
+        
+        // Priority: Keep admin roles from login, don't let refresh override them
+        let finalRole = 'user';
+        if (['admin', 'sub_admin', 'manager'].includes(storedRole)) {
+          // NEVER override admin roles - they come from login API with proper auth
+          finalRole = storedRole;
+        } else if (freshRole && freshRole !== 'user') {
+          // Use fresh role if it's elevated (API returned a real role)
+          finalRole = freshRole;
+        } else {
+          // Default case - use stored or fresh, prefer stored
+          finalRole = storedRole || freshRole || 'user';
+        }
+        
         const updatedUser = {
           ...storedUser,
           ...freshData,
-          role: freshData.role || storedUser.role || 'user'
+          role: finalRole
         };
         setUser(updatedUser);
         localStorage.setItem("paras_user", JSON.stringify(updatedUser));
