@@ -137,17 +137,38 @@
       - Retry button for failed burns
       - Total burned PRC and users affected
 
+20. ✅ **DMT Account Verification (MANDATORY)** (March 10, 2026)
+    - **Problem**: DMT transactions were failing due to incorrect bank account details
+    - **Solution**: Mandatory account verification before adding recipient
+    - **Backend**: Fixed `/api/eko/dmt/verify-account` to accept JSON body (POST)
+    - **Frontend**: Added verification step in RedeemPageV2.js
+      - New "Verify Bank Account" button
+      - Account verified status display with holder name
+      - "Add Bank Account" button disabled until verification passes
+    - **Removed**: Conflicting legacy route in `_archive_eko_payments_legacy.py`
+
+21. ✅ **Scheduler Status API (Admin)** (March 10, 2026)
+    - **New API**: `GET /api/admin/scheduler/status`
+      - Shows if scheduler is running
+      - Lists all scheduled jobs with next run times (IST)
+      - Shows last scheduled burn info
+      - Provides recommendation for production use
+    - **Frontend**: Added scheduler status card to AdminPRCBurnControl.js
+      - Visual indicator (green=running, red=stopped)
+      - Job count display
+      - Warning message if scheduler not working
+
 ---
 
 ## Pending/Backlog
 
 ### P1 (High Priority):
-- [ ] Production Performance Monitoring - latent risk
-- [ ] DMT Account Verification step (pre-transfer)
-- [ ] Production Auto-Burning scheduler fix
+- [ ] Production Auto-Burning scheduler investigation (apscheduler may not work on some cloud platforms)
 - [ ] Backend monolith refactoring (server.py still 38000+ lines)
+- [ ] Production Performance Monitoring - continuous
 
 ### P2 (Medium Priority):
+- [x] ~~DMT Account Verification step (pre-transfer)~~ - DONE
 - [ ] Mining Rate Display verification on production (Elite user)
 - [ ] KYC image migration (base64 → file storage)
 - [ ] Razorpay auto-subscription fix
@@ -187,4 +208,4 @@ CACHE_ENV_PREFIX = "prod"
 
 ---
 
-Last Updated: March 9, 2026
+Last Updated: March 10, 2026
