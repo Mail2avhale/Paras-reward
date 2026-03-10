@@ -112,6 +112,13 @@
     - **ReferralsEnhanced.js**: Added explicit axios timeouts (10s user, 12s levels)
     - Both pages now show data consistently
 
+17. ✅ **MongoDB Auto-Restart (PERMANENT FIX)** (March 10, 2026)
+    - **Root Cause**: MongoDB was NOT managed by supervisor, manual starts didn't survive crashes
+    - **Solution**: Created `/etc/supervisor/conf.d/mongodb.conf` with autostart=true, autorestart=true
+    - **Verification**: Tested crash simulation - MongoDB auto-restarts within 10 seconds
+    - **Script**: Created `/app/backend/scripts/setup_mongodb_supervisor.sh` for production
+    - **Result**: No more manual MongoDB restarts needed!
+
 ---
 
 ## Pending/Backlog
