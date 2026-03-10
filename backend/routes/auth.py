@@ -489,13 +489,24 @@ async def login(
     
     normalized_identifier = identifier.lower() if '@' in identifier else identifier
     
-    user = await db.users.find_one({
-        "$or": [
-            {"email": {"$regex": f"^{normalized_identifier}$", "$options": "i"}},
+    # OPTIMIZED: Use sequential equality checks instead of slow $regex $or query
+    # Try email first (most common), then mobile, then uid
+    user = await db.users.find_one(
+        {"email": normalized_identifier},
+        {"_id": 0, "profile_picture": 0}
+    )
+    
+    if not user:
+        user = await db.users.find_one(
             {"mobile": identifier},
-            {"uid": identifier}
-        ]
-    }, {"_id": 0, "profile_picture": 0})  # PERFORMANCE: Exclude profile_picture (large base64)
+            {"_id": 0, "profile_picture": 0}
+        )
+    
+    if not user:
+        user = await db.users.find_one(
+            {"uid": identifier},
+            {"_id": 0, "profile_picture": 0}
+        )
     
     if not user:
         # PARALLEL: Record failed login attempt
