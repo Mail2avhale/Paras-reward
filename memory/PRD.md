@@ -209,3 +209,16 @@ CACHE_ENV_PREFIX = "prod"
 ---
 
 Last Updated: March 10, 2026
+
+---
+
+## ⚠️ DEVELOPMENT GUIDELINES
+
+**IMPORTANT:** Before making any code changes, read `/app/DEVELOPMENT_GUIDELINES.md`
+
+### Quick Rules:
+1. **Never use `import requests`** in async code → Use `httpx.AsyncClient`
+2. **Never use `$regex`** for user lookup → Use equality queries
+3. **Always add indexes** for new collections
+4. **Always add timeouts** to DB queries (`max_time_ms=5000`)
+5. **Run pre-deployment checklist** before every deploy
