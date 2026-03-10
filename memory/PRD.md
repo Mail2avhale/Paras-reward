@@ -93,6 +93,12 @@
 13. ✅ **New Health Monitoring Endpoint** (March 10, 2026)
     - `/api/health/db/detailed` - Shows connection pool stats, collection sizes, index counts
 
+14. ✅ **MongoDB Profiler & Index Scripts** (March 10, 2026)
+    - Profiler enabled for queries > 100ms
+    - Created `/app/backend/scripts/create_indexes.js` - Production index creation script
+    - Created `/app/backend/scripts/db_monitor.py` - Slow query monitor & index analyzer
+    - Added indexes for: `login_history`, `admin_sessions`, `activity_logs`, `dmt_logs`, `security_alerts`, `login_attempts`
+
 ---
 
 ## Pending/Backlog
