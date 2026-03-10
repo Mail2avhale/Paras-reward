@@ -275,6 +275,11 @@ const RedeemPageV2 = ({ user }) => {
   const [addingRecipient, setAddingRecipient] = useState(false);
   const [senderMobile, setSenderMobile] = useState('');
   
+  // Account Verification states (Pre-transfer verification)
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [accountVerified, setAccountVerified] = useState(false);
+  const [verifiedAccountDetails, setVerifiedAccountDetails] = useState(null);
+  
   // EMI lender search states
   const [lenderSearch, setLenderSearch] = useState('');
   const [showLenderDropdown, setShowLenderDropdown] = useState(false);
@@ -733,10 +738,56 @@ const RedeemPageV2 = ({ user }) => {
     }
   };
   
-  // DMT: Add Recipient (Bank Account)
+  // DMT: Verify Bank Account (MANDATORY before adding recipient)
+  const verifyBankAccount = async () => {
+    if (!formData.account_number || !formData.ifsc_code) {
+      toast.error('Please enter Account Number and IFSC Code');
+      return;
+    }
+    
+    // Reset previous verification
+    setAccountVerified(false);
+    setVerifiedAccountDetails(null);
+    setVerifyingAccount(true);
+    
+    try {
+      const response = await axios.post(`${API}/eko/dmt/verify-account`, {
+        account: formData.account_number,
+        ifsc: formData.ifsc_code,
+        user_id: user?.uid || 'guest'
+      });
+      
+      if (response.data.success && response.data.data?.verified) {
+        const details = response.data.data;
+        setAccountVerified(true);
+        setVerifiedAccountDetails(details);
+        // Auto-fill account holder name from verification
+        if (details.account_holder_name && !formData.account_holder) {
+          setFormData(prev => ({ ...prev, account_holder: details.account_holder_name }));
+        }
+        toast.success(`✅ Account Verified: ${details.account_holder_name}`);
+      } else {
+        toast.error(response.data.user_message || 'Account verification failed. Please check details.');
+      }
+    } catch (error) {
+      console.error('[DMT] Account verification error:', error);
+      const errorMsg = error.response?.data?.user_message || error.response?.data?.detail || 'Account verification failed';
+      toast.error(errorMsg);
+    } finally {
+      setVerifyingAccount(false);
+    }
+  };
+  
+  // DMT: Add Recipient (Bank Account) - ONLY after verification
   const addDmtRecipient = async () => {
     if (!formData.account_number || !formData.ifsc_code || !formData.account_holder) {
       toast.error('Please fill all bank account details');
+      return;
+    }
+    
+    // MANDATORY: Account must be verified before adding
+    if (!accountVerified) {
+      toast.error('⚠️ Please verify the bank account first');
       return;
     }
     
@@ -773,6 +824,9 @@ const RedeemPageV2 = ({ user }) => {
       setDmtCustomer(null);
       setDmtRecipientId(null);
       setSenderMobile('');
+      // Reset verification states
+      setAccountVerified(false);
+      setVerifiedAccountDetails(null);
     }
   }, [selectedService]);
   
@@ -2490,14 +2544,56 @@ const RedeemPageV2 = ({ user }) => {
                               </div>
                             </div>
                             
+                            {/* Account Verification Section */}
+                            <div className="mt-4 p-4 bg-gray-800/70 border border-gray-700/50 rounded-xl">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Shield className="h-4 w-4 text-blue-400" />
+                                <span className="text-gray-300 text-sm font-medium">Bank Account Verification</span>
+                                <span className="text-xs text-amber-400 ml-auto">* Mandatory</span>
+                              </div>
+                              
+                              {!accountVerified ? (
+                                <div className="space-y-3">
+                                  <p className="text-gray-400 text-xs">
+                                    Verify the bank account details before adding. This ensures successful transfers.
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    onClick={verifyBankAccount}
+                                    disabled={!formData.account_number || !formData.ifsc_code || verifyingAccount}
+                                    className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                                  >
+                                    {verifyingAccount ? (
+                                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Verifying Account...</>
+                                    ) : (
+                                      <><Shield className="h-4 w-4 mr-2" /> Verify Bank Account</>
+                                    )}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <CheckCircle className="h-5 w-5 text-green-400" />
+                                    <span className="text-green-400 font-medium">Account Verified</span>
+                                  </div>
+                                  <p className="text-white text-sm">{verifiedAccountDetails?.account_holder_name}</p>
+                                  {verifiedAccountDetails?.bank_name && (
+                                    <p className="text-gray-400 text-xs mt-1">{verifiedAccountDetails.bank_name}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
                             <Button
                               type="button"
                               onClick={addDmtRecipient}
-                              disabled={!formData.account_number || !formData.ifsc_code || !formData.account_holder || addingRecipient}
-                              className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
+                              disabled={!formData.account_number || !formData.ifsc_code || !formData.account_holder || addingRecipient || !accountVerified}
+                              className={`w-full h-12 font-semibold rounded-xl ${accountVerified ? 'bg-amber-500 hover:bg-amber-600 text-black' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`}
                             >
                               {addingRecipient ? (
                                 <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Adding Bank Account...</>
+                              ) : !accountVerified ? (
+                                <>Verify Account First</>
                               ) : (
                                 <>Add Bank Account & Continue <ArrowRight className="h-5 w-5 ml-2" /></>
                               )}

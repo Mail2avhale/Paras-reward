@@ -126,6 +126,17 @@
     - **API Updated**: `/api/user/{uid}/prc-expiry` returns `is_lifetime: true`
     - **Backend**: `BURN_SETTINGS` updated with `time_based_expiry_enabled: false`
 
+19. ✅ **Burn Schedule History (Admin)** (March 10, 2026)
+    - **New API**: `GET /api/admin/prc-burn-control/history` - Returns burn history with pagination
+    - **New API**: `POST /api/admin/prc-burn-control/retry` - Retry failed burns
+    - **Frontend**: Added Burn History section to AdminPRCBurnControl.js
+    - **Features**:
+      - Status indicators (Success ✅ / Failed ❌)
+      - Timestamp in IST
+      - Type badges (Scheduled / Manual / Forced)
+      - Retry button for failed burns
+      - Total burned PRC and users affected
+
 ---
 
 ## Pending/Backlog

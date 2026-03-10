@@ -1527,14 +1527,22 @@ async def get_transactions(user_id: str, limit: int = 20, skip: int = 0):
 
 # ==================== BANK VERIFICATION ====================
 
+class VerifyAccountRequest(BaseModel):
+    account: str
+    ifsc: str
+    user_id: str
+
 @router.post("/verify-account")
-async def verify_bank_account(account: str, ifsc: str, user_id: str, request: Request):
+async def verify_bank_account(req: VerifyAccountRequest, request: Request):
     """Verify bank account before adding as recipient."""
     if not validate_eko_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
     
     db = get_db()
     client_ip = get_client_ip(request)
+    account = req.account
+    ifsc = req.ifsc
+    user_id = req.user_id
     
     logging.info(f"[DMT] Account Verification: ***{account[-4:]}, IFSC: {ifsc}")
     

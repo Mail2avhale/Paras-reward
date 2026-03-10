@@ -37431,7 +37431,196 @@ async def smart_burn(request: Request):
         raise HTTPException(status_code=500, detail=f"Smart burn failed: {str(e)}")
 
 
-# ========== REVERT PAYMENT REQUEST STATUS ==========
+# ========== BURN HISTORY API ==========
+
+@api_router.get("/admin/prc-burn-control/history")
+async def get_burn_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """
+    Get PRC burn execution history with status and retry option
+    Shows all burn jobs - scheduled and manual
+    """
+    try:
+        skip = (page - 1) * limit
+        
+        # Get burn history from collection
+        burn_records = await db.prc_burn_history.find(
+            {},
+            {"_id": 0}
+        ).sort("burn_date", -1).skip(skip).limit(limit).to_list(limit)
+        
+        # Also check admin_actions for burn-related actions
+        admin_burn_actions = await db.admin_actions.find(
+            {"action_type": {"$in": ["prc_burn", "manual_burn", "smart_burn", "scheduled_burn"]}},
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(limit).to_list(limit)
+        
+        # Combine and format results
+        history = []
+        ist_offset = timedelta(hours=5, minutes=30)
+        
+        for record in burn_records:
+            burn_date = record.get("burn_date")
+            result = record.get("result", {})
+            
+            # Determine status
+            if result and result.get("success"):
+                status = "success"
+            elif result and result.get("error"):
+                status = "failed"
+            else:
+                status = "completed"
+            
+            history.append({
+                "id": burn_date.isoformat() if burn_date else None,
+                "type": "scheduled" if not record.get("forced") else "manual",
+                "burn_date": burn_date.isoformat() if burn_date else None,
+                "burn_date_ist": (burn_date + ist_offset).strftime("%d %b %Y, %I:%M %p IST") if burn_date else None,
+                "executed_by": record.get("executed_by", "system"),
+                "forced": record.get("forced", False),
+                "status": status,
+                "total_burned": result.get("total_burned", 0) if result else 0,
+                "users_affected": result.get("users_affected", 0) if result else 0,
+                "percentage": result.get("percentage", 0.5) if result else 0.5,
+                "error": result.get("error") if result else None,
+                "can_retry": status == "failed"
+            })
+        
+        # Add admin actions not in burn_history
+        for action in admin_burn_actions:
+            timestamp = action.get("timestamp")
+            if timestamp:
+                # Check if already in history
+                if not any(h["burn_date"] == timestamp.isoformat() for h in history):
+                    history.append({
+                        "id": timestamp.isoformat(),
+                        "type": "manual",
+                        "burn_date": timestamp.isoformat(),
+                        "burn_date_ist": (timestamp + ist_offset).strftime("%d %b %Y, %I:%M %p IST"),
+                        "executed_by": action.get("admin_id", "admin"),
+                        "forced": True,
+                        "status": "success" if action.get("success") else "failed",
+                        "total_burned": action.get("total_burned", 0),
+                        "users_affected": action.get("users_affected", 0),
+                        "percentage": action.get("percentage", 0.5),
+                        "error": action.get("error"),
+                        "can_retry": not action.get("success", True)
+                    })
+        
+        # Sort by date descending
+        history.sort(key=lambda x: x["burn_date"] or "", reverse=True)
+        
+        # Get total count
+        total = await db.prc_burn_history.count_documents({})
+        
+        return {
+            "success": True,
+            "history": history[:limit],
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "pages": (total + limit - 1) // limit
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"[BURN HISTORY] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-burn-control/retry")
+async def retry_failed_burn(request: Request):
+    """
+    Retry a failed burn job
+    """
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id", "admin")
+        burn_id = data.get("burn_id")  # The ISO date string of the failed burn
+        
+        if not burn_id:
+            raise HTTPException(status_code=400, detail="burn_id is required")
+        
+        # Execute the burn
+        burn_result = await run_prc_burn_job()
+        
+        now = datetime.now(timezone.utc)
+        ist_offset = timedelta(hours=5, minutes=30)
+        
+        # Record retry in history
+        await db.prc_burn_history.insert_one({
+            "burn_date": now,
+            "executed_by": admin_id,
+            "forced": True,
+            "is_retry": True,
+            "original_burn_id": burn_id,
+            "result": burn_result,
+            "created_at": now
+        })
+        
+        return {
+            "success": True,
+            "message": "Retry executed successfully",
+            "burn_result": burn_result,
+            "burn_time_ist": (now + ist_offset).strftime("%d %b %Y, %I:%M %p IST")
+        }
+        
+    except Exception as e:
+        logging.error(f"[BURN RETRY] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== SCHEDULER HEALTH CHECK ==========
+
+@api_router.get("/admin/scheduler/status")
+async def get_scheduler_status():
+    """
+    Get the status of the background scheduler.
+    Useful for checking if automated tasks are running on production.
+    """
+    try:
+        scheduler_running = scheduler.running if scheduler else False
+        jobs = []
+        
+        if scheduler_running:
+            for job in scheduler.get_jobs():
+                next_run = job.next_run_time
+                jobs.append({
+                    "id": job.id,
+                    "name": job.name,
+                    "next_run": next_run.isoformat() if next_run else None,
+                    "next_run_ist": (next_run + timedelta(hours=5, minutes=30)).strftime("%d %b %Y, %I:%M %p IST") if next_run else None
+                })
+        
+        # Check last burn to see if scheduler is actually working
+        last_scheduled_burn = await db.prc_burn_history.find_one(
+            {"type": "scheduled"},
+            sort=[("burn_date", -1)]
+        )
+        
+        return {
+            "success": True,
+            "scheduler_running": scheduler_running,
+            "total_jobs": len(jobs),
+            "jobs": jobs,
+            "last_scheduled_burn": {
+                "time": last_scheduled_burn.get("burn_date").isoformat() if last_scheduled_burn else None,
+                "status": last_scheduled_burn.get("status") if last_scheduled_burn else None
+            } if last_scheduled_burn else None,
+            "recommendation": "If scheduler shows running but burns aren't executing, use Smart Burn daily or set up external cron job" if scheduler_running else "Scheduler not running - use Smart Burn manually"
+        }
+        
+    except Exception as e:
+        logging.error(f"[SCHEDULER STATUS] Error: {e}")
+        return {
+            "success": False,
+            "scheduler_running": False,
+            "error": str(e),
+            "recommendation": "Use Smart Burn manually to execute daily burns"
+        }
 
 @api_router.post("/admin/payment-request/revert-status")
 async def revert_payment_request_status(request: Request):

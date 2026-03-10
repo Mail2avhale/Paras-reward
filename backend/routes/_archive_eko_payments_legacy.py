@@ -2857,21 +2857,22 @@ async def add_dmt_recipient(request: DMTRecipientRequest):
 #         raise HTTPException(status_code=404, detail=f"Recipients not found: {str(e)}")
 
 
-@router.post("/dmt/verify-account")
-async def verify_bank_account(ifsc: str, account_number: str):
-    """Verify bank account before transfer"""
-    try:
-        result = await make_eko_request(
-            "/v2/banks/ifsc/accounts/verify",
-            method="POST",
-            data={
-                "ifsc": ifsc,
-                "account": account_number
-            }
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Account verification failed: {str(e)}")
+# DEPRECATED: Use /api/eko/dmt/verify-account from eko_dmt_service.py instead
+# @router.post("/dmt/verify-account")
+# async def verify_bank_account_legacy(ifsc: str, account_number: str):
+#     """Verify bank account before transfer - DEPRECATED"""
+#     try:
+#         result = await make_eko_request(
+#             "/v2/banks/ifsc/accounts/verify",
+#             method="POST",
+#             data={
+#                 "ifsc": ifsc,
+#                 "account": account_number
+#             }
+#         )
+#         return result
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Account verification failed: {str(e)}")
 
 
 @router.post("/dmt/send-otp")

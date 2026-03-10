@@ -4,7 +4,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { 
   Flame, Settings, TrendingDown, Users, AlertTriangle,
-  RefreshCw, CheckCircle, ArrowLeft, Percent, Info, ShieldCheck, Zap
+  RefreshCw, CheckCircle, ArrowLeft, Percent, Info, ShieldCheck, Zap,
+  History, XCircle, Clock, RotateCcw
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,11 @@ const AdminPRCBurnControl = ({ user }) => {
   const [executing, setExecuting] = useState(false);
   const [smartBurning, setSmartBurning] = useState(false);
   const [smartBurnResult, setSmartBurnResult] = useState(null);
+  
+  // Burn History state
+  const [burnHistory, setBurnHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [retrying, setRetrying] = useState(null);
   
   // Settings state
   const [burnEnabled, setBurnEnabled] = useState(false);
@@ -42,10 +48,60 @@ const AdminPRCBurnControl = ({ user }) => {
     }
   }, [user, navigate]);
 
+  // Scheduler status state
+  const [schedulerStatus, setSchedulerStatus] = useState(null);
+
   useEffect(() => {
     fetchSettings();
     fetchPRCStats();
+    fetchBurnHistory();
+    fetchSchedulerStatus();
   }, []);
+
+  // Fetch scheduler status
+  const fetchSchedulerStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/scheduler/status`);
+      setSchedulerStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching scheduler status:', error);
+      setSchedulerStatus({ scheduler_running: false, error: 'Failed to fetch' });
+    }
+  };
+
+  // Fetch burn history
+  const fetchBurnHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await axios.get(`${API}/admin/prc-burn-control/history?limit=20`);
+      setBurnHistory(response.data.history || []);
+    } catch (error) {
+      console.error('Error fetching burn history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Retry failed burn
+  const handleRetryBurn = async (burnId) => {
+    setRetrying(burnId);
+    try {
+      const response = await axios.post(`${API}/admin/prc-burn-control/retry`, {
+        admin_id: user?.uid,
+        burn_id: burnId
+      });
+      
+      if (response.data.success) {
+        toast.success('Burn retry successful!');
+        fetchBurnHistory();
+        fetchPRCStats();
+      }
+    } catch (error) {
+      toast.error('Retry failed: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setRetrying(null);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -343,6 +399,41 @@ const AdminPRCBurnControl = ({ user }) => {
         </div>
       </Card>
 
+      {/* Scheduler Status Card */}
+      {schedulerStatus && (
+        <Card className={`mt-6 p-4 ${schedulerStatus.scheduler_running ? 'bg-blue-500/10 border-blue-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${schedulerStatus.scheduler_running ? 'bg-blue-500/20' : 'bg-red-500/20'}`}>
+                <Clock className={`w-5 h-5 ${schedulerStatus.scheduler_running ? 'text-blue-400' : 'text-red-400'}`} />
+              </div>
+              <div>
+                <h3 className={`font-semibold ${schedulerStatus.scheduler_running ? 'text-blue-400' : 'text-red-400'}`}>
+                  Scheduler: {schedulerStatus.scheduler_running ? 'Running' : 'Not Running'}
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  {schedulerStatus.total_jobs || 0} jobs configured
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchSchedulerStatus}
+              className="border-gray-600"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
+          {schedulerStatus.recommendation && (
+            <p className="text-amber-400 text-xs mt-3 p-2 bg-amber-500/10 rounded-lg">
+              <AlertTriangle className="w-3 h-3 inline mr-1" />
+              {schedulerStatus.recommendation}
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Smart Auto Burn Section */}
       <Card className="mt-6 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
         <div className="flex items-start justify-between">
@@ -457,6 +548,141 @@ const AdminPRCBurnControl = ({ user }) => {
               reduce the supply to maintain PRC value. A small percentage (1-5%) burn 
               periodically can help balance the economy.
             </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Burn Schedule History */}
+      <Card className="mt-6 p-4 bg-gray-800/50 border-gray-700" data-testid="burn-history-card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-purple-400" />
+            <h3 className="text-white font-semibold">Burn Schedule History</h3>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchBurnHistory}
+            disabled={historyLoading}
+            className="border-gray-600"
+          >
+            {historyLoading ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+
+        {historyLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 text-gray-500 animate-spin" />
+          </div>
+        ) : burnHistory.length === 0 ? (
+          <div className="text-center py-8">
+            <Clock className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+            <p className="text-gray-500">No burn history found</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {burnHistory.map((burn, index) => (
+              <div
+                key={burn.id || index}
+                className={`p-3 rounded-lg border ${
+                  burn.status === 'success' 
+                    ? 'bg-green-900/20 border-green-500/30' 
+                    : burn.status === 'failed'
+                    ? 'bg-red-900/20 border-red-500/30'
+                    : 'bg-gray-900/50 border-gray-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {/* Status Icon */}
+                    {burn.status === 'success' ? (
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                    ) : burn.status === 'failed' ? (
+                      <XCircle className="w-5 h-5 text-red-400" />
+                    ) : (
+                      <Clock className="w-5 h-5 text-yellow-400" />
+                    )}
+                    
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium">
+                          {burn.burn_date_ist || 'Unknown time'}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          burn.type === 'scheduled' 
+                            ? 'bg-blue-500/20 text-blue-400' 
+                            : 'bg-purple-500/20 text-purple-400'
+                        }`}>
+                          {burn.type === 'scheduled' ? 'Scheduled' : 'Manual'}
+                        </span>
+                        {burn.forced && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                            Forced
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-400 text-sm">
+                        By: {burn.executed_by || 'System'} 
+                        {burn.status === 'success' && burn.total_burned > 0 && (
+                          <span className="ml-2 text-green-400">
+                            • Burned: {burn.total_burned?.toLocaleString()} PRC from {burn.users_affected} users
+                          </span>
+                        )}
+                        {burn.status === 'failed' && burn.error && (
+                          <span className="ml-2 text-red-400">
+                            • Error: {burn.error}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Retry Button for failed burns */}
+                  {burn.can_retry && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRetryBurn(burn.id)}
+                      disabled={retrying === burn.id}
+                      className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                    >
+                      {retrying === burn.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          Retry
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="mt-4 pt-4 border-t border-gray-700 flex flex-wrap gap-4 text-xs">
+          <div className="flex items-center gap-1">
+            <CheckCircle className="w-3 h-3 text-green-400" />
+            <span className="text-gray-400">Success</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <XCircle className="w-3 h-3 text-red-400" />
+            <span className="text-gray-400">Failed (can retry)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full bg-blue-500/50"></span>
+            <span className="text-gray-400">Scheduled (11 AM/PM)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-full bg-purple-500/50"></span>
+            <span className="text-gray-400">Manual</span>
           </div>
         </div>
       </Card>

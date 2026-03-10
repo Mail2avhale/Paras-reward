@@ -20,7 +20,7 @@ import os
 import time
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://burn-scheduler-fix.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://monolith-refactor-14.preview.emergentagent.com')
 
 TEST_USER_EMAIL = "testuser@test.com"
 TEST_USER_PASSWORD = "test123"
