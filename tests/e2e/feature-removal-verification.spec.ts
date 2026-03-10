@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://monolith-refactor-14.preview.emergentagent.com';
+const BASE_URL = 'https://bbps-services-ui.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   

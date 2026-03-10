@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://monolith-refactor-14.preview.emergentagent.com';
+const BASE_URL = 'https://bbps-services-ui.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 

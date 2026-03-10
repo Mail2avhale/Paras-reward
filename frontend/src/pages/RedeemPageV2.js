@@ -241,6 +241,50 @@ const CIRCLES = [
   { id: 'GA', name: 'Goa' }
 ];
 
+// Reusable Service Category Section Component
+const ServiceCategorySection = ({ title, services, selectedService, setSelectedService }) => {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">{title}</p>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {services.map(id => {
+          const config = SERVICE_CONFIG[id];
+          if (!config) return null;
+          const Icon = config.icon;
+          const isSelected = selectedService === id;
+          
+          return (
+            <button
+              key={id}
+              onClick={() => setSelectedService(id)}
+              className={`relative p-3 rounded-xl border transition-all duration-300 ${
+                isSelected
+                  ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
+                  : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+              }`}
+              data-testid={`service-${id}`}
+            >
+              {isSelected && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                </div>
+              )}
+              <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                isSelected ? 'bg-white/20' : 'bg-gray-700/50'
+              }`}>
+                <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+              </div>
+              <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                {config.name}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const RedeemPageV2 = ({ user }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1328,332 +1372,65 @@ const RedeemPageV2 = ({ user }) => {
                 <Receipt className="h-6 w-6 text-amber-400" />
               </div>
               
-              {/* Service Categories */}
+              {/* Service Categories - Optimized Grid */}
               <div className="space-y-4">
-                {/* Recharge & TV */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Recharge & TV</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['mobile_recharge', 'mobile_postpaid', 'dth', 'cable_tv'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Recharge */}
+                <ServiceCategorySection
+                  title="Mobile Recharge"
+                  services={['mobile_recharge', 'mobile_postpaid']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
+                
+                {/* Entertainment & TV */}
+                <ServiceCategorySection
+                  title="Entertainment & TV"
+                  services={['dth', 'cable_tv']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
                 
                 {/* Utility Bills */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Utility Bills</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['electricity', 'water', 'gas', 'lpg'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                {/* Entertainment/DTH */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Entertainment</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['dth', 'cable_tv'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ServiceCategorySection
+                  title="Utility Bills"
+                  services={['electricity', 'water', 'gas', 'lpg']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
 
                 {/* Telecom */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Telecom</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['broadband', 'landline'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ServiceCategorySection
+                  title="Telecom"
+                  services={['broadband', 'landline']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
                 
-                {/* Transport */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['fastag'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Transport & Travel */}
+                <ServiceCategorySection
+                  title="Transport & Travel"
+                  services={['fastag']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
                 
                 {/* Financial Services */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Financial Services</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['emi', 'credit_card', 'insurance'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <ServiceCategorySection
+                  title="Financial Services"
+                  services={['emi', 'credit_card', 'insurance']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
                 
-                {/* Transport & Others */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Transport & Others</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['fastag', 'education', 'municipal_tax'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Others */}
+                <ServiceCategorySection
+                  title="Others"
+                  services={['education', 'municipal_tax', 'housing_society']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
                 
-                {/* Bank Transfer */}
-                <div>
-                  <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Money Transfer</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {['dmt'].map(id => {
-                      const config = SERVICE_CONFIG[id];
-                      if (!config) return null;
-                      const Icon = config.icon;
-                      const isSelected = selectedService === id;
-                      
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedService(id)}
-                          className={`relative p-3 rounded-xl border transition-all duration-300 ${
-                            isSelected
-                              ? `bg-gradient-to-br ${config.gradient} border-white/30 shadow-lg scale-105`
-                              : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
-                          }`}
-                          data-testid={`service-${id}`}
-                        >
-                          {isSelected && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                            </div>
-                          )}
-                          {config.requiresAdmin && (
-                            <div className="absolute -top-1 -left-1 px-1 bg-amber-500 rounded text-[8px] font-bold text-black">
-                              Admin
-                            </div>
-                          )}
-                          <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
-                            isSelected ? 'bg-white/20' : 'bg-gray-700/50'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                          </div>
-                          <p className={`text-[9px] font-medium text-center leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
-                            {config.name}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Note: Bank Transfer (DMT) moved to Chatbot flow */}
               </div>
             </div>
             

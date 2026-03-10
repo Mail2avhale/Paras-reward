@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://monolith-refactor-14.preview.emergentagent.com",
+    "url": "https://bbps-services-ui.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

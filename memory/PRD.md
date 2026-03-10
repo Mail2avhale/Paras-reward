@@ -212,6 +212,25 @@ Last Updated: March 10, 2026
 
 ---
 
+## Latest Changes (December 10, 2026)
+
+### Frontend Refactoring - RedeemPageV2.js
+22. ✅ **Service Categories Cleanup** (December 10, 2026)
+    - Removed duplicate service entries (DTH appeared in Recharge & Entertainment, FASTag in Transport & Transport & Others)
+    - Created reusable `ServiceCategorySection` component (47 lines)
+    - Removed disabled DMT section (now handled via Chatbot flow)
+    - File size reduced: 2857 → 2633 lines (224 lines removed)
+    - Categories now organized cleanly:
+      - Mobile Recharge (mobile_recharge, mobile_postpaid)
+      - Entertainment & TV (dth, cable_tv)
+      - Utility Bills (electricity, water, gas, lpg)
+      - Telecom (broadband, landline)
+      - Transport & Travel (fastag)
+      - Financial Services (emi, credit_card, insurance)
+      - Others (education, municipal_tax, housing_society)
+
+---
+
 ## ⚠️ DEVELOPMENT GUIDELINES
 
 **IMPORTANT:** Before making any code changes, read `/app/DEVELOPMENT_GUIDELINES.md`
