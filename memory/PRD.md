@@ -99,6 +99,19 @@
     - Created `/app/backend/scripts/db_monitor.py` - Slow query monitor & index analyzer
     - Added indexes for: `login_history`, `admin_sessions`, `activity_logs`, `dmt_logs`, `security_alerts`, `login_attempts`
 
+15. ✅ **Bank Account Section Removed from Profile** (March 10, 2026)
+    - Removed BankDetailsCard component (208 lines)
+    - Removed account_holder, ifsc_code, bank_name fields
+    - File size reduced: 1282 → 1068 lines
+
+16. ✅ **Mining & Referral Page Data Loading Fix** (March 10, 2026)
+    - **Mining.js**: Fixed default rate from 1.0 → 20.83 PRC/hr
+    - **Mining.js**: Added retry logic (3 attempts) for failed API calls
+    - **Mining.js**: Increased timeout from 3s → 5s with 8s axios timeout
+    - **ReferralsEnhanced.js**: Fixed Promise.race causing timeouts
+    - **ReferralsEnhanced.js**: Added explicit axios timeouts (10s user, 12s levels)
+    - Both pages now show data consistently
+
 ---
 
 ## Pending/Backlog

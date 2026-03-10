@@ -712,7 +712,7 @@ const DailyRewards = ({ user }) => {
   const [isMining, setIsMining] = useState(false);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
   const [sessionPRC, setSessionPRC] = useState(0);
-  const [miningRate, setMiningRate] = useState(1.0);
+  const [miningRate, setMiningRate] = useState(20.83); // Default to base rate (500/24)
   const [isStarting, setIsStarting] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
@@ -749,27 +749,31 @@ const DailyRewards = ({ user }) => {
   const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
 
   // Fetch user data and mining status
-  const fetchUserData = useCallback(async (isInitialLoad = false) => {
+  const fetchUserData = useCallback(async (isInitialLoad = false, retryCount = 0) => {
     // Set a timeout to prevent infinite loading on slow networks
-    // OPTIMIZED: 3 second timeout for faster failure, show cached data immediately
+    // OPTIMIZED: 5 second timeout, with retry logic
     const timeoutId = setTimeout(() => {
       if (isInitialLoad) {
         setLoading(false);
         setUserData(user);
         console.warn('Mining data fetch timeout - using fallback');
       }
-    }, 3000); // 3 second timeout
+    }, 5000); // 5 second timeout
     
     try {
       // Fetch mining status FIRST (most important for this page)
       // Then fetch user data and stats in parallel
-      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 5000 });
+      const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 8000 });
       const miningData = miningResponse.data;
       
       // Immediately update mining state for faster UI
-      setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 1.0);
+      // FIXED: Use proper fallback chain for mining rate
+      const rate = miningData.mining_rate_per_hour || miningData.mining_rate || 20.83;
+      setMiningRate(rate);
+      console.log('Mining rate loaded:', rate); // DEBUG
+      
       setReferralBreakdown(miningData.referral_breakdown || null);
-      setBaseRate(miningData.base_rate || 0);
+      setBaseRate(miningData.base_rate || 20.83);
       // single_leg_info is included in base_rate, no separate display needed
       
       // Auto-start mining display if session is active
@@ -792,8 +796,8 @@ const DailyRewards = ({ user }) => {
       
       // Fetch user data and stats in background (non-blocking)
       const [userResponse, statsResponse] = await Promise.all([
-        axios.get(`${API}/user/${user.uid}`, { timeout: 5000 }),
-        axios.get(`${API}/user/${user.uid}/redemption-stats`, { timeout: 5000 }).catch(() => ({ data: {} }))
+        axios.get(`${API}/user/${user.uid}`, { timeout: 8000 }),
+        axios.get(`${API}/user/${user.uid}/redemption-stats`, { timeout: 8000 }).catch(() => ({ data: {} }))
       ]);
       
       const data = userResponse.data;
@@ -821,7 +825,16 @@ const DailyRewards = ({ user }) => {
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      
+      // RETRY LOGIC: If first attempt fails, retry up to 2 times
+      if (retryCount < 2) {
+        console.log(`Retrying mining data fetch (attempt ${retryCount + 2})...`);
+        setTimeout(() => fetchUserData(isInitialLoad, retryCount + 1), 1000);
+        return;
+      }
+      
       setUserData(user);
+      // Keep default rate (20.83) instead of 1.0
     } finally {
       clearTimeout(timeoutId);
       if (isInitialLoad) setLoading(false);
