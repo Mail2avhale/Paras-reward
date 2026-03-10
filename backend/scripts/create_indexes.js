@@ -104,9 +104,12 @@ print("   ✅ indexes created\n");
 // ========== USERS (CRITICAL indexes) ==========
 print("📁 users");
 db.users.createIndex({"uid": 1}, {background: true, unique: true, name: "uid_unique_idx"});
+db.users.createIndex({"email": 1}, {background: true, name: "email_idx"});
+db.users.createIndex({"mobile": 1}, {background: true, sparse: true, name: "mobile_idx"});
 db.users.createIndex({"referred_by": 1}, {background: true, name: "referred_by_idx"});
 db.users.createIndex({"subscription_plan": 1}, {background: true, name: "plan_idx"});
 db.users.createIndex({"prc_balance": 1}, {background: true, name: "prc_balance_idx"});
+db.users.createIndex({"created_at": -1}, {background: true, name: "created_at_idx"});
 print("   ✅ indexes created\n");
 
 // ========== CHATBOT REDEEM REQUESTS ==========
