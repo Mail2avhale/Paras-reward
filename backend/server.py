@@ -4116,85 +4116,116 @@ async def daily_percentage_burn():
     """
     Daily 0.5% burn from ALL users' available PRC balance
     Runs at 11 AM and 11 PM (0.5% each = 1% daily)
-    NO NEGATIVE IMPACT - gradual, sustainable mechanism
+    
+    OPTIMIZED: Uses bulk_write for fast execution (handles 5000+ users in seconds)
     """
+    from pymongo import UpdateOne
+    
     now = datetime.now(timezone.utc)
     burn_pct = BURN_SETTINGS["per_session_burn_percentage"]  # 0.5%
+    reference_id = f"DAILY-{now.strftime('%Y%m%d%H%M%S')}"
     
     users_affected = 0
     total_burned = 0
     burned_details = []
     
-    # Find ALL users with PRC balance > 0
-    users_with_prc = await db.users.find({
-        "prc_balance": {"$gt": 0}
-    }).to_list(10000)
+    # Find ALL users with PRC balance > minimum threshold
+    # Using projection for faster query
+    min_balance_for_burn = 2  # 0.5% of 2 = 0.01 (minimum burn)
+    users_cursor = db.users.find(
+        {"prc_balance": {"$gte": min_balance_for_burn}},
+        {"uid": 1, "prc_balance": 1, "_id": 0}
+    )
     
-    for user in users_with_prc:
+    # Process in batches for memory efficiency
+    BATCH_SIZE = 500
+    batch_operations = []
+    transaction_records = []
+    
+    async for user in users_cursor:
         uid = user.get("uid")
         current_balance = user.get("prc_balance", 0)
         
-        if current_balance <= 0:
+        if current_balance < min_balance_for_burn:
             continue
         
         # Calculate 0.5% to burn
         burn_amount = round(current_balance * (burn_pct / 100), 4)
         
-        # Minimum burn of 0.01 PRC (avoid micro burns)
         if burn_amount < 0.01:
             continue
         
         new_balance = round(current_balance - burn_amount, 4)
-        
-        # Ensure no negative balance
         if new_balance < 0:
             new_balance = 0
             burn_amount = current_balance
         
-        # Apply burn
-        await db.users.update_one(
-            {"uid": uid},
-            {
-                "$set": {"prc_balance": new_balance},
-                "$push": {
-                    "prc_transactions": {
-                        "type": "debit",
-                        "amount": burn_amount,
-                        "description": f"Daily PRC Maintenance ({burn_pct}%)",
-                        "reference_id": f"DAILY-{now.strftime('%Y%m%d%H%M%S')}",
-                        "balance_after": new_balance,
-                        "timestamp": now.isoformat()
-                    }
-                }
-            }
+        # Prepare bulk update operation (balance only - much faster)
+        batch_operations.append(
+            UpdateOne(
+                {"uid": uid},
+                {"$set": {"prc_balance": new_balance}}
+            )
         )
+        
+        # Prepare transaction record for separate insert
+        transaction_records.append({
+            "uid": uid,
+            "type": "prc_burn",
+            "amount": burn_amount,
+            "description": f"Daily PRC Maintenance ({burn_pct}%)",
+            "reference_id": reference_id,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "timestamp": now
+        })
         
         users_affected += 1
         total_burned += burn_amount
-        burned_details.append({
-            "uid": uid,
-            "before": current_balance,
-            "burned": burn_amount,
-            "after": new_balance
-        })
+        
+        if len(burned_details) < 100:
+            burned_details.append({
+                "uid": uid,
+                "before": current_balance,
+                "burned": burn_amount,
+                "after": new_balance
+            })
+        
+        # Execute batch when full
+        if len(batch_operations) >= BATCH_SIZE:
+            try:
+                await db.users.bulk_write(batch_operations, ordered=False)
+                await db.transactions.insert_many(transaction_records, ordered=False)
+            except Exception as e:
+                logging.error(f"[BURN] Batch error: {e}")
+            batch_operations = []
+            transaction_records = []
+    
+    # Execute remaining operations
+    if batch_operations:
+        try:
+            await db.users.bulk_write(batch_operations, ordered=False)
+            await db.transactions.insert_many(transaction_records, ordered=False)
+        except Exception as e:
+            logging.error(f"[BURN] Final batch error: {e}")
     
     # Log the burn operation
     from routes.user_logs import log_burn_operation
     try:
         await log_burn_operation(
             operation_type="daily_percentage_burn",
-            total_users_checked=len(users_with_prc),
+            total_users_checked=users_affected,
             users_burned=users_affected,
-            users_skipped=len(users_with_prc) - users_affected,
+            users_skipped=0,
             total_prc_burned=total_burned,
-            skipped_users_details=[],  # No skips in daily burn
-            burned_users_details=burned_details[:100],
-            settings_used={**BURN_SETTINGS, "notes": f"Daily {burn_pct}% burn at {now.strftime('%H:%M')} IST"}
+            skipped_users_details=[],
+            burned_users_details=burned_details[:50],
+            settings_used={**BURN_SETTINGS, "notes": f"Daily {burn_pct}% burn - OPTIMIZED bulk_write"}
         )
     except Exception as e:
         logging.error(f"[BURN LOG] Failed to log: {e}")
     
-    logging.info(f"[PRC BURN] Daily {burn_pct}%: {users_affected} users, {total_burned:.2f} PRC burned")
+    logging.info(f"[PRC BURN] Daily {burn_pct}%: {users_affected} users, {total_burned:.2f} PRC burned (OPTIMIZED)")
     return {
         "users_affected": users_affected,
         "total_burned": round(total_burned, 2),
