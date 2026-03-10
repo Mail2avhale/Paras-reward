@@ -37496,13 +37496,31 @@ async def get_burn_history(
             burn_date = record.get("burn_date")
             result = record.get("result", {})
             
+            # Get summary from nested result structure (from run_prc_burn_job)
+            summary = result.get("summary", {}) if result else {}
+            daily_burn = result.get("daily_percentage_burn", {}) if result else {}
+            
             # Determine status
-            if result and result.get("success"):
+            if result and (result.get("success") or summary.get("status") == "completed"):
                 status = "success"
             elif result and result.get("error"):
                 status = "failed"
             else:
                 status = "completed"
+            
+            # Get burned amount from different possible locations in result
+            total_burned = (
+                summary.get("total_prc_burned") or 
+                daily_burn.get("total_burned") or 
+                result.get("total_burned") or 
+                0
+            )
+            users_affected = (
+                summary.get("total_users_affected") or 
+                daily_burn.get("users_affected") or 
+                result.get("users_affected") or 
+                0
+            )
             
             history.append({
                 "id": burn_date.isoformat() if burn_date else None,
@@ -37512,9 +37530,9 @@ async def get_burn_history(
                 "executed_by": record.get("executed_by", "system"),
                 "forced": record.get("forced", False),
                 "status": status,
-                "total_burned": result.get("total_burned", 0) if result else 0,
-                "users_affected": result.get("users_affected", 0) if result else 0,
-                "percentage": result.get("percentage", 0.5) if result else 0.5,
+                "total_burned": total_burned,
+                "users_affected": users_affected,
+                "percentage": daily_burn.get("burn_percentage", 0.5),
                 "error": result.get("error") if result else None,
                 "can_retry": status == "failed"
             })
