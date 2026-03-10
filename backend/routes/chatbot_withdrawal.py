@@ -3,26 +3,46 @@ PARAS REWARD - Chatbot Bank Withdrawal System
 ==============================================
 Bank withdrawal via chatbot WITH Eko DMT OTP verification
 
-UPDATED Flow:
-1. User requests withdrawal via chatbot
-2. System validates: KYC, minimum amount, balance
-3. User provides bank details
-4. ★ SYSTEM checks Eko customer status ★
-5. ★ If not registered → Register → OTP sent to user ★
-6. ★ User enters OTP in chatbot ★
-7. ★ System verifies OTP with Eko ★
-8. Request created after OTP verified
-9. Admin processes DMT transfer
-10. Status updates sent to user
+IMPORTANT: This is the PRIMARY withdrawal flow!
+Users request withdrawals through the AI Chatbot, NOT through a direct Redeem Page.
 
-Fees:
+E2E FLOW DOCUMENTATION: /app/DMT_CHATBOT_FLOW.md
+
+USER JOURNEY:
+1. User opens chatbot and says "withdraw" or "bank transfer"
+2. Chatbot checks eligibility (KYC, balance, subscription)
+3. User chooses verification: Mobile OTP or Aadhaar eKYC
+4. For Mobile OTP:
+   - Check/Register customer in Eko
+   - OTP sent to user's mobile
+   - User enters OTP in chatbot
+5. User enters bank details (account, IFSC)
+6. User enters amount, sees fee breakdown
+7. User confirms → Request created (status: pending)
+8. ADMIN processes the request via Admin Panel
+9. Admin initiates IMPS/NEFT transfer via Eko API
+10. User receives money in bank account
+
+FEES:
 - Processing Fee: ₹10 (flat)
 - Admin Charge: 20% of amount
+- Example: ₹1000 withdrawal → User receives ₹790
 
-Configuration:
+LIMITS:
 - Minimum: ₹500
-- KYC: Mandatory
-- OTP: Required (via Eko DMT)
+- Maximum (Mobile OTP): ₹25,000/day
+- Maximum (Aadhaar): ₹1,00,000/day
+
+REQUIREMENTS:
+- KYC: Mandatory (verified status)
+- Subscription: Startup/Growth/Elite (not Explorer)
+- PRC Balance: Minimum 5,000 PRC (₹500)
+
+RELATED FILES:
+- Frontend Chatbot: /app/frontend/src/components/AIChatbotEnhanced.js
+- Withdrawal Flow UI: /app/frontend/src/components/ChatbotWithdrawalFlow.js
+- Admin Panel: /app/frontend/src/pages/AdminChatbotWithdrawals.js
+- Admin DMT Routes: /app/backend/routes/admin_dmt_routes.py
 """
 
 from fastapi import APIRouter, HTTPException, Request

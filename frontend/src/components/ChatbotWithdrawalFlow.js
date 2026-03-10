@@ -1,14 +1,37 @@
 /**
- * Chatbot Bank Withdrawal Flow Component
+ * PARAS REWARD - Chatbot Bank Withdrawal Flow Component
+ * =====================================================
  * 
- * This component handles the Eko OTP verification flow for bank withdrawals:
- * 1. Check customer status in Eko
- * 2. Register if new (sends OTP automatically)
- * 3. Verify OTP (3 attempts max)
- * 4. Collect bank details
- * 5. Confirm and submit withdrawal request
+ * IMPORTANT: This is the PRIMARY method for bank withdrawals!
+ * Users request withdrawals through AI Chatbot, NOT through a direct page.
  * 
- * Integrates with AIChatbotEnhanced.js
+ * E2E FLOW DOCUMENTATION: /app/DMT_CHATBOT_FLOW.md
+ * 
+ * FLOW STEPS:
+ * 1. Check eligibility (KYC verified, balance >= ₹500, valid subscription)
+ * 2. Choose verification: Mobile OTP or Aadhaar eKYC
+ * 3. Mobile OTP Flow:
+ *    - Check customer status in Eko
+ *    - Register if new (OTP sent automatically)
+ *    - Verify OTP (3 attempts max)
+ * 4. Collect bank details (account, IFSC - auto-lookup)
+ * 5. Enter amount, show fee breakdown
+ * 6. Confirm and submit withdrawal request
+ * 7. Request goes to Admin for DMT processing
+ * 
+ * FEES:
+ * - Processing Fee: ₹10 (flat)
+ * - Admin Charge: 20%
+ * - Example: ₹1000 → User receives ₹790
+ * 
+ * LIMITS:
+ * - Mobile OTP: ₹25,000/day
+ * - Aadhaar eKYC: ₹1,00,000/day
+ * 
+ * RELATED FILES:
+ * - Backend API: /app/backend/routes/chatbot_withdrawal.py
+ * - Admin Panel: /app/frontend/src/pages/AdminChatbotWithdrawals.js
+ * - Parent Chatbot: /app/frontend/src/components/AIChatbotEnhanced.js
  */
 
 import { useState, useEffect } from 'react';
