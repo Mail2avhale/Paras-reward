@@ -340,26 +340,24 @@ const ReferralsEnhanced = ({ user }) => {
     // Set timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      console.warn('Referrals data fetch timeout');
-    }, 10000);
+      console.warn('Referrals data fetch timeout - using fallback');
+    }, 15000);
     
     try {
       setLoading(true);
       
-      // Try to fetch all data in parallel with timeout
-      const [userResult, levelsResult] = await Promise.race([
-        Promise.allSettled([
-          axios.get(`${API}/user/${user.uid}`),
-          axios.get(`${API}/referrals/${user.uid}/levels`)
-        ]),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
-      ]).catch(() => [{ status: 'rejected' }, { status: 'rejected' }]);
+      // FIXED: Fetch data with proper error handling (no race condition)
+      // Use Promise.allSettled to handle partial failures gracefully
+      const [userResult, levelsResult] = await Promise.allSettled([
+        axios.get(`${API}/user/${user.uid}`, { timeout: 10000 }),
+        axios.get(`${API}/referrals/${user.uid}/levels`, { timeout: 12000 })
+      ]);
       
       // Process user data
       if (userResult?.status === 'fulfilled') {
         setUserData(userResult.value.data);
       } else {
-        // Use prop data as fallback
+        console.warn('User API failed:', userResult?.reason?.message);
         setUserData(user);
       }
       
@@ -408,7 +406,7 @@ const ReferralsEnhanced = ({ user }) => {
         setReferralStats({ total: l1Count, active: activeCount, yourCircle: yourCircleCount });
       } else {
         // Fallback: use user's referral count
-        console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason);
+        console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason?.message);
         const userData = userResult?.status === 'fulfilled' ? userResult.value.data : user;
         const refCount = userData?.referral_count || 0;
         checkMilestoneAchievement(refCount);

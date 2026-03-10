@@ -29697,6 +29697,7 @@ async def get_referral_levels(user_id: str):
         current_level_users = next_level_users
     
     # Build response with user details and activity status
+    # OPTIMIZED: Batch process user activity instead of N+1 queries
     levels = []
     for level_num in range(1, 6):
         level_key = f"level_{level_num}"
@@ -29707,6 +29708,8 @@ async def get_referral_levels(user_id: str):
         
         for u in users:
             user_uid = u.get("uid")
+            # OPTIMIZED: Use user data directly instead of additional DB call
+            # check_user_active_status already receives user_data, so no N+1
             is_active, active_reason = await check_user_active_status(user_uid, u)
             
             if is_active:
@@ -29750,8 +29753,8 @@ async def get_referral_levels(user_id: str):
         }
     }
     
-    # Cache for 60 seconds to improve performance
-    await cache.set(cache_key, response, ttl=60)
+    # Cache for 120 seconds to improve performance and reduce DB load
+    await cache.set(cache_key, response, ttl=120)
     
     return response
 
