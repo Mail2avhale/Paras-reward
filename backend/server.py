@@ -3882,18 +3882,29 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
 # ==================== PRC BURN SYSTEM - UPDATED MARCH 2026 ====================
 # NEW BURNING RULES:
 # 1. Explorer (Free): 4 hours validity - then burn
-# 2. VIP (Paid): Lifetime, max 2 days inactivity - then burn  
-# 3. Expired VIP: 2 days - then burn
-# 4. ALL USERS: Daily 1% burn from available PRC (0.5% at 11 AM + 0.5% at 11 PM)
+# =============================================================================
+# PRC BURN SETTINGS - UPDATED (March 10, 2026)
+# =============================================================================
+# NEW RULES:
+# 1. PRC VALIDITY = LIFETIME (No expiry for anyone!)
+# 2. DAILY AUTO BURN = 1% (0.5% at 11 AM + 0.5% at 11 PM)
+# =============================================================================
 
 # Burn Settings
 BURN_SETTINGS = {
-    "explorer_validity_hours": 4,      # Free users: 4 hours
-    "vip_inactivity_days": 2,          # VIP: 2 days max inactivity
-    "expired_vip_validity_days": 2,    # Expired VIP: 2 days
-    "daily_burn_percentage": 1.0,      # 1% daily
-    "burn_schedule_hours": [11, 23],   # 11 AM and 11 PM (23 = 11 PM)
-    "per_session_burn_percentage": 0.5 # 0.5% per session
+    # DISABLED - No more time-based expiry
+    "explorer_validity_hours": 999999,    # Effectively LIFETIME (disabled)
+    "vip_inactivity_days": 999999,        # Effectively LIFETIME (disabled)
+    "expired_vip_validity_days": 999999,  # Effectively LIFETIME (disabled)
+    
+    # ACTIVE - Daily percentage burn
+    "daily_burn_percentage": 1.0,         # 1% daily total
+    "burn_schedule_hours": [11, 23],      # 11 AM and 11 PM IST
+    "per_session_burn_percentage": 0.5,   # 0.5% per session (2 sessions = 1% daily)
+    
+    # Feature flags
+    "time_based_expiry_enabled": False,   # DISABLED - Lifetime validity
+    "daily_percentage_burn_enabled": True # ACTIVE - 1% daily burn
 }
 
 async def get_user_burn_status(user: dict) -> dict:

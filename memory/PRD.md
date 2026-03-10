@@ -119,6 +119,13 @@
     - **Script**: Created `/app/backend/scripts/setup_mongodb_supervisor.sh` for production
     - **Result**: No more manual MongoDB restarts needed!
 
+18. ✅ **PRC Expiry Policy Update** (March 10, 2026)
+    - **OLD**: Free users PRC expired in 48 hours
+    - **NEW**: **LIFETIME validity** for ALL users (explorer, startup, growth, elite)
+    - **Daily Auto-Burn**: 1% (0.5% at 11 AM + 0.5% at 11 PM IST)
+    - **API Updated**: `/api/user/{uid}/prc-expiry` returns `is_lifetime: true`
+    - **Backend**: `BURN_SETTINGS` updated with `time_based_expiry_enabled: false`
+
 ---
 
 ## Pending/Backlog
