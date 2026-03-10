@@ -404,6 +404,18 @@ const ReferralsEnhanced = ({ user }) => {
         }
         setPreviousTotal(l1Count);
         setReferralStats({ total: l1Count, active: activeCount, yourCircle: yourCircleCount });
+        
+        // RETRY LOGIC: If we got 0 but user has referral_count > 0, retry once after 2 seconds
+        // This handles cache miss scenarios where stale data was returned
+        const storedRefCount = responseData.debug_search_info?.stored_referral_count || 0;
+        if (yourCircleCount === 0 && storedRefCount > 0 && !window._referralRetried) {
+          window._referralRetried = true;
+          console.log('[Referrals] Got 0 but stored count is', storedRefCount, '- retrying in 2s');
+          setTimeout(() => {
+            fetchReferralData();
+            window._referralRetried = false;
+          }, 2000);
+        }
       } else {
         // Fallback: use user's referral count
         console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason?.message);

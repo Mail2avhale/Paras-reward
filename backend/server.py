@@ -29628,9 +29628,11 @@ async def get_referral_levels(user_id: str):
     user_id can be UID or email.
     """
     # Check cache first for faster response
+    # BUT: Don't use cache if it has 0 total (likely stale/error data)
     cache_key = f"referral_levels_{user_id}"
     cached = await cache.get(cache_key)
-    if cached:
+    if cached and cached.get("total", 0) > 0:
+        # Only use cache if it has actual data
         return cached
     
     now = datetime.now(timezone.utc)
@@ -29844,8 +29846,13 @@ async def get_referral_levels(user_id: str):
         }
     }
     
-    # Cache for 120 seconds to improve performance and reduce DB load
-    await cache.set(cache_key, response, ttl=120)
+    # Cache for 120 seconds - BUT only if we have actual data
+    # This prevents caching empty results due to DB timeouts
+    if total_count > 0:
+        await cache.set(cache_key, response, ttl=120)
+    else:
+        # Short cache (10 sec) for empty results to allow quick retry
+        await cache.set(cache_key, response, ttl=10)
     
     return response
 
