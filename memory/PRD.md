@@ -214,20 +214,25 @@ Last Updated: March 10, 2026
 
 ## Latest Changes (December 10, 2026)
 
+### Critical Bug Fixes
+23. ✅ **Referral Page Timeout Fix** (December 10, 2026)
+    - **Problem:** `/api/referrals/{uid}/levels` API was timing out on production
+    - **Root Cause:** N+1 query problem - `check_user_active_status()` was making extra DB calls for each referral
+    - **Fix:** Removed extra DB queries, check active status directly from user data
+    - **Result:** API response time reduced from timeout (>30s) to <2 seconds
+
+24. ✅ **Mobile App Cache/Stuck Issue Fix** (December 10, 2026)
+    - Service Worker upgraded to v6 with auto-cleanup of old caches
+    - Added 15-second network timeout for slow mobile connections
+    - Admin APIs now bypass cache (always fresh data)
+    - Added axios 30-second default timeout
+    - Auto service worker update for PWA/TWA users
+
 ### Frontend Refactoring - RedeemPageV2.js
 22. ✅ **Service Categories Cleanup** (December 10, 2026)
-    - Removed duplicate service entries (DTH appeared in Recharge & Entertainment, FASTag in Transport & Transport & Others)
-    - Created reusable `ServiceCategorySection` component (47 lines)
-    - Removed disabled DMT section (now handled via Chatbot flow)
-    - File size reduced: 2857 → 2633 lines (224 lines removed)
-    - Categories now organized cleanly:
-      - Mobile Recharge (mobile_recharge, mobile_postpaid)
-      - Entertainment & TV (dth, cable_tv)
-      - Utility Bills (electricity, water, gas, lpg)
-      - Telecom (broadband, landline)
-      - Transport & Travel (fastag)
-      - Financial Services (emi, credit_card, insurance)
-      - Others (education, municipal_tax, housing_society)
+    - Removed duplicate service entries (DTH, FASTag duplicates)
+    - Created reusable `ServiceCategorySection` component
+    - File size reduced: 2857 → 2633 lines
 
 ---
 
