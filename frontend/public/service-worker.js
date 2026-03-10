@@ -1,8 +1,8 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-const CACHE_NAME = 'paras-reward-v5';
-const RUNTIME_CACHE = 'paras-runtime-v5';
-const API_CACHE = 'paras-api-v5';
+const CACHE_NAME = 'paras-reward-v6';
+const RUNTIME_CACHE = 'paras-runtime-v6';
+const API_CACHE = 'paras-api-v6';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [

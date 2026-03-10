@@ -45,6 +45,23 @@ axios.interceptors.response.use(
   }
 );
 
+// Axios request interceptor - add cache busting for admin APIs to prevent stale data
+axios.interceptors.request.use(
+  config => {
+    const url = config.url || '';
+    // Add cache busting for admin dashboard APIs
+    if (url.includes('/admin/') && config.method === 'get') {
+      config.params = config.params || {};
+      config.params._t = Date.now();
+      config.headers = config.headers || {};
+      config.headers['Cache-Control'] = 'no-cache';
+      config.headers['Pragma'] = 'no-cache';
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+
 // Helper function to check if user can access admin pages
 const canAccessAdmin = (user) => {
   return user && (user.role === "admin" || user.role === "sub_admin" || user.role === "manager");
