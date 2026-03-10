@@ -1586,3 +1586,160 @@ async def verify_bank_account(req: VerifyAccountRequest, request: Request):
     except Exception as e:
         logging.error(f"[DMT] Verification Error: {e}")
         return create_error_response(500, str(e), "Verification failed. Please try again.")
+
+
+# ==================== REFUND API ====================
+
+class RefundRequest(BaseModel):
+    transaction_id: str
+    user_id: str
+    otp: str  # OTP sent to customer mobile for refund
+
+@router.post("/refund")
+async def process_refund(req: RefundRequest, request: Request):
+    """
+    Process refund for a failed DMT transaction.
+    As per Eko docs: When tx_status = 3 (Refund Pending), customer receives OTP
+    to initiate refund using this API.
+    """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    db = get_db()
+    client_ip = get_client_ip(request)
+    
+    # Find transaction
+    txn = db.dmt_transactions.find_one({
+        "transaction_id": req.transaction_id,
+        "user_id": req.user_id
+    })
+    
+    if not txn:
+        return create_error_response(404, "Transaction not found", "Transaction not found.")
+    
+    # Check if refund is applicable
+    if txn.get("status") not in ["refund_pending", "failed", "on_hold"]:
+        return create_error_response(400, "Refund not applicable", 
+            f"Refund not applicable for transaction status: {txn.get('status')}")
+    
+    if txn.get("prc_refunded"):
+        return create_error_response(400, "Already refunded", "This transaction has already been refunded.")
+    
+    eko_tid = txn.get("eko_tid")
+    if not eko_tid:
+        return create_error_response(400, "No Eko TID", "Cannot process refund without Eko transaction ID.")
+    
+    logging.info(f"[DMT REFUND] Processing refund for TID: {eko_tid}, User: {req.user_id}")
+    
+    try:
+        # Eko Refund API: POST /transactions/{tid}/refund
+        url = f"{EKO_BASE_URL}/v1/transactions/{eko_tid}/refund"
+        
+        headers = generate_eko_headers(request)
+        
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "otp": req.otp,
+            "tid": eko_tid
+        }
+        
+        response = requests.post(url, headers=headers, data=data, timeout=60)
+        result = response.json()
+        
+        # Log the refund attempt
+        log_dmt_transaction(db, {
+            "action": "refund",
+            "user_id": req.user_id,
+            "transaction_id": req.transaction_id,
+            "eko_tid": eko_tid,
+            "ip": client_ip,
+            "response": result
+        })
+        
+        if result.get("status") == 0:
+            # Refund successful - return PRC to user
+            prc_amount = txn.get("prc_amount", 0)
+            refund_prc(db, req.user_id, prc_amount, req.transaction_id, "DMT Refund processed")
+            
+            # Update transaction status
+            db.dmt_transactions.update_one(
+                {"transaction_id": req.transaction_id},
+                {"$set": {
+                    "status": "refunded",
+                    "prc_refunded": prc_amount,
+                    "refund_processed_at": datetime.now(timezone.utc),
+                    "refund_response": result
+                }}
+            )
+            
+            return create_success_response({
+                "refund_status": "success",
+                "prc_refunded": prc_amount,
+                "transaction_id": req.transaction_id,
+                "eko_tid": eko_tid,
+                "message": result.get("message", "Refund processed successfully")
+            }, "Refund processed successfully! PRC has been credited to your account.")
+        
+        else:
+            error_msg = EKO_ERROR_MESSAGES.get(result.get("status"), result.get("message", "Refund failed"))
+            return create_error_response(
+                result.get("status"),
+                result.get("message", "Refund failed"),
+                error_msg
+            )
+            
+    except Exception as e:
+        logging.error(f"[DMT REFUND] Error: {e}")
+        return create_error_response(500, str(e), "Refund processing failed. Please try again.")
+
+
+# ==================== RESEND REFUND OTP ====================
+
+@router.post("/refund/resend-otp")
+async def resend_refund_otp(transaction_id: str, user_id: str, request: Request):
+    """
+    Resend OTP for refund process.
+    When a transaction is in refund_pending state, customer can request new OTP.
+    """
+    if not validate_eko_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    db = get_db()
+    
+    txn = db.dmt_transactions.find_one({
+        "transaction_id": transaction_id,
+        "user_id": user_id
+    })
+    
+    if not txn:
+        return create_error_response(404, "Transaction not found", "Transaction not found.")
+    
+    eko_tid = txn.get("eko_tid")
+    if not eko_tid:
+        return create_error_response(400, "No Eko TID", "Cannot resend OTP without Eko transaction ID.")
+    
+    try:
+        # Eko Resend Refund OTP API
+        url = f"{EKO_BASE_URL}/v1/transactions/{eko_tid}/refund/otp"
+        
+        headers = generate_eko_headers_for_get()
+        params = {"initiator_id": EKO_INITIATOR_ID}
+        
+        response = requests.get(url, headers=headers, params=params, timeout=30)
+        result = response.json()
+        
+        if result.get("status") == 0:
+            return create_success_response({
+                "otp_sent": True,
+                "message": "OTP sent to registered mobile number"
+            }, "OTP sent successfully for refund verification.")
+        else:
+            return create_error_response(
+                result.get("status"),
+                result.get("message", "Failed to send OTP"),
+                "Failed to send OTP. Please try again."
+            )
+            
+    except Exception as e:
+        logging.error(f"[DMT REFUND OTP] Error: {e}")
+        return create_error_response(500, str(e), "Failed to send OTP.")
