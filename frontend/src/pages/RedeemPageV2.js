@@ -1869,8 +1869,9 @@ const RedeemPageV2 = ({ user }) => {
                 {/* ============================================ */}
                 {/* BBPS SERVICES - Generic Form */}
                 {/* DTH, EMI, FASTag, Water, Broadband, Landline, Credit Card, Insurance, Education, etc. */}
+                {/* NOTE: Electricity and Gas have their own specific section above, exclude them here */}
                 {/* ============================================ */}
-                {['dth', 'electricity', 'gas', 'emi', 'fastag', 'water', 'broadband', 'landline', 'credit_card', 'insurance', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid', 'housing_society'].includes(selectedService) && (
+                {['dth', 'emi', 'fastag', 'water', 'broadband', 'landline', 'credit_card', 'insurance', 'education', 'municipal_tax', 'lpg', 'cable_tv', 'mobile_postpaid', 'housing_society'].includes(selectedService) && (
                   <>
                     {/* Step 1: Provider Selection */}
                     <div>
