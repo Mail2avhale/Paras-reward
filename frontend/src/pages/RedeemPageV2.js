@@ -969,6 +969,16 @@ const RedeemPageV2 = ({ user }) => {
         toast.error('LPG Consumer ID and Provider both are required');
         return;
       }
+    } else if (selectedService === 'emi') {
+      // EMI/Loan payments use loan_account field
+      consumerNumber = formData.loan_account;
+      operatorId = formData.operator;
+      category = 'emi';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Loan Account Number and Lender both are required');
+        return;
+      }
     } else {
       consumerNumber = formData.consumer_number;
       operatorId = formData.operator;
