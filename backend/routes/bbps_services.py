@@ -69,11 +69,6 @@ async def bbps_post(url: str, headers: dict = None, data: dict = None, json_body
     return await client.post(url, headers=headers, data=data, timeout=timeout)
 
 
-async def bbps_get(url: str, headers: dict = None, timeout: int = 60) -> httpx.Response:
-    """Non-blocking async GET request for BBPS"""
-    client = get_bbps_http_client()
-    return await client.get(url, headers=headers, timeout=timeout)
-
 # ==================== EKO PRODUCTION CONFIG (ALL FROM ENV) ====================
 
 BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
@@ -426,7 +421,7 @@ async def test_fetch_bill():
         return {"success": False, "error": "Config not valid", "config": await debug_config()}
     
     # Test with a simple electricity operator
-    test_operator = 116  # MSEDCL (Maharashtra electricity)
+    test_operator = 62  # MSEDCL-Maharashtra State Electricity (correct ID per Eko docs)
     test_account = "123456789012"  # Dummy account
     test_mobile = "9999999999"
     
@@ -1335,72 +1330,7 @@ async def get_operators(category: str):
         return create_error_response(500, str(e), "Failed to load providers. Please refresh.")
 
 
-# ==================== GET OPERATOR PARAMETERS ====================
-
-@router.get("/operator-params/{operator_id}")
-async def get_operator_params(operator_id: str):
-    """
-    Get required parameters for a specific operator.
-    
-    Returns field validation rules (regex, min/max length, field names).
-    Essential for proper form validation before payment.
-    
-    API: GET /v2/billpayments/operators/{operator_id}
-    (NOT /operators/{id}/params - that's incorrect!)
-    """
-    try:
-        # Correct Eko API endpoint (no /params suffix!)
-        url = f"{BASE_URL}/v2/billpayments/operators/{operator_id}?initiator_id={INITIATOR_ID}"
-        
-        response = await bbps_get(url, headers=generate_headers(), timeout=30)
-        
-        if response.status_code != 200:
-            return create_error_response(
-                response.status_code,
-                "Failed to fetch operator parameters",
-                "Unable to load form requirements. Please try again."
-            )
-        
-        result = response.json()
-        
-        # Eko params API returns: {operator_name, data: [...params], operator_id, fetchBill, BBPS}
-        # Note: 'data' is an array of parameters, not a dict!
-        if isinstance(result, dict) and result.get("status") is not None and result.get("status") != 0:
-            return create_error_response(
-                result.get("status"),
-                result.get("message"),
-                "Unable to load form requirements for this provider."
-            )
-        
-        # Handle both response formats
-        if isinstance(result, dict):
-            operator_name = result.get("operator_name")
-            operator_id_resp = result.get("operator_id")
-            fetch_bill = result.get("fetchBill", 0)
-            is_bbps = result.get("BBPS", 0)
-            # 'data' is array of parameter objects
-            parameters = result.get("data", [])
-        else:
-            operator_name = None
-            operator_id_resp = operator_id
-            fetch_bill = 0
-            is_bbps = 0
-            parameters = []
-        
-        return {
-            "success": True,
-            "operator_id": operator_id,
-            "operator_name": operator_name,
-            "billFetchResponse": fetch_bill,
-            "supports_bill_fetch": fetch_bill == 1,
-            "is_bbps": is_bbps == 1,
-            "parameters": parameters,
-            "raw_response": result
-        }
-        
-    except Exception as e:
-        logging.error(f"[BBPS PARAMS] Error: {e}")
-        return create_error_response(500, str(e), "Failed to load provider details.")
+# ==================== SERVICE STATUS ====================
 
 
 # ==================== ERROR CODES REFERENCE ====================
@@ -1438,7 +1368,7 @@ async def activate_service(service_code: int = 53):
     
     IMPORTANT: This must be called once to activate services before using them!
     """
-    import requests as req
+    import asyncio
     
     try:
         # Generate fresh headers with correct Content-Type for form data
@@ -1469,8 +1399,9 @@ async def activate_service(service_code: int = 53):
         logging.info(f"[BBPS] Activating service {service_code} for user {USER_CODE}")
         logging.info(f"[BBPS] URL: {url}")
         
-        # Make PUT request (as per Eko docs)
-        response = req.put(url, headers=headers, data=data, timeout=60)
+        # FIXED: Use httpx async client instead of sync requests
+        async with httpx.AsyncClient() as client:
+            response = await client.put(url, headers=headers, data=data, timeout=60)
         
         logging.info(f"[BBPS] Activation response: {response.status_code} - {response.text[:200]}")
         
@@ -1522,8 +1453,6 @@ async def check_service_status(service_code: int = 53):
     """
     Check if a service is activated for the user
     """
-    import requests as req
-    
     try:
         # Generate headers
         timestamp = str(round(time.time() * 1000))
@@ -1543,7 +1472,9 @@ async def check_service_status(service_code: int = 53):
         
         logging.info(f"[BBPS] Checking service status: {url}")
         
-        response = req.get(url, headers=headers, timeout=30)
+        # FIXED: Use httpx async client instead of sync requests
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=30)
         result = response.json()
         
         logging.info(f"[BBPS] Service status response: {result}")
