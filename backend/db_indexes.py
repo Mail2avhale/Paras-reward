@@ -52,6 +52,13 @@ async def create_performance_indexes(db):
         await db.users.create_index("role", background=True)
         await db.users.create_index("is_admin", background=True)
         
+        # NEW: Compound index for referral tree $graphLookup optimization
+        await db.users.create_index([("referred_by", 1), ("uid", 1)], background=True)
+        await db.users.create_index([("referred_by", 1), ("kyc_status", 1), ("subscription_expiry", 1)], background=True)
+        
+        # NEW: Index for explorer users burn query
+        await db.users.create_index([("subscription_plan", 1), ("prc_balance", 1)], background=True)
+        
         # Fraud detection
         await db.users.create_index("aadhaar_number", sparse=True, background=True)
         await db.users.create_index("pan_number", sparse=True, background=True)

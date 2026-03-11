@@ -95,7 +95,7 @@ async def get_user_children(uid: str):
     try:
         children = await db.users.find({
             "parent_id": uid
-        }).to_list(None)
+        }).to_list(1000)
         
         for child in children:
             child.pop("password_hash", None)

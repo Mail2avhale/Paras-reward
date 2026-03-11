@@ -45,7 +45,7 @@ async def get_delivery_partners(status: str = "all", page: int = 1, limit: int =
     
     skip = (page - 1) * limit
     
-    partners = await db.delivery_partners.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    partners = await db.delivery_partners.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(1000)
     total = await db.delivery_partners.count_documents(query)
     
     for partner in partners:
@@ -100,7 +100,7 @@ async def get_delivery_partner(partner_id: str):
     
     recent_orders = await db.orders.find(
         {"delivery_partner_id": partner_id}
-    ).sort("created_at", -1).limit(10).to_list(None)
+    ).sort("created_at", -1).limit(10).to_list(1000)
     
     for order in recent_orders:
         order.pop("_id", None)
@@ -208,7 +208,7 @@ async def get_available_partners_by_state(state: str):
             {"service_states": state},
             {"service_states": {"$in": [state, "all", "All"]}}
         ]
-    }, {"_id": 0, "partner_id": 1, "name": 1, "company_name": 1, "commission_rate": 1}).to_list(None)
+    }, {"_id": 0, "partner_id": 1, "name": 1, "company_name": 1, "commission_rate": 1}).to_list(1000)
     
     return {"partners": partners, "count": len(partners)}
 

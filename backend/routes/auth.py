@@ -1161,7 +1161,7 @@ async def get_biometric_register_options(user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    existing_creds = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    existing_creds = await db.biometric_credentials.find({"user_id": user_id}).to_list(1000)
     exclude_credentials = [
         PublicKeyCredentialDescriptor(id=bytes.fromhex(cred["credential_raw_id"]))
         for cred in existing_creds
@@ -1295,7 +1295,7 @@ async def get_biometric_login_options(email: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    credentials = await db.biometric_credentials.find({"user_id": user["uid"]}).to_list(None)
+    credentials = await db.biometric_credentials.find({"user_id": user["uid"]}).to_list(1000)
     if not credentials:
         raise HTTPException(status_code=404, detail="No biometric credentials registered for this user")
     
@@ -1410,7 +1410,7 @@ async def biometric_login(email: str, credential_data: Dict):
 @router.get("/biometric/credentials/{user_id}")
 async def get_user_biometric_credentials(user_id: str):
     """Get list of registered biometric credentials for a user"""
-    credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(1000)
     
     for cred in credentials:
         cred.pop("_id", None)

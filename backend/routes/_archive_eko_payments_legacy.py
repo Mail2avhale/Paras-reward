@@ -3081,7 +3081,7 @@ async def get_user_eko_transactions(user_id: str, limit: int = 50):
     transactions = await db.eko_transactions.find(
         {"user_id": user_id},
         {"_id": 0}
-    ).sort("timestamp", -1).limit(limit).to_list(None)
+    ).sort("timestamp", -1).limit(limit).to_list(1000)
     
     return {"transactions": transactions}
 

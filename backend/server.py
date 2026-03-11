@@ -10,6 +10,7 @@ load_dotenv(ROOT_DIR / '.env')
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import UpdateOne  # For bulk operations
 import os
 import logging
 import hashlib
@@ -4280,9 +4281,11 @@ async def get_user_burn_status(user: dict) -> dict:
 async def burn_expired_prc_for_explorer_users():
     """
     Burn PRC for Explorer (Free) users after 4 hours validity
+    OPTIMIZED: Batch fetch all last earnings instead of N+1 queries
     """
     now = datetime.now(timezone.utc)
     cutoff_time = now - timedelta(hours=BURN_SETTINGS["explorer_validity_hours"])
+    cutoff_str = cutoff_time.isoformat()
     
     users_affected = 0
     total_burned = 0
@@ -4292,7 +4295,32 @@ async def burn_expired_prc_for_explorer_users():
     explorer_users = await db.users.find({
         "subscription_plan": {"$in": ["explorer", "free", None, ""]},
         "prc_balance": {"$gt": 0}
-    }).to_list(1000)
+    }).limit(1000).to_list(1000)
+    
+    if not explorer_users:
+        return {"users_affected": 0, "total_burned": 0, "details": []}
+    
+    # OPTIMIZED: Batch fetch last earnings for all users in ONE query using aggregation
+    user_ids = [u.get("uid") for u in explorer_users if u.get("uid")]
+    
+    # Get last earning time for all users at once
+    last_earnings_pipeline = [
+        {"$match": {
+            "user_id": {"$in": user_ids},
+            "transaction_type": {"$in": ["mining", "tap_game", "mining_reward", "referral_bonus"]},
+            "amount": {"$gt": 0}
+        }},
+        {"$sort": {"created_at": -1}},
+        {"$group": {
+            "_id": "$user_id",
+            "last_earning_time": {"$first": "$created_at"}
+        }}
+    ]
+    last_earnings_results = await db.transactions.aggregate(last_earnings_pipeline).to_list(len(user_ids))
+    last_earnings_map = {r["_id"]: r["last_earning_time"] for r in last_earnings_results}
+    
+    # Prepare bulk operations
+    bulk_operations = []
     
     for user in explorer_users:
         uid = user.get("uid")
@@ -4301,33 +4329,37 @@ async def burn_expired_prc_for_explorer_users():
         if current_balance <= 0:
             continue
         
-        # Check last PRC earning time
-        last_earning = await db.transactions.find_one({
-            "user_id": uid,
-            "transaction_type": {"$in": ["mining", "tap_game", "mining_reward", "referral_bonus"]},
-            "amount": {"$gt": 0}
-        }, sort=[("created_at", -1)])
-        
+        # Check last PRC earning time from pre-fetched data
         should_burn = False
+        last_earning_time = last_earnings_map.get(uid)
         
-        if last_earning:
-            earning_time = last_earning.get("created_at")
-            if isinstance(earning_time, str):
-                earning_time = datetime.fromisoformat(earning_time.replace('Z', '+00:00'))
-            if earning_time and earning_time < cutoff_time:
+        if last_earning_time:
+            if isinstance(last_earning_time, str):
+                try:
+                    last_earning_time = datetime.fromisoformat(last_earning_time.replace('Z', '+00:00'))
+                except:
+                    last_earning_time = None
+            if last_earning_time and last_earning_time.tzinfo is None:
+                last_earning_time = last_earning_time.replace(tzinfo=timezone.utc)
+            if last_earning_time and last_earning_time < cutoff_time:
                 should_burn = True
         else:
             # No earnings found, check account creation
             created_at = user.get("created_at")
             if created_at:
                 if isinstance(created_at, str):
-                    created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                if created_at < cutoff_time:
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    except:
+                        created_at = None
+                if created_at and created_at.tzinfo is None:
+                    created_at = created_at.replace(tzinfo=timezone.utc)
+                if created_at and created_at < cutoff_time:
                     should_burn = True
         
         if should_burn and current_balance > 0:
-            # Burn all PRC for explorer users past validity
-            await db.users.update_one(
+            # Add to bulk operations instead of individual updates
+            bulk_operations.append(UpdateOne(
                 {"uid": uid},
                 {
                     "$set": {"prc_balance": 0},
@@ -4342,22 +4374,24 @@ async def burn_expired_prc_for_explorer_users():
                         }
                     }
                 }
-            )
+            ))
             
             users_affected += 1
             total_burned += current_balance
             burned_details.append({
                 "uid": uid,
-                "burned": current_balance,
-                "reason": "4hr_expiry"
+                "burned": current_balance
             })
     
-    logging.info(f"[PRC BURN] Explorer: {users_affected} users, {total_burned:.2f} PRC burned")
+    # Execute bulk operations
+    if bulk_operations:
+        await db.users.bulk_write(bulk_operations, ordered=False)
+    
     return {
         "users_affected": users_affected,
-        "total_burned": round(total_burned, 2),
-        "status": "completed",
-        "details": burned_details[:50]
+        "total_burned": round(total_burned, 4),
+        "details": burned_details[:20],  # Limit details for response size
+        "cutoff_time": cutoff_time.isoformat()
     }
 
 async def burn_expired_prc_for_expired_vip():
@@ -8193,10 +8227,20 @@ async def get_admin_razorpay_subscriptions(
     orders = await db.razorpay_orders.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.razorpay_orders.count_documents(query)
     
+    # FIXED N+1: Batch fetch all users at once instead of one query per order
+    user_ids = list(set([order.get("user_id") for order in orders if order.get("user_id")]))
+    users_map = {}
+    if user_ids:
+        users_list = await db.users.find(
+            {"uid": {"$in": user_ids}}, 
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "subscription_expires": 1, "subscription_expiry": 1}
+        ).to_list(len(user_ids))
+        users_map = {u["uid"]: u for u in users_list}
+    
     result = []
     for order in orders:
         user_id = order.get("user_id")
-        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "name": 1, "email": 1, "mobile": 1, "subscription_plan": 1, "subscription_expires": 1, "subscription_expiry": 1})
+        user = users_map.get(user_id, {})
         
         # Get user's current subscription status
         current_plan = user.get("subscription_plan") if user else None
@@ -21638,17 +21682,30 @@ async def get_manager_dashboard(uid: str):
         revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
         total_revenue = revenue_result[0]["total"] if revenue_result else 0
         
-        # Sales trend (last 7 days)
+        # Sales trend (last 7 days) - OPTIMIZED: Single aggregation instead of 7 queries
+        trend_pipeline = [
+            {"$match": {
+                "created_at": {"$gte": (today - timedelta(days=7)).isoformat(), "$lt": (today + timedelta(days=1)).isoformat()}
+            }},
+            {"$addFields": {
+                "order_date": {"$substr": ["$created_at", 0, 10]}
+            }},
+            {"$group": {
+                "_id": "$order_date",
+                "orders": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        trend_result = await db.orders.aggregate(trend_pipeline).to_list(10)
+        trend_map = {r["_id"]: r["orders"] for r in trend_result}
+        
         sales_trend = []
         for i in range(6, -1, -1):
             day = today - timedelta(days=i)
-            day_end = day + timedelta(days=1)
-            day_orders = await db.orders.count_documents({
-                "created_at": {"$gte": day.isoformat(), "$lt": day_end.isoformat()}
-            })
+            day_str = day.strftime("%Y-%m-%d")
             sales_trend.append({
-                "date": day.strftime("%Y-%m-%d"),
-                "orders": day_orders
+                "date": day_str,
+                "orders": trend_map.get(day_str, 0)
             })
         
         # Recent activities (last 10)
@@ -28291,8 +28348,18 @@ async def get_global_feed(page: int = 1, limit: int = 20):
         {"_id": 0, "referred_by": 1, "created_at": 1}
     ).sort("created_at", -1).limit(10).to_list(10)
     
+    # FIXED N+1: Batch fetch all referrers at once
+    referrer_ids = list(set([ref.get("referred_by") for ref in recent_referrals if ref.get("referred_by")]))
+    referrers_map = {}
+    if referrer_ids:
+        referrers_list = await db.users.find(
+            {"uid": {"$in": referrer_ids}}, 
+            {"_id": 0, "uid": 1, "name": 1, "referral_count": 1}
+        ).to_list(len(referrer_ids))
+        referrers_map = {r["uid"]: r for r in referrers_list}
+    
     for ref in recent_referrals:
-        referrer = await db.users.find_one({"uid": ref.get("referred_by")}, {"_id": 0, "name": 1, "referral_count": 1})
+        referrer = referrers_map.get(ref.get("referred_by"), {})
         if referrer:
             referrer_name = referrer.get("name", "User")
             display_name = referrer_name.split()[0][:3] + "***" if referrer_name else "User"

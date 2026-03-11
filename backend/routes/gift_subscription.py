@@ -81,7 +81,7 @@ async def get_eligible_referrals(parent_uid: str):
             "created_at": 1,
             "last_login": 1
         }
-    ).to_list(None)
+    ).to_list(1000)
     
     eligible = []
     ineligible = []
