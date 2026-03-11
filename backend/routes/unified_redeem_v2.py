@@ -1151,11 +1151,9 @@ async def get_user_requests(
     # Get total count
     total = await db.redeem_requests.count_documents(query)
     
-    # Get requests
-    cursor = db.redeem_requests.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    requests = []
-    async for doc in cursor:
-        requests.append(serialize_doc(doc))
+    # Get requests - FIX: Use to_list() instead of async for to prevent cursor leak
+    requests = await db.redeem_requests.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    requests = [serialize_doc(doc) for doc in requests]
     
     return {
         "success": True,
@@ -1271,11 +1269,9 @@ async def get_admin_requests(
     # Get total count
     total = await db.redeem_requests.count_documents(query)
     
-    # Get requests
-    cursor = db.redeem_requests.find(query).sort(sort_by, sort_direction).skip(skip).limit(per_page)
-    requests = []
-    async for doc in cursor:
-        requests.append(serialize_doc(doc))
+    # Get requests - FIX: Use to_list() instead of async for to prevent cursor leak
+    requests_raw = await db.redeem_requests.find(query).sort(sort_by, sort_direction).skip(skip).limit(per_page).to_list(length=per_page)
+    requests = [serialize_doc(doc) for doc in requests_raw]
     
     # Calculate pagination info
     total_pages = (total + per_page - 1) // per_page
@@ -1307,37 +1303,40 @@ async def get_admin_stats():
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
-    # Count by status
+    # Count by status - FIX: Use to_list() instead of async for
     pipeline = [
         {"$group": {"_id": "$status", "count": {"$sum": 1}, "total_amount": {"$sum": "$amount_inr"}}}
     ]
+    status_stats_raw = await db.redeem_requests.aggregate(pipeline).to_list(length=20)
     status_stats = {}
-    async for doc in db.redeem_requests.aggregate(pipeline):
+    for doc in status_stats_raw:
         status_stats[doc["_id"]] = {
             "count": doc["count"],
             "total_amount": doc["total_amount"]
         }
     
-    # Count by service type
+    # Count by service type - FIX: Use to_list() instead of async for
     pipeline = [
         {"$group": {"_id": "$service_type", "count": {"$sum": 1}, "total_amount": {"$sum": "$amount_inr"}}}
     ]
+    service_stats_raw = await db.redeem_requests.aggregate(pipeline).to_list(length=50)
     service_stats = {}
-    async for doc in db.redeem_requests.aggregate(pipeline):
+    for doc in service_stats_raw:
         service_stats[doc["_id"]] = {
             "count": doc["count"],
             "total_amount": doc["total_amount"]
         }
     
-    # Today's stats
+    # Today's stats - FIX: Use to_list() instead of async for
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     today_pipeline = [
         {"$match": {"created_at": {"$gte": today_start}}},
         {"$group": {"_id": None, "count": {"$sum": 1}, "total_amount": {"$sum": "$amount_inr"}}}
     ]
+    today_stats_raw = await db.redeem_requests.aggregate(today_pipeline).to_list(length=1)
     today_stats = {"count": 0, "total_amount": 0}
-    async for doc in db.redeem_requests.aggregate(today_pipeline):
-        today_stats = {"count": doc["count"], "total_amount": doc["total_amount"]}
+    if today_stats_raw:
+        today_stats = {"count": today_stats_raw[0]["count"], "total_amount": today_stats_raw[0]["total_amount"]}
     
     return {
         "success": True,

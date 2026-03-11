@@ -4254,7 +4254,9 @@ async def daily_percentage_burn():
     batch_operations = []
     transaction_records = []
     
-    async for user in users_cursor:
+    # FIX: Use to_list() instead of async for to prevent cursor leak
+    all_users = await users_cursor.to_list(length=10000)
+    for user in all_users:
         uid = user.get("uid")
         current_balance = user.get("prc_balance", 0)
         
@@ -10786,7 +10788,9 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
                  "subscription_plan": 1, "subscription_expiry": 1, "prc_balance": 1, "total_mined": 1,
                  "kyc_status": 1, "referral_code": 1, "created_at": 1, "membership_type": 1}
             )
-            async for user in users_cursor:
+            # FIX: Use to_list() instead of async for to prevent cursor leak
+            users_list = await users_cursor.to_list(length=1000)
+            for user in users_list:
                 users_data[user.get("uid")] = user
         
         # Batch count previous payments using aggregation
@@ -21407,11 +21411,13 @@ async def get_manager_dashboard(uid: str):
             "status": "pending"
         })
         
-        # Calculate revenue (sum of completed orders)
-        completed_orders = db.orders.find({"status": "delivered"})
-        total_revenue = 0
-        async for order in completed_orders:
-            total_revenue += order.get("total_amount", 0)
+        # Calculate revenue (sum of completed orders) - OPTIMIZED with aggregation
+        revenue_pipeline = [
+            {"$match": {"status": "delivered"}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+        ]
+        revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+        total_revenue = revenue_result[0]["total"] if revenue_result else 0
         
         # Sales trend (last 7 days)
         sales_trend = []
@@ -25115,7 +25121,9 @@ async def get_all_bill_payment_requests(
              "subscription_plan": 1, "membership_type": 1,
              "prc_balance": 1, "kyc_status": 1}
         )
-        async for user in users_cursor:
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        users_list = await users_cursor.to_list(length=1000)
+        for user in users_list:
             users_data[user.get("uid")] = user
     
     # Enrich requests with cached user data and flatten service details
@@ -29823,14 +29831,13 @@ async def get_referral_levels(user_id: str):
         if not level_search_values:
             break
         
-        # Find next level users
+        # Find next level users - FIX: Use to_list() instead of async for
         next_level_users = []
         try:
-            async for referred_user in db.users.find(
+            next_level_users = await db.users.find(
                 {"referred_by": {"$in": level_search_values}},
                 {"_id": 0}
-            ):
-                next_level_users.append(referred_user)
+            ).to_list(length=5000)
         except Exception as e:
             print(f"Error searching level {level}: {e}")
         
@@ -29974,12 +29981,14 @@ async def debug_referred_by(user_id: str):
     # Count by ALL possible formats (aggressive search)
     count_by_all = await db.users.count_documents({"referred_by": {"$in": search_values}})
     
-    # Get sample referred_by values that match
-    sample_referrals = []
-    async for u in db.users.find(
+    # Get sample referred_by values that match - FIX: Use to_list()
+    sample_referrals_raw = await db.users.find(
         {"referred_by": {"$in": search_values}},
         {"_id": 0, "name": 1, "email": 1, "referred_by": 1, "created_at": 1}
-    ).limit(15):
+    ).limit(15).to_list(length=15)
+    
+    sample_referrals = []
+    for u in sample_referrals_raw:
         sample_referrals.append({
             "name": u.get("name"),
             "email": u.get("email", "")[:30] if u.get("email") else None,
@@ -32757,7 +32766,9 @@ async def burn_inactive_user_prc():
         burn_count = 0
         total_burned = 0.0
         
-        async for user in inactive_users:
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        inactive_users_list = await inactive_users.to_list(length=10000)
+        for user in inactive_users_list:
             uid = user.get("uid")
             prc_balance = user.get("prc_balance", 0)
             
@@ -32820,7 +32831,9 @@ async def hard_delete_expired_accounts():
         
         delete_count = 0
         
-        async for user in accounts_to_delete:
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        accounts_list = await accounts_to_delete.to_list(length=1000)
+        for user in accounts_list:
             uid = user.get("uid")
             email = user.get("email")
             
@@ -34432,17 +34445,20 @@ async def emergency_stop_mining(request: Request):
         
         # Send notification to users (if enabled)
         if send_notification:
-            await db.notifications.insert_many([
-                {
-                    "user_id": user["uid"],
-                    "title": "Mining Paused",
-                    "message": "Mining has been temporarily paused for maintenance. We'll notify you when it resumes.",
-                    "type": "system",
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "read": False
-                }
-                async for user in db.users.find({"mining_active": False}, {"uid": 1})
-            ][:1000])  # Limit to 1000 notifications at a time
+            # FIX: Use to_list() instead of async for to prevent cursor leak
+            users_to_notify = await db.users.find({"mining_active": False}, {"uid": 1}).limit(1000).to_list(length=1000)
+            if users_to_notify:
+                await db.notifications.insert_many([
+                    {
+                        "user_id": user["uid"],
+                        "title": "Mining Paused",
+                        "message": "Mining has been temporarily paused for maintenance. We'll notify you when it resumes.",
+                        "type": "system",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "read": False
+                    }
+                    for user in users_to_notify
+                ])
         
         return {
             "success": True,
