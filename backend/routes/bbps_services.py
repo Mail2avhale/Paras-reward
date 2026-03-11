@@ -574,19 +574,10 @@ async def fetch_bill(data: FetchBillRequest):
     """
     Fetch bill details from EKO BBPS API.
     
-    Standard Process:
-    1. Validate input parameters
-    2. Generate authentication headers
-    3. Build request body with operator-specific params
-    4. Make API request to EKO
-    5. Handle HTTP errors (403, 404, 500, etc.)
-    6. Parse Eko response status
-    7. Return standardized response
+    CRITICAL: Uses POST /v2/billpayments/fetchbill (NOT GET v3!)
+    Testing confirmed that v3 GET returns 500 error while v2 POST works correctly.
     
     Works for: Electricity, DTH, FASTag, EMI, Water, etc.
-    
-    NOTE: Different operators require different parameters.
-    Call /operator-params/{operator_id} first to know what params are needed.
     """
     if not validate_bbps_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -594,47 +585,50 @@ async def fetch_bill(data: FetchBillRequest):
     client_ref_id = f"FETCH{int(time.time() * 1000)}"
     
     try:
-        url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
-        
-        # Build base request body
-        body = {
-            "operator_id": data.operator_id,
-            "utility_acc_no": data.account,
-            "confirmation_mobile_no": data.mobile,
+        # Build request body for POST v2 endpoint
+        # Reference: Testing showed POST v2 returns HTTP 200 while GET v3 returns 500
+        request_body = {
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
+            "utility_acc_no": data.account,
+            "confirmation_mobile_no": data.mobile,
             "sender_name": data.sender_name or "Customer",
-            "latlong": DEFAULT_LATLONG,
-            "source_ip": data.source_ip or "127.0.0.1"
+            "operator_id": data.operator_id,
+            "latlong": DEFAULT_LATLONG
         }
+        
+        # Add source_ip if provided
+        if data.source_ip and data.source_ip != "127.0.0.1":
+            request_body["source_ip"] = data.source_ip
         
         # Add operator-specific parameters if provided
         if data.postalcode:
-            body["postalcode"] = data.postalcode
+            request_body["postalcode"] = data.postalcode
         if data.cycle_number:
-            body["cycle_number"] = data.cycle_number
+            request_body["cycle_number"] = data.cycle_number
         if data.authenticator:
-            body["authenticator"] = data.authenticator
+            request_body["authenticator"] = data.authenticator
         if data.dob:
-            body["dob"] = data.dob
+            request_body["dob"] = data.dob
         
         # Add any extra operator-specific params
         if data.extra_params:
             for key, value in data.extra_params.items():
-                if key not in body:  # Don't override standard params
-                    body[key] = value
+                if key not in request_body:
+                    request_body[key] = value
         
-        logging.info(f"[BBPS FETCH] client_ref={client_ref_id}, operator={data.operator_id}, account=***{data.account[-4:]}")
-        logging.info(f"[BBPS FETCH] Request body params: {list(body.keys())}")
+        # Use POST v2 endpoint (confirmed working in test)
+        # Endpoint: /v2/billpayments/fetchbill
+        url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
+        
+        logging.info(f"[BBPS FETCH] POST {url}")
+        logging.info(f"[BBPS FETCH] operator={data.operator_id}, account=***{data.account[-4:]}")
+        logging.info(f"[BBPS FETCH] Body keys: {list(request_body.keys())}")
         
         headers = generate_headers()
         
-        # Log full request details for debugging
-        logging.info(f"[BBPS FETCH] URL: {url}")
-        logging.info(f"[BBPS FETCH] Body: operator_id={data.operator_id}, account=***{data.account[-4:]}, mobile=***{data.mobile[-4:]}")
-        
-        # Use JSON format for fetch bill (confirmed working with Eko API)
-        response = await bbps_post(url, headers=headers, json_body=body, timeout=REQUEST_TIMEOUT)
+        # Use POST request with JSON body
+        response = await bbps_post(url, headers=headers, json_body=request_body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS FETCH] HTTP Status: {response.status_code}")
         logging.info(f"[BBPS FETCH] Response Body: {response.text[:500] if response.text else 'empty'}")
@@ -653,8 +647,15 @@ async def fetch_bill(data: FetchBillRequest):
             return create_error_response(404, "Service not found", "Service configuration error. Please contact support.")
         
         if response.status_code == 500:
-            logging.error("[BBPS FETCH] 500 Server Error")
-            return create_error_response(500, "Server error", "Eko server is temporarily unavailable. Please try again in a few minutes.")
+            logging.error(f"[BBPS FETCH] 500 Server Error - Response: {response.text[:1000] if response.text else 'empty'}")
+            # Try to parse error message from Eko
+            try:
+                error_data = response.json()
+                error_msg = error_data.get("message", "Server error")
+                logging.error(f"[BBPS FETCH] Eko Error: {error_msg}")
+            except:
+                error_msg = "Server error"
+            return create_error_response(500, error_msg, "Eko server error. Please try again in a few minutes.")
         
         if response.status_code != 200:
             logging.error(f"[BBPS FETCH] Unexpected HTTP {response.status_code}: {response.text}")
@@ -1169,7 +1170,7 @@ async def search_operators(query: str, category: Optional[str] = None):
     category_map = {
         "mobile_prepaid": 5, "mobile_postpaid": 10, "dth": 4,
         "electricity": 8, "water": 11, "landline": 9, "broadband": 1,
-        "gas": 14, "lpg": 23, "emi": 21, "loan": 21, "credit_card": 7,
+        "gas": 2, "lpg": 18, "emi": 21, "loan": 21, "credit_card": 7,
         "insurance": 20, "fastag": 22, "housing_society": 12
     }
     
@@ -1244,8 +1245,8 @@ async def get_operators(category: str):
         "water": 11,
         "landline": 9,
         "broadband": 1,
-        "gas": 14,  # Piped Natural Gas (PNG)
-        "lpg": 23,  # LPG Cylinder booking
+        "gas": 2,  # PNG - Piped Natural Gas (Mahanagar Gas, Gujarat Gas, etc.)
+        "lpg": 18,  # LPG Cylinder booking (Indane, HP Gas, Bharat Gas)
         
         # Financial
         "emi": 21,

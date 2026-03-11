@@ -1,0 +1,57 @@
+{
+  "summary": "BBPS Integration Fix Verification - All 26 backend API tests passed. Fixed bill fetch from GET v3 to POST v2 endpoint, gas category from 14 to 2. All categories (electricity, gas, water, emi, dth, lpg, credit_card) working correctly.",
+  "mode": "generate",
+  "baseline_commit": "a81d951857769ac89ac5323fd4a15d7480e2287b",
+  "head_commit": "a466cd02c48a6c5ecf7584e00f9f90c7a80cb9b0",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_results": {
+    "total_specs": 26,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0,
+    "breakdown": {
+      "backend_pytest": "26/26 passed"
+    }
+  },
+  "specs_created": [],
+  "specs_updated": [
+    "/app/backend/tests/test_bbps_new_services.py"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_bbps_new_services.py",
+    "/app/test_reports/pytest/bbps_integration_test.xml"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_bbps_new_services.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 26/26 tests passed",
+    "frontend": "N/A - Backend-only testing per request"
+  },
+  "seed_data_creation": "None - used existing MSEDCL test consumer 000437378053 with BU 3667",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "## BBPS Integration Fix Verification - Iteration 116\n\n### What Was Tested:\n\n**BBPS Operators API - GET /api/bbps/operators/{category}**:\n1. electricity: 89 operators - WORKING\n2. gas: 29 operators (category_id=2, not 14) - WORKING\n3. water: 54 operators - WORKING\n4. emi: 294 operators - WORKING\n5. dth: 5 operators - WORKING\n6. lpg: 3 operators - WORKING\n7. credit_card: 29 operators - WORKING\n8. insurance: 40+ operators - WORKING\n\n**BBPS Operator Params API - GET /api/bbps/operator-params/{operator_id}**:\n- MSEDCL (62): Returns 2 params (utility_acc_no, cycle_number) - WORKING\n- fetch_bill_required: true\n- is_bbps: true\n\n**BBPS Bill Fetch API - POST /api/bbps/fetch**:\n- Basic fetch with operator_id, account, mobile - WORKING\n- Fetch with cycle_number parameter for MSEDCL - WORKING\n- Validation for invalid mobile (422) - WORKING\n- Validation for empty account (422) - WORKING\n- Actual bill returned: amount=3750.0, customer=M/S SNAPWORK TECHNOLOGIES PVT LTD\n\n### Key Fixes Verified:\n1. Bill fetch changed from GET /v3/customer/payment/bbps/bill to POST /v2/billpayments/fetchbill\n2. Gas category_id changed from 14 to 2 (PNG - Piped Natural Gas)\n3. All operator categories returning correct data\n\n### Test Data Used:\n- MSEDCL Operator ID: 62\n- Consumer Number: 000437378053\n- BU (cycle_number): 3667\n- Mahanagar Gas Operator ID: 28",
+  "feature_verification": {
+    "GET /api/bbps/operators/electricity": "WORKING - 89 operators",
+    "GET /api/bbps/operators/gas": "WORKING - 29 operators, category_id=2 (FIXED from 14)",
+    "GET /api/bbps/operators/water": "WORKING - 54 operators",
+    "GET /api/bbps/operators/emi": "WORKING - 294 operators",
+    "GET /api/bbps/operators/dth": "WORKING - 5 operators",
+    "GET /api/bbps/operators/lpg": "WORKING - 3 operators",
+    "GET /api/bbps/operators/credit_card": "WORKING - 29 operators",
+    "GET /api/bbps/operator-params/{operator_id}": "WORKING - returns params with regex validation",
+    "POST /api/bbps/fetch": "WORKING - returns bill details using POST v2 endpoint (FIXED from GET v3)",
+    "POST /api/bbps/fetch with cycle_number": "WORKING - extra params supported for MSEDCL"
+  }
+}

@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://mongodb-tuning.preview.emergentagent.com';
+const BASE_URL = 'https://bill-payment-stable.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

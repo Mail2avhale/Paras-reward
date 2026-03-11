@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://mongodb-tuning.preview.emergentagent.com/setup
+   https://bill-payment-stable.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

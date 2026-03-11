@@ -21,6 +21,7 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 TEST_MSEDCL_CONSUMER = "000437378053"
 TEST_MSEDCL_BU = "3667"
 TEST_MSEDCL_OPERATOR_ID = "62"
+TEST_GAS_OPERATOR_ID = "28"  # Mahanagar Gas
 
 @pytest.fixture
 def api_client():
@@ -40,7 +41,7 @@ class TestBBPSHealthCheck:
         
         data = response.json()
         assert data["status"] == "PARAS REWARD BBPS RUNNING"
-        assert data["version"] == "2.0"
+        assert data["version"] == "2.1"  # Updated version after BBPS fix
         assert "services" in data
         assert len(data["services"]) == 8
         
@@ -159,6 +160,33 @@ class TestBBPSOperators:
         data = response.json()
         assert data["success"] == False
         assert data["error_code"] == 400
+    
+    def test_gas_operators(self, api_client):
+        """Gas (PNG) category returns operators - category_id should be 2"""
+        response = api_client.get(f"{BASE_URL}/api/bbps/operators/gas")
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["success"] == True
+        # Gas category ID should be 2 (not 14 - was fixed in BBPS update)
+        assert data["eko_category_id"] == 2
+        assert data["count"] >= 20  # Should have 20+ gas operators
+        
+        # Verify Mahanagar Gas is present
+        operator_names = [op["name"].lower() for op in data["operators"]]
+        has_mahanagar = any("mahanagar" in name for name in operator_names)
+        assert has_mahanagar, "Mahanagar Gas should be present in gas operators"
+    
+    def test_lpg_operators(self, api_client):
+        """LPG category returns operators"""
+        response = api_client.get(f"{BASE_URL}/api/bbps/operators/lpg")
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["success"] == True
+        assert data["eko_category_id"] == 18
+        # Should have Bharat Gas, HP Gas, Indane Gas
+        assert data["count"] >= 3
         
     def test_operator_response_structure(self, api_client):
         """Each operator has required fields"""
@@ -185,7 +213,7 @@ class TestBBPSOperatorParams:
         assert data["success"] == True
         assert data["operator_id"] == TEST_MSEDCL_OPERATOR_ID
         assert "MSEDCL" in data["operator_name"]
-        assert data["supports_bill_fetch"] == True
+        assert data["fetch_bill_required"] == True  # Key is fetch_bill_required, not supports_bill_fetch
         assert data["is_bbps"] == True
         assert len(data["parameters"]) == 2
         
@@ -248,6 +276,31 @@ class TestBBPSBillFetch:
             assert data["status"] == "SUCCESS"
             assert "bill_amount" in data
             assert "customer_name" in data
+    
+    def test_bill_fetch_with_cycle_number_param(self, api_client):
+        """Bill fetch with cycle_number (BU) parameter for MSEDCL"""
+        payload = {
+            "operator_id": TEST_MSEDCL_OPERATOR_ID,
+            "account": TEST_MSEDCL_CONSUMER,
+            "mobile": "9999999999",
+            "sender_name": "Test User",
+            "cycle_number": TEST_MSEDCL_BU  # BU parameter for MSEDCL
+        }
+        
+        response = api_client.post(f"{BASE_URL}/api/bbps/fetch", json=payload)
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert "success" in data
+        assert "status" in data
+        
+        # With correct BU parameter, bill fetch should succeed
+        if data["success"]:
+            assert data["status"] == "SUCCESS"
+            assert "bill_amount" in data
+            # Verify bill amount is returned as string (can be converted to float)
+            bill_amount = data["bill_amount"]
+            float(bill_amount)  # Should not raise error
             
     def test_bill_fetch_invalid_mobile_rejected(self, api_client):
         """Bill fetch rejects invalid mobile number"""
