@@ -15,8 +15,8 @@ root.render(
 );
 
 // Clear old service worker caches on version mismatch
-// v7: Admin login redirect fix - March 2026
-const CURRENT_CACHE_VERSION = 'v7';
+// v8: Fix app stuck issue - timeout protection - March 2026
+const CURRENT_CACHE_VERSION = 'v8';
 
 async function clearOldCaches() {
   if ('caches' in window) {

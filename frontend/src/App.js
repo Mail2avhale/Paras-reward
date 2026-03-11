@@ -486,8 +486,16 @@ function App() {
 
   // Refresh user data from server to ensure subscription info is current
   const refreshUserData = async (uid) => {
+    // Add timeout to prevent infinite loading
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     try {
-      const response = await fetch(`${BACKEND_URL}/api/user/${uid}`);
+      const response = await fetch(`${BACKEND_URL}/api/user/${uid}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const freshData = await response.json();
         // CRITICAL: Preserve admin/sub_admin/manager role from stored user
@@ -530,20 +538,38 @@ function App() {
         return updatedUser;
       }
     } catch (error) {
-      console.error('Error refreshing user data:', error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        console.warn('[REFRESH] Request timed out after 15 seconds');
+      } else {
+        console.error('Error refreshing user data:', error);
+      }
     }
     return null;
   };
 
   useEffect(() => {
     // If user exists, refresh data from server
+    // Add max timeout of 20 seconds to prevent stuck loading
+    let timeoutFallback;
+    
     if (user?.uid) {
+      timeoutFallback = setTimeout(() => {
+        console.warn('[APP] Loading fallback triggered after 20 seconds');
+        setLoading(false);
+      }, 20000);
+      
       refreshUserData(user.uid).finally(() => {
+        clearTimeout(timeoutFallback);
         setLoading(false);
       });
     } else {
       setLoading(false);
     }
+    
+    return () => {
+      if (timeoutFallback) clearTimeout(timeoutFallback);
+    };
   }, []); // Run once on mount
 
   const handleLogin = async (userData) => {

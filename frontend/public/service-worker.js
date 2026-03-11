@@ -1,9 +1,9 @@
 // Enhanced Service Worker for PARAS REWARD TWA/PWA
 // Update version to force cache refresh after TWA update
-// v7: Admin login redirect fix - March 2026
-const CACHE_NAME = 'paras-reward-v7';
-const RUNTIME_CACHE = 'paras-runtime-v7';
-const API_CACHE = 'paras-api-v7';
+// v8: Fix app stuck issue - timeout protection - March 2026
+const CACHE_NAME = 'paras-reward-v8';
+const RUNTIME_CACHE = 'paras-runtime-v8';
+const API_CACHE = 'paras-api-v8';
 
 // Static assets to cache (including new icons)
 const urlsToCache = [
