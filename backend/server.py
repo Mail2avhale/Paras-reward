@@ -979,6 +979,43 @@ async def clear_all_lockouts_get():
     """GET version of clear-all-lockouts for easy browser access"""
     return await clear_all_login_lockouts()
 
+@api_router.get("/admin/create-indexes")
+async def admin_create_indexes():
+    """
+    Manually trigger database index creation.
+    Call this after deployment to ensure optimal database performance.
+    """
+    try:
+        print("🔧 Admin triggered index creation...")
+        await create_performance_indexes(db)
+        await initialize_database_indexes()
+        
+        # Get index stats to verify
+        stats = await get_index_stats(db)
+        
+        return {
+            "success": True,
+            "message": "Database indexes created/verified successfully",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "index_stats": stats
+        }
+    except Exception as e:
+        print(f"❌ Index creation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
+
+@api_router.get("/admin/index-status")
+async def admin_index_status():
+    """Get current status of all database indexes"""
+    try:
+        stats = await get_index_stats(db)
+        return {
+            "success": True,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "index_stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 async def force_fix_get(identifier: str):
     """GET version of force-fix-user for easy browser access"""
     return await force_fix_user(identifier)
