@@ -7057,8 +7057,8 @@ async def get_user_as_model(uid: str):
 async def get_user_dashboard_combined(uid: str):
     """
     Combined API for User Dashboard - returns ALL data in ONE call.
-    This reduces multiple API calls to 1, significantly improving load time.
-    Cached for 30 seconds.
+    CRITICAL OPTIMIZATION: Skip slow count_documents, use cached referral_count from user doc.
+    Cached for 60 seconds.
     """
     cache_key = f"user:dashboard:{uid}"
     
@@ -7068,15 +7068,38 @@ async def get_user_dashboard_combined(uid: str):
         if cached:
             return cached
     
-    # Get user data (this already does all the heavy lifting)
-    # PERFORMANCE: Exclude profile_picture from dashboard query
-    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password": 0, "profile_picture": 0})
+    # CRITICAL: Single DB query only - get user data
+    # Referral count is stored in user document (updated during signup)
+    user = await db.users.find_one(
+        {"uid": uid}, 
+        {"_id": 0, "password": 0, "password_hash": 0, "profile_picture": 0}
+    )
+    
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
     now = datetime.now(timezone.utc)
     
-    # Check mining session validity
+    # Use stored referral_count from user document (no expensive count query)
+    referral_count = user.get("referral_count", 0)
+    
+    # Get recent activity in background (non-blocking)
+    # If this fails, just return empty - dashboard still loads
+    recent_activity = []
+    try:
+        recent_activity = await asyncio.wait_for(
+            db.transactions.find(
+                {"user_id": uid},
+                {"_id": 0}
+            ).sort("created_at", -1).limit(5).to_list(5),
+            timeout=5.0  # Max 5 seconds for activity
+        )
+    except asyncio.TimeoutError:
+        print(f"[DASHBOARD] Activity query timed out for {uid}")
+    except Exception as e:
+        print(f"[DASHBOARD] Activity query failed: {e}")
+    
+    # Check mining session validity (no DB query - from user data)
     mining_active = False
     mining_session_end = None
     remaining_hours = 0
@@ -7095,83 +7118,20 @@ async def get_user_dashboard_combined(uid: str):
             mining_session_end = session_end.isoformat()
             remaining_hours = (session_end - now).total_seconds() / 3600
             
-            # Calculate mined this session
             elapsed_hours = (now - start_time).total_seconds() / 3600
             base_rate = user.get("mining_rate", 0.5)
             mined_this_session = elapsed_hours * base_rate
     
-    # Get referral count (indexed query - fast)
-    referral_count = await db.users.count_documents({"referred_by": uid})
-    
-    # Get recent activity (last 5)
-    recent_activity = await db.transactions.find(
-        {"user_id": uid},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(5).to_list(5)
-    
-    # Get subscription info
+    # All data from user document - no extra queries
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_expiry = user.get("subscription_expiry")
-    
-    # Get subscription start date (check multiple possible field names)
     subscription_start = (
         user.get("subscription_start_date") or 
         user.get("subscription_start") or 
-        user.get("subscription_created_at") or 
         user.get("vip_activation_date") or
         user.get("vip_activated_at")
     )
-    
-    # If no start date found and user has a paid subscription, try to get from VIP payments
-    if not subscription_start and subscription_plan in ["startup", "growth", "elite"]:
-        latest_payment = await db.vip_payments.find_one(
-            {"user_id": uid, "status": "approved"},
-            sort=[("approved_at", -1)]
-        )
-        if latest_payment:
-            subscription_start = (
-                latest_payment.get("subscription_start") or
-                latest_payment.get("approved_at") or
-                latest_payment.get("created_at")
-            )
-            # Also sync this to the user document for future queries
-            if subscription_start:
-                await db.users.update_one(
-                    {"uid": uid},
-                    {"$set": {"vip_activated_at": subscription_start}}
-                )
-    
-    # Final fallback: Calculate start date from expiry (assuming 30-day plan)
-    if not subscription_start and subscription_expiry and subscription_plan in ["startup", "growth", "elite"]:
-        try:
-            expiry_dt = subscription_expiry
-            if isinstance(expiry_dt, str):
-                expiry_dt = datetime.fromisoformat(expiry_dt.replace('Z', '+00:00'))
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            # Calculate start as expiry minus 30 days
-            start_dt = expiry_dt - timedelta(days=30)
-            subscription_start = start_dt.isoformat()
-            # Sync to user document
-            await db.users.update_one(
-                {"uid": uid},
-                {"$set": {"vip_activated_at": subscription_start}}
-            )
-        except Exception as e:
-            print(f"Error calculating subscription start: {e}")
-    
-    # AUTO-SYNC KYC STATUS for dashboard
-    kyc_status = user.get("kyc_status")
-    if kyc_status != "verified":
-        verified_kyc = await db.kyc_documents.find_one({
-            "user_id": uid,
-            "status": {"$in": ["verified", "approved"]}
-        })
-        if verified_kyc:
-            kyc_status = "verified"
-            await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
-        else:
-            kyc_status = kyc_status or "not_submitted"
+    kyc_status = user.get("kyc_status", "not_submitted")
     
     # Build response
     result = {
@@ -7191,11 +7151,11 @@ async def get_user_dashboard_combined(uid: str):
             "mining_rate": user.get("mining_rate", 0.5),
             "created_at": user.get("created_at"),
             "profile_image": user.get("profile_image"),
-            # Profile completion fields
-            "kyc_status": kyc_status,  # Use auto-synced value
+            "kyc_status": kyc_status,
             "city": user.get("city", ""),
             "district": user.get("district", ""),
-            "state": user.get("state", "")
+            "state": user.get("state", ""),
+            "role": user.get("role", "user")
         },
         "mining": {
             "active": mining_active,
@@ -7208,8 +7168,8 @@ async def get_user_dashboard_combined(uid: str):
         "cached_at": now.isoformat()
     }
     
-    # Cache for 30 seconds
-    await cache.set(cache_key, result, ttl=30)
+    # Cache for 60 seconds
+    await cache.set(cache_key, result, ttl=60)
     
     return result
 
