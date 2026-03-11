@@ -3542,84 +3542,132 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
 
 async def get_multi_level_referrals(user_id: str, max_levels: int = 5):
     """
-    Get multi-level referrals (up to 5 levels deep) - OPTIMIZED with caching and limits
+    Get multi-level referrals (up to 5 levels deep) - OPTIMIZED with $graphLookup
+    Uses MongoDB aggregation instead of recursive queries for better performance.
+    
     Returns: {
         'level_1': [list of direct referrals],
         'level_2': [list of level 2 referrals],
         ...
         'level_5': [list of level 5 referrals]
     }
-    
-    NOTE: referred_by can contain UID, referral_code, email, or name - we check ALL
     """
     # OPTIMIZATION: Check cache first
-    cache_key = f"referrals:{user_id}:levels"
+    cache_key = f"referrals:{user_id}:levels:v2"
     if cache:
         cached = await cache.get(cache_key)
         if cached:
             return cached
     
     referrals_by_level = {}
-    MAX_PER_LEVEL = 100  # Limit referrals per level to prevent slowdown
+    MAX_PER_LEVEL = 100  # Limit referrals per level
     
-    # Get ALL info for the root user
-    root_user = await db.users.find_one({"uid": user_id}, {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1})
+    # Get root user info
+    root_user = await db.users.find_one(
+        {"uid": user_id}, 
+        {"_id": 0, "uid": 1, "referral_code": 1, "email": 1}
+    )
     if not root_user:
         return referrals_by_level
     
-    # Build initial search values - all possible ways this user could be referenced
-    def get_search_values(user_doc):
-        values = []
-        if user_doc.get("uid"):
-            values.append(user_doc["uid"])
-        if user_doc.get("referral_code"):
-            values.append(user_doc["referral_code"])
-        if user_doc.get("email"):
-            values.append(user_doc["email"])
-        # Removed name from search - too generic, causes slow queries
-        return [v for v in values if v]  # Filter out None/empty
+    # Build search values for root user
+    root_search_values = []
+    if root_user.get("uid"):
+        root_search_values.append(root_user["uid"])
+    if root_user.get("referral_code"):
+        root_search_values.append(root_user["referral_code"])
+    if root_user.get("email"):
+        root_search_values.append(root_user["email"])
     
-    current_level_search_values = get_search_values(root_user)
+    if not root_search_values:
+        return referrals_by_level
     
-    for level in range(1, max_levels + 1):
-        if not current_level_search_values:
-            break
+    try:
+        # OPTIMIZED: Use $graphLookup for efficient tree traversal in a SINGLE query
+        pipeline = [
+            # Start with users directly referred by root user
+            {"$match": {"referred_by": {"$in": root_search_values}}},
             
-        # Find all users whose referred_by matches any of our search values
-        referred_users = []
-        next_level_search_values = []
+            # Use $graphLookup to traverse the referral tree
+            {"$graphLookup": {
+                "from": "users",
+                "startWith": "$uid",  # Start from each user's UID
+                "connectFromField": "uid",  # Connect using UID
+                "connectToField": "referred_by",  # To referred_by field
+                "as": "downstream",  # Store results in downstream array
+                "maxDepth": max_levels - 1,  # Levels beyond the first
+                "depthField": "depth",  # Track depth for level assignment
+                "restrictSearchWithMatch": {}  # No additional filters
+            }},
+            
+            # Project only needed fields
+            {"$project": {
+                "_id": 0,
+                "uid": 1,
+                "referral_code": 1,
+                "email": 1,
+                "name": 1,
+                "subscription_plan": 1,
+                "last_login": 1,
+                "is_active": 1,
+                "profile_picture": 1,
+                "depth": {"$literal": 0},  # Level 1 users have depth 0
+                "downstream": {
+                    "$slice": ["$downstream", MAX_PER_LEVEL * max_levels]  # Limit total
+                }
+            }},
+            
+            # Limit level 1 results
+            {"$limit": MAX_PER_LEVEL}
+        ]
         
+        level_1_users = await db.users.aggregate(pipeline).to_list(MAX_PER_LEVEL)
+        
+        # Process results into levels
+        if level_1_users:
+            # Level 1: Direct referrals
+            referrals_by_level['level_1'] = [
+                {k: v for k, v in user.items() if k != 'downstream'} 
+                for user in level_1_users
+            ][:MAX_PER_LEVEL]
+            
+            # Process downstream users into levels 2-5
+            all_downstream = []
+            for user in level_1_users:
+                for downstream_user in user.get('downstream', []):
+                    # depth field from graphLookup: 0 = level 2, 1 = level 3, etc.
+                    level = downstream_user.get('depth', 0) + 2
+                    if level <= max_levels:
+                        downstream_user['_level'] = level
+                        all_downstream.append(downstream_user)
+            
+            # Group by level
+            for level in range(2, max_levels + 1):
+                level_users = [
+                    {k: v for k, v in u.items() if k not in ['downstream', '_level', 'depth']}
+                    for u in all_downstream if u.get('_level') == level
+                ][:MAX_PER_LEVEL]
+                
+                if level_users:
+                    referrals_by_level[f'level_{level}'] = level_users
+    
+    except Exception as e:
+        logging.error(f"Error in get_multi_level_referrals $graphLookup: {e}")
+        # Fallback to simple level 1 query if $graphLookup fails
         try:
-            # OPTIMIZATION: Use projection to fetch only needed fields and limit results
-            cursor = db.users.find(
-                {"referred_by": {"$in": current_level_search_values}},
-                {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1, 
-                 "subscription_plan": 1, "last_login": 1, "is_active": 1, "profile_picture": 1}
-            ).limit(MAX_PER_LEVEL)
-            
-            referred_users = await cursor.to_list(MAX_PER_LEVEL)
-            
-            for referred_user in referred_users:
-                # Collect search values for next level
-                next_level_search_values.extend(get_search_values(referred_user))
-        except Exception as e:
-            print(f"Error in get_multi_level_referrals level {level}: {e}")
-            break
-        
-        # Store this level's referrals
-        if referred_users:
-            referrals_by_level[f'level_{level}'] = referred_users
-        
-        # Move to next level with deduplicated search values (limit to prevent explosion)
-        current_level_search_values = list(set(next_level_search_values))[:MAX_PER_LEVEL]
-        
-        # Stop if no more referrals at this level
-        if not current_level_search_values:
-            break
+            level_1 = await db.users.find(
+                {"referred_by": {"$in": root_search_values}},
+                {"_id": 0, "uid": 1, "referral_code": 1, "email": 1, "name": 1,
+                 "subscription_plan": 1, "last_login": 1, "is_active": 1}
+            ).limit(MAX_PER_LEVEL).to_list(MAX_PER_LEVEL)
+            if level_1:
+                referrals_by_level['level_1'] = level_1
+        except Exception as e2:
+            logging.error(f"Fallback query also failed: {e2}")
     
-    # Cache for 5 minutes
-    if cache:
-        await cache.set(cache_key, referrals_by_level, ttl=60)
+    # Cache for 2 minutes
+    if cache and referrals_by_level:
+        await cache.set(cache_key, referrals_by_level, ttl=120)
     
     return referrals_by_level
 
@@ -4059,7 +4107,7 @@ async def get_user_lien_amount(user_id: str) -> float:
     pending_renewals = await db.renewal_fees.find({
         "user_id": user_id,
         "status": "pending"
-    }).to_list(None)
+    }).to_list(1000)
     
     total_lien = sum(r.get("amount", 0.0) for r in pending_renewals)
     
@@ -4864,7 +4912,7 @@ async def get_active_referrals(uid: str):
         "referred_by": uid,
         "last_login": {"$gte": yesterday.isoformat()},
         "mining_active": True
-    }).to_list(length=None)
+    }).limit(500).to_list(length=500)  # FIXED: Added limit to prevent memory exhaustion
     
     # Additional check: ensure their mining session hasn't expired
     active_count = 0
@@ -4898,11 +4946,11 @@ async def get_valid_prc_balance(uid: str):
     total_valid_prc = 0
     now = datetime.now(timezone.utc)
     
-    # Get all PRC earning transactions
+    # Get all PRC earning transactions - FIXED: Added limit
     transactions = await db.transactions.find({
         "user_id": uid,
         "transaction_type": {"$in": ["mining", "referral", "tap_game", "admin_credit"]}
-    }).sort("timestamp", -1).to_list(length=None)
+    }).sort("timestamp", -1).limit(100).to_list(length=100)  # Only check recent 100 transactions
     
     for txn in transactions:
         # Check if transaction is within 2 days
@@ -6338,7 +6386,7 @@ async def get_biometric_register_options(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Get existing credentials to exclude
-    existing_creds = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    existing_creds = await db.biometric_credentials.find({"user_id": user_id}).to_list(1000)
     exclude_credentials = [
         PublicKeyCredentialDescriptor(id=bytes.fromhex(cred["credential_raw_id"]))
         for cred in existing_creds
@@ -6492,7 +6540,7 @@ async def get_biometric_login_options(email: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Get user's credentials
-    credentials = await db.biometric_credentials.find({"user_id": user["uid"]}).to_list(None)
+    credentials = await db.biometric_credentials.find({"user_id": user["uid"]}).to_list(1000)
     if not credentials:
         raise HTTPException(status_code=404, detail="No biometric credentials registered for this user")
     
@@ -6631,7 +6679,7 @@ async def biometric_login(
 
 async def get_user_biometric_credentials(user_id: str):
     """Get list of registered biometric credentials for a user"""
-    credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(None)
+    credentials = await db.biometric_credentials.find({"user_id": user_id}).to_list(1000)
     
     # Remove sensitive data
     for cred in credentials:
@@ -6690,7 +6738,7 @@ async def get_user_children(uid: str):
                 {"assigned_master_stockist": uid},
                 {"assigned_sub_stockist": uid}
             ]
-        }).to_list(None)
+        }).to_list(1000)
         
         # Remove sensitive data from each child
         for child in children:
@@ -11578,7 +11626,7 @@ async def get_referral_uids(referrer_uid: str) -> list:
     referrals = await db.users.find(
         {"referred_by": referrer_uid},
         {"uid": 1, "_id": 0}
-    ).to_list(None)
+    ).to_list(1000)
     return [r["uid"] for r in referrals]
 
 async def reject_vip_payment(payment_id: str, request: Request):
@@ -11753,7 +11801,7 @@ async def get_delivery_partners(status: str = "all", page: int = 1, limit: int =
     
     skip = (page - 1) * limit
     
-    partners = await db.delivery_partners.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(None)
+    partners = await db.delivery_partners.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(1000)
     total = await db.delivery_partners.count_documents(query)
     
     # Convert ObjectId and datetime
@@ -11807,7 +11855,7 @@ async def get_delivery_partner(partner_id: str):
     # Get recent orders assigned to this partner
     recent_orders = await db.orders.find(
         {"delivery_partner_id": partner_id}
-    ).sort("created_at", -1).limit(10).to_list(None)
+    ).sort("created_at", -1).limit(10).to_list(1000)
     
     for order in recent_orders:
         order.pop("_id", None)
@@ -11905,7 +11953,7 @@ async def get_available_partners_for_state(state: str):
             {"service_states": {"$in": [state, "All India", "all"]}},
             {"service_states": {"$size": 0}}  # Partners with no state restriction
         ]
-    }).to_list(None)
+    }).to_list(1000)
     
     for partner in partners:
         partner.pop("_id", None)
@@ -12235,8 +12283,8 @@ async def apply_monthly_fees_to_all_users(request: Request):
     if not admin or admin.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admin can apply monthly fees")
     
-    # Get all VIP users
-    vip_users = await db.users.find({"membership_type": "vip"}).to_list(None)
+    # Get all VIP users - FIXED: Added limit to prevent memory exhaustion
+    vip_users = await db.users.find({"membership_type": "vip"}).limit(5000).to_list(5000)
     
     cashback_fee_applied = 0
     profit_fee_applied = 0
@@ -12640,19 +12688,26 @@ async def get_detailed_transaction_history(
     # Get total count
     total_count = await db.transactions.count_documents(query)
     
-    # Calculate summary
-    all_transactions = await db.transactions.find(query).to_list(None)
+    # Calculate summary using aggregation instead of loading all transactions
+    summary_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$type",
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount"}
+        }}
+    ]
+    summary_results = await db.transactions.aggregate(summary_pipeline).to_list(50)
+    
+    credit_types = ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]
+    debit_types = ["order", "withdrawal", "admin_debit", "delivery_charge"]
+    
     summary = {
         "total_transactions": total_count,
-        "total_credit": sum(t["amount"] for t in all_transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"]),
-        "total_debit": sum(t["amount"] for t in all_transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"]),
-        "transactions_by_type": {}
+        "total_credit": sum(r["total_amount"] for r in summary_results if r["_id"] in credit_types),
+        "total_debit": sum(r["total_amount"] for r in summary_results if r["_id"] in debit_types),
+        "transactions_by_type": {r["_id"]: r["count"] for r in summary_results}
     }
-    
-    # Count by type
-    for t in all_transactions:
-        t_type = t["type"]
-        summary["transactions_by_type"][t_type] = summary["transactions_by_type"].get(t_type, 0) + 1
     
     return {
         "transactions": transactions,
@@ -15695,7 +15750,7 @@ async def get_user_growth_chart():
             db.users.find(
                 {},
                 {"_id": 0, "created_at": 1, "timestamp": 1}
-            ).to_list(None),
+            ).to_list(1000),
             timeout=15.0
         )
         
@@ -15762,7 +15817,7 @@ async def get_prc_circulation_chart():
             db.transactions.find(
                 {"wallet_type": "prc"},
                 {"_id": 0, "created_at": 1, "timestamp": 1, "type": 1, "amount": 1}
-            ).to_list(None),
+            ).to_list(1000),
             timeout=15.0
         )
         
@@ -15840,7 +15895,7 @@ async def get_orders_chart():
             db.orders.find(
                 {},
                 {"_id": 0, "created_at": 1, "timestamp": 1, "status": 1, "total_prc": 1, "total_prc_price": 1}
-            ).to_list(None),
+            ).to_list(1000),
             timeout=15.0
         )
         
@@ -15942,7 +15997,7 @@ async def get_subscriptions_chart():
             db.subscription_payments.find(
                 {"status": "approved"},
                 {"_id": 0, "created_at": 1, "timestamp": 1, "approved_at": 1, "amount": 1}
-            ).to_list(None),
+            ).to_list(1000),
             timeout=10.0
         )
         
@@ -18991,7 +19046,7 @@ async def get_vip_payments(status: Optional[str] = None):
     if status:
         query["status"] = status
     
-    payments = await db.vip_payments.find(query).sort("submitted_at", -1).to_list(length=None)
+    payments = await db.vip_payments.find(query).sort("submitted_at", -1).to_list(length=1000)
     
     for payment in payments:
         payment["_id"] = str(payment["_id"])
@@ -20361,7 +20416,7 @@ async def get_revenue_trends(period: str = "daily", days: int = 30):
         {"$sort": {"_id": 1}}
     ]
     
-    trends = await db.orders.aggregate(pipeline).to_list(length=None)
+    trends = await db.orders.aggregate(pipeline).to_list(length=1000)
     
     return {
         "period": period,
@@ -20403,7 +20458,7 @@ async def get_user_growth(days: int = 30):
         {"$sort": {"_id.date": 1}}
     ]
     
-    growth_data = await db.users.aggregate(pipeline).to_list(length=None)
+    growth_data = await db.users.aggregate(pipeline).to_list(length=1000)
     
     # Transform data
     date_map = {}
@@ -20451,7 +20506,7 @@ async def get_withdrawal_patterns(days: int = 30):
         {"$sort": {"_id.date": 1}}
     ]
     
-    cashback_data = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(length=None)
+    cashback_data = await db.cashback_withdrawals.aggregate(cashback_pipeline).to_list(length=1000)
     
     # Transform data
     date_map = {}
@@ -21105,7 +21160,7 @@ async def get_user_tickets(user_id: str, status: Optional[str] = None):
     if status:
         query["status"] = status
     
-    tickets = await db.support_tickets.find(query).sort("created_at", -1).to_list(length=None)
+    tickets = await db.support_tickets.find(query).sort("created_at", -1).to_list(length=1000)
     
     # Remove _id field
     for ticket in tickets:
@@ -21123,7 +21178,7 @@ async def get_ticket_details(ticket_id: str):
     ticket.pop("_id", None)
     
     # Get all replies for this ticket
-    replies = await db.support_ticket_replies.find({"ticket_id": ticket_id}).sort("created_at", 1).to_list(length=None)
+    replies = await db.support_ticket_replies.find({"ticket_id": ticket_id}).sort("created_at", 1).to_list(length=1000)
     for reply in replies:
         reply.pop("_id", None)
     
@@ -21801,7 +21856,7 @@ async def get_sales_report(
         }
         
         # Get orders
-        orders = await db.orders.find(query).to_list(length=None)
+        orders = await db.orders.find(query).to_list(length=1000)
         
         # Calculate metrics
         total_orders = len(orders)
@@ -21882,7 +21937,7 @@ async def get_users_report(
         users_list = await db.users.find({
             "role": "user",
             "created_at": {"$gte": start_date, "$lte": end_date}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         daily_growth = {}
         for user in users_list:
@@ -22159,7 +22214,7 @@ async def create_announcement(request: Request, uid: str):
         elif data.get("target_audience") == "stockists":
             query["role"] = {"$in": ["master_stockist", "sub_stockist", "outlet"]}
         
-        target_users = await db.users.find(query).to_list(length=None)
+        target_users = await db.users.find(query).to_list(length=1000)
         
         notifications = []
         for user in target_users:
@@ -22678,7 +22733,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 {"timestamp": {"$gte": start_str}},
                 {"created_at": {"$gte": start_str}}
             ]
-        }, {"_id": 0}).to_list(length=None)
+        }, {"_id": 0}).to_list(length=1000)
         
         # Get all transactions for previous period (for comparison)
         prev_transactions = await db.transactions.find({
@@ -22686,7 +22741,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 {"timestamp": {"$gte": prev_start_str, "$lt": prev_end_str}},
                 {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
             ]
-        }, {"_id": 0}).to_list(length=None)
+        }, {"_id": 0}).to_list(length=1000)
         
         # Calculate PRC Created (mining, referral bonuses, cashback, admin credits)
         credit_types = ["mining", "referral_bonus", "cashback", "admin_credit", "vip_bonus", "signup_bonus", "prc_rain_gain"]
@@ -22704,17 +22759,24 @@ async def get_detailed_prc_analytics(period: str = "month"):
         prc_burned_current = sum(abs(t.get("amount", 0)) for t in current_transactions if t.get("type") == "prc_burn")
         prc_burned_prev = sum(abs(t.get("amount", 0)) for t in prev_transactions if t.get("type") == "prc_burn")
         
-        # Get all users for balance calculation
-        users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1}).to_list(length=None)
-        total_in_circulation = sum(u.get("prc_balance", 0) for u in users)
-        vip_user_count = len([u for u in users if u.get("membership_type") == "vip"])
+        # Get all users for balance calculation - FIXED: Use aggregation instead of loading all users
+        user_stats_pipeline = [
+            {"$group": {
+                "_id": None,
+                "total_prc_balance": {"$sum": "$prc_balance"},
+                "vip_count": {"$sum": {"$cond": [{"$eq": ["$membership_type", "vip"]}, 1, 0]}}
+            }}
+        ]
+        user_stats = await db.users.aggregate(user_stats_pipeline).to_list(1)
+        total_in_circulation = user_stats[0]["total_prc_balance"] if user_stats else 0
+        vip_user_count = user_stats[0]["vip_count"] if user_stats else 0
         
         # Calculate Profit/Loss (Platform perspective)
         # Profit = PRC Used + PRC Burned - PRC Created (ideally should be positive or balanced)
         profit_loss_current = (prc_used_current + prc_burned_current) - prc_created_current
         profit_loss_prev = (prc_used_prev + prc_burned_prev) - prc_created_prev
         
-        # Get revenue from VIP memberships (actual money)
+        # Get revenue from VIP memberships (actual money) - FIXED: Added limit
         # Check both approved_at and created_at fields for date filtering
         vip_payments = await db.vip_payments.find({
             "status": "approved",
@@ -22723,7 +22785,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 {"created_at": {"$gte": start_str}},
                 {"updated_at": {"$gte": start_str}}
             ]
-        }, {"_id": 0, "amount": 1}).to_list(length=None)
+        }, {"_id": 0, "amount": 1}).limit(1000).to_list(length=1000)
         vip_revenue_current = sum(p.get("amount", 0) for p in vip_payments)
         
         vip_payments_prev = await db.vip_payments.find({
@@ -22733,7 +22795,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
                 {"created_at": {"$gte": prev_start_str, "$lt": prev_end_str}},
                 {"updated_at": {"$gte": prev_start_str, "$lt": prev_end_str}}
             ]
-        }, {"_id": 0, "amount": 1}).to_list(length=None)
+        }, {"_id": 0, "amount": 1}).to_list(length=1000)
         vip_revenue_prev = sum(p.get("amount", 0) for p in vip_payments_prev)
         
         # Calculate percentage changes
@@ -24259,7 +24321,7 @@ async def get_liquidity_dashboard():
         now = datetime.now(timezone.utc)
         
         # ===== PRC IN SYSTEM =====
-        users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1, "membership_expiry": 1}).to_list(None)
+        users = await db.users.find({}, {"_id": 0, "prc_balance": 1, "membership_type": 1, "membership_expiry": 1}).to_list(1000)
         total_prc = sum(u.get("prc_balance", 0) for u in users)
         
         # PRC Value (assuming 1 PRC = ₹1 for simplicity, can be configured)
@@ -24867,7 +24929,7 @@ async def get_burn_statistics():
     # Get total burned from transactions
     burn_transactions = await db.transactions.find({
         "transaction_type": {"$in": ["prc_burn_free_user", "prc_burn_expired_vip"]}
-    }).to_list(None)
+    }).to_list(1000)
     
     total_burned = sum(t.get("prc_amount", 0) for t in burn_transactions)
     free_user_burned = sum(t.get("prc_amount", 0) for t in burn_transactions if t.get("transaction_type") == "prc_burn_free_user")
@@ -26395,7 +26457,7 @@ async def bulk_reject_all_pending_requests(request: Request):
     
     pending_bills = await db.bill_payment_requests.find({
         "status": {"$in": ["pending", "eko_failed"]}
-    }).to_list(length=None)
+    }).to_list(length=1000)
     
     print(f"📋 Found {len(pending_bills)} pending bill payment requests")
     
@@ -26473,7 +26535,7 @@ async def bulk_reject_all_pending_requests(request: Request):
     
     pending_bank = await db.bank_redeem_requests.find({
         "status": {"$in": ["pending", "eko_failed"]}
-    }).to_list(length=None)
+    }).to_list(length=1000)
     
     print(f"📋 Found {len(pending_bank)} pending bank transfer requests")
     
@@ -29497,7 +29559,7 @@ async def get_referral_tree(user_id: str):
             return None
         
         # Get direct referrals
-        referrals = await db.users.find({"referred_by": uid}).to_list(length=None)
+        referrals = await db.users.find({"referred_by": uid}).to_list(length=1000)
         
         node = {
             "id": uid,
@@ -29538,7 +29600,7 @@ async def get_network_tree_advanced(user_id: str):
             return None
         
         # Get direct referrals
-        referrals = await db.users.find({"referred_by": uid}).to_list(length=None)
+        referrals = await db.users.find({"referred_by": uid}).to_list(length=1000)
         
         # Check if user is active (has paid subscription)
         subscription_plan = user.get("subscription_plan", "explorer")
@@ -29586,7 +29648,7 @@ async def get_referral_stats(user_id: str):
     """
     
     # Get direct referrals
-    direct_referrals = await db.users.find({"referred_by": user_id}, {"_id": 0}).to_list(length=None)
+    direct_referrals = await db.users.find({"referred_by": user_id}, {"_id": 0}).to_list(length=1000)
     
     # Count active referrals using unified logic
     active_count = 0
@@ -29672,7 +29734,7 @@ async def get_referral_earnings(user_id: str):
     total = sum(txn.get("amount", 0) for txn in transactions)
     
     # Pending earnings (from users who haven't made orders yet)
-    direct_referrals = await db.users.find({"referred_by": user_id}).to_list(length=None)
+    direct_referrals = await db.users.find({"referred_by": user_id}).to_list(length=1000)
     potential_earnings = len([r for r in direct_referrals if await db.orders.count_documents({"user_id": r["uid"]}) == 0]) * 10  # Assume 10 PRC potential per referral
     
     return {
@@ -31069,7 +31131,7 @@ async def check_and_award_achievements(user_id: str):
         return []
     
     # Get user's existing achievements
-    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(None)
+    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(1000)
     unlocked_ids = [a["achievement_id"] for a in user_achievements]
     
     # Gather user data for condition checks
@@ -31145,7 +31207,7 @@ async def check_and_award_achievements(user_id: str):
 @api_router.get("/achievements/{user_id}")
 async def get_user_achievements(user_id: str):
     """Get user's unlocked achievements and progress"""
-    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(None)
+    user_achievements = await db.user_achievements.find({"user_id": user_id}).to_list(1000)
     unlocked_ids = [a["achievement_id"] for a in user_achievements]
     
     # Build response with all achievements
@@ -31582,12 +31644,27 @@ async def get_user_recent_activity(uid: str, limit: int = 10):
         ts = item.get("timestamp")
         if not ts:
             return datetime.min.replace(tzinfo=timezone.utc)
+        
+        # Handle string timestamps
         if isinstance(ts, str):
             try:
-                return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                parsed = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                # Ensure timezone awareness
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return parsed
             except:
                 return datetime.min.replace(tzinfo=timezone.utc)
-        return ts
+        
+        # Handle datetime objects
+        if isinstance(ts, datetime):
+            # Ensure timezone awareness for comparison
+            if ts.tzinfo is None:
+                return ts.replace(tzinfo=timezone.utc)
+            return ts
+        
+        # Unknown type - return minimum
+        return datetime.min.replace(tzinfo=timezone.utc)
     
     activities.sort(key=get_timestamp, reverse=True)
     
@@ -32001,7 +32078,7 @@ async def get_activity_stats():
             {"$group": {"_id": "$action_type", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
         ]
-        action_stats = await db.activity_logs.aggregate(pipeline).to_list(length=None)
+        action_stats = await db.activity_logs.aggregate(pipeline).to_list(length=1000)
         
         # Get recent activity count (last 24 hours)
         yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
@@ -32073,10 +32150,10 @@ async def get_capital_entries(
         skip = (page - 1) * limit
         total = await db.capital_entries.count_documents(query)
         
-        entries = await db.capital_entries.find(query, {"_id": 0}).sort("entry_date", -1).skip(skip).limit(limit).to_list(None)
+        entries = await db.capital_entries.find(query, {"_id": 0}).sort("entry_date", -1).skip(skip).limit(limit).to_list(1000)
         
         # Calculate summary
-        all_entries = await db.capital_entries.find({}, {"_id": 0}).to_list(None)
+        all_entries = await db.capital_entries.find({}, {"_id": 0}).to_list(1000)
         
         total_capital = sum(e.get("amount", 0) for e in all_entries if e.get("entry_type") in ["director_capital", "partner_capital"])
         total_liabilities = sum(e.get("amount", 0) for e in all_entries if e.get("entry_type") in ["personal_loan", "bank_loan"])
@@ -32220,7 +32297,7 @@ async def record_repayment(repayment: RepaymentRequest):
 async def get_capital_summary():
     """Get capital and liability summary for dashboard"""
     try:
-        entries = await db.capital_entries.find({}, {"_id": 0}).to_list(None)
+        entries = await db.capital_entries.find({}, {"_id": 0}).to_list(1000)
         
         # Group by type
         director_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "director_capital")
@@ -33432,7 +33509,7 @@ async def get_all_video_ads(
         if is_active is not None:
             query["is_active"] = is_active
         
-        video_ads = await db.video_ads.find(query).sort("created_at", -1).to_list(length=None)
+        video_ads = await db.video_ads.find(query).sort("created_at", -1).to_list(length=1000)
         
         return {
             "success": True,
@@ -34704,7 +34781,7 @@ async def preview_prc_burn(request: Request):
         users = await db.users.find(
             {"prc_balance": {"$gt": min_protected_balance}},
             {"uid": 1, "prc_balance": 1}
-        ).to_list(None)
+        ).to_list(1000)
         
         total_burn = 0
         users_affected = 0
@@ -34781,7 +34858,7 @@ async def execute_prc_burn(request: Request):
         users = await db.users.find(
             {"prc_balance": {"$gt": min_protected_balance}},
             {"uid": 1, "prc_balance": 1, "email": 1}
-        ).to_list(None)
+        ).to_list(1000)
         
         total_burn = 0
         users_affected = 0
@@ -34991,7 +35068,7 @@ async def get_cash_book(page: int = 1, limit: int = 50):
         entries = await cursor.to_list(length=limit)
         
         # Calculate running balance for each entry
-        all_entries = await db.cash_book.find().sort("created_at", 1).to_list(length=None)
+        all_entries = await db.cash_book.find().sort("created_at", 1).to_list(length=1000)
         running_balance = cash_account.get("opening_balance", 0)
         balance_map = {}
         for entry in all_entries:
@@ -35048,7 +35125,7 @@ async def get_bank_book(page: int = 1, limit: int = 50):
         entries = await cursor.to_list(length=limit)
         
         # Calculate running balance
-        all_entries = await db.bank_book.find().sort("created_at", 1).to_list(length=None)
+        all_entries = await db.bank_book.find().sort("created_at", 1).to_list(length=1000)
         running_balance = bank_account.get("opening_balance", 0)
         balance_map = {}
         for entry in all_entries:
@@ -35263,8 +35340,8 @@ async def get_accounting_summary():
         bank_today = await db.bank_book.count_documents({"created_at": {"$gte": today_str}})
         
         # Calculate totals
-        cash_entries = await db.cash_book.find().to_list(length=None)
-        bank_entries = await db.bank_book.find().to_list(length=None)
+        cash_entries = await db.cash_book.find().to_list(length=1000)
+        bank_entries = await db.bank_book.find().to_list(length=1000)
         
         cash_credit = sum(e.get("amount", 0) for e in cash_entries if e.get("entry_type") in ["capital", "income", "transfer_in"])
         cash_debit = sum(e.get("amount", 0) for e in cash_entries if e.get("entry_type") in ["expense", "transfer_out"])
@@ -35398,7 +35475,7 @@ async def get_chart_of_accounts():
         account_balances["2002"] = prc_liability
         
         # Capital from capital_entries collection
-        capital_entries = await db.capital_entries.find({}).to_list(length=None)
+        capital_entries = await db.capital_entries.find({}).to_list(length=1000)
         owner_capital = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "capital")
         additional_capital = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "additional_capital")
         drawings = sum(e.get("amount", 0) for e in capital_entries if e.get("entry_type") == "drawings")
@@ -35444,7 +35521,7 @@ async def get_capital_summary():
     """Get capital and owner's equity summary"""
     try:
         # Get all capital entries
-        entries = await db.capital_entries.find({}).sort("date", -1).to_list(length=None)
+        entries = await db.capital_entries.find({}).sort("date", -1).to_list(length=1000)
         
         # Calculate totals
         opening_capital = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "opening_capital")
@@ -35452,10 +35529,10 @@ async def get_capital_summary():
         drawings = sum(e.get("amount", 0) for e in entries if e.get("entry_type") == "drawings")
         
         # Get retained earnings from P&L
-        all_income = await db.cash_book.find({"entry_type": "income"}).to_list(length=None)
-        all_income += await db.bank_book.find({"entry_type": "income"}).to_list(length=None)
-        all_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
-        all_expenses += await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        all_income = await db.cash_book.find({"entry_type": "income"}).to_list(length=1000)
+        all_income += await db.bank_book.find({"entry_type": "income"}).to_list(length=1000)
+        all_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=1000)
+        all_expenses += await db.bank_book.find({"entry_type": "expense"}).to_list(length=1000)
         
         total_income = sum(e.get("amount", 0) for e in all_income)
         total_expense = sum(e.get("amount", 0) for e in all_expenses)
@@ -35609,8 +35686,8 @@ async def get_trial_balance(as_of_date: str = None):
             })
         
         # Expenses by category
-        cash_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=None)
-        bank_expenses = await db.bank_book.find({"entry_type": "expense"}).to_list(length=None)
+        cash_expenses = await db.cash_book.find({"entry_type": "expense"}).to_list(length=1000)
+        bank_expenses = await db.bank_book.find({"entry_type": "expense"}).to_list(length=1000)
         all_expenses = cash_expenses + bank_expenses
         
         expense_by_category = {}
@@ -35630,7 +35707,7 @@ async def get_trial_balance(as_of_date: str = None):
                 })
         
         # Drawings
-        drawings = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=None)
+        drawings = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=1000)
         total_drawings = sum(d.get("amount", 0) for d in drawings)
         if total_drawings > 0:
             debit_accounts.append({
@@ -35657,7 +35734,7 @@ async def get_trial_balance(as_of_date: str = None):
             })
         
         # Capital
-        capital_entries = await db.capital_entries.find({"entry_type": {"$in": ["opening_capital", "additional_capital"]}}).to_list(length=None)
+        capital_entries = await db.capital_entries.find({"entry_type": {"$in": ["opening_capital", "additional_capital"]}}).to_list(length=1000)
         total_capital = sum(c.get("amount", 0) for c in capital_entries)
         if total_capital > 0:
             credit_accounts.append({
@@ -35668,8 +35745,8 @@ async def get_trial_balance(as_of_date: str = None):
             })
         
         # Income by category
-        cash_income = await db.cash_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=None)
-        bank_income = await db.bank_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=None)
+        cash_income = await db.cash_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=1000)
+        bank_income = await db.bank_book.find({"entry_type": {"$in": ["income", "capital"]}}).to_list(length=1000)
         all_income = cash_income + bank_income
         
         # Exclude capital entries from income (they're in equity)
@@ -35999,11 +36076,11 @@ async def get_profit_loss_statement(month: int = None, year: int = None):
         # Get Cash Book entries for the month
         cash_entries = await db.cash_book.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         bank_entries = await db.bank_book.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         # Categorize income and expenses
         income_categories = {}
@@ -36030,7 +36107,7 @@ async def get_profit_loss_statement(month: int = None, year: int = None):
         # Get PRC metrics for the month
         prc_transactions = await db.transactions.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         prc_mined = sum(t.get("amount", 0) for t in prc_transactions if t.get("type") in ["mining", "tap_game", "referral"])
         prc_consumed = sum(t.get("amount", 0) for t in prc_transactions if t.get("type") in ["order", "bill_payment_request", "gift_voucher_request"])
@@ -36082,9 +36159,9 @@ async def get_balance_sheet():
         prc_liability_inr = round(prc_liability * PRC_TO_INR_RATE, 2)
         
         # Get capital entries from dedicated collection
-        opening_capital_entries = await db.capital_entries.find({"entry_type": "opening_capital"}).to_list(length=None)
-        additional_capital_entries = await db.capital_entries.find({"entry_type": "additional_capital"}).to_list(length=None)
-        drawings_entries = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=None)
+        opening_capital_entries = await db.capital_entries.find({"entry_type": "opening_capital"}).to_list(length=1000)
+        additional_capital_entries = await db.capital_entries.find({"entry_type": "additional_capital"}).to_list(length=1000)
+        drawings_entries = await db.capital_entries.find({"entry_type": "drawings"}).to_list(length=1000)
         
         opening_capital = sum(e.get("amount", 0) for e in opening_capital_entries)
         additional_capital = sum(e.get("amount", 0) for e in additional_capital_entries)
@@ -36092,10 +36169,10 @@ async def get_balance_sheet():
         total_drawings = sum(e.get("amount", 0) for e in drawings_entries)
         
         # Calculate retained earnings (income - expenses, excluding capital movements)
-        all_income = await db.cash_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=None)
-        all_income += await db.bank_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=None)
-        all_expenses = await db.cash_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=None)
-        all_expenses += await db.bank_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=None)
+        all_income = await db.cash_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=1000)
+        all_income += await db.bank_book.find({"entry_type": "income", "category": {"$ne": "capital"}}).to_list(length=1000)
+        all_expenses = await db.cash_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=1000)
+        all_expenses += await db.bank_book.find({"entry_type": "expense", "category": {"$ne": "drawings"}}).to_list(length=1000)
         
         total_income = sum(e.get("amount", 0) for e in all_income)
         total_expense = sum(e.get("amount", 0) for e in all_expenses)
@@ -36162,7 +36239,7 @@ async def get_prc_flow_report(month: int = None, year: int = None):
         # Get all PRC transactions for the month
         transactions = await db.transactions.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         # Categorize by type
         inflow = {
@@ -36400,7 +36477,7 @@ async def get_accounts_receivable(status: str = "all", page: int = 1, limit: int
         total = await db.accounts_receivable.count_documents(query)
         
         # Calculate totals
-        all_receivables = await db.accounts_receivable.find({}).to_list(length=None)
+        all_receivables = await db.accounts_receivable.find({}).to_list(length=1000)
         total_pending = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "pending")
         total_overdue = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "overdue")
         total_collected = sum(r.get("amount", 0) for r in all_receivables if r.get("status") == "paid")
@@ -36545,7 +36622,7 @@ async def get_accounts_payable(status: str = "all", page: int = 1, limit: int = 
         total = await db.accounts_payable.count_documents(query)
         
         # Calculate totals
-        all_payables = await db.accounts_payable.find({}).to_list(length=None)
+        all_payables = await db.accounts_payable.find({}).to_list(length=1000)
         total_pending = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "pending")
         total_overdue = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "overdue")
         total_paid = sum(p.get("amount", 0) for p in all_payables if p.get("status") == "paid")
@@ -36702,12 +36779,12 @@ async def get_bank_reconciliation(month: int = None, year: int = None):
         # Get bank book entries for the month
         bank_entries = await db.bank_book.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).sort("created_at", 1).to_list(length=None)
+        }).sort("created_at", 1).to_list(length=1000)
         
         # Get bank statements (uploaded/imported)
         bank_statements = await db.bank_statements.find({
             "transaction_date": {"$gte": start_str, "$lt": end_str}
-        }).sort("transaction_date", 1).to_list(length=None)
+        }).sort("transaction_date", 1).to_list(length=1000)
         
         # Get bank account balance
         bank_account = await db.company_accounts.find_one({"account_type": "bank"})
@@ -36799,7 +36876,7 @@ async def get_gst_summary(month: int = None, year: int = None):
         # Get GST entries
         gst_entries = await db.gst_entries.find({
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         # Calculate input and output GST
         input_gst = sum(e.get("gst_amount", 0) for e in gst_entries if e.get("gst_type") == "input")
@@ -36923,12 +37000,12 @@ async def get_budget_vs_actual(month: int = None, year: int = None):
         cash_expenses = await db.cash_book.find({
             "entry_type": "expense",
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         bank_expenses = await db.bank_book.find({
             "entry_type": "expense",
             "created_at": {"$gte": start_str, "$lt": end_str}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         all_expenses = cash_expenses + bank_expenses
         
@@ -37030,7 +37107,7 @@ async def get_financial_ratios():
         ]).to_list(length=1)
         prc_liability = (prc_total[0]["total"] if prc_total else 0) * PRC_TO_INR_RATE
         
-        ap_pending = await db.accounts_payable.find({"status": {"$in": ["pending", "overdue"]}}).to_list(length=None)
+        ap_pending = await db.accounts_payable.find({"status": {"$in": ["pending", "overdue"]}}).to_list(length=1000)
         total_ap = sum(p.get("amount", 0) for p in ap_pending)
         
         total_current_liabilities = prc_liability + total_ap
@@ -37041,20 +37118,20 @@ async def get_financial_ratios():
         recent_income = await db.cash_book.find({
             "entry_type": "income",
             "created_at": {"$gte": thirty_days_ago}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         recent_income += await db.bank_book.find({
             "entry_type": "income",
             "created_at": {"$gte": thirty_days_ago}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         recent_expenses = await db.cash_book.find({
             "entry_type": "expense",
             "created_at": {"$gte": thirty_days_ago}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         recent_expenses += await db.bank_book.find({
             "entry_type": "expense",
             "created_at": {"$gte": thirty_days_ago}
-        }).to_list(length=None)
+        }).to_list(length=1000)
         
         total_income = sum(i.get("amount", 0) for i in recent_income)
         total_expenses = sum(e.get("amount", 0) for e in recent_expenses)
@@ -37212,14 +37289,14 @@ async def export_data_backup(
         }
         
         if data_type in ["all", "users"]:
-            users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(None)
+            users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
             backup_data["users"] = {
                 "count": len(users),
                 "data": users
             }
         
         if data_type in ["all", "transactions"]:
-            transactions = await db.transactions.find({}, {"_id": 0}).to_list(None)
+            transactions = await db.transactions.find({}, {"_id": 0}).to_list(1000)
             backup_data["transactions"] = {
                 "count": len(transactions),
                 "data": transactions
@@ -37227,29 +37304,29 @@ async def export_data_backup(
         
         if data_type in ["all", "payments"]:
             # VIP payments
-            vip_payments = await db.vip_payments.find({}, {"_id": 0}).to_list(None)
+            vip_payments = await db.vip_payments.find({}, {"_id": 0}).to_list(1000)
             backup_data["vip_payments"] = {
                 "count": len(vip_payments),
                 "data": vip_payments
             }
             
             # Bill payments
-            bill_payments = await db.bill_payments.find({}, {"_id": 0}).to_list(None)
+            bill_payments = await db.bill_payments.find({}, {"_id": 0}).to_list(1000)
             backup_data["bill_payments"] = {
                 "count": len(bill_payments),
                 "data": bill_payments
             }
         
         if data_type in ["all", "kyc"]:
-            kyc_docs = await db.kyc_documents.find({}, {"_id": 0}).to_list(None)
+            kyc_docs = await db.kyc_documents.find({}, {"_id": 0}).to_list(1000)
             backup_data["kyc_documents"] = {
                 "count": len(kyc_docs),
                 "data": kyc_docs
             }
         
         if data_type in ["all", "messages"]:
-            messages = await db.messages.find({}, {"_id": 0}).to_list(None)
-            conversations = await db.conversations.find({}, {"_id": 0}).to_list(None)
+            messages = await db.messages.find({}, {"_id": 0}).to_list(1000)
+            conversations = await db.conversations.find({}, {"_id": 0}).to_list(1000)
             backup_data["messages"] = {
                 "messages_count": len(messages),
                 "conversations_count": len(conversations),
@@ -37258,14 +37335,14 @@ async def export_data_backup(
             }
         
         if data_type in ["all", "referrals"]:
-            referrals = await db.referrals.find({}, {"_id": 0}).to_list(None)
+            referrals = await db.referrals.find({}, {"_id": 0}).to_list(1000)
             backup_data["referrals"] = {
                 "count": len(referrals),
                 "data": referrals
             }
         
         if data_type in ["all", "activities"]:
-            activities = await db.activities.find({}, {"_id": 0}).to_list(None)
+            activities = await db.activities.find({}, {"_id": 0}).to_list(1000)
             backup_data["activities"] = {
                 "count": len(activities),
                 "data": activities
@@ -37359,7 +37436,7 @@ async def execute_data_archive(months_old: int = 6):
         # Archive old transactions
         old_transactions = await db.transactions.find({
             "created_at": {"$lt": cutoff_str}
-        }, {"_id": 0}).to_list(None)
+        }, {"_id": 0}).to_list(1000)
         
         if old_transactions:
             await db.archived_transactions.insert_many(old_transactions)
@@ -37369,7 +37446,7 @@ async def execute_data_archive(months_old: int = 6):
         # Archive old activities
         old_activities = await db.activities.find({
             "created_at": {"$lt": cutoff_str}
-        }, {"_id": 0}).to_list(None)
+        }, {"_id": 0}).to_list(1000)
         
         if old_activities:
             await db.archived_activities.insert_many(old_activities)
@@ -37379,7 +37456,7 @@ async def execute_data_archive(months_old: int = 6):
         # Archive old messages (keep conversations intact)
         old_messages = await db.messages.find({
             "created_at": {"$lt": cutoff_str}
-        }, {"_id": 0}).to_list(None)
+        }, {"_id": 0}).to_list(1000)
         
         if old_messages:
             await db.archived_messages.insert_many(old_messages)
@@ -37390,7 +37467,7 @@ async def execute_data_archive(months_old: int = 6):
         old_notifications = await db.notifications.find({
             "created_at": {"$lt": cutoff_str},
             "is_read": True  # Only archive read notifications
-        }, {"_id": 0}).to_list(None)
+        }, {"_id": 0}).to_list(1000)
         
         if old_notifications:
             await db.archived_notifications.insert_many(old_notifications)
@@ -37618,7 +37695,7 @@ async def execute_prc_burn_control(request: Request):
             user_query["last_active"] = {"$lt": thirty_days_ago}
         
         # Get eligible users
-        users = await db.users.find(user_query, {"uid": 1, "email": 1, "prc_balance": 1}).to_list(None)
+        users = await db.users.find(user_query, {"uid": 1, "email": 1, "prc_balance": 1}).to_list(1000)
         
         total_burned = 0
         users_affected = 0
