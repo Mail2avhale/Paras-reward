@@ -17,31 +17,33 @@ Build and maintain a stable, production-ready rewards/loyalty application (www.p
 ## Architecture
 - **Frontend:** React with Shadcn/UI components
 - **Backend:** FastAPI (Python)
-- **Database:** MongoDB Atlas
+- **Database:** MongoDB Atlas (maxPoolSize=50)
 - **Cache:** Redis (Upstash)
 - **3rd Party:** Eko (DMT/BBPS), Razorpay (Payments)
 
 ## Key Files
-- `/app/backend/server.py` - Main API server (monolith - needs refactoring)
+- `/app/backend/server.py` - Main API server (38000+ lines - needs refactoring)
 - `/app/backend/routes/auth.py` - Authentication
 - `/app/backend/routes/bbps_services.py` - BBPS integration
 - `/app/backend/services/eko_dmt_service.py` - DMT integration
 - `/app/backend/db_indexes.py` - Database index definitions
-- `/app/frontend/src/App.js` - Main React app
-- `/app/frontend/src/pages/RedeemPageV2.js` - Redemption services (2670 lines - needs refactoring)
+- `/app/frontend/src/App.js` - Main React app with timeout protection
+- `/app/frontend/src/pages/RedeemPageV2.js` - Redemption services (2670 lines)
 - `/app/frontend/src/pages/ReferralsEnhanced.js` - Referral system
 
 ## Completed Work (March 11, 2026)
 
-### This Session
-- [x] Admin login redirect fix - Roles preserved after refresh
-- [x] Database performance fix - maxPoolSize 5→50
-- [x] Admin API for index creation: `/api/admin/create-indexes`
-- [x] Admin dashboard query optimization (single aggregation)
-- [x] Referral cache fix - empty results not cached long
-- [x] Service worker cache v7
-- [x] **PRC Balance loading fix** - Wrong API endpoint `/auth/user/` → `/user/`
-- [x] **Electricity duplicate dropdown fix** - Removed from generic form
+### This Session - All Fixes
+1. [x] Admin login redirect fix - Roles preserved after refresh
+2. [x] Database performance fix - maxPoolSize 5→50
+3. [x] Admin API for index creation: `/api/admin/create-indexes`
+4. [x] Admin dashboard query optimization (single aggregation)
+5. [x] Referral cache fix - empty results not cached long
+6. [x] **PRC Balance loading fix** - Wrong API endpoint `/auth/user/` → `/user/`
+7. [x] **Electricity duplicate dropdown fix** - Removed from generic form
+8. [x] **App stuck timeout protection** - 15sec API timeout, 20sec loading fallback
+9. [x] **Database keep-alive ping** - Every 2 minutes to prevent cold start
+10. [x] Service worker v8
 
 ### Previous Sessions
 - [x] Referral page timeout fix (N+1 query)
@@ -84,21 +86,35 @@ Build and maintain a stable, production-ready rewards/loyalty application (www.p
 - `/api/admin/index-status` - Check index status
 - `/api/admin/bill-payments` - View bill payment requests
 - `/api/admin/chatbot-withdrawals` - View DMT withdrawal requests
+- `/api/admin/scheduler/status` - Check scheduler jobs status
 - `/api/health` - App health check
+
+## Background Jobs (APScheduler)
+- 🔥 PRC Burn: 11 AM & 11 PM IST
+- 💰 Wallet reconciliation: 3 AM daily
+- 📊 Daily system summary: 12:05 AM
+- ⚡ Inactive user PRC burn: Sunday 4 AM
+- 🗑️ Account hard delete: 3:30 AM daily
+- 🔓 Auto lockout clear: 12 PM & 12 AM
+- 🔄 Razorpay auto-sync: Every 1 minute
+- 💳 Razorpay captured-sync: Every 2 minutes
+- 🏦 Eko status update: Every 5 minutes
+- 💓 **DB keep-alive ping: Every 2 minutes** (NEW)
 
 ## Known Issues
 1. apscheduler doesn't trigger automatically in production
 2. Eko BBPS bill fetch returning 403 - IP whitelist issue
-3. First request after cold start is slow (connection warmup)
+3. First request after cold start is slow (mitigated by keep-alive)
 
 ## Performance Notes
 - Login with warm connection: ~0.5s
-- Login with cold start: ~27-55s (connection pool warmup)
-- API responses (warm): 0.18s - 0.58s
+- API responses (warm): 0.02s - 0.6s
+- Keep-alive ping keeps connections warm
 
 ## API Endpoint Reference
 - `/api/user/{uid}` - Get user data with PRC balance ✅
-- `/api/auth/user/{uid}` - ❌ Does NOT exist (was causing PRC=0 bug)
+- `/api/auth/user/{uid}` - ❌ Does NOT exist
+- `/api/user/{uid}/dashboard` - Combined dashboard data
 - `/api/bbps/operators/{category}` - Get BBPS operators
 - `/api/bbps/fetch` - Fetch bill details
 - `/api/chatbot-redeem/eligibility/{uid}` - Check withdrawal eligibility

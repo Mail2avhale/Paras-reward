@@ -1879,6 +1879,39 @@ async def daily_wallet_reconciliation():
         print(f"[WALLET RECONCILIATION ERROR] {e}")
 
 
+# ========== DATABASE KEEP-ALIVE PING ==========
+async def database_keep_alive_ping():
+    """
+    Keep MongoDB connection pool warm by sending periodic pings.
+    Runs every 2 minutes to prevent cold start delays.
+    
+    Cold start issue: First request after idle period can take 15-60 seconds
+    because MongoDB Atlas closes idle connections.
+    
+    This function:
+    1. Pings the database to keep connections alive
+    2. Performs a lightweight read to warm the connection pool
+    3. Logs the ping status for monitoring
+    """
+    try:
+        start = datetime.now(timezone.utc)
+        
+        # Ping MongoDB
+        await db.command('ping')
+        
+        # Lightweight read to warm connection pool
+        await db.users.find_one({}, {"_id": 1})
+        
+        elapsed = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+        
+        # Only log if ping is slow (> 500ms) to reduce log noise
+        if elapsed > 500:
+            print(f"[DB KEEP-ALIVE] Ping completed in {elapsed:.0f}ms (slow)")
+        
+    except Exception as e:
+        print(f"[DB KEEP-ALIVE ERROR] {e}")
+
+
 # ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
 async def eko_update_pending_transactions():
     """
@@ -38691,6 +38724,17 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Database keep-alive ping every 2 minutes
+        # This keeps MongoDB connection pool warm and prevents cold start delays
+        scheduler.add_job(
+            database_keep_alive_ping,
+            'interval',
+            minutes=2,
+            id='db_keep_alive',
+            name='Database connection keep-alive ping',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -38704,6 +38748,7 @@ async def startup_db():
         print("   - 🔄 Razorpay auto-sync: Every 1 minute (faster activation)")
         print("   - 💳 Razorpay captured-sync: Every 2 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
+        print("   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)")
         
         # Trigger initial Razorpay sync 30 seconds after startup
         import asyncio
