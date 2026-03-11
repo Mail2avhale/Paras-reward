@@ -61,9 +61,11 @@ async def bbps_get(url: str, headers: dict = None, timeout: int = 60) -> httpx.R
     client = get_bbps_http_client()
     return await client.get(url, headers=headers, timeout=timeout)
 
-async def bbps_post(url: str, headers: dict = None, data: dict = None, timeout: int = 60) -> httpx.Response:
-    """Non-blocking async POST request for BBPS"""
+async def bbps_post(url: str, headers: dict = None, data: dict = None, json_body: dict = None, timeout: int = 60) -> httpx.Response:
+    """Non-blocking async POST request for BBPS - supports both form data and JSON"""
     client = get_bbps_http_client()
+    if json_body:
+        return await client.post(url, headers=headers, json=json_body, timeout=timeout)
     return await client.post(url, headers=headers, data=data, timeout=timeout)
 
 # ==================== EKO PRODUCTION CONFIG (ALL FROM ENV) ====================
@@ -148,7 +150,7 @@ def generate_headers() -> Dict[str, str]:
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
         "initiator_id": INITIATOR_ID,
-        "Content-Type": "application/json"  # BBPS uses JSON for fetch, form-urlencoded for pay
+        "Content-Type": "application/json"  # BBPS fetch uses JSON
     }
 
 
@@ -314,6 +316,84 @@ def health():
     }
 
 
+@router.get("/debug-config")
+async def debug_config():
+    """
+    Debug endpoint to check Eko configuration (admin only).
+    Returns masked config values to verify setup.
+    """
+    return {
+        "base_url": BASE_URL,
+        "developer_key": f"{DEVELOPER_KEY[:8]}...{DEVELOPER_KEY[-4:]}" if DEVELOPER_KEY and len(DEVELOPER_KEY) > 12 else "NOT SET",
+        "initiator_id": INITIATOR_ID or "NOT SET",
+        "auth_key": f"{AUTH_KEY[:4]}...{AUTH_KEY[-4:]}" if AUTH_KEY and len(AUTH_KEY) > 8 else "NOT SET",
+        "user_code": USER_CODE or "NOT SET",
+        "config_valid": validate_bbps_config(),
+        "note": "If any value shows 'NOT SET', check environment variables"
+    }
+
+
+@router.post("/test-fetch")
+async def test_fetch_bill():
+    """
+    Test fetch bill with sample data to debug API connectivity.
+    Uses a known working operator for testing.
+    """
+    if not validate_bbps_config():
+        return {"success": False, "error": "Config not valid", "config": await debug_config()}
+    
+    # Test with a simple electricity operator
+    test_operator = 116  # MSEDCL (Maharashtra electricity)
+    test_account = "123456789012"  # Dummy account
+    test_mobile = "9999999999"
+    
+    url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
+    client_ref_id = f"TEST{int(time.time() * 1000)}"
+    
+    body = {
+        "operator_id": test_operator,
+        "utility_acc_no": test_account,
+        "confirmation_mobile_no": test_mobile,
+        "user_code": USER_CODE,
+        "client_ref_id": client_ref_id,
+        "sender_name": "Test User",
+        "latlong": DEFAULT_LATLONG
+    }
+    
+    results = {}
+    
+    # Try 1: Form-urlencoded
+    headers_form = generate_headers()
+    headers_form["Content-Type"] = "application/x-www-form-urlencoded"
+    try:
+        response1 = await bbps_post(url, headers=headers_form, data=body, timeout=30)
+        results["form_urlencoded"] = {
+            "http_status": response1.status_code,
+            "response": response1.text[:300] if response1.text else "empty"
+        }
+    except Exception as e:
+        results["form_urlencoded"] = {"error": str(e)}
+    
+    # Try 2: JSON
+    headers_json = generate_headers()
+    headers_json["Content-Type"] = "application/json"
+    try:
+        response2 = await bbps_post(url, headers=headers_json, json_body=body, timeout=30)
+        results["json"] = {
+            "http_status": response2.status_code,
+            "response": response2.text[:300] if response2.text else "empty"
+        }
+    except Exception as e:
+        results["json"] = {"error": str(e)}
+    
+    return {
+        "success": True,
+        "request_url": url,
+        "results": results,
+        "recommendation": "Use the format that returns HTTP 200"
+    }
+
+
 # ==================== FETCH BILL ====================
 
 @router.post("/fetch")
@@ -352,9 +432,16 @@ async def fetch_bill(data: FetchBillRequest):
         logging.info(f"[BBPS FETCH] client_ref={client_ref_id}, operator={data.operator_id}, account=***{data.account[-4:]}")
         
         headers = generate_headers()
-        response = await bbps_post(url, headers=headers, data=body, timeout=REQUEST_TIMEOUT)
+        
+        # Log full request details for debugging
+        logging.info(f"[BBPS FETCH] URL: {url}")
+        logging.info(f"[BBPS FETCH] Body: operator_id={data.operator_id}, account=***{data.account[-4:]}, mobile=***{data.mobile[-4:]}")
+        
+        # Use JSON format for fetch bill (confirmed working with Eko API)
+        response = await bbps_post(url, headers=headers, json_body=body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS FETCH] HTTP Status: {response.status_code}")
+        logging.info(f"[BBPS FETCH] Response Body: {response.text[:500] if response.text else 'empty'}")
         
         # Handle HTTP-level errors
         if response.status_code == 403:
