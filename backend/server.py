@@ -1335,34 +1335,65 @@ async def get_admin_stats_live():
     """
     Get admin stats WITHOUT cache - for debugging production issues.
     Shows real-time data directly from database.
+    OPTIMIZED: Single aggregation pipeline instead of multiple count_documents calls
     """
     try:
         today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         
-        # Direct database queries without cache
-        total_users = await db.users.count_documents({})
+        # OPTIMIZED: Single aggregation to get all user stats at once
+        # This reduces 6+ DB round-trips to just 1
+        user_stats = await db.users.aggregate([
+            {
+                "$facet": {
+                    "total": [{"$count": "count"}],
+                    "by_plan": [
+                        {"$group": {
+                            "_id": "$subscription_plan",
+                            "count": {"$sum": 1}
+                        }}
+                    ],
+                    "total_prc": [
+                        {"$group": {"_id": None, "sum": {"$sum": "$prc_balance"}}}
+                    ],
+                    "new_today": [
+                        {"$match": {"created_at": {"$gte": today_start.isoformat()}}},
+                        {"$count": "count"}
+                    ],
+                    "sample": [
+                        {"$limit": 5},
+                        {"$project": {"_id": 0, "uid": 1, "name": 1, "subscription_plan": 1, "prc_balance": 1}}
+                    ]
+                }
+            }
+        ]).to_list(1)
         
-        # Subscription breakdown
-        startup_users = await db.users.count_documents({"subscription_plan": "startup"})
-        growth_users = await db.users.count_documents({"subscription_plan": "growth"})
-        elite_users = await db.users.count_documents({"subscription_plan": "elite"})
+        stats = user_stats[0] if user_stats else {}
+        
+        total_users = stats.get("total", [{}])[0].get("count", 0)
+        total_prc = stats.get("total_prc", [{}])[0].get("sum", 0) if stats.get("total_prc") else 0
+        new_today = stats.get("new_today", [{}])[0].get("count", 0) if stats.get("new_today") else 0
+        sample_users = stats.get("sample", [])
+        
+        # Extract subscription counts
+        plan_counts = {p["_id"]: p["count"] for p in stats.get("by_plan", [])}
+        startup_users = plan_counts.get("startup", 0)
+        growth_users = plan_counts.get("growth", 0)
+        elite_users = plan_counts.get("elite", 0)
         vip_users = startup_users + growth_users + elite_users
         
-        # PRC totals
-        prc_result = await db.users.aggregate([
-            {"$group": {"_id": None, "total_prc": {"$sum": "$prc_balance"}}}
+        # Orders stats - also optimize with facet
+        order_stats = await db.orders.aggregate([
+            {
+                "$facet": {
+                    "total": [{"$count": "count"}],
+                    "pending": [{"$match": {"status": "pending"}}, {"$count": "count"}]
+                }
+            }
         ]).to_list(1)
-        total_prc = prc_result[0]["total_prc"] if prc_result else 0
         
-        # Orders
-        total_orders = await db.orders.count_documents({})
-        pending_orders = await db.orders.count_documents({"status": "pending"})
-        
-        # New users today
-        new_today = await db.users.count_documents({"created_at": {"$gte": today_start.isoformat()}})
-        
-        # Sample user data to verify
-        sample_users = await db.users.find({}, {"_id": 0, "uid": 1, "name": 1, "subscription_plan": 1, "prc_balance": 1}).limit(5).to_list(5)
+        o_stats = order_stats[0] if order_stats else {}
+        total_orders = o_stats.get("total", [{}])[0].get("count", 0) if o_stats.get("total") else 0
+        pending_orders = o_stats.get("pending", [{}])[0].get("count", 0) if o_stats.get("pending") else 0
         
         return {
             "live_data": True,
