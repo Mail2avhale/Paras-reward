@@ -517,6 +517,56 @@ else:
 client = AsyncIOMotorClient(mongo_url, **connection_options)
 db = client[os.environ['DB_NAME']]
 
+# ========== DATABASE CONNECTION HEALTH & AUTO-RECONNECT ==========
+async def ensure_db_connection():
+    """
+    Check database connection and reconnect if needed.
+    Call this before critical operations.
+    """
+    global client, db
+    try:
+        # Quick ping to check connection
+        await client.admin.command('ping')
+        return True
+    except Exception as e:
+        logging.error(f"❌ Database connection lost: {e}")
+        try:
+            # Force close existing connection
+            client.close()
+            # Create new connection
+            client = AsyncIOMotorClient(mongo_url, **connection_options)
+            db = client[os.environ['DB_NAME']]
+            # Verify new connection
+            await client.admin.command('ping')
+            logging.info("✅ Database reconnected successfully")
+            return True
+        except Exception as reconnect_error:
+            logging.error(f"❌ Failed to reconnect: {reconnect_error}")
+            return False
+
+async def safe_db_operation(operation, fallback=None, operation_name="db_operation"):
+    """
+    Execute a database operation with automatic retry on connection failure.
+    """
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            return await operation()
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Check if it's a connection error
+            if any(x in error_msg for x in ['serverselectiontimeout', 'connection', 'timeout', 'network']):
+                logging.warning(f"⚠️ DB operation '{operation_name}' failed (attempt {attempt+1}): {e}")
+                if attempt < max_retries - 1:
+                    await ensure_db_connection()
+                    continue
+            # For other errors or last attempt, raise or return fallback
+            if fallback is not None:
+                logging.error(f"❌ DB operation '{operation_name}' failed, using fallback: {e}")
+                return fallback
+            raise
+    return fallback
+
 # Initialize Fraud Detector
 fraud_detector = FraudDetector(db)
 
@@ -689,6 +739,52 @@ def check_region_access(user: dict, target_region: str = None) -> bool:
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# ========== REQUEST TIMEOUT & DB CHECK MIDDLEWARE ==========
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+class DatabaseCheckMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to check database connection before processing requests.
+    Auto-reconnect if connection is lost.
+    """
+    async def dispatch(self, request, call_next):
+        # Skip health check endpoints
+        if "/health" in request.url.path:
+            return await call_next(request)
+        
+        # For API routes, verify DB connection periodically
+        if request.url.path.startswith("/api/"):
+            global db_ready
+            if not db_ready:
+                # Try to reconnect
+                try:
+                    await client.admin.command('ping')
+                    db_ready = True
+                except Exception as e:
+                    logging.error(f"DB not ready for request {request.url.path}: {e}")
+                    # Don't fail immediately - let the request try
+        
+        # Process request with timeout
+        try:
+            response = await asyncio.wait_for(
+                call_next(request),
+                timeout=30.0  # 30 second max for any request
+            )
+            return response
+        except asyncio.TimeoutError:
+            logging.error(f"Request timeout: {request.method} {request.url.path}")
+            return JSONResponse(
+                status_code=504,
+                content={"detail": "Request timeout. Please try again."}
+            )
+        except Exception as e:
+            logging.error(f"Request error: {request.method} {request.url.path} - {e}")
+            raise
+
+# Add middleware
+app.add_middleware(DatabaseCheckMiddleware)
+
 # Health check endpoint for Kubernetes deployment
 # This must return 200 even if DB is not fully connected
 db_ready = False
@@ -746,7 +842,7 @@ async def api_health_check():
 
 @api_router.get("/health/db")
 async def db_health_check():
-    """Deep health check - actually pings the database"""
+    """Deep health check - actually pings the database with auto-reconnect"""
     try:
         # Ping database to verify connection
         start_time = datetime.now(timezone.utc)
@@ -761,10 +857,13 @@ async def db_health_check():
         }
     except Exception as e:
         logging.error(f"Database health check failed: {e}")
+        # Try to reconnect
+        reconnected = await ensure_db_connection()
         return {
-            "status": "unhealthy",
-            "database": "disconnected",
+            "status": "reconnected" if reconnected else "unhealthy",
+            "database": "reconnected" if reconnected else "disconnected",
             "error": str(e),
+            "reconnect_attempted": True,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
