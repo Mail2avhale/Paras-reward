@@ -986,15 +986,37 @@ const RedeemPageV2 = ({ user }) => {
     
     try {
       // Use new clean BBPS API: POST /api/bbps/fetch
-      // Request format: { operator_id, account, mobile }
+      // Request format: { operator_id, account, mobile, ...additional_params }
       // For postpaid, mobile number IS the account number
       const mobileForRequest = category === 'mobile_postpaid' ? consumerNumber : formData.mobile_number || "9999999999";
       
-      const response = await axios.post(`${API}/bbps/fetch`, {
+      // Build request with additional params if available
+      const fetchRequest = {
         operator_id: operatorId,
         account: consumerNumber,
         mobile: mobileForRequest
-      });
+      };
+      
+      // Add additional parameters (like cycle_number for MSEDCL)
+      if (formData.additional_param_1) {
+        // Get the param name from operatorParams
+        const paramName = operatorParams?.parameters?.[1]?.param_name || 'cycle_number';
+        fetchRequest.extra_params = {
+          [paramName]: formData.additional_param_1
+        };
+        // Also add as direct field for backward compatibility
+        fetchRequest[paramName] = formData.additional_param_1;
+      }
+      if (formData.additional_param_2) {
+        const paramName = operatorParams?.parameters?.[2]?.param_name || 'additional_param_2';
+        fetchRequest.extra_params = fetchRequest.extra_params || {};
+        fetchRequest.extra_params[paramName] = formData.additional_param_2;
+        fetchRequest[paramName] = formData.additional_param_2;
+      }
+      
+      console.log('[BBPS FETCH] Request:', fetchRequest);
+      
+      const response = await axios.post(`${API}/bbps/fetch`, fetchRequest);
       
       if (response.data.success) {
         const data = response.data;
@@ -1125,6 +1147,20 @@ const RedeemPageV2 = ({ user }) => {
     } else {
       // Default for gas, water, broadband, landline, cable_tv, municipal_tax, housing_society
       details.consumer_number = formData.consumer_number;
+    }
+    
+    // Add additional operator parameters (like cycle_number for MSEDCL)
+    if (formData.additional_param_1 && operatorParams?.parameters?.[1]) {
+      const paramName = operatorParams.parameters[1].param_name;
+      details[paramName] = formData.additional_param_1;
+      details.additional_params = details.additional_params || {};
+      details.additional_params[paramName] = formData.additional_param_1;
+    }
+    if (formData.additional_param_2 && operatorParams?.parameters?.[2]) {
+      const paramName = operatorParams.parameters[2].param_name;
+      details[paramName] = formData.additional_param_2;
+      details.additional_params = details.additional_params || {};
+      details.additional_params[paramName] = formData.additional_param_2;
     }
     
     // Check PRC balance
