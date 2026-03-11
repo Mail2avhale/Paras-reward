@@ -979,13 +979,84 @@ const RedeemPageV2 = ({ user }) => {
         toast.error('Loan Account Number and Lender both are required');
         return;
       }
-    } else {
+    } else if (selectedService === 'fastag') {
+      // FASTag uses vehicle_number field
+      consumerNumber = formData.vehicle_number || formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'fastag';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Vehicle Number and FASTag Issuer both are required');
+        return;
+      }
+    } else if (selectedService === 'dth') {
+      // DTH uses subscriber_id or consumer_number
+      consumerNumber = formData.subscriber_id || formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'dth';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Subscriber ID and DTH Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'electricity') {
+      // Electricity bill
       consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'electricity';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Consumer Number and Electricity Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'water') {
+      // Water bill
+      consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'water';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Consumer/RR Number and Water Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'gas') {
+      // Gas (PNG) bill
+      consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'gas';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Consumer Number and Gas Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'broadband') {
+      // Broadband
+      consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'broadband';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Account Number and Broadband Provider both are required');
+        return;
+      }
+    } else if (selectedService === 'landline') {
+      // Landline
+      consumerNumber = formData.consumer_number;
+      operatorId = formData.operator;
+      category = 'landline';
+      
+      if (!consumerNumber || !operatorId) {
+        toast.error('Phone Number and Provider both are required');
+        return;
+      }
+    } else {
+      // Generic fallback for any other services
+      consumerNumber = formData.consumer_number || formData.loan_account || formData.vehicle_number || formData.subscriber_id;
       operatorId = formData.operator;
       category = selectedService;
       
       if (!consumerNumber || !operatorId) {
-        toast.error('Consumer Number and Provider both are required');
+        toast.error('Account/Consumer Number and Provider both are required');
         return;
       }
     }
