@@ -24,22 +24,24 @@ Build and maintain a stable, production-ready rewards/loyalty application (www.p
 ## Key Files
 - `/app/backend/server.py` - Main API server (monolith - needs refactoring)
 - `/app/backend/routes/auth.py` - Authentication
+- `/app/backend/routes/bbps_services.py` - BBPS integration
 - `/app/backend/services/eko_dmt_service.py` - DMT integration
 - `/app/backend/db_indexes.py` - Database index definitions
 - `/app/frontend/src/App.js` - Main React app
-- `/app/frontend/src/pages/DailyRewards.js` - Mining page
-- `/app/frontend/src/pages/RedeemPageV2.js` - Redemption services
+- `/app/frontend/src/pages/RedeemPageV2.js` - Redemption services (2670 lines - needs refactoring)
 - `/app/frontend/src/pages/ReferralsEnhanced.js` - Referral system
 
-## Completed Work (March 2026)
+## Completed Work (March 11, 2026)
 
-### Session - March 11, 2026
+### This Session
 - [x] Admin login redirect fix - Roles preserved after refresh
 - [x] Database performance fix - maxPoolSize 5→50
 - [x] Admin API for index creation: `/api/admin/create-indexes`
 - [x] Admin dashboard query optimization (single aggregation)
 - [x] Referral cache fix - empty results not cached long
 - [x] Service worker cache v7
+- [x] **PRC Balance loading fix** - Wrong API endpoint `/auth/user/` → `/user/`
+- [x] **Electricity duplicate dropdown fix** - Removed from generic form
 
 ### Previous Sessions
 - [x] Referral page timeout fix (N+1 query)
@@ -53,17 +55,17 @@ Build and maintain a stable, production-ready rewards/loyalty application (www.p
 ## Pending/In-Progress
 
 ### P0 - Critical
-- [ ] DMT & BBPS E2E Flow Verification (Eko docs compliance)
-- [ ] Admin login redirect - needs user verification
+- [ ] Admin login redirect - needs user verification on production
+- [ ] DMT & BBPS E2E Flow Verification (Eko 403 error - IP whitelist issue)
 
 ### P1 - High Priority
 - [ ] Production Auto-Burn scheduler (apscheduler not triggering)
 - [ ] PRC Burn History logging fix (code ready, needs deploy)
 - [ ] Backend refactoring (server.py monolith - 38000+ lines)
-- [ ] Referrals "Your Network" card verification
+- [ ] Referrals "Your Network" card - L1+L2+L3 display verification
 
 ### P2 - Medium Priority
-- [ ] Frontend refactoring (RedeemPageV2.js)
+- [ ] Frontend refactoring (RedeemPageV2.js - 2670 lines)
 - [ ] KYC/Receipt images migration to file storage
 
 ### Future/Backlog
@@ -75,19 +77,28 @@ Build and maintain a stable, production-ready rewards/loyalty application (www.p
 ## Test Credentials
 - **Admin:** admin@paras.com / PIN: 153759
 - **Admin 2:** mail2avhale@gmail.com / PIN: 153759
-- **Test User:** testuser@test.com / PIN: 942133
+- **Test User:** 9421331342 / PIN: 942133 (SUWARNA SANTOSH AVHALE, PRC: 48342)
 
 ## Key Admin Endpoints
 - `/api/admin/create-indexes` - Trigger database index creation
 - `/api/admin/index-status` - Check index status
+- `/api/admin/bill-payments` - View bill payment requests
+- `/api/admin/chatbot-withdrawals` - View DMT withdrawal requests
 - `/api/health` - App health check
 
 ## Known Issues
 1. apscheduler doesn't trigger automatically in production
-2. Eko APIs not whitelisted for preview environment
+2. Eko BBPS bill fetch returning 403 - IP whitelist issue
 3. First request after cold start is slow (connection warmup)
 
 ## Performance Notes
 - Login with warm connection: ~0.5s
 - Login with cold start: ~27-55s (connection pool warmup)
 - API responses (warm): 0.18s - 0.58s
+
+## API Endpoint Reference
+- `/api/user/{uid}` - Get user data with PRC balance ✅
+- `/api/auth/user/{uid}` - ❌ Does NOT exist (was causing PRC=0 bug)
+- `/api/bbps/operators/{category}` - Get BBPS operators
+- `/api/bbps/fetch` - Fetch bill details
+- `/api/chatbot-redeem/eligibility/{uid}` - Check withdrawal eligibility

@@ -524,7 +524,8 @@ const RedeemPageV2 = ({ user }) => {
   
   const fetchUserData = async () => {
     try {
-      const response = await axios.get(`${API}/auth/user/${user.uid}`);
+      // Use correct endpoint: /api/user/{uid} (not /auth/user/)
+      const response = await axios.get(`${API}/user/${user.uid}`);
       setUserData(response.data);
     } catch (error) {
       console.error('Error fetching user:', error);
