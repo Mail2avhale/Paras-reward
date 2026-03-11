@@ -1101,6 +1101,98 @@ async def get_transaction_status(tid: str):
         return create_error_response(500, str(e), "Unable to check status. Please try again.")
 
 
+# ==================== GET CATEGORIES ====================
+
+@router.get("/categories")
+async def get_categories():
+    """
+    Get all BBPS categories from Eko API.
+    
+    Returns list of categories like:
+    - Electricity, Water, Gas, DTH, Loan/EMI, Insurance, etc.
+    """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    try:
+        url = f"{BASE_URL}/v3/customer/payment/bbps/categories?initiator_id={INITIATOR_ID}&user_code={USER_CODE}&client_ref_id=CAT{int(time.time())}"
+        
+        response = await bbps_get(url, headers=generate_headers(), timeout=30)
+        
+        logging.info(f"[BBPS CATEGORIES] HTTP Status: {response.status_code}")
+        logging.info(f"[BBPS CATEGORIES] Response: {response.text[:500] if response.text else 'empty'}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                f"Failed to fetch categories: {response.text}",
+                "Unable to load categories."
+            )
+        
+        result = response.json()
+        return {
+            "success": True,
+            "categories": result.get("data", result) if isinstance(result, dict) else result
+        }
+    
+    except Exception as e:
+        logging.error(f"[BBPS CATEGORIES] Error: {e}")
+        return create_error_response(500, str(e), "Service temporarily unavailable.")
+
+
+@router.get("/operators/search/{query}")
+async def search_operators(query: str, category: Optional[str] = None):
+    """
+    Search operators by name across all categories or within a specific category.
+    
+    Example: /operators/search/IDFC?category=emi
+    """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    category_map = {
+        "mobile_prepaid": 5, "mobile_postpaid": 10, "dth": 4,
+        "electricity": 8, "water": 11, "landline": 9, "broadband": 1,
+        "gas": 14, "lpg": 23, "emi": 21, "loan": 21, "credit_card": 7,
+        "insurance": 20, "fastag": 22, "housing_society": 12
+    }
+    
+    # If category specified, search only that category
+    categories_to_search = [category_map.get(category.lower())] if category and category.lower() in category_map else list(set(category_map.values()))
+    
+    all_matches = []
+    
+    for cat_id in categories_to_search[:5]:  # Limit to 5 categories to avoid timeout
+        try:
+            url = f"{BASE_URL}/v2/billpayments/operators?initiator_id={INITIATOR_ID}&category={cat_id}"
+            response = await bbps_get(url, headers=generate_headers(), timeout=15)
+            
+            if response.status_code == 200:
+                result = response.json()
+                operators = result.get("data", result) if isinstance(result, dict) else result
+                
+                if isinstance(operators, list):
+                    for op in operators:
+                        op_name = op.get("name", "") or ""
+                        if query.lower() in op_name.lower():
+                            all_matches.append({
+                                "operator_id": op.get("operator_id"),
+                                "name": op_name,
+                                "category_id": cat_id,
+                                "billFetchResponse": op.get("billFetchResponse", 0)
+                            })
+        except Exception as e:
+            logging.warning(f"[BBPS SEARCH] Category {cat_id} failed: {e}")
+            continue
+    
+    return {
+        "success": True,
+        "query": query,
+        "matches": all_matches,
+        "count": len(all_matches)
+    }
+
+
 # ==================== GET OPERATORS ====================
 
 @router.get("/operators/{category}")
