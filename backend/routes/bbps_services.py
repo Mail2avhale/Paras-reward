@@ -162,8 +162,8 @@ def generate_headers() -> Dict[str, str]:
 
 def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
     """
-    Generate authentication headers for bill PAYMENT (uses form-urlencoded).
-    Payment API requires request_hash in addition to regular auth.
+    Generate authentication headers for bill PAYMENT.
+    NOTE: Payment API also uses JSON (as per Eko curl example) - NOT form-urlencoded!
     """
     encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
     
@@ -180,7 +180,7 @@ def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
         "initiator_id": INITIATOR_ID,
-        "Content-Type": "application/x-www-form-urlencoded"  # Payment uses form data
+        "Content-Type": "application/json"  # FIXED: Payment also uses JSON per Eko docs
     }
 
 
@@ -500,6 +500,78 @@ async def test_fetch_bill():
     }
 
 
+@router.post("/debug-pay")
+async def debug_pay_bill(
+    operator_id: str,
+    account: str,
+    amount: str,
+    mobile: str,
+    bill_fetch_response: Optional[str] = None
+):
+    """
+    DEBUG endpoint to test bill payment and see exact Eko response.
+    DO NOT use in production - for debugging only!
+    """
+    if not validate_bbps_config():
+        return {"success": False, "error": "Config not valid"}
+    
+    client_ref_id = f"DEBUG{int(time.time() * 1000)}"
+    timestamp = str(round(time.time() * 1000))
+    
+    url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
+    
+    # Generate headers
+    headers = generate_headers_for_payment(timestamp)
+    request_hash = generate_request_hash(timestamp, account, amount)
+    headers["request_hash"] = request_hash
+    
+    body = {
+        "amount": amount,
+        "operator_id": operator_id,
+        "utility_acc_no": account,
+        "confirmation_mobile_no": mobile,
+        "user_code": USER_CODE,
+        "client_ref_id": client_ref_id,
+        "sender_name": "Debug User",
+        "latlong": DEFAULT_LATLONG,
+        "source_ip": "127.0.0.1"
+    }
+    
+    if bill_fetch_response:
+        body["billfetchresponse"] = bill_fetch_response
+    
+    debug_info = {
+        "request_url": url,
+        "request_headers": {k: v[:20] + "..." if len(str(v)) > 20 else v for k, v in headers.items()},
+        "request_body": {**body, "utility_acc_no": f"***{account[-4:]}"},
+        "timestamp_used": timestamp
+    }
+    
+    try:
+        # Try with JSON format
+        headers_json = {**headers, "Content-Type": "application/json"}
+        response_json = await bbps_post(url, headers=headers_json, json_body=body, timeout=60)
+        debug_info["json_response"] = {
+            "http_status": response_json.status_code,
+            "body": response_json.text[:1000] if response_json.text else "empty"
+        }
+    except Exception as e:
+        debug_info["json_response"] = {"error": str(e)}
+    
+    try:
+        # Try with form-urlencoded format
+        headers_form = {**headers, "Content-Type": "application/x-www-form-urlencoded"}
+        response_form = await bbps_post(url, headers=headers_form, data=body, timeout=60)
+        debug_info["form_response"] = {
+            "http_status": response_form.status_code,
+            "body": response_form.text[:1000] if response_form.text else "empty"
+        }
+    except Exception as e:
+        debug_info["form_response"] = {"error": str(e)}
+    
+    return debug_info
+
+
 # ==================== FETCH BILL ====================
 
 @router.post("/fetch")
@@ -743,7 +815,9 @@ async def pay_bill(data: PayBillRequest):
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
-            "latlong": DEFAULT_LATLONG
+            "latlong": DEFAULT_LATLONG,
+            "source_ip": "127.0.0.1",  # FIXED: Required parameter per Eko docs
+            "initiator_id": INITIATOR_ID  # FIXED: Also include initiator_id in body
         }
         
         # Add bill_fetch_response if provided (required for some operators)
@@ -751,11 +825,13 @@ async def pay_bill(data: PayBillRequest):
             body["billfetchresponse"] = data.bill_fetch_response
         
         logging.info(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
+        logging.info(f"[BBPS PAY] Request body keys: {list(body.keys())}")
         
-        # Use data= for form-urlencoded (as per Eko docs for payment)
-        response = await bbps_post(url, headers=headers, data=body, timeout=REQUEST_TIMEOUT)
+        # FIXED: Use JSON format for payment (as per Eko documentation curl example)
+        response = await bbps_post(url, headers=headers, json_body=body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS PAY] HTTP Status: {response.status_code}")
+        logging.info(f"[BBPS PAY] Response: {response.text[:500] if response.text else 'empty'}")
         
         # Handle HTTP-level errors
         if response.status_code == 403:
