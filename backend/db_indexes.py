@@ -45,6 +45,8 @@ async def create_performance_indexes(db):
         # Activity tracking
         await db.users.create_index("last_login", background=True)
         await db.users.create_index("created_at", background=True)
+        # Compound index for single-leg downline query (CRITICAL for mining performance)
+        await db.users.create_index([("created_at", 1), ("uid", 1)], background=True)
         
         # Admin queries
         await db.users.create_index("role", background=True)

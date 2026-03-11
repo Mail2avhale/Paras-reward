@@ -254,7 +254,7 @@ async def get_mining_status(uid: str):
     
     # Cache for 30 seconds
     if cache:
-        await cache.set(cache_key, result, ttl=30)
+        await cache.set(cache_key, result, ttl=120)  # 2 minutes - increased for stability
     
     return result
 

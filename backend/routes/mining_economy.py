@@ -31,9 +31,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Tuple, Optional
 import logging
 
-# Cache for mining rate calculations (60 seconds TTL)
+# Cache for mining rate calculations (5 minutes TTL - increased for stability)
 _mining_rate_cache = {}
-MINING_CACHE_TTL = 60  # seconds
+MINING_CACHE_TTL = 300  # 5 minutes - increased from 60 seconds for stability
 
 # ==================== CONSTANTS ====================
 
