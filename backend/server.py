@@ -937,6 +937,44 @@ async def get_performance_status():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@api_router.get("/health/connection-status")
+async def get_connection_status():
+    """
+    Real-time database connection status for debugging.
+    Use this to monitor production connection health.
+    """
+    global _last_successful_ping, _consecutive_failures
+    
+    # Quick ping test
+    ping_ok = False
+    ping_ms = 0
+    error_msg = None
+    
+    try:
+        import time
+        start = time.time()
+        await db.command('ping')
+        ping_ms = (time.time() - start) * 1000
+        ping_ok = True
+    except Exception as e:
+        error_msg = str(e)
+    
+    return {
+        "connection_ok": ping_ok,
+        "ping_ms": round(ping_ms, 2) if ping_ok else None,
+        "error": error_msg,
+        "last_successful_ping": _last_successful_ping,
+        "consecutive_failures": _consecutive_failures,
+        "db_ready_flag": db_ready,
+        "pool_config": {
+            "maxPoolSize": connection_options.get('maxPoolSize'),
+            "minPoolSize": connection_options.get('minPoolSize'),
+            "serverSelectionTimeoutMS": connection_options.get('serverSelectionTimeoutMS'),
+            "socketTimeoutMS": connection_options.get('socketTimeoutMS')
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @api_router.post("/performance/reset-circuit")
 async def reset_circuit_breaker():
     """Reset circuit breaker - admin use only"""
@@ -1979,6 +2017,9 @@ async def daily_wallet_reconciliation():
 
 
 # ========== DATABASE KEEP-ALIVE PING ==========
+_last_successful_ping = None
+_consecutive_failures = 0
+
 async def database_keep_alive_ping():
     """
     Keep MongoDB connection pool warm by sending periodic pings.
@@ -1990,8 +2031,11 @@ async def database_keep_alive_ping():
     This function:
     1. Pings the database to keep connections alive
     2. Performs a lightweight read to warm the connection pool
-    3. Logs the ping status for monitoring
+    3. Auto-reconnects if connection is lost
+    4. Logs the ping status for monitoring
     """
+    global _last_successful_ping, _consecutive_failures, client, db
+    
     try:
         start = datetime.now(timezone.utc)
         
@@ -2003,12 +2047,33 @@ async def database_keep_alive_ping():
         
         elapsed = (datetime.now(timezone.utc) - start).total_seconds() * 1000
         
+        # Reset failure counter on success
+        _consecutive_failures = 0
+        _last_successful_ping = datetime.now(timezone.utc).isoformat()
+        
         # Only log if ping is slow (> 500ms) to reduce log noise
         if elapsed > 500:
             print(f"[DB KEEP-ALIVE] Ping completed in {elapsed:.0f}ms (slow)")
         
     except Exception as e:
-        print(f"[DB KEEP-ALIVE ERROR] {e}")
+        _consecutive_failures += 1
+        print(f"[DB KEEP-ALIVE ERROR #{_consecutive_failures}] {e}")
+        
+        # If 3+ consecutive failures, try to reconnect
+        if _consecutive_failures >= 3:
+            print("[DB KEEP-ALIVE] Multiple failures detected, attempting reconnect...")
+            try:
+                # Close existing connection
+                client.close()
+                # Create new connection
+                client = AsyncIOMotorClient(mongo_url, **connection_options)
+                db = client[os.environ['DB_NAME']]
+                # Test new connection
+                await client.admin.command('ping')
+                print("[DB KEEP-ALIVE] ✅ Reconnected successfully!")
+                _consecutive_failures = 0
+            except Exception as reconnect_error:
+                print(f"[DB KEEP-ALIVE] ❌ Reconnect failed: {reconnect_error}")
 
 
 # ========== EKO TRANSACTION STATUS UPDATE FUNCTION ==========
