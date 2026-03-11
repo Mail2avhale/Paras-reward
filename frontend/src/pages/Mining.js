@@ -205,14 +205,25 @@ const DailyRewards = ({ user }) => {
   // Fetch user data and mining status
   const fetchUserData = useCallback(async (isInitialLoad = false, retryCount = 0) => {
     // Set a timeout to prevent infinite loading on slow networks
-    // OPTIMIZED: 5 second timeout, with retry logic
+    // OPTIMIZED: 8 second timeout, with retry logic
     const timeoutId = setTimeout(() => {
       if (isInitialLoad) {
         setLoading(false);
-        setUserData(user);
-        console.warn('Mining data fetch timeout - using fallback');
+        // Use user prop but with reasonable defaults for mining display
+        setUserData({
+          ...user,
+          mining_rate: user.mining_rate || 0.5,
+          base_rate: user.mining_rate || 0.5
+        });
+        setMiningRate(user.mining_rate || 0.5);
+        setBaseRate(user.mining_rate || 0.5);
+        console.warn('Mining data fetch timeout - using cached user data');
+        // Retry once more after timeout
+        if (retryCount < 2) {
+          setTimeout(() => fetchUserData(false, retryCount + 1), 2000);
+        }
       }
-    }, 5000); // 5 second timeout
+    }, 8000); // Increased to 8 second timeout
     
     try {
       // Fetch mining status FIRST (most important for this page)
