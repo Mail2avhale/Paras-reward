@@ -496,17 +496,27 @@ function App() {
         const storedRole = storedUser.role;
         const freshRole = freshData.role;
         
+        // DEBUG: Log role comparison
+        console.log('[REFRESH] Role comparison:', {
+          storedRole,
+          freshRole,
+          storedUserKeys: Object.keys(storedUser).length
+        });
+        
         // Priority: Keep admin roles from login, don't let refresh override them
         let finalRole = 'user';
         if (['admin', 'sub_admin', 'manager'].includes(storedRole)) {
           // NEVER override admin roles - they come from login API with proper auth
           finalRole = storedRole;
+          console.log('[REFRESH] Keeping admin role from stored:', finalRole);
         } else if (freshRole && freshRole !== 'user') {
           // Use fresh role if it's elevated (API returned a real role)
           finalRole = freshRole;
+          console.log('[REFRESH] Using elevated fresh role:', finalRole);
         } else {
           // Default case - use stored or fresh, prefer stored
           finalRole = storedRole || freshRole || 'user';
+          console.log('[REFRESH] Using default role logic:', finalRole);
         }
         
         const updatedUser = {
@@ -516,6 +526,7 @@ function App() {
         };
         setUser(updatedUser);
         localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+        console.log('[REFRESH] Final user role set to:', finalRole);
         return updatedUser;
       }
     } catch (error) {
@@ -536,12 +547,21 @@ function App() {
   }, []); // Run once on mount
 
   const handleLogin = async (userData) => {
+    // DEBUG: Log login data for troubleshooting admin redirect
+    console.log('[LOGIN] User data received:', {
+      uid: userData.uid,
+      role: userData.role,
+      name: userData.name
+    });
+    
     // Save session token for single-session enforcement
     if (userData.session_token) {
       localStorage.setItem("paras_session_token", userData.session_token);
     }
     setUser(userData);
     localStorage.setItem("paras_user", JSON.stringify(userData));
+    
+    console.log('[LOGIN] User saved to state and localStorage with role:', userData.role);
     
     // Refresh to get complete user data including subscription
     setTimeout(() => refreshUserData(userData.uid), 100);

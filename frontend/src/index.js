@@ -15,7 +15,8 @@ root.render(
 );
 
 // Clear old service worker caches on version mismatch
-const CURRENT_CACHE_VERSION = 'v6';
+// v7: Admin login redirect fix - March 2026
+const CURRENT_CACHE_VERSION = 'v7';
 
 async function clearOldCaches() {
   if ('caches' in window) {
@@ -25,6 +26,22 @@ async function clearOldCaches() {
       console.log('Clearing old cache:', name);
       return caches.delete(name);
     }));
+  }
+}
+
+// FORCE clear all caches for admin login fix
+async function forceUpdateServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const registration of registrations) {
+      await registration.unregister();
+    }
+    // Clear all caches
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    console.log('Force cleared all service workers and caches');
   }
 }
 
