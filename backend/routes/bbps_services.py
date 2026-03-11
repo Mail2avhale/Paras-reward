@@ -526,7 +526,7 @@ async def debug_pay_bill(
     headers["request_hash"] = request_hash
     
     body = {
-        "amount": amount,
+        "amount": float(amount),  # FIXED: Eko requires numeric amount
         "operator_id": operator_id,
         "utility_acc_no": account,
         "confirmation_mobile_no": mobile,
@@ -679,16 +679,37 @@ async def fetch_bill(data: FetchBillRequest):
         
         # SUCCESS: status = 0
         if eko_status == 0:
-            bill_data = {
-                "bill_amount": eko_data.get("amount"),
-                "customer_name": eko_data.get("utilitycustomername"),
-                "bill_date": eko_data.get("billdate"),
-                "due_date": eko_data.get("duedate"),
-                "bill_number": eko_data.get("billnumber"),
-                "bill_fetch_response": eko_data.get("billfetchresponse"),
-                "operator_name": eko_data.get("operator_name"),
-                "raw_response": result
-            }
+            # Handle billDetailsList if present (for EMI/Loan and some operators)
+            bill_details_list = eko_data.get("billDetailsList", [])
+            
+            if bill_details_list and len(bill_details_list) > 0:
+                # Use first bill from list
+                first_bill = bill_details_list[0]
+                bill_data = {
+                    "bill_amount": first_bill.get("billAmount") or first_bill.get("netBillAmount") or eko_data.get("amount"),
+                    "customer_name": first_bill.get("customer_name") or eko_data.get("utilitycustomername"),
+                    "bill_date": first_bill.get("billDate") or eko_data.get("billdate"),
+                    "due_date": first_bill.get("billDueDate") or eko_data.get("duedate"),
+                    "bill_number": first_bill.get("billNumber") or eko_data.get("billnumber"),
+                    "bill_fetch_response": eko_data.get("billfetchresponse"),
+                    "operator_name": eko_data.get("billername") or eko_data.get("operator_name"),
+                    "bbps_ref_id": first_bill.get("bharatBillReferenceNumber"),
+                    "payment_status": first_bill.get("paymentStatus"),
+                    "bill_period": first_bill.get("billperiod"),
+                    "raw_response": result
+                }
+            else:
+                # Standard response format
+                bill_data = {
+                    "bill_amount": eko_data.get("amount"),
+                    "customer_name": eko_data.get("utilitycustomername"),
+                    "bill_date": eko_data.get("billdate"),
+                    "due_date": eko_data.get("duedate") or eko_data.get("billDueDate"),
+                    "bill_number": eko_data.get("billnumber"),
+                    "bill_fetch_response": eko_data.get("billfetchresponse"),
+                    "operator_name": eko_data.get("billername") or eko_data.get("operator_name"),
+                    "raw_response": result
+                }
             
             logging.info(f"[BBPS FETCH] Success: amount={bill_data['bill_amount']}, customer={bill_data['customer_name']}")
             
@@ -808,7 +829,7 @@ async def pay_bill(data: PayBillRequest):
         headers["request_hash"] = request_hash
         
         body = {
-            "amount": data.amount,
+            "amount": float(data.amount),  # FIXED: Eko requires numeric amount, not string
             "operator_id": data.operator_id,
             "utility_acc_no": data.account,
             "confirmation_mobile_no": data.mobile,
