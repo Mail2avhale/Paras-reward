@@ -68,6 +68,12 @@ async def bbps_post(url: str, headers: dict = None, data: dict = None, json_body
         return await client.post(url, headers=headers, json=json_body, timeout=timeout)
     return await client.post(url, headers=headers, data=data, timeout=timeout)
 
+
+async def bbps_get(url: str, headers: dict = None, timeout: int = 60) -> httpx.Response:
+    """Non-blocking async GET request for BBPS"""
+    client = get_bbps_http_client()
+    return await client.get(url, headers=headers, timeout=timeout)
+
 # ==================== EKO PRODUCTION CONFIG (ALL FROM ENV) ====================
 
 BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
@@ -204,11 +210,18 @@ def generate_request_hash(timestamp: str, account: str, amount: str) -> str:
 # ==================== REQUEST MODELS ====================
 
 class FetchBillRequest(BaseModel):
-    """Request model for bill fetch"""
+    """Request model for bill fetch - supports operator-specific parameters"""
     operator_id: str
     account: str          # utility_acc_no
     mobile: str           # confirmation_mobile_no
     sender_name: Optional[str] = "Customer"
+    # Operator-specific optional parameters
+    source_ip: Optional[str] = None
+    postalcode: Optional[str] = None  # For MSEB electricity
+    cycle_number: Optional[str] = None  # For MSEB
+    authenticator: Optional[str] = None  # For MSEB
+    dob: Optional[str] = None  # For LIC - DD/MM/YYYY format
+    extra_params: Optional[Dict[str, str]] = None  # For any other operator-specific params
     
     @validator('mobile')
     def validate_mobile(cls, v):
@@ -311,7 +324,7 @@ def health():
     """Health check endpoint"""
     return {
         "status": "PARAS REWARD BBPS RUNNING",
-        "version": "2.0",
+        "version": "2.1",
         "services": ["electricity", "dth", "fastag", "emi", "mobile_prepaid", "water", "credit_card", "insurance"]
     }
 
@@ -333,6 +346,76 @@ async def debug_config():
     }
 
 
+# ==================== GET OPERATOR PARAMETERS API (NEW) ====================
+
+@router.get("/operator-params/{operator_id}")
+async def get_operator_parameters(operator_id: str):
+    """
+    Get required parameters for a specific operator.
+    MUST call this before fetch/pay to know what params are needed.
+    
+    Reference: https://developers.eko.in/reference/bbps-operator-parameters
+    
+    Returns:
+    - param_name: Name of parameter to pass in fetch/pay API
+    - param_label: Label to show to user
+    - param_type: Numeric, Decimal, AlphaNumeric, or List
+    - regex: Validation regex
+    - error_message: Error message if validation fails
+    - fetchBill: 1 = Must call fetch before pay, 0 = Can pay directly
+    """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    try:
+        url = f"{BASE_URL}/v2/billpayments/operators/{operator_id}"
+        headers = generate_headers()
+        
+        logging.info(f"[BBPS OPERATOR PARAMS] Getting params for operator_id={operator_id}")
+        
+        response = await bbps_get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+        
+        logging.info(f"[BBPS OPERATOR PARAMS] HTTP Status: {response.status_code}")
+        logging.info(f"[BBPS OPERATOR PARAMS] Response: {response.text[:500] if response.text else 'empty'}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                f"Failed to get operator parameters: {response.text}",
+                "Could not fetch operator details. Please try again."
+            )
+        
+        result = response.json()
+        
+        # Return full response for debugging (Eko returns different status codes)
+        eko_status = result.get("status")
+        
+        # Handle various Eko response patterns
+        if eko_status == 0 or result.get("operator_name"):
+            return {
+                "success": True,
+                "operator_id": operator_id,
+                "operator_name": result.get("operator_name"),
+                "parameters": result.get("data", []),
+                "fetch_bill_required": result.get("fetchBill", 0) == 1,
+                "is_bbps": result.get("BBPS", 0) == 1,
+                "raw_response": result
+            }
+        else:
+            # Return raw response for debugging
+            return {
+                "success": False,
+                "operator_id": operator_id,
+                "error_code": eko_status,
+                "message": result.get("message", "Unknown error"),
+                "raw_response": result
+            }
+    
+    except Exception as e:
+        logging.error(f"[BBPS OPERATOR PARAMS] Error: {e}")
+        return create_error_response(500, str(e), "Service temporarily unavailable.")
+
+
 @router.post("/test-fetch")
 async def test_fetch_bill():
     """
@@ -347,9 +430,48 @@ async def test_fetch_bill():
     test_account = "123456789012"  # Dummy account
     test_mobile = "9999999999"
     
-    url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
+    results = {}
+    
+    # First get operator parameters
+    try:
+        params_url = f"{BASE_URL}/v2/billpayments/operators/{test_operator}"
+        headers = generate_headers()
+        params_response = await bbps_get(params_url, headers=headers, timeout=30)
+        results["operator_params"] = {
+            "http_status": params_response.status_code,
+            "response": params_response.text[:500] if params_response.text else "empty"
+        }
+    except Exception as e:
+        results["operator_params"] = {"error": str(e)}
+    
+    # Try GET method (as per documentation)
     client_ref_id = f"TEST{int(time.time() * 1000)}"
     
+    query_params = (
+        f"user_code={USER_CODE}"
+        f"&client_ref_id={client_ref_id}"
+        f"&utility_acc_no={test_account}"
+        f"&confirmation_mobile_no={test_mobile}"
+        f"&sender_name=TestUser"
+        f"&operator_id={test_operator}"
+        f"&latlong={DEFAULT_LATLONG}"
+        f"&source_ip=127.0.0.1"
+    )
+    
+    get_url = f"{BASE_URL}/v3/customer/payment/bbps/bill?initiator_id={INITIATOR_ID}&{query_params}"
+    
+    headers_get = generate_headers()
+    try:
+        response_get = await bbps_get(get_url, headers=headers_get, timeout=30)
+        results["get_v3"] = {
+            "http_status": response_get.status_code,
+            "response": response_get.text[:500] if response_get.text else "empty"
+        }
+    except Exception as e:
+        results["get_v3"] = {"error": str(e)}
+    
+    # Try POST v2 method (current implementation)
+    post_url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
     body = {
         "operator_id": test_operator,
         "utility_acc_no": test_account,
@@ -360,37 +482,21 @@ async def test_fetch_bill():
         "latlong": DEFAULT_LATLONG
     }
     
-    results = {}
-    
-    # Try 1: Form-urlencoded
-    headers_form = generate_headers()
-    headers_form["Content-Type"] = "application/x-www-form-urlencoded"
-    try:
-        response1 = await bbps_post(url, headers=headers_form, data=body, timeout=30)
-        results["form_urlencoded"] = {
-            "http_status": response1.status_code,
-            "response": response1.text[:300] if response1.text else "empty"
-        }
-    except Exception as e:
-        results["form_urlencoded"] = {"error": str(e)}
-    
-    # Try 2: JSON
     headers_json = generate_headers()
-    headers_json["Content-Type"] = "application/json"
     try:
-        response2 = await bbps_post(url, headers=headers_json, json_body=body, timeout=30)
-        results["json"] = {
-            "http_status": response2.status_code,
-            "response": response2.text[:300] if response2.text else "empty"
+        response_post = await bbps_post(post_url, headers=headers_json, json_body=body, timeout=30)
+        results["post_v2_json"] = {
+            "http_status": response_post.status_code,
+            "response": response_post.text[:500] if response_post.text else "empty"
         }
     except Exception as e:
-        results["json"] = {"error": str(e)}
+        results["post_v2_json"] = {"error": str(e)}
     
     return {
         "success": True,
-        "request_url": url,
+        "test_operator": test_operator,
         "results": results,
-        "recommendation": "Use the format that returns HTTP 200"
+        "recommendation": "Check which method returns HTTP 200 with valid data"
     }
 
 
@@ -404,12 +510,16 @@ async def fetch_bill(data: FetchBillRequest):
     Standard Process:
     1. Validate input parameters
     2. Generate authentication headers
-    3. Make API request to EKO
-    4. Handle HTTP errors (403, 404, 500, etc.)
-    5. Parse Eko response status
-    6. Return standardized response
+    3. Build request body with operator-specific params
+    4. Make API request to EKO
+    5. Handle HTTP errors (403, 404, 500, etc.)
+    6. Parse Eko response status
+    7. Return standardized response
     
     Works for: Electricity, DTH, FASTag, EMI, Water, etc.
+    
+    NOTE: Different operators require different parameters.
+    Call /operator-params/{operator_id} first to know what params are needed.
     """
     if not validate_bbps_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -419,6 +529,7 @@ async def fetch_bill(data: FetchBillRequest):
     try:
         url = f"{BASE_URL}/v2/billpayments/fetchbill?initiator_id={INITIATOR_ID}"
         
+        # Build base request body
         body = {
             "operator_id": data.operator_id,
             "utility_acc_no": data.account,
@@ -426,10 +537,28 @@ async def fetch_bill(data: FetchBillRequest):
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
-            "latlong": DEFAULT_LATLONG
+            "latlong": DEFAULT_LATLONG,
+            "source_ip": data.source_ip or "127.0.0.1"
         }
         
+        # Add operator-specific parameters if provided
+        if data.postalcode:
+            body["postalcode"] = data.postalcode
+        if data.cycle_number:
+            body["cycle_number"] = data.cycle_number
+        if data.authenticator:
+            body["authenticator"] = data.authenticator
+        if data.dob:
+            body["dob"] = data.dob
+        
+        # Add any extra operator-specific params
+        if data.extra_params:
+            for key, value in data.extra_params.items():
+                if key not in body:  # Don't override standard params
+                    body[key] = value
+        
         logging.info(f"[BBPS FETCH] client_ref={client_ref_id}, operator={data.operator_id}, account=***{data.account[-4:]}")
+        logging.info(f"[BBPS FETCH] Request body params: {list(body.keys())}")
         
         headers = generate_headers()
         
