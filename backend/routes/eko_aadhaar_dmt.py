@@ -140,7 +140,30 @@ async def send_aadhaar_otp(request: AadhaarOtpRequest):
                 data=otp_data
             )
             
-            result = response.json()
+            # Log raw response for debugging
+            logging.info(f"[AADHAAR-OTP] Raw response status: {response.status_code}")
+            logging.info(f"[AADHAAR-OTP] Raw response text: {response.text[:500] if response.text else 'EMPTY'}")
+            
+            # Handle empty response
+            if not response.text or response.text.strip() == "":
+                return {
+                    "success": False,
+                    "message": "Eko service not responding. Please try again later.",
+                    "error_type": "EKO_SERVICE_DOWN",
+                    "http_status": response.status_code
+                }
+            
+            try:
+                result = response.json()
+            except Exception as json_err:
+                logging.error(f"[AADHAAR-OTP] JSON parse error: {json_err}, raw: {response.text[:200]}")
+                return {
+                    "success": False,
+                    "message": "Invalid response from Eko. Please try again.",
+                    "error_type": "INVALID_RESPONSE",
+                    "raw_response": response.text[:200] if response.text else "EMPTY"
+                }
+            
             logging.info(f"[AADHAAR-OTP] Response: {result}")
             
             response_code = result.get("response_status_id", -1)
@@ -192,12 +215,23 @@ async def send_aadhaar_otp(request: AadhaarOtpRequest):
                     "eko_response": result
                 }
                 
-    except Exception as e:
-        logging.error(f"[AADHAAR-OTP] Error: {e}")
+    except httpx.RequestError as req_err:
+        logging.error(f"[AADHAAR-OTP] Network error: {type(req_err).__name__}: {req_err}")
         return {
             "success": False,
-            "message": f"Error: {str(e)}",
-            "error_type": "SYSTEM_ERROR"
+            "message": "Network error connecting to Eko. Please check your internet connection.",
+            "error_type": "NETWORK_ERROR",
+            "details": str(req_err)
+        }
+    except Exception as e:
+        logging.error(f"[AADHAAR-OTP] Error: {type(e).__name__}: {e}")
+        import traceback
+        logging.error(f"[AADHAAR-OTP] Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "message": f"System error: {type(e).__name__}. Please try again.",
+            "error_type": "SYSTEM_ERROR",
+            "details": str(e) if str(e) else "Unknown error"
         }
 
 
