@@ -481,6 +481,18 @@ const AdminChatbotWithdrawals = ({ user }) => {
                           >
                             <Hash className="w-4 h-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              setSelectedRequest(req);
+                              setShowRejectModal(true);
+                            }}
+                            disabled={processing}
+                            title="Reject & Refund"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
                         </>
                       )}
                     </div>
@@ -728,6 +740,16 @@ const AdminChatbotWithdrawals = ({ user }) => {
                     >
                       <Hash className="w-4 h-4 mr-2" />
                       Enter UTR Manual
+                    </Button>
+                    
+                    {/* Reject Button for Processing */}
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectModal(true)}
+                      disabled={processing}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
                     </Button>
                   </>
                 )}
