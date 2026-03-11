@@ -426,6 +426,19 @@ const RedeemPageV2 = ({ user }) => {
     fetchUserData();
     fetchRequests();
     loadQuickPayItems();
+    
+    // Handle "Pay Again" from URL params
+    const operatorFromUrl = searchParams.get('operator');
+    const accountFromUrl = searchParams.get('account');
+    if (operatorFromUrl || accountFromUrl) {
+      setFormData(prev => ({
+        ...prev,
+        operator: operatorFromUrl || '',
+        consumer_number: accountFromUrl || '',
+        mobile_number: accountFromUrl || '',
+        loan_account: accountFromUrl || ''
+      }));
+    }
   }, [user, navigate]);
   
   // Load Quick Pay items from localStorage
@@ -1448,7 +1461,16 @@ const RedeemPageV2 = ({ user }) => {
             data-testid="my-requests-btn"
           >
             <Clock className="h-5 w-5 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300 hidden sm:inline">My Requests</span>
+            <span className="text-sm font-medium text-purple-300 hidden sm:inline">Withdrawals</span>
+          </button>
+          {/* Bill History Button */}
+          <button
+            onClick={() => navigate('/bill-history')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-2xl hover:border-emerald-400 transition-all"
+            data-testid="bill-history-btn"
+          >
+            <Receipt className="h-5 w-5 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-300 hidden sm:inline">Bill History</span>
           </button>
         </div>
         

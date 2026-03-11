@@ -228,6 +228,7 @@ const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
+const BillPaymentHistory = lazy(() => import("@/pages/BillPaymentHistory"));
 
 // ============ MANAGER PAGES REMOVED ============
 // Manager now uses Admin panel with restricted permissions
@@ -437,6 +438,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             
             {/* User Withdrawal History - View and cancel requests */}
             <Route path="/withdrawal-history" element={user ? <Suspense fallback={<LoadingFallback />}><UserWithdrawalHistory user={user} /></Suspense> : <Navigate to="/login" />} />
+            
+            {/* Bill Payment History - View past bill payments and pay again */}
+            <Route path="/bill-history" element={user ? <Suspense fallback={<LoadingFallback />}><BillPaymentHistory user={user} /></Suspense> : <Navigate to="/login" />} />
             
             {/* Old bill-payments route redirects to new redeem page */}
             <Route path="/bill-payments" element={<Navigate to="/redeem" replace />} />
