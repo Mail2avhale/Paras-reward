@@ -10184,10 +10184,13 @@ async def send_renewal_notifications():
         window_start = target_date - timedelta(hours=12)
         window_end = target_date + timedelta(hours=12)
         
-        async for user in db.users.find({
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        expiring_users = await db.users.find({
             "subscription_plan": {"$in": ["startup", "growth", "elite"]},
             "subscription_expiry": {"$exists": True}
-        }):
+        }).to_list(length=1000)
+        
+        for user in expiring_users:
             expiry_str = user.get("subscription_expiry")
             if not expiry_str:
                 continue
@@ -10278,10 +10281,13 @@ async def get_expiring_subscriptions():
     expiry_threshold = now + timedelta(days=7)
     
     expiring_users = []
-    async for user in db.users.find({
+    # FIX: Use to_list() instead of async for to prevent cursor leak
+    all_users = await db.users.find({
         "subscription_plan": {"$in": ["startup", "growth", "elite"]},
         "subscription_expiry": {"$exists": True}
-    }, {"_id": 0, "password_hash": 0}):
+    }, {"_id": 0, "password_hash": 0}).to_list(length=1000)
+    
+    for user in all_users:
         expiry_str = user.get("subscription_expiry")
         if expiry_str:
             try:
@@ -10416,11 +10422,13 @@ async def check_expired_subscriptions():
     downgraded_count = 0
     grace_period_users = []
     
-    # Find all paid users
-    async for user in db.users.find({
+    # FIX: Use to_list() instead of async for to prevent cursor leak
+    all_paid_users = await db.users.find({
         "subscription_plan": {"$in": ["startup", "growth", "elite"]},
         "subscription_expiry": {"$exists": True}
-    }):
+    }).to_list(length=2000)
+    
+    for user in all_paid_users:
         expiry_str = user.get("subscription_expiry")
         if not expiry_str:
             continue
@@ -23866,24 +23874,20 @@ async def export_profit_loss(year: int = None, month: int = None, format: str = 
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
         
-        # Income
+        # Income - FIX: Use to_list() to prevent cursor leak
         vip_total = await db.vippayments.count_documents({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}})
-        vip_revenue = 0
-        async for p in db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
-            vip_revenue += p.get("amount", 0)
+        vip_payments = await db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}).to_list(length=500)
+        vip_revenue = sum(p.get("amount", 0) for p in vip_payments)
         
-        ads_revenue = 0
-        async for a in db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}):
-            ads_revenue += a.get("revenue_amount", 0)
+        ads_records = await db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}).to_list(length=100)
+        ads_revenue = sum(a.get("revenue_amount", 0) for a in ads_records)
         
-        # Expenses
-        fixed_expenses = 0
-        async for e in db.fixed_expenses.find({"month": f"{target_year}-{target_month:02d}"}, {"amount": 1}):
-            fixed_expenses += e.get("amount", 0)
+        # Expenses - FIX: Use to_list() to prevent cursor leak
+        fixed_exp_records = await db.fixed_expenses.find({"month": f"{target_year}-{target_month:02d}"}, {"amount": 1}).to_list(length=100)
+        fixed_expenses = sum(e.get("amount", 0) for e in fixed_exp_records)
         
-        variable_expenses = 0
-        async for e in db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
-            variable_expenses += e.get("amount", 0)
+        var_exp_records = await db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}).to_list(length=500)
+        variable_expenses = sum(e.get("amount", 0) for e in var_exp_records)
         
         # Build CSV
         import io
@@ -24017,29 +24021,24 @@ async def create_monthly_pl_snapshot():
         start_str = start_date.isoformat()
         end_str = end_date.isoformat()
         
-        # Income
-        vip_income = 0
-        async for p in db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
-            vip_income += p.get("amount", 0)
+        # Income - FIX: Use to_list() to prevent cursor leak
+        vip_payments_list = await db.vippayments.find({"status": "approved", "approved_at": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}).to_list(length=500)
+        vip_income = sum(p.get("amount", 0) for p in vip_payments_list)
         
-        ads_income = 0
-        async for a in db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}):
-            ads_income += a.get("revenue_amount", 0)
+        ads_income_list = await db.ads_income.find({"date": {"$gte": start_str[:10], "$lt": end_str[:10]}}, {"revenue_amount": 1}).to_list(length=100)
+        ads_income = sum(a.get("revenue_amount", 0) for a in ads_income_list)
         
-        other_income = 0
-        async for o in db.other_income.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
-            other_income += o.get("amount", 0)
+        other_income_list = await db.other_income.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}).to_list(length=100)
+        other_income = sum(o.get("amount", 0) for o in other_income_list)
         
         total_income = vip_income + ads_income + other_income
         
-        # Expenses
-        fixed_expenses = 0
-        async for e in db.fixed_expenses.find({"month": month_key}, {"amount": 1}):
-            fixed_expenses += e.get("amount", 0)
+        # Expenses - FIX: Use to_list() to prevent cursor leak
+        fixed_exp_list = await db.fixed_expenses.find({"month": month_key}, {"amount": 1}).to_list(length=100)
+        fixed_expenses = sum(e.get("amount", 0) for e in fixed_exp_list)
         
-        variable_expenses = 0
-        async for e in db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}):
-            variable_expenses += e.get("amount", 0)
+        var_exp_list = await db.expenses.find({"date": {"$gte": start_str, "$lt": end_str}}, {"amount": 1}).to_list(length=500)
+        variable_expenses = sum(e.get("amount", 0) for e in var_exp_list)
         
         total_expenses = fixed_expenses + variable_expenses
         net_pl = total_income - total_expenses
@@ -27275,11 +27274,14 @@ async def get_users_at_risk_of_burn():
     # Free users with PRC expiring soon (within 12 hours)
     warning_threshold = now - timedelta(hours=36)  # 36 hours old = 12 hours to burn
     
+    # FIX: Use to_list() instead of async for to prevent cursor leak
     free_users_at_risk = []
-    async for user in db.users.find({
+    free_users_list = await db.users.find({
         "membership_type": {"$ne": "vip"},
         "mining_history": {"$exists": True}
-    }).limit(50):
+    }).limit(50).to_list(length=50)
+    
+    for user in free_users_list:
         at_risk_prc = 0
         for entry in user.get("mining_history", []):
             if not entry.get("burned", False):
@@ -27298,12 +27300,14 @@ async def get_users_at_risk_of_burn():
                 "at_risk_prc": at_risk_prc
             })
     
-    # VIP users expired (in grace period)
+    # VIP users expired (in grace period) - FIX: Use to_list()
     expired_vips_at_risk = []
-    async for user in db.users.find({
+    expired_vips_list = await db.users.find({
         "membership_type": "vip",
         "vip_expiry": {"$exists": True}
-    }).limit(50):
+    }).limit(50).to_list(length=50)
+    
+    for user in expired_vips_list:
         try:
             expiry = datetime.fromisoformat(user.get("vip_expiry", "").replace('Z', '+00:00'))
             if expiry < now and expiry > grace_period_end:

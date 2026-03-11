@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://eko-compliance-check.preview.emergentagent.com';
+const BASE_URL = 'https://mongodb-tuning.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   
