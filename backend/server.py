@@ -478,16 +478,16 @@ is_atlas = 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url
 # Configure connection options - OPTIMIZED for production performance & reliability
 connection_options = {
     # ========== CONNECTION POOL SETTINGS ==========
-    'maxPoolSize': 50,          # Increased pool for concurrent requests (was 20)
-    'minPoolSize': 5,           # Keep 5 warm connections (was 1) - FASTER responses
-    'maxIdleTimeMS': 120000,    # 2 min idle timeout (was 1 min)
-    'waitQueueTimeoutMS': 10000, # Wait up to 10s for connection (was 3s)
-    'maxConnecting': 5,         # Allow 5 parallel connection attempts
+    'maxPoolSize': 100,          # Increased to 100 for 5000 users
+    'minPoolSize': 10,           # Keep 10 warm connections
+    'maxIdleTimeMS': 30000,      # 30 sec idle timeout - RELEASE FASTER
+    'waitQueueTimeoutMS': 5000,  # 5s wait timeout - FAIL FAST
+    'maxConnecting': 10,         # Allow 10 parallel connection attempts
     
     # ========== TIMEOUT SETTINGS ==========
-    'serverSelectionTimeoutMS': 10000,  # 10s to select server (was 3s)
-    'connectTimeoutMS': 10000,          # 10s to connect (was 3s)
-    'socketTimeoutMS': 30000,           # 30s socket timeout (was 20s)
+    'serverSelectionTimeoutMS': 5000,   # 5s to select server
+    'connectTimeoutMS': 5000,           # 5s to connect
+    'socketTimeoutMS': 20000,           # 20s socket timeout
     
     # ========== RELIABILITY SETTINGS ==========
     'retryWrites': True,        # Auto-retry failed writes
@@ -3582,7 +3582,8 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     # BATCH QUERY 1: Get ALL active users (paid + free) for display - same logic as Invite page
     all_active_uids = set()
     try:
-        async for user in db.users.find(
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        active_users = await db.users.find(
             {
                 "uid": {"$in": all_uids},
                 "$or": [
@@ -3591,7 +3592,9 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 ]
             },
             {"_id": 0, "uid": 1}
-        ):
+        ).to_list(length=1000)  # Limit to prevent memory issues
+        
+        for user in active_users:
             all_active_uids.add(user["uid"])
     except Exception as e:
         print(f"Batch all-user mining check error: {e}")
@@ -3600,14 +3603,17 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     remaining_all_uids = [uid for uid in all_uids if uid not in all_active_uids]
     if remaining_all_uids:
         try:
-            async for tx in db.transactions.find(
+            # FIX: Use to_list() instead of async for to prevent cursor leak
+            active_txs = await db.transactions.find(
                 {
                     "user_id": {"$in": remaining_all_uids},
                     "created_at": {"$gte": twenty_four_hours_ago.isoformat()},
                     "type": {"$in": ["mining", "tap_game", "rain_drop", "bonus"]}
                 },
                 {"_id": 0, "user_id": 1}
-            ):
+            ).to_list(length=1000)  # Limit to prevent memory issues
+            
+            for tx in active_txs:
                 all_active_uids.add(tx["user_id"])
         except Exception as e:
             print(f"All user transaction check error: {e}")
@@ -3621,7 +3627,8 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
     # BATCH QUERY 2: Get active PAID users only (for bonus calculation)
     active_by_mining = set()
     try:
-        async for user in db.users.find(
+        # FIX: Use to_list() instead of async for to prevent cursor leak
+        paid_active_users = await db.users.find(
             {
                 "uid": {"$in": all_paid_uids},
                 "$or": [
@@ -3630,7 +3637,9 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 ]
             },
             {"_id": 0, "uid": 1}
-        ):
+        ).to_list(length=500)
+        
+        for user in paid_active_users:
             active_by_mining.add(user["uid"])
     except Exception as e:
         print(f"Batch mining check error: {e}")
@@ -3655,7 +3664,9 @@ async def count_active_referrals_by_level_with_weights(user_id: str):
                 },
                 {"$group": {"_id": "$user_id"}}
             ]
-            async for doc in db.transactions.aggregate(pipeline):
+            # FIX: Use to_list() instead of async for to prevent cursor leak
+            active_tx_docs = await db.transactions.aggregate(pipeline).to_list(length=500)
+            for doc in active_tx_docs:
                 active_by_transactions.add(doc["_id"])
         except Exception as e:
             print(f"Batch transaction check error: {e}")
@@ -29759,20 +29770,21 @@ async def get_referral_levels(user_id: str):
     # SUPER AGGRESSIVE SEARCH: Find ALL users who might be referred by this user
     all_direct_referrals = []
     try:
-        # First try exact match
-        async for referred_user in db.users.find(
+        # First try exact match - FIX: Use to_list() to prevent cursor leak
+        all_direct_referrals = await db.users.find(
             {"referred_by": {"$in": search_values}},
             {"_id": 0}
-        ):
-            all_direct_referrals.append(referred_user)
+        ).to_list(length=500)
         
         # If no results, try case-insensitive regex search
         if not all_direct_referrals and ref_code:
             regex_pattern = f"^{ref_code}$"
-            async for referred_user in db.users.find(
+            regex_results = await db.users.find(
                 {"referred_by": {"$regex": regex_pattern, "$options": "i"}},
                 {"_id": 0}
-            ):
+            ).to_list(length=100)
+            
+            for referred_user in regex_results:
                 if referred_user not in all_direct_referrals:
                     all_direct_referrals.append(referred_user)
                     
