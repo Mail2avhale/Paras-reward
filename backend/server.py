@@ -1628,10 +1628,10 @@ async def auto_sync_razorpay_payments():
             "yearly": 336
         }
         
-        # Get all pending orders - include more statuses
+        # Get all pending orders - REDUCED limit to prevent event loop blocking
         pending_orders = await db.razorpay_orders.find({
             "status": {"$in": ["created", "pending", "attempted"]}
-        }).to_list(200)  # Increased limit
+        }).to_list(20)  # Reduced from 200 to 20 to minimize blocking time
         
         if not pending_orders:
             print(f"[AUTO-SYNC] No pending orders to sync")
@@ -1646,13 +1646,15 @@ async def auto_sync_razorpay_payments():
             user_id = order.get("user_id")
             
             try:
-                # Fetch order from Razorpay API
-                razorpay_order = razorpay_client.order.fetch(order_id)
+                # FIXED: Use asyncio.to_thread() to prevent blocking the event loop
+                # Razorpay SDK uses synchronous requests library
+                razorpay_order = await asyncio.to_thread(razorpay_client.order.fetch, order_id)
                 razorpay_status = razorpay_order.get("status")
                 
                 if razorpay_status == "paid":
                     # Order is paid - fetch payment details
-                    payments = razorpay_client.order.payments(order_id)
+                    # FIXED: Use asyncio.to_thread() for async-safe call
+                    payments = await asyncio.to_thread(razorpay_client.order.payments, order_id)
                     
                     # Find captured payment
                     captured_payment = None
@@ -1792,10 +1794,11 @@ async def auto_sync_captured_from_razorpay():
         # Fetch recent captured payments (last 24 hours)
         from_timestamp = int((datetime.now(timezone.utc) - timedelta(hours=24)).timestamp())
         
-        payments_response = razorpay_client.payment.all({
-            "count": 50,
-            "from": from_timestamp
-        })
+        # FIXED: Use asyncio.to_thread() to prevent blocking the event loop
+        payments_response = await asyncio.to_thread(
+            razorpay_client.payment.all,
+            {"count": 50, "from": from_timestamp}
+        )
         
         all_payments = payments_response.get("items", [])
         captured_payments = [p for p in all_payments if p.get("status") == "captured"]
@@ -8514,13 +8517,14 @@ async def manual_sync_razorpay_payments():
             user_id = order.get("user_id")
             
             try:
-                # Fetch order from Razorpay API
-                razorpay_order = razorpay_client.order.fetch(order_id)
+                # FIXED: Use asyncio.to_thread() to prevent blocking the event loop
+                razorpay_order = await asyncio.to_thread(razorpay_client.order.fetch, order_id)
                 razorpay_status = razorpay_order.get("status")
                 
                 if razorpay_status == "paid":
                     # Order is paid - fetch payment details
-                    payments = razorpay_client.order.payments(order_id)
+                    # FIXED: Use asyncio.to_thread() for async-safe call
+                    payments = await asyncio.to_thread(razorpay_client.order.payments, order_id)
                     
                     # Find captured payment
                     captured_payment = None
@@ -8650,7 +8654,8 @@ async def search_razorpay_payment(request: Request):
         # If payment_id provided, fetch directly
         if payment_id:
             try:
-                payment = razorpay_client.payment.fetch(payment_id)
+                # FIXED: Use asyncio.to_thread() to prevent blocking
+                payment = await asyncio.to_thread(razorpay_client.payment.fetch, payment_id)
                 return {
                     "success": True,
                     "found": True,
@@ -8683,7 +8688,8 @@ async def search_razorpay_payment(request: Request):
             except:
                 pass
         
-        payments_response = razorpay_client.payment.all(search_params)
+        # FIXED: Use asyncio.to_thread() to prevent blocking
+        payments_response = await asyncio.to_thread(razorpay_client.payment.all, search_params)
         all_payments = payments_response.get("items", [])
         
         # Filter by amount if provided
@@ -8780,8 +8786,9 @@ async def manual_activate_subscription(request: Request):
         razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
         
         # Verify payment exists and is captured
+        # FIXED: Use asyncio.to_thread() to prevent blocking
         try:
-            payment = razorpay_client.payment.fetch(payment_id)
+            payment = await asyncio.to_thread(razorpay_client.payment.fetch, payment_id)
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"Payment not found in Razorpay: {e}")
         
@@ -8956,11 +8963,11 @@ async def bulk_sync_captured_payments(request: Request):
         
         logging.info(f"[BULK-SYNC] Fetching payments from Razorpay since {from_timestamp}")
         
-        # Fetch payments with status=captured
-        payments_response = razorpay_client.payment.all({
-            "count": 100,  # Max 100 at a time
-            "from": from_timestamp
-        })
+        # FIXED: Use asyncio.to_thread() to prevent blocking
+        payments_response = await asyncio.to_thread(
+            razorpay_client.payment.all,
+            {"count": 100, "from": from_timestamp}
+        )
         
         all_payments = payments_response.get("items", [])
         logging.info(f"[BULK-SYNC] Found {len(all_payments)} total payments from Razorpay")
@@ -9158,7 +9165,8 @@ async def sync_single_razorpay_order(request: Request):
         user_id = order.get("user_id")
         
         # Fetch from Razorpay API
-        razorpay_order = razorpay_client.order.fetch(order_id)
+        # FIXED: Use asyncio.to_thread() to prevent blocking
+        razorpay_order = await asyncio.to_thread(razorpay_client.order.fetch, order_id)
         razorpay_status = razorpay_order.get("status")
         
         if razorpay_status != "paid":
@@ -9170,7 +9178,8 @@ async def sync_single_razorpay_order(request: Request):
             }
         
         # Get captured payment
-        payments = razorpay_client.order.payments(order_id)
+        # FIXED: Use asyncio.to_thread() to prevent blocking
+        payments = await asyncio.to_thread(razorpay_client.order.payments, order_id)
         captured_payment = None
         for payment in payments.get("items", []):
             if payment.get("status") == "captured":
