@@ -462,16 +462,18 @@ async def check_user_eligibility(uid: str) -> dict:
             "kyc_status": kyc_status
         }
     
-    # Get PRC balance
+    # Get PRC balance and dynamic rate
     prc_balance = user.get("prc_balance", 0)
-    inr_balance = prc_balance / PRC_TO_INR_RATE
+    prc_rate = get_prc_rate_from_db()
+    inr_balance = prc_balance / prc_rate
     
     if inr_balance < MIN_WITHDRAWAL_INR:
         return {
             "eligible": False,
             "reason": f"Minimum ₹{MIN_WITHDRAWAL_INR} आवश्यक आहे. तुमचा balance: ₹{inr_balance:.0f}",
             "balance_inr": inr_balance,
-            "prc_balance": prc_balance
+            "prc_balance": prc_balance,
+            "prc_rate": prc_rate
         }
     
     return {
@@ -481,7 +483,8 @@ async def check_user_eligibility(uid: str) -> dict:
         "prc_balance": prc_balance,
         "balance_inr": inr_balance,
         "min_withdrawal": MIN_WITHDRAWAL_INR,
-        "max_withdrawal": inr_balance
+        "max_withdrawal": inr_balance,
+        "prc_rate": prc_rate
     }
 
 # ==================== API ENDPOINTS ====================

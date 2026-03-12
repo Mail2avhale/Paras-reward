@@ -20252,8 +20252,18 @@ async def get_comprehensive_analytics(
     month_start = today_start.replace(day=1)
     year_start = today_start.replace(month=1, day=1)
     
-    # PRC Rate (10 PRC = ₹1 INR, so 1 PRC = ₹0.1)
-    PRC_TO_INR_RATE = 0.1  # Correct rate: 10 PRC = ₹1
+    # PRC Rate - DYNAMIC from database
+    def get_prc_rate_sync():
+        try:
+            settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+            if settings:
+                rate = settings.get("prc_to_inr_rate", 100)
+                return 1 / rate  # Convert to INR per PRC (e.g., 100 PRC = 1 INR means 1 PRC = 0.01 INR)
+            return 0.01  # Default: 1 PRC = ₹0.01
+        except:
+            return 0.01
+    
+    PRC_TO_INR_RATE = get_prc_rate_sync()
     
     # ===== 1. PRC CIRCULATION STATS =====
     prc_circulation = await asyncio.gather(
@@ -35581,7 +35591,8 @@ async def get_chart_of_accounts():
         total_prc = await db.users.aggregate([
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(length=1)
-        prc_liability = (total_prc[0]["total"] if total_prc else 0) * PRC_TO_INR_RATE
+        prc_rate = get_prc_ledger_rate()  # Dynamic rate
+        prc_liability = (total_prc[0]["total"] if total_prc else 0) * prc_rate
         account_balances["2002"] = prc_liability
         
         # Capital from capital_entries collection
@@ -35834,7 +35845,8 @@ async def get_trial_balance(as_of_date: str = None):
         total_prc = await db.users.aggregate([
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(length=1)
-        prc_liability = (total_prc[0]["total"] if total_prc else 0) * PRC_TO_INR_RATE
+        prc_rate = get_prc_ledger_rate()  # Dynamic rate
+        prc_liability = (total_prc[0]["total"] if total_prc else 0) * prc_rate
         if prc_liability > 0:
             credit_accounts.append({
                 "code": "2002",
@@ -35989,8 +36001,19 @@ async def add_journal_entry(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== PRC LEDGER SYSTEM ====================
-# Conversion rate: 10 PRC = ₹1 INR (or 1000 PRC = ₹100)
-PRC_TO_INR_RATE = 0.1  # 1 PRC = ₹0.1
+# PRC Rate - DYNAMIC from database
+def get_prc_ledger_rate():
+    """Get PRC to INR rate for ledger calculations"""
+    try:
+        settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+        if settings:
+            rate = settings.get("prc_to_inr_rate", 100)
+            return 1 / rate  # 100 PRC = 1 INR means 1 PRC = 0.01 INR
+        return 0.01
+    except:
+        return 0.01
+
+PRC_TO_INR_RATE = 0.01  # Default, actual calculated dynamically
 
 @api_router.get("/admin/accounting/prc-ledger")
 async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all"):
@@ -36016,6 +36039,7 @@ async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all
             amount = txn.get("amount", 0)
             is_credit = entry_type in ["mining", "tap_game", "referral", "admin_credit", "cashback", "prc_rain_gain", "withdrawal_rejected"]
             
+            prc_rate = get_prc_ledger_rate()  # Dynamic rate
             entries.append({
                 "id": str(txn.get("_id", "")),
                 "transaction_id": txn.get("transaction_id", ""),
@@ -36024,7 +36048,7 @@ async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all
                 "type": entry_type,
                 "user_id": txn.get("user_id", ""),
                 "prc_amount": amount,
-                "inr_value": round(amount * PRC_TO_INR_RATE, 2),
+                "inr_value": round(amount * prc_rate, 2),
                 "dr_cr": "CR" if is_credit else "DR",
                 "balance_after": txn.get("balance_after", 0)
             })
@@ -36051,16 +36075,19 @@ async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all
         
         total = await db.transactions.count_documents(query)
         
+        prc_rate = get_prc_ledger_rate()  # Dynamic rate
+        prc_rate_display = int(1 / prc_rate) if prc_rate > 0 else 100
+        
         return {
             "summary": {
                 "total_mined_prc": round(mined_prc, 2),
-                "total_mined_inr": round(mined_prc * PRC_TO_INR_RATE, 2),
+                "total_mined_inr": round(mined_prc * prc_rate, 2),
                 "total_consumed_prc": round(consumed_prc, 2),
-                "total_consumed_inr": round(consumed_prc * PRC_TO_INR_RATE, 2),
+                "total_consumed_inr": round(consumed_prc * prc_rate, 2),
                 "total_burned_prc": round(burned_prc, 2),
-                "total_burned_inr": round(burned_prc * PRC_TO_INR_RATE, 2),
+                "total_burned_inr": round(burned_prc * prc_rate, 2),
                 "net_circulation_prc": round(mined_prc - consumed_prc - burned_prc, 2),
-                "conversion_rate": "10 PRC = ₹1"
+                "conversion_rate": f"{prc_rate_display} PRC = ₹1"
             },
             "entries": entries,
             "pagination": {
@@ -36105,15 +36132,17 @@ async def sync_prc_to_cash_book(admin_id: str = ""):
         
         now = datetime.utcnow().isoformat()
         entries_added = 0
+        prc_rate = get_prc_ledger_rate()  # Dynamic rate
+        prc_rate_display = int(1 / prc_rate) if prc_rate > 0 else 100
         
         # Add PRC Income entry to Cash Book (virtual asset)
         if income_total > 0:
-            inr_value = round(income_total * PRC_TO_INR_RATE, 2)
+            inr_value = round(income_total * prc_rate, 2)
             await db.cash_book.insert_one({
                 "entry_id": str(uuid.uuid4()),
                 "entry_type": "income",
                 "amount": inr_value,
-                "description": f"PRC Mined/Earned ({income_total:.2f} PRC @ ₹0.1/PRC)",
+                "description": f"PRC Mined/Earned ({income_total:.2f} PRC @ {prc_rate_display} PRC = ₹1)",
                 "category": "prc_income",
                 "reference_no": f"PRC-SYNC-{now[:10]}",
                 "date": now,
@@ -36125,12 +36154,12 @@ async def sync_prc_to_cash_book(admin_id: str = ""):
         
         # Add PRC Consumption as liability reduction (income to company)
         if expense_total > 0:
-            inr_value = round(expense_total * PRC_TO_INR_RATE, 2)
+            inr_value = round(expense_total * prc_rate, 2)
             await db.cash_book.insert_one({
                 "entry_id": str(uuid.uuid4()),
                 "entry_type": "income",
                 "amount": inr_value,
-                "description": f"PRC Redeemed/Consumed ({expense_total:.2f} PRC @ ₹0.1/PRC)",
+                "description": f"PRC Redeemed/Consumed ({expense_total:.2f} PRC @ {prc_rate_display} PRC = ₹1)",
                 "category": "prc_redemption",
                 "reference_no": f"PRC-REDEEM-{now[:10]}",
                 "date": now,
@@ -36155,8 +36184,8 @@ async def sync_prc_to_cash_book(admin_id: str = ""):
                 "prc_income": income_total,
                 "prc_consumed": expense_total,
                 "prc_burned": burn_total,
-                "inr_income_value": round(income_total * PRC_TO_INR_RATE, 2),
-                "inr_consumed_value": round(expense_total * PRC_TO_INR_RATE, 2)
+                "inr_income_value": round(income_total * prc_rate, 2),
+                "inr_consumed_value": round(expense_total * prc_rate, 2)
             }
         }
     except Exception as e:
@@ -36242,7 +36271,7 @@ async def get_profit_loss_statement(month: int = None, year: int = None):
                 "mined": round(prc_mined, 2),
                 "consumed": round(prc_consumed, 2),
                 "burned": round(prc_burned, 2),
-                "net_liability": round((prc_mined - prc_consumed - prc_burned) * PRC_TO_INR_RATE, 2)
+                "net_liability": round((prc_mined - prc_consumed - prc_burned) * get_prc_ledger_rate(), 2)
             },
             "generated_at": datetime.utcnow().isoformat()
         }
@@ -36266,7 +36295,7 @@ async def get_balance_sheet():
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(length=1)
         prc_liability = total_prc[0]["total"] if total_prc else 0
-        prc_liability_inr = round(prc_liability * PRC_TO_INR_RATE, 2)
+        prc_liability_inr = round(prc_liability * get_prc_ledger_rate(), 2)
         
         # Get capital entries from dedicated collection
         opening_capital_entries = await db.capital_entries.find({"entry_type": "opening_capital"}).to_list(length=1000)
@@ -36415,6 +36444,7 @@ async def get_prc_flow_report(month: int = None, year: int = None):
             else:
                 daily_stats[date_str]["outflow"] += amount
         
+        prc_rate = get_prc_ledger_rate()  # Dynamic rate
         return {
             "report_type": "PRC Flow Report",
             "period": f"{start_date.strftime('%B %Y')}",
@@ -36423,16 +36453,16 @@ async def get_prc_flow_report(month: int = None, year: int = None):
             "inflow": {
                 "breakdown": {k: round(v, 2) for k, v in inflow.items()},
                 "total": round(total_inflow, 2),
-                "inr_value": round(total_inflow * PRC_TO_INR_RATE, 2)
+                "inr_value": round(total_inflow * prc_rate, 2)
             },
             "outflow": {
                 "breakdown": {k: round(v, 2) for k, v in outflow.items()},
                 "total": round(total_outflow, 2),
-                "inr_value": round(total_outflow * PRC_TO_INR_RATE, 2)
+                "inr_value": round(total_outflow * prc_rate, 2)
             },
             "net_flow": {
                 "prc": round(net_flow, 2),
-                "inr_value": round(net_flow * PRC_TO_INR_RATE, 2)
+                "inr_value": round(net_flow * prc_rate, 2)
             },
             "daily_breakdown": [{
                 "date": date,
@@ -36741,7 +36771,7 @@ async def get_accounts_payable(status: str = "all", page: int = 1, limit: int = 
         prc_liability = await db.users.aggregate([
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(length=1)
-        prc_redemption_liability = (prc_liability[0]["total"] if prc_liability else 0) * PRC_TO_INR_RATE
+        prc_redemption_liability = (prc_liability[0]["total"] if prc_liability else 0) * get_prc_ledger_rate()
         
         return {
             "summary": {
@@ -37215,7 +37245,7 @@ async def get_financial_ratios():
         prc_total = await db.users.aggregate([
             {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
         ]).to_list(length=1)
-        prc_liability = (prc_total[0]["total"] if prc_total else 0) * PRC_TO_INR_RATE
+        prc_liability = (prc_total[0]["total"] if prc_total else 0) * get_prc_ledger_rate()
         
         ap_pending = await db.accounts_payable.find({"status": {"$in": ["pending", "overdue"]}}).to_list(length=1000)
         total_ap = sum(p.get("amount", 0) for p in ap_pending)

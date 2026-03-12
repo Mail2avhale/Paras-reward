@@ -50,8 +50,8 @@ EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
 # Whitelisted IPs
 SOURCE_IP = "34.44.149.98"
 
-# Business Rules
-PRC_TO_INR_RATE = 100  # 100 PRC = ₹1
+# Business Rules - Defaults (actual values from DB)
+DEFAULT_PRC_TO_INR_RATE = 100  # 100 PRC = ₹1
 MIN_REDEEM_INR = 100
 MAX_DAILY_INR = 5000
 
@@ -67,6 +67,24 @@ def set_db(database):
 
 def get_db():
     return db
+
+def get_prc_rate():
+    """Get PRC to INR rate from database - DYNAMIC"""
+    try:
+        if db is None:
+            return DEFAULT_PRC_TO_INR_RATE
+        
+        settings = db.dmt_settings.find_one({"_id": "dmt_config"})
+        if settings:
+            return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
+        
+        admin_settings = db.settings.find_one({"key": "dmt_settings"})
+        if admin_settings:
+            return admin_settings.get("prc_rate", DEFAULT_PRC_TO_INR_RATE)
+        
+        return DEFAULT_PRC_TO_INR_RATE
+    except:
+        return DEFAULT_PRC_TO_INR_RATE
 
 
 # ============================================================================
@@ -176,13 +194,15 @@ def create_response(success: bool, status: str, message: str, data: dict = None)
 
 
 def prc_to_inr(prc_amount: int) -> float:
-    """Convert PRC to INR. 100 PRC = ₹1"""
-    return prc_amount / PRC_TO_INR_RATE
+    """Convert PRC to INR using dynamic rate"""
+    rate = get_prc_rate()
+    return prc_amount / rate
 
 
 def inr_to_prc(inr_amount: float) -> int:
-    """Convert INR to PRC. ₹1 = 100 PRC"""
-    return int(inr_amount * PRC_TO_INR_RATE)
+    """Convert INR to PRC using dynamic rate"""
+    rate = get_prc_rate()
+    return int(inr_amount * rate)
 
 
 async def log_transaction(user_id: str, reference_id: str, amount: float, 
@@ -629,9 +649,10 @@ async def initiate_transfer(req: TransferRequest, request: Request):
     """
     client_ip = request.client.host if request.client else "unknown"
     
-    # Validate PRC amount
-    if req.prc_amount < MIN_REDEEM_INR * PRC_TO_INR_RATE:
-        return create_response(False, "MIN_AMOUNT", f"Minimum {MIN_REDEEM_INR * PRC_TO_INR_RATE} PRC (₹{MIN_REDEEM_INR}) required")
+    # Validate PRC amount using dynamic rate
+    prc_rate = get_prc_rate()
+    if req.prc_amount < MIN_REDEEM_INR * prc_rate:
+        return create_response(False, "MIN_AMOUNT", f"Minimum {MIN_REDEEM_INR * prc_rate} PRC (₹{MIN_REDEEM_INR}) required")
     
     inr_amount = prc_to_inr(req.prc_amount)
     
@@ -825,13 +846,15 @@ async def get_wallet(user_id: str):
     
     prc_balance = user.get("prc_balance", 0)
     inr_equivalent = prc_to_inr(prc_balance)
+    prc_rate = get_prc_rate()
     
     return create_response(True, "SUCCESS", "Wallet retrieved", {
         "prc_balance": prc_balance,
         "inr_equivalent": inr_equivalent,
-        "conversion_rate": f"{PRC_TO_INR_RATE} PRC = ₹1",
-        "min_redeem_prc": MIN_REDEEM_INR * PRC_TO_INR_RATE,
-        "max_daily_prc": MAX_DAILY_INR * PRC_TO_INR_RATE
+        "conversion_rate": f"{prc_rate} PRC = ₹1",
+        "min_redeem_prc": MIN_REDEEM_INR * prc_rate,
+        "max_daily_prc": MAX_DAILY_INR * prc_rate,
+        "prc_rate": prc_rate
     })
 
 
@@ -863,8 +886,9 @@ async def redeem_prc(req: RedeemRequest, request: Request):
     if not req.bank_account or not req.ifsc:
         return create_response(False, "VALIDATION_ERROR", "Bank account and IFSC required")
     
-    if req.prc_amount < MIN_REDEEM_INR * PRC_TO_INR_RATE:
-        return create_response(False, "MIN_AMOUNT", f"Minimum ₹{MIN_REDEEM_INR} (10000 PRC) required")
+    prc_rate = get_prc_rate()
+    if req.prc_amount < MIN_REDEEM_INR * prc_rate:
+        return create_response(False, "MIN_AMOUNT", f"Minimum ₹{MIN_REDEEM_INR} ({MIN_REDEEM_INR * prc_rate} PRC) required")
     
     inr_amount = prc_to_inr(req.prc_amount)
     
@@ -1000,13 +1024,15 @@ async def redeem_prc(req: RedeemRequest, request: Request):
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
+    prc_rate = get_prc_rate()
     return {
         "status": "DMT SERVICE RUNNING",
         "version": "1.0",
         "route": "ICICI v1",
         "base_url": EKO_BASE_URL,
-        "conversion": f"{PRC_TO_INR_RATE} PRC = ₹1",
+        "conversion": f"{prc_rate} PRC = ₹1",
         "min_redeem": f"₹{MIN_REDEEM_INR}",
         "max_daily": f"₹{MAX_DAILY_INR}",
+        "prc_rate": prc_rate,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }

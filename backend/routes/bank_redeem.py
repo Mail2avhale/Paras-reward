@@ -64,6 +64,28 @@ async def get_eko_service():
     return eko_service
 
 
+def get_dynamic_prc_rate() -> int:
+    """Get PRC to INR rate from database settings - DYNAMIC"""
+    try:
+        if db is None:
+            return 100  # Default fallback
+        
+        # Check dmt_settings collection
+        settings = db.dmt_settings.find_one({"_id": "dmt_config"})
+        if settings:
+            return settings.get("prc_to_inr_rate", 100)
+        
+        # Check admin settings collection
+        admin_settings = db.settings.find_one({"key": "dmt_settings"})
+        if admin_settings:
+            return admin_settings.get("prc_rate", 100)
+        
+        return 100  # Default
+    except Exception as e:
+        logging.error(f"[BANK_REDEEM] Failed to get PRC rate: {e}")
+        return 100
+
+
 async def eko_verify_bank_account(ifsc: str, account_number: str):
     """Verify bank account using Eko API"""
     service = await get_eko_service()
@@ -287,8 +309,8 @@ def calculate_total_prc(amount_inr: int) -> dict:
     admin_charge = int(amount_inr * (ADMIN_CHARGE_PERCENT / 100))  # 20% admin charge
     total_inr = amount_inr + processing_fee + admin_charge
     
-    # PRC rate: 10 PRC = 1 INR
-    prc_rate = 10
+    # PRC rate: Dynamic from database
+    prc_rate = get_dynamic_prc_rate()
     
     return {
         "amount_inr": amount_inr,
@@ -299,7 +321,8 @@ def calculate_total_prc(amount_inr: int) -> dict:
         "amount_prc": amount_inr * prc_rate,
         "processing_fee_prc": processing_fee * prc_rate,
         "admin_charge_prc": admin_charge * prc_rate,
-        "total_prc": int(total_inr * prc_rate)
+        "total_prc": int(total_inr * prc_rate),
+        "prc_rate": prc_rate
     }
 
 
