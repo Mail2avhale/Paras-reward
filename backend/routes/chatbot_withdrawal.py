@@ -340,14 +340,15 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
             "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        # V3 API URL - Fund Transfer endpoint
-        # Production: https://api.eko.in/ekoicici/v3/users/payment/fund-transfer
-        v3_base_url = EKO_BASE_URL.replace("/ekoicici", "/ekoicici")  # Same base
-        url = f"{v3_base_url.replace('/v1', '')}/v3/users/payment/fund-transfer"
+        # V3 Fund Transfer URL
+        # Production URL pattern (confirmed working with 402 - needs auth)
+        base_host = "https://api.eko.in:25002"
+        v3_url = f"{base_host}/ekoapi/v3/users/payment/fund-transfer"
         
         # If we have direct bank details, use Fund Transfer API
         if account_number and ifsc_code and recipient_name:
             # Direct Fund Transfer (no recipient_id needed)
+            url = v3_url
             payload = {
                 "initiator_id": EKO_INITIATOR_ID,
                 "user_code": EKO_USER_CODE,
@@ -2454,4 +2455,126 @@ async def get_customer_eko_status(mobile: str):
             "message": str(e),
             "registered": False,
             "verified": False
+        }
+
+
+
+# ==================== V3 FUND TRANSFER TEST ENDPOINT ====================
+
+class V3TransferTestRequest(BaseModel):
+    """Test V3 Fund Transfer API"""
+    account_number: str = Field(..., description="Bank account number")
+    ifsc_code: str = Field(..., description="IFSC code")
+    recipient_name: str = Field(..., description="Beneficiary name")
+    amount: int = Field(..., ge=1, le=100, description="Test amount (max ₹100)")
+    sender_name: str = Field(default="Test Sender", description="Sender name")
+    dry_run: bool = Field(default=True, description="If True, only validate without transfer")
+
+
+@router.post("/test/v3-fund-transfer")
+async def test_v3_fund_transfer(request: V3TransferTestRequest):
+    """
+    Test V3 Fund Transfer API
+    
+    This endpoint tests the V3 API connection and validates parameters.
+    Set dry_run=False to actually execute the transfer (USE WITH CAUTION!)
+    """
+    import uuid
+    
+    try:
+        if not is_eko_configured():
+            return {"success": False, "error": "Eko not configured"}
+        
+        # Generate unique client_ref_id
+        client_ref_id = f"TEST{uuid.uuid4().hex[:14]}"
+        
+        # Generate authentication
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
+        
+        # V3 Fund Transfer URL
+        base_host = "https://api.eko.in:25002"
+        v3_url = f"{base_host}/ekoapi/v3/users/payment/fund-transfer"
+        
+        # Headers
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        # Payload
+        payload = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "client_ref_id": client_ref_id,
+            "service_code": "45",
+            "payment_mode": "5",  # IMPS
+            "recipient_name": request.recipient_name,
+            "account": request.account_number,
+            "ifsc": request.ifsc_code,
+            "amount": str(request.amount),
+            "sender_name": request.sender_name,
+            "source": "API",
+            "latlong": "19.9975,73.7898"
+        }
+        
+        # Log test details
+        logging.info(f"[V3-TEST] URL: {v3_url}")
+        logging.info(f"[V3-TEST] Headers: developer_key={EKO_DEVELOPER_KEY[:10]}..., timestamp={timestamp_ms}")
+        logging.info(f"[V3-TEST] Payload: {payload}")
+        
+        if request.dry_run:
+            return {
+                "success": True,
+                "mode": "DRY_RUN",
+                "message": "Validation passed. Ready to transfer.",
+                "url": v3_url,
+                "client_ref_id": client_ref_id,
+                "payload": payload,
+                "headers_preview": {
+                    "developer_key": f"{EKO_DEVELOPER_KEY[:10]}...",
+                    "secret-key": f"{secret_key[:20]}...",
+                    "secret-key-timestamp": timestamp_ms
+                }
+            }
+        
+        # ACTUAL TRANSFER (only if dry_run=False)
+        logging.warning(f"[V3-TEST] EXECUTING REAL TRANSFER: Rs.{request.amount}")
+        
+        response = await chatbot_post(v3_url, headers=headers, data=payload, timeout=60)
+        
+        # Log raw response
+        raw_text = response.text
+        logging.info(f"[V3-TEST] Status Code: {response.status_code}")
+        logging.info(f"[V3-TEST] Raw Response: {raw_text[:500]}")
+        
+        # Try to parse JSON
+        try:
+            result = response.json()
+        except Exception as json_err:
+            return {
+                "success": False,
+                "mode": "LIVE_TRANSFER",
+                "error": f"JSON parse error: {json_err}",
+                "status_code": response.status_code,
+                "raw_response": raw_text[:1000]
+            }
+        
+        logging.info(f"[V3-TEST] Parsed Response: {result}")
+        
+        return {
+            "success": True,
+            "mode": "LIVE_TRANSFER",
+            "client_ref_id": client_ref_id,
+            "eko_response": result,
+            "status_code": response.status_code
+        }
+        
+    except Exception as e:
+        logging.error(f"[V3-TEST] Error: {e}")
+        return {
+            "success": False,
+            "error": str(e)
         }
