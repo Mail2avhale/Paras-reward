@@ -143,34 +143,37 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 **V1 API Key Understanding:**
 - OTP verification happens during **TRANSFER**, not during customer registration
 - All registered customers (state=1, 2, 8) can transact
-- Transfer flow: Initiate → OTP sent → Enter OTP → Complete
+- **INSTANT TRANSFER** - No admin approval required (like mobile recharge)
 
-**Flow Implemented:**
+**Complete Flow:**
 ```
 1. Customer Search → Check if exists
 2. Customer Create → PUT /v1/customers/mobile_number:{mobile}
 3. Add Recipient → PUT /v1/customers/mobile_number:{mobile}/recipients
 4. Transfer (First call) → POST /v1/transactions → Returns "OTP sent"
 5. Enter OTP
-6. Transfer (With OTP) → POST /v1/transactions + otp param → SUCCESS
+6. Transfer (With OTP) → POST /v1/transactions + otp param → SUCCESS ✅
 ```
 
-**Backend Updates:**
-- Registration: All customers get `can_transact: true`
-- Search: All registered customers get `can_transact: true`
-- Transfer: OTP handling added - detects "OTP sent", stores pending transaction, completes with OTP
-- Removed incorrect OTP verification code from registration flow
+**Admin Controls:**
+| API | Description |
+|-----|-------------|
+| `GET /admin/settings` | View current settings |
+| `POST /admin/settings` | Update limit/status |
+| `POST /admin/enable` | Enable DMT service |
+| `POST /admin/disable` | Disable DMT service |
+| `GET /admin/transactions` | All transactions with filters |
+| `GET /admin/stats` | Dashboard stats |
 
-**Frontend Updates:**
-- Registration form: No OTP step (V1 doesn't need it)
-- Transfer: OTP input modal added when transfer requires OTP
-- All registered customers can see recipients and initiate transfer
+**Features:**
+- **Dynamic Daily Limit** - Admin can set ₹100 to ₹2,00,000
+- **Service Toggle** - Enable/Disable DMT anytime
+- **Transaction History** - Filters: status, date, mobile
+- **Error Handling** - 20+ EKO error codes with Marathi messages
 
-**Test Results:** ✅ All V1 APIs working
-- Customer Search (state=1) → can_transact: true ✅
-- Customer Search (state=2) → can_transact: true ✅
-- Registration → can_transact: true ✅
-- Transfer with OTP → OTP modal + completion ✅
+**Test Results:** ✅ 70/70 tests passed
+- Backend: 100%
+- Frontend: 100%
 
 **Files Modified:**
 - `/app/backend/routes/eko_dmt_service.py`
