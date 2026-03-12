@@ -2024,6 +2024,34 @@ async def daily_wallet_reconciliation():
 _last_successful_ping = None
 _consecutive_failures = 0
 
+
+# ==================== EMERGENCY AUTO-PAUSE JOB ====================
+
+async def check_emergency_auto_pause_job():
+    """
+    Scheduled job to check for emergency conditions and auto-pause redeems.
+    Runs every 5 minutes.
+    
+    Triggers auto-pause if:
+    - Today's redeem requests > 200% of 30-day average
+    
+    Auto-resumes after 24 hours.
+    """
+    try:
+        from routes.prc_economy import check_and_auto_pause
+        
+        result = await check_and_auto_pause(db)
+        
+        if result.get("action") == "pause_activated":
+            logging.warning(f"[EMERGENCY JOB] 🚨 {result.get('message')}")
+        elif result.get("action") == "already_paused":
+            logging.info("[EMERGENCY JOB] ⏸️ Redeem pause still active")
+        # Don't log "no_action" to avoid spam
+        
+    except Exception as e:
+        logging.error(f"[EMERGENCY JOB] Error: {e}")
+
+
 async def database_keep_alive_ping():
     """
     Keep MongoDB connection pool warm by sending periodic pings.
@@ -38287,6 +38315,79 @@ async def get_prc_whale_wallets():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@api_router.get("/admin/prc-economy/pause-status")
+async def get_emergency_pause_status_api():
+    """
+    Get current emergency pause status.
+    
+    Returns whether redeem is paused, when it was paused, and when it will auto-resume.
+    """
+    try:
+        from routes.prc_economy import get_emergency_pause_status
+        return await get_emergency_pause_status(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "is_paused": False}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Pause status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/pause")
+async def activate_emergency_pause_api(reason: str = "Manual admin pause"):
+    """
+    Manually activate emergency redeem pause.
+    
+    Args:
+        reason: Reason for pausing
+    
+    This will pause all redeem requests for 24 hours.
+    """
+    try:
+        from routes.prc_economy import activate_emergency_pause
+        return await activate_emergency_pause(db, reason=reason, triggered_by="admin")
+    except ImportError:
+        return {"error": "PRC Economy module not found", "success": False}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Manual pause error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/resume")
+async def deactivate_emergency_pause_api():
+    """
+    Manually resume redeems (deactivate emergency pause).
+    
+    Admin can use this to resume redeems before the 24-hour auto-resume.
+    """
+    try:
+        from routes.prc_economy import deactivate_emergency_pause
+        return await deactivate_emergency_pause(db, deactivated_by="admin")
+    except ImportError:
+        return {"error": "PRC Economy module not found", "success": False}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Manual resume error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-economy/check-and-pause")
+async def trigger_emergency_check_api():
+    """
+    Manually trigger emergency check (usually runs every 5 minutes automatically).
+    
+    This will check current redeem activity and auto-pause if spike > 200%.
+    """
+    try:
+        from routes.prc_economy import check_and_auto_pause
+        return await check_and_auto_pause(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "action": "error"}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Manual check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @api_router.post("/admin/payment-request/revert-status")
 async def revert_payment_request_status(request: Request):
     """
@@ -39194,6 +39295,17 @@ async def startup_db():
             replace_existing=True
         )
         
+        # Emergency Auto-Pause Check every 5 minutes
+        # Monitors redeem activity and auto-pauses if spike > 200%
+        scheduler.add_job(
+            check_emergency_auto_pause_job,
+            'interval',
+            minutes=5,
+            id='emergency_auto_pause_check',
+            name='Emergency redeem auto-pause monitor',
+            replace_existing=True
+        )
+        
         # Start the scheduler
         scheduler.start()
         print("✅ Scheduled tasks started:")
@@ -39208,6 +39320,7 @@ async def startup_db():
         print("   - 💳 Razorpay captured-sync: Every 2 minutes")
         print("   - 🏦 Eko status update: Every 5 minutes")
         print("   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)")
+        print("   - 🚨 Emergency auto-pause: Every 5 minutes (200% spike detection)")
         
         # Trigger initial Razorpay sync 30 seconds after startup
         import asyncio

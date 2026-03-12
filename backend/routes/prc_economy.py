@@ -6,7 +6,7 @@ This module implements the complete PRC token economy control system including:
 - Dynamic PRC Value Control Engine (5 factors)
 - Redeem Pressure Monitoring
 - Whale Wallet Protection
-- Emergency Protection Mode
+- Emergency Protection Mode (AUTO-PAUSE)
 - System Stability Index
 
 Reference: PARAS REWARD TOKEN ECONOMY DOCUMENT
@@ -33,6 +33,10 @@ NORMAL_BURN_RATE = 1.0    # 1% burn for normal wallets
 # Redeem Pressure Thresholds (Section 14-15)
 SAFE_REDEEM_RATIO = 0.15  # 15% is safe threshold
 EMERGENCY_SPIKE_THRESHOLD = 2.0  # 200% spike triggers emergency
+
+# Emergency Auto-Pause Settings
+EMERGENCY_PAUSE_DURATION_HOURS = 24  # Auto-pause for 24 hours
+EMERGENCY_CHECK_INTERVAL_MINUTES = 5  # Check every 5 minutes
 
 # Rate Update Interval
 RATE_UPDATE_INTERVAL_DAYS = 30  # Update every 30 days
@@ -485,6 +489,247 @@ async def check_emergency_conditions(db) -> Dict:
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Emergency check error: {e}")
         return {"error": str(e), "is_emergency": False}
+
+
+# ==================== EMERGENCY AUTO-PAUSE SYSTEM ====================
+
+async def get_emergency_pause_status(db) -> Dict:
+    """
+    Get current emergency pause status from database.
+    
+    Returns:
+    - is_paused: bool - Whether redeems are currently paused
+    - paused_at: datetime - When pause was activated
+    - paused_until: datetime - When pause will auto-expire
+    - reason: str - Why pause was triggered
+    - triggered_by: str - 'auto' or 'admin'
+    """
+    try:
+        status = await db.system_settings.find_one({"key": "emergency_redeem_pause"})
+        
+        if not status:
+            return {
+                "is_paused": False,
+                "paused_at": None,
+                "paused_until": None,
+                "reason": None,
+                "triggered_by": None
+            }
+        
+        now = datetime.now(timezone.utc)
+        paused_until = status.get("paused_until")
+        
+        # Check if pause has expired
+        if paused_until:
+            if isinstance(paused_until, str):
+                paused_until = datetime.fromisoformat(paused_until.replace('Z', '+00:00'))
+            
+            if now > paused_until:
+                # Pause expired - clear it
+                await db.system_settings.delete_one({"key": "emergency_redeem_pause"})
+                logging.info("[PRC ECONOMY] Emergency pause expired - auto-resumed")
+                return {
+                    "is_paused": False,
+                    "paused_at": None,
+                    "paused_until": None,
+                    "reason": "Pause expired - auto-resumed",
+                    "triggered_by": None
+                }
+        
+        return {
+            "is_paused": status.get("is_paused", False),
+            "paused_at": status.get("paused_at"),
+            "paused_until": status.get("paused_until"),
+            "reason": status.get("reason"),
+            "triggered_by": status.get("triggered_by", "unknown"),
+            "spike_ratio": status.get("spike_ratio")
+        }
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Get pause status error: {e}")
+        return {"is_paused": False, "error": str(e)}
+
+
+async def activate_emergency_pause(db, reason: str, spike_ratio: float = 0, triggered_by: str = "auto") -> Dict:
+    """
+    Activate emergency redeem pause.
+    
+    Args:
+        db: Database connection
+        reason: Why pause was triggered
+        spike_ratio: The spike ratio that triggered the pause
+        triggered_by: 'auto' or 'admin'
+    
+    Returns: Status of activation
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        paused_until = now + timedelta(hours=EMERGENCY_PAUSE_DURATION_HOURS)
+        
+        pause_data = {
+            "key": "emergency_redeem_pause",
+            "is_paused": True,
+            "paused_at": now.isoformat(),
+            "paused_until": paused_until.isoformat(),
+            "reason": reason,
+            "triggered_by": triggered_by,
+            "spike_ratio": spike_ratio,
+            "updated_at": now.isoformat()
+        }
+        
+        await db.system_settings.update_one(
+            {"key": "emergency_redeem_pause"},
+            {"$set": pause_data},
+            upsert=True
+        )
+        
+        # Log the emergency activation
+        await db.system_logs.insert_one({
+            "type": "emergency_pause_activated",
+            "reason": reason,
+            "spike_ratio": spike_ratio,
+            "triggered_by": triggered_by,
+            "paused_until": paused_until.isoformat(),
+            "timestamp": now.isoformat()
+        })
+        
+        logging.warning(f"[PRC ECONOMY] 🚨 EMERGENCY PAUSE ACTIVATED - Reason: {reason}, Spike: {spike_ratio}x")
+        
+        return {
+            "success": True,
+            "is_paused": True,
+            "paused_at": now.isoformat(),
+            "paused_until": paused_until.isoformat(),
+            "duration_hours": EMERGENCY_PAUSE_DURATION_HOURS,
+            "reason": reason,
+            "message": f"🚨 Emergency redeem pause activated for {EMERGENCY_PAUSE_DURATION_HOURS} hours"
+        }
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Activate pause error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def deactivate_emergency_pause(db, deactivated_by: str = "admin") -> Dict:
+    """
+    Manually deactivate emergency redeem pause (Admin override).
+    
+    Args:
+        db: Database connection
+        deactivated_by: Who deactivated ('admin' or 'auto')
+    
+    Returns: Status of deactivation
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get current status first
+        current = await db.system_settings.find_one({"key": "emergency_redeem_pause"})
+        
+        if not current or not current.get("is_paused"):
+            return {
+                "success": True,
+                "message": "No active emergency pause to deactivate",
+                "was_paused": False
+            }
+        
+        # Remove the pause
+        await db.system_settings.delete_one({"key": "emergency_redeem_pause"})
+        
+        # Log the deactivation
+        await db.system_logs.insert_one({
+            "type": "emergency_pause_deactivated",
+            "deactivated_by": deactivated_by,
+            "original_reason": current.get("reason"),
+            "was_paused_at": current.get("paused_at"),
+            "timestamp": now.isoformat()
+        })
+        
+        logging.info(f"[PRC ECONOMY] ✅ Emergency pause deactivated by {deactivated_by}")
+        
+        return {
+            "success": True,
+            "message": "Emergency redeem pause deactivated",
+            "was_paused": True,
+            "deactivated_by": deactivated_by,
+            "deactivated_at": now.isoformat()
+        }
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Deactivate pause error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def check_and_auto_pause(db) -> Dict:
+    """
+    Main function to check emergency conditions and auto-pause if needed.
+    
+    This should be called:
+    1. By a scheduled job every 5 minutes
+    2. Before processing any redeem request
+    
+    Returns: Current emergency status and any actions taken
+    """
+    try:
+        # First check if already paused
+        pause_status = await get_emergency_pause_status(db)
+        if pause_status.get("is_paused"):
+            return {
+                "action": "already_paused",
+                "status": pause_status,
+                "message": "Redeem is already paused"
+            }
+        
+        # Check emergency conditions
+        emergency = await check_emergency_conditions(db)
+        
+        if emergency.get("is_emergency"):
+            # AUTO-ACTIVATE PAUSE!
+            spike_ratio = emergency.get("spike_ratio", 0)
+            reason = f"Auto-triggered: Redeem spike {spike_ratio}x (threshold: {EMERGENCY_SPIKE_THRESHOLD}x)"
+            
+            activation = await activate_emergency_pause(
+                db,
+                reason=reason,
+                spike_ratio=spike_ratio,
+                triggered_by="auto"
+            )
+            
+            return {
+                "action": "pause_activated",
+                "emergency": emergency,
+                "activation": activation,
+                "message": f"🚨 AUTO-PAUSE ACTIVATED: {reason}"
+            }
+        
+        return {
+            "action": "no_action",
+            "emergency": emergency,
+            "message": "System normal - no pause needed"
+        }
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Check and auto-pause error: {e}")
+        return {"action": "error", "error": str(e)}
+
+
+async def is_redeem_allowed(db) -> Tuple[bool, str]:
+    """
+    Quick check if redeem is currently allowed.
+    
+    Use this before processing any redeem request.
+    
+    Returns:
+        Tuple[bool, str]: (is_allowed, reason_if_blocked)
+    """
+    try:
+        pause_status = await get_emergency_pause_status(db)
+        
+        if pause_status.get("is_paused"):
+            paused_until = pause_status.get("paused_until", "unknown")
+            return (False, f"Redeem temporarily paused until {paused_until}. Reason: {pause_status.get('reason', 'Emergency protection')}")
+        
+        return (True, "Redeem allowed")
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Check redeem allowed error: {e}")
+        # On error, allow redeem (fail-open for user convenience)
+        return (True, "Check failed - allowing by default")
 
 
 # ==================== SYSTEM STABILITY INDEX (Section 19) ====================

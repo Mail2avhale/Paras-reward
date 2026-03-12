@@ -760,14 +760,32 @@ async def create_redeem_request(request: RedeemRequestCreate):
     Create a new redeem request
     
     Flow:
-    1. Check if within allowed time (8 AM to 8 PM IST)
-    2. Validate user exists and has KYC verified
-    3. Check PRC balance
-    4. Deduct PRC from user wallet
-    5. Create pending request for admin approval
+    1. Check if emergency pause is active
+    2. Check if within allowed time (8 AM to 8 PM IST)
+    3. Validate user exists and has KYC verified
+    4. Check PRC balance
+    5. Deduct PRC from user wallet
+    6. Create pending request for admin approval
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
+    
+    # EMERGENCY AUTO-PAUSE CHECK
+    try:
+        from routes.prc_economy import is_redeem_allowed
+        allowed, reason = await is_redeem_allowed(db)
+        if not allowed:
+            raise HTTPException(
+                status_code=503,
+                detail=f"🚨 {reason}"
+            )
+    except ImportError:
+        pass  # Module not available, continue
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        logging.error(f"[REDEEM] Emergency check error: {e}")
+        # On error, allow (fail-open)
     
     # Check time restriction (8 AM to 8 PM IST) - TEMPORARILY DISABLED FOR TESTING
     # from datetime import timezone, timedelta

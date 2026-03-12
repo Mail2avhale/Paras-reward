@@ -8,19 +8,21 @@ import {
   Flame, Users, Coins, RefreshCw, Loader2, ChevronRight,
   Gauge, Wallet, AlertCircle, CheckCircle, XCircle,
   ArrowUpRight, ArrowDownRight, DollarSign, BarChart3,
-  Zap, Target, Clock, Scale
+  Zap, Target, Clock, Scale, Pause, Play, Power
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /**
  * PRC Token Economy Dashboard
- * Implements complete Token Economy Control System
+ * Implements complete Token Economy Control System with Auto-Pause
  */
 const AdminPRCEconomyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboard, setDashboard] = useState(null);
+  const [pauseStatus, setPauseStatus] = useState(null);
+  const [pauseLoading, setPauseLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchDashboard = useCallback(async (showRefreshToast = false) => {
@@ -28,8 +30,13 @@ const AdminPRCEconomyDashboard = () => {
       if (showRefreshToast) setRefreshing(true);
       else setLoading(true);
       
-      const response = await axios.get(`${API}/admin/prc-economy/dashboard`);
-      setDashboard(response.data);
+      const [dashResponse, pauseResponse] = await Promise.all([
+        axios.get(`${API}/admin/prc-economy/dashboard`),
+        axios.get(`${API}/admin/prc-economy/pause-status`)
+      ]);
+      
+      setDashboard(dashResponse.data);
+      setPauseStatus(pauseResponse.data);
       setError(null);
       
       if (showRefreshToast) toast.success('Dashboard refreshed');
@@ -41,6 +48,36 @@ const AdminPRCEconomyDashboard = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const handlePauseRedeem = async () => {
+    if (!window.confirm('Are you sure you want to PAUSE all redeems for 24 hours?')) return;
+    
+    setPauseLoading(true);
+    try {
+      await axios.post(`${API}/admin/prc-economy/pause?reason=Manual admin pause`);
+      toast.success('Redeem paused for 24 hours');
+      fetchDashboard(false);
+    } catch (err) {
+      toast.error('Failed to pause redeems');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const handleResumeRedeem = async () => {
+    if (!window.confirm('Are you sure you want to RESUME redeems?')) return;
+    
+    setPauseLoading(true);
+    try {
+      await axios.post(`${API}/admin/prc-economy/resume`);
+      toast.success('Redeems resumed');
+      fetchDashboard(false);
+    } catch (err) {
+      toast.error('Failed to resume redeems');
+    } finally {
+      setPauseLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -99,25 +136,77 @@ const AdminPRCEconomyDashboard = () => {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Real-time economy monitoring & control</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => fetchDashboard(true)}
-          disabled={refreshing}
-          className="border-gray-700 text-gray-300"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Manual Pause/Resume Control */}
+          {!pauseStatus?.is_paused ? (
+            <Button
+              variant="outline"
+              onClick={handlePauseRedeem}
+              disabled={pauseLoading}
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              {pauseLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4 mr-2" />}
+              Pause Redeems
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleResumeRedeem}
+              disabled={pauseLoading}
+              className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+            >
+              {pauseLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+              Resume Redeems
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => fetchDashboard(true)}
+            disabled={refreshing}
+            className="border-gray-700 text-gray-300"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      {/* Emergency Alert Banner */}
-      {emergency_status?.is_emergency && (
-        <Card className="p-4 bg-red-500/20 border-red-500/50 animate-pulse">
+      {/* Emergency Pause Banner */}
+      {pauseStatus?.is_paused && (
+        <Card className="p-4 bg-red-500/20 border-red-500/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Pause className="w-6 h-6 text-red-400" />
+              <div>
+                <p className="text-red-400 font-semibold">🚨 REDEEM PAUSED</p>
+                <p className="text-red-300 text-sm">
+                  Reason: {pauseStatus.reason || 'Emergency protection'}
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Auto-resumes: {pauseStatus.paused_until ? new Date(pauseStatus.paused_until).toLocaleString('en-IN') : 'Unknown'}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleResumeRedeem}
+              disabled={pauseLoading}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {pauseLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+              Resume Now
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Emergency Alert Banner (when spike detected but not yet paused) */}
+      {emergency_status?.is_emergency && !pauseStatus?.is_paused && (
+        <Card className="p-4 bg-orange-500/20 border-orange-500/50 animate-pulse">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <AlertTriangle className="w-6 h-6 text-orange-400" />
             <div>
-              <p className="text-red-400 font-semibold">EMERGENCY: Abnormal Activity Detected!</p>
-              <p className="text-red-300 text-sm">Redeem spike ratio: {emergency_status.spike_ratio}x (threshold: {emergency_status.emergency_threshold}x)</p>
+              <p className="text-orange-400 font-semibold">⚠️ HIGH REDEEM ACTIVITY DETECTED</p>
+              <p className="text-orange-300 text-sm">Spike ratio: {emergency_status.spike_ratio}x (auto-pause at {emergency_status.emergency_threshold}x)</p>
             </div>
           </div>
         </Card>
