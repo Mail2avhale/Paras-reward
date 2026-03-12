@@ -307,11 +307,19 @@ async def _add_eko_recipient(mobile: str, account_number: str, ifsc: str, name: 
         return None
 
 
-async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, amount: int, client_ref_id: str) -> dict:
+async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, amount: int, client_ref_id: str, 
+                                        account_number: str = None, ifsc_code: str = None, 
+                                        recipient_name: str = None, sender_name: str = None) -> dict:
     """
-    Execute INSTANT money transfer via Eko DMT V1 API.
+    Execute INSTANT money transfer via Eko V3 Fund Transfer API.
     
-    Eko V1 API: POST /v1/transactions (form-urlencoded)
+    This uses the simpler Fund Transfer API instead of DMT:
+    - No OTP required
+    - No request_hash required
+    - Direct bank transfer
+    
+    API: POST /ekoapi/v3/users/payment/fund-transfer
+    Docs: https://developers.eko.in/reference/initiate-fund-transfer
     
     Returns dict with success status, utr_number, tid, etc.
     """
@@ -319,51 +327,78 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
         if not is_eko_configured():
             return {"success": False, "message": "Eko service not configured"}
         
-        # Generate timestamp for auth
+        # Generate timestamp for auth (milliseconds)
         timestamp_ms = str(int(time.time() * 1000))
         secret_key = generate_eko_secret_key(timestamp_ms)
         
-        # Generate request_hash for transfer (DMT V1 format)
-        # Documentation: https://developers.eko.in/docs/auth
-        # For DMT: concatenated_string = timestamp + recipient_id + amount + user_code
-        # (Note: This may vary - check specific API docs)
-        encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))  # Keep as bytes
-        hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
-        request_hash = hmac.new(
-            encoded_key,  # Use bytes directly, not re-encoded
-            hash_string.encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
-        
-        # Headers - form-urlencoded for V1 API
+        # V3 Fund Transfer - NO request_hash needed!
+        # Headers
         headers = {
             "developer_key": EKO_DEVELOPER_KEY,
             "secret-key": secret_key,
             "secret-key-timestamp": timestamp_ms,
-            "initiator_id": EKO_INITIATOR_ID,
-            "request_hash": request_hash_b64,
-            "Content-Type": "application/x-www-form-urlencoded"  # V1 API requires form data!
+            "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        # V3 API URL - Fund Transfer endpoint
+        # Production: https://api.eko.in/ekoicici/v3/users/payment/fund-transfer
+        v3_base_url = EKO_BASE_URL.replace("/ekoicici", "/ekoicici")  # Same base
+        url = f"{v3_base_url.replace('/v1', '')}/v3/users/payment/fund-transfer"
         
-        # Form data payload (not JSON!)
-        payload = {
-            "customer_id": sender_mobile,
-            "recipient_id": recipient_id,
-            "amount": str(amount),
-            "client_ref_id": client_ref_id,
-            "channel": "2",  # IMPS
-            "state": "1",
-            "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "latlong": "19.9975,73.7898"
-        }
+        # If we have direct bank details, use Fund Transfer API
+        if account_number and ifsc_code and recipient_name:
+            # Direct Fund Transfer (no recipient_id needed)
+            payload = {
+                "initiator_id": EKO_INITIATOR_ID,
+                "user_code": EKO_USER_CODE,
+                "client_ref_id": client_ref_id[:20],  # Max 20 chars
+                "service_code": "45",  # Fixed for Fund Transfer
+                "payment_mode": "5",   # 5 = IMPS
+                "recipient_name": recipient_name,
+                "account": account_number,
+                "ifsc": ifsc_code,
+                "amount": str(amount),
+                "sender_name": sender_name or "Paras User",
+                "source": "API",
+                "latlong": "19.9975,73.7898"
+            }
+            
+            logging.info(f"[CHATBOT-DMT] Using V3 Fund Transfer API: Rs.{amount} to {account_number}")
+        else:
+            # Fallback to V1 DMT with recipient_id
+            logging.info(f"[CHATBOT-DMT] Falling back to V1 DMT API: Rs.{amount} to recipient {recipient_id}")
+            
+            # Generate request_hash for V1 DMT
+            encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))
+            hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
+            request_hash = hmac.new(
+                encoded_key,
+                hash_string.encode('utf-8'),
+                hashlib.sha256
+            ).digest()
+            request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
+            
+            headers["request_hash"] = request_hash_b64
+            headers["initiator_id"] = EKO_INITIATOR_ID
+            
+            url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+            
+            payload = {
+                "customer_id": sender_mobile,
+                "recipient_id": recipient_id,
+                "amount": str(amount),
+                "client_ref_id": client_ref_id,
+                "channel": "2",  # IMPS
+                "state": "1",
+                "initiator_id": EKO_INITIATOR_ID,
+                "user_code": EKO_USER_CODE,
+                "latlong": "19.9975,73.7898"
+            }
         
-        logging.info(f"[CHATBOT-DMT] Executing transfer: Rs.{amount} to recipient {recipient_id}")
+        logging.info(f"[CHATBOT-DMT] Transfer URL: {url}")
+        logging.info(f"[CHATBOT-DMT] Transfer Payload: {payload}")
         
-        # Use data= for form-encoded payload
+        # Execute request
         response = await chatbot_post(url, headers=headers, data=payload, timeout=60)
         result = response.json()
         
@@ -1036,12 +1071,18 @@ async def create_withdrawal_request(request: WithdrawalRequest):
         
         logging.info(f"[CHATBOT-DMT] Recipient added: {recipient_id}")
         
-        # STEP 3: Execute INSTANT DMT transfer
+        # STEP 3: Execute INSTANT transfer using V3 Fund Transfer API
+        # Pass bank details directly for V3 API (no recipient_id needed)
         transfer_result = await _execute_instant_dmt_transfer(
             sender_mobile=user_mobile,
             recipient_id=str(recipient_id),
             amount=int(fees["net_amount"]),  # Net amount after fees
-            client_ref_id=request_id
+            client_ref_id=request_id,
+            # V3 Fund Transfer params
+            account_number=request.account_number,
+            ifsc_code=request.ifsc_code,
+            recipient_name=request.account_holder_name,
+            sender_name=user.get("name", "Paras User")
         )
         
         logging.info(f"[CHATBOT-DMT] Transfer result: {transfer_result}")
