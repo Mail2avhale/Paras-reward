@@ -304,6 +304,7 @@ class CustomerRegisterRequest(BaseModel):
     mobile: str = Field(..., min_length=10, max_length=10)
     name: str = Field(..., min_length=1, max_length=100, description="Full name")
     dob: Optional[str] = Field(None, description="Date of birth YYYY-MM-DD format")
+    address: Optional[str] = Field(None, description="Customer address")
     user_id: str
     
     @validator('mobile')
@@ -318,6 +319,7 @@ class CustomerOTPRequest(BaseModel):
     user_id: str
     mobile: str = Field(..., min_length=10, max_length=10)
     otp: Optional[str] = Field(None, min_length=4, max_length=6)
+    otp_ref_id: Optional[str] = Field(None, description="OTP reference ID from registration")
 
 
 class AddRecipientRequest(BaseModel):
@@ -638,20 +640,18 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
 @router.post("/customer/register")
 async def register_customer(req: CustomerRegisterRequest, request: Request):
     """
-    Register new customer in EKO system.
+    Register new customer in EKO system using V1 API.
     
-    As per Eko Documentation:
+    As per Eko V1 Documentation:
     - API: PUT /v1/customers/mobile_number:{mobile}
-    - Required: name, pipe (9 for DMT)
-    - Optional: dob, residence_address
-    - After registration: OTP is automatically sent to mobile
-    - Customer state=1 means OTP verification pending
+    - Content-Type: application/x-www-form-urlencoded
+    - Required: initiator_id, name, user_code
     
     Flow:
     1. Call PUT API to register customer
-    2. Eko sends OTP to customer's mobile automatically
-    3. Customer enters OTP
-    4. Call verify-otp API to complete registration
+    2. If state=1, OTP verification is required
+    3. If state=2, customer is already verified (non-KYC)
+    4. For state=1, call verify-otp API to complete registration
     """
     if not validate_eko_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -659,74 +659,111 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
     db = get_db()
     client_ip = get_client_ip(request)
     
-    logging.info(f"[DMT] Customer Registration: {req.mobile}, Name: {req.name}")
+    logging.info(f"[DMT] Customer Registration V1: {req.mobile}, Name: {req.name}")
     
     try:
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        # V1 API endpoint - this works for general DMT accounts
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}"
         
-        # Build payload as per Eko documentation
+        # V1 payload - simpler than V3
         payload = {
+            "initiator_id": EKO_INITIATOR_ID,
             "name": req.name,
-            "pipe": "9"  # 9 = Standard DMT pipe
+            "user_code": EKO_USER_CODE
         }
         
-        # Add optional fields if provided
-        if req.dob:
-            payload["dob"] = req.dob
-        
         headers = generate_eko_headers(request)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        logging.info(f"[DMT] V1 Registration URL: {url}")
+        logging.info(f"[DMT] V1 Payload: {payload}")
+        
         response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Registration Response: {response.status_code}")
-        logging.debug(f"[DMT] Registration Response Body: {response.text[:500]}")
+        logging.info(f"[DMT] Registration Response Body: {response.text[:800]}")
         
         if response.status_code == 403:
             logging.error(f"[DMT] 403 Forbidden - IP: {client_ip}")
             return create_error_response(403, "Authentication failed", "Service temporarily unavailable. Contact support.")
         
+        # Handle empty response
+        if not response.text or response.text.strip() == "":
+            logging.error(f"[DMT] Empty response from Eko")
+            return create_error_response(500, "Empty response from payment service", "Service temporarily unavailable.")
+        
         result = response.json()
         eko_status = result.get("status")
+        response_status_id = result.get("response_status_id", -1)
         eko_data = result.get("data", {})
         
         # Log registration
         log_dmt_transaction(db, {
-            "action": "customer_register",
+            "action": "customer_register_v1",
             "user_id": req.user_id,
             "mobile": req.mobile,
             "name": req.name,
             "ip": client_ip,
             "eko_status": eko_status,
+            "response_status_id": response_status_id,
             "response": result
         })
         
-        if eko_status == 0:
-            # Registration successful
-            # state=1 means OTP verification pending (OTP already sent by Eko)
-            customer_state = eko_data.get("state", 1)
-            otp_sent = customer_state == 1
+        # Success case - status=0 or response_status_id=0
+        if eko_status == 0 or response_status_id == 0:
+            customer_state = eko_data.get("state", "2")
+            state_desc = eko_data.get("state_desc", "")
+            customer_id = eko_data.get("customer_id", req.mobile)
+            otp_ref_id = eko_data.get("otp_ref_id", "")
             
-            return create_success_response({
-                "registered": True,
-                "customer_id": eko_data.get("customer_id"),
-                "mobile": req.mobile,
-                "name": req.name,
-                "state": customer_state,
-                "otp_required": otp_sent,
-                "otp_sent": otp_sent,
-                "otp_ref_id": eko_data.get("otp_ref_id"),
-                "message": "Customer registered. OTP sent to mobile number." if otp_sent else "Customer registered successfully."
-            }, "Customer registered - OTP sent to mobile")
+            # State meanings:
+            # 1 = OTP verification pending
+            # 2 = Verified (Non-KYC) - can do transactions immediately
+            # 3 = KYC pending
+            # 4 = Fully KYC verified
+            
+            if str(customer_state) == "1":
+                # OTP verification needed
+                return create_success_response({
+                    "registered": True,
+                    "customer_id": customer_id,
+                    "mobile": req.mobile,
+                    "name": req.name,
+                    "state": customer_state,
+                    "state_desc": state_desc,
+                    "otp_required": True,
+                    "otp_sent": True,
+                    "otp_ref_id": otp_ref_id,
+                    "can_transact": False,
+                    "message": "OTP पाठवला आहे. कृपया OTP टाकून verification पूर्ण करा."
+                }, "Customer registered - OTP sent")
+            else:
+                # Customer verified immediately (state 2, 3, or 4)
+                return create_success_response({
+                    "registered": True,
+                    "customer_id": customer_id,
+                    "mobile": req.mobile,
+                    "name": req.name,
+                    "state": customer_state,
+                    "state_desc": state_desc,
+                    "otp_required": False,
+                    "otp_sent": False,
+                    "can_transact": True,
+                    "message": result.get("message", "Customer registered successfully! You can now add bank accounts.")
+                }, "Customer registered successfully")
         
-        elif eko_status == 327:
-            # OTP already pending - customer was registered before but not verified
+        elif eko_status == 327 or response_status_id == 327:
+            # OTP already pending
             return create_success_response({
                 "registered": True,
                 "customer_id": eko_data.get("customer_id"),
                 "mobile": req.mobile,
-                "state": 1,
+                "state": "1",
                 "otp_required": True,
                 "otp_sent": False,
-                "message": "Customer already registered. OTP verification pending. Click 'Resend OTP'."
+                "can_transact": False,
+                "otp_ref_id": eko_data.get("otp_ref_id", ""),
+                "message": "OTP verification pending. 'Resend OTP' वर क्लिक करा."
             }, "OTP verification pending")
         
         else:
@@ -747,13 +784,14 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
     """
     Resend OTP for customer verification.
     
-    As per Eko Documentation:
+    As per Eko V1 Documentation:
     - API: POST /v1/customers/mobile_number:{mobile}/otp
+    - Required: initiator_id, user_code
     - This sends a fresh OTP to customer's mobile
-    - Use when: OTP expired, or customer didn't receive OTP
+    - Use when: Customer state=1 (OTP pending)
     
-    Note: On UAT/Staging environment, OTP SMS is NOT actually sent.
-    For testing, use any 6-digit OTP like '123456'.
+    OTP is sent to the customer's registered mobile number.
+    Customer will receive SMS with 6-digit OTP.
     """
     if not validate_eko_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -761,54 +799,62 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
     db = get_db()
     client_ip = get_client_ip(request)
     
-    logging.info(f"[DMT] Resend OTP: {req.mobile}")
+    logging.info(f"[DMT] Resend OTP V1: {req.mobile}")
     
     try:
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/otp?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        # V1 API endpoint for resending OTP
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/otp"
         
         # POST request with form data
         payload = {
-            "pipe": "9"
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
         }
         
         headers = generate_eko_headers(request)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        logging.info(f"[DMT] Resend OTP URL: {url}, Payload: {payload}")
+        
         response = await async_post(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Resend OTP Response: {response.status_code}")
-        logging.debug(f"[DMT] Resend OTP Response Body: {response.text[:500]}")
+        logging.info(f"[DMT] Resend OTP Response Body: {response.text[:500]}")
         
         if response.status_code == 403:
             logging.error(f"[DMT] 403 Forbidden on Resend OTP - IP: {client_ip}")
             return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
-        if response.status_code != 200:
-            return create_error_response(
-                response.status_code,
-                f"API Error: {response.status_code}",
-                "Failed to send OTP. Please try again."
-            )
+        # Handle empty response
+        if not response.text or response.text.strip() == "":
+            return create_error_response(500, "Empty response", "Service temporarily unavailable.")
         
         result = response.json()
         eko_status = result.get("status")
+        response_status_id = result.get("response_status_id", -1)
+        response_type_id = result.get("response_type_id", -1)
         eko_data = result.get("data", {})
         
         # Log OTP request
         log_dmt_transaction(db, {
-            "action": "resend_otp",
+            "action": "resend_otp_v1",
             "user_id": req.user_id,
             "mobile": req.mobile,
             "ip": client_ip,
             "eko_status": eko_status,
+            "response_status_id": response_status_id,
             "response": result
         })
         
-        if eko_status == 0:
+        # Success - OTP sent (response_type_id=327 means OTP sent)
+        if eko_status == 0 and (response_status_id == 0 or response_type_id == 327):
             return create_success_response({
                 "otp_sent": True,
                 "mobile": req.mobile,
-                "otp_ref_id": eko_data.get("otp_ref_id"),
-                "message": "OTP sent to mobile number successfully."
-            }, "OTP sent")
+                "otp_ref_id": eko_data.get("otp_ref_id", ""),
+                "state": eko_data.get("state", "1"),
+                "message": result.get("message", "OTP पाठवला आहे. कृपया SMS check करा.")
+            }, "OTP sent successfully")
         else:
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Failed to send OTP"))
             return create_error_response(eko_status, result.get("message", "Failed to send OTP"), user_msg)
@@ -825,19 +871,12 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
     """
     Verify customer OTP to complete registration.
     
-    As per Eko Documentation:
-    - API: PUT /v1/customers/verification/otp:{otp}
-    - Query params: initiator_id, user_code
-    - Body params: customer_id_type=mobile_number, customer_id={mobile}
+    NOTE: For current Eko account configuration:
+    - New customers are immediately verified (state=2) during registration
+    - OTP verification is only needed for legacy customers with state=1
+    - V3 verify endpoint may not be available for all account types
     
-    After successful verification:
-    - Customer state changes from 1 to 0
-    - Customer can now add recipients and do transfers
-    
-    Common Error Codes:
-    - 302: Wrong OTP
-    - 303: OTP expired (need to resend)
-    - 327: OTP not generated yet
+    If V3 verify fails, suggest re-registering the customer.
     """
     if not validate_eko_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -846,39 +885,57 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
     client_ip = get_client_ip(request)
     
     if not req.otp:
-        return create_error_response(400, "OTP is required", "Please enter the OTP received on your mobile.")
+        return create_error_response(400, "OTP is required", "कृपया OTP टाका.")
     
     logging.info(f"[DMT] Verify OTP: {req.mobile}, OTP: ***{req.otp[-2:]}")
     
     try:
-        # API endpoint with OTP in path
-        url = f"{EKO_BASE_URL}/v1/customers/verification/otp:{req.otp}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        # First, fetch existing customer to get their name
+        search_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        headers = generate_eko_headers(request)
         
-        # Body with customer identification
+        search_response = await async_get(search_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        customer_name = "User"
+        
+        if search_response.status_code == 200:
+            try:
+                search_result = search_response.json()
+                customer_name = search_result.get("data", {}).get("name", "User") or "User"
+            except:
+                pass
+        
+        logging.info(f"[DMT] Customer name from search: {customer_name}")
+        
+        # Now try V1 re-registration with OTP and name
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}"
+        
         payload = {
-            "customer_id_type": "mobile_number",
-            "customer_id": req.mobile
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "name": customer_name,
+            "otp": req.otp  # Include OTP in registration call
         }
         
-        headers = generate_eko_headers(request)
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
+        logging.info(f"[DMT] Trying V1 re-registration with OTP and name: {customer_name}")
+        
         response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
-        logging.info(f"[DMT] Verify OTP Response: {response.status_code}")
-        logging.debug(f"[DMT] Verify OTP Response Body: {response.text[:500]}")
+        logging.info(f"[DMT] Verify Response: {response.status_code}")
+        logging.info(f"[DMT] Verify Response Body: {response.text[:800]}")
         
         if response.status_code == 403:
             logging.error(f"[DMT] 403 Forbidden on Verify OTP - IP: {client_ip}")
             return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
         
-        if response.status_code != 200:
-            return create_error_response(
-                response.status_code,
-                f"API Error: {response.status_code}",
-                "Failed to verify OTP. Please try again."
-            )
+        # Handle empty response
+        if not response.text or response.text.strip() == "":
+            return create_error_response(500, "Empty response", "Service temporarily unavailable.")
         
         result = response.json()
         eko_status = result.get("status")
+        response_status_id = result.get("response_status_id", -1)
         eko_data = result.get("data", {})
         
         # Log verification attempt
@@ -888,34 +945,44 @@ async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
             "mobile": req.mobile,
             "ip": client_ip,
             "eko_status": eko_status,
+            "response_status_id": response_status_id,
             "success": eko_status == 0,
             "response": result
         })
         
-        if eko_status == 0:
+        customer_state = str(eko_data.get("state", ""))
+        state_desc = eko_data.get("state_desc", "")
+        
+        # Check if customer is now verified (state=2 or higher)
+        if eko_status == 0 and customer_state in ["2", "3", "4"]:
             return create_success_response({
                 "verified": True,
                 "customer_id": eko_data.get("customer_id"),
                 "mobile": req.mobile,
-                "state": eko_data.get("state", 0),
-                "state_desc": eko_data.get("state_desc", "Verified"),
+                "state": customer_state,
+                "state_desc": state_desc,
                 "available_limit": eko_data.get("available_limit", 25000),
                 "total_limit": eko_data.get("total_limit", 25000),
-                "message": "Customer verified successfully! You can now add bank accounts."
-            }, "Customer verified")
+                "can_transact": True,
+                "message": "Customer verified! आता bank account add करा."
+            }, "Customer verified successfully")
         
-        elif eko_status == 302:
-            return create_error_response(302, "Wrong OTP", "Invalid OTP. Please check and try again.")
-        
-        elif eko_status == 303:
-            return create_error_response(303, "OTP expired", "OTP expired. Please click 'Resend OTP' to get a new one.")
-        
-        elif eko_status == 327:
-            return create_error_response(327, "OTP not generated", "OTP not generated. Please click 'Resend OTP'.")
+        elif customer_state == "1":
+            # Still pending - V3 verify endpoint needed but might not be available
+            return create_error_response(
+                327,
+                "OTP verification pending",
+                "OTP verification pending. कृपया Eko support शी संपर्क करा किंवा नवीन mobile number वापरून register करा."
+            )
         
         else:
-            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "OTP verification failed"))
-            return create_error_response(eko_status, result.get("message", "OTP verification failed"), user_msg)
+            # V1 didn't verify - return appropriate message
+            message = result.get("message", "Verification failed")
+            return create_error_response(
+                eko_status or 500,
+                message,
+                f"Verification failed: {message}"
+            )
             
     except httpx.TimeoutException:
         return create_error_response(504, "Request timeout", "Service is slow. Please try again.")

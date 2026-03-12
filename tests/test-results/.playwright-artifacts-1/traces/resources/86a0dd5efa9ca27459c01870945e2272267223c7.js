@@ -36,7 +36,7 @@ var _jsxFileName = "/app/frontend/src/components/NotificationBell.js",
 
 
 
-const API = `${"https://bill-payment-stable.preview.emergentagent.com"}/api`;
+const API = `${"https://dmt-otp-fix.preview.emergentagent.com"}/api`;
 const NotificationBell = ({
   userId
 }) => {

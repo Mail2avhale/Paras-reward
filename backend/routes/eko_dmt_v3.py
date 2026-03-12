@@ -25,6 +25,7 @@ import os
 import time
 import hashlib
 import base64
+import hmac
 import logging
 import requests
 from datetime import datetime, timezone
@@ -72,22 +73,32 @@ def generate_eko_secret_key():
     """
     Generate EKO secret key as per documentation.
     
-    Formula: base64(sha256(developer_key + timestamp + authenticator_key))
+    CORRECT Formula (from Eko docs):
+    1. Base64 encode the authenticator key
+    2. Use HMAC-SHA256 with the encoded key
+    3. Sign the timestamp in MILLISECONDS
+    4. Base64 encode the result
+    
+    IMPORTANT: Timestamp must be in milliseconds, not seconds!
     """
-    timestamp = str(int(time.time()))
+    timestamp_ms = str(int(time.time() * 1000))  # MILLISECONDS, not seconds
     
-    # Raw string: developer_key + timestamp + authenticator_key
-    raw_string = EKO_DEVELOPER_KEY + timestamp + EKO_AUTHENTICATOR_KEY
+    # Step 1: Base64 encode the authenticator key
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8')).decode('utf-8')
     
-    # SHA256 hash
-    hash_bytes = hashlib.sha256(raw_string.encode('utf-8')).digest()
+    # Step 2: HMAC-SHA256 with the encoded key, signing the timestamp
+    signature = hmac.new(
+        encoded_key.encode('utf-8'),
+        timestamp_ms.encode('utf-8'),
+        hashlib.sha256
+    ).digest()
     
-    # Base64 encode
-    secret_key = base64.b64encode(hash_bytes).decode('utf-8')
+    # Step 3: Base64 encode the signature
+    secret_key = base64.b64encode(signature).decode('utf-8')
     
-    logger.info(f"[EKO-AUTH] Generated secret key with timestamp: {timestamp}")
+    logger.info(f"[EKO-AUTH] Generated secret key with timestamp: {timestamp_ms}")
     
-    return secret_key, timestamp
+    return secret_key, timestamp_ms
 
 
 def get_eko_headers():
