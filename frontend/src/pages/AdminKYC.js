@@ -174,10 +174,11 @@ const AdminKYC = ({ user }) => {
       const response = await axios.get(`${API}/kyc/list?page=${page}&limit=${ITEMS_PER_PAGE}${statusParam}${searchParam}`);
       
       const data = response.data || {};
-      const docs = data.documents || [];
+      // Backend returns "users" key, not "documents"
+      const docs = data.users || data.documents || [];
       
       setKycDocuments(docs);
-      setTotalPages(data.pages || 1);
+      setTotalPages(data.total_pages || data.pages || 1);
       setTotalDocs(data.total || 0);
       setLastRefresh(new Date());
       setSelectedIds(new Set()); // Clear selection on refresh

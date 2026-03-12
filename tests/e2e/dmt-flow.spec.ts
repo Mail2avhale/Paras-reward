@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://instant-money-flow.preview.emergentagent.com';
+const BASE_URL = 'https://dmt-fix.preview.emergentagent.com';
 
 const DMT_TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

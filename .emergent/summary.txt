@@ -1,363 +1,143 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to fix the failing Eko Domestic Money Transfer (DMT) user OTP registration and Aadhaar OTP verification flows. Over the session, this evolved into a complete end-to-end implementation of the DMT service.
+The user's initial goal was to fix the failing Eko Domestic Money Transfer (DMT) user OTP registration and Aadhaar OTP verification flows. This evolved into a complete end-to-end implementation of the DMT service, including making the PRC (Paras Reward Coin) rate fully automatic based on an economic formula.
 
-The final requirements are:
-1.  **Instant DMT:** Users should be able to perform money transfers instantly, like a mobile recharge, without any admin approval.
-2.  **Admin Controls:** An admin must be able to enable/disable the entire DMT service and set a daily transfer limit for all users.
-3.  **Transaction History:** The admin needs a view to see all DMT transactions with filtering capabilities.
-4.  **Error Handling:** The system must have robust error handling for the DMT flow.
-5.  **Code Cleanup:** All unused code, especially from the incorrect V3 API implementation, should be removed from the frontend and backend.
+During the session, several critical issues were identified and fixed:
+1.  A production DMT transfer failure (Failed to submit request) was traced back to multiple backend bugs, including incorrect API URL formats, conflicting routes, and wrong content types for the Eko V1 API.
+2.  The chatbot's withdrawal feature was still using an old admin-approval flow; this was updated to use the new instant DMT process.
+3.  A security flaw allowing the frontend to bypass OTP verification was patched.
+4.  The PRC conversion rate was found to be hardcoded in numerous places. This was completely refactored to use a single, dynamic rate calculated automatically by an economic formula in .
+5.  The admin dashboard was missing UI controls for the DMT daily limit and enable/disable functions; these were added.
+
+The final user requests were to fix a bug on the production KYC page and confirm all features were working before deployment.
 
 **User's preferred language**: The user communicates in **Marathi**. The next agent **MUST** respond in **Marathi**.
 
 **what currently exists?**
-The application has a FastAPI backend and a React frontend. The agent successfully identified that the user's Eko account is configured for the **V1 API**, not the V3 API as previously attempted.
+A full-stack application with a FastAPI backend and React frontend. The Eko V1 DMT (Domestic Money Transfer) feature is now implemented for both the main UI and the chatbot withdrawal flow. All identified backend bugs related to the transfer have been fixed. The PRC rate is now fully automatic and dynamic, calculated based on an economic formula, and this change is reflected across the entire application. Admin controls for DMT settings (limit, enable/disable) are functional and have a corresponding UI in the admin dashboard.
 
-The entire DMT flow has been re-implemented using the correct V1 API, which handles OTP verification **during the transaction** rather than at customer registration. New customers are registered and can transact immediately, with the OTP being requested only when they initiate their first transfer.
-
-The following has been implemented:
-*   **Backend:** All DMT-related endpoints in  now use the Eko V1 API for customer search, registration, adding recipients, and transactions. Unused V3 API code () and its router have been deleted.
-*   **Admin Controls:** New endpoints have been added for admins to enable/disable the DMT service and set a daily transfer limit. These settings are stored in a new  collection in MongoDB.
-*   **Frontend:**  has been significantly refactored to remove the incorrect customer registration OTP flow and implement the new transaction-time OTP flow. Unused code and state have been cleaned up. The admin dashboard () was updated to manage the new DMT settings.
-*   **Testing:** The testing agent was used to create a comprehensive test suite (70+ tests passed) for the entire backend flow, fixing several bugs in the process.
-
-The application has been through a deployment check and is ready for deployment, but a final user-led test in a production-like environment failed.
+However, two key issues remain:
+1.  A bug on the production admin page prevents admins from seeing the list of pending KYC requests.
+2.  The end-to-end DMT flow cannot be fully tested because the user's Eko retailer account has insufficient balance, which blocks any real transfer attempts.
 
 **Last working item**:
--   **Last item agent was working:** The user attempted a real transaction in the production environment which resulted in a Failed to submit request error on the frontend. The agent was about to start debugging this critical production failure.
+-   **Last item agent was working:** Investigating a production bug on the KYC verification admin page () where the statistics show 104 pending requests, but the list of requests is empty, preventing admins from processing them.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (Extensive backend tests passed via testing agent)
--   **Which testing method agent to use?** Manual debugging using logs and . The agent needs to investigate the backend logs to find the root cause of the error reported by the user.
--   **User Testing Done:** Y (User test FAILED in production)
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Manual investigation. The agent added a debug endpoint () to get raw data from the database. The next step is to have the user access this endpoint on their production URL to diagnose the data inconsistency.
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Production DMT transfer fails with Failed to submit request (P0)**
+-   **Issue 1: Production KYC Admin Page Bug (P0)**
+-   **Issue 2: Insufficient Eko Retailer Balance (P1 - Blocker)**
 
 **Issues Detail:**
--   **Issue 1: Production DMT transfer fails with Failed to submit request**
-    -   **Attempted fixes:** None yet. This is a newly discovered issue from the user's final test.
+-   **Issue 1: Production KYC Admin Page Bug**
+    -   **Attempted fixes:**
+        -   The agent suspected a pagination issue (frontend sending  while backend expects ) but ruled it out as a secondary concern.
+        -   The primary suspect is data inconsistency in the production  collection.
+        -   A debug endpoint  was created in  to fetch all pending KYC documents directly from the database to inspect their structure.
     -   **Next debug checklist:**
-        1.  Check the backend logs (==> /var/log/supervisor/backend.err.log <==
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
-    version = _bcrypt.__about__.__version__
-              ^^^^^^^^^^^^^^^^^
-AttributeError: module 'bcrypt' has no attribute '__about__'
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [8124]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [9153]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [9153]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [9465]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [9465]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [9598]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [9598]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [10085]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [10085]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [10703]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [10703]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [10837]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [10837]
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [13610]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:76: UserWarning: Wire protocol compression with zstandard is not available. You must install the zstandard module for zstandard support.
-  warnings.warn(
-/root/.venv/lib/python3.11/site-packages/pymongo/compression_support.py:64: UserWarning: Wire protocol compression with snappy is not available. You must install the python-snappy module for snappy support.
-  warnings.warn(
-INFO:     Started server process [48]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-
-==> /var/log/supervisor/backend.out.log <==
-   - 💳 Razorpay captured-sync: Every 2 minutes
-   - 🏦 Eko status update: Every 5 minutes
-   - 💓 DB keep-alive ping: Every 2 minutes (prevents cold start)
-   - 🚨 Emergency auto-pause: Every 5 minutes (200% spike detection)
-[INITIAL-SYNC] 🚀 Running initial Razorpay sync after startup...
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T08:57:53.463119+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T08:58:23.462561+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T08:59:23.461849+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T08:59:23.462168+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:00:23.462931+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:01:23.461815+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:01:23.462109+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:02:23.461806+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:03:23.462369+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:03:23.462647+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:04:23.462636+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:05:23.463521+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:05:23.463792+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:06:23.461775+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:07:23.462018+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:07:23.462300+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:08:23.462238+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:09:23.462482+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:09:23.462752+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:10:23.462000+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:11:23.461742+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:11:23.462012+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 23 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:12:23.462621+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:13:23.462845+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:13:23.463125+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 22 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:14:23.462552+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:15:23.462294+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:15:23.462574+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 22 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:16:23.461807+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[AUTO-SYNC] No pending orders to sync
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:17:23.462188+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...
-[RAZORPAY-CAPTURED-SYNC] ⏰ Triggered at 2026-03-12T09:17:23.462514+00:00
-[AUTO-SYNC] No pending orders to sync
-[RAZORPAY-CAPTURED-SYNC] Found 22 captured payments in last 24 hours
-[RAZORPAY-CAPTURED-SYNC] No new activations needed
-[AUTO-SYNC] ⏰ Auto-sync triggered at 2026-03-12T09:18:23.461967+00:00
-[AUTO-SYNC] ✅ Razorpay configured, starting sync...) to find the specific error corresponding to the failed request shown in the user's screenshot.
-        2.  Inspect the  function in  and the browser's network tab (if possible) to understand the exact payload being sent to the  endpoint.
-        3.  Use  to manually replicate the failing API call from the command line to isolate whether the issue is in the backend logic or the frontend payload.
-        4.  Trace the  function in , paying close attention to the data being sent to the Eko V1  endpoint and the response being received.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a show-stopper bug preventing the core functionality of the application from working in a real environment. Fixing it will complete the entire DMT feature.
+        1.  Instruct the user to navigate to  in their browser.
+        2.  Ask the user to provide the JSON output from that page.
+        3.  Analyze the output to see if the 104 documents exist and if their  field is correctly set to . This will determine if the bug is in the backend query or frontend rendering.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical bug as it blocks the entire KYC approval process for administrators.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None.
 
-**In progress Task List**:
--   **Task 1: Resolve Production DMT Transfer Failure (P0)**
-    -   **Where to resume:** Begin by inspecting the backend logs for errors related to the DMT transfer attempt.
-    -   **What will be achieved with this?** A fully functional, end-to-end, and production-ready Domestic Money Transfer feature.
-    -   **Status:** IN PROGRESS
+-   **Issue 2: Insufficient Eko Retailer Balance**
+    -   **Attempted fixes:** The agent has repeatedly informed the user that their Eko retailer account balance is zero, which causes all transfer attempts to fail with Eko error code 347 (Insufficient balance).
+    -   **Next debug checklist:**
+        1.  Reiterate to the user that they must log in to their Eko Connect portal and add funds (e.g., at least ₹500 to cover transfers and fees).
+        2.  Once the user confirms the balance is added, perform a full end-to-end transfer test via the chatbot.
+        3.  This test will finally confirm if a Transaction OTP is triggered by Eko or if the transfer succeeds directly.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the final blocker preventing the validation of the entire DMT feature. Until this is resolved, it's impossible to confirm if the transfer flow works under real conditions.
+    -   **Status:** BLOCKED (on user action)
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** None.
+    -   **Blocked on other issue:** None.
+
+**In progress Task List**:
+- None. Focus is on the above issues.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P1:** Continue refactoring  into smaller route files.
-*   **P2:** Continue refactoring .
+*   **P1:** Refactor the monolithic  by moving large sections of code (like PRC ledger and user profile endpoints) into separate files under the  directory.
 
 **Future Tasks:**
 *   Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
 *   Run the PRC Vault to PRC Balance Migration Script on Production.
-*   Add Email/Mobile OTP verification on signup.
+*   Add Email/Mobile OTP verification on user signup.
 *   Investigate the Admin Panel Failed to delete plan error.
 *   Investigate Razorpay auto-subscription failures.
 
 **Completed work in this session**
--   **Eko DMT V1 Flow Implementation (RESOLVED):**
-    -   Correctly identified that the user's account uses the Eko V1 API, not V3.
-    -   Rewrote the entire backend DMT logic to use V1 endpoints for customer search, registration, and transactions ().
-    -   Implemented the correct OTP-in-transaction flow as per V1 documentation.
-    -   Refactored the frontend () to match the V1 flow, removing the incorrect registration OTP UI.
--   **Admin Controls for DMT (IMPLEMENTED):**
-    -   Created backend APIs for admins to enable/disable the DMT service and set a dynamic daily transfer limit.
-    -   Updated the admin dashboard to manage these settings.
--   **Code Cleanup (DONE):**
-    -   Deleted the unused  file.
-    -   Removed the V3 router from .
-    -   Cleaned up unused state and functions from .
--   **Comprehensive Testing (DONE):**
-    -   Used the testing agent to generate and pass over 70 backend tests, ensuring the V1 API logic is robust and fixing several underlying bugs.
+-   **Fixed Eko V1 DMT Bugs (RESOLVED):**
+    -   Corrected the recipient creation URL format in .
+    -   Resolved a critical route conflict by disabling a legacy  route in .
+    -   Fixed the  for the Eko transfer API from  to .
+-   **Integrated Instant DMT into Chatbot (DONE):**
+    -   Modified  to use the new instant Eko DMT flow, replacing the old admin-approval system. Implemented automatic PRC refund on transfer failure.
+-   **Patched Security & Logic Flaws (DONE):**
+    -   Fixed a security issue where the frontend could bypass OTP verification by sending a flag; backend now enforces a database check.
+    -   Corrected customer status checking logic to handle Eko's string-based state codes (e.g., ).
+-   **Made PRC Rate Fully Automatic (DONE):**
+    -   Removed all hardcoded  variables from , , , and other files.
+    -   Integrated the dynamic rate calculation from  across the application, ensuring the rate is always based on the economic formula and not an admin-set value.
+-   **Implemented Admin DMT Controls UI (DONE):**
+    -   Added UI controls to  for setting the daily transfer limit and enabling/disabling the DMT service.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Eko V1 API:** The entire DMT flow is built on this. Key distinction is that OTP is not for customer verification but for transaction authorization.
--   **OTP-in-Transaction:** The core logic change. The  endpoint is called twice: first to initiate and receive an OTP, and second (with the OTP) to confirm the transaction.
--   **Dynamic Configuration:** Storing admin settings (DMT status, daily limit) in a  MongoDB collection allows for real-time control without code deployments.
+-   **Eko V1 API (ICICI pipe):** The DMT flow is built on this version, which has specific behaviors like OTP-in-transaction and form-urlencoded data for transfers.
+-   **Dynamic PRC Rate:** The PRC-to-INR conversion rate is no longer a fixed or admin-set value. It's now calculated automatically by a formula in  based on five economic factors (supply, redemption, burn, user growth, utility) and stored in the database for all services to use.
+-   **Route Conflict Resolution:** A critical bug was caused by a legacy route in an archived file () conflicting with the new, active route in . This highlights the importance of cleaning up or disabling unused but still-included code.
 
 **key DB schema**
--   **dmt_settings:**  - Stores admin-configurable settings for the DMT service.
--   **dmt_transactions:** Stores records of all DMT transfers.
--   **users:** Stores user information.
+-   **dmt_settings:** 
+-   **prc_economy:**  - Stores the **automatically calculated** PRC rate.
+-   **kyc:** Stores KYC documents. The  field is critical for the pending KYC bug.
 
 **All files of reference**
--   : The single source of truth for all backend DMT logic, including V1 API calls and admin controls.
--   : The main frontend component for the entire user-facing DMT flow.
--   : The UI for managing DMT settings.
--   : Main server file where routers are registered.
-
-**Areas that need refactoring**:
--   : Can be further modularized by moving more routes out.
--   : Remains a large and complex component.
-
-**key api endpoints**
--   : **WORKING.**
--   : **WORKING.**
--   : **WORKING.**
--   : **NEEDS DEBUGGING.** Fails in production environment.
--   : **WORKING.**
--   , : **WORKING.**
--   : **WORKING.**
+-   : Contains the logic for the broken KYC list and the new  endpoint.
+-   : Contains the end-to-end instant DMT flow for chatbot users.
+-   : The source of truth for the automatic PRC rate calculation.
+-   : The frontend file for the broken KYC admin page.
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   The absolute highest priority (P0) is to **debug and fix the production DMT transfer failure.** The user's test failed with a Failed to submit request error. Start by checking the backend logs.
--   The switch to the **Eko V1 API is correct and final.** Do not attempt to use or re-implement any V3 logic. The key concept is that OTP is verified *during the transaction*, not at registration.
--   All backend logic and admin controls are implemented and have passed automated tests. The failure is likely a specific environment, configuration, or payload issue in the final production call.
+-   The #1 priority is the **Production KYC Page Bug**. Guide the user to access  and provide you with the output. This is essential for diagnosis.
+-   The #2 priority (and a complete blocker for the DMT feature) is the **Insufficient Eko Balance**. You must get confirmation from the user that they have added at least **₹500** to their Eko retailer account before you can proceed with testing the transfer.
+-   The PRC rate is **fully automatic**. Do not try to set it manually or suggest that the admin should. The system is designed to manage this itself based on economic activity.
 
 **documents and test reports created in this job**
--   : Contains successful test results for the DMT backend (pre-admin controls).
--   : Contains successful test results for the final DMT backend including admin controls (70 tests passed).
--   : Updated with all completed tasks and the current status.
+-   None. All debugging was done via live  commands and log inspection.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** I need the new features: direct transfer, no admin approval, admin can set limits, admin can enable/disable DMT.
-2.  **Agent:** Implemented the requested admin controls and instant transfer logic.
-3.  **User:** Explain the full flow, let's test E2E, and where do I see transaction details?
-4.  **Agent:** Explained the flow, added an admin transaction history endpoint, and improved error handling.
-5.  **User:** This will be in the user chatbot, right? Also, remove all unused code and deploy.
-6.  **Agent:** Confirmed, and proceeded to clean up unused frontend and backend code related to the old V3 OTP flow.
-7.  **User:** (Shared an image of two options: Mobile OTP vs Aadhaar) Which one should I use?
-8.  **Agent:** Advised to use Mobile OTP as it corresponds to the working V1 API implementation.
-9.  **User:** Ok.
-10. **User:** Test on production with these details: . (Shared screenshot showing Failed to submit request error).
+1.  **User:** Asks if the PRC rate is automatic everywhere based on the formula. (Status: Addressed)
+2.  **User:** Requests to check all files and make the PRC rate dynamic if it's hardcoded anywhere. (Status: Completed)
+3.  **User:** States that the admin should not change the rate; it should be automatic as previously done. (Status: Addressed & Implemented)
+4.  **User:** Asks if the rate is based on the current environment's data. (Status: Addressed)
+5.  **User:** Credit added. (Status: Incomplete - This was not enough to resolve the insufficient balance issue).
+6.  **User:** Provides new recipient details for testing. (Status: Completed - Recipient was added).
+7.  **User:** Reports the KYC page bug in production: 104 request pending figure but the list is empty. (Status: In Progress).
+8.  **User:** Cannot see the admin pages screenshot. (Status: Addressed - Agent had issues with screenshot tool).
+9.  **User:** Asks to check the screenshot of the admin page. (Status: Addressed).
+10. **User:** Asks where the DMT daily transfer limit is. (Status: Completed - Agent added UI controls for it).
 
 **Project Health Check:**
 -   **Broken:**
-    -   The core Domestic Money Transfer (DMT) feature is failing in the production environment during the final transaction step.
+    -   Admin KYC Verification Page: Core functionality is unusable due to the list not appearing.
+    -   Eko DMT Flow: Functionally blocked due to zero balance in the user's Eko retailer account.
 
 **3rd Party Integrations**
 -   **Eko (DMT & BBPS API):**
-    -   **BBPS:** **FIXED & STABLE**.
-    -   **DMT (v1 API):** The implementation is complete but **failing in production**. The flow uses the V1 API for customer management and transactions.
+    -   DMT (v1 API): Implementation is complete, but **untested under real conditions** due to the user's account having no funds.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used multiple times to validate the V1 DMT backend implementation, which passed with over 70 tests.
--   **Test files created:** , . The testing agent also created persistent pytest files in the backend.
--   **Known regressions:** The DMT flow, which was thought to be complete, has regressed or failed under real production conditions.
-
-**Credentials to test flow:**
--   **Admin:**  / PIN: 
--   **DMT Test User:**  / PIN: 
--   **Production Test Recipient:**  / AC:  / IFSC: 
-
-**What agent forgot to execute**
-The agent has been very thorough. The production failure was an unforeseen issue that only appeared during the user's final test, not something the agent forgot to do.</analysis>
+-   **Testing agent used after significant changes:** NO. All recent fixes were tested manually via  and log checks.
+-   **Test files created:** None in this session.
+-   **Known regressions:** The KYC Admin page was presumably working but is now broken in production.</analysis>

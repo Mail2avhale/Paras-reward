@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://instant-money-flow.preview.emergentagent.com",
+    "url": "https://dmt-fix.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
