@@ -151,11 +151,44 @@ EKO_ERROR_MESSAGES = {
     342: "Recipient already registered.",
     41: "Invalid IFSC code.",
     46: "Invalid account details.",
-    347: "Insufficient balance.",
+    347: "Insufficient balance in EKO account.",
     544: "Bank server unavailable. Please try later.",
     53: "IMPS not available for this transaction.",
     317: "NEFT not allowed for this account.",
     314: "Monthly limit exceeded.",
+    # Additional error codes
+    45: "Invalid amount. Amount should be between ₹100 and ₹25000.",
+    47: "Invalid recipient details.",
+    48: "Transaction declined by bank.",
+    49: "Account frozen or blocked.",
+    50: "Invalid transaction reference.",
+    51: "Duplicate transaction. Please wait before retrying.",
+    52: "Transaction limit exceeded for this account.",
+    54: "Bank maintenance in progress.",
+    55: "Network error. Please try again.",
+    133: "Invalid name format. Name should contain only letters and space.",
+    350: "Daily transaction limit exceeded.",
+    351: "Weekly transaction limit exceeded.",
+    352: "Monthly transaction limit exceeded.",
+    500: "Internal server error. Please try again.",
+    502: "Gateway timeout. Transaction status unknown.",
+    503: "Service temporarily unavailable.",
+}
+
+# User-friendly error messages in Marathi
+EKO_ERROR_MESSAGES_MR = {
+    403: "Authentication failed. कृपया support शी संपर्क करा.",
+    463: "Customer सापडला नाही. कृपया आधी registration करा.",
+    327: "OTP verification pending. कृपया OTP verify करा.",
+    302: "चुकीचा OTP. कृपया पुन्हा प्रयत्न करा.",
+    303: "OTP expired. कृपया नवीन OTP मिळवा.",
+    347: "Insufficient balance. कृपया balance check करा.",
+    544: "Bank server unavailable. कृपया नंतर प्रयत्न करा.",
+    45: "Invalid amount. ₹100 ते ₹25000 दरम्यान रक्कम टाका.",
+    48: "Transaction declined by bank.",
+    50: "Duplicate transaction. कृपया थोडा वेळ थांबा.",
+    350: "दैनिक limit पूर्ण झाली. उद्या पुन्हा प्रयत्न करा.",
+    500: "Server error. कृपया पुन्हा प्रयत्न करा.",
 }
 
 # ==================== DATABASE CONNECTION ====================
@@ -525,11 +558,12 @@ def health():
 
 @router.get("/wallet/{user_id}")
 async def get_wallet(user_id: str):
-    """Get user's PRC wallet balance and INR equivalent - ASYNC version."""
-    if db is None:
+    """Get user's PRC wallet balance and INR equivalent."""
+    sync_db = get_db()
+    if sync_db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
     
-    user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
+    user = sync_db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -537,13 +571,12 @@ async def get_wallet(user_id: str):
     prc_balance = user.get("prc_balance", 0)
     inr_equivalent = prc_balance / PRC_TO_INR_RATE
     
-    # Use async version for daily limit check
-    is_allowed, remaining_limit, used_today = await check_daily_limit_async(user_id)
+    # Use sync version for daily limit check
+    is_allowed, remaining_limit, used_today = check_daily_limit(sync_db, user_id)
     
     # Get dynamic daily limit from settings
-    settings = await db.dmt_settings.find_one({"_id": "dmt_config"})
-    daily_limit = settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR) if settings else DEFAULT_DAILY_LIMIT_INR
-    dmt_enabled = settings.get("enabled", True) if settings else True
+    daily_limit = get_daily_limit(sync_db)
+    dmt_enabled = is_dmt_enabled(sync_db)
     
     return create_success_response({
         "prc_balance": prc_balance,
@@ -2009,3 +2042,213 @@ async def set_daily_limit(limit_inr: int):
         "daily_limit_inr": limit_inr,
         "message": f"Daily limit updated to ₹{limit_inr}"
     }, "Daily limit updated")
+
+
+
+# ==================== ADMIN TRANSACTION HISTORY ====================
+
+@router.get("/admin/transactions")
+async def get_all_transactions(
+    status: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    mobile: Optional[str] = None,
+    limit: int = 50,
+    skip: int = 0
+):
+    """
+    Get ALL DMT transactions for Admin with filters.
+    
+    Filters:
+    - status: completed, failed, pending, processing, otp_pending
+    - date_from: YYYY-MM-DD
+    - date_to: YYYY-MM-DD
+    - mobile: Customer mobile number
+    """
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    # Build filter query
+    query = {"service_type": "dmt"}
+    
+    if status:
+        query["status"] = status
+    
+    if mobile:
+        query["mobile"] = mobile
+    
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            query["created_at"] = {"$gte": from_date}
+        except:
+            pass
+    
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+            if "created_at" in query:
+                query["created_at"]["$lte"] = to_date
+            else:
+                query["created_at"] = {"$lte": to_date}
+        except:
+            pass
+    
+    # Get transactions
+    transactions = list(db.dmt_transactions.find(
+        query,
+        {"_id": 0, "eko_response": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit))
+    
+    total = db.dmt_transactions.count_documents(query)
+    
+    # Calculate summary
+    summary_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total_inr": {"$sum": "$amount_inr"},
+            "total_prc": {"$sum": "$prc_amount"}
+        }}
+    ]
+    summary_result = list(db.dmt_transactions.aggregate(summary_pipeline))
+    
+    summary = {
+        "total_transactions": total,
+        "completed": 0,
+        "failed": 0,
+        "pending": 0,
+        "total_amount_inr": 0,
+        "total_prc_used": 0
+    }
+    
+    for s in summary_result:
+        status_name = s["_id"]
+        if status_name == "completed":
+            summary["completed"] = s["count"]
+            summary["total_amount_inr"] = s["total_inr"]
+            summary["total_prc_used"] = s["total_prc"]
+        elif status_name == "failed":
+            summary["failed"] = s["count"]
+        elif status_name in ["pending", "processing", "otp_pending"]:
+            summary["pending"] += s["count"]
+    
+    # Format transactions
+    formatted = []
+    for t in transactions:
+        formatted.append({
+            "transaction_id": t.get("transaction_id"),
+            "eko_tid": t.get("eko_tid"),
+            "user_id": t.get("user_id"),
+            "mobile": t.get("mobile"),
+            "recipient_id": t.get("recipient_id"),
+            "status": t.get("status"),
+            "amount_inr": t.get("amount_inr"),
+            "prc_used": t.get("prc_amount"),
+            "prc_refunded": t.get("prc_refunded", 0),
+            "created_at": t.get("created_at").isoformat() if t.get("created_at") else None,
+            "message": t.get("eko_message")
+        })
+    
+    return create_success_response({
+        "summary": summary,
+        "transactions": formatted,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "has_more": skip + limit < total
+        }
+    }, f"Found {total} transactions")
+
+
+@router.get("/admin/stats")
+async def get_dmt_stats():
+    """
+    Get DMT statistics for Admin Dashboard.
+    """
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    # Today's stats
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    today_pipeline = [
+        {
+            "$match": {
+                "service_type": "dmt",
+                "created_at": {"$gte": today_start}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$status",
+                "count": {"$sum": 1},
+                "total_inr": {"$sum": "$amount_inr"}
+            }
+        }
+    ]
+    
+    today_stats = list(db.dmt_transactions.aggregate(today_pipeline))
+    
+    today = {
+        "total_transactions": 0,
+        "completed": 0,
+        "failed": 0,
+        "pending": 0,
+        "total_amount_inr": 0
+    }
+    
+    for s in today_stats:
+        today["total_transactions"] += s["count"]
+        if s["_id"] == "completed":
+            today["completed"] = s["count"]
+            today["total_amount_inr"] = s["total_inr"]
+        elif s["_id"] == "failed":
+            today["failed"] = s["count"]
+        else:
+            today["pending"] += s["count"]
+    
+    # All time stats
+    all_time_pipeline = [
+        {"$match": {"service_type": "dmt"}},
+        {
+            "$group": {
+                "_id": "$status",
+                "count": {"$sum": 1},
+                "total_inr": {"$sum": "$amount_inr"}
+            }
+        }
+    ]
+    
+    all_time_stats = list(db.dmt_transactions.aggregate(all_time_pipeline))
+    
+    all_time = {
+        "total_transactions": 0,
+        "completed": 0,
+        "failed": 0,
+        "total_amount_inr": 0
+    }
+    
+    for s in all_time_stats:
+        all_time["total_transactions"] += s["count"]
+        if s["_id"] == "completed":
+            all_time["completed"] = s["count"]
+            all_time["total_amount_inr"] = s["total_inr"]
+        elif s["_id"] == "failed":
+            all_time["failed"] = s["count"]
+    
+    # Get settings
+    settings = get_dmt_settings(db)
+    
+    return create_success_response({
+        "today": today,
+        "all_time": all_time,
+        "settings": {
+            "enabled": settings.get("enabled", True),
+            "daily_limit_inr": settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR)
+        }
+    }, "DMT stats retrieved")
