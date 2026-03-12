@@ -1393,6 +1393,19 @@ async def fix_double_activation_subscriptions(request: Request):
             subscription_start = user.get("subscription_start")
             current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
             
+            # Get remaining days that were legitimately added (from transaction record)
+            # Find the most recent subscription transaction for this user
+            last_txn = await db.transactions.find_one(
+                {"user_id": user_id, "type": "subscription_payment"},
+                sort=[("timestamp", -1)]
+            )
+            
+            legitimate_remaining_days = 0
+            if last_txn:
+                legitimate_remaining_days = last_txn.get("remaining_days_added", 0) or 0
+                # Cap at reasonable amount (max 28 days remaining from previous subscription)
+                legitimate_remaining_days = min(legitimate_remaining_days, 28)
+            
             # Prefer last_payment_date, fallback to subscription_start
             correct_start = payment_date or subscription_start
             if not correct_start:
@@ -1420,9 +1433,12 @@ async def fix_double_activation_subscriptions(request: Request):
             now = datetime.now(timezone.utc)
             current_days = (current_expiry - correct_start).days if current_expiry else 0
             
-            # Check if over-extended (more than 28 days from payment date)
-            if current_days > 35:  # More than 28 + buffer
-                correct_expiry = correct_start + timedelta(days=28)
+            # Correct total days = 28 (plan) + legitimate remaining days
+            correct_total_days = 28 + legitimate_remaining_days
+            
+            # Check if over-extended (more than correct total from payment date)
+            if current_days > correct_total_days + 7:  # More than correct + buffer
+                correct_expiry = correct_start + timedelta(days=correct_total_days)
                 
                 result = {
                     "user_id": user_id,
@@ -1433,9 +1449,10 @@ async def fix_double_activation_subscriptions(request: Request):
                     "used_date": correct_start.isoformat(),
                     "current_expiry": current_expiry.isoformat() if current_expiry else None,
                     "current_days": current_days,
+                    "legitimate_remaining_days": legitimate_remaining_days,
+                    "correct_total_days": correct_total_days,
                     "correct_expiry": correct_expiry.isoformat(),
-                    "correct_days": 28,
-                    "days_to_remove": current_days - 28
+                    "days_to_remove": current_days - correct_total_days
                 }
                 
                 if not dry_run:
@@ -1452,7 +1469,9 @@ async def fix_double_activation_subscriptions(request: Request):
                                 "subscription_fixed_v2": True,
                                 "fixed_at": datetime.now(timezone.utc),
                                 "original_wrong_days": current_days,
-                                "fix_reason": "Double activation bug fix v2 - using last_payment_date"
+                                "correct_total_days": correct_total_days,
+                                "legitimate_remaining_days": legitimate_remaining_days,
+                                "fix_reason": f"Double activation fix v2: 28 + {legitimate_remaining_days} remaining = {correct_total_days} days"
                             }
                         }
                     )
@@ -1482,12 +1501,17 @@ async def fix_double_activation_subscriptions(request: Request):
 @router.post("/admin/fix-specific-user")
 async def fix_specific_user_subscription(request: Request):
     """
-    ADMIN TOOL: Fix a specific user's subscription to 28 days from their last_payment_date.
+    ADMIN TOOL: Fix a specific user's subscription.
+    
+    Formula: expiry = last_payment_date + 28 + remaining_days
     
     Usage:
     curl -X POST "/api/razorpay/admin/fix-specific-user" \
       -H "Content-Type: application/json" \
-      -d '{"admin_pin": "123456", "user_id": "xxx", "correct_days": 28}'
+      -d '{"admin_pin": "123456", "user_id": "xxx"}'
+    
+    Or specify custom days:
+      -d '{"admin_pin": "123456", "user_id": "xxx", "plan_days": 28, "remaining_days": 5}'
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -1496,7 +1520,8 @@ async def fix_specific_user_subscription(request: Request):
         data = await request.json()
         admin_pin = data.get("admin_pin")
         user_id = data.get("user_id")
-        correct_days = data.get("correct_days", 28)
+        plan_days = data.get("plan_days", 28)  # Base plan days
+        custom_remaining = data.get("remaining_days")  # Optional: override remaining days
         
         if admin_pin != "123456":
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
@@ -1512,6 +1537,20 @@ async def fix_specific_user_subscription(request: Request):
         payment_date = user.get("last_payment_date")
         subscription_start = user.get("subscription_start")
         current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+        
+        # Get remaining days from transaction record (if not custom specified)
+        remaining_days = 0
+        if custom_remaining is not None:
+            remaining_days = custom_remaining
+        else:
+            # Find from transaction record
+            last_txn = await db.transactions.find_one(
+                {"user_id": user_id, "type": "subscription_payment"},
+                sort=[("timestamp", -1)]
+            )
+            if last_txn:
+                remaining_days = last_txn.get("remaining_days_added", 0) or 0
+                remaining_days = min(remaining_days, 28)  # Cap at 28
         
         # Prefer last_payment_date
         correct_start = payment_date or subscription_start
@@ -1530,8 +1569,9 @@ async def fix_specific_user_subscription(request: Request):
         if current_expiry and current_expiry.tzinfo is None:
             current_expiry = current_expiry.replace(tzinfo=timezone.utc)
         
-        # Calculate correct expiry from last payment date
-        correct_expiry = correct_start + timedelta(days=correct_days)
+        # Calculate correct total: plan_days + remaining_days
+        correct_total_days = plan_days + remaining_days
+        correct_expiry = correct_start + timedelta(days=correct_total_days)
         
         # Current days from correct start
         current_days = (current_expiry - correct_start).days if current_expiry else 0
@@ -1549,7 +1589,9 @@ async def fix_specific_user_subscription(request: Request):
                     "subscription_fixed_v2": True,
                     "fixed_at": datetime.now(timezone.utc),
                     "original_wrong_days": current_days,
-                    "fix_reason": f"Manual fix v2: {current_days} days -> {correct_days} days (from payment date)"
+                    "correct_total_days": correct_total_days,
+                    "legitimate_remaining_days": remaining_days,
+                    "fix_reason": f"Manual fix v2: {plan_days} + {remaining_days} remaining = {correct_total_days} days"
                 }
             }
         )
@@ -1563,9 +1605,11 @@ async def fix_specific_user_subscription(request: Request):
             "new_subscription_start": correct_start.isoformat(),
             "old_expiry": current_expiry.isoformat() if current_expiry else None,
             "old_days": current_days,
+            "plan_days": plan_days,
+            "remaining_days_added": remaining_days,
+            "new_total_days": correct_total_days,
             "new_expiry": correct_expiry.isoformat(),
-            "new_days": correct_days,
-            "message": f"Fixed subscription from {current_days} days to {correct_days} days (from payment date)"
+            "message": f"Fixed: {plan_days} (plan) + {remaining_days} (remaining) = {correct_total_days} days"
         }
         
     except HTTPException:
