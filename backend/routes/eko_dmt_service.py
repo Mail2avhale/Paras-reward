@@ -344,21 +344,7 @@ class AddRecipientRequest(BaseModel):
         return v
 
 
-class TransferRequest(BaseModel):
-    """Request to transfer money"""
-    user_id: str = Field(..., description="Paras Reward user ID")
-    mobile: str = Field(..., min_length=10, max_length=10)
-    recipient_id: str = Field(..., description="EKO recipient ID")
-    prc_amount: int = Field(..., gt=0, description="PRC amount to redeem")
-    
-    @validator('prc_amount')
-    def validate_prc(cls, v):
-        inr = v / PRC_TO_INR_RATE
-        if inr < MIN_REDEEM_INR:
-            raise ValueError(f'Minimum redeem is ₹{MIN_REDEEM_INR} ({MIN_REDEEM_INR * PRC_TO_INR_RATE} PRC)')
-        if inr > MAX_DAILY_INR:
-            raise ValueError(f'Maximum daily limit is ₹{MAX_DAILY_INR}')
-        return v
+# TransferRequest class defined with STEP 5: MONEY TRANSFER section
 
 
 # ==================== RESPONSE HELPERS ====================
@@ -580,12 +566,13 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
             except (ValueError, TypeError):
                 customer_state_int = 0
             
-            # State meanings:
-            # 0 = Verified (can do transactions)
-            # 1 = OTP verification pending
-            # 2 = Blocked
-            # 8 = Minimum KYC Approved (can do transactions)
+            # State meanings (per Eko V1 documentation):
+            # 1 = Verification Pending (can still transact in V1, OTP during transfer)
+            # 2 = Non-KYC Verified (can transact)
+            # 3 = KYC Approved
+            # 8 = Minimum KYC Approved
             
+            # V1 API: All registered customers can transact, OTP is verified during transfer
             response_data = {
                 "customer_exists": True,
                 "customer_id": customer_data.get("customer_id"),
@@ -594,14 +581,16 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
                 "available_limit": customer_data.get("available_limit", 25000),
                 "used_limit": customer_data.get("used_limit", 0),
                 "total_limit": customer_data.get("total_limit", 25000),
-                "kyc_status": customer_data.get("state_desc", "Verified" if customer_state_int in [0, 8] else "Pending"),
+                "kyc_status": customer_data.get("state_desc", ""),
                 "state": customer_state,
-                "otp_required": customer_state_int == 1,
-                "can_transact": customer_state_int in [0, 8]  # State 0=Verified, 8=Minimum KYC Approved
+                "otp_required": False,  # V1 API: OTP during transfer, not registration
+                "can_transact": True    # V1 API: All registered customers can transact
             }
             
-            if customer_state == 1:
-                response_data["message"] = "Customer found but OTP verification pending. Please verify OTP to continue."
+            if customer_state_int == 1:
+                response_data["message"] = "Customer ready! Transfer करताना OTP पाठवला जाईल."
+            else:
+                response_data["message"] = "Customer verified - Transfer साठी तयार!"
             
             return create_success_response(response_data, "Customer found")
         
@@ -616,15 +605,15 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
             }, "Customer not found - Registration required")
         
         elif eko_status == 327:
-            # Customer exists but OTP pending
+            # Customer exists but OTP pending - V1 API: can still transact
             return create_success_response({
                 "customer_exists": True,
                 "mobile": req.mobile,
-                "state": 1,
-                "otp_required": True,
-                "can_transact": False,
-                "message": "Customer found but OTP verification pending."
-            }, "OTP verification pending")
+                "state": "1",
+                "otp_required": False,  # V1 API: OTP during transfer
+                "can_transact": True,   # V1 API: Can transact
+                "message": "Customer ready! Transfer करताना OTP पाठवला जाईल."
+            }, "Customer ready for transfer")
         
         else:
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Customer search failed"))
@@ -737,12 +726,12 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
                     "name": req.name,
                     "state": customer_state,
                     "state_desc": state_desc,
-                    "otp_required": True,
-                    "otp_sent": True,
+                    "otp_required": False,  # V1 API: No OTP for registration
+                    "otp_sent": False,
                     "otp_ref_id": otp_ref_id,
-                    "can_transact": False,
-                    "message": "OTP पाठवला आहे. कृपया OTP टाकून verification पूर्ण करा."
-                }, "Customer registered - OTP sent")
+                    "can_transact": True,  # V1 API: Customer can transact, OTP verified during transfer
+                    "message": "Registration पूर्ण! Transfer करताना OTP पाठवला जाईल."
+                }, "Customer registered - OTP will be sent during transfer")
             else:
                 # Customer verified immediately (state 2, 3, or 4)
                 return create_success_response({
@@ -759,18 +748,18 @@ async def register_customer(req: CustomerRegisterRequest, request: Request):
                 }, "Customer registered successfully")
         
         elif eko_status == 327 or response_status_id == 327:
-            # OTP already pending
+            # OTP already pending - but in V1 API, customer can still transact
             return create_success_response({
                 "registered": True,
                 "customer_id": eko_data.get("customer_id"),
                 "mobile": req.mobile,
                 "state": "1",
-                "otp_required": True,
+                "otp_required": False,  # V1 API: No separate OTP for registration
                 "otp_sent": False,
-                "can_transact": False,
+                "can_transact": True,  # V1 API: Can transact, OTP during transfer
                 "otp_ref_id": eko_data.get("otp_ref_id", ""),
-                "message": "OTP verification pending. 'Resend OTP' वर क्लिक करा."
-            }, "OTP verification pending")
+                "message": "Customer ready! Transfer करताना OTP पाठवला जाईल."
+            }, "Customer ready for transfer")
         
         else:
             user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Registration failed"))
@@ -875,126 +864,27 @@ async def resend_customer_otp(req: CustomerOTPRequest, request: Request):
 @router.post("/customer/verify-otp")
 async def verify_customer_otp(req: CustomerOTPRequest, request: Request):
     """
-    Verify customer OTP to complete registration.
+    NOTE: V1 API मध्ये customer registration साठी separate OTP verification नाही!
     
-    NOTE: For current Eko account configuration:
-    - New customers are immediately verified (state=2) during registration
-    - OTP verification is only needed for legacy customers with state=1
-    - V3 verify endpoint may not be available for all account types
+    OTP verification फक्त TRANSACTION flow मध्ये होते:
+    1. POST /v1/transactions - initiate
+    2. If "OTP sent" → POST /v1/transactions with otp
     
-    If V3 verify fails, suggest re-registering the customer.
+    हा endpoint backward compatibility साठी ठेवला आहे पण actual verification
+    /transfer endpoint मध्ये होते.
+    
+    Customer registration V1 API मध्ये:
+    - PUT /v1/customers/mobile_number:{mobile} → creates customer
+    - state=1 → OTP pending (for transactions)
+    - state=2 → Verified (can transact)
+    
+    OTP is verified during TRANSFER, not during registration.
     """
-    if not validate_eko_config():
-        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
-    
-    db = get_db()
-    client_ip = get_client_ip(request)
-    
-    if not req.otp:
-        return create_error_response(400, "OTP is required", "कृपया OTP टाका.")
-    
-    logging.info(f"[DMT] Verify OTP: {req.mobile}, OTP: ***{req.otp[-2:]}")
-    
-    try:
-        # First, fetch existing customer to get their name
-        search_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        headers = generate_eko_headers(request)
-        
-        search_response = await async_get(search_url, headers=headers, timeout=REQUEST_TIMEOUT)
-        customer_name = "User"
-        
-        if search_response.status_code == 200:
-            try:
-                search_result = search_response.json()
-                customer_name = search_result.get("data", {}).get("name", "User") or "User"
-            except:
-                pass
-        
-        logging.info(f"[DMT] Customer name from search: {customer_name}")
-        
-        # Now try V1 re-registration with OTP and name
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}"
-        
-        payload = {
-            "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "name": customer_name,
-            "otp": req.otp  # Include OTP in registration call
-        }
-        
-        headers["Content-Type"] = "application/x-www-form-urlencoded"
-        
-        logging.info(f"[DMT] Trying V1 re-registration with OTP and name: {customer_name}")
-        
-        response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
-        
-        logging.info(f"[DMT] Verify Response: {response.status_code}")
-        logging.info(f"[DMT] Verify Response Body: {response.text[:800]}")
-        
-        if response.status_code == 403:
-            logging.error(f"[DMT] 403 Forbidden on Verify OTP - IP: {client_ip}")
-            return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
-        
-        # Handle empty response
-        if not response.text or response.text.strip() == "":
-            return create_error_response(500, "Empty response", "Service temporarily unavailable.")
-        
-        result = response.json()
-        eko_status = result.get("status")
-        response_status_id = result.get("response_status_id", -1)
-        eko_data = result.get("data", {})
-        
-        # Log verification attempt
-        log_dmt_transaction(db, {
-            "action": "verify_otp",
-            "user_id": req.user_id,
-            "mobile": req.mobile,
-            "ip": client_ip,
-            "eko_status": eko_status,
-            "response_status_id": response_status_id,
-            "success": eko_status == 0,
-            "response": result
-        })
-        
-        customer_state = str(eko_data.get("state", ""))
-        state_desc = eko_data.get("state_desc", "")
-        
-        # Check if customer is now verified (state=2 or higher)
-        if eko_status == 0 and customer_state in ["2", "3", "4"]:
-            return create_success_response({
-                "verified": True,
-                "customer_id": eko_data.get("customer_id"),
-                "mobile": req.mobile,
-                "state": customer_state,
-                "state_desc": state_desc,
-                "available_limit": eko_data.get("available_limit", 25000),
-                "total_limit": eko_data.get("total_limit", 25000),
-                "can_transact": True,
-                "message": "Customer verified! आता bank account add करा."
-            }, "Customer verified successfully")
-        
-        elif customer_state == "1":
-            # Still pending - V3 verify endpoint needed but might not be available
-            return create_error_response(
-                327,
-                "OTP verification pending",
-                "OTP verification pending. कृपया Eko support शी संपर्क करा किंवा नवीन mobile number वापरून register करा."
-            )
-        
-        else:
-            # V1 didn't verify - return appropriate message
-            message = result.get("message", "Verification failed")
-            return create_error_response(
-                eko_status or 500,
-                message,
-                f"Verification failed: {message}"
-            )
-            
-    except httpx.TimeoutException:
-        return create_error_response(504, "Request timeout", "Service is slow. Please try again.")
-    except Exception as e:
-        logging.error(f"[DMT] Verify OTP Error: {e}")
-        return create_error_response(500, str(e), "Verification failed. Please try again.")
+    return create_success_response({
+        "message": "V1 API मध्ये customer OTP verification transaction मध्ये होते.",
+        "info": "Transfer करताना OTP पाठवला जाईल आणि तेव्हा verify होईल.",
+        "next_step": "Add recipient and initiate transfer"
+    }, "OTP verification happens during transfer")
 
 
 # ==================== STEP 3: ADD RECIPIENT ====================
@@ -1195,19 +1085,26 @@ async def get_recipients(mobile: str, user_id: str):
 
 # ==================== STEP 5: MONEY TRANSFER ====================
 
+class TransferRequest(BaseModel):
+    """Transfer money to bank account"""
+    user_id: str
+    mobile: str
+    recipient_id: str
+    prc_amount: int = Field(..., ge=10000, le=500000)  # Min 10000 PRC (₹100)
+    otp: Optional[str] = None  # OTP for completing transfer
+    pending_transaction_id: Optional[str] = None  # For OTP completion
+
+
 @router.post("/transfer")
 async def transfer_money(req: TransferRequest, request: Request):
     """
     Execute money transfer to bank account.
     
-    Process:
-    1. Validate PRC balance
-    2. Check daily limit
-    3. Deduct PRC
-    4. Execute EKO transfer
-    5. Update transaction status
-    
-    If transfer fails, PRC is refunded.
+    V1 API OTP Flow:
+    1. First call without OTP → EKO sends OTP to customer
+    2. Return "OTP_REQUIRED" with transaction_id
+    3. User enters OTP
+    4. Call again with OTP → Transfer completes
     
     EKO API: POST /v1/transactions
     """
@@ -1216,6 +1113,12 @@ async def transfer_money(req: TransferRequest, request: Request):
     
     db = get_db()
     client_ip = get_client_ip(request)
+    
+    # If OTP provided, this is completion of pending transaction
+    if req.otp and req.pending_transaction_id:
+        return await complete_transfer_with_otp(db, req, client_ip)
+    
+    # New transfer - initiate
     client_ref_id = f"DMT{int(time.time() * 1000)}{uuid.uuid4().hex[:8].upper()}"
     
     # Convert PRC to INR
@@ -1251,7 +1154,7 @@ async def transfer_money(req: TransferRequest, request: Request):
         "recipient_id": req.recipient_id,
         "amount_inr": amount_inr,
         "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(minutes=5)},
-        "status": {"$in": ["completed", "processing", "pending"]}
+        "status": {"$in": ["completed", "processing", "pending", "otp_pending"]}
     })
     
     if recent_dup:
@@ -1299,164 +1202,35 @@ async def transfer_money(req: TransferRequest, request: Request):
     db.dmt_transactions.insert_one(transaction_doc)
     
     try:
-        # Step 6: Execute EKO Transfer
-        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        # Generate timestamp and request hash (per Eko docs)
-        timestamp_ms = str(int(time.time() * 1000))
-        
-        # For DMT transfer: request_hash uses (timestamp + recipient_id + amount + user_code)
-        # Note: Eko docs show utility_acc_no for BBPS, for DMT we use recipient_id
-        request_hash = generate_request_hash(
-            timestamp_ms=timestamp_ms,
-            utility_acc_no=req.recipient_id,  # recipient_id for DMT
-            amount=str(int(amount_inr)),
-            user_code=EKO_USER_CODE
+        # Step 6: Execute EKO Transfer (First call - may require OTP)
+        result, eko_response = await execute_eko_transfer(
+            db, req, client_ref_id, amount_inr, client_ip, otp=None
         )
         
-        # Generate headers with same timestamp
-        secret_key = generate_secret_key(timestamp_ms)
-        headers = {
-            "developer_key": EKO_DEVELOPER_KEY,
-            "secret-key": secret_key,
-            "secret-key-timestamp": timestamp_ms,
-            "initiator_id": EKO_INITIATOR_ID,
-            "Content-Type": "application/json",
-            "request_hash": request_hash
-        }
-        
-        payload = {
-            "customer_id": req.mobile,
-            "recipient_id": req.recipient_id,
-            "amount": str(int(amount_inr)),
-            "client_ref_id": client_ref_id,
-            "channel": "2",  # 2 = IMPS
-            "state": "1",
-            "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "source_ip": client_ip,
-            "latlong": "19.9975,73.7898"
-        }
-        
-        logging.info(f"[DMT] Executing Transfer: ₹{amount_inr} via {url}")
-        
-        response = await async_post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
-        
-        logging.info(f"[DMT] Transfer Response: {response.status_code}")
-        
-        if response.status_code == 403:
-            # Refund PRC on auth failure
-            refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Authentication failed")
-            return create_error_response(403, "Authentication failed", "Service temporarily unavailable. PRC refunded.")
-        
-        result = response.json()
-        eko_status = result.get("status")
-        tx_data = result.get("data", {})
-        tx_status = tx_data.get("tx_status")
-        eko_tid = tx_data.get("tid")
-        
-        # Log the transaction
-        log_dmt_transaction(db, {
-            "action": "transfer",
-            "user_id": req.user_id,
-            "client_ref_id": client_ref_id,
-            "amount_inr": amount_inr,
-            "prc_amount": req.prc_amount,
-            "recipient_id": req.recipient_id,
-            "ip": client_ip,
-            "eko_status": eko_status,
-            "tx_status": tx_status,
-            "tid": eko_tid,
-            "response": result
-        })
-        
-        # Update transaction record
-        update_data = {
-            "eko_status": eko_status,
-            "eko_tid": eko_tid,
-            "tx_status": tx_status,
-            "eko_message": result.get("message"),
-            "eko_response": result,
-            "updated_at": datetime.now(timezone.utc)
-        }
-        
-        if eko_status == 0:
-            # Process based on tx_status
-            if tx_status == 0:
-                # SUCCESS
-                update_data["status"] = "completed"
-                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
-                
-                return create_success_response({
-                    "transaction_id": client_ref_id,
-                    "eko_tid": eko_tid,
-                    "status": "SUCCESS",
-                    "amount_inr": amount_inr,
-                    "prc_deducted": req.prc_amount,
-                    "new_prc_balance": new_prc_balance,
-                    "message": "Transfer successful!",
-                    "bank_ref": tx_data.get("bank_ref_num")
-                }, "Transfer completed successfully!")
-            
-            elif tx_status == 1:
-                # FAILED - Refund PRC
-                update_data["status"] = "failed"
-                refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer failed")
-                update_data["prc_refunded"] = req.prc_amount
-                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
-                
-                return create_error_response(
-                    eko_status,
-                    "Transfer failed",
-                    f"Transfer failed. {req.prc_amount} PRC has been refunded."
-                )
-            
-            elif tx_status == 2:
-                # PENDING
-                update_data["status"] = "pending"
-                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
-                
-                return create_success_response({
-                    "transaction_id": client_ref_id,
-                    "eko_tid": eko_tid,
-                    "status": "PENDING",
-                    "amount_inr": amount_inr,
-                    "prc_deducted": req.prc_amount,
-                    "message": "Transfer is being processed. Status will be updated shortly."
-                }, "Transfer initiated - Pending confirmation")
-            
-            else:
-                # Other status - REFUND states
-                update_data["status"] = "processing"
-                if tx_status in [3, 4]:  # Refund states
-                    refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer refunded by bank")
-                    update_data["prc_refunded"] = req.prc_amount
-                
-                db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
-                
-                return create_success_response({
-                    "transaction_id": client_ref_id,
-                    "eko_tid": eko_tid,
-                    "status": "PROCESSING",
-                    "message": "Transfer is being processed."
-                }, "Transfer in progress")
-        
-        else:
-            # EKO Error - Refund PRC
-            refund_prc(db, req.user_id, req.prc_amount, client_ref_id, f"EKO Error: {result.get('message')}")
-            update_data["status"] = "failed"
-            update_data["prc_refunded"] = req.prc_amount
-            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
-            
-            user_msg = EKO_ERROR_MESSAGES.get(eko_status, result.get("message", "Transfer failed"))
-            return create_error_response(
-                eko_status,
-                result.get("message", "Transfer failed"),
-                f"Transfer failed. {req.prc_amount} PRC refunded. Reason: {user_msg}"
+        if result.get("otp_required"):
+            # OTP required - update transaction status
+            db.dmt_transactions.update_one(
+                {"transaction_id": client_ref_id},
+                {"$set": {
+                    "status": "otp_pending",
+                    "otp_ref_id": result.get("otp_ref_id"),
+                    "updated_at": datetime.now(timezone.utc)
+                }}
             )
             
+            return create_success_response({
+                "status": "OTP_REQUIRED",
+                "transaction_id": client_ref_id,
+                "otp_ref_id": result.get("otp_ref_id"),
+                "amount_inr": amount_inr,
+                "prc_amount": req.prc_amount,
+                "message": "OTP पाठवला आहे. कृपया OTP टाकून transfer पूर्ण करा."
+            }, "OTP sent to customer mobile")
+        
+        # Transfer completed or failed
+        return result
+        
     except httpx.TimeoutException:
-        # Don't refund on timeout - status unknown
         db.dmt_transactions.update_one(
             {"transaction_id": client_ref_id},
             {"$set": {"status": "timeout", "updated_at": datetime.now(timezone.utc)}}
@@ -1471,7 +1245,6 @@ async def transfer_money(req: TransferRequest, request: Request):
     except Exception as e:
         logging.error(f"[DMT] Transfer Error: {e}")
         
-        # Refund PRC on error
         refund_prc(db, req.user_id, req.prc_amount, client_ref_id, f"System error: {str(e)}")
         
         db.dmt_transactions.update_one(
@@ -1489,6 +1262,207 @@ async def transfer_money(req: TransferRequest, request: Request):
             str(e),
             f"Transfer failed due to system error. {req.prc_amount} PRC refunded."
         )
+
+
+async def execute_eko_transfer(db, req, client_ref_id: str, amount_inr: float, client_ip: str, otp: str = None):
+    """Execute EKO transfer API call"""
+    url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+    
+    timestamp_ms = str(int(time.time() * 1000))
+    
+    request_hash = generate_request_hash(
+        timestamp_ms=timestamp_ms,
+        utility_acc_no=req.recipient_id,
+        amount=str(int(amount_inr)),
+        user_code=EKO_USER_CODE
+    )
+    
+    secret_key = generate_secret_key(timestamp_ms)
+    headers = {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": secret_key,
+        "secret-key-timestamp": timestamp_ms,
+        "initiator_id": EKO_INITIATOR_ID,
+        "Content-Type": "application/json",
+        "request_hash": request_hash
+    }
+    
+    payload = {
+        "customer_id": req.mobile,
+        "recipient_id": req.recipient_id,
+        "amount": str(int(amount_inr)),
+        "client_ref_id": client_ref_id,
+        "channel": "2",
+        "state": "1",
+        "initiator_id": EKO_INITIATOR_ID,
+        "user_code": EKO_USER_CODE,
+        "source_ip": client_ip,
+        "latlong": "19.9975,73.7898"
+    }
+    
+    # Add OTP if provided
+    if otp:
+        payload["otp"] = otp
+        logging.info(f"[DMT] Completing transfer with OTP")
+    
+    logging.info(f"[DMT] Executing Transfer: ₹{amount_inr} via {url}")
+    
+    response = await async_post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
+    
+    logging.info(f"[DMT] Transfer Response: {response.status_code}")
+    logging.info(f"[DMT] Transfer Response Body: {response.text[:500]}")
+    
+    if response.status_code == 403:
+        refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Authentication failed")
+        return create_error_response(403, "Authentication failed", "Service temporarily unavailable. PRC refunded."), None
+    
+    result = response.json()
+    eko_status = result.get("status")
+    eko_message = result.get("message", "")
+    tx_data = result.get("data", {})
+    tx_status = tx_data.get("tx_status")
+    eko_tid = tx_data.get("tid")
+    otp_ref_id = tx_data.get("otp_ref_id")
+    
+    # Log transaction
+    log_dmt_transaction(db, {
+        "action": "transfer",
+        "user_id": req.user_id,
+        "client_ref_id": client_ref_id,
+        "amount_inr": amount_inr,
+        "prc_amount": req.prc_amount,
+        "recipient_id": req.recipient_id,
+        "ip": client_ip,
+        "eko_status": eko_status,
+        "tx_status": tx_status,
+        "tid": eko_tid,
+        "otp_provided": bool(otp),
+        "response": result
+    })
+    
+    # Check if OTP is required (response message contains "OTP")
+    if "otp" in eko_message.lower() or "otp sent" in eko_message.lower():
+        return {
+            "otp_required": True,
+            "otp_ref_id": otp_ref_id,
+            "message": eko_message
+        }, result
+    
+    # Process transfer result
+    update_data = {
+        "eko_status": eko_status,
+        "eko_tid": eko_tid,
+        "tx_status": tx_status,
+        "eko_message": eko_message,
+        "eko_response": result,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    if eko_status == 0:
+        if tx_status == 0:
+            # SUCCESS
+            update_data["status"] = "completed"
+            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
+            
+            # Get updated balance
+            user = db.users.find_one({"uid": req.user_id})
+            new_balance = user.get("prc_balance", 0) if user else 0
+            
+            return create_success_response({
+                "transaction_id": client_ref_id,
+                "eko_tid": eko_tid,
+                "status": "SUCCESS",
+                "amount_inr": amount_inr,
+                "prc_deducted": req.prc_amount,
+                "new_prc_balance": new_balance,
+                "message": "Transfer successful! ✅",
+                "bank_ref": tx_data.get("bank_ref_num")
+            }, "Transfer completed successfully!"), result
+        
+        elif tx_status == 1:
+            # FAILED
+            update_data["status"] = "failed"
+            refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer failed")
+            update_data["prc_refunded"] = req.prc_amount
+            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
+            
+            return create_error_response(
+                eko_status,
+                "Transfer failed",
+                f"Transfer failed. {req.prc_amount} PRC has been refunded."
+            ), result
+        
+        elif tx_status == 2:
+            # PENDING
+            update_data["status"] = "pending"
+            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
+            
+            return create_success_response({
+                "transaction_id": client_ref_id,
+                "eko_tid": eko_tid,
+                "status": "PENDING",
+                "amount_inr": amount_inr,
+                "prc_deducted": req.prc_amount,
+                "message": "Transfer is being processed. Status will update shortly."
+            }, "Transfer initiated - Pending"), result
+        
+        else:
+            # Other status
+            update_data["status"] = "processing"
+            if tx_status in [3, 4]:
+                refund_prc(db, req.user_id, req.prc_amount, client_ref_id, "Transfer refunded by bank")
+                update_data["prc_refunded"] = req.prc_amount
+            
+            db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
+            
+            return create_success_response({
+                "transaction_id": client_ref_id,
+                "eko_tid": eko_tid,
+                "status": "PROCESSING",
+                "message": "Transfer is being processed."
+            }, "Transfer in progress"), result
+    
+    else:
+        # EKO Error
+        refund_prc(db, req.user_id, req.prc_amount, client_ref_id, f"EKO Error: {eko_message}")
+        update_data["status"] = "failed"
+        update_data["prc_refunded"] = req.prc_amount
+        db.dmt_transactions.update_one({"transaction_id": client_ref_id}, {"$set": update_data})
+        
+        user_msg = EKO_ERROR_MESSAGES.get(eko_status, eko_message or "Transfer failed")
+        return create_error_response(
+            eko_status,
+            eko_message or "Transfer failed",
+            f"Transfer failed. {req.prc_amount} PRC refunded. Reason: {user_msg}"
+        ), result
+
+
+async def complete_transfer_with_otp(db, req: TransferRequest, client_ip: str):
+    """Complete pending transfer with OTP"""
+    
+    # Find pending transaction
+    txn = db.dmt_transactions.find_one({
+        "transaction_id": req.pending_transaction_id,
+        "user_id": req.user_id,
+        "status": "otp_pending"
+    })
+    
+    if not txn:
+        return create_error_response(404, "Transaction not found", "Pending transaction not found or already processed.")
+    
+    logging.info(f"[DMT] Completing transfer {req.pending_transaction_id} with OTP")
+    
+    try:
+        # Execute transfer with OTP
+        result, eko_response = await execute_eko_transfer(
+            db, req, req.pending_transaction_id, txn["amount_inr"], client_ip, otp=req.otp
+        )
+        
+        return result
+        
+    except Exception as e:
+        logging.error(f"[DMT] OTP Completion Error: {e}")
+        return create_error_response(500, str(e), "Failed to complete transfer. Please try again.")
 
 
 def refund_prc(db, user_id: str, amount: int, ref_id: str, reason: str):

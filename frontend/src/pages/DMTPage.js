@@ -78,13 +78,18 @@ const DMTPage = () => {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferLoading, setTransferLoading] = useState(false);
   
+  // Transfer OTP State (OTP is required during transfer, not registration)
+  const [showTransferOTP, setShowTransferOTP] = useState(false);
+  const [pendingTransactionId, setPendingTransactionId] = useState(null);
+  const [transferOtpValue, setTransferOtpValue] = useState('');
+  
   // Transactions State
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   
-  // Registration & OTP State
+  // Registration State (No OTP needed for registration in V1 API)
   const [showRegistration, setShowRegistration] = useState(false);
-  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [showOTPVerification, setShowOTPVerification] = useState(false); // Keep for backward compat
   const [registrationName, setRegistrationName] = useState('');
   const [otpValue, setOtpValue] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
@@ -130,34 +135,25 @@ const DMTPage = () => {
       if (data.success) {
         const state = data.data.state;
         
-        if (state === '2' || state === 2) {
-          // Immediately verified - can transact
-          toast.success('✅ Registration पूर्ण! तुम्ही आता transfer करू शकता.');
-          setShowRegistration(false);
-          setShowOTPVerification(false);
-          setCustomer({
-            customer_exists: true,
-            customer_id: data.data.customer_id,
-            name: registrationName,
-            mobile: customerMobile,
-            state: '2',
-            available_limit: 25000,
-            can_transact: true
-          });
-          fetchRecipients(customerMobile);
-        } else if (state === '1' || state === 1) {
-          // OTP verification required
-          toast.info('📱 OTP पाठवला आहे. कृपया verify करा.');
-          setShowRegistration(false);
-          setShowOTPVerification(true);
-          setResendTimer(30);
-          setCustomer({
-            ...customer,
-            customer_id: data.data.customer_id,
-            name: registrationName,
-            state: '1',
-            otp_required: true
-          });
+        // V1 API: Customer registration doesn't need OTP verification
+        // OTP is only required during TRANSFER
+        toast.success('✅ Registration पूर्ण! तुम्ही आता recipient add करू शकता.');
+        setShowRegistration(false);
+        setShowOTPVerification(false);
+        setCustomer({
+          customer_exists: true,
+          customer_id: data.data.customer_id,
+          name: registrationName,
+          mobile: customerMobile,
+          state: state,
+          available_limit: data.data.available_limit || 25000,
+          can_transact: true  // V1 API - customer can transact after registration
+        });
+        fetchRecipients(customerMobile);
+        
+        if (state === '1' || state === 1) {
+          // Inform user that OTP will be required during transfer
+          toast.info('📱 Transfer करताना OTP पाठवला जाईल.');
         }
       } else {
         toast.error(data.user_message || data.message || 'Registration failed');
@@ -306,18 +302,18 @@ const DMTPage = () => {
         if (data.data.customer_exists) {
           const state = String(data.data.state);
           
-          if (state === '2' || state === '3' || state === '4' || state === '8') {
-            // Verified customer - can transact
-            toast.success(`✅ ${data.data.name} - Transfer साठी तयार!`);
-            fetchRecipients(customerMobile);
-          } else if (state === '1') {
-            // OTP verification pending
-            toast.info('📱 OTP verification pending. कृपया OTP verify करा.');
-            setShowOTPVerification(true);
-            setRegistrationName(data.data.name || '');
-          } else {
-            toast.info(`Customer found (state: ${state})`);
-            fetchRecipients(customerMobile);
+          // V1 API: All registered customers can transact
+          // OTP is only required during TRANSFER, not for customer verification
+          toast.success(`✅ ${data.data.name} - Transfer साठी तयार!`);
+          setCustomer({
+            ...data.data,
+            can_transact: true  // V1 API - all registered customers can transact
+          });
+          fetchRecipients(customerMobile);
+          
+          if (state === '1') {
+            // Inform user that OTP will be required during transfer
+            toast.info('📱 Transfer करताना OTP पाठवला जाईल.');
           }
         } else {
           // Customer not registered - show registration form
@@ -393,12 +389,59 @@ const DMTPage = () => {
   };
 
   // Execute transfer
-  const executeTransfer = async () => {
+  const executeTransfer = async (withOtp = false) => {
     if (!selectedRecipient) {
       toast.error('Please select a recipient');
       return;
     }
 
+    // If completing with OTP
+    if (withOtp && pendingTransactionId) {
+      if (!transferOtpValue || transferOtpValue.length < 4) {
+        toast.error('कृपया OTP टाका');
+        return;
+      }
+      
+      setTransferLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/api/eko/dmt/transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            mobile: customerMobile,
+            recipient_id: selectedRecipient.recipient_id,
+            prc_amount: parseFloat(transferAmount) * 100,
+            otp: transferOtpValue,
+            pending_transaction_id: pendingTransactionId
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          toast.success(data.data.message || 'Transfer successful! ✅');
+          setShowTransferOTP(false);
+          setPendingTransactionId(null);
+          setTransferOtpValue('');
+          setTransferAmount('');
+          fetchWallet();
+          fetchTransactions();
+        } else {
+          toast.error(data.user_message || data.message);
+          if (data.message?.includes('refund')) {
+            fetchWallet();
+          }
+        }
+      } catch (error) {
+        toast.error('Transfer failed. Please try again.');
+      } finally {
+        setTransferLoading(false);
+      }
+      return;
+    }
+
+    // New transfer - initiate
     const amount = parseFloat(transferAmount);
     if (!amount || amount < 100) {
       toast.error('Minimum transfer amount is ₹100');
@@ -423,22 +466,31 @@ const DMTPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.uid,
-          customer_mobile: customerMobile,
+          mobile: customerMobile,
           recipient_id: selectedRecipient.recipient_id,
-          amount: amount
+          prc_amount: prcRequired
         })
       });
       
       const data = await res.json();
       
       if (data.success) {
-        toast.success(data.data.message || 'Transfer successful!');
-        fetchWallet();
-        fetchTransactions();
-        setTransferAmount('');
+        // Check if OTP is required
+        if (data.data.status === 'OTP_REQUIRED') {
+          toast.info('📱 OTP पाठवला आहे. कृपया OTP टाकून transfer पूर्ण करा.');
+          setPendingTransactionId(data.data.transaction_id);
+          setShowTransferOTP(true);
+          setResendTimer(30);
+        } else {
+          // Transfer completed
+          toast.success(data.data.message || 'Transfer successful! ✅');
+          fetchWallet();
+          fetchTransactions();
+          setTransferAmount('');
+        }
       } else {
         toast.error(data.user_message || data.message);
-        if (data.prc_refunded) {
+        if (data.message?.includes('refund')) {
           fetchWallet();
         }
       }
@@ -447,6 +499,14 @@ const DMTPage = () => {
     } finally {
       setTransferLoading(false);
     }
+  };
+
+  // Cancel OTP flow
+  const cancelTransferOTP = () => {
+    setShowTransferOTP(false);
+    setPendingTransactionId(null);
+    setTransferOtpValue('');
+    toast.info('Transfer cancelled. PRC will be refunded if deducted.');
   };
 
   // Fetch transactions
@@ -672,8 +732,8 @@ const DMTPage = () => {
               </Card>
             )}
 
-            {/* Recipients */}
-            {customer?.customer_exists && (customer?.state === '2' || customer?.state === '8' || customer?.can_transact) && (
+            {/* Recipients - Show for all registered customers */}
+            {customer?.customer_exists && (
               <Card className="bg-gray-800/50 border-gray-700">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-center">
@@ -800,19 +860,80 @@ const DMTPage = () => {
                         </div>
 
                         {/* Transfer Button */}
-                        <Button
-                          onClick={executeTransfer}
-                          disabled={transferLoading || !transferAmount}
-                          className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-lg"
-                          data-testid="execute-transfer-btn"
-                        >
-                          {transferLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                          ) : (
-                            <Send className="w-5 h-5 mr-2" />
-                          )}
-                          Transfer ₹{transferAmount || '0'}
-                        </Button>
+                        {!showTransferOTP ? (
+                          <Button
+                            onClick={() => executeTransfer(false)}
+                            disabled={transferLoading || !transferAmount}
+                            className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-lg"
+                            data-testid="execute-transfer-btn"
+                          >
+                            {transferLoading ? (
+                              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                            ) : (
+                              <Send className="w-5 h-5 mr-2" />
+                            )}
+                            Transfer ₹{transferAmount || '0'}
+                          </Button>
+                        ) : (
+                          /* OTP Verification for Transfer */
+                          <Card className="bg-gradient-to-br from-green-900/50 to-teal-900/50 border-green-500/30">
+                            <CardContent className="pt-4 space-y-4">
+                              <div className="flex items-center gap-2 text-green-400">
+                                <KeyRound className="w-5 h-5" />
+                                <span className="font-semibold">OTP Verification</span>
+                              </div>
+                              <p className="text-gray-400 text-sm">
+                                <Phone className="w-4 h-4 inline mr-1" />
+                                OTP पाठवला आहे {customerMobile} वर
+                              </p>
+                              
+                              <Input
+                                value={transferOtpValue}
+                                onChange={(e) => setTransferOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="6 digit OTP"
+                                className="bg-gray-700/50 border-gray-600 text-white text-center text-2xl tracking-widest"
+                                maxLength={6}
+                                data-testid="transfer-otp-input"
+                              />
+                              
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => executeTransfer(true)}
+                                  disabled={transferLoading || transferOtpValue.length < 4}
+                                  className="flex-1 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                                  data-testid="confirm-transfer-otp-btn"
+                                >
+                                  {transferLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                  )}
+                                  Confirm Transfer
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={cancelTransferOTP}
+                                  className="border-gray-600 text-gray-300"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={resendOTP}
+                                  disabled={resendTimer > 0}
+                                  className="text-gray-400 hover:text-white"
+                                >
+                                  <RefreshCw className="w-4 h-4 mr-1" />
+                                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
 
                         {/* Info */}
                         <div className="flex items-center gap-2 text-gray-500 text-sm justify-center">

@@ -138,39 +138,43 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ---
 
-### 🎯 DMT V1 API Fix (March 12, 2026)
-**Problem:** Eko DMT user registration आणि OTP verification काम करत नव्हते.
+### 🎯 DMT V1 API Complete Implementation (March 12, 2026)
 
-**Root Cause:**
-- V3 Fino DMT endpoints या Eko account साठी available नाहीत
-- V3 `/dmt-fino` → "Endpoint not found"
+**V1 API Key Understanding:**
+- OTP verification happens during **TRANSFER**, not during customer registration
+- All registered customers (state=1, 2, 8) can transact
+- Transfer flow: Initiate → OTP sent → Enter OTP → Complete
 
-**Final Solution (V1 API Only):**
-1. Registration: `PUT /v1/customers/mobile_number:{mobile}` → state=2 (verified) किंवा state=1 (OTP pending)
-2. Resend OTP: `POST /v1/customers/mobile_number:{mobile}/otp`
-3. V3 code **removed** - confusion avoid करण्यासाठी
+**Flow Implemented:**
+```
+1. Customer Search → Check if exists
+2. Customer Create → PUT /v1/customers/mobile_number:{mobile}
+3. Add Recipient → PUT /v1/customers/mobile_number:{mobile}/recipients
+4. Transfer (First call) → POST /v1/transactions → Returns "OTP sent"
+5. Enter OTP
+6. Transfer (With OTP) → POST /v1/transactions + otp param → SUCCESS
+```
+
+**Backend Updates:**
+- Registration: All customers get `can_transact: true`
+- Search: All registered customers get `can_transact: true`
+- Transfer: OTP handling added - detects "OTP sent", stores pending transaction, completes with OTP
+- Removed incorrect OTP verification code from registration flow
 
 **Frontend Updates:**
-- Registration Form UI added (for new customers)
-- OTP Verification Form UI added (for state=1 customers)
-- Resend OTP button with 30s cooldown timer
-- Full E2E flow from search → register → OTP → transfer
+- Registration form: No OTP step (V1 doesn't need it)
+- Transfer: OTP input modal added when transfer requires OTP
+- All registered customers can see recipients and initiate transfer
 
-**Bugs Fixed During Testing:**
-1. Wallet API 500 Error - MongoDB boolean check issue
-2. can_transact Logic - state=8 customers साठी fix
+**Test Results:** ✅ All V1 APIs working
+- Customer Search (state=1) → can_transact: true ✅
+- Customer Search (state=2) → can_transact: true ✅
+- Registration → can_transact: true ✅
+- Transfer with OTP → OTP modal + completion ✅
 
-**Test Results:** ✅ 64/64 tests passed (39 pytest + 25 Playwright)
-- Customer Search ✅
-- Registration ✅ 
-- Resend OTP ✅
-- Frontend UI ✅
-- Transfer Flow ✅
-
-**Files:**
-- Modified: `/app/backend/routes/eko_dmt_service.py`
-- Modified: `/app/frontend/src/pages/DMTPage.js`
-- Disabled: `/app/backend/routes/eko_dmt_v3.py.disabled`
+**Files Modified:**
+- `/app/backend/routes/eko_dmt_service.py`
+- `/app/frontend/src/pages/DMTPage.js`
 
 ---
 
