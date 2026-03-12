@@ -157,15 +157,29 @@ class AdminProcessRequest(BaseModel):
 # ==================== EKO HELPER FUNCTIONS ====================
 
 def generate_eko_secret_key(timestamp_ms: str) -> str:
-    """Generate Eko secret-key as per documentation"""
+    """
+    Generate Eko secret-key as per documentation:
+    https://developers.eko.in/docs/auth
+    
+    1. Encode access_key using base64
+    2. HMAC-SHA256(encoded_key, timestamp)
+    3. Base64 encode the result
+    """
     if not EKO_AUTH_KEY:
         return ""
-    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8')).decode('utf-8')
+    
+    # Step 1: Base64 encode the access_key
+    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))
+    
+    # Step 2: HMAC-SHA256 hash the timestamp with encoded key
+    # NOTE: encoded_key should be used as bytes, not re-encoded!
     signature = hmac.new(
-        encoded_key.encode('utf-8'),
+        encoded_key,  # Already bytes from base64.b64encode()
         timestamp_ms.encode('utf-8'),
         hashlib.sha256
     ).digest()
+    
+    # Step 3: Base64 encode the signature
     return base64.b64encode(signature).decode('utf-8')
 
 def get_eko_headers() -> dict:
@@ -309,12 +323,14 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
         timestamp_ms = str(int(time.time() * 1000))
         secret_key = generate_eko_secret_key(timestamp_ms)
         
-        # Generate request_hash for transfer
-        # Hash formula: HMAC-SHA256(base64(auth_key), timestamp + recipient_id + amount + user_code)
-        encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8')).decode('utf-8')
+        # Generate request_hash for transfer (DMT V1 format)
+        # Documentation: https://developers.eko.in/docs/auth
+        # For DMT: concatenated_string = timestamp + recipient_id + amount + user_code
+        # (Note: This may vary - check specific API docs)
+        encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))  # Keep as bytes
         hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
         request_hash = hmac.new(
-            encoded_key.encode('utf-8'),
+            encoded_key,  # Use bytes directly, not re-encoded
             hash_string.encode('utf-8'),
             hashlib.sha256
         ).digest()

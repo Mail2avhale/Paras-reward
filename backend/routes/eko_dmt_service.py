@@ -258,16 +258,16 @@ def generate_secret_key(timestamp_ms: str) -> str:
     
     Reference: https://developers.eko.in/docs/authentication
     """
-    # Step 1: Base64 encode the authenticator key
+    # Step 1: Base64 encode the authenticator key (keep as bytes!)
     key_bytes = EKO_AUTH_KEY.encode('utf-8')
-    encoded_key = base64.b64encode(key_bytes).decode('utf-8')
+    encoded_key = base64.b64encode(key_bytes)  # Returns bytes, don't decode!
     
     # Step 2: Use timestamp as message
     message = timestamp_ms.encode('utf-8')
     
-    # Step 3: HMAC-SHA256 with encoded key as the key
+    # Step 3: HMAC-SHA256 with encoded key (bytes) as the key
     signature = hmac.new(
-        encoded_key.encode('utf-8'),
+        encoded_key,  # Use bytes directly!
         message,
         hashlib.sha256
     ).digest()
@@ -343,15 +343,15 @@ def generate_request_hash(timestamp_ms: str, utility_acc_no: str, amount: str, u
     3. HMAC-SHA256(base64_key, concatenated_string)
     4. Base64 encode result
     """
-    # Base64 encode the key
-    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8')).decode('utf-8')
+    # Base64 encode the key (keep as bytes!)
+    encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))
     
     # Concatenate the string
     concat_string = timestamp_ms + utility_acc_no + amount + user_code
     
-    # HMAC-SHA256
+    # HMAC-SHA256 (use encoded_key as bytes directly!)
     signature = hmac.new(
-        encoded_key.encode('utf-8'),
+        encoded_key,  # Use bytes directly!
         concat_string.encode('utf-8'),
         hashlib.sha256
     ).digest()
