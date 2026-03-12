@@ -21,7 +21,10 @@ import {
   Shield,
   Loader2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  UserPlus,
+  KeyRound,
+  Phone
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -78,6 +81,14 @@ const DMTPage = () => {
   // Transactions State
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  
+  // Registration & OTP State
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [registrationName, setRegistrationName] = useState('');
+  const [otpValue, setOtpValue] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   // Load wallet on mount
   useEffect(() => {
@@ -86,6 +97,169 @@ const DMTPage = () => {
       fetchTransactions();
     }
   }, [user]);
+
+  // Resend OTP Timer
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+
+  // Register new customer
+  const registerCustomer = async () => {
+    if (!registrationName || registrationName.length < 3) {
+      toast.error('कृपया पूर्ण नाव टाका (किमान 3 अक्षरे)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/eko/dmt/customer/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobile: customerMobile,
+          name: registrationName,
+          user_id: user.uid
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        const state = data.data.state;
+        
+        if (state === '2' || state === 2) {
+          // Immediately verified - can transact
+          toast.success('✅ Registration पूर्ण! तुम्ही आता transfer करू शकता.');
+          setShowRegistration(false);
+          setShowOTPVerification(false);
+          setCustomer({
+            customer_exists: true,
+            customer_id: data.data.customer_id,
+            name: registrationName,
+            mobile: customerMobile,
+            state: '2',
+            available_limit: 25000,
+            can_transact: true
+          });
+          fetchRecipients(customerMobile);
+        } else if (state === '1' || state === 1) {
+          // OTP verification required
+          toast.info('📱 OTP पाठवला आहे. कृपया verify करा.');
+          setShowRegistration(false);
+          setShowOTPVerification(true);
+          setResendTimer(30);
+          setCustomer({
+            ...customer,
+            customer_id: data.data.customer_id,
+            name: registrationName,
+            state: '1',
+            otp_required: true
+          });
+        }
+      } else {
+        toast.error(data.user_message || data.message || 'Registration failed');
+      }
+    } catch (error) {
+      toast.error('Registration failed. कृपया पुन्हा प्रयत्न करा.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP
+  const resendOTP = async () => {
+    if (resendTimer > 0) return;
+    
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/eko/dmt/customer/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobile: customerMobile,
+          user_id: user.uid
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('✅ OTP पुन्हा पाठवला आहे!');
+        setResendTimer(30);
+      } else {
+        toast.error(data.user_message || data.message || 'OTP पाठवता आला नाही');
+      }
+    } catch (error) {
+      toast.error('OTP पाठवता आला नाही. कृपया पुन्हा प्रयत्न करा.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Verify OTP
+  const verifyOTP = async () => {
+    if (!otpValue || otpValue.length < 4) {
+      toast.error('कृपया OTP टाका');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/eko/dmt/customer/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobile: customerMobile,
+          otp: otpValue,
+          user_id: user.uid
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success && data.data?.verified) {
+        toast.success('✅ Verification पूर्ण! आता transfer करू शकता.');
+        setShowOTPVerification(false);
+        setOtpValue('');
+        setCustomer({
+          customer_exists: true,
+          customer_id: data.data.customer_id,
+          name: registrationName || customer?.name,
+          mobile: customerMobile,
+          state: '2',
+          available_limit: data.data.available_limit || 25000,
+          can_transact: true
+        });
+        fetchRecipients(customerMobile);
+      } else {
+        // Check if state changed to 2 even without explicit verification
+        if (data.data?.state === '2' || data.data?.state === 2) {
+          toast.success('✅ Customer verified! आता transfer करू शकता.');
+          setShowOTPVerification(false);
+          setOtpValue('');
+          setCustomer({
+            customer_exists: true,
+            customer_id: data.data.customer_id || customerMobile,
+            name: registrationName || customer?.name,
+            mobile: customerMobile,
+            state: '2',
+            available_limit: 25000,
+            can_transact: true
+          });
+          fetchRecipients(customerMobile);
+        } else {
+          toast.error(data.user_message || data.message || 'OTP verification failed');
+        }
+      }
+    } catch (error) {
+      toast.error('Verification failed. कृपया पुन्हा प्रयत्न करा.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   // Fetch wallet balance
   const fetchWallet = async () => {
@@ -103,9 +277,15 @@ const DMTPage = () => {
   // Search customer
   const searchCustomer = async () => {
     if (!customerMobile || customerMobile.length !== 10) {
-      toast.error('Please enter valid 10 digit mobile number');
+      toast.error('कृपया 10 अंकी मोबाइल नंबर टाका');
       return;
     }
+
+    // Reset states
+    setShowRegistration(false);
+    setShowOTPVerification(false);
+    setRegistrationName('');
+    setOtpValue('');
 
     setCustomerLoading(true);
     try {
@@ -122,17 +302,33 @@ const DMTPage = () => {
       
       if (data.success) {
         setCustomer(data.data);
+        
         if (data.data.customer_exists) {
-          toast.success(`Customer found: ${data.data.name}`);
-          fetchRecipients(customerMobile);
+          const state = String(data.data.state);
+          
+          if (state === '2' || state === '3' || state === '4' || state === '8') {
+            // Verified customer - can transact
+            toast.success(`✅ ${data.data.name} - Transfer साठी तयार!`);
+            fetchRecipients(customerMobile);
+          } else if (state === '1') {
+            // OTP verification pending
+            toast.info('📱 OTP verification pending. कृपया OTP verify करा.');
+            setShowOTPVerification(true);
+            setRegistrationName(data.data.name || '');
+          } else {
+            toast.info(`Customer found (state: ${state})`);
+            fetchRecipients(customerMobile);
+          }
         } else {
-          toast.info('Customer not registered. Registration required.');
+          // Customer not registered - show registration form
+          toast.info('🆕 नवीन customer. कृपया registration करा.');
+          setShowRegistration(true);
         }
       } else {
         toast.error(data.user_message || data.message);
       }
     } catch (error) {
-      toast.error('Failed to search customer');
+      toast.error('Customer शोधता आला नाही');
     } finally {
       setCustomerLoading(false);
     }
@@ -363,15 +559,121 @@ const DMTPage = () => {
                   <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                     <p className="text-yellow-400 text-sm flex items-center gap-2">
                       <AlertCircle className="w-4 h-4" />
-                      Customer not registered. Registration required.
+                      नवीन customer. कृपया registration करा.
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
+            {/* Registration Form */}
+            {showRegistration && (
+              <Card className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 border-blue-500/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-lg flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-blue-400" />
+                    नवीन Customer Registration
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Mobile: {customerMobile}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-gray-300">पूर्ण नाव *</Label>
+                    <Input
+                      value={registrationName}
+                      onChange={(e) => setRegistrationName(e.target.value)}
+                      placeholder="नाव टाका (जसे bank मध्ये आहे)"
+                      className="bg-gray-700/50 border-gray-600 text-white mt-1"
+                      data-testid="registration-name-input"
+                    />
+                  </div>
+                  
+                  <Button
+                    onClick={registerCustomer}
+                    disabled={loading || !registrationName}
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                    data-testid="register-customer-btn"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <UserPlus className="w-4 h-4 mr-2" />
+                    )}
+                    Register करा
+                  </Button>
+                  
+                  <p className="text-gray-500 text-xs text-center">
+                    Registration नंतर OTP येईल तुमच्या mobile वर
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* OTP Verification Form */}
+            {showOTPVerification && (
+              <Card className="bg-gradient-to-br from-green-900/50 to-teal-900/50 border-green-500/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-lg flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-green-400" />
+                    OTP Verification
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    <Phone className="w-4 h-4 inline mr-1" />
+                    {customerMobile} वर OTP पाठवला आहे
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-gray-300">OTP टाका *</Label>
+                    <Input
+                      value={otpValue}
+                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="6 digit OTP"
+                      className="bg-gray-700/50 border-gray-600 text-white text-center text-2xl tracking-widest mt-1"
+                      maxLength={6}
+                      data-testid="otp-input"
+                    />
+                  </div>
+                  
+                  <Button
+                    onClick={verifyOTP}
+                    disabled={otpLoading || otpValue.length < 4}
+                    className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                    data-testid="verify-otp-btn"
+                  >
+                    {otpLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Verify OTP
+                  </Button>
+                  
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resendOTP}
+                      disabled={resendTimer > 0 || otpLoading}
+                      className="text-gray-400 hover:text-white"
+                      data-testid="resend-otp-btn"
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-1 ${otpLoading ? 'animate-spin' : ''}`} />
+                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+                    </Button>
+                  </div>
+                  
+                  <p className="text-gray-500 text-xs text-center">
+                    OTP नाही आला? 30 सेकंद थांबा आणि Resend करा
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Recipients */}
-            {customer?.customer_exists && (
+            {customer?.customer_exists && (customer?.state === '2' || customer?.state === '8' || customer?.can_transact) && (
               <Card className="bg-gray-800/50 border-gray-700">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-center">

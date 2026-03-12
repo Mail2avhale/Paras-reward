@@ -392,7 +392,7 @@ async def check_daily_limit_async(user_id: str) -> tuple:
     Returns (is_allowed, remaining_limit, used_today)
     Uses shared async Motor client for better performance.
     """
-    if not db:
+    if db is None:
         return False, 0, 0
         
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -454,7 +454,7 @@ def check_daily_limit(sync_db, user_id: str) -> tuple:
 
 async def log_dmt_transaction_async(log_data: Dict):
     """Log DMT transaction for audit - ASYNC version"""
-    if not db:
+    if db is None:
         return
     log_data["timestamp"] = datetime.now(timezone.utc)
     await db.dmt_logs.insert_one(log_data)
@@ -487,7 +487,7 @@ def health():
 @router.get("/wallet/{user_id}")
 async def get_wallet(user_id: str):
     """Get user's PRC wallet balance and INR equivalent - ASYNC version."""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
     
     user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
@@ -574,11 +574,17 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
             # Customer found
             customer_data = result.get("data", {})
             customer_state = customer_data.get("state", 0)
+            # Ensure state is integer for comparison
+            try:
+                customer_state_int = int(customer_state) if customer_state is not None else 0
+            except (ValueError, TypeError):
+                customer_state_int = 0
             
             # State meanings:
             # 0 = Verified (can do transactions)
             # 1 = OTP verification pending
             # 2 = Blocked
+            # 8 = Minimum KYC Approved (can do transactions)
             
             response_data = {
                 "customer_exists": True,
@@ -588,10 +594,10 @@ async def search_customer(req: CustomerSearchRequest, request: Request):
                 "available_limit": customer_data.get("available_limit", 25000),
                 "used_limit": customer_data.get("used_limit", 0),
                 "total_limit": customer_data.get("total_limit", 25000),
-                "kyc_status": customer_data.get("state_desc", "Verified" if customer_state == 0 else "Pending"),
+                "kyc_status": customer_data.get("state_desc", "Verified" if customer_state_int in [0, 8] else "Pending"),
                 "state": customer_state,
-                "otp_required": customer_state == 1,
-                "can_transact": customer_state == 0
+                "otp_required": customer_state_int == 1,
+                "can_transact": customer_state_int in [0, 8]  # State 0=Verified, 8=Minimum KYC Approved
             }
             
             if customer_state == 1:
