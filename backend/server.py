@@ -70,9 +70,8 @@ from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_r
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
 from routes.eko_dmt_service import router as dmt_router, set_db as set_eko_dmt_db
-# DMT v3 router disabled - using v1 APIs instead
-# from routes.eko_dmt_v3 import router as dmt_v3_router
-from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
+# V3 DMT disabled - V1 API working with state=2 (immediate verification)
+# from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
 from routes.eko_dmt_icici import router as dmt_icici_router, set_db as set_dmt_icici_db
 from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
@@ -38682,7 +38681,7 @@ api_router.include_router(redeem_v2_router)
 
 # Error Monitor Router
 set_monitor_db(db)
-set_dmt_v3_db(db)  # Set DB for EKO DMT v3
+# set_dmt_v3_db(db)  # V3 disabled - using V1 API
 set_dmt_icici_db(db)  # Set DB for EKO DMT ICICI
 api_router.include_router(monitor_router)
 
@@ -38698,10 +38697,10 @@ set_eko_dmt_db(db)  # Set DB for EKO DMT v1 (async)
 api_router.include_router(dmt_router)
 api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 (NO OTP)
 
-# EKO DMT v3 (Advanced with Aadhaar/OTP) Router
-# DMT v3 router disabled - using v1 APIs
+# EKO DMT v3 - DISABLED (V1 API working)
+# V3 Fino DMT endpoints not available for this Eko account
+# Using V1 API which gives state=2 (immediate verification)
 # api_router.include_router(dmt_v3_router)
-api_router.include_router(dmt_v3_router)  # EKO DMT v3 with proper OTP
 
 # Admin DMT Management Router
 set_admin_dmt_db(db)

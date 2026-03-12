@@ -139,41 +139,33 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 ---
 
 ### 🎯 DMT V1 API Fix (March 12, 2026)
-**Problem:** Eko DMT user registration and OTP verification flows were failing.
+**Problem:** Eko DMT user registration आणि OTP verification काम करत नव्हते.
 
 **Root Cause:**
-- Code was using V3 Fino DMT endpoints which are NOT available for this Eko account
-- V3 endpoints: `/v3/customer/account/{mobile}/dmt-fino` returned "Endpoint not found"
-- V3 verify endpoint: `/v3/customer/account/{mobile}/dmt/verify` returned "Internal server error"
+- V3 Fino DMT endpoints या Eko account साठी available नाहीत
+- V3 `/dmt-fino` → "Endpoint not found"
 
-**Fix Applied:**
-1. Changed registration to use V1 API: `PUT /v1/customers/mobile_number:{mobile}`
-2. Changed Resend OTP to use V1 API: `POST /v1/customers/mobile_number:{mobile}/otp`
-3. Updated Verify OTP to use V1 re-registration with OTP parameter
+**Final Solution (V1 API Only):**
+1. Registration: `PUT /v1/customers/mobile_number:{mobile}` → state=2 (verified) किंवा state=1 (OTP pending)
+2. Resend OTP: `POST /v1/customers/mobile_number:{mobile}/otp`
+3. V3 code **removed** - confusion avoid करण्यासाठी
 
-**Important Notes:**
-- V1 registration creates customers with state=2 (immediately verified) OR state=1 (OTP pending)
-- V1 Resend OTP works correctly for state=1 customers
-- OTP verification via V1 uses re-registration approach
-- To enable V3 OTP verification, Eko Fino DMT service needs to be activated on the account
+**Test Results:** ✅ All working
+- Health Check ✅
+- Customer Search ✅ (state=2 = verified)
+- Registration ✅
+- Resend OTP ✅
 
-**Test Results (39/39 tests passed):**
-- ✅ DMT Health Check API
-- ✅ Customer Search (existing)
-- ✅ Customer Search (new)
-- ✅ Customer Registration
-- ✅ Resend OTP
-- ✅ Verify OTP endpoint
-
-**Files Modified:** `/app/backend/routes/eko_dmt_service.py`
+**Files:**
+- Modified: `/app/backend/routes/eko_dmt_service.py`
+- Disabled: `/app/backend/routes/eko_dmt_v3.py.disabled`
 
 ---
 
 ## REMAINING TASKS
 
 ### P1 - Important
-- [ ] Enable V3 Fino DMT service on Eko account for full OTP verification
-- [ ] Auto-Burn Scheduler testing on production (verify after deploy)
+- [ ] Auto-Burn Scheduler testing on production
 - [ ] Backend `server.py` refactoring into smaller route files
 
 ### P2 - Future
