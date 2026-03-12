@@ -793,9 +793,9 @@ async def create_withdrawal_request(request: WithdrawalRequest):
     user = await db.users.find_one({"uid": request.uid})
     user_mobile = user.get("mobile")
     
-    # Check if Eko OTP verification is done (if Eko is configured)
-    if is_eko_configured() and not request.eko_verified:
-        # Check database for verification status
+    # SECURITY: Always verify from database - don't trust frontend flag
+    # OTP verification is MANDATORY for DMT transfers
+    if is_eko_configured():
         verified_record = await db.eko_verified_customers.find_one({
             "mobile": user_mobile,
             "verified": True
