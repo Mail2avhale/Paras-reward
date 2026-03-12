@@ -867,9 +867,17 @@ async def create_withdrawal_request(request: WithdrawalRequest):
                     except:
                         state_int = 99
                     
-                    # State 0 = Full KYC, State 2 = Non-KYC (both can transact)
-                    # State 1 = OTP pending, State 3 = Blocked
-                    if state_int not in [0, 2]:
+                    # Eko Customer States:
+                    # 0 = Full KYC verified
+                    # 1 = OTP verification pending (BLOCKED)
+                    # 2 = Non-KYC (can transact with ₹25000 limit)
+                    # 3 = Blocked (BLOCKED)
+                    # 8 = Minimum KYC Approved (can transact)
+                    # 
+                    # States that CAN transact: 0, 2, 8
+                    # States that CANNOT transact: 1, 3
+                    allowed_states = [0, 2, 8]
+                    if state_int not in allowed_states:
                         raise HTTPException(
                             status_code=400,
                             detail="❌ Customer verification pending. कृपया आधी OTP verification पूर्ण करा."
