@@ -2745,3 +2745,329 @@ async def test_v1_dmt_debug(request: V1DMTTestRequest):
     except Exception as e:
         logging.error(f"[V1-DEBUG] Error: {e}")
         return {"success": False, "error": str(e)}
+
+
+
+# ==================== DMT REFUND ADMIN ENDPOINTS ====================
+
+@router.post("/admin/find-failed-dmt")
+async def find_failed_dmt_transfers(request: Request):
+    """
+    Find all DMT transfers that show "completed" but actually failed (Refund Pending at Eko).
+    These need PRC refund.
+    
+    Usage:
+    curl -X POST "/api/chatbot-redeem/admin/find-failed-dmt" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456"}'
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all completed withdrawals
+        completed_requests = await db.chatbot_withdrawal_requests.find(
+            {"status": "completed"},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(100).to_list(100)
+        
+        failed_transfers = []
+        
+        for req in completed_requests:
+            # Check if this transfer actually succeeded at Eko
+            tid = req.get("dmt_transaction_id")
+            utr = req.get("utr_number")
+            
+            # If UTR is empty/None, likely failed
+            if not utr or utr == "" or utr == "NA":
+                # Double check with Eko inquiry if TID exists
+                eko_status = "UNKNOWN"
+                
+                if tid and is_eko_configured():
+                    try:
+                        timestamp_ms = str(int(time.time() * 1000))
+                        secret_key = generate_eko_secret_key(timestamp_ms)
+                        
+                        url = f"{EKO_BASE_URL}/v1/transactions/{tid}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+                        headers = {
+                            "developer_key": EKO_DEVELOPER_KEY,
+                            "secret-key": secret_key,
+                            "secret-key-timestamp": timestamp_ms
+                        }
+                        
+                        response = await chatbot_get(url, headers=headers, timeout=30)
+                        if response.status_code == 200:
+                            result = response.json()
+                            tx_data = result.get("data", {})
+                            tx_status = tx_data.get("tx_status")
+                            tx_desc = tx_data.get("txstatus_desc", "")
+                            
+                            # tx_status: 0=Success, 1=Fail, 2=Pending, 3=Refund Pending, 4=Refunded
+                            if tx_status in ["3", 3]:
+                                eko_status = "REFUND_PENDING"
+                            elif tx_status in ["4", 4]:
+                                eko_status = "REFUNDED"
+                            elif tx_status in ["1", 1]:
+                                eko_status = "FAILED"
+                            elif tx_status in ["0", 0]:
+                                eko_status = "SUCCESS"
+                            else:
+                                eko_status = f"STATUS_{tx_status}"
+                    except Exception as e:
+                        eko_status = f"ERROR: {str(e)[:50]}"
+                
+                # Only include if not actually successful
+                if eko_status != "SUCCESS":
+                    failed_transfers.append({
+                        "request_id": req.get("request_id"),
+                        "uid": req.get("uid"),
+                        "user_name": req.get("user_name"),
+                        "mobile": req.get("mobile"),
+                        "prc_deducted": req.get("prc_deducted"),
+                        "inr_amount": req.get("inr_amount"),
+                        "dmt_tid": tid,
+                        "utr": utr,
+                        "eko_status": eko_status,
+                        "bank_name": req.get("bank_name"),
+                        "account_number": req.get("account_number"),
+                        "created_at": str(req.get("created_at"))
+                    })
+        
+        return {
+            "success": True,
+            "total_completed": len(completed_requests),
+            "failed_count": len(failed_transfers),
+            "failed_transfers": failed_transfers,
+            "message": f"Found {len(failed_transfers)} transfers that need PRC refund"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIND-FAILED] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/refund-failed-dmt")
+async def refund_failed_dmt_transfers(request: Request):
+    """
+    Refund PRC for failed DMT transfers.
+    
+    Usage:
+    curl -X POST "/api/chatbot-redeem/admin/refund-failed-dmt" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "dry_run": true}'
+    
+    Set dry_run=false to actually refund.
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        dry_run = data.get("dry_run", True)
+        specific_request_ids = data.get("request_ids", None)  # Optional: refund specific requests only
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find failed transfers
+        query = {"status": "completed"}
+        if specific_request_ids:
+            query["request_id"] = {"$in": specific_request_ids}
+        
+        completed_requests = await db.chatbot_withdrawal_requests.find(
+            query, {"_id": 0}
+        ).sort("created_at", -1).limit(200).to_list(200)
+        
+        refunded = []
+        skipped = []
+        total_prc_refunded = 0
+        
+        for req in completed_requests:
+            tid = req.get("dmt_transaction_id")
+            utr = req.get("utr_number")
+            prc_deducted = req.get("prc_deducted", 0)
+            uid = req.get("uid")
+            request_id = req.get("request_id")
+            
+            # Skip if already refunded
+            if req.get("prc_refunded"):
+                skipped.append({
+                    "request_id": request_id,
+                    "reason": "Already refunded"
+                })
+                continue
+            
+            # Check if UTR is empty (likely failed)
+            if not utr or utr == "" or utr == "NA":
+                # Verify with Eko
+                eko_status = "UNKNOWN"
+                should_refund = False
+                
+                if tid and is_eko_configured():
+                    try:
+                        timestamp_ms = str(int(time.time() * 1000))
+                        secret_key = generate_eko_secret_key(timestamp_ms)
+                        
+                        url = f"{EKO_BASE_URL}/v1/transactions/{tid}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+                        headers = {
+                            "developer_key": EKO_DEVELOPER_KEY,
+                            "secret-key": secret_key,
+                            "secret-key-timestamp": timestamp_ms
+                        }
+                        
+                        response = await chatbot_get(url, headers=headers, timeout=30)
+                        if response.status_code == 200:
+                            result = response.json()
+                            tx_data = result.get("data", {})
+                            tx_status = tx_data.get("tx_status")
+                            
+                            if tx_status in ["3", 3, "4", 4, "1", 1]:
+                                should_refund = True
+                                eko_status = f"TX_STATUS_{tx_status}"
+                    except:
+                        # If Eko check fails, still consider for refund based on empty UTR
+                        should_refund = True
+                        eko_status = "EKO_CHECK_FAILED"
+                else:
+                    # No TID means definitely failed
+                    should_refund = True
+                    eko_status = "NO_TID"
+                
+                if should_refund and prc_deducted > 0:
+                    if not dry_run:
+                        # Refund PRC to user
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$inc": {"prc_balance": prc_deducted}}
+                        )
+                        
+                        # Mark request as refunded
+                        await db.chatbot_withdrawal_requests.update_one(
+                            {"request_id": request_id},
+                            {
+                                "$set": {
+                                    "prc_refunded": True,
+                                    "refunded_at": datetime.now(timezone.utc),
+                                    "refund_reason": f"DMT failed - Eko status: {eko_status}",
+                                    "status": "refunded"
+                                }
+                            }
+                        )
+                        
+                        # Log refund transaction
+                        await db.transactions.insert_one({
+                            "user_id": uid,
+                            "type": "prc_refund",
+                            "amount": prc_deducted,
+                            "reason": f"DMT transfer failed - {request_id}",
+                            "dmt_tid": tid,
+                            "eko_status": eko_status,
+                            "timestamp": datetime.now(timezone.utc)
+                        })
+                    
+                    refunded.append({
+                        "request_id": request_id,
+                        "uid": uid,
+                        "user_name": req.get("user_name"),
+                        "prc_refunded": prc_deducted,
+                        "inr_amount": req.get("inr_amount"),
+                        "eko_status": eko_status,
+                        "status": "REFUNDED" if not dry_run else "WOULD_REFUND"
+                    })
+                    total_prc_refunded += prc_deducted
+            else:
+                skipped.append({
+                    "request_id": request_id,
+                    "reason": f"Has UTR: {utr}"
+                })
+        
+        return {
+            "success": True,
+            "mode": "DRY_RUN" if dry_run else "LIVE",
+            "refunded_count": len(refunded),
+            "skipped_count": len(skipped),
+            "total_prc_refunded": total_prc_refunded,
+            "total_inr_value": total_prc_refunded / 100,  # Assuming 100 PRC = ₹1
+            "refunded": refunded,
+            "skipped": skipped[:10],  # Only show first 10 skipped
+            "message": f"{'Would refund' if dry_run else 'Refunded'} {total_prc_refunded} PRC to {len(refunded)} users"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REFUND-DMT] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/refund-specific-user")
+async def refund_specific_user_prc(request: Request):
+    """
+    Manually refund PRC to a specific user.
+    
+    Usage:
+    curl -X POST "/api/chatbot-redeem/admin/refund-specific-user" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "uid": "xxx", "prc_amount": 10000, "reason": "DMT failed"}'
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        uid = data.get("uid")
+        prc_amount = data.get("prc_amount")
+        reason = data.get("reason", "Manual PRC refund")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not uid or not prc_amount:
+            raise HTTPException(status_code=400, detail="uid and prc_amount required")
+        
+        if prc_amount <= 0:
+            raise HTTPException(status_code=400, detail="prc_amount must be positive")
+        
+        # Get user
+        user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "prc_balance": 1})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        old_balance = user.get("prc_balance", 0)
+        new_balance = old_balance + prc_amount
+        
+        # Update balance
+        await db.users.update_one(
+            {"uid": uid},
+            {"$inc": {"prc_balance": prc_amount}}
+        )
+        
+        # Log transaction
+        await db.transactions.insert_one({
+            "user_id": uid,
+            "type": "prc_refund",
+            "amount": prc_amount,
+            "reason": reason,
+            "old_balance": old_balance,
+            "new_balance": new_balance,
+            "timestamp": datetime.now(timezone.utc),
+            "admin_action": True
+        })
+        
+        return {
+            "success": True,
+            "uid": uid,
+            "name": user.get("name"),
+            "prc_refunded": prc_amount,
+            "old_balance": old_balance,
+            "new_balance": new_balance,
+            "reason": reason,
+            "message": f"Refunded {prc_amount} PRC to {user.get('name')}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REFUND-USER] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
