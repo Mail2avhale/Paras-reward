@@ -4512,8 +4512,15 @@ async def daily_percentage_burn():
         if current_balance < min_balance_for_burn:
             continue
         
-        # Calculate 0.5% to burn
-        burn_amount = round(current_balance * (burn_pct / 100), 4)
+        # WHALE PROTECTION (Section 17): 2% burn for wallets > 500,000 PRC
+        WHALE_THRESHOLD = 500000
+        if current_balance > WHALE_THRESHOLD:
+            effective_burn_pct = 1.0  # 2% daily = 1% per session for whales
+        else:
+            effective_burn_pct = burn_pct  # 0.5% per session for normal users
+        
+        # Calculate burn amount
+        burn_amount = round(current_balance * (effective_burn_pct / 100), 4)
         
         if burn_amount < 0.01:
             continue
@@ -38136,6 +38143,149 @@ async def get_scheduler_status():
             "error": str(e),
             "recommendation": "Use Smart Burn manually to execute daily burns"
         }
+
+
+
+# ========== PRC ECONOMY CONTROL SYSTEM (Token Economy Document) ==========
+
+@api_router.get("/admin/prc-economy/dashboard")
+async def get_prc_economy_dashboard():
+    """
+    Get comprehensive PRC economy dashboard with all metrics.
+    Implements PARAS REWARD TOKEN ECONOMY CONTROL SYSTEM.
+    
+    Includes:
+    - Dynamic PRC rate (5 factors)
+    - Redeem pressure monitoring
+    - Whale wallet protection
+    - Emergency status
+    - System stability index
+    """
+    try:
+        from routes.prc_economy import get_economy_dashboard
+        return await get_economy_dashboard(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "success": False}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Dashboard error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-economy/rate")
+async def get_dynamic_prc_rate():
+    """
+    Get current dynamic PRC rate calculated using 5 ecosystem factors:
+    - Supply Factor
+    - Redeem Demand Factor  
+    - Burn Factor
+    - Active User Factor
+    - Utility Usage Factor
+    
+    Rate is clamped between 6-20 PRC per ₹1 (safety limits).
+    """
+    try:
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        return await calculate_dynamic_prc_rate(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "final_rate": 10}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Rate calculation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-economy/redeem-pressure")
+async def get_prc_redeem_pressure():
+    """
+    Monitor redeem pressure.
+    
+    RedeemPressure = TotalPRCRedeemedToday / ActiveUsers
+    Safe Threshold = 0.15 (15%)
+    
+    Returns status: normal, high, critical
+    """
+    try:
+        from routes.prc_economy import get_redeem_pressure
+        return await get_redeem_pressure(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "status": "unknown"}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Redeem pressure error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-economy/stability")
+async def get_prc_stability_index():
+    """
+    Calculate ecosystem stability score (0-100).
+    
+    Components:
+    - Burn activity contribution
+    - User activity contribution
+    - Utility usage contribution
+    - Redeem pressure penalty
+    - Emergency penalty
+    
+    Score interpretation:
+    - > 80: Excellent
+    - 60-80: Good
+    - 40-60: Moderate
+    - < 40: Poor - action needed
+    """
+    try:
+        from routes.prc_economy import calculate_stability_index
+        return await calculate_stability_index(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "stability_score": 50}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Stability index error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-economy/emergency-check")
+async def check_prc_emergency():
+    """
+    Check if emergency protection mode should be activated.
+    
+    Trigger: Redeem requests spike > 200% compared to 30-day average
+    
+    If triggered:
+    - Pause redeem for 24 hours
+    - Notify admin
+    - Investigate unusual activity
+    """
+    try:
+        from routes.prc_economy import check_emergency_conditions
+        return await check_emergency_conditions(db)
+    except ImportError:
+        return {"error": "PRC Economy module not found", "is_emergency": False}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Emergency check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-economy/whale-wallets")
+async def get_prc_whale_wallets():
+    """
+    Get whale wallets (balance > 500,000 PRC).
+    
+    Whale wallets have 2% burn rate (double the normal 1%).
+    """
+    try:
+        from routes.prc_economy import get_whale_wallets, WHALE_THRESHOLD, WHALE_BURN_RATE
+        whales = await get_whale_wallets(db, limit=100)
+        return {
+            "success": True,
+            "whale_threshold": WHALE_THRESHOLD,
+            "whale_burn_rate": WHALE_BURN_RATE,
+            "total_whales": len(whales),
+            "whales": whales
+        }
+    except ImportError:
+        return {"error": "PRC Economy module not found", "whales": []}
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Whale wallets error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @api_router.post("/admin/payment-request/revert-status")
 async def revert_payment_request_status(request: Request):
