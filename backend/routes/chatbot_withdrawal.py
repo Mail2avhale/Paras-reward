@@ -210,6 +210,216 @@ def generate_request_id() -> str:
     random_part = uuid.uuid4().hex[:6].upper()
     return f"WD-{timestamp}-{random_part}"
 
+
+# ==================== INSTANT DMT HELPER FUNCTIONS ====================
+
+async def _add_eko_recipient(mobile: str, account_number: str, ifsc: str, name: str) -> str:
+    """
+    Add bank account as recipient for DMT transfer.
+    
+    Eko V1 API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_ifsc:{account}_{ifsc_lowercase}
+    
+    Returns recipient_id on success, None on failure.
+    """
+    try:
+        if not is_eko_configured():
+            logging.error("[CHATBOT-DMT] Eko not configured")
+            return None
+        
+        # V1 API correct URL format: acc_ifsc:{account}_{ifsc_lowercase}
+        ifsc_lower = ifsc.lower()
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{mobile}/recipients/acc_ifsc:{account_number}_{ifsc_lower}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        headers = get_eko_headers()
+        
+        # V1 API simplified payload
+        payload = {
+            "recipient_name": name,
+            "recipient_mobile": mobile,
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        logging.info(f"[CHATBOT-DMT] Adding recipient: {name}, Account: ***{account_number[-4:]}")
+        
+        response = await chatbot_put(url, headers=headers, data=payload, timeout=60)
+        result = response.json()
+        
+        logging.info(f"[CHATBOT-DMT] Add Recipient Response: {result}")
+        
+        if result.get("status") in [0, "0"]:
+            recipient_data = result.get("data", {})
+            recipient_id = recipient_data.get("recipient_id")
+            if recipient_id:
+                return str(recipient_id)
+        
+        # Check if recipient already exists error (still extract recipient_id)
+        if "recipient_id" in str(result):
+            import re
+            match = re.search(r'"recipient_id":\s*"?(\d+)"?', str(result))
+            if match:
+                return match.group(1)
+        
+        logging.error(f"[CHATBOT-DMT] Add Recipient Failed: {result}")
+        return None
+        
+    except Exception as e:
+        logging.error(f"[CHATBOT-DMT] Add Recipient Exception: {e}")
+        return None
+
+
+async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, amount: int, client_ref_id: str) -> dict:
+    """
+    Execute INSTANT money transfer via Eko DMT V1 API.
+    
+    Eko V1 API: POST /v1/transactions (form-urlencoded)
+    
+    Returns dict with success status, utr_number, tid, etc.
+    """
+    try:
+        if not is_eko_configured():
+            return {"success": False, "message": "Eko service not configured"}
+        
+        # Generate timestamp for auth
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
+        
+        # Generate request_hash for transfer
+        # Hash formula: HMAC-SHA256(base64(auth_key), timestamp + recipient_id + amount + user_code)
+        encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8')).decode('utf-8')
+        hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
+        request_hash = hmac.new(
+            encoded_key.encode('utf-8'),
+            hash_string.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+        request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
+        
+        # Headers - form-urlencoded for V1 API
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "initiator_id": EKO_INITIATOR_ID,
+            "request_hash": request_hash_b64,
+            "Content-Type": "application/x-www-form-urlencoded"  # V1 API requires form data!
+        }
+        
+        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        # Form data payload (not JSON!)
+        payload = {
+            "customer_id": sender_mobile,
+            "recipient_id": recipient_id,
+            "amount": str(amount),
+            "client_ref_id": client_ref_id,
+            "channel": "2",  # IMPS
+            "state": "1",
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "latlong": "19.9975,73.7898"
+        }
+        
+        logging.info(f"[CHATBOT-DMT] Executing transfer: Rs.{amount} to recipient {recipient_id}")
+        
+        # Use data= for form-encoded payload
+        response = await chatbot_post(url, headers=headers, data=payload, timeout=60)
+        result = response.json()
+        
+        logging.info(f"[CHATBOT-DMT] Transfer Response: {result}")
+        
+        # Parse Eko response
+        eko_status = result.get("status", result.get("response_status_id"))
+        tx_data = result.get("data", {})
+        tx_status = tx_data.get("tx_status")
+        eko_tid = tx_data.get("tid", "")
+        bank_ref = tx_data.get("bank_ref_num", "")
+        
+        if eko_status in [0, "0"]:
+            if tx_status == 0:
+                # SUCCESS!
+                return {
+                    "success": True,
+                    "utr_number": bank_ref,
+                    "tid": eko_tid,
+                    "tx_status": "SUCCESS",
+                    "message": "Transfer successful!"
+                }
+            elif tx_status == 1:
+                # FAILED
+                return {
+                    "success": False,
+                    "tid": eko_tid,
+                    "message": tx_data.get("txstatus_desc", "Transfer failed")
+                }
+            elif tx_status == 2:
+                # PENDING
+                return {
+                    "success": False,
+                    "pending": True,
+                    "tid": eko_tid,
+                    "message": "Transfer pending - check status later"
+                }
+        
+        # Check for OTP required (status 302)
+        if eko_status in [302, "302"]:
+            return {
+                "success": False,
+                "otp_required": True,
+                "message": "OTP required for this transfer"
+            }
+        
+        # Check for insufficient balance (status 347)
+        if eko_status in [347, "347"]:
+            return {
+                "success": False,
+                "message": "Insufficient balance in service account. Please try later."
+            }
+        
+        return {
+            "success": False,
+            "message": result.get("message", f"Transfer failed with status {eko_status}")
+        }
+        
+    except httpx.TimeoutException:
+        return {"success": False, "message": "Transfer timeout - please check status"}
+    except Exception as e:
+        logging.error(f"[CHATBOT-DMT] Transfer Exception: {e}")
+        return {"success": False, "message": str(e)}
+
+
+async def _refund_prc(uid: str, prc_amount: float, reference_id: str, reason: str):
+    """Refund PRC to user on transfer failure"""
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Add PRC back to user
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$inc": {"prc_balance": prc_amount},
+                "$set": {"updated_at": now}
+            }
+        )
+        
+        # Log refund transaction
+        await db.transactions.insert_one({
+            "transaction_id": str(uuid.uuid4()),
+            "uid": uid,
+            "type": "withdrawal_refund",
+            "amount_prc": prc_amount,
+            "reference_id": reference_id,
+            "status": "completed",
+            "description": f"PRC Refund: {reason}",
+            "created_at": now
+        })
+        
+        logging.info(f"[CHATBOT-DMT] PRC Refunded: {prc_amount} to user {uid}")
+        
+    except Exception as e:
+        logging.error(f"[CHATBOT-DMT] Refund Exception: {e}")
+
+
 async def check_user_eligibility(uid: str) -> dict:
     """Check if user is eligible for withdrawal"""
     user = await db.users.find_one({"uid": uid})
@@ -563,9 +773,16 @@ async def get_verification_status(mobile: str):
 @router.post("/request")
 async def create_withdrawal_request(request: WithdrawalRequest):
     """
-    Create new withdrawal request via chatbot
+    Create new withdrawal request via chatbot - INSTANT TRANSFER
     
-    IMPORTANT: User must complete Eko OTP verification before calling this API
+    Flow:
+    1. Check eligibility
+    2. Verify Eko OTP verification done
+    3. Add recipient to Eko (if not exists)
+    4. Execute INSTANT DMT transfer
+    5. Return success/failure immediately
+    
+    NO admin approval required - transfer is instant!
     """
     
     # Check eligibility
@@ -610,48 +827,7 @@ async def create_withdrawal_request(request: WithdrawalRequest):
     eko_record = await db.eko_verified_customers.find_one({"mobile": user_mobile})
     eko_customer_id = eko_record.get("customer_id") if eko_record else None
     
-    # Create withdrawal request document
-    withdrawal_doc = {
-        "request_id": request_id,
-        "uid": request.uid,
-        "user_name": user.get("name"),
-        "user_mobile": user_mobile,
-        
-        # Eko verification status
-        "eko_verified": True,
-        "eko_customer_id": eko_customer_id,
-        
-        # Amount details
-        "amount_inr": request.amount_inr,
-        "processing_fee": fees["processing_fee"],
-        "admin_charge": fees["admin_charge"],
-        "total_fees": fees["total_fees"],
-        "net_amount": fees["net_amount"],
-        "prc_deducted": prc_required,
-        
-        # Bank details
-        "account_holder_name": request.account_holder_name,
-        "account_number": request.account_number,
-        "bank_name": request.bank_name,
-        "ifsc_code": request.ifsc_code,
-        
-        # Status
-        "status": "pending",  # pending, processing, completed, rejected
-        "created_at": now,
-        "updated_at": now,
-        
-        # DMT processing (filled by admin)
-        "dmt_transaction_id": None,
-        "dmt_status": None,
-        "processed_by": None,
-        "processed_at": None,
-        "rejection_reason": None,
-        
-        # Source
-        "source": "chatbot"
-    }
-    
-    # Deduct PRC from user balance
+    # STEP 1: Deduct PRC from user balance FIRST
     await db.users.update_one(
         {"uid": request.uid},
         {
@@ -660,56 +836,188 @@ async def create_withdrawal_request(request: WithdrawalRequest):
         }
     )
     
-    # Save withdrawal request
-    await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
+    logging.info(f"[CHATBOT-DMT] PRC Deducted: {prc_required} from user {request.uid}")
     
-    # Save/update user's bank account for future use
-    await db.user_bank_accounts.update_one(
-        {
-            "uid": request.uid,
-            "account_number": request.account_number
-        },
-        {
-            "$set": {
+    try:
+        # STEP 2: Add recipient to Eko (using correct V1 URL format)
+        recipient_id = await _add_eko_recipient(
+            mobile=user_mobile,
+            account_number=request.account_number,
+            ifsc=request.ifsc_code,
+            name=request.account_holder_name
+        )
+        
+        if not recipient_id:
+            # Refund PRC if recipient add fails
+            await _refund_prc(request.uid, prc_required, request_id, "Recipient add failed")
+            raise HTTPException(status_code=400, detail="❌ Bank account add करता आले नाही. कृपया पुन्हा प्रयत्न करा.")
+        
+        logging.info(f"[CHATBOT-DMT] Recipient added: {recipient_id}")
+        
+        # STEP 3: Execute INSTANT DMT transfer
+        transfer_result = await _execute_instant_dmt_transfer(
+            sender_mobile=user_mobile,
+            recipient_id=str(recipient_id),
+            amount=int(fees["net_amount"]),  # Net amount after fees
+            client_ref_id=request_id
+        )
+        
+        logging.info(f"[CHATBOT-DMT] Transfer result: {transfer_result}")
+        
+        # STEP 4: Handle transfer result
+        if transfer_result.get("success"):
+            # SUCCESS - Transfer completed!
+            withdrawal_doc = {
+                "request_id": request_id,
                 "uid": request.uid,
+                "user_name": user.get("name"),
+                "user_mobile": user_mobile,
+                "eko_verified": True,
+                "eko_customer_id": eko_customer_id,
+                "amount_inr": request.amount_inr,
+                "processing_fee": fees["processing_fee"],
+                "admin_charge": fees["admin_charge"],
+                "total_fees": fees["total_fees"],
+                "net_amount": fees["net_amount"],
+                "prc_deducted": prc_required,
                 "account_holder_name": request.account_holder_name,
                 "account_number": request.account_number,
                 "bank_name": request.bank_name,
                 "ifsc_code": request.ifsc_code,
-                "verified": False,  # Self-declared
-                "last_used": now,
-                "created_at": now
+                "status": "completed",  # INSTANT completion!
+                "created_at": now,
+                "updated_at": now,
+                "dmt_transaction_id": transfer_result.get("tid"),
+                "dmt_status": "SUCCESS",
+                "utr_number": transfer_result.get("utr_number"),
+                "processed_at": now,
+                "source": "chatbot",
+                "instant_transfer": True
             }
-        },
-        upsert=True
-    )
+            
+            await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
+            
+            # Log transaction as completed
+            await db.transactions.insert_one({
+                "transaction_id": str(uuid.uuid4()),
+                "uid": request.uid,
+                "type": "withdrawal_completed",
+                "amount_prc": -prc_required,
+                "amount_inr": request.amount_inr,
+                "reference_id": request_id,
+                "status": "completed",
+                "description": f"Bank withdrawal - {request.bank_name} (INSTANT)",
+                "created_at": now
+            })
+            
+            return {
+                "success": True,
+                "request_id": request_id,
+                "message": "✅ Transfer successful! पैसे तुमच्या bank account मध्ये जमा झाले.",
+                "status": "COMPLETED",
+                "details": {
+                    "amount": request.amount_inr,
+                    "fees": fees["total_fees"],
+                    "net_amount": fees["net_amount"],
+                    "prc_deducted": prc_required,
+                    "bank": f"{request.bank_name} - ****{request.account_number[-4:]}",
+                    "utr_number": transfer_result.get("utr_number"),
+                    "transaction_id": transfer_result.get("tid"),
+                    "expected_days": "Instant"  # Changed from 5-7 days!
+                }
+            }
+        
+        elif transfer_result.get("otp_required"):
+            # OTP required for transfer - save pending request
+            withdrawal_doc = {
+                "request_id": request_id,
+                "uid": request.uid,
+                "user_name": user.get("name"),
+                "user_mobile": user_mobile,
+                "eko_verified": True,
+                "eko_customer_id": eko_customer_id,
+                "amount_inr": request.amount_inr,
+                "processing_fee": fees["processing_fee"],
+                "admin_charge": fees["admin_charge"],
+                "total_fees": fees["total_fees"],
+                "net_amount": fees["net_amount"],
+                "prc_deducted": prc_required,
+                "account_holder_name": request.account_holder_name,
+                "account_number": request.account_number,
+                "bank_name": request.bank_name,
+                "ifsc_code": request.ifsc_code,
+                "recipient_id": recipient_id,
+                "status": "otp_pending",
+                "created_at": now,
+                "updated_at": now,
+                "source": "chatbot",
+                "instant_transfer": True
+            }
+            
+            await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
+            
+            return {
+                "success": True,
+                "request_id": request_id,
+                "otp_required": True,
+                "message": "📱 OTP पाठवला आहे. कृपया OTP टाकून transfer पूर्ण करा.",
+                "status": "OTP_PENDING",
+                "details": {
+                    "amount": request.amount_inr,
+                    "fees": fees["total_fees"],
+                    "net_amount": fees["net_amount"],
+                    "prc_deducted": prc_required,
+                    "bank": f"{request.bank_name} - ****{request.account_number[-4:]}"
+                }
+            }
+        
+        else:
+            # FAILED - Refund PRC
+            await _refund_prc(request.uid, prc_required, request_id, f"Transfer failed: {transfer_result.get('message')}")
+            
+            # Log failed attempt
+            withdrawal_doc = {
+                "request_id": request_id,
+                "uid": request.uid,
+                "user_name": user.get("name"),
+                "user_mobile": user_mobile,
+                "amount_inr": request.amount_inr,
+                "prc_deducted": prc_required,
+                "prc_refunded": prc_required,
+                "account_number": request.account_number,
+                "bank_name": request.bank_name,
+                "ifsc_code": request.ifsc_code,
+                "status": "failed",
+                "created_at": now,
+                "updated_at": now,
+                "failure_reason": transfer_result.get("message"),
+                "source": "chatbot"
+            }
+            
+            await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
+            
+            error_msg = transfer_result.get("message", "Transfer failed")
+            if "insufficient balance" in error_msg.lower():
+                error_msg = "❌ Service temporarily unavailable. कृपया नंतर प्रयत्न करा."
+            
+            return {
+                "success": False,
+                "request_id": request_id,
+                "message": f"❌ Transfer failed. {prc_required:.0f} PRC refunded.",
+                "status": "FAILED",
+                "error": error_msg,
+                "details": {
+                    "prc_refunded": prc_required
+                }
+            }
     
-    # Log transaction
-    await db.transactions.insert_one({
-        "transaction_id": str(uuid.uuid4()),
-        "uid": request.uid,
-        "type": "withdrawal_request",
-        "amount_prc": -prc_required,
-        "amount_inr": request.amount_inr,
-        "reference_id": request_id,
-        "status": "pending",
-        "description": f"Bank withdrawal request - {request.bank_name}",
-        "created_at": now
-    })
-    
-    return {
-        "success": True,
-        "request_id": request_id,
-        "message": "Withdrawal request submitted successfully!",
-        "details": {
-            "amount": request.amount_inr,
-            "fees": fees["total_fees"],
-            "net_amount": fees["net_amount"],
-            "prc_deducted": prc_required,
-            "bank": f"{request.bank_name} - ****{request.account_number[-4:]}",
-            "expected_days": "5-7 working days"
-        }
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[CHATBOT-DMT] Exception: {e}")
+        # Refund PRC on any error
+        await _refund_prc(request.uid, prc_required, request_id, f"System error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transfer failed. PRC refunded. Error: {str(e)}")
 
 @router.get("/status/{request_id}")
 async def get_request_status(request_id: str):
@@ -1479,216 +1787,10 @@ async def execute_dmt_transfer(request_id: str, request: Request):
         raise HTTPException(status_code=500, detail=f"Transfer execution error: {str(e)}")
 
 
-async def _add_eko_recipient(sender_mobile: str, account_number: str, ifsc_code: str, account_holder: str) -> dict:
-    """
-    Add a recipient/beneficiary in Eko DMT v1 system.
-    
-    Eko API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_no:{account}
-    """
-    try:
-        if not is_eko_configured():
-            return {"success": False, "message": "Eko service not configured", "error_code": "CONFIG_ERROR"}
-        
-        # Sanitize account holder name (1-50 chars, uppercase, no special chars)
-        clean_name = ' '.join(account_holder.split())[:50].upper()
-        clean_name = re.sub(r'[^A-Z\s]', '', clean_name).strip()
-        if len(clean_name) < 1:
-            clean_name = "CUSTOMER"
-        
-        # Get bank code from IFSC (first 4 chars)
-        bank_code = ifsc_code[:4].upper()
-        
-        # Generate headers with timestamp
-        timestamp_ms = str(int(time.time() * 1000))
-        secret_key = generate_eko_secret_key(timestamp_ms)
-        
-        headers = {
-            "developer_key": EKO_DEVELOPER_KEY,
-            "secret-key": secret_key,
-            "secret-key-timestamp": timestamp_ms,
-            "initiator_id": EKO_INITIATOR_ID,
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-        
-        # Eko Add Recipient API - correct URL format
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{sender_mobile}/recipients/acc_no:{account_number}"
-        url += f"?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        payload = {
-            "recipient_name": clean_name,
-            "recipient_mobile": sender_mobile,
-            "ifsc": ifsc_code.upper(),
-            "bank_code": bank_code,
-            "recipient_type": "1",  # 1 = Bank Account
-            "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE
-        }
-        
-        logging.info(f"[EKO-RECIPIENT] Adding: {clean_name}, Account: ***{account_number[-4:]}, IFSC: {ifsc_code}")
-        
-        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
-        result = response.json()
-        
-        logging.info(f"[EKO-RECIPIENT] Response Status: {response.status_code}, Body: {result}")
-        
-        # Handle Eko response
-        eko_status = result.get("status", result.get("response_status_id"))
-        
-        if eko_status in [0, "0"]:
-            # Success
-            recipient_data = result.get("data", {})
-            return {
-                "success": True,
-                "recipient_id": recipient_data.get("recipient_id", ""),
-                "is_verified": recipient_data.get("is_verified", False),
-                "message": "Recipient added successfully"
-            }
-        elif eko_status in [342, "342"]:
-            # Recipient already exists - this is OK
-            recipient_data = result.get("data", {})
-            return {
-                "success": True,
-                "recipient_id": recipient_data.get("recipient_id", ""),
-                "message": "Recipient already exists"
-            }
-        else:
-            error_msg = result.get("message", "Failed to add recipient")
-            return {
-                "success": False,
-                "message": error_msg,
-                "error_code": str(eko_status),
-                "raw_response": result
-            }
-            
-    except httpx.TimeoutException:
-        logging.error("[EKO-RECIPIENT] Timeout")
-        return {"success": False, "message": "Eko API timeout - please retry", "error_code": "TIMEOUT"}
-    except httpx.RequestError as e:
-        logging.error(f"[EKO-RECIPIENT] Request error: {e}")
-        return {"success": False, "message": f"Network error: {str(e)}", "error_code": "NETWORK_ERROR"}
-    except Exception as e:
-        logging.error(f"[EKO-RECIPIENT] Exception: {e}")
-        return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
-
-
-async def _execute_eko_transfer(sender_mobile: str, recipient_id: str, amount: int, transfer_mode: str, client_ref_id: str) -> dict:
-    """
-    Execute money transfer via Eko DMT v1 API.
-    
-    Eko API: POST /v1/transactions
-    
-    Returns UTR number on success.
-    """
-    try:
-        if not is_eko_configured():
-            return {"success": False, "message": "Eko service not configured", "error_code": "CONFIG_ERROR"}
-        
-        # Generate timestamp for auth
-        timestamp_ms = str(int(time.time() * 1000))
-        secret_key = generate_eko_secret_key(timestamp_ms)
-        
-        # Generate request_hash for transfer (per Eko docs)
-        # request_hash = HMAC-SHA256(timestamp + recipient_id + amount + user_code)
-        hash_string = f"{timestamp_ms}{recipient_id}{amount}{EKO_USER_CODE}"
-        request_hash = hmac.new(
-            EKO_AUTH_KEY.encode('utf-8'),
-            hash_string.encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
-        
-        headers = {
-            "developer_key": EKO_DEVELOPER_KEY,
-            "secret-key": secret_key,
-            "secret-key-timestamp": timestamp_ms,
-            "initiator_id": EKO_INITIATOR_ID,
-            "request_hash": request_hash_b64,
-            "Content-Type": "application/json"
-        }
-        
-        # Channel: 2 = IMPS, 1 = NEFT
-        channel = "2" if transfer_mode.upper() == "IMPS" else "1"
-        
-        # Eko Transfer API
-        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        payload = {
-            "customer_id": sender_mobile,
-            "recipient_id": recipient_id,
-            "amount": str(amount),
-            "client_ref_id": client_ref_id,
-            "channel": channel,
-            "state": "1",
-            "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "latlong": "19.9975,73.7898"
-        }
-        
-        logging.info(f"[EKO-TRANSFER] Executing: Rs.{amount} via {transfer_mode} to recipient {recipient_id}")
-        
-        response = await chatbot_post(url, headers=headers, json=payload, timeout=60)
-        result = response.json()
-        
-        logging.info(f"[EKO-TRANSFER] Response: {result}")
-        
-        # Parse Eko response
-        eko_status = result.get("status", result.get("response_status_id"))
-        tx_data = result.get("data", {})
-        tx_status = tx_data.get("tx_status")
-        eko_tid = tx_data.get("tid", "")
-        bank_ref = tx_data.get("bank_ref_num", "")
-        
-        if eko_status in [0, "0"]:
-            if tx_status == 0:
-                # SUCCESS
-                return {
-                    "success": True,
-                    "utr_number": bank_ref,
-                    "tid": eko_tid,
-                    "tx_status": "SUCCESS",
-                    "message": "Transfer successful!",
-                    "raw_response": result
-                }
-            elif tx_status == 1:
-                # FAILED
-                return {
-                    "success": False,
-                    "tid": eko_tid,
-                    "message": tx_data.get("txstatus_desc", "Transfer failed"),
-                    "error_code": "TX_FAILED",
-                    "raw_response": result
-                }
-            elif tx_status == 2:
-                # PENDING
-                return {
-                    "success": False,
-                    "pending": True,
-                    "tid": eko_tid,
-                    "message": "Transfer pending - check status later",
-                    "error_code": "PENDING",
-                    "raw_response": result
-                }
-            else:
-                return {
-                    "success": False,
-                    "tid": eko_tid,
-                    "message": f"Unknown status: {tx_status}",
-                    "error_code": f"TX_{tx_status}",
-                    "raw_response": result
-                }
-        else:
-            return {
-                "success": False,
-                "message": result.get("message", "Transfer failed"),
-                "error_code": str(eko_status),
-                "raw_response": result
-            }
-            
-    except httpx.TimeoutException:
-        return {"success": False, "message": "Timeout - check status manually", "error_code": "TIMEOUT"}
-    except Exception as e:
-        logging.error(f"[EKO-TRANSFER] Exception: {e}")
-        return {"success": False, "message": str(e), "error_code": "EXCEPTION"}
+# NOTE: The functions _add_eko_recipient and _execute_eko_transfer are defined 
+# at the top of this file (lines 216-380) and should not be duplicated here.
+# The old implementations below were using incorrect URL format (acc_no instead of acc_ifsc)
+# and JSON instead of form-urlencoded for transfer.
 
 
 @router.post("/admin/complete-manual/{request_id}")
