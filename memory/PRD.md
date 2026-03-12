@@ -150,14 +150,26 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 2. Resend OTP: `POST /v1/customers/mobile_number:{mobile}/otp`
 3. V3 code **removed** - confusion avoid करण्यासाठी
 
-**Test Results:** ✅ All working
-- Health Check ✅
-- Customer Search ✅ (state=2 = verified)
-- Registration ✅
+**Frontend Updates:**
+- Registration Form UI added (for new customers)
+- OTP Verification Form UI added (for state=1 customers)
+- Resend OTP button with 30s cooldown timer
+- Full E2E flow from search → register → OTP → transfer
+
+**Bugs Fixed During Testing:**
+1. Wallet API 500 Error - MongoDB boolean check issue
+2. can_transact Logic - state=8 customers साठी fix
+
+**Test Results:** ✅ 64/64 tests passed (39 pytest + 25 Playwright)
+- Customer Search ✅
+- Registration ✅ 
 - Resend OTP ✅
+- Frontend UI ✅
+- Transfer Flow ✅
 
 **Files:**
 - Modified: `/app/backend/routes/eko_dmt_service.py`
+- Modified: `/app/frontend/src/pages/DMTPage.js`
 - Disabled: `/app/backend/routes/eko_dmt_v3.py.disabled`
 
 ---
