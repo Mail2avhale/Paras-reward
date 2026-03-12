@@ -83,7 +83,7 @@ def validate_eko_config():
 # PRC Conversion
 PRC_TO_INR_RATE = 100  # 100 PRC = ₹1
 MIN_REDEEM_INR = 100   # Minimum ₹100
-MAX_DAILY_INR = 5000   # Maximum ₹5000 per day
+DEFAULT_DAILY_LIMIT_INR = 5000   # Default ₹5000 per day
 
 # Database
 MONGO_URL = os.environ.get("MONGO_URL")
@@ -91,6 +91,36 @@ DB_NAME = os.environ.get("DB_NAME", "test_database")
 
 # Request timeout
 REQUEST_TIMEOUT = 60
+
+# ==================== DMT SETTINGS HELPERS ====================
+
+def get_dmt_settings(db):
+    """Get DMT service settings from database"""
+    settings = db.dmt_settings.find_one({"_id": "dmt_config"})
+    if not settings:
+        # Create default settings
+        default_settings = {
+            "_id": "dmt_config",
+            "enabled": True,
+            "daily_limit_inr": DEFAULT_DAILY_LIMIT_INR,
+            "min_transfer_inr": MIN_REDEEM_INR,
+            "prc_to_inr_rate": PRC_TO_INR_RATE,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        db.dmt_settings.insert_one(default_settings)
+        return default_settings
+    return settings
+
+def is_dmt_enabled(db):
+    """Check if DMT service is enabled"""
+    settings = get_dmt_settings(db)
+    return settings.get("enabled", True)
+
+def get_daily_limit(db):
+    """Get current daily limit in INR"""
+    settings = get_dmt_settings(db)
+    return settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR)
 
 # ==================== ASYNC HTTP HELPERS ====================
 
@@ -402,14 +432,19 @@ async def check_daily_limit_async(user_id: str) -> tuple:
     
     result = await db.dmt_transactions.aggregate(pipeline).to_list(1)
     used_today = result[0]["total_inr"] if result else 0
-    remaining = MAX_DAILY_INR - used_today
+    
+    # Get dynamic daily limit from settings
+    settings = await db.dmt_settings.find_one({"_id": "dmt_config"})
+    max_daily = settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR) if settings else DEFAULT_DAILY_LIMIT_INR
+    remaining = max_daily - used_today
     
     return remaining > 0, remaining, used_today
 
 
 def check_daily_limit(sync_db, user_id: str) -> tuple:
     """
-    Check if user has exceeded daily limit - SYNC version (DEPRECATED).
+    Check if user has exceeded daily limit - SYNC version.
+    Uses dynamic limit from settings.
     Returns (is_allowed, remaining_limit, used_today)
     """
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -433,7 +468,10 @@ def check_daily_limit(sync_db, user_id: str) -> tuple:
     
     result = list(sync_db.dmt_transactions.aggregate(pipeline))
     used_today = result[0]["total_inr"] if result else 0
-    remaining = MAX_DAILY_INR - used_today
+    
+    # Get dynamic daily limit from settings
+    max_daily = get_daily_limit(sync_db)
+    remaining = max_daily - used_today
     
     return remaining > 0, remaining, used_today
 
@@ -458,13 +496,28 @@ def log_dmt_transaction(sync_db, log_data: Dict):
 def health():
     """DMT Service Health Check"""
     config_valid = validate_eko_config()
+    sync_db = get_db()
+    
+    # Get DMT service status from settings
+    dmt_enabled = True
+    daily_limit = DEFAULT_DAILY_LIMIT_INR
+    
+    if sync_db is not None:
+        settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+        if settings:
+            dmt_enabled = settings.get("enabled", True)
+            daily_limit = settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR)
+    
     return {
-        "status": "DMT SERVICE RUNNING" if config_valid else "CONFIG ERROR",
+        "status": "DMT SERVICE RUNNING" if config_valid and dmt_enabled else ("DMT DISABLED" if not dmt_enabled else "CONFIG ERROR"),
+        "enabled": dmt_enabled,
         "config_valid": config_valid,
         "version": "2.0",
+        "api_type": "V1 (ICICI)",
+        "instant_transfer": True,  # No admin approval required
+        "daily_limit_inr": daily_limit,
         "prc_rate": f"{PRC_TO_INR_RATE} PRC = ₹1",
-        "min_redeem": f"₹{MIN_REDEEM_INR}",
-        "max_daily": f"₹{MAX_DAILY_INR}"
+        "min_redeem": f"₹{MIN_REDEEM_INR}"
     }
 
 
@@ -487,13 +540,19 @@ async def get_wallet(user_id: str):
     # Use async version for daily limit check
     is_allowed, remaining_limit, used_today = await check_daily_limit_async(user_id)
     
+    # Get dynamic daily limit from settings
+    settings = await db.dmt_settings.find_one({"_id": "dmt_config"})
+    daily_limit = settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR) if settings else DEFAULT_DAILY_LIMIT_INR
+    dmt_enabled = settings.get("enabled", True) if settings else True
+    
     return create_success_response({
         "prc_balance": prc_balance,
         "inr_equivalent": round(inr_equivalent, 2),
-        "can_redeem": inr_equivalent >= MIN_REDEEM_INR,
+        "can_redeem": inr_equivalent >= MIN_REDEEM_INR and dmt_enabled,
+        "dmt_enabled": dmt_enabled,
         "min_redeem_prc": MIN_REDEEM_INR * PRC_TO_INR_RATE,
         "min_redeem_inr": MIN_REDEEM_INR,
-        "daily_limit_inr": MAX_DAILY_INR,
+        "daily_limit_inr": daily_limit,
         "used_today_inr": used_today,
         "remaining_limit_inr": max(0, remaining_limit)
     })
@@ -1098,13 +1157,13 @@ class TransferRequest(BaseModel):
 @router.post("/transfer")
 async def transfer_money(req: TransferRequest, request: Request):
     """
-    Execute money transfer to bank account.
+    Execute money transfer to bank account - INSTANT (No admin approval).
     
     V1 API OTP Flow:
     1. First call without OTP → EKO sends OTP to customer
     2. Return "OTP_REQUIRED" with transaction_id
     3. User enters OTP
-    4. Call again with OTP → Transfer completes
+    4. Call again with OTP → Transfer completes INSTANTLY
     
     EKO API: POST /v1/transactions
     """
@@ -1113,6 +1172,10 @@ async def transfer_money(req: TransferRequest, request: Request):
     
     db = get_db()
     client_ip = get_client_ip(request)
+    
+    # Check if DMT service is enabled
+    if not is_dmt_enabled(db):
+        return create_error_response(503, "DMT service disabled", "DMT service सध्या बंद आहे. कृपया नंतर प्रयत्न करा.")
     
     # If OTP provided, this is completion of pending transaction
     if req.otp and req.pending_transaction_id:
@@ -1123,6 +1186,9 @@ async def transfer_money(req: TransferRequest, request: Request):
     
     # Convert PRC to INR
     amount_inr = req.prc_amount / PRC_TO_INR_RATE
+    
+    # Get dynamic daily limit from settings
+    daily_limit_inr = get_daily_limit(db)
     
     logging.info(f"[DMT] Transfer Request: {req.prc_amount} PRC (₹{amount_inr}) to Recipient: {req.recipient_id}")
     
@@ -1817,3 +1883,129 @@ async def resend_refund_otp(transaction_id: str, user_id: str, request: Request)
     except Exception as e:
         logging.error(f"[DMT REFUND OTP] Error: {e}")
         return create_error_response(500, str(e), "Failed to send OTP.")
+
+
+
+# ==================== ADMIN API ENDPOINTS ====================
+
+class DMTSettingsUpdate(BaseModel):
+    """Admin update DMT settings"""
+    enabled: Optional[bool] = None
+    daily_limit_inr: Optional[int] = Field(None, ge=100, le=200000)
+
+
+@router.get("/admin/settings")
+async def get_admin_dmt_settings():
+    """
+    Get current DMT service settings (Admin only).
+    Returns: enabled status, daily limit, etc.
+    """
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    settings = get_dmt_settings(db)
+    
+    # Remove MongoDB _id
+    return create_success_response({
+        "enabled": settings.get("enabled", True),
+        "daily_limit_inr": settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR),
+        "min_transfer_inr": settings.get("min_transfer_inr", MIN_REDEEM_INR),
+        "prc_to_inr_rate": settings.get("prc_to_inr_rate", PRC_TO_INR_RATE),
+        "updated_at": settings.get("updated_at", datetime.now(timezone.utc)).isoformat()
+    }, "DMT settings retrieved")
+
+
+@router.post("/admin/settings")
+async def update_admin_dmt_settings(req: DMTSettingsUpdate):
+    """
+    Update DMT service settings (Admin only).
+    
+    - enabled: true/false - Enable or disable DMT service
+    - daily_limit_inr: Daily transfer limit per user (₹100 to ₹2,00,000)
+    """
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc)}
+    
+    if req.enabled is not None:
+        update_data["enabled"] = req.enabled
+        logging.info(f"[DMT ADMIN] Service {'enabled' if req.enabled else 'disabled'}")
+    
+    if req.daily_limit_inr is not None:
+        update_data["daily_limit_inr"] = req.daily_limit_inr
+        logging.info(f"[DMT ADMIN] Daily limit updated to ₹{req.daily_limit_inr}")
+    
+    db.dmt_settings.update_one(
+        {"_id": "dmt_config"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    # Get updated settings
+    settings = get_dmt_settings(db)
+    
+    return create_success_response({
+        "enabled": settings.get("enabled", True),
+        "daily_limit_inr": settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR),
+        "message": "Settings updated successfully"
+    }, "DMT settings updated")
+
+
+@router.post("/admin/enable")
+async def enable_dmt_service():
+    """Enable DMT service"""
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    db.dmt_settings.update_one(
+        {"_id": "dmt_config"},
+        {"$set": {"enabled": True, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    logging.info("[DMT ADMIN] Service ENABLED")
+    return create_success_response({"enabled": True}, "DMT service enabled")
+
+
+@router.post("/admin/disable")
+async def disable_dmt_service():
+    """Disable DMT service"""
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    db.dmt_settings.update_one(
+        {"_id": "dmt_config"},
+        {"$set": {"enabled": False, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    logging.info("[DMT ADMIN] Service DISABLED")
+    return create_success_response({"enabled": False}, "DMT service disabled")
+
+
+@router.post("/admin/set-limit")
+async def set_daily_limit(limit_inr: int):
+    """Set daily transfer limit (Admin only)"""
+    if limit_inr < 100 or limit_inr > 200000:
+        return create_error_response(400, "Invalid limit", "Limit must be between ₹100 and ₹2,00,000")
+    
+    db = get_db()
+    if db is None:
+        return create_error_response(500, "Database error", "Service unavailable")
+    
+    db.dmt_settings.update_one(
+        {"_id": "dmt_config"},
+        {"$set": {"daily_limit_inr": limit_inr, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    logging.info(f"[DMT ADMIN] Daily limit set to ₹{limit_inr}")
+    return create_success_response({
+        "daily_limit_inr": limit_inr,
+        "message": f"Daily limit updated to ₹{limit_inr}"
+    }, "Daily limit updated")
