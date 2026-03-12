@@ -2578,3 +2578,114 @@ async def test_v3_fund_transfer(request: V3TransferTestRequest):
             "success": False,
             "error": str(e)
         }
+
+
+
+# ==================== V1 DMT DEBUG TEST ====================
+
+class V1DMTTestRequest(BaseModel):
+    """Test V1 DMT API with full debug"""
+    customer_mobile: str = Field(..., description="Customer mobile (10 digits)")
+    recipient_id: str = Field(..., description="Recipient ID from Eko")
+    amount: int = Field(..., ge=1, le=100, description="Test amount (max ₹100)")
+    dry_run: bool = Field(default=True, description="If True, only show request details")
+
+
+@router.post("/test/v1-dmt-debug")
+async def test_v1_dmt_debug(request: V1DMTTestRequest):
+    """
+    Debug V1 DMT Transfer API - shows exact request and response
+    """
+    import uuid
+    
+    try:
+        if not is_eko_configured():
+            return {"success": False, "error": "Eko not configured"}
+        
+        client_ref_id = f"DBG{uuid.uuid4().hex[:17]}"
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
+        
+        # Generate request_hash for V1 DMT
+        encoded_key = base64.b64encode(EKO_AUTH_KEY.encode('utf-8'))
+        hash_string = f"{timestamp_ms}{request.recipient_id}{request.amount}{EKO_USER_CODE}"
+        request_hash = hmac.new(
+            encoded_key,
+            hash_string.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+        request_hash_b64 = base64.b64encode(request_hash).decode('utf-8')
+        
+        # V1 DMT URL
+        url = f"{EKO_BASE_URL}/v1/transactions?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms,
+            "initiator_id": EKO_INITIATOR_ID,
+            "request_hash": request_hash_b64,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        payload = {
+            "customer_id": request.customer_mobile,
+            "recipient_id": request.recipient_id,
+            "amount": str(request.amount),
+            "client_ref_id": client_ref_id,
+            "channel": "2",  # IMPS
+            "state": "1",
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "latlong": "19.9975,73.7898"
+        }
+        
+        debug_info = {
+            "url": url,
+            "client_ref_id": client_ref_id,
+            "timestamp": timestamp_ms,
+            "hash_string": hash_string,
+            "request_hash": request_hash_b64,
+            "headers": {
+                "developer_key": f"{EKO_DEVELOPER_KEY[:10]}...",
+                "secret-key": f"{secret_key[:20]}...",
+                "secret-key-timestamp": timestamp_ms,
+                "request_hash": f"{request_hash_b64[:20]}..."
+            },
+            "payload": payload
+        }
+        
+        if request.dry_run:
+            return {
+                "success": True,
+                "mode": "DRY_RUN",
+                "message": "Request prepared. Set dry_run=false to execute.",
+                "debug": debug_info
+            }
+        
+        # Execute real request
+        logging.warning(f"[V1-DEBUG] EXECUTING REAL TRANSFER: Rs.{request.amount}")
+        
+        response = await chatbot_post(url, headers=headers, data=payload, timeout=60)
+        raw_text = response.text
+        
+        logging.info(f"[V1-DEBUG] Status: {response.status_code}")
+        logging.info(f"[V1-DEBUG] Raw: {raw_text}")
+        
+        try:
+            result = response.json()
+        except:
+            result = {"raw_text": raw_text}
+        
+        return {
+            "success": True,
+            "mode": "LIVE",
+            "status_code": response.status_code,
+            "raw_response": raw_text[:2000],
+            "parsed_response": result,
+            "debug": debug_info
+        }
+        
+    except Exception as e:
+        logging.error(f"[V1-DEBUG] Error: {e}")
+        return {"success": False, "error": str(e)}
