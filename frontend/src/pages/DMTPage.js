@@ -82,18 +82,15 @@ const DMTPage = () => {
   const [showTransferOTP, setShowTransferOTP] = useState(false);
   const [pendingTransactionId, setPendingTransactionId] = useState(null);
   const [transferOtpValue, setTransferOtpValue] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
   
   // Transactions State
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   
-  // Registration State (No OTP needed for registration in V1 API)
+  // Registration State (V1 API - No OTP needed for registration)
   const [showRegistration, setShowRegistration] = useState(false);
-  const [showOTPVerification, setShowOTPVerification] = useState(false); // Keep for backward compat
   const [registrationName, setRegistrationName] = useState('');
-  const [otpValue, setOtpValue] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
 
   // Load wallet on mount
   useEffect(() => {
@@ -165,97 +162,9 @@ const DMTPage = () => {
     }
   };
 
-  // Resend OTP
-  const resendOTP = async () => {
-    if (resendTimer > 0) return;
-    
-    setOtpLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/customer/resend-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mobile: customerMobile,
-          user_id: user.uid
-        })
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        toast.success('✅ OTP पुन्हा पाठवला आहे!');
-        setResendTimer(30);
-      } else {
-        toast.error(data.user_message || data.message || 'OTP पाठवता आला नाही');
-      }
-    } catch (error) {
-      toast.error('OTP पाठवता आला नाही. कृपया पुन्हा प्रयत्न करा.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // Verify OTP
-  const verifyOTP = async () => {
-    if (!otpValue || otpValue.length < 4) {
-      toast.error('कृपया OTP टाका');
-      return;
-    }
-
-    setOtpLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/customer/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mobile: customerMobile,
-          otp: otpValue,
-          user_id: user.uid
-        })
-      });
-      
-      const data = await res.json();
-      
-      if (data.success && data.data?.verified) {
-        toast.success('✅ Verification पूर्ण! आता transfer करू शकता.');
-        setShowOTPVerification(false);
-        setOtpValue('');
-        setCustomer({
-          customer_exists: true,
-          customer_id: data.data.customer_id,
-          name: registrationName || customer?.name,
-          mobile: customerMobile,
-          state: '2',
-          available_limit: data.data.available_limit || 25000,
-          can_transact: true
-        });
-        fetchRecipients(customerMobile);
-      } else {
-        // Check if state changed to 2 even without explicit verification
-        if (data.data?.state === '2' || data.data?.state === 2) {
-          toast.success('✅ Customer verified! आता transfer करू शकता.');
-          setShowOTPVerification(false);
-          setOtpValue('');
-          setCustomer({
-            customer_exists: true,
-            customer_id: data.data.customer_id || customerMobile,
-            name: registrationName || customer?.name,
-            mobile: customerMobile,
-            state: '2',
-            available_limit: 25000,
-            can_transact: true
-          });
-          fetchRecipients(customerMobile);
-        } else {
-          toast.error(data.user_message || data.message || 'OTP verification failed');
-        }
-      }
-    } catch (error) {
-      toast.error('Verification failed. कृपया पुन्हा प्रयत्न करा.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
+  // NOTE: V1 API - Resend OTP and Verify OTP functions removed
+  // OTP verification happens during TRANSFER, not registration
+  // See executeTransfer() for transfer OTP handling
 
   // Fetch wallet balance
   const fetchWallet = async () => {
@@ -279,7 +188,6 @@ const DMTPage = () => {
 
     // Reset states
     setShowRegistration(false);
-    setShowOTPVerification(false);
     setRegistrationName('');
     setOtpValue('');
 
@@ -509,6 +417,36 @@ const DMTPage = () => {
     toast.info('Transfer cancelled. PRC will be refunded if deducted.');
   };
 
+  // Resend transfer OTP
+  const resendTransferOTP = async () => {
+    if (resendTimer > 0) return;
+    
+    setTransferLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/eko/dmt/customer/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobile: customerMobile,
+          user_id: user.uid
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('✅ OTP पुन्हा पाठवला आहे!');
+        setResendTimer(30);
+      } else {
+        toast.error(data.user_message || data.message || 'OTP पाठवता आला नाही');
+      }
+    } catch (error) {
+      toast.error('OTP पाठवता आला नाही.');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   // Fetch transactions
   const fetchTransactions = async () => {
     setTransactionsLoading(true);
@@ -671,66 +609,8 @@ const DMTPage = () => {
               </Card>
             )}
 
-            {/* OTP Verification Form */}
-            {showOTPVerification && (
-              <Card className="bg-gradient-to-br from-green-900/50 to-teal-900/50 border-green-500/30">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-lg flex items-center gap-2">
-                    <KeyRound className="w-5 h-5 text-green-400" />
-                    OTP Verification
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    <Phone className="w-4 h-4 inline mr-1" />
-                    {customerMobile} वर OTP पाठवला आहे
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-gray-300">OTP टाका *</Label>
-                    <Input
-                      value={otpValue}
-                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6 digit OTP"
-                      className="bg-gray-700/50 border-gray-600 text-white text-center text-2xl tracking-widest mt-1"
-                      maxLength={6}
-                      data-testid="otp-input"
-                    />
-                  </div>
-                  
-                  <Button
-                    onClick={verifyOTP}
-                    disabled={otpLoading || otpValue.length < 4}
-                    className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
-                    data-testid="verify-otp-btn"
-                  >
-                    {otpLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                    )}
-                    Verify OTP
-                  </Button>
-                  
-                  <div className="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={resendOTP}
-                      disabled={resendTimer > 0 || otpLoading}
-                      className="text-gray-400 hover:text-white"
-                      data-testid="resend-otp-btn"
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-1 ${otpLoading ? 'animate-spin' : ''}`} />
-                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
-                    </Button>
-                  </div>
-                  
-                  <p className="text-gray-500 text-xs text-center">
-                    OTP नाही आला? 30 सेकंद थांबा आणि Resend करा
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+            {/* NOTE: V1 API - OTP verification removed from customer registration */}
+            {/* OTP is only required during TRANSFER, not during registration */}
 
             {/* Recipients - Show for all registered customers */}
             {customer?.customer_exists && (
@@ -923,8 +803,8 @@ const DMTPage = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={resendOTP}
-                                  disabled={resendTimer > 0}
+                                  onClick={resendTransferOTP}
+                                  disabled={resendTimer > 0 || transferLoading}
                                   className="text-gray-400 hover:text-white"
                                 >
                                   <RefreshCw className="w-4 h-4 mr-1" />
