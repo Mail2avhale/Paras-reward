@@ -1172,7 +1172,9 @@ async def search_operators(query: str, category: Optional[str] = None):
         "electricity": 8, "water": 11, "landline": 9, "broadband": 1,
         "gas": 2, "lpg": 18, "emi": 21, "loan": 21, "credit_card": 7,
         "insurance": 20, "fastag": 22, "housing_society": 12,
-        "municipal_tax": 15, "education": 14, "cable_tv": 17
+        "municipal_tax": 15, "education": 14, "cable_tv": 17,
+        "subscription": 13, "hospital": 19, "municipal_corp": 6,
+        "loan_repayment": 25, "transport": 27
     }
     
     # If category specified, search only that category
@@ -1232,37 +1234,52 @@ async def get_operators(category: str):
     - 22: FASTag (20 operators: IndusInd, Axis, BOB, etc.)
     - 1: Broadband (92 operators)
     """
+    # Complete Eko BBPS Category Mapping (as of March 2026)
+    # Based on direct API investigation
     category_map = {
-        # Mobile Recharge - Category 5 has Jio, Airtel, Vi, BSNL
-        "mobile_recharge": 5,
+        # Mobile Services
+        "mobile_recharge": 5,   # Cat 5: Airtel, Jio, Vi, BSNL Prepaid (6 operators)
         "mobile_prepaid": 5,
-        "mobile_postpaid": 10,
+        "mobile_postpaid": 10,  # Cat 10: Airtel, Jio, Vi Postpaid (7 operators)
         
-        # DTH
-        "dth": 4,
+        # Entertainment
+        "dth": 4,               # Cat 4: Dish TV, Tata Sky, Airtel DTH (5 operators)
+        "cable_tv": 17,         # Cat 17: Hathway, Asianet, INDigital (4 operators)
+        "subscription": 13,     # Cat 13: Amazon Prime, JioHotstar, Hungama (17 operators)
+        "ott": 13,
         
         # Utility Bills
-        "electricity": 8,
-        "water": 11,
-        "landline": 9,
-        "broadband": 1,
-        "gas": 2,  # PNG - Piped Natural Gas (Mahanagar Gas, Gujarat Gas, etc.)
-        "lpg": 18,  # LPG Cylinder booking (Indane, HP Gas, Bharat Gas)
+        "electricity": 8,       # Cat 8: MSEDCL, BSES, Tata Power (89 operators)
+        "water": 11,            # Cat 11: Municipal water boards (54 operators)
+        "landline": 9,          # Cat 9: Airtel, BSNL, MTNL Landline (5 operators)
+        "broadband": 1,         # Cat 1: Airtel, Jio, ACT Fibernet (93 operators)
+        "gas": 2,               # Cat 2: Mahanagar Gas, Gujarat Gas, Adani (29 operators)
+        "lpg": 18,              # Cat 18: Indane, HP Gas, Bharat Gas (3 operators)
         
-        # Financial
-        "emi": 21,
+        # Financial Services
+        "credit_card": 7,       # Cat 7: HDFC, ICICI, Axis, etc. (29 operators)
+        "emi": 21,              # Cat 21: Loan EMI payments (294 operators)
         "loan": 21,
         "loan_emi": 21,
-        "credit_card": 7,
-        "insurance": 20,
+        "loan_repayment": 25,   # Cat 25: Agent/Customer loan repayment (283 operators)
+        "insurance": 20,        # Cat 20: Life & General Insurance (40 operators)
         
-        # Transport & Others
-        "fastag": 22,
-        "housing_society": 12,  # Housing Society maintenance (105 operators)
-        "municipal_tax": 15,    # Municipal Tax - MCGM, Chennai Corp, etc. (41 operators)
-        "education": 14,        # Education/School/College Fees (1661 operators)
-        "hospital": 24,
-        "cable_tv": 17          # Cable TV subscriptions (Hathway, Asianet, etc.)
+        # Transport
+        "fastag": 22,           # Cat 22: Bank FASTag recharge (20 operators)
+        "transport": 27,        # Cat 27: Transport Department services (5 operators)
+        
+        # Property & Housing
+        "housing_society": 12,  # Cat 12: Society maintenance fees (105 operators)
+        "municipal_tax": 15,    # Cat 15: Property Tax - MCGM, etc. (41 operators)
+        "municipal_corp": 6,    # Cat 6: Metro Municipal Corps - KDMC, AMC (2 operators)
+        "municipal_other": 23,  # Cat 23: Other municipal services (5 operators)
+        
+        # Education & Healthcare
+        "education": 14,        # Cat 14: School/College Fees (1661 operators)
+        "school_fees": 14,
+        "college_fees": 14,
+        "hospital": 19,         # Cat 19: Hospital payments (6 operators)
+        "healthcare": 19
     }
     
     cat_id = category_map.get(category.lower())
