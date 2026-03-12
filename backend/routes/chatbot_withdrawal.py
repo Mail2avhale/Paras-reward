@@ -360,9 +360,19 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
         eko_tid = tx_data.get("tid", "")
         bank_ref = tx_data.get("bank_ref_num", "")
         
+        # Log detailed status for debugging
+        logging.info(f"[CHATBOT-DMT] eko_status={eko_status} (type={type(eko_status)}), tx_status={tx_status} (type={type(tx_status)})")
+        
         if eko_status in [0, "0"]:
-            if tx_status == 0:
+            # Convert tx_status to int for comparison (Eko can return string or int)
+            try:
+                tx_status_int = int(tx_status) if tx_status is not None else -1
+            except (ValueError, TypeError):
+                tx_status_int = -1
+                
+            if tx_status_int == 0:
                 # SUCCESS!
+                logging.info(f"[CHATBOT-DMT] ✅ Transfer SUCCESS! UTR={bank_ref}, TID={eko_tid}")
                 return {
                     "success": True,
                     "utr_number": bank_ref,
@@ -370,14 +380,14 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
                     "tx_status": "SUCCESS",
                     "message": "Transfer successful!"
                 }
-            elif tx_status == 1:
+            elif tx_status_int == 1:
                 # FAILED
                 return {
                     "success": False,
                     "tid": eko_tid,
                     "message": tx_data.get("txstatus_desc", "Transfer failed")
                 }
-            elif tx_status == 2:
+            elif tx_status_int == 2:
                 # PENDING
                 return {
                     "success": False,
@@ -385,6 +395,19 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
                     "tid": eko_tid,
                     "message": "Transfer pending - check status later"
                 }
+            else:
+                # Unknown tx_status but eko_status is 0 - check message for success
+                eko_message = result.get("message", "")
+                if "successful" in eko_message.lower() or "success" in eko_message.lower():
+                    logging.info(f"[CHATBOT-DMT] ✅ Transfer SUCCESS (via message)! UTR={bank_ref}, TID={eko_tid}")
+                    return {
+                        "success": True,
+                        "utr_number": bank_ref or eko_tid,
+                        "tid": eko_tid,
+                        "tx_status": "SUCCESS",
+                        "message": "Transfer successful!"
+                    }
+                logging.warning(f"[CHATBOT-DMT] Unknown tx_status={tx_status_int} with eko_status=0")
         
         # Check for OTP required (status 302)
         if eko_status in [302, "302"]:
@@ -401,6 +424,20 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
                 "message": "Insufficient balance in service account. Please try later."
             }
         
+        # FALLBACK: Check if message contains "successful" even if status is not 0
+        # Some Eko responses have status != 0 but message says "Transaction successful"
+        eko_message = result.get("message", "")
+        if "transaction successful" in eko_message.lower() or "transfer successful" in eko_message.lower():
+            logging.info(f"[CHATBOT-DMT] ✅ Transfer SUCCESS (via message fallback)! Message: {eko_message}")
+            return {
+                "success": True,
+                "utr_number": tx_data.get("bank_ref_num", "") or tx_data.get("tid", ""),
+                "tid": tx_data.get("tid", ""),
+                "tx_status": "SUCCESS",
+                "message": "Transfer successful!"
+            }
+        
+        logging.warning(f"[CHATBOT-DMT] Transfer failed: status={eko_status}, message={eko_message}")
         return {
             "success": False,
             "message": result.get("message", f"Transfer failed with status {eko_status}")
