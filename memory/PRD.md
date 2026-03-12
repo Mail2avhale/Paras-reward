@@ -138,10 +138,41 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ---
 
+### 🎯 DMT V1 API Fix (March 12, 2026)
+**Problem:** Eko DMT user registration and OTP verification flows were failing.
+
+**Root Cause:**
+- Code was using V3 Fino DMT endpoints which are NOT available for this Eko account
+- V3 endpoints: `/v3/customer/account/{mobile}/dmt-fino` returned "Endpoint not found"
+- V3 verify endpoint: `/v3/customer/account/{mobile}/dmt/verify` returned "Internal server error"
+
+**Fix Applied:**
+1. Changed registration to use V1 API: `PUT /v1/customers/mobile_number:{mobile}`
+2. Changed Resend OTP to use V1 API: `POST /v1/customers/mobile_number:{mobile}/otp`
+3. Updated Verify OTP to use V1 re-registration with OTP parameter
+
+**Important Notes:**
+- V1 registration creates customers with state=2 (immediately verified) OR state=1 (OTP pending)
+- V1 Resend OTP works correctly for state=1 customers
+- OTP verification via V1 uses re-registration approach
+- To enable V3 OTP verification, Eko Fino DMT service needs to be activated on the account
+
+**Test Results (39/39 tests passed):**
+- ✅ DMT Health Check API
+- ✅ Customer Search (existing)
+- ✅ Customer Search (new)
+- ✅ Customer Registration
+- ✅ Resend OTP
+- ✅ Verify OTP endpoint
+
+**Files Modified:** `/app/backend/routes/eko_dmt_service.py`
+
+---
+
 ## REMAINING TASKS
 
 ### P1 - Important
-- [ ] Eko API IP Whitelisting (external - contact Eko support if needed)
+- [ ] Enable V3 Fino DMT service on Eko account for full OTP verification
 - [ ] Auto-Burn Scheduler testing on production (verify after deploy)
 - [ ] Backend `server.py` refactoring into smaller route files
 
@@ -155,6 +186,13 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 ---
 
 ## Key API Endpoints
+
+### DMT APIs (FIXED - V1)
+- `GET /api/eko/dmt/health` - Health check
+- `POST /api/eko/dmt/customer/search` - Search customer by mobile
+- `POST /api/eko/dmt/customer/register` - Register new customer
+- `POST /api/eko/dmt/customer/resend-otp` - Resend OTP to customer
+- `POST /api/eko/dmt/customer/verify-otp` - Verify customer OTP
 
 ### BBPS APIs (FIXED)
 - `GET /api/bbps/operators/{category}` - Get operators for service category
