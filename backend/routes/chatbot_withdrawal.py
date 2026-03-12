@@ -2581,6 +2581,62 @@ async def test_v3_fund_transfer(request: V3TransferTestRequest):
 
 
 
+# ==================== TRANSACTION INQUIRY ====================
+
+@router.get("/test/transaction-status/{reference}")
+async def check_transaction_status(reference: str):
+    """
+    Check transaction status using Eko Transaction Inquiry API
+    
+    reference: Can be either Eko TID (e.g., 3548255959) or client_ref_id
+    """
+    try:
+        if not is_eko_configured():
+            return {"success": False, "error": "Eko not configured"}
+        
+        timestamp_ms = str(int(time.time() * 1000))
+        secret_key = generate_eko_secret_key(timestamp_ms)
+        
+        # Inquiry URL - V1 format
+        # Try both V1 and V3 patterns
+        urls_to_try = [
+            f"{EKO_BASE_URL}/v1/transactions/{reference}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}",
+            f"https://api.eko.in:25002/ekoapi/v3/tools/reference/transaction?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}&client_ref_id={reference}",
+        ]
+        
+        headers = {
+            "developer_key": EKO_DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp_ms
+            # No Content-Type for GET requests
+        }
+        
+        results = []
+        for url in urls_to_try:
+            try:
+                response = await chatbot_get(url, headers=headers, timeout=30)
+                results.append({
+                    "url": url,
+                    "status_code": response.status_code,
+                    "response": response.text[:1000]
+                })
+            except Exception as e:
+                results.append({
+                    "url": url,
+                    "error": str(e)
+                })
+        
+        return {
+            "success": True,
+            "reference": reference,
+            "results": results
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+
 # ==================== V1 DMT DEBUG TEST ====================
 
 class V1DMTTestRequest(BaseModel):
