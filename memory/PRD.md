@@ -23,6 +23,29 @@ Production application (www.parasreward.com) was experiencing severe performance
 
 ## COMPLETED FIXES
 
+### 🎯 DMT Transfer Production Fix (March 12, 2026)
+**Critical bugs fixed in DMT (Domestic Money Transfer) flow:**
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| Recipient Add failing | Wrong URL format `acc_no:` | Changed to `acc_ifsc:{account}_{ifsc_lowercase}` per V1 docs |
+| Transfer route conflict | Legacy `/eko/dmt/transfer` route | Disabled duplicate route in `_archive_eko_payments_legacy.py` |
+| Transfer API empty response | Using `json=` payload | Changed to `data=` for form-urlencoded (V1 API requirement) |
+| Frontend undefined states | `setShowOTPVerification`, `setOtpValue` | Removed references to deleted V3 OTP flow states |
+
+**Files Modified:**
+- `/app/backend/routes/eko_dmt_service.py` - Fixed recipient URL, transfer payload
+- `/app/backend/routes/_archive_eko_payments_legacy.py` - Disabled conflicting route
+- `/app/frontend/src/pages/DMTPage.js` - Cleaned unused state references
+
+**Test Status:** 
+- ✅ Customer Search - Working
+- ✅ Customer Registration - Working  
+- ✅ Recipient Add - Working (acc_ifsc format)
+- ✅ Recipients List - Working
+- ✅ Transfer API - Working (returns Eko status correctly)
+- ⚠️ Actual Transfer - Blocked by "Insufficient balance" (Eko retailer account needs recharge)
+
 ### 🎯 PRC Token Economy Control System (March 12, 2026)
 **Implemented complete PRC economy control as per Token Economy Document:**
 
@@ -200,10 +223,23 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ### DMT APIs (FIXED - V1)
 - `GET /api/eko/dmt/health` - Health check
+- `GET /api/eko/dmt/wallet/{user_id}` - Get user PRC balance and limits
 - `POST /api/eko/dmt/customer/search` - Search customer by mobile
 - `POST /api/eko/dmt/customer/register` - Register new customer
 - `POST /api/eko/dmt/customer/resend-otp` - Resend OTP to customer
-- `POST /api/eko/dmt/customer/verify-otp` - Verify customer OTP
+- `POST /api/eko/dmt/recipient/add` - Add bank account as recipient (**FIXED**)
+- `GET /api/eko/dmt/recipients/{mobile}` - Get list of saved recipients
+- `POST /api/eko/dmt/transfer` - Execute money transfer (**FIXED**)
+- `GET /api/eko/dmt/status/{transaction_id}` - Check transaction status
+- `GET /api/eko/dmt/transactions/{user_id}` - Get user transaction history
+
+### DMT Admin APIs
+- `GET /api/eko/dmt/admin/settings` - Get DMT service settings
+- `POST /api/eko/dmt/admin/enable` - Enable DMT service
+- `POST /api/eko/dmt/admin/disable` - Disable DMT service
+- `POST /api/eko/dmt/admin/set-limit` - Set daily transfer limit
+- `GET /api/eko/dmt/admin/transactions` - Get all transactions with filters
+- `GET /api/eko/dmt/admin/stats` - Get DMT statistics
 
 ### BBPS APIs (FIXED)
 - `GET /api/bbps/operators/{category}` - Get operators for service category

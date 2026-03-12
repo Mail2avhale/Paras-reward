@@ -986,7 +986,11 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
     """
     Add bank account as recipient for money transfer.
     
-    EKO API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_no:{account}
+    EKO V1 API: PUT /v1/customers/mobile_number:{mobile}/recipients/acc_ifsc:{account}_{ifsc_lowercase}
+    
+    Documentation: https://developers.eko.in/v1/reference/add-recipient
+    - The URL format uses acc_ifsc:{account_number}_{ifsc_code_lowercase}
+    - NOT acc_no:{account_number}
     """
     if not validate_eko_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
@@ -997,26 +1001,26 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
     logging.info(f"[DMT] Add Recipient: {req.recipient_name}, Account: ***{req.account_number[-4:]}, IFSC: {req.ifsc}")
     
     try:
-        # Get bank code from IFSC
-        bank_code = req.ifsc[:4]  # First 4 characters of IFSC
+        # CORRECT V1 API Format: acc_ifsc:{account}_{ifsc_lowercase}
+        ifsc_lower = req.ifsc.lower()
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients/acc_ifsc:{req.account_number}_{ifsc_lower}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
         
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/recipients/acc_no:{req.account_number}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
+        # V1 API payload - simplified, no bank_code needed
         payload = {
             "recipient_name": req.recipient_name,
             "recipient_mobile": req.mobile,
-            "ifsc": req.ifsc,
-            "bank_code": bank_code,
-            "recipient_type": "1",  # 1 = Bank Account
             "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "source_ip": client_ip
+            "user_code": EKO_USER_CODE
         }
         
         headers = generate_eko_headers(request)
+        
+        logging.info(f"[DMT] Add Recipient URL: {url}")
+        
         response = await async_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[DMT] Add Recipient Response: {response.status_code}")
+        logging.info(f"[DMT] Add Recipient Response Body: {response.text[:500]}")
         
         if response.status_code == 403:
             return create_error_response(403, "Authentication failed", "Service temporarily unavailable.")
@@ -1050,7 +1054,7 @@ async def add_recipient(req: AddRecipientRequest, request: Request):
                         "account_number": req.account_number,
                         "ifsc": req.ifsc,
                         "mobile": req.mobile,
-                        "bank_code": bank_code,
+                        "bank_code": req.ifsc[:4],  # First 4 chars of IFSC
                         "is_verified": recipient_data.get("is_verified", False),
                         "updated_at": datetime.now(timezone.utc)
                     }
@@ -1382,7 +1386,7 @@ async def execute_eko_transfer(db, req, client_ref_id: str, amount_inr: float, c
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp_ms,
         "initiator_id": EKO_INITIATOR_ID,
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",  # IMPORTANT: V1 API uses form data, not JSON
         "request_hash": request_hash
     }
     
@@ -1406,7 +1410,8 @@ async def execute_eko_transfer(db, req, client_ref_id: str, amount_inr: float, c
     
     logging.info(f"[DMT] Executing Transfer: ₹{amount_inr} via {url}")
     
-    response = await async_post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
+    # Use data= for form-encoded payload (V1 API requirement)
+    response = await async_post(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
     
     logging.info(f"[DMT] Transfer Response: {response.status_code}")
     logging.info(f"[DMT] Transfer Response Body: {response.text[:500]}")

@@ -136,7 +136,6 @@ const DMTPage = () => {
         // OTP is only required during TRANSFER
         toast.success('✅ Registration पूर्ण! तुम्ही आता recipient add करू शकता.');
         setShowRegistration(false);
-        setShowOTPVerification(false);
         setCustomer({
           customer_exists: true,
           customer_id: data.data.customer_id,
@@ -189,7 +188,6 @@ const DMTPage = () => {
     // Reset states
     setShowRegistration(false);
     setRegistrationName('');
-    setOtpValue('');
 
     setCustomerLoading(true);
     try {

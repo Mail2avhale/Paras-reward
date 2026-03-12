@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260312_085110/results.json' }],
   ],
   use: {
-    baseURL: 'https://dmt-otp-fix.preview.emergentagent.com',
+    baseURL: 'https://instant-money-flow.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 # Base URL from environment or default
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://dmt-otp-fix.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://instant-money-flow.preview.emergentagent.com').rstrip('/')
 
 
 class TestDMTHealthCheck:

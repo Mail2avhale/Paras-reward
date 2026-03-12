@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://dmt-otp-fix.preview.emergentagent.com';
+const BASE_URL = 'https://instant-money-flow.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {
