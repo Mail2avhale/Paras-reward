@@ -65,22 +65,21 @@ async def get_eko_service():
 
 
 def get_dynamic_prc_rate() -> int:
-    """Get PRC to INR rate from database settings - DYNAMIC"""
+    """Get PRC to INR rate - DYNAMIC from economy system"""
     try:
+        # Import the dynamic rate function from prc_economy
+        from routes.prc_economy import get_dynamic_rate_sync
+        return get_dynamic_rate_sync()
+    except ImportError:
+        # Fallback to database settings
         if db is None:
-            return 100  # Default fallback
+            return 100
         
-        # Check dmt_settings collection
         settings = db.dmt_settings.find_one({"_id": "dmt_config"})
         if settings:
             return settings.get("prc_to_inr_rate", 100)
         
-        # Check admin settings collection
-        admin_settings = db.settings.find_one({"key": "dmt_settings"})
-        if admin_settings:
-            return admin_settings.get("prc_rate", 100)
-        
-        return 100  # Default
+        return 100
     except Exception as e:
         logging.error(f"[BANK_REDEEM] Failed to get PRC rate: {e}")
         return 100

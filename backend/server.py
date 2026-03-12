@@ -36001,14 +36001,18 @@ async def add_journal_entry(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== PRC LEDGER SYSTEM ====================
-# PRC Rate - DYNAMIC from database
+# PRC Rate - DYNAMIC from economy system
 def get_prc_ledger_rate():
-    """Get PRC to INR rate for ledger calculations"""
+    """Get PRC to INR rate for ledger calculations - DYNAMIC"""
     try:
+        from routes.prc_economy import get_dynamic_rate_sync
+        rate = get_dynamic_rate_sync()  # e.g., 10 means 10 PRC = ₹1
+        return 1 / rate  # Convert to INR per PRC (e.g., 1 PRC = ₹0.1)
+    except ImportError:
         settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
         if settings:
             rate = settings.get("prc_to_inr_rate", 100)
-            return 1 / rate  # 100 PRC = 1 INR means 1 PRC = 0.01 INR
+            return 1 / rate
         return 0.01
     except:
         return 0.01

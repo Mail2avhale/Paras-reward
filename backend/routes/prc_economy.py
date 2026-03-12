@@ -327,6 +327,9 @@ async def calculate_dynamic_prc_rate(db) -> Dict:
         # Cache the result
         _economy_cache[cache_key] = (result, datetime.now(timezone.utc))
         
+        # Save to database for sync access
+        await save_calculated_rate(db, result)
+        
         return result
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Dynamic rate calculation error: {e}")
@@ -335,6 +338,68 @@ async def calculate_dynamic_prc_rate(db) -> Dict:
             "final_rate": PRC_INR_RATE,
             "error": str(e)
         }
+
+
+def get_dynamic_rate_sync() -> int:
+    """
+    Synchronous version to get dynamic PRC rate.
+    Uses cached value or calculates fresh if cache expired.
+    
+    This is used by DMT/withdrawal services that need sync rate access.
+    Returns: final_rate (int) - e.g., 10 means 10 PRC = ₹1
+    """
+    try:
+        from pymongo import MongoClient
+        import os
+        
+        # Check memory cache first
+        cache_key = "prc_dynamic_rate"
+        if cache_key in _economy_cache:
+            cached_data, cache_time = _economy_cache[cache_key]
+            if (datetime.now(timezone.utc) - cache_time).total_seconds() < ECONOMY_CACHE_TTL:
+                return cached_data.get("final_rate", PRC_INR_RATE)
+        
+        # Fetch from database (last calculated value)
+        client = MongoClient(os.environ.get("MONGO_URL"))
+        sync_db = client[os.environ.get("DB_NAME", "test_database")]
+        
+        # Check if we have a stored calculated rate
+        stored_rate = sync_db.system_settings.find_one({"type": "prc_dynamic_rate"})
+        if stored_rate:
+            calc_time = stored_rate.get("calculated_at")
+            if calc_time:
+                # Check if calculation is recent (within cache TTL)
+                if isinstance(calc_time, str):
+                    calc_time = datetime.fromisoformat(calc_time.replace("Z", "+00:00"))
+                if (datetime.now(timezone.utc) - calc_time).total_seconds() < ECONOMY_CACHE_TTL:
+                    return stored_rate.get("final_rate", PRC_INR_RATE)
+        
+        # Fallback to admin-set rate in dmt_settings
+        dmt_settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+        if dmt_settings:
+            return dmt_settings.get("prc_to_inr_rate", PRC_INR_RATE)
+        
+        return PRC_INR_RATE
+        
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Sync rate fetch error: {e}")
+        return PRC_INR_RATE
+
+
+async def save_calculated_rate(db, rate_data: Dict):
+    """Save the calculated dynamic rate to database for sync access"""
+    try:
+        await db.system_settings.update_one(
+            {"type": "prc_dynamic_rate"},
+            {"$set": {
+                "type": "prc_dynamic_rate",
+                **rate_data,
+                "updated_at": datetime.now(timezone.utc)
+            }},
+            upsert=True
+        )
+    except Exception as e:
+        logging.error(f"[PRC ECONOMY] Failed to save rate: {e}")
 
 
 # ==================== REDEEM PRESSURE MONITOR (Section 14) ====================

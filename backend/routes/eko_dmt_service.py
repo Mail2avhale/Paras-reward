@@ -113,9 +113,18 @@ def get_dmt_settings(db):
     return settings
 
 def get_prc_rate(db):
-    """Get current PRC to INR rate from database - DYNAMIC"""
-    settings = get_dmt_settings(db)
-    return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
+    """Get current PRC to INR rate - DYNAMIC from economy system"""
+    try:
+        # Import the dynamic rate function from prc_economy
+        from routes.prc_economy import get_dynamic_rate_sync
+        return get_dynamic_rate_sync()
+    except ImportError:
+        # Fallback to database settings
+        settings = get_dmt_settings(db)
+        return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
+    except Exception as e:
+        logging.error(f"[DMT] PRC rate error: {e}")
+        return DEFAULT_PRC_TO_INR_RATE
 
 def is_dmt_enabled(db):
     """Check if DMT service is enabled"""

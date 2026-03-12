@@ -187,9 +187,13 @@ def is_eko_configured() -> bool:
 # ==================== HELPER FUNCTIONS ====================
 
 def get_prc_rate_from_db() -> int:
-    """Get PRC to INR rate from database settings"""
+    """Get PRC to INR rate - DYNAMIC from economy system"""
     try:
-        # Use sync db for this helper
+        # Import the dynamic rate function from prc_economy
+        from routes.prc_economy import get_dynamic_rate_sync
+        return get_dynamic_rate_sync()
+    except ImportError:
+        # Fallback to database settings
         from pymongo import MongoClient
         client = MongoClient(os.environ.get("MONGO_URL"))
         sync_db = client[os.environ.get("DB_NAME", "test_database")]
@@ -197,11 +201,6 @@ def get_prc_rate_from_db() -> int:
         settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
         if settings:
             return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
-        
-        # Also check admin settings collection
-        admin_settings = sync_db.settings.find_one({"key": "dmt_settings"})
-        if admin_settings:
-            return admin_settings.get("prc_rate", DEFAULT_PRC_TO_INR_RATE)
         
         return DEFAULT_PRC_TO_INR_RATE
     except Exception as e:
