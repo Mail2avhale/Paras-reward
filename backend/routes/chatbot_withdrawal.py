@@ -94,7 +94,7 @@ def set_db(database):
 MIN_WITHDRAWAL_INR = 500  # Minimum ₹500
 PROCESSING_FEE = 10  # ₹10 flat
 ADMIN_CHARGE_PERCENT = 20  # 20%
-PRC_TO_INR_RATE = 10  # 10 PRC = ₹1
+DEFAULT_PRC_TO_INR_RATE = 100  # 100 PRC = ₹1 (default, actual from DB)
 
 # Eko Configuration
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
@@ -186,13 +186,38 @@ def is_eko_configured() -> bool:
 
 # ==================== HELPER FUNCTIONS ====================
 
+def get_prc_rate_from_db() -> int:
+    """Get PRC to INR rate from database settings"""
+    try:
+        # Use sync db for this helper
+        from pymongo import MongoClient
+        client = MongoClient(os.environ.get("MONGO_URL"))
+        sync_db = client[os.environ.get("DB_NAME", "test_database")]
+        
+        settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
+        if settings:
+            return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
+        
+        # Also check admin settings collection
+        admin_settings = sync_db.settings.find_one({"key": "dmt_settings"})
+        if admin_settings:
+            return admin_settings.get("prc_rate", DEFAULT_PRC_TO_INR_RATE)
+        
+        return DEFAULT_PRC_TO_INR_RATE
+    except Exception as e:
+        logging.error(f"[CHATBOT] Failed to get PRC rate: {e}")
+        return DEFAULT_PRC_TO_INR_RATE
+
 def calculate_fees(amount_inr: float) -> dict:
-    """Calculate fees for withdrawal"""
+    """Calculate fees for withdrawal with dynamic PRC rate"""
     processing_fee = PROCESSING_FEE
     admin_charge = amount_inr * (ADMIN_CHARGE_PERCENT / 100)
     total_fees = processing_fee + admin_charge
     net_amount = amount_inr - total_fees
-    prc_required = amount_inr * PRC_TO_INR_RATE
+    
+    # Get dynamic PRC rate from database
+    prc_rate = get_prc_rate_from_db()
+    prc_required = amount_inr * prc_rate
     
     return {
         "amount_inr": amount_inr,
@@ -201,7 +226,8 @@ def calculate_fees(amount_inr: float) -> dict:
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
         "total_fees": total_fees,
         "net_amount": net_amount,
-        "prc_required": prc_required
+        "prc_required": prc_required,
+        "prc_rate": prc_rate
     }
 
 def generate_request_id() -> str:

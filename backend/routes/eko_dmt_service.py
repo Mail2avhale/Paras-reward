@@ -80,8 +80,8 @@ def validate_eko_config():
         return False
     return True
 
-# PRC Conversion
-PRC_TO_INR_RATE = 100  # 100 PRC = ₹1
+# PRC Conversion - DEFAULTS (actual values fetched from DB)
+DEFAULT_PRC_TO_INR_RATE = 100  # 100 PRC = ₹1 (default)
 MIN_REDEEM_INR = 100   # Minimum ₹100
 DEFAULT_DAILY_LIMIT_INR = 5000   # Default ₹5000 per day
 
@@ -104,13 +104,18 @@ def get_dmt_settings(db):
             "enabled": True,
             "daily_limit_inr": DEFAULT_DAILY_LIMIT_INR,
             "min_transfer_inr": MIN_REDEEM_INR,
-            "prc_to_inr_rate": PRC_TO_INR_RATE,
+            "prc_to_inr_rate": DEFAULT_PRC_TO_INR_RATE,
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc)
         }
         db.dmt_settings.insert_one(default_settings)
         return default_settings
     return settings
+
+def get_prc_rate(db):
+    """Get current PRC to INR rate from database - DYNAMIC"""
+    settings = get_dmt_settings(db)
+    return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
 
 def is_dmt_enabled(db):
     """Check if DMT service is enabled"""
@@ -549,7 +554,7 @@ def health():
         "api_type": "V1 (ICICI)",
         "instant_transfer": True,  # No admin approval required
         "daily_limit_inr": daily_limit,
-        "prc_rate": f"{PRC_TO_INR_RATE} PRC = ₹1",
+        "prc_rate": f"{get_prc_rate(sync_db)} PRC = ₹1",
         "min_redeem": f"₹{MIN_REDEEM_INR}"
     }
 
@@ -569,7 +574,8 @@ async def get_wallet(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     prc_balance = user.get("prc_balance", 0)
-    inr_equivalent = prc_balance / PRC_TO_INR_RATE
+    prc_rate = get_prc_rate(sync_db)  # Dynamic rate from DB
+    inr_equivalent = prc_balance / prc_rate
     
     # Use sync version for daily limit check
     is_allowed, remaining_limit, used_today = check_daily_limit(sync_db, user_id)
@@ -583,11 +589,12 @@ async def get_wallet(user_id: str):
         "inr_equivalent": round(inr_equivalent, 2),
         "can_redeem": inr_equivalent >= MIN_REDEEM_INR and dmt_enabled,
         "dmt_enabled": dmt_enabled,
-        "min_redeem_prc": MIN_REDEEM_INR * PRC_TO_INR_RATE,
+        "min_redeem_prc": MIN_REDEEM_INR * prc_rate,
         "min_redeem_inr": MIN_REDEEM_INR,
         "daily_limit_inr": daily_limit,
         "used_today_inr": used_today,
-        "remaining_limit_inr": max(0, remaining_limit)
+        "remaining_limit_inr": max(0, remaining_limit),
+        "prc_rate": prc_rate
     })
 
 
@@ -1221,13 +1228,14 @@ async def transfer_money(req: TransferRequest, request: Request):
     # New transfer - initiate
     client_ref_id = f"DMT{int(time.time() * 1000)}{uuid.uuid4().hex[:8].upper()}"
     
-    # Convert PRC to INR
-    amount_inr = req.prc_amount / PRC_TO_INR_RATE
+    # Convert PRC to INR using dynamic rate
+    prc_rate = get_prc_rate(db)
+    amount_inr = req.prc_amount / prc_rate
     
     # Get dynamic daily limit from settings
     daily_limit_inr = get_daily_limit(db)
     
-    logging.info(f"[DMT] Transfer Request: {req.prc_amount} PRC (₹{amount_inr}) to Recipient: {req.recipient_id}")
+    logging.info(f"[DMT] Transfer Request: {req.prc_amount} PRC (₹{amount_inr}) @ rate {prc_rate} to Recipient: {req.recipient_id}")
     
     # Step 1: Validate user and PRC balance
     user = db.users.find_one({"uid": req.user_id})
@@ -1949,7 +1957,7 @@ async def get_admin_dmt_settings():
         "enabled": settings.get("enabled", True),
         "daily_limit_inr": settings.get("daily_limit_inr", DEFAULT_DAILY_LIMIT_INR),
         "min_transfer_inr": settings.get("min_transfer_inr", MIN_REDEEM_INR),
-        "prc_to_inr_rate": settings.get("prc_to_inr_rate", PRC_TO_INR_RATE),
+        "prc_to_inr_rate": settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE),
         "updated_at": settings.get("updated_at", datetime.now(timezone.utc)).isoformat()
     }, "DMT settings retrieved")
 
