@@ -228,8 +228,9 @@ async def get_kyc_status(uid: str):
 async def list_kyc(
     status: Optional[str] = None,
     search: Optional[str] = None,
+    page: int = 1,
     limit: int = 50,
-    skip: int = 0
+    skip: Optional[int] = None
 ):
     """List all KYC submissions (Admin)"""
     try:
@@ -244,10 +245,13 @@ async def list_kyc(
                 {"pan_number": {"$regex": search, "$options": "i"}}
             ]
         
+        # Calculate skip from page if skip not provided
+        actual_skip = skip if skip is not None else (page - 1) * limit
+        
         kyc_list = await db.kyc.find(
             query,
             {"_id": 0, "aadhaar_front_base64": 0, "aadhaar_back_base64": 0, "pan_front_base64": 0, "selfie_base64": 0}
-        ).sort("submitted_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        ).sort("submitted_at", -1).skip(actual_skip).limit(limit).to_list(length=limit)
         
         total = await db.kyc.count_documents(query)
         
@@ -263,7 +267,9 @@ async def list_kyc(
             "users": kyc_list,
             "total": total,
             "limit": limit,
-            "skip": skip
+            "skip": actual_skip,
+            "page": page,
+            "total_pages": (total + limit - 1) // limit
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -373,11 +379,54 @@ async def get_kyc_stats():
         rejected = await db.kyc.count_documents({"status": "rejected"})
         total = await db.kyc.count_documents({})
         
+        # Also check users collection for comparison
+        users_pending = await db.users.count_documents({"kyc_status": "pending"})
+        users_verified = await db.users.count_documents({"kyc_status": {"$in": ["verified", "approved"]}})
+        
         return {
             "pending": pending,
             "verified": verified,
             "rejected": rejected,
-            "total": total
+            "total": total,
+            "users_kyc_pending": users_pending,
+            "users_kyc_verified": users_verified
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/debug")
+async def debug_kyc():
+    """Debug KYC data issues"""
+    try:
+        # Count from db.kyc
+        kyc_pending = await db.kyc.count_documents({"status": "pending"})
+        kyc_total = await db.kyc.count_documents({})
+        
+        # Get sample pending records
+        sample_pending = await db.kyc.find(
+            {"status": "pending"},
+            {"_id": 0, "uid": 1, "status": 1, "full_name": 1, "submitted_at": 1}
+        ).limit(5).to_list(length=5)
+        
+        # Get all unique statuses
+        statuses = await db.kyc.distinct("status")
+        
+        # Check if there are records without status field
+        no_status = await db.kyc.count_documents({"status": {"$exists": False}})
+        null_status = await db.kyc.count_documents({"status": None})
+        empty_status = await db.kyc.count_documents({"status": ""})
+        
+        return {
+            "kyc_collection": {
+                "pending": kyc_pending,
+                "total": kyc_total,
+                "unique_statuses": statuses,
+                "no_status_field": no_status,
+                "null_status": null_status,
+                "empty_status": empty_status,
+                "sample_pending": sample_pending
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
