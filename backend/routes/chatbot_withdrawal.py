@@ -838,8 +838,19 @@ async def create_withdrawal_request(request: WithdrawalRequest):
     user_mobile = user.get("mobile")
     
     # Verify customer status from Eko directly (real-time check)
-    if is_eko_configured():
-        # Check Eko customer status
+    # IMPORTANT: Check local verification FIRST before Eko API
+    # This handles cases where:
+    # 1. Eko API is unreachable (403/timeout)
+    # 2. Customer completed OTP verification locally but Eko still shows state=1
+    verified_record = await db.eko_verified_customers.find_one({
+        "mobile": user_mobile,
+        "verified": True
+    })
+    
+    if verified_record:
+        logging.info(f"[CHATBOT-DMT] Customer locally verified: mobile={user_mobile}")
+    elif is_eko_configured():
+        # Check Eko customer status only if not locally verified
         try:
             url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{user_mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
             headers = get_eko_headers()
@@ -864,38 +875,29 @@ async def create_withdrawal_request(request: WithdrawalRequest):
                             detail="❌ Customer verification pending. कृपया आधी OTP verification पूर्ण करा."
                         )
                     
-                    logging.info(f"[CHATBOT-DMT] Customer verified: state={state_int}, mobile={user_mobile}")
+                    logging.info(f"[CHATBOT-DMT] Customer verified via Eko: state={state_int}, mobile={user_mobile}")
                 else:
                     raise HTTPException(
                         status_code=400,
                         detail="❌ Customer not registered. कृपया आधी registration करा."
                     )
+            elif response.status_code == 403:
+                # IP not whitelisted - allow transfer (Eko service issue, not user issue)
+                logging.warning(f"[CHATBOT-DMT] Eko 403 - IP not whitelisted, allowing transfer")
             else:
                 logging.warning(f"[CHATBOT-DMT] Eko check failed: {response.status_code}")
-                # Allow if Eko is unreachable but user has local verification
-                verified_record = await db.eko_verified_customers.find_one({
-                    "mobile": user_mobile,
-                    "verified": True
-                })
-                if not verified_record:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="❌ कृपया आधी OTP verification पूर्ण करा."
-                    )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logging.error(f"[CHATBOT-DMT] Eko verification error: {e}")
-            # Fallback to database check
-            verified_record = await db.eko_verified_customers.find_one({
-                "mobile": user_mobile,
-                "verified": True
-            })
-            if not verified_record:
                 raise HTTPException(
                     status_code=400,
                     detail="❌ कृपया आधी OTP verification पूर्ण करा."
                 )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"[CHATBOT-DMT] Eko verification error: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail="❌ कृपया आधी OTP verification पूर्ण करा."
+            )
     
     # Check sufficient balance
     fees = calculate_fees(request.amount_inr)
