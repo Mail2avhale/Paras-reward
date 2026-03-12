@@ -10,7 +10,8 @@ import {
   ArrowLeft, ArrowRight, Smartphone, Tv, Zap, Flame, Building, Banknote,
   CheckCircle, Clock, XCircle, AlertCircle, Info, ChevronRight,
   Wallet, Receipt, Loader2, RefreshCw, Search, X, Phone, Droplet, Wifi,
-  PhoneCall, CreditCard, Shield, Car, GraduationCap, Monitor, Landmark, Home, Cylinder
+  PhoneCall, CreditCard, Shield, Car, GraduationCap, Monitor, Landmark, Home, Cylinder,
+  Stethoscope, Play, Bus, IndianRupee, FileText
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -161,6 +162,56 @@ const SERVICE_CONFIG = {
     gradient: 'from-lime-500 to-green-500',
     fields: ['consumer_number', 'operator'],
     category: 'housing'
+  },
+  
+  // Healthcare
+  hospital: { 
+    name: 'Hospital Payment', 
+    icon: Stethoscope, 
+    color: 'red',
+    gradient: 'from-red-500 to-rose-500',
+    fields: ['patient_id', 'operator'],
+    category: 'healthcare'
+  },
+  
+  // OTT & Subscriptions
+  subscription: { 
+    name: 'OTT & Subscription', 
+    icon: Play, 
+    color: 'pink',
+    gradient: 'from-pink-500 to-rose-500',
+    fields: ['subscriber_id', 'operator'],
+    category: 'entertainment'
+  },
+  
+  // Transport Services
+  transport: { 
+    name: 'Traffic Challan', 
+    icon: Bus, 
+    color: 'blue',
+    gradient: 'from-blue-600 to-indigo-500',
+    fields: ['challan_number', 'operator'],
+    category: 'transport'
+  },
+  
+  // Loan Repayment
+  loan_repayment: { 
+    name: 'Loan Repayment', 
+    icon: IndianRupee, 
+    color: 'green',
+    gradient: 'from-green-500 to-emerald-500',
+    fields: ['loan_account', 'operator'],
+    category: 'finance'
+  },
+  
+  // Municipal Corporation (Metro cities)
+  municipal_corp: { 
+    name: 'Municipal Corp (Metro)', 
+    icon: Landmark, 
+    color: 'gray',
+    gradient: 'from-gray-500 to-slate-500',
+    fields: ['consumer_number', 'operator'],
+    category: 'tax'
   },
   
   // Money Transfer (REMOVED - Now handled via Chatbot)
@@ -399,6 +450,10 @@ const RedeemPageV2 = ({ user }) => {
     vehicle_number: '',
     student_id: '',
     lpg_id: '',
+    // New categories fields
+    patient_id: '',        // Hospital
+    subscriber_id: '',     // OTT/Subscription
+    challan_number: '',    // Traffic Challan/Transport
     // Additional operator params (like BU for MSEDCL)
     additional_param_1: '',
     additional_param_2: ''
@@ -1064,7 +1119,7 @@ const RedeemPageV2 = ({ user }) => {
       }
     } else {
       // Generic fallback for any other services
-      consumerNumber = formData.consumer_number || formData.loan_account || formData.vehicle_number || formData.subscriber_id;
+      consumerNumber = formData.consumer_number || formData.loan_account || formData.vehicle_number || formData.subscriber_id || formData.patient_id || formData.challan_number;
       operatorId = formData.operator;
       category = selectedService;
       
@@ -1560,7 +1615,7 @@ const RedeemPageV2 = ({ user }) => {
                 {/* Entertainment & TV */}
                 <ServiceCategorySection
                   title="Entertainment & TV"
-                  services={['dth', 'cable_tv']}
+                  services={['dth', 'cable_tv', 'subscription']}
                   selectedService={selectedService}
                   setSelectedService={setSelectedService}
                 />
@@ -1584,7 +1639,7 @@ const RedeemPageV2 = ({ user }) => {
                 {/* Transport & Travel */}
                 <ServiceCategorySection
                   title="Transport & Travel"
-                  services={['fastag']}
+                  services={['fastag', 'transport']}
                   selectedService={selectedService}
                   setSelectedService={setSelectedService}
                 />
@@ -1592,15 +1647,23 @@ const RedeemPageV2 = ({ user }) => {
                 {/* Financial Services */}
                 <ServiceCategorySection
                   title="Financial Services"
-                  services={['emi', 'credit_card', 'insurance']}
+                  services={['emi', 'loan_repayment', 'credit_card', 'insurance']}
                   selectedService={selectedService}
                   setSelectedService={setSelectedService}
                 />
                 
-                {/* Others */}
+                {/* Tax & Property */}
                 <ServiceCategorySection
-                  title="Others"
-                  services={['education', 'municipal_tax', 'housing_society']}
+                  title="Tax & Property"
+                  services={['municipal_tax', 'municipal_corp', 'housing_society']}
+                  selectedService={selectedService}
+                  setSelectedService={setSelectedService}
+                />
+                
+                {/* Education & Healthcare */}
+                <ServiceCategorySection
+                  title="Education & Healthcare"
+                  services={['education', 'hospital']}
                   selectedService={selectedService}
                   setSelectedService={setSelectedService}
                 />

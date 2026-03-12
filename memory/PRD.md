@@ -23,6 +23,21 @@ Production application (www.parasreward.com) was experiencing severe performance
 
 ## COMPLETED FIXES
 
+### 🎯 New BBPS Categories Added (March 12, 2026)
+**Added 6 new service categories to Redeem page:**
+
+| Category | Cat ID | Operators | Examples |
+|----------|--------|-----------|----------|
+| OTT/Subscription | 13 | 17 | Amazon Prime, JioHotstar, Hungama |
+| Hospital | 19 | 6 | Narayana Health, Billroth |
+| Transport/Challan | 27 | 5 | Delhi Traffic, AP Traffic |
+| Loan Repayment | 25 | 283 | Agent/Customer repayments |
+| Municipal Corp Metro | 6 | 2 | KDMC, AMC |
+
+**Files Modified:**
+- `/app/backend/routes/bbps_services.py` - Complete category mapping
+- `/app/frontend/src/pages/RedeemPageV2.js` - UI categories added
+
 ### 🎯 Bill Payment History Feature (March 11, 2026)
 **New Feature:** Added Bill Payment History page with "Pay Again" functionality.
 
