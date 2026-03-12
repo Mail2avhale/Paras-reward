@@ -71,19 +71,22 @@ def get_db():
 def get_prc_rate():
     """Get PRC to INR rate from database - DYNAMIC"""
     try:
-        if db is None:
-            return DEFAULT_PRC_TO_INR_RATE
+        # Use sync connection for this helper
+        from pymongo import MongoClient
+        import os
+        client = MongoClient(os.environ.get("MONGO_URL"))
+        sync_db = client[os.environ.get("DB_NAME", "test_database")]
         
-        settings = db.dmt_settings.find_one({"_id": "dmt_config"})
+        settings = sync_db.dmt_settings.find_one({"_id": "dmt_config"})
         if settings:
             return settings.get("prc_to_inr_rate", DEFAULT_PRC_TO_INR_RATE)
         
-        admin_settings = db.settings.find_one({"key": "dmt_settings"})
+        admin_settings = sync_db.settings.find_one({"key": "dmt_settings"})
         if admin_settings:
             return admin_settings.get("prc_rate", DEFAULT_PRC_TO_INR_RATE)
         
         return DEFAULT_PRC_TO_INR_RATE
-    except:
+    except Exception as e:
         return DEFAULT_PRC_TO_INR_RATE
 
 
