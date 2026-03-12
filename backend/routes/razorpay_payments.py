@@ -475,6 +475,7 @@ async def razorpay_webhook(request: Request):
                     )
                     
                     # ACTIVATE SUBSCRIPTION - Same logic as verify-payment
+                    # But with extra check to prevent double activation
                     user_id = order.get("user_id")
                     plan_type = order.get("plan_type", "monthly")
                     plan_name = order.get("plan_name", "startup")
@@ -486,64 +487,70 @@ async def razorpay_webhook(request: Request):
                     user = await db.users.find_one({"uid": user_id})
                     remaining_days = 0
                     
-                    if user:
-                        # Check BOTH field names for expiry
-                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
-                        if existing_expiry:
-                            if isinstance(existing_expiry, str):
-                                try:
-                                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                except:
-                                    existing_expiry = None
-                            
+                    # CRITICAL: Check if this payment was already processed via verify-payment
+                    if user and user.get("last_payment_id") == payment_id:
+                        logging.info(f"[WEBHOOK] Payment {payment_id} already activated via verify-payment, skipping webhook activation")
+                        # Skip the entire activation block
+                    else:
+                        # Proceed with activation only if not already done
+                        if user:
+                            # Check BOTH field names for expiry
+                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
                             if existing_expiry:
-                                if existing_expiry.tzinfo is None:
-                                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                if isinstance(existing_expiry, str):
+                                    try:
+                                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                    except:
+                                        existing_expiry = None
                                 
-                                if existing_expiry > now:
-                                    remaining_days = (existing_expiry - now).days
-                                    logging.info(f"[WEBHOOK] User {user_id} has {remaining_days} remaining days to add")
-                    
-                    total_days = duration_days + remaining_days
-                    expiry_date = now + timedelta(days=total_days)
-                    
-                    # Update user subscription
-                    await db.users.update_one(
-                        {"uid": user_id},
-                        {
-                            "$set": {
-                                "subscription_plan": plan_name,
-                                "subscription_start": now,
-                                "subscription_expires": expiry_date,
-                                "subscription_expiry": expiry_date.isoformat(),  # Also set string field
-                                "vip_expiry": expiry_date.isoformat(),  # Also set vip_expiry
-                                "membership_type": "vip",
-                                "subscription_status": "active",
-                                "last_payment_id": payment_id,
-                                "last_payment_date": now,
-                                "previous_remaining_days_added": remaining_days,
-                                "activated_via": "webhook"
+                                if existing_expiry:
+                                    if existing_expiry.tzinfo is None:
+                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                    
+                                    if existing_expiry > now:
+                                        remaining_days = (existing_expiry - now).days
+                                        logging.info(f"[WEBHOOK] User {user_id} has {remaining_days} remaining days to add")
+                        
+                        total_days = duration_days + remaining_days
+                        expiry_date = now + timedelta(days=total_days)
+                        
+                        # Update user subscription
+                        await db.users.update_one(
+                            {"uid": user_id},
+                            {
+                                "$set": {
+                                    "subscription_plan": plan_name,
+                                    "subscription_start": now,
+                                    "subscription_expires": expiry_date,
+                                    "subscription_expiry": expiry_date.isoformat(),
+                                    "vip_expiry": expiry_date.isoformat(),
+                                    "membership_type": "vip",
+                                    "subscription_status": "active",
+                                    "last_payment_id": payment_id,
+                                    "last_payment_date": now,
+                                    "previous_remaining_days_added": remaining_days,
+                                    "activated_via": "webhook"
+                                }
                             }
-                        }
-                    )
-                    
-                    # Log transaction
-                    await db.transactions.insert_one({
-                        "user_id": user_id,
-                        "type": "subscription_payment",
-                        "amount": amount,
-                        "payment_id": payment_id,
-                        "order_id": order_id,
-                        "plan_name": plan_name,
-                        "plan_type": plan_type,
-                        "duration_days": duration_days,
-                        "remaining_days_added": remaining_days,
-                        "total_days": total_days,
-                        "activated_via": "webhook",
-                        "timestamp": now
-                    })
-                    
-                    logging.info(f"[WEBHOOK] Subscription activated for user {user_id}, plan: {plan_name}, total days: {total_days}")
+                        )
+                        
+                        # Log transaction
+                        await db.transactions.insert_one({
+                            "user_id": user_id,
+                            "type": "subscription_payment",
+                            "amount": amount,
+                            "payment_id": payment_id,
+                            "order_id": order_id,
+                            "plan_name": plan_name,
+                            "plan_type": plan_type,
+                            "duration_days": duration_days,
+                            "remaining_days_added": remaining_days,
+                            "total_days": total_days,
+                            "activated_via": "webhook",
+                            "timestamp": now
+                        })
+                        
+                        logging.info(f"[WEBHOOK] Subscription activated for user {user_id}, plan: {plan_name}, total days: {total_days}")
                 else:
                     logging.info(f"[WEBHOOK] Order {order_id} already paid, skipping activation")
             
@@ -1309,4 +1316,240 @@ async def manual_activate_by_email(request: Request):
         raise
     except Exception as e:
         logging.error(f"[MANUAL] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== FIX DOUBLE-ACTIVATED SUBSCRIPTIONS ====================
+
+@router.post("/admin/fix-double-activation")
+async def fix_double_activation_subscriptions(request: Request):
+    """
+    ADMIN TOOL: Fix subscriptions that got 52 days instead of 28 days due to double activation bug.
+    
+    This will:
+    1. Find users whose subscription was activated twice (via verify-payment AND webhook)
+    2. Reduce their expiry to correct value (28 days from subscription_start)
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/fix-double-activation" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "dry_run": true}'
+    
+    Set dry_run=false to actually make changes.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        dry_run = data.get("dry_run", True)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find transactions with double activation pattern
+        # (same user, same payment_id, both verify-payment and webhook records)
+        pipeline = [
+            {
+                "$match": {
+                    "type": "subscription_payment",
+                    "total_days": {"$gt": 35}  # More than 28 + buffer
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$user_id",
+                    "transactions": {"$push": "$$ROOT"},
+                    "count": {"$sum": 1},
+                    "max_total_days": {"$max": "$total_days"}
+                }
+            },
+            {
+                "$match": {
+                    "max_total_days": {"$gte": 50, "$lte": 60}  # 52 days range
+                }
+            },
+            {"$limit": 100}
+        ]
+        
+        affected_users = await db.transactions.aggregate(pipeline).to_list(100)
+        
+        results = []
+        fixed_count = 0
+        
+        for entry in affected_users:
+            user_id = entry["_id"]
+            max_days = entry["max_total_days"]
+            
+            # Get user's current subscription
+            user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+            if not user:
+                continue
+            
+            subscription_start = user.get("subscription_start")
+            current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+            
+            if not subscription_start:
+                continue
+            
+            # Parse dates
+            if isinstance(subscription_start, str):
+                try:
+                    subscription_start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+                except:
+                    continue
+            
+            if isinstance(current_expiry, str):
+                try:
+                    current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                except:
+                    continue
+            
+            if subscription_start.tzinfo is None:
+                subscription_start = subscription_start.replace(tzinfo=timezone.utc)
+            if current_expiry.tzinfo is None:
+                current_expiry = current_expiry.replace(tzinfo=timezone.utc)
+            
+            # Calculate current days
+            current_days = (current_expiry - subscription_start).days
+            
+            # Check if over-extended
+            if current_days > 35:  # More than 28 + buffer
+                correct_expiry = subscription_start + timedelta(days=28)
+                
+                result = {
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "subscription_start": subscription_start.isoformat(),
+                    "current_expiry": current_expiry.isoformat(),
+                    "current_days": current_days,
+                    "correct_expiry": correct_expiry.isoformat(),
+                    "correct_days": 28,
+                    "days_to_remove": current_days - 28
+                }
+                
+                if not dry_run:
+                    # Fix the subscription
+                    await db.users.update_one(
+                        {"uid": user_id},
+                        {
+                            "$set": {
+                                "subscription_expires": correct_expiry,
+                                "subscription_expiry": correct_expiry.isoformat(),
+                                "vip_expiry": correct_expiry.isoformat(),
+                                "subscription_fixed": True,
+                                "fixed_at": datetime.now(timezone.utc),
+                                "original_wrong_days": current_days,
+                                "fix_reason": "Double activation bug fix"
+                            }
+                        }
+                    )
+                    result["status"] = "FIXED"
+                    fixed_count += 1
+                else:
+                    result["status"] = "WOULD_FIX"
+                
+                results.append(result)
+        
+        return {
+            "success": True,
+            "mode": "DRY_RUN" if dry_run else "LIVE",
+            "affected_users_found": len(results),
+            "fixed_count": fixed_count if not dry_run else 0,
+            "users": results,
+            "message": "Set dry_run=false to actually fix these subscriptions" if dry_run else f"Fixed {fixed_count} subscriptions"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIX-DOUBLE] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/fix-specific-user")
+async def fix_specific_user_subscription(request: Request):
+    """
+    ADMIN TOOL: Fix a specific user's subscription to 28 days from their subscription_start.
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/fix-specific-user" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "user_id": "xxx", "correct_days": 28}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        user_id = data.get("user_id")
+        correct_days = data.get("correct_days", 28)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        subscription_start = user.get("subscription_start")
+        current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+        
+        if not subscription_start:
+            raise HTTPException(status_code=400, detail="User has no subscription_start")
+        
+        # Parse dates
+        if isinstance(subscription_start, str):
+            subscription_start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+        if isinstance(current_expiry, str):
+            current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+        
+        if subscription_start.tzinfo is None:
+            subscription_start = subscription_start.replace(tzinfo=timezone.utc)
+        
+        # Calculate correct expiry
+        correct_expiry = subscription_start + timedelta(days=correct_days)
+        
+        # Current days
+        current_days = (current_expiry - subscription_start).days if current_expiry else 0
+        
+        # Update
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "subscription_expires": correct_expiry,
+                    "subscription_expiry": correct_expiry.isoformat(),
+                    "vip_expiry": correct_expiry.isoformat(),
+                    "subscription_fixed": True,
+                    "fixed_at": datetime.now(timezone.utc),
+                    "original_wrong_days": current_days,
+                    "fix_reason": f"Manual fix: {current_days} days -> {correct_days} days"
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "name": user.get("name"),
+            "subscription_start": subscription_start.isoformat(),
+            "old_expiry": current_expiry.isoformat() if current_expiry else None,
+            "old_days": current_days,
+            "new_expiry": correct_expiry.isoformat(),
+            "new_days": correct_days,
+            "message": f"Fixed subscription from {current_days} days to {correct_days} days"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIX-USER] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
