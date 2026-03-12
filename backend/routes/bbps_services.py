@@ -1171,7 +1171,8 @@ async def search_operators(query: str, category: Optional[str] = None):
         "mobile_prepaid": 5, "mobile_postpaid": 10, "dth": 4,
         "electricity": 8, "water": 11, "landline": 9, "broadband": 1,
         "gas": 2, "lpg": 18, "emi": 21, "loan": 21, "credit_card": 7,
-        "insurance": 20, "fastag": 22, "housing_society": 12
+        "insurance": 20, "fastag": 22, "housing_society": 12,
+        "municipal_tax": 15, "education": 14, "cable_tv": 17
     }
     
     # If category specified, search only that category
@@ -1257,10 +1258,11 @@ async def get_operators(category: str):
         
         # Transport & Others
         "fastag": 22,
-        "housing_society": 12,
-        "municipal_tax": 12,
-        "education": 13,
-        "hospital": 24
+        "housing_society": 12,  # Housing Society maintenance (105 operators)
+        "municipal_tax": 15,    # Municipal Tax - MCGM, Chennai Corp, etc. (41 operators)
+        "education": 14,        # Education/School/College Fees (1661 operators)
+        "hospital": 24,
+        "cable_tv": 17          # Cable TV subscriptions (Hathway, Asianet, etc.)
     }
     
     cat_id = category_map.get(category.lower())
