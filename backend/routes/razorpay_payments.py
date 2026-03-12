@@ -1388,16 +1388,20 @@ async def fix_double_activation_subscriptions(request: Request):
             if not user:
                 continue
             
+            # Use last_payment_date as the correct start (not subscription_start which might be old)
+            payment_date = user.get("last_payment_date")
             subscription_start = user.get("subscription_start")
             current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
             
-            if not subscription_start:
+            # Prefer last_payment_date, fallback to subscription_start
+            correct_start = payment_date or subscription_start
+            if not correct_start:
                 continue
             
             # Parse dates
-            if isinstance(subscription_start, str):
+            if isinstance(correct_start, str):
                 try:
-                    subscription_start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+                    correct_start = datetime.fromisoformat(correct_start.replace('Z', '+00:00'))
                 except:
                     continue
             
@@ -1407,24 +1411,27 @@ async def fix_double_activation_subscriptions(request: Request):
                 except:
                     continue
             
-            if subscription_start.tzinfo is None:
-                subscription_start = subscription_start.replace(tzinfo=timezone.utc)
-            if current_expiry.tzinfo is None:
+            if correct_start.tzinfo is None:
+                correct_start = correct_start.replace(tzinfo=timezone.utc)
+            if current_expiry and current_expiry.tzinfo is None:
                 current_expiry = current_expiry.replace(tzinfo=timezone.utc)
             
-            # Calculate current days
-            current_days = (current_expiry - subscription_start).days
+            # Calculate current days from correct_start
+            now = datetime.now(timezone.utc)
+            current_days = (current_expiry - correct_start).days if current_expiry else 0
             
-            # Check if over-extended
+            # Check if over-extended (more than 28 days from payment date)
             if current_days > 35:  # More than 28 + buffer
-                correct_expiry = subscription_start + timedelta(days=28)
+                correct_expiry = correct_start + timedelta(days=28)
                 
                 result = {
                     "user_id": user_id,
                     "name": user.get("name"),
                     "email": user.get("email"),
-                    "subscription_start": subscription_start.isoformat(),
-                    "current_expiry": current_expiry.isoformat(),
+                    "last_payment_date": str(payment_date) if payment_date else None,
+                    "subscription_start": str(subscription_start) if subscription_start else None,
+                    "used_date": correct_start.isoformat(),
+                    "current_expiry": current_expiry.isoformat() if current_expiry else None,
                     "current_days": current_days,
                     "correct_expiry": correct_expiry.isoformat(),
                     "correct_days": 28,
@@ -1432,18 +1439,20 @@ async def fix_double_activation_subscriptions(request: Request):
                 }
                 
                 if not dry_run:
-                    # Fix the subscription
+                    # Fix the subscription - also update subscription_start to correct date
                     await db.users.update_one(
                         {"uid": user_id},
                         {
                             "$set": {
+                                "subscription_start": correct_start,
                                 "subscription_expires": correct_expiry,
                                 "subscription_expiry": correct_expiry.isoformat(),
                                 "vip_expiry": correct_expiry.isoformat(),
                                 "subscription_fixed": True,
+                                "subscription_fixed_v2": True,
                                 "fixed_at": datetime.now(timezone.utc),
                                 "original_wrong_days": current_days,
-                                "fix_reason": "Double activation bug fix"
+                                "fix_reason": "Double activation bug fix v2 - using last_payment_date"
                             }
                         }
                     )
@@ -1473,7 +1482,7 @@ async def fix_double_activation_subscriptions(request: Request):
 @router.post("/admin/fix-specific-user")
 async def fix_specific_user_subscription(request: Request):
     """
-    ADMIN TOOL: Fix a specific user's subscription to 28 days from their subscription_start.
+    ADMIN TOOL: Fix a specific user's subscription to 28 days from their last_payment_date.
     
     Usage:
     curl -X POST "/api/razorpay/admin/fix-specific-user" \
@@ -1499,42 +1508,48 @@ async def fix_specific_user_subscription(request: Request):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        # Use last_payment_date as primary, fallback to subscription_start
+        payment_date = user.get("last_payment_date")
         subscription_start = user.get("subscription_start")
         current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
         
-        if not subscription_start:
-            raise HTTPException(status_code=400, detail="User has no subscription_start")
+        # Prefer last_payment_date
+        correct_start = payment_date or subscription_start
+        if not correct_start:
+            raise HTTPException(status_code=400, detail="User has no payment date or subscription_start")
         
         # Parse dates
-        if isinstance(subscription_start, str):
-            subscription_start = datetime.fromisoformat(subscription_start.replace('Z', '+00:00'))
+        if isinstance(correct_start, str):
+            correct_start = datetime.fromisoformat(correct_start.replace('Z', '+00:00'))
         if isinstance(current_expiry, str):
             current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
         
-        if subscription_start.tzinfo is None:
-            subscription_start = subscription_start.replace(tzinfo=timezone.utc)
+        if correct_start.tzinfo is None:
+            correct_start = correct_start.replace(tzinfo=timezone.utc)
         
         if current_expiry and current_expiry.tzinfo is None:
             current_expiry = current_expiry.replace(tzinfo=timezone.utc)
         
-        # Calculate correct expiry
-        correct_expiry = subscription_start + timedelta(days=correct_days)
+        # Calculate correct expiry from last payment date
+        correct_expiry = correct_start + timedelta(days=correct_days)
         
-        # Current days
-        current_days = (current_expiry - subscription_start).days if current_expiry else 0
+        # Current days from correct start
+        current_days = (current_expiry - correct_start).days if current_expiry else 0
         
         # Update
         await db.users.update_one(
             {"uid": user_id},
             {
                 "$set": {
+                    "subscription_start": correct_start,
                     "subscription_expires": correct_expiry,
                     "subscription_expiry": correct_expiry.isoformat(),
                     "vip_expiry": correct_expiry.isoformat(),
                     "subscription_fixed": True,
+                    "subscription_fixed_v2": True,
                     "fixed_at": datetime.now(timezone.utc),
                     "original_wrong_days": current_days,
-                    "fix_reason": f"Manual fix: {current_days} days -> {correct_days} days"
+                    "fix_reason": f"Manual fix v2: {current_days} days -> {correct_days} days (from payment date)"
                 }
             }
         )
@@ -1543,12 +1558,14 @@ async def fix_specific_user_subscription(request: Request):
             "success": True,
             "user_id": user_id,
             "name": user.get("name"),
-            "subscription_start": subscription_start.isoformat(),
+            "last_payment_date": str(payment_date) if payment_date else None,
+            "old_subscription_start": str(subscription_start) if subscription_start else None,
+            "new_subscription_start": correct_start.isoformat(),
             "old_expiry": current_expiry.isoformat() if current_expiry else None,
             "old_days": current_days,
             "new_expiry": correct_expiry.isoformat(),
             "new_days": correct_days,
-            "message": f"Fixed subscription from {current_days} days to {correct_days} days"
+            "message": f"Fixed subscription from {current_days} days to {correct_days} days (from payment date)"
         }
         
     except HTTPException:
