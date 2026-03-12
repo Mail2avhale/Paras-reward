@@ -359,6 +359,15 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
         tx_status = tx_data.get("tx_status")
         eko_tid = tx_data.get("tid", "")
         bank_ref = tx_data.get("bank_ref_num", "")
+        eko_message = result.get("message", "")
+        
+        # DETAILED DEBUG LOGGING
+        logging.info(f"[CHATBOT-DMT] === FULL EKO RESPONSE ===")
+        logging.info(f"[CHATBOT-DMT] eko_status={eko_status} (type={type(eko_status).__name__})")
+        logging.info(f"[CHATBOT-DMT] tx_status={tx_status} (type={type(tx_status).__name__ if tx_status else 'None'})")
+        logging.info(f"[CHATBOT-DMT] message={eko_message}")
+        logging.info(f"[CHATBOT-DMT] tid={eko_tid}, bank_ref={bank_ref}")
+        logging.info(f"[CHATBOT-DMT] tx_data={tx_data}")
         
         # Log detailed status for debugging
         logging.info(f"[CHATBOT-DMT] eko_status={eko_status} (type={type(eko_status)}), tx_status={tx_status} (type={type(tx_status)})")
@@ -424,18 +433,38 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
                 "message": "Insufficient balance in service account. Please try later."
             }
         
-        # FALLBACK: Check if message contains "successful" even if status is not 0
-        # Some Eko responses have status != 0 but message says "Transaction successful"
+        # FALLBACK: Check if message contains "successful" AND we have valid transaction data
+        # "Transaction successful Last_used_OkeyKey" is actually an ERROR, not success!
         eko_message = result.get("message", "")
-        if "transaction successful" in eko_message.lower() or "transfer successful" in eko_message.lower():
-            logging.info(f"[CHATBOT-DMT] ✅ Transfer SUCCESS (via message fallback)! Message: {eko_message}")
-            return {
-                "success": True,
-                "utr_number": tx_data.get("bank_ref_num", "") or tx_data.get("tid", ""),
-                "tid": tx_data.get("tid", ""),
-                "tx_status": "SUCCESS",
-                "message": "Transfer successful!"
-            }
+        has_valid_tid = bool(tx_data.get("tid"))
+        has_valid_utr = bool(tx_data.get("bank_ref_num"))
+        
+        # Only consider success if we have BOTH success message AND valid transaction data
+        if ("transaction successful" in eko_message.lower() or "transfer successful" in eko_message.lower()):
+            # Check for known error patterns that contain "successful" but are actually failures
+            if "last_used" in eko_message.lower() or "okeykey" in eko_message.lower() or "okey" in eko_message.lower():
+                logging.warning(f"[CHATBOT-DMT] ❌ FALSE SUCCESS detected! Message: {eko_message}")
+                return {
+                    "success": False,
+                    "message": f"Transfer failed: {eko_message}"
+                }
+            
+            # Real success - must have valid transaction ID
+            if has_valid_tid:
+                logging.info(f"[CHATBOT-DMT] ✅ Transfer SUCCESS (via message fallback)! Message: {eko_message}")
+                return {
+                    "success": True,
+                    "utr_number": tx_data.get("bank_ref_num", "") or tx_data.get("tid", ""),
+                    "tid": tx_data.get("tid", ""),
+                    "tx_status": "SUCCESS",
+                    "message": "Transfer successful!"
+                }
+            else:
+                logging.warning(f"[CHATBOT-DMT] ❌ Success message but no TID! Message: {eko_message}")
+                return {
+                    "success": False,
+                    "message": f"Transfer status unclear - no transaction ID received"
+                }
         
         logging.warning(f"[CHATBOT-DMT] Transfer failed: status={eko_status}, message={eko_message}")
         return {
