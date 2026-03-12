@@ -1514,6 +1514,9 @@ async def fix_specific_user_subscription(request: Request):
         if subscription_start.tzinfo is None:
             subscription_start = subscription_start.replace(tzinfo=timezone.utc)
         
+        if current_expiry and current_expiry.tzinfo is None:
+            current_expiry = current_expiry.replace(tzinfo=timezone.utc)
+        
         # Calculate correct expiry
         correct_expiry = subscription_start + timedelta(days=correct_days)
         
