@@ -14,7 +14,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://withdrawal-otp.preview.emergentagent.com';
+const BASE_URL = 'https://wallet-core-rebuild.preview.emergentagent.com';
 
 // ========================================
 // ADMIN SETTINGS API TESTS

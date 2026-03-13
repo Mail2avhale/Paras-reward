@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts, waitForAppReady } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://withdrawal-otp.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://wallet-core-rebuild.preview.emergentagent.com';
 // Test user credentials that are working
 const USER_EMAIL = 'mail2avhale@gmail.com';
 const USER_PIN = '153759';

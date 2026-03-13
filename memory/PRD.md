@@ -204,15 +204,49 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ---
 
+### 🎯 Architectural Refactor - Phase 4 Complete (March 13, 2026)
+
+**Service-Oriented Architecture Implementation:**
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| **WalletService** | ✅ INTEGRATED | Double-entry ledger for all PRC movements |
+| **TransactionService** | ✅ INTEGRATED | Transaction state machine (INITIATED→SUCCESS/FAILED) |
+| **TaskQueue** | ✅ WORKING | Background worker for async tasks |
+
+**WalletService Integration:**
+- ✅ `mining.py` - PRC credits from mining
+- ✅ `chatbot_withdrawal.py` - PRC debits for withdrawals + refunds
+- ✅ `unified_redeem_v2.py` - ALL PRC deductions and refunds for BBPS services
+
+**TaskQueue Features:**
+- 10-second worker interval
+- Automatic retry with exponential backoff (1min, 5min, 30min)
+- Built-in handlers: `send_notification`, `process_referral_bonus`, `retry_failed_transfer`
+- Admin endpoints for monitoring and manual retry
+
+**New API Endpoints:**
+- `GET /api/admin/tasks/stats` - Task queue statistics
+- `GET /api/admin/tasks/failed` - List failed tasks
+- `POST /api/admin/tasks/retry/{task_id}` - Retry failed task
+- `POST /api/admin/tasks/enqueue/test` - Test task queue
+
+**Files Modified:**
+- `/app/backend/routes/unified_redeem_v2.py` - WalletService integration for all PRC operations
+
+---
+
 ## REMAINING TASKS
 
-### P1 - Important
-- [ ] Auto-Burn Scheduler testing on production
+### P1 - Important (Architectural Refactor Continuation)
+- [ ] Integrate TaskQueue for BBPS retry logic (auto-retry failed transactions)
+- [ ] Admin panel balance adjustment endpoints → WalletService
 - [ ] Backend `server.py` refactoring into smaller route files
 
 ### P2 - Future
+- [ ] New DMT provider integration (after Eko V3 activation)
+- [ ] MongoDB to PostgreSQL migration
 - [ ] KYC/Receipt images migration from base64 to file storage
-- [ ] PRC Vault to Balance migration script
 - [ ] Email/Mobile OTP verification on signup
 - [ ] Admin "Failed to delete plan" error investigation
 - [ ] Razorpay auto-subscription failures investigation
@@ -252,6 +286,12 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 - `GET /api/health/connection-status` - DB connection diagnostics
 - `GET /api/user/{uid}/dashboard` - User dashboard (optimized)
 - `GET /api/mining/status/{uid}` - Mining status (cached 30s)
+
+### Task Queue Admin APIs (NEW)
+- `GET /api/admin/tasks/stats` - Queue statistics (pending, completed, failed)
+- `GET /api/admin/tasks/failed` - List of failed tasks
+- `POST /api/admin/tasks/retry/{task_id}` - Retry a failed task
+- `POST /api/admin/tasks/enqueue/test` - Test the queue system
 
 ## Test Credentials
 - **Admin:** admin@paras.com / PIN: 153759

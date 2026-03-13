@@ -75,6 +75,7 @@ from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_d
 from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
 from routes.admin_ledger_view import router as admin_ledger_view_router, set_db as set_admin_ledger_view_db
+from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 # Removed: social.py, support.py - routes exist in server.py with better implementation
@@ -38736,6 +38737,9 @@ api_router.include_router(admin_ledger_router)
 set_admin_ledger_view_db(db)
 api_router.include_router(admin_ledger_view_router)
 
+# Admin Tasks Router (Phase 4 - Background Tasks)
+api_router.include_router(admin_tasks_router)
+
 # PRC Statement Router (User-facing Redeem/Refund Statement)
 set_prc_statement_db(db)
 api_router.include_router(prc_statement_router)
@@ -39187,6 +39191,15 @@ async def startup_db():
             print(f"⚠️ Error checking video ads (non-critical): {e}")
         
         print("✅ Database initialization complete!")
+    
+    # Start Task Queue Worker (Phase 4 - Background Tasks)
+    print("🔄 Starting background task worker...")
+    try:
+        from app.services import TaskQueue
+        asyncio.create_task(TaskQueue.start_worker(interval=10.0))
+        print("✅ Task queue worker started (10s interval)")
+    except Exception as e:
+        print(f"⚠️ Task worker start failed (non-critical): {e}")
     
     # Start scheduler for automated tasks
     print("⏰ Starting scheduled tasks...")

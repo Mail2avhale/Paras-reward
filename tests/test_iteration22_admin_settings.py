@@ -12,7 +12,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://withdrawal-otp.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://wallet-core-rebuild.preview.emergentagent.com').rstrip('/')
 
 class TestAdminMiningSettings:
     """Test Admin Mining Settings API - Save and Persistence"""

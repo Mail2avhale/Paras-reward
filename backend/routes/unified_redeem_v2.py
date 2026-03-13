@@ -40,6 +40,9 @@ except ImportError:
 import time
 import json
 
+# Import WalletService for ledger-based PRC operations (Phase 2 Architecture)
+from app.services import WalletService
+
 router = APIRouter(prefix="/redeem", tags=["Unified Redeem v2"])
 
 # Database reference
@@ -909,24 +912,23 @@ async def create_redeem_request(request: RedeemRequestCreate):
         "completed_at": None
     }
     
-    # Deduct PRC from user
-    new_balance = current_balance - total_prc_required
-    await db.users.update_one(
-        {"uid": request.user_id},
-        {
-            "$set": {"prc_balance": new_balance},
-            "$push": {
-                "prc_transactions": {
-                    "type": "debit",
-                    "amount": total_prc_required,
-                    "description": f"Redeem: {SERVICE_TYPES[request.service_type]['name']} - ₹{request.amount}",
-                    "reference_id": request_id,
-                    "balance_after": new_balance,
-                    "timestamp": now.isoformat()
-                }
-            }
-        }
+    # Deduct PRC from user using WalletService (with ledger entry)
+    debit_result = WalletService.debit(
+        user_id=request.user_id,
+        amount=total_prc_required,
+        txn_type="redeem",
+        description=f"Redeem: {SERVICE_TYPES[request.service_type]['name']} - ₹{request.amount}",
+        reference=request_id
     )
+    
+    if not debit_result.get("success"):
+        raise HTTPException(
+            status_code=400,
+            detail=debit_result.get("error", "Failed to deduct PRC")
+        )
+    
+    new_balance = debit_result.get("balance_after", current_balance - total_prc_required)
+    logging.info(f"[REDEEM] Deducted {total_prc_required} PRC via WalletService. Ledger TXN: {debit_result.get('txn_id')}")
     
     # Insert request
     await db.redeem_requests.insert_one(request_doc)
@@ -1015,25 +1017,16 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     "new_balance": new_balance
                 }
             else:
-                # FAILED - Refund PRC
-                refund_balance = new_balance + total_prc_required
-                
-                await db.users.update_one(
-                    {"uid": request.user_id},
-                    {
-                        "$set": {"prc_balance": refund_balance},
-                        "$push": {
-                            "prc_transactions": {
-                                "type": "credit",
-                                "amount": total_prc_required,
-                                "description": f"Refund: {SERVICE_TYPES[request.service_type]['name']} failed - {eko_result.get('message')}",
-                                "reference_id": request_id,
-                                "balance_after": refund_balance,
-                                "timestamp": datetime.now(timezone.utc).isoformat()
-                            }
-                        }
-                    }
+                # FAILED - Refund PRC using WalletService
+                refund_result = WalletService.credit(
+                    user_id=request.user_id,
+                    amount=total_prc_required,
+                    txn_type="refund",
+                    description=f"Refund: {SERVICE_TYPES[request.service_type]['name']} failed - {eko_result.get('message')}",
+                    reference=request_id
                 )
+                refund_balance = refund_result.get("balance_after", new_balance + total_prc_required) if refund_result.get("success") else new_balance + total_prc_required
+                logging.info(f"[REDEEM] Refunded {total_prc_required} PRC via WalletService. Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
                 
                 await db.redeem_requests.update_one(
                     {"request_id": request_id},
@@ -1094,25 +1087,16 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 
         except Exception as e:
             logging.error(f"[INSTANT] Error: {str(e)}")
-            # Refund on error
-            refund_balance = new_balance + total_prc_required
-            
-            await db.users.update_one(
-                {"uid": request.user_id},
-                {
-                    "$set": {"prc_balance": refund_balance},
-                    "$push": {
-                        "prc_transactions": {
-                            "type": "credit",
-                            "amount": total_prc_required,
-                            "description": f"Refund: System error - {str(e)[:50]}",
-                            "reference_id": request_id,
-                            "balance_after": refund_balance,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
-                    }
-                }
+            # Refund on error using WalletService
+            refund_result = WalletService.credit(
+                user_id=request.user_id,
+                amount=total_prc_required,
+                txn_type="refund",
+                description=f"Refund: System error - {str(e)[:50]}",
+                reference=request_id
             )
+            refund_balance = refund_result.get("balance_after", new_balance + total_prc_required) if refund_result.get("success") else new_balance + total_prc_required
+            logging.info(f"[REDEEM] Refunded {total_prc_required} PRC via WalletService (error). Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
             
             await db.redeem_requests.update_one(
                 {"request_id": request_id},
@@ -1424,31 +1408,19 @@ async def admin_approve_request(data: AdminApproveRequest):
         if not data.rejection_reason:
             raise HTTPException(status_code=400, detail="Rejection reason is required")
         
-        # Refund PRC to user
+        # Refund PRC to user using WalletService
         user_id = request_doc["user_id"]
         refund_amount = request_doc["total_prc_deducted"]
         
-        user = await db.users.find_one({"uid": user_id})
-        if user:
-            current_balance = user.get("prc_balance", 0)
-            new_balance = current_balance + refund_amount
-            
-            await db.users.update_one(
-                {"uid": user_id},
-                {
-                    "$set": {"prc_balance": new_balance},
-                    "$push": {
-                        "prc_transactions": {
-                            "type": "credit",
-                            "amount": refund_amount,
-                            "description": f"Refund: {request_doc['service_name']} request rejected",
-                            "reference_id": data.request_id,
-                            "balance_after": new_balance,
-                            "timestamp": now.isoformat()
-                        }
-                    }
-                }
-            )
+        refund_result = WalletService.credit(
+            user_id=user_id,
+            amount=refund_amount,
+            txn_type="refund",
+            description=f"Refund: {request_doc['service_name']} request rejected",
+            reference=data.request_id
+        )
+        new_balance = refund_result.get("balance_after", 0) if refund_result.get("success") else 0
+        logging.info(f"[REDEEM] Refunded {refund_amount} PRC via WalletService (rejection). Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
         
         # Update request
         update_data = {
@@ -1572,31 +1544,19 @@ async def admin_complete_request(data: AdminCompleteRequest):
             "utr": eko_result.get("utr")
         }
     else:
-        # FAILED - Refund PRC to user
+        # FAILED - Refund PRC to user using WalletService
         user_id = request_doc["user_id"]
         refund_amount = request_doc["total_prc_deducted"]
         
-        user = await db.users.find_one({"uid": user_id})
-        if user:
-            current_balance = user.get("prc_balance", 0)
-            new_balance = current_balance + refund_amount
-            
-            await db.users.update_one(
-                {"uid": user_id},
-                {
-                    "$set": {"prc_balance": new_balance},
-                    "$push": {
-                        "prc_transactions": {
-                            "type": "credit",
-                            "amount": refund_amount,
-                            "description": f"Refund: Eko transaction failed - {eko_result.get('message')}",
-                            "reference_id": data.request_id,
-                            "balance_after": new_balance,
-                            "timestamp": now.isoformat()
-                        }
-                    }
-                }
-            )
+        refund_result = WalletService.credit(
+            user_id=user_id,
+            amount=refund_amount,
+            txn_type="refund",
+            description=f"Refund: Eko transaction failed - {eko_result.get('message')}",
+            reference=data.request_id
+        )
+        new_balance = refund_result.get("balance_after", 0) if refund_result.get("success") else 0
+        logging.info(f"[REDEEM] Refunded {refund_amount} PRC via WalletService (Eko failed). Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
         
         update_data = {
             "status": STATUS_FAILED,
@@ -1737,31 +1697,19 @@ async def check_eko_transaction_status(request_id: str, admin_id: str = "admin")
             }
             
         elif new_status == STATUS_FAILED or new_status in ["refund_pending", "refunded"]:
-            # Failed - Refund PRC
+            # Failed - Refund PRC using WalletService
             user_id = request_doc["user_id"]
             refund_amount = request_doc["total_prc_deducted"]
             
-            user = await db.users.find_one({"uid": user_id})
-            if user:
-                current_balance = user.get("prc_balance", 0)
-                new_balance = current_balance + refund_amount
-                
-                await db.users.update_one(
-                    {"uid": user_id},
-                    {
-                        "$set": {"prc_balance": new_balance},
-                        "$push": {
-                            "prc_transactions": {
-                                "type": "credit",
-                                "amount": refund_amount,
-                                "description": "Refund: Eko transaction failed on status check",
-                                "reference_id": request_id,
-                                "balance_after": new_balance,
-                                "timestamp": now.isoformat()
-                            }
-                        }
-                    }
-                )
+            refund_result = WalletService.credit(
+                user_id=user_id,
+                amount=refund_amount,
+                txn_type="refund",
+                description="Refund: Eko transaction failed on status check",
+                reference=request_id
+            )
+            new_balance = refund_result.get("balance_after", 0) if refund_result.get("success") else 0
+            logging.info(f"[REDEEM] Refunded {refund_amount} PRC via WalletService (status check). Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
             
             await db.redeem_requests.update_one(
                 {"request_id": request_id},
@@ -1836,27 +1784,16 @@ async def manual_refund_request(request_id: str, admin_id: str = "admin", reason
     user_id = request_doc["user_id"]
     refund_amount = request_doc["total_prc_deducted"]
     
-    user = await db.users.find_one({"uid": user_id})
-    if user:
-        current_balance = user.get("prc_balance", 0)
-        new_balance = current_balance + refund_amount
-        
-        await db.users.update_one(
-            {"uid": user_id},
-            {
-                "$set": {"prc_balance": new_balance},
-                "$push": {
-                    "prc_transactions": {
-                        "type": "credit",
-                        "amount": refund_amount,
-                        "description": f"Manual Refund: {reason}",
-                        "reference_id": request_id,
-                        "balance_after": new_balance,
-                        "timestamp": now.isoformat()
-                    }
-                }
-            }
-        )
+    # Manual refund using WalletService
+    refund_result = WalletService.credit(
+        user_id=user_id,
+        amount=refund_amount,
+        txn_type="refund",
+        description=f"Manual Refund: {reason}",
+        reference=request_id
+    )
+    new_balance = refund_result.get("balance_after", 0) if refund_result.get("success") else 0
+    logging.info(f"[REDEEM] Manual Refund {refund_amount} PRC via WalletService. Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
     
     await db.redeem_requests.update_one(
         {"request_id": request_id},
