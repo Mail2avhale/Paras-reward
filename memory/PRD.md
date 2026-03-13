@@ -291,6 +291,12 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 - `GET /api/eko/dmt/status/{transaction_id}` - Check transaction status
 - `GET /api/eko/dmt/transactions/{user_id}` - Get user transaction history
 
+### DMT Refund APIs (NEW)
+- `POST /api/eko/dmt/refund/resend-otp` - Resend refund OTP to customer ✅
+- `POST /api/eko/dmt/refund/process` - Process refund with OTP ✅
+- `GET /api/eko/dmt/refund/pending` - Get pending refunds list ✅
+- `GET /api/eko/dmt/refund/history/{eko_txn_id}` - Get refund history for transaction
+
 ### DMT Admin APIs
 - `GET /api/eko/dmt/admin/settings` - Get DMT service settings
 - `POST /api/eko/dmt/admin/enable` - Enable DMT service

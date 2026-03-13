@@ -775,3 +775,260 @@ async def get_dmt_stats():
         "total": format_stats(total_stats),
         "service_enabled": DMT_ENABLED
     }
+
+
+# ==================== REFUND APIs (Eko V1) ====================
+
+class RefundOTPRequest(BaseModel):
+    eko_txn_id: str  # Eko transaction ID (tid from transfer response)
+    user_id: str
+
+class RefundRequest(BaseModel):
+    eko_txn_id: str  # Eko transaction ID
+    otp: str  # OTP received by customer
+    user_id: str
+
+@router.post("/refund/resend-otp")
+async def resend_refund_otp(request: RefundOTPRequest):
+    """
+    Resend OTP to customer for refund process.
+    
+    When a DMT transaction fails, Eko automatically sends an OTP to customer.
+    Use this API to resend that OTP if customer didn't receive it.
+    
+    Eko API: POST /transactions/:id/refund/otp
+    """
+    if not DMT_ENABLED:
+        raise HTTPException(status_code=503, detail="DMT service is currently disabled")
+    
+    try:
+        headers = get_eko_headers()
+        url = f"{EKO_BASE_URL}/v1/transactions/{request.eko_txn_id}/refund/otp?initiator_id={EKO_INITIATOR_ID}"
+        
+        data = {
+            "user_code": EKO_USER_CODE
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.post(url, headers=headers, data=data)
+            result = response.json()
+        
+        logging.info(f"[DMT REFUND] Resend OTP for txn {request.eko_txn_id}: {result.get('response_status_id')}")
+        
+        # Update local transaction record
+        await db.dmt_transactions.update_one(
+            {"eko_txn_id": request.eko_txn_id},
+            {
+                "$set": {
+                    "refund_otp_sent": True,
+                    "refund_otp_sent_at": datetime.now(timezone.utc).isoformat()
+                },
+                "$push": {
+                    "refund_history": {
+                        "action": "otp_resent",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "eko_response": result
+                    }
+                }
+            }
+        )
+        
+        if result.get("response_status_id") == 0:
+            return {
+                "success": True,
+                "message": "Refund OTP sent to customer mobile",
+                "eko_txn_id": request.eko_txn_id,
+                "data": result.get("data", {})
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message", "Failed to resend OTP"),
+                "error_code": result.get("response_status_id"),
+                "eko_txn_id": request.eko_txn_id
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT REFUND] Resend OTP error for {request.eko_txn_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to resend OTP: {str(e)}")
+
+
+@router.post("/refund/process")
+async def process_refund(request: RefundRequest):
+    """
+    Process refund for a failed DMT transaction.
+    
+    This API is used to safely refund cash to customer when transaction fails:
+    1. When transaction fails, Eko automatically sends OTP to customer
+    2. Ask customer for that OTP
+    3. Call this API with the OTP as consent that cash was refunded
+    4. After this, Eko will refund eValue to your account
+    
+    Eko API: POST /transactions/:id/refund
+    """
+    if not DMT_ENABLED:
+        raise HTTPException(status_code=503, detail="DMT service is currently disabled")
+    
+    # Get local transaction record
+    local_txn = await db.dmt_transactions.find_one({"eko_txn_id": request.eko_txn_id})
+    
+    if not local_txn:
+        # Try to find by our txn_id
+        local_txn = await db.dmt_transactions.find_one({"txn_id": request.eko_txn_id})
+    
+    try:
+        headers = get_eko_headers()
+        url = f"{EKO_BASE_URL}/v1/transactions/{request.eko_txn_id}/refund?initiator_id={EKO_INITIATOR_ID}"
+        
+        data = {
+            "otp": request.otp,
+            "user_code": EKO_USER_CODE
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.post(url, headers=headers, data=data)
+            result = response.json()
+        
+        logging.info(f"[DMT REFUND] Process refund for txn {request.eko_txn_id}: {result.get('response_status_id')}")
+        
+        now = datetime.now(timezone.utc)
+        
+        if result.get("response_status_id") == 0:
+            # Refund successful - update local record
+            refund_data = result.get("data", {})
+            
+            update_data = {
+                "refund_status": "success",
+                "refund_completed_at": now.isoformat(),
+                "eko_refund_response": result,
+                "refund_amount": refund_data.get("amount") or (local_txn.get("amount") if local_txn else 0)
+            }
+            
+            if local_txn:
+                await db.dmt_transactions.update_one(
+                    {"_id": local_txn["_id"]},
+                    {
+                        "$set": update_data,
+                        "$push": {
+                            "refund_history": {
+                                "action": "refund_completed",
+                                "timestamp": now.isoformat(),
+                                "eko_response": result
+                            }
+                        }
+                    }
+                )
+                
+                # Credit PRC back to user if not already done
+                if not local_txn.get("prc_refunded"):
+                    refund_amount = local_txn.get("total_deducted", 0)
+                    if refund_amount > 0:
+                        credit_result = WalletService.credit(
+                            user_id=local_txn.get("user_id") or request.user_id,
+                            amount=refund_amount,
+                            txn_type="eko_refund",
+                            description=f"Eko Refund: Transaction {request.eko_txn_id}",
+                            reference=f"REFUND-{request.eko_txn_id}"
+                        )
+                        
+                        await db.dmt_transactions.update_one(
+                            {"_id": local_txn["_id"]},
+                            {
+                                "$set": {
+                                    "prc_refunded": True,
+                                    "prc_refund_txn": credit_result.get("txn_id")
+                                }
+                            }
+                        )
+                        
+                        logging.info(f"[DMT REFUND] PRC credited: {refund_amount} to {local_txn.get('user_id')}")
+            
+            return {
+                "success": True,
+                "message": "Refund processed successfully",
+                "eko_txn_id": request.eko_txn_id,
+                "refund_amount": refund_data.get("amount"),
+                "data": refund_data
+            }
+        else:
+            # Refund failed
+            if local_txn:
+                await db.dmt_transactions.update_one(
+                    {"_id": local_txn["_id"]},
+                    {
+                        "$set": {
+                            "refund_status": "failed",
+                            "refund_error": result.get("message")
+                        },
+                        "$push": {
+                            "refund_history": {
+                                "action": "refund_failed",
+                                "timestamp": now.isoformat(),
+                                "error": result.get("message"),
+                                "eko_response": result
+                            }
+                        }
+                    }
+                )
+            
+            return {
+                "success": False,
+                "message": result.get("message", "Refund failed"),
+                "error_code": result.get("response_status_id"),
+                "eko_txn_id": request.eko_txn_id
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT REFUND] Process refund error for {request.eko_txn_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Refund failed: {str(e)}")
+
+
+@router.get("/refund/pending")
+async def get_pending_refunds(user_id: Optional[str] = None, limit: int = 50):
+    """
+    Get list of transactions eligible for refund.
+    
+    Returns failed transactions that haven't been refunded yet.
+    """
+    query = {
+        "status": "failed",
+        "$or": [
+            {"refund_status": {"$exists": False}},
+            {"refund_status": {"$nin": ["success", "completed"]}}
+        ]
+    }
+    
+    if user_id:
+        query["user_id"] = user_id
+    
+    transactions = await db.dmt_transactions.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "success": True,
+        "pending_refunds": transactions,
+        "count": len(transactions)
+    }
+
+
+@router.get("/refund/history/{eko_txn_id}")
+async def get_refund_history(eko_txn_id: str):
+    """Get refund history for a specific transaction."""
+    
+    transaction = await db.dmt_transactions.find_one(
+        {"$or": [{"eko_txn_id": eko_txn_id}, {"txn_id": eko_txn_id}]},
+        {"_id": 0}
+    )
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    return {
+        "success": True,
+        "transaction": transaction,
+        "refund_history": transaction.get("refund_history", []),
+        "refund_status": transaction.get("refund_status", "not_initiated")
+    }
+

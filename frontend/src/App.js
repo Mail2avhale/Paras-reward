@@ -182,6 +182,7 @@ const AdminFraudAlerts = IS_USER_BUILD ? null : lazy(() => import(/* webpackChun
 const AdminFraudDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
 const AdminVideoAds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
 const AdminFixedExpenses = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
+const AdminDMTRefunds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/DMTRefunds"));
 const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
 // AdminOrders removed - Marketplace deprecated (December 2025)
 // const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
@@ -411,7 +412,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/redeem" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* Admin DMT removed - Eko API not working */}
-                <Route path="/admin/dmt" element={<Navigate to="/admin" />} />
+                <Route path="/admin/dmt" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user}><AdminDMTRefunds user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/dmt-refunds" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user}><AdminDMTRefunds user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminLedgerView user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/popup-messages" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPopupMessages user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
