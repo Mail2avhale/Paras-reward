@@ -64,17 +64,10 @@ from routes.user_logs import router as user_logs_router, set_db as set_user_logs
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
-# Legacy Eko router - archived, keeping import for set_db dependency
-from routes._archive_eko_payments_legacy import router as eko_router, set_db as set_eko_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
-from routes.eko_dmt_service import router as dmt_router, set_db as set_eko_dmt_db
-# V1 DMT - DEPRECATED (Bank rejection issues)
-# V3 Levin DMT - NEW PRIMARY (OTP required for every transfer)
-from routes.eko_dmt_v3_levin import router as dmt_v3_levin_router, set_db as set_dmt_v3_levin_db
-from routes.eko_dmt_icici import router as dmt_icici_router, set_db as set_dmt_icici_db
-from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
+# DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
 from routes.leaderboard import router as leaderboard_router, set_db as set_leaderboard_db
@@ -82,7 +75,6 @@ from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_d
 from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
-from routes.eko_aadhaar_dmt import router as eko_aadhaar_router
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
@@ -38705,10 +38697,9 @@ api_router.include_router(notifications_router)
 set_razorpay_db(db)
 api_router.include_router(razorpay_router)
 
-# Legacy Eko Bill Payment & DMT Router - DISABLED (replaced by clean implementations)
-# Routes are now in: bbps_services.py (BBPS) and eko_dmt_service.py (DMT)
-set_eko_db(db)
-api_router.include_router(eko_router)  # Re-enabled for mobile recharge & BBPS processing
+# Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
+# set_eko_db(db)
+# api_router.include_router(eko_router)
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)
@@ -38716,8 +38707,6 @@ api_router.include_router(redeem_v2_router)
 
 # Error Monitor Router
 set_monitor_db(db)
-# set_dmt_v3_db(db)  # V3 disabled - using V1 API
-set_dmt_icici_db(db)  # Set DB for EKO DMT ICICI
 api_router.include_router(monitor_router)
 
 # KYC Router - User KYC submission and admin verification
@@ -38727,20 +38716,8 @@ api_router.include_router(kyc_router)
 # BBPS Services Router (Clean Implementation)
 api_router.include_router(bbps_router)
 
-# EKO DMT (Domestic Money Transfer) Router
-# V1 DMT DISABLED - All transfers fail with bank rejection
-# set_eko_dmt_db(db)  # DISABLED
-# api_router.include_router(dmt_router)  # DISABLED
-# api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 - DISABLED
-
-# EKO DMT V3 LEVIN - PRIMARY (OTP required for every transfer)
-# As per Eko support recommendation - V3 Levin flow is reliable
-set_dmt_v3_levin_db(db)
-api_router.include_router(dmt_v3_levin_router)
-
-# Admin DMT Management Router
-set_admin_dmt_db(db)
-api_router.include_router(admin_dmt_router)
+# DMT/Eko COMPLETELY REMOVED - V3 API not working with current Eko account
+# All DMT routes, files and code have been deleted
 
 # Chatbot Withdrawal Router (Bank Redeem via Chatbot)
 set_chatbot_withdrawal_db(db)
@@ -38770,7 +38747,7 @@ api_router.include_router(gift_router)
 
 # Leaderboard Router - ENABLED (only in routes/leaderboard.py)
 api_router.include_router(leaderboard_router)
-api_router.include_router(eko_aadhaar_router)
+# Eko Aadhaar DMT removed
 
 # Mining Router - Extracted from server.py
 set_mining_db(db)
