@@ -1,0 +1,61 @@
+{
+  "summary": "DMT V3 Limits Management - All 51 tests passed (25 backend + 26 frontend API tests)",
+  "mode": "generate",
+  "baseline_commit": "4521440f9862ea0b8c7aa399908f134010c58f36",
+  "head_commit": "6893a61c15fbf2d59081eb4a61b24661ad1d55f0",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "component": "AdminServiceToggles.js",
+        "issue": "No data-testid attributes found in the component. Consider adding data-testid for better E2E test targeting.",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 51,
+    "failed": 0,
+    "skipped": 0
+  },
+  "specs_created": [
+    "/app/backend/tests/test_dmt_limits_api.py",
+    "/app/tests/e2e/dmt-admin-api.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_dmt_limits_api.py",
+    "/app/test_reports/pytest/dmt_limits_results.xml",
+    "/app/tests/e2e/dmt-admin-api.spec.ts"
+  ],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_dmt_limits_api.py",
+    "/app/tests/e2e/dmt-admin-api.spec.ts"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "None required - tests use existing API endpoints",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All DMT V3 Limits APIs tested and working correctly. Tests cover:\n\n## Backend Tests (25 passed):\n- DMT Global Limits API: GET/PUT /api/admin/dmt-limits with validation\n- User DMT Usage API: GET /api/admin/user/{user_id}/dmt-usage\n- DMT Service Toggle: POST /api/admin/service-toggles/dmt\n- Levin DMT Health: GET /api/eko/levin-dmt/health\n- Limit validation (daily <= weekly <= monthly, per_txn <= daily)\n\n## Frontend API Tests (26 passed):\n- All CRUD operations for DMT limits\n- User usage tracking (daily/weekly/monthly)\n- Service enable/disable toggle\n- Integration tests for limit propagation\n\n## Note:\nOld dmt-admin-api.spec.ts was testing legacy v1 APIs which have been replaced. Archived as .bak and replaced with new v3 tests.",
+  "features_tested": {
+    "DMT Service Toggle API": "PASSED - Enable/Disable DMT service via POST /api/admin/service-toggles/dmt",
+    "DMT Global Limits API GET": "PASSED - GET /api/admin/dmt-limits returns daily/weekly/monthly/per_txn/min_amount",
+    "DMT Global Limits API PUT": "PASSED - PUT /api/admin/dmt-limits updates all limits with validation",
+    "DMT Limits Validation": "PASSED - Rejects invalid limit hierarchy (daily > weekly, weekly > monthly, per_txn > daily)",
+    "User DMT Usage API": "PASSED - GET /api/admin/user/{user_id}/dmt-usage returns daily/weekly/monthly usage with remaining",
+    "Levin DMT Health API": "PASSED - GET /api/eko/levin-dmt/health returns healthy status with user_code 19560001",
+    "Service Toggles List": "PASSED - GET /api/admin/service-toggles includes DMT service with correct name",
+    "Limits Integration": "PASSED - Global limit changes reflect in user usage endpoint"
+  }
+}

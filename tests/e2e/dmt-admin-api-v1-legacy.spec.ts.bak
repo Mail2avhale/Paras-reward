@@ -1,0 +1,579 @@
+/**
+ * DMT Admin API E2E Tests
+ * =======================
+ * Tests for DMT Admin endpoints including:
+ * - Admin Settings GET/POST
+ * - Admin Enable/Disable DMT
+ * - Admin Set Daily Limit
+ * - Admin Get All Transactions with filters
+ * - Admin Stats Dashboard
+ * - Health Check reflects admin settings
+ * - Daily Limit Enforcement
+ * - Error Handling for disabled DMT
+ */
+
+import { test, expect } from '@playwright/test';
+
+const BASE_URL = 'https://dmt-payment-gateway.preview.emergentagent.com';
+
+// ========================================
+// ADMIN SETTINGS API TESTS
+// ========================================
+
+test.describe('DMT Admin Settings API', () => {
+  
+  test.afterEach(async ({ request }) => {
+    // Restore default settings after each test
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/settings`, {
+      data: { enabled: true, daily_limit_inr: 50000 }
+    });
+  });
+
+  test('GET admin settings returns all required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('enabled');
+    expect(data.data).toHaveProperty('daily_limit_inr');
+    expect(data.data).toHaveProperty('min_transfer_inr');
+    expect(data.data).toHaveProperty('prc_to_inr_rate');
+    expect(data.data).toHaveProperty('updated_at');
+  });
+
+  test('GET admin settings returns correct types', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    const data = await response.json();
+    
+    expect(typeof data.data.enabled).toBe('boolean');
+    expect(typeof data.data.daily_limit_inr).toBe('number');
+    expect(typeof data.data.min_transfer_inr).toBe('number');
+    expect(typeof data.data.prc_to_inr_rate).toBe('number');
+    expect(typeof data.data.updated_at).toBe('string');
+  });
+
+  test('POST admin settings updates enabled status', async ({ request }) => {
+    // Disable DMT
+    const disableResponse = await request.post(`${BASE_URL}/api/eko/dmt/admin/settings`, {
+      data: { enabled: false }
+    });
+    expect(disableResponse.ok()).toBeTruthy();
+    
+    const disableData = await disableResponse.json();
+    expect(disableData.success).toBe(true);
+    expect(disableData.data.enabled).toBe(false);
+    
+    // Verify persisted
+    const verifyResponse = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    const verifyData = await verifyResponse.json();
+    expect(verifyData.data.enabled).toBe(false);
+  });
+
+  test('POST admin settings updates daily limit', async ({ request }) => {
+    const newLimit = 25000;
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/settings`, {
+      data: { daily_limit_inr: newLimit }
+    });
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.daily_limit_inr).toBe(newLimit);
+    
+    // Verify persisted
+    const verifyResponse = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    const verifyData = await verifyResponse.json();
+    expect(verifyData.data.daily_limit_inr).toBe(newLimit);
+  });
+
+  test('POST admin settings updates both enabled and limit', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/settings`, {
+      data: { enabled: false, daily_limit_inr: 30000 }
+    });
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.enabled).toBe(false);
+    expect(data.data.daily_limit_inr).toBe(30000);
+  });
+});
+
+// ========================================
+// ADMIN ENABLE/DISABLE DMT TESTS
+// ========================================
+
+test.describe('DMT Admin Enable/Disable', () => {
+  
+  test.afterEach(async ({ request }) => {
+    // Ensure DMT is enabled after each test
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+  });
+
+  test('POST admin enable DMT service', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.enabled).toBe(true);
+    expect(data.message).toContain('enabled');
+  });
+
+  test('POST admin disable DMT service', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.enabled).toBe(false);
+    expect(data.message).toContain('disabled');
+  });
+
+  test('Enable/disable cycle works correctly', async ({ request }) => {
+    // Disable
+    const disableResponse = await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    expect(disableResponse.ok()).toBeTruthy();
+    expect((await disableResponse.json()).data.enabled).toBe(false);
+    
+    // Verify disabled in health
+    const healthDisabled = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const healthDisabledData = await healthDisabled.json();
+    expect(healthDisabledData.enabled).toBe(false);
+    expect(healthDisabledData.status).toBe('DMT DISABLED');
+    
+    // Enable
+    const enableResponse = await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    expect(enableResponse.ok()).toBeTruthy();
+    expect((await enableResponse.json()).data.enabled).toBe(true);
+    
+    // Verify enabled in health
+    const healthEnabled = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const healthEnabledData = await healthEnabled.json();
+    expect(healthEnabledData.enabled).toBe(true);
+    expect(healthEnabledData.status).toBe('DMT SERVICE RUNNING');
+  });
+});
+
+// ========================================
+// ADMIN SET DAILY LIMIT TESTS
+// ========================================
+
+test.describe('DMT Admin Set Daily Limit', () => {
+  
+  test.afterEach(async ({ request }) => {
+    // Restore default limit
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=50000`);
+  });
+
+  test('POST set daily limit with valid value', async ({ request }) => {
+    const newLimit = 25000;
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=${newLimit}`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.daily_limit_inr).toBe(newLimit);
+    expect(data.data.message).toContain('25000');
+  });
+
+  test('POST set daily limit minimum valid (100)', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=100`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.daily_limit_inr).toBe(100);
+  });
+
+  test('POST set daily limit maximum valid (200000)', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=200000`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.daily_limit_inr).toBe(200000);
+  });
+
+  test('POST set daily limit below minimum fails', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=50`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(false);
+    // Error message should indicate invalid limit
+  });
+
+  test('POST set daily limit above maximum fails', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=300000`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(false);
+  });
+
+  test('Daily limit change reflects in health endpoint', async ({ request }) => {
+    const newLimit = 35000;
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=${newLimit}`);
+    
+    const healthResponse = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const healthData = await healthResponse.json();
+    expect(healthData.daily_limit_inr).toBe(newLimit);
+  });
+});
+
+// ========================================
+// ADMIN TRANSACTIONS WITH FILTERS TESTS
+// ========================================
+
+test.describe('DMT Admin Transactions API', () => {
+  
+  test('GET all transactions returns valid structure', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('summary');
+    expect(data.data).toHaveProperty('transactions');
+    expect(data.data).toHaveProperty('pagination');
+  });
+
+  test('GET transactions summary has all required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions`);
+    const data = await response.json();
+    
+    const summary = data.data.summary;
+    expect(summary).toHaveProperty('total_transactions');
+    expect(summary).toHaveProperty('completed');
+    expect(summary).toHaveProperty('failed');
+    expect(summary).toHaveProperty('pending');
+    expect(summary).toHaveProperty('total_amount_inr');
+    expect(summary).toHaveProperty('total_prc_used');
+  });
+
+  test('GET transactions pagination has all required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions`);
+    const data = await response.json();
+    
+    const pagination = data.data.pagination;
+    expect(pagination).toHaveProperty('total');
+    expect(pagination).toHaveProperty('limit');
+    expect(pagination).toHaveProperty('skip');
+    expect(pagination).toHaveProperty('has_more');
+  });
+
+  test('GET transactions with status filter - completed', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?status=completed`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with status filter - failed', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?status=failed`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with status filter - pending', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?status=pending`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with date from filter', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?date_from=2026-01-01`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with date range filter', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?date_from=2026-01-01&date_to=2026-12-31`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with mobile filter', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?mobile=9876543210`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+
+  test('GET transactions with pagination parameters', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/transactions?limit=10&skip=0`);
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data.pagination.limit).toBe(10);
+    expect(data.data.pagination.skip).toBe(0);
+  });
+
+  test('GET transactions with combined filters', async ({ request }) => {
+    const response = await request.get(
+      `${BASE_URL}/api/eko/dmt/admin/transactions?status=completed&date_from=2026-01-01&mobile=9876543210&limit=20`
+    );
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBe(true);
+  });
+});
+
+// ========================================
+// ADMIN STATS DASHBOARD TESTS
+// ========================================
+
+test.describe('DMT Admin Stats Dashboard API', () => {
+  
+  test('GET admin stats returns valid structure', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/stats`);
+    expect(response.ok()).toBeTruthy();
+    
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.data).toHaveProperty('today');
+    expect(data.data).toHaveProperty('all_time');
+    expect(data.data).toHaveProperty('settings');
+  });
+
+  test('GET admin stats today has required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/stats`);
+    const data = await response.json();
+    
+    const today = data.data.today;
+    expect(today).toHaveProperty('total_transactions');
+    expect(today).toHaveProperty('completed');
+    expect(today).toHaveProperty('failed');
+    expect(today).toHaveProperty('pending');
+    expect(today).toHaveProperty('total_amount_inr');
+  });
+
+  test('GET admin stats all_time has required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/stats`);
+    const data = await response.json();
+    
+    const allTime = data.data.all_time;
+    expect(allTime).toHaveProperty('total_transactions');
+    expect(allTime).toHaveProperty('completed');
+    expect(allTime).toHaveProperty('failed');
+    expect(allTime).toHaveProperty('total_amount_inr');
+  });
+
+  test('GET admin stats settings has required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/admin/stats`);
+    const data = await response.json();
+    
+    const settings = data.data.settings;
+    expect(settings).toHaveProperty('enabled');
+    expect(settings).toHaveProperty('daily_limit_inr');
+  });
+});
+
+// ========================================
+// DMT HEALTH CHECK WITH DYNAMIC SETTINGS
+// ========================================
+
+test.describe('DMT Health Check with Admin Settings', () => {
+  
+  test.afterEach(async ({ request }) => {
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=50000`);
+  });
+
+  test('Health check shows enabled status correctly', async ({ request }) => {
+    // Enable first
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const data = await response.json();
+    
+    expect(data.enabled).toBe(true);
+    expect(data.status).toBe('DMT SERVICE RUNNING');
+    expect(data.config_valid).toBe(true);
+  });
+
+  test('Health check shows disabled status correctly', async ({ request }) => {
+    // Disable first
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const data = await response.json();
+    
+    expect(data.enabled).toBe(false);
+    expect(data.status).toBe('DMT DISABLED');
+    expect(data.config_valid).toBe(true);
+  });
+
+  test('Health check reflects daily limit changes', async ({ request }) => {
+    const newLimit = 35000;
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=${newLimit}`);
+    
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const data = await response.json();
+    
+    expect(data.daily_limit_inr).toBe(newLimit);
+  });
+
+  test('Health check has all required fields', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const data = await response.json();
+    
+    expect(data).toHaveProperty('status');
+    expect(data).toHaveProperty('enabled');
+    expect(data).toHaveProperty('config_valid');
+    expect(data).toHaveProperty('version');
+    expect(data).toHaveProperty('api_type');
+    expect(data).toHaveProperty('instant_transfer');
+    expect(data).toHaveProperty('daily_limit_inr');
+    expect(data).toHaveProperty('prc_rate');
+    expect(data).toHaveProperty('min_redeem');
+  });
+});
+
+// ========================================
+// WALLET API WITH DYNAMIC LIMIT
+// ========================================
+
+test.describe('DMT Wallet API with Dynamic Limit', () => {
+  
+  test('Wallet API returns 404 for non-existent user', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/wallet/nonexistent_user_xyz_123`);
+    expect(response.status()).toBe(404);
+    
+    const data = await response.json();
+    expect(data.detail).toContain('User not found');
+  });
+
+  test('Settings limit reflects in system', async ({ request }) => {
+    // Update limit via admin API
+    const newLimit = 35000;
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=${newLimit}`);
+    
+    // Verify via settings endpoint
+    const settingsResponse = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    const settingsData = await settingsResponse.json();
+    expect(settingsData.data.daily_limit_inr).toBe(newLimit);
+    
+    // Restore
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=50000`);
+  });
+});
+
+// ========================================
+// ERROR HANDLING FOR DISABLED DMT
+// ========================================
+
+test.describe('DMT Error Handling for Disabled Service', () => {
+  
+  test.afterEach(async ({ request }) => {
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+  });
+
+  test('Transfer attempt when DMT disabled returns error', async ({ request }) => {
+    // Disable DMT
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    
+    // Verify disabled
+    const healthResponse = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    expect((await healthResponse.json()).enabled).toBe(false);
+    
+    // Attempt transfer
+    const response = await request.post(`${BASE_URL}/api/eko/dmt/transfer`, {
+      data: {
+        user_id: 'TEST_user',
+        mobile: '9876543210',
+        recipient_id: '12345',
+        prc_amount: 10000
+      }
+    });
+    
+    // Should either return service disabled error or validation error
+    const data = await response.json();
+    if (response.ok() && data.success === false) {
+      // Service disabled error
+      const message = (data.user_message || data.message || '').toLowerCase();
+      expect(message.includes('disabled') || message.includes('unavailable') || data.error_code === 503).toBe(true);
+    }
+    // Validation errors (422) are also acceptable since the request format may be wrong
+  });
+
+  test('Health correctly indicates disabled status', async ({ request }) => {
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    
+    const response = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const data = await response.json();
+    
+    expect(data.enabled).toBe(false);
+    expect(data.status).toBe('DMT DISABLED');
+  });
+});
+
+// ========================================
+// INTEGRATION TESTS
+// ========================================
+
+test.describe('DMT Admin API Integration', () => {
+  
+  test.afterEach(async ({ request }) => {
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=50000`);
+  });
+
+  test('Admin settings changes persist across multiple checks', async ({ request }) => {
+    // Change settings
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/settings`, {
+      data: { enabled: false, daily_limit_inr: 20000 }
+    });
+    
+    // Check via GET settings
+    const settings = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    const settingsData = await settings.json();
+    expect(settingsData.data.enabled).toBe(false);
+    expect(settingsData.data.daily_limit_inr).toBe(20000);
+    
+    // Check via health
+    const health = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    const healthData = await health.json();
+    expect(healthData.enabled).toBe(false);
+    expect(healthData.daily_limit_inr).toBe(20000);
+    
+    // Check via stats
+    const stats = await request.get(`${BASE_URL}/api/eko/dmt/admin/stats`);
+    const statsData = await stats.json();
+    expect(statsData.data.settings.enabled).toBe(false);
+    expect(statsData.data.settings.daily_limit_inr).toBe(20000);
+  });
+
+  test('Enable/Disable affects health immediately', async ({ request }) => {
+    // Disable
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/disable`);
+    let health = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    expect((await health.json()).enabled).toBe(false);
+    
+    // Enable
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/enable`);
+    health = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    expect((await health.json()).enabled).toBe(true);
+  });
+
+  test('Set limit via dedicated endpoint and verify', async ({ request }) => {
+    const testLimit = 15000;
+    
+    // Set via dedicated endpoint
+    await request.post(`${BASE_URL}/api/eko/dmt/admin/set-limit?limit_inr=${testLimit}`);
+    
+    // Verify via settings
+    const settings = await request.get(`${BASE_URL}/api/eko/dmt/admin/settings`);
+    expect((await settings.json()).data.daily_limit_inr).toBe(testLimit);
+    
+    // Verify via health
+    const health = await request.get(`${BASE_URL}/api/eko/dmt/health`);
+    expect((await health.json()).daily_limit_inr).toBe(testLimit);
+  });
+});
