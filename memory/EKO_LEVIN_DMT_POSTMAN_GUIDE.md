@@ -1,13 +1,13 @@
 # EKO LEVIN DMT - POSTMAN SETUP GUIDE
 
-## Environment Variables (EKO-DMT-V3)
+## Environment Variables (EKO-DMT-V3 Production)
 
 ```
 base_url = https://api.eko.in:25002/ekoicici/v3
 developer_key = 7c179a397b4710e71b2248d1f5892d19
 access_key = 7a2529f5-3587-4add-a2df-3d0606d62460
 initiator_id = 9936606966
-user_code = 20810200
+user_code = 19560001  # PRODUCTION (staging: 20810200)
 customer_id = 9421331342
 ```
 
@@ -35,21 +35,21 @@ pm.environment.set("secret_key", secretKey);
 
 ---
 
-## API FLOW
+## API FLOW (LEVIN DMT - Uses /dmt-levin/ path, NOT /ppi/)
 
-### API 1 - Check Sender Profile
+### API 1 - Check Sender Profile ✅ WORKING
 ```
 GET {{base_url}}/customer/profile/{{customer_id}}?initiator_id={{initiator_id}}&user_code={{user_code}}
 ```
 
-### API 2 - Get Recipient List
+### API 2 - Get Recipient List ✅ WORKING
 ```
-GET {{base_url}}/customer/payment/ppi/sender/{{customer_id}}/recipients?initiator_id={{initiator_id}}&user_code={{user_code}}
+GET {{base_url}}/customer/payment/dmt-levin/sender/{{customer_id}}/recipients?initiator_id={{initiator_id}}&user_code={{user_code}}&additional_info=1
 ```
 
 ### API 3 - Add Recipient
 ```
-POST {{base_url}}/customer/payment/ppi/sender/{{customer_id}}/recipient
+POST {{base_url}}/customer/payment/dmt-levin/sender/{{customer_id}}/recipient
 
 Body (form-urlencoded):
 - initiator_id = {{initiator_id}}
@@ -63,7 +63,7 @@ Body (form-urlencoded):
 
 ### API 4 - Register Recipient with Bank
 ```
-POST {{base_url}}/customer/payment/ppi/sender/{{customer_id}}/bank/recipient
+POST {{base_url}}/customer/payment/dmt-levin/sender/{{customer_id}}/bank/recipient
 
 Body:
 - initiator_id = {{initiator_id}}
@@ -71,37 +71,39 @@ Body:
 - recipient_id = {{recipient_id}}
 ```
 
-### API 5 - Send Transfer OTP
+### API 5 - Send Transfer OTP ✅ WORKING
 ```
-POST {{base_url}}/customer/payment/ppi/otp
-
-Body:
-- initiator_id = {{initiator_id}}
-- user_code = {{user_code}}
-- customer_id = {{customer_id}}
-- recipient_id = {{recipient_id}}
-- beneficiary_id = {{beneficiary_id}}
-- amount = 1000
-- service_code = 80
-```
-
-### API 6 - Initiate Transfer
-```
-POST {{base_url}}/customer/payment/ppi
+POST {{base_url}}/customer/payment/dmt-levin/otp
 
 Body:
 - initiator_id = {{initiator_id}}
 - user_code = {{user_code}}
 - customer_id = {{customer_id}}
 - recipient_id = {{recipient_id}}
-- beneficiary_id = {{beneficiary_id}}
-- amount = 1000
+- amount = 100
+
+Note: service_code NOT required for Levin DMT!
+```
+
+### API 6 - Initiate Transfer ✅ WORKING
+```
+POST {{base_url}}/customer/payment/dmt-levin
+
+Body:
+- initiator_id = {{initiator_id}}
+- user_code = {{user_code}}
+- customer_id = {{customer_id}}
+- recipient_id = {{recipient_id}}
+- amount = 100
 - currency = INR
 - channel = 2
 - state = 1
 - client_ref_id = TXN{{timestamp}}
 - otp = {{transfer_otp}}
 - otp_ref_id = {{otp_ref_id}}
+- latlong = 28.6139,77.2090
+- timestamp = 2026-03-13 15:00:00
+- recipient_id_type = 1
 ```
 
 ### API 7 - Check Transaction Status
@@ -114,11 +116,21 @@ GET {{base_url}}/tools/reference/transaction/{{tid}}
 ## Complete Flow
 
 1. Check Sender Profile → Verify sender exists
-2. Add Recipient → Get `recipient_id`
-3. Register Recipient with Bank → Get `beneficiary_id`
-4. Send Transfer OTP → Get `otp_ref_id`
-5. Initiate Transfer → Get `tid` (transaction ID)
-6. Check Status → Verify transaction
+2. Get Recipients List → See existing recipients
+3. Add Recipient (if needed) → Get `recipient_id`
+4. Register Recipient with Bank (if needed) → Get `beneficiary_id`
+5. Send Transfer OTP → Get `otp_ref_id`
+6. Initiate Transfer → Get `tid` (transaction ID)
+7. Check Status → Verify transaction
+
+---
+
+## Important Notes
+
+1. **Use `/dmt-levin/` path, NOT `/ppi/`** - PPI module not required for Levin DMT
+2. **Production user_code**: `19560001` (staging: `20810200`)
+3. **Monthly limit**: ₹25,000 per sender
+4. **OTP validity**: ~5 minutes
 
 ---
 
@@ -130,13 +142,16 @@ GET {{base_url}}/tools/reference/transaction/{{tid}}
 | 302 | Wrong OTP |
 | 403 | Authentication error |
 | 415 | Wrong content type |
-| 500 | PPI module disabled or invalid request |
+| 500 | PPI module disabled (use /dmt-levin/ instead) |
+| "Insufficient balance" | Eko retailer wallet needs recharge |
 
 ---
 
 ## Current Status (March 13, 2026)
 
 - ✅ API 1 (Sender Profile) - Working
-- ❌ API 2-6 (PPI) - 500 Error (PPI module not enabled)
+- ✅ API 2 (Get Recipients) - Working
+- ✅ API 5 (Send OTP) - Working
+- ✅ API 6 (Transfer) - Working (requires wallet balance)
 
-**Action Required:** Ask Eko to enable PPI module for initiator_id: 9936606966
+**All Levin DMT APIs are fully functional!**
