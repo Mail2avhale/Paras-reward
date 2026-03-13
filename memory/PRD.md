@@ -244,6 +244,7 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ### P1 - Important (Architectural Refactor Continuation)
 - [x] ~~TaskQueue integration for BBPS auto-retry logic~~ ✅ COMPLETED
+- [x] ~~DMT V1 E2E Implementation~~ ✅ COMPLETED
 - [ ] Backend `server.py` refactoring into smaller route files
 
 ### P2 - Future
@@ -277,15 +278,16 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 ## Key API Endpoints
 
-### DMT APIs (FIXED - V1)
-- `GET /api/eko/dmt/health` - Health check
-- `GET /api/eko/dmt/wallet/{user_id}` - Get user PRC balance and limits
-- `POST /api/eko/dmt/customer/search` - Search customer by mobile
+### DMT APIs (V1 - Rebuilt)
+- `GET /api/eko/dmt/health` - Health check ✅
+- `GET /api/eko/dmt/wallet/{user_id}` - Get user PRC balance and limits ✅
+- `POST /api/eko/dmt/customer/search` - Search customer by mobile ✅
 - `POST /api/eko/dmt/customer/register` - Register new customer
+- `POST /api/eko/dmt/customer/verify-otp` - Verify OTP for registration
 - `POST /api/eko/dmt/customer/resend-otp` - Resend OTP to customer
-- `POST /api/eko/dmt/recipient/add` - Add bank account as recipient (**FIXED**)
-- `GET /api/eko/dmt/recipients/{mobile}` - Get list of saved recipients
-- `POST /api/eko/dmt/transfer` - Execute money transfer (**FIXED**)
+- `POST /api/eko/dmt/recipient/add` - Add bank account as recipient
+- `GET /api/eko/dmt/recipients/{mobile}` - Get list of saved recipients ✅
+- `POST /api/eko/dmt/transfer` - Execute money transfer (with WalletService)
 - `GET /api/eko/dmt/status/{transaction_id}` - Check transaction status
 - `GET /api/eko/dmt/transactions/{user_id}` - Get user transaction history
 

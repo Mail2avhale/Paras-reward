@@ -78,6 +78,7 @@ from routes.admin_ledger_view import router as admin_ledger_view_router, set_db 
 from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
+from routes.dmt_v1_service import router as dmt_v1_router, set_db as set_dmt_v1_db
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -38702,6 +38703,10 @@ api_router.include_router(razorpay_router)
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)
 # api_router.include_router(eko_router)
+
+# DMT V1 Service Router (Domestic Money Transfer)
+set_dmt_v1_db(db)
+api_router.include_router(dmt_v1_router)
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)

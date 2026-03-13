@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminLoginAsUser from '@/components/AdminLoginAsUser';
+import PaymentRetryQueueWidget from '@/components/admin/PaymentRetryQueueWidget';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -389,6 +390,11 @@ const AdminDashboard = ({ user }) => {
             </div>
           )}
         </Card>
+      </div>
+
+      {/* Payment Retry Queue Widget */}
+      <div className="mt-6">
+        <PaymentRetryQueueWidget />
       </div>
 
       {/* Login As User Dialog */}

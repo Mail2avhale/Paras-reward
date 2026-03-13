@@ -154,7 +154,7 @@ const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit")
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
-// DMTPage - REMOVED (Eko API not working)
+const DMTPage = lazy(() => import("@/pages/DMTPage")); // DMT V1 - Money Transfer
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -346,9 +346,10 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
             <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
-            {/* DMT routes removed - Eko API not working */}
-            <Route path="/dmt" element={<Navigate to="/redeem" />} />
-            <Route path="/bank-transfer" element={<Navigate to="/redeem" />} />
+            {/* DMT V1 - Money Transfer */}
+            <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bank-transfer" element={user ? <Navigate to="/dmt" /> : <Navigate to="/login" />} />
+            <Route path="/money-transfer" element={user ? <Navigate to="/dmt" /> : <Navigate to="/login" />} />
             <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
             <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
             
