@@ -54,13 +54,13 @@ class RecipientActivateRequest(BaseModel):
 class TransactionOTPRequest(BaseModel):
     customer_mobile: str
     recipient_id: str
-    beneficiary_id: str
+    beneficiary_id: Optional[str] = None  # Not required for Levin DMT OTP
     amount: int
 
 class TransferRequest(BaseModel):
     customer_mobile: str
     recipient_id: str
-    beneficiary_id: str
+    beneficiary_id: Optional[str] = None  # May not be required
     amount: int
     otp: str
     otp_ref_id: str
@@ -276,13 +276,15 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
 async def get_recipients(customer_mobile: str):
     """
     Step 4: Get list of recipients for a sender
-    GET /v3/customer/payment/ppi/sender/{customer_id}/recipients
+    GET /v3/customer/payment/dmt-levin/sender/{customer_id}/recipients
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/ppi/sender/{customer_mobile}/recipients"
+        # Levin DMT uses /dmt-levin/ path, NOT /ppi/
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{customer_mobile}/recipients"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE
+            "user_code": EKO_USER_CODE,
+            "additional_info": "1"  # Required for Levin DMT
         }
         
         logging.info(f"[Levin DMT] Get recipients for: {customer_mobile}")
@@ -333,10 +335,11 @@ async def get_recipients(customer_mobile: str):
 async def add_recipient(request: RecipientAddRequest):
     """
     Step 5: Add a new recipient
-    POST /v3/customer/payment/ppi/sender/{customer_id}/recipient
+    POST /v3/customer/payment/dmt-levin/sender/{customer_id}/recipient
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/ppi/sender/{request.customer_mobile}/recipient"
+        # Levin DMT uses /dmt-levin/ path
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -344,7 +347,7 @@ async def add_recipient(request: RecipientAddRequest):
             "recipient_name": request.recipient_name,
             "recipient_mobile": request.recipient_mobile,
             "account": request.account_number,
-            "bank_code": request.ifsc_code,
+            "ifsc": request.ifsc_code,  # Changed from bank_code to ifsc
             "recipient_type": "3"  # Bank account
         }
         
@@ -387,10 +390,11 @@ async def add_recipient(request: RecipientAddRequest):
 async def activate_recipient(request: RecipientActivateRequest):
     """
     Step 6: Activate recipient for transfers
-    POST /v3/customer/payment/ppi/sender/{customer_id}/bank/recipient
+    POST /v3/customer/payment/dmt-levin/sender/{customer_id}/bank/recipient
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/ppi/sender/{request.customer_mobile}/bank/recipient"
+        # Levin DMT uses /dmt-levin/ path
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/bank/recipient"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -436,19 +440,19 @@ async def activate_recipient(request: RecipientActivateRequest):
 async def send_transaction_otp(request: TransactionOTPRequest):
     """
     Step 7: Send OTP for transaction
-    POST /v3/customer/payment/ppi/otp
+    POST /v3/customer/payment/dmt-levin/otp
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/ppi/otp"
+        # Levin DMT uses /dmt-levin/otp path
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/otp"
         
+        # Note: service_code is NOT required for Levin DMT OTP
         data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "customer_id": request.customer_mobile,
             "recipient_id": request.recipient_id,
-            "beneficiary_id": request.beneficiary_id,
-            "amount": str(request.amount),
-            "service_code": "80"  # Levin DMT service code
+            "amount": str(request.amount)
         }
         
         logging.info(f"[Levin DMT] Send transaction OTP: {request.customer_mobile}, amount={request.amount}")
@@ -490,10 +494,11 @@ async def send_transaction_otp(request: TransactionOTPRequest):
 async def initiate_transfer(request: TransferRequest):
     """
     Step 8: Initiate fund transfer
-    POST /v3/customer/payment/ppi
+    POST /v3/customer/payment/dmt-levin
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/ppi"
+        # Levin DMT uses /dmt-levin path for transfer
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin"
         
         # Generate unique client_ref_id if not provided
         client_ref_id = request.client_ref_id or f"LEVIN{uuid.uuid4().hex[:12].upper()}"
