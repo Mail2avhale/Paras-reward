@@ -15578,41 +15578,110 @@ REFERRAL_BONUS_PERCENTAGE = 20  # 20% of direct referral earnings added to limit
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
     Calculate total redeem limit for a user.
-    Formula: 39950 (base) + 20% of direct referral bonus earned
+    Formula: 39950 (base) + 20% of referral bonus from ACTIVE referrals only
+    Active referral = referred user has active subscription
     """
     try:
         base_limit = BASE_REDEEM_LIMIT
         
-        # Get direct referral bonus earned by user
-        direct_referral_bonus = 0
+        # Get user's referral code
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            return {
+                "base_limit": base_limit,
+                "active_referrals": 0,
+                "active_referral_bonus": 0,
+                "referral_bonus_addition": 0,
+                "total_limit": base_limit
+            }
         
-        # From transactions collection
-        referral_txns = await db.transactions.find({
-            "user_id": user_id,
-            "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
-        }).to_list(1000)
+        referral_code = user.get("referral_code", "")
         
-        for txn in referral_txns:
-            direct_referral_bonus += float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
+        # Find users who were referred by this user AND have active subscription
+        active_referral_bonus = 0
+        active_referral_count = 0
         
-        # From prc_ledger if exists
-        ledger_entries = await db.prc_ledger.find({
-            "user_id": user_id,
-            "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
-        }).to_list(1000)
+        if referral_code:
+            # Get all users referred by this user
+            referred_users = await db.users.find({
+                "referred_by": referral_code
+            }).to_list(1000)
+            
+            now = datetime.now(timezone.utc)
+            
+            for referred_user in referred_users:
+                # Check if referred user has active subscription
+                is_active = False
+                
+                # Check subscription expiry
+                sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry")
+                if sub_expiry:
+                    try:
+                        if isinstance(sub_expiry, str):
+                            exp_date = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                        else:
+                            exp_date = sub_expiry
+                        if exp_date.tzinfo is None:
+                            exp_date = exp_date.replace(tzinfo=timezone.utc)
+                        
+                        if exp_date > now:
+                            is_active = True
+                    except:
+                        pass
+                
+                # Also check is_premium flag
+                if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
+                    is_active = True
+                
+                if is_active:
+                    active_referral_count += 1
+                    
+                    # Get referral bonus earned for this specific referred user
+                    referred_uid = referred_user.get("uid")
+                    
+                    # From transactions
+                    ref_txns = await db.transactions.find({
+                        "user_id": user_id,
+                        "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]},
+                        "$or": [
+                            {"referred_user_id": referred_uid},
+                            {"from_user_id": referred_uid},
+                            {"source_user_id": referred_uid}
+                        ]
+                    }).to_list(100)
+                    
+                    for txn in ref_txns:
+                        active_referral_bonus += abs(float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0))
         
-        for entry in ledger_entries:
-            direct_referral_bonus += abs(float(entry.get("amount", 0) or entry.get("credit", 0) or 0))
+        # If no specific referral tracking, calculate from total referral bonus proportionally
+        if active_referral_bonus == 0 and active_referral_count > 0:
+            # Get total referral bonus
+            total_ref_bonus = 0
+            all_ref_txns = await db.transactions.find({
+                "user_id": user_id,
+                "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
+            }).to_list(1000)
+            
+            for txn in all_ref_txns:
+                total_ref_bonus += abs(float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0))
+            
+            # Get total referred count
+            total_referred = await db.users.count_documents({"referred_by": referral_code})
+            
+            # Calculate proportional bonus for active referrals
+            if total_referred > 0:
+                active_referral_bonus = (total_ref_bonus * active_referral_count) / total_referred
         
-        # Calculate 20% of referral bonus
-        referral_bonus_addition = (direct_referral_bonus * REFERRAL_BONUS_PERCENTAGE) / 100
+        # Calculate 20% of active referral bonus
+        referral_bonus_addition = (active_referral_bonus * REFERRAL_BONUS_PERCENTAGE) / 100
         
         # Total limit
         total_limit = base_limit + referral_bonus_addition
         
         return {
             "base_limit": base_limit,
-            "direct_referral_earned": round(direct_referral_bonus, 2),
+            "active_referrals": active_referral_count,
+            "active_referral_bonus": round(active_referral_bonus, 2),
             "referral_bonus_addition": round(referral_bonus_addition, 2),
             "total_limit": round(total_limit, 2)
         }
@@ -15620,7 +15689,8 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         logging.error(f"Error calculating redeem limit: {e}")
         return {
             "base_limit": BASE_REDEEM_LIMIT,
-            "direct_referral_earned": 0,
+            "active_referrals": 0,
+            "active_referral_bonus": 0,
             "referral_bonus_addition": 0,
             "total_limit": BASE_REDEEM_LIMIT
         }
@@ -15760,14 +15830,14 @@ async def get_user_redeem_limit(user_id: str):
             "user_id": user_id,
             "limit": {
                 "base_limit": limit_info["base_limit"],
-                "direct_referral_earned": limit_info["direct_referral_earned"],
+                "active_referrals": limit_info.get("active_referrals", 0),
+                "active_referral_bonus": limit_info.get("active_referral_bonus", 0),
                 "referral_bonus_addition": limit_info["referral_bonus_addition"],
                 "total_limit": limit_info["total_limit"],
                 "total_redeemed": total_redeemed,
                 "remaining_limit": round(remaining, 2),
                 "usage_percentage": round(usage_percentage, 2)
-            },
-            "formula": "Base (799×5×10 = 39950) + 20% of Direct Referral Bonus"
+            }
         }
     except Exception as e:
         logging.error(f"Error getting redeem limit: {e}")
