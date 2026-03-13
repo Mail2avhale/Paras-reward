@@ -225,6 +225,7 @@ const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChun
 const AdminRedeemDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminRedeemDashboard"));
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
 // AdminDMTDashboard - REMOVED (Eko API not working)
+const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminLedgerView"));
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
@@ -410,6 +411,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* Admin DMT removed - Eko API not working */}
                 <Route path="/admin/dmt" element={<Navigate to="/admin" />} />
+                <Route path="/admin/ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminLedgerView user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/popup-messages" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPopupMessages user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

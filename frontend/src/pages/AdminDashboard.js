@@ -275,6 +275,13 @@ const AdminDashboard = ({ user }) => {
           </div>
           <div 
             className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
+            onClick={() => navigate('/admin/ledger')}
+          >
+            <p className="text-2xl font-bold text-blue-400">📒</p>
+            <p className="text-xs text-gray-500">Ledger View</p>
+          </div>
+          <div 
+            className="text-center p-2 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all"
             onClick={() => navigate('/admin/subscriptions?tab=approved')}
           >
             <p className="text-2xl font-bold text-purple-400">{stats?.vip_payments?.approved || 0}</p>

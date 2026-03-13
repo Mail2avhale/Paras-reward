@@ -873,18 +873,28 @@ async def create_withdrawal_request(request: WithdrawalRequest):
             
             await db.chatbot_withdrawal_requests.insert_one(withdrawal_doc)
             
-            # Log transaction as completed
-            await db.transactions.insert_one({
-                "transaction_id": str(uuid.uuid4()),
-                "uid": request.uid,
-                "type": "withdrawal_completed",
-                "amount_prc": -prc_required,
-                "amount_inr": request.amount_inr,
-                "reference_id": request_id,
-                "status": "completed",
-                "description": f"Bank withdrawal - {request.bank_name} (INSTANT)",
-                "created_at": now
-            })
+            # PHASE 3: Create transaction with state machine
+            txn_result = TransactionService.create(
+                user_id=request.uid,
+                txn_type="withdrawal",
+                amount=prc_required,
+                description=f"Bank withdrawal ₹{request.amount_inr} to {request.bank_name}",
+                metadata={
+                    "request_id": request_id,
+                    "amount_inr": request.amount_inr,
+                    "bank_name": request.bank_name,
+                    "account_masked": f"****{request.account_number[-4:]}",
+                    "utr_number": transfer_result.get("utr_number"),
+                    "instant": True
+                }
+            )
+            
+            # Mark transaction as SUCCESS immediately
+            if txn_result.get("success"):
+                TransactionService.mark_success(
+                    txn_id=txn_result["transaction"]["txn_id"],
+                    reference=transfer_result.get("utr_number")
+                )
             
             return {
                 "success": True,
@@ -950,6 +960,25 @@ async def create_withdrawal_request(request: WithdrawalRequest):
         else:
             # FAILED - Refund PRC
             await _refund_prc(request.uid, prc_required, request_id, f"Transfer failed: {transfer_result.get('message')}")
+            
+            # PHASE 3: Create failed transaction record
+            txn_result = TransactionService.create(
+                user_id=request.uid,
+                txn_type="withdrawal",
+                amount=prc_required,
+                description=f"Bank withdrawal ₹{request.amount_inr} - FAILED",
+                metadata={
+                    "request_id": request_id,
+                    "amount_inr": request.amount_inr,
+                    "bank_name": request.bank_name,
+                    "failure_reason": transfer_result.get("message")
+                }
+            )
+            if txn_result.get("success"):
+                TransactionService.mark_failed(
+                    txn_id=txn_result["transaction"]["txn_id"],
+                    reason=transfer_result.get("message", "Transfer failed")
+                )
             
             # Log failed attempt
             withdrawal_doc = {
