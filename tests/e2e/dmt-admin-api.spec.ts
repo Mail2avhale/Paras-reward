@@ -14,7 +14,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://fintech-refactor-3.preview.emergentagent.com';
+const BASE_URL = 'https://dmt-payment-gateway.preview.emergentagent.com';
 
 // ========================================
 // ADMIN SETTINGS API TESTS

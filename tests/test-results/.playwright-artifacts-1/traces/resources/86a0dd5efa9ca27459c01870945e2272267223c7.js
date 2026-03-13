@@ -36,7 +36,7 @@ var _jsxFileName = "/app/frontend/src/components/NotificationBell.js",
 
 
 
-const API = `${"https://fintech-refactor-3.preview.emergentagent.com"}/api`;
+const API = `${"https://dmt-payment-gateway.preview.emergentagent.com"}/api`;
 const NotificationBell = ({
   userId
 }) => {

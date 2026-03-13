@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://fintech-refactor-3.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://dmt-payment-gateway.preview.emergentagent.com';
 
 /**
  * Test Suite: Payment Gateway Toggles and PRC Collect Button

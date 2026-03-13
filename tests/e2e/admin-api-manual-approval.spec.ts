@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
  * Testing white screen issue with button clicks
  */
 
-const BASE_URL = 'https://fintech-refactor-3.preview.emergentagent.com';
+const BASE_URL = 'https://dmt-payment-gateway.preview.emergentagent.com';
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';
 const ADMIN_PIN = '123456';
 

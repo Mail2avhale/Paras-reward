@@ -96,6 +96,7 @@ async def health_check():
         "status": "healthy",
         "service": "Levin DMT V3",
         "base_url": EKO_BASE_URL_V3,
+        "user_code": EKO_USER_CODE,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -278,7 +279,7 @@ async def get_recipients(customer_mobile: str):
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.get(url, headers=get_headers(), params=params)
             
-            logging.info(f"[Levin DMT] Recipients response: {response.status_code}")
+            logging.info(f"[Levin DMT] Recipients response: {response.status_code} - {response.text[:500] if response.text else 'EMPTY'}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -287,7 +288,15 @@ async def get_recipients(customer_mobile: str):
                     "message": "No recipients found"
                 }
             
-            result = response.json()
+            try:
+                result = response.json()
+            except Exception as json_err:
+                logging.error(f"[Levin DMT] JSON parse error: {json_err}, raw: {response.text[:200]}")
+                return {
+                    "success": False,
+                    "recipients": [],
+                    "message": f"API error: {response.text[:200]}"
+                }
             
             if result.get("response_status_id") == 0:
                 recipients = result.get("data", {}).get("recipient_list", [])
