@@ -1,5 +1,12 @@
 # Paras Reward Platform - PRD
 
+## Latest Update (March 13, 2026)
+- ✅ **Floating "?" Help Button REMOVED** - AIContextualHelp component deleted
+- ✅ **DMT Page White Screen Bug FIXED** - Page now loads correctly
+- ✅ **AI Chatbot KEPT** - "Need Help? Ask me!" button retained per user request
+
+---
+
 ## Original Problem Statement
 Production application (www.parasreward.com) was experiencing severe performance issues:
 - App gets stuck after 2-3 minutes of activity
