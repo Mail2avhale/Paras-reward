@@ -16,7 +16,7 @@ from datetime import datetime, timezone, timedelta
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://dmt-payment-gateway.preview.emergentagent.com'
+    BASE_URL = 'https://levin-dmt-revamp.preview.emergentagent.com'
 
 # Test user ID from the bug fix requirements
 TEST_USER_ID = "73b95483-f36b-4637-a5ee-d447300c6835"

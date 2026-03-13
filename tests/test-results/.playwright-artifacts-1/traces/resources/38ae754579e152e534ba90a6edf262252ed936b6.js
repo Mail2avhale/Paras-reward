@@ -59,7 +59,7 @@ var _jsxFileName = "/app/frontend/src/components/AIChatbotEnhanced.js",
 
 
 
-const API = `${"https://dmt-payment-gateway.preview.emergentagent.com"}/api`;
+const API = `${"https://levin-dmt-revamp.preview.emergentagent.com"}/api`;
 
 // Quick Action Button Component
 const QuickActionButton = ({
@@ -3211,7 +3211,7 @@ var _jsxFileName = "/app/frontend/src/pages/DashboardModern.js",
 
 
 
-const API = `${"https://dmt-payment-gateway.preview.emergentagent.com"}/api`;
+const API = `${"https://levin-dmt-revamp.preview.emergentagent.com"}/api`;
 
 // Get time-based greeting with emoji
 const getTimeGreeting = () => {

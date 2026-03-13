@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts } from '../fixtures/helpers';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://dmt-payment-gateway.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://levin-dmt-revamp.preview.emergentagent.com';
 
 // Test credentials
 const TEST_USER = {

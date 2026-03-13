@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://dmt-payment-gateway.preview.emergentagent.com';
+const BASE_URL = 'https://levin-dmt-revamp.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 

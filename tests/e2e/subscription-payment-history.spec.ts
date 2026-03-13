@@ -14,7 +14,7 @@ import { dismissToasts, DMT_TEST_CREDENTIALS } from '../fixtures/helpers';
  * 6. Payment history is expandable/collapsible
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://dmt-payment-gateway.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://levin-dmt-revamp.preview.emergentagent.com';
 const TEST_USER_ID = DMT_TEST_CREDENTIALS.userId; // 73b95483-f36b-4637-a5ee-d447300c6835
 
 // Helper to login with test user
