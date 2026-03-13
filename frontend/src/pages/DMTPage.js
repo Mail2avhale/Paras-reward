@@ -662,29 +662,15 @@ const DMTPage = ({ user }) => {
           <div className="relative mb-6 group" data-testid="wallet-info-card">
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
             <Card className="relative bg-gradient-to-br from-gray-900 to-gray-900/80 border border-gray-800/50 p-5 rounded-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-violet-500/20 to-cyan-500/20 rounded-xl border border-violet-500/20">
-                    <Wallet className="w-6 h-6 text-violet-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-                      {walletInfo.prc_balance?.toLocaleString()} <span className="text-lg">PRC</span>
-                    </p>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-violet-500/20 to-cyan-500/20 rounded-xl border border-violet-500/20">
+                  <Wallet className="w-6 h-6 text-violet-400" />
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Daily Limit</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, ((walletInfo.daily_limit - walletInfo.daily_remaining) / walletInfo.daily_limit) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-300">₹{walletInfo.daily_remaining?.toLocaleString()}</span>
-                  </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                    {walletInfo.prc_balance?.toLocaleString()} <span className="text-lg">PRC</span>
+                  </p>
                 </div>
               </div>
             </Card>
