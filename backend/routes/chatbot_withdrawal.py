@@ -53,6 +53,9 @@ import uuid
 import re
 import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 
+# Import new services (Phase 2 integration)
+from app.services import WalletService, TransactionService, TransactionState
+
 # Global async HTTP client for chatbot withdrawal
 _chatbot_http_client = None
 
@@ -532,32 +535,21 @@ async def _execute_instant_dmt_transfer(sender_mobile: str, recipient_id: str, a
 
 
 async def _refund_prc(uid: str, prc_amount: float, reference_id: str, reason: str):
-    """Refund PRC to user on transfer failure"""
+    """Refund PRC to user using WalletService (with ledger entry)"""
     try:
-        now = datetime.now(timezone.utc).isoformat()
-        
-        # Add PRC back to user
-        await db.users.update_one(
-            {"uid": uid},
-            {
-                "$inc": {"prc_balance": prc_amount},
-                "$set": {"updated_at": now}
-            }
+        # Use WalletService for proper ledger tracking
+        result = WalletService.credit(
+            user_id=uid,
+            amount=prc_amount,
+            txn_type="withdrawal_refund",
+            description=f"Refund: {reason}",
+            reference=reference_id
         )
         
-        # Log refund transaction
-        await db.transactions.insert_one({
-            "transaction_id": str(uuid.uuid4()),
-            "uid": uid,
-            "type": "withdrawal_refund",
-            "amount_prc": prc_amount,
-            "reference_id": reference_id,
-            "status": "completed",
-            "description": f"PRC Refund: {reason}",
-            "created_at": now
-        })
-        
-        logging.info(f"[CHATBOT-DMT] PRC Refunded: {prc_amount} to user {uid}")
+        if result["success"]:
+            logging.info(f"[CHATBOT-DMT] PRC Refunded via WalletService: {prc_amount} to user {uid}, Ledger TXN: {result['txn_id']}")
+        else:
+            logging.error(f"[CHATBOT-DMT] Refund failed: {result.get('error')}")
         
     except Exception as e:
         logging.error(f"[CHATBOT-DMT] Refund Exception: {e}")
@@ -802,16 +794,19 @@ async def create_withdrawal_request(request: WithdrawalRequest):
     eko_record = await db.eko_verified_customers.find_one({"mobile": user_mobile})
     eko_customer_id = eko_record.get("customer_id") if eko_record else None
     
-    # STEP 1: Deduct PRC from user balance FIRST
-    await db.users.update_one(
-        {"uid": request.uid},
-        {
-            "$inc": {"prc_balance": -prc_required},
-            "$set": {"updated_at": now}
-        }
+    # STEP 1: Deduct PRC using WalletService (with ledger entry)
+    debit_result = WalletService.debit(
+        user_id=request.uid,
+        amount=prc_required,
+        txn_type="withdrawal",
+        description=f"Bank Withdrawal ₹{request.amount_inr}",
+        reference=request_id
     )
     
-    logging.info(f"[CHATBOT-DMT] PRC Deducted: {prc_required} from user {request.uid}")
+    if not debit_result["success"]:
+        raise HTTPException(status_code=400, detail=debit_result.get("error", "PRC deduction failed"))
+    
+    logging.info(f"[CHATBOT-DMT] PRC Deducted via WalletService: {prc_required} from user {request.uid}, Ledger TXN: {debit_result['txn_id']}")
     
     try:
         # STEP 2: Add recipient to Eko (using correct V1 URL format)
