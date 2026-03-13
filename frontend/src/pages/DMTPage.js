@@ -59,25 +59,35 @@ const sanitizeErrorMessage = (error) => {
   return errorStr || 'Something went wrong. Please try again.';
 };
 
-// Step indicator component
+// Step indicator component - Premium Style
 const StepIndicator = ({ currentStep, steps }) => (
-  <div className="flex items-center justify-center gap-2 mb-6">
+  <div className="flex items-center justify-center gap-1 mb-6 px-4 overflow-x-auto pb-2">
     {steps.map((step, idx) => (
       <React.Fragment key={idx}>
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
-          idx + 1 === currentStep 
-            ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
-            : idx + 1 < currentStep 
-              ? 'bg-green-500/20 text-green-400'
-              : 'bg-gray-800 text-gray-500'
-        }`}>
-          <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">
-            {idx + 1 < currentStep ? '✓' : idx + 1}
+        <div 
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+            idx + 1 === currentStep 
+              ? 'bg-gradient-to-r from-violet-600/20 to-cyan-600/20 text-white border border-violet-500/30 shadow-lg shadow-violet-500/10' 
+              : idx + 1 < currentStep 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-gray-800/50 text-gray-500 border border-gray-800'
+          }`}
+        >
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+            idx + 1 === currentStep 
+              ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white' 
+              : idx + 1 < currentStep 
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-gray-700 text-gray-500'
+          }`}>
+            {idx + 1 < currentStep ? <CheckCircle className="w-4 h-4" /> : idx + 1}
           </span>
-          <span className="hidden sm:inline">{step}</span>
+          <span className="hidden sm:inline whitespace-nowrap">{step}</span>
         </div>
         {idx < steps.length - 1 && (
-          <ChevronRight className="w-4 h-4 text-gray-600" />
+          <div className={`w-8 h-0.5 rounded-full transition-colors ${
+            idx + 1 < currentStep ? 'bg-emerald-500/50' : 'bg-gray-800'
+          }`} />
         )}
       </React.Fragment>
     ))}
@@ -559,94 +569,182 @@ const DMTPage = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4 md:p-6">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-orange-500/20 rounded-xl">
-              <Banknote className="w-6 h-6 text-orange-400" />
+    <div className="min-h-screen bg-[#0a0a0f] p-4 md:p-6">
+      {/* Animated Background Gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-violet-950/30 via-transparent to-cyan-950/20 pointer-events-none" />
+      <div className="fixed top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-0 left-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="max-w-2xl mx-auto relative">
+        {/* Premium Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-2xl blur-lg opacity-50" />
+              <div className="relative p-4 bg-gradient-to-br from-violet-600 to-cyan-600 rounded-2xl">
+                <Send className="w-7 h-7 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Money Transfer</h1>
-              <p className="text-sm text-gray-400">Send money to any bank account</p>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                Money Transfer
+              </h1>
+              <p className="text-sm text-gray-500">Instant bank transfers • Secure & Fast</p>
             </div>
           </div>
           
-          {/* DMT Type Selector */}
-          <div className="flex items-center gap-2">
-            <select
-              value={dmtType}
-              onChange={(e) => {
-                setDmtType(e.target.value);
-                resetFlow();
-              }}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
-              data-testid="dmt-type-selector"
+          <div className="flex items-center gap-3">
+            {/* DMT Type Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full">
+              <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
+              <span className="text-xs text-violet-300 font-medium">
+                {dmtType === 'levin' ? 'Levin V3' : 'Legacy V1'}
+              </span>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+              className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors"
+              data-testid="show-history-btn"
             >
-              <option value="levin">Levin DMT (OTP)</option>
-              <option value="v1">V1 DMT (Legacy)</option>
-            </select>
+              <History className="w-5 h-5" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowHistory(!showHistory)}
-            className="text-gray-400 hover:text-white"
-            data-testid="show-history-btn"
-          >
-            <History className="w-5 h-5" />
-          </Button>
         </div>
-
-        {/* Wallet Info */}
-        {walletInfo && (
-          <Card className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-orange-500/20 p-4 mb-6" data-testid="wallet-info-card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Wallet className="w-5 h-5 text-orange-400" />
-                <div>
-                  <p className="text-sm text-gray-400">Available Balance</p>
-                  <p className="text-xl font-bold text-white">{walletInfo.prc_balance?.toLocaleString()} PRC</p>
-                </div>
+        
+        {/* DMT Type Selector - Premium Style */}
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => { setDmtType('levin'); resetFlow(); }}
+            className={`flex-1 p-4 rounded-2xl border transition-all duration-300 ${
+              dmtType === 'levin' 
+                ? 'bg-gradient-to-br from-violet-600/20 to-cyan-600/20 border-violet-500/50 shadow-lg shadow-violet-500/10' 
+                : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+            }`}
+            data-testid="dmt-type-levin"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${dmtType === 'levin' ? 'bg-violet-500/20' : 'bg-gray-800'}`}>
+                <Zap className={`w-5 h-5 ${dmtType === 'levin' ? 'text-violet-400' : 'text-gray-500'}`} />
               </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Daily Limit</p>
-                <p className="text-sm text-white">₹{walletInfo.daily_remaining?.toLocaleString()} / ₹{walletInfo.daily_limit?.toLocaleString()}</p>
+              <div className="text-left">
+                <p className={`font-semibold ${dmtType === 'levin' ? 'text-white' : 'text-gray-400'}`}>Levin DMT</p>
+                <p className="text-xs text-gray-500">OTP Based • Recommended</p>
               </div>
             </div>
-          </Card>
+          </button>
+          
+          <button
+            onClick={() => { setDmtType('v1'); resetFlow(); }}
+            className={`flex-1 p-4 rounded-2xl border transition-all duration-300 ${
+              dmtType === 'v1' 
+                ? 'bg-gradient-to-br from-amber-600/20 to-orange-600/20 border-amber-500/50 shadow-lg shadow-amber-500/10' 
+                : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+            }`}
+            data-testid="dmt-type-v1"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${dmtType === 'v1' ? 'bg-amber-500/20' : 'bg-gray-800'}`}>
+                <Shield className={`w-5 h-5 ${dmtType === 'v1' ? 'text-amber-400' : 'text-gray-500'}`} />
+              </div>
+              <div className="text-left">
+                <p className={`font-semibold ${dmtType === 'v1' ? 'text-white' : 'text-gray-400'}`}>Legacy V1</p>
+                <p className="text-xs text-gray-500">Classic Transfer</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Premium Wallet Card */}
+        {walletInfo && (
+          <div className="relative mb-6 group" data-testid="wallet-info-card">
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
+            <Card className="relative bg-gradient-to-br from-gray-900 to-gray-900/80 border border-gray-800/50 p-5 rounded-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-violet-500/20 to-cyan-500/20 rounded-xl border border-violet-500/20">
+                    <Wallet className="w-6 h-6 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                      {walletInfo.prc_balance?.toLocaleString()} <span className="text-lg">PRC</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Daily Limit</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, ((walletInfo.daily_limit - walletInfo.daily_remaining) / walletInfo.daily_limit) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-300">₹{walletInfo.daily_remaining?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
         )}
 
-        {/* Transaction History Modal */}
+        {/* Transaction History - Premium Modal */}
         {showHistory && (
-          <Card className="bg-gray-900 border-gray-700 p-4 mb-6" data-testid="transaction-history">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Recent Transactions</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)}>
-                <XCircle className="w-4 h-4" />
+          <Card className="bg-gray-900/90 backdrop-blur-xl border border-gray-800/50 p-5 mb-6 rounded-2xl" data-testid="transaction-history">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-500/10 rounded-xl">
+                  <History className="w-5 h-5 text-violet-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Recent Transactions</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)} className="hover:bg-white/5 rounded-xl">
+                <XCircle className="w-5 h-5 text-gray-400" />
               </Button>
             </div>
             {transactions.length > 0 ? (
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {transactions.slice(0, 10).map((txn) => (
-                  <div key={txn.txn_id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                    <div>
-                      <p className="text-sm text-white font-mono">{txn.txn_id}</p>
-                      <p className="text-xs text-gray-400">₹{txn.amount} • {new Date(txn.created_at).toLocaleDateString()}</p>
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
+                {transactions.slice(0, 10).map((txn, idx) => (
+                  <div 
+                    key={txn.txn_id} 
+                    className="flex items-center justify-between p-4 bg-gray-800/30 hover:bg-gray-800/50 rounded-xl border border-gray-800/50 transition-colors group"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        txn.status === 'success' ? 'bg-emerald-500/10' :
+                        txn.status === 'failed' ? 'bg-red-500/10' : 'bg-amber-500/10'
+                      }`}>
+                        {txn.status === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
+                         txn.status === 'failed' ? <XCircle className="w-4 h-4 text-red-400" /> :
+                         <RefreshCw className="w-4 h-4 text-amber-400" />}
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-mono group-hover:text-violet-300 transition-colors">{txn.txn_id?.slice(0, 16)}...</p>
+                        <p className="text-xs text-gray-500">{new Date(txn.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      txn.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                      txn.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {txn.status}
-                    </span>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-white">₹{txn.amount?.toLocaleString()}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        txn.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                        txn.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                        'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {txn.status}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-center text-gray-500 py-4">No transactions yet</p>
+              <div className="text-center py-8">
+                <History className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500">No transactions yet</p>
+              </div>
             )}
           </Card>
         )}
@@ -654,39 +752,75 @@ const DMTPage = ({ user }) => {
         {/* Step Indicator */}
         {!showHistory && <StepIndicator currentStep={step} steps={steps} />}
 
-        {/* Main Content */}
+        {/* Main Content - Glass Card */}
         {!showHistory && (
-          <Card className="bg-gray-900/50 border-gray-800 p-6" data-testid="dmt-main-card">
+          <Card className="relative bg-gray-900/60 backdrop-blur-xl border border-gray-800/50 p-6 rounded-2xl overflow-hidden" data-testid="dmt-main-card">
+            {/* Decorative gradient */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-violet-600/10 to-transparent rounded-full blur-2xl" />
+            
             {/* Step 1: Search Customer */}
             {step === 1 && (
-              <div className="space-y-4" data-testid="step-search">
-                <div className="text-center mb-6">
-                  <Search className="w-12 h-12 text-orange-400 mx-auto mb-3" />
-                  <h2 className="text-lg font-semibold text-white">Enter Customer Mobile</h2>
-                  <p className="text-sm text-gray-400">Customer whose bank account you want to transfer to</p>
+              <div className="space-y-6 relative" data-testid="step-search">
+                <div className="text-center mb-8">
+                  <div className="relative inline-block mb-4">
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-lg opacity-30" />
+                    <div className="relative w-20 h-20 bg-gradient-to-br from-violet-600/20 to-cyan-600/20 rounded-full flex items-center justify-center border border-violet-500/20">
+                      <Search className="w-10 h-10 text-violet-400" />
+                    </div>
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">Enter Customer Mobile</h2>
+                  <p className="text-sm text-gray-500">Customer whose bank account you want to transfer money to</p>
                 </div>
                 
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                  <Input
-                    type="tel"
-                    placeholder="10-digit mobile number"
-                    value={mobile}
-                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white"
-                    data-testid="mobile-input"
-                  />
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center">
+                    <Phone className="absolute left-4 w-5 h-5 text-gray-500 group-focus-within:text-violet-400 transition-colors" />
+                    <Input
+                      type="tel"
+                      placeholder="10-digit mobile number"
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      className="pl-12 py-4 bg-gray-800/50 border-gray-700/50 text-white text-lg rounded-xl focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                      data-testid="mobile-input"
+                    />
+                    {mobile.length === 10 && (
+                      <CheckCircle className="absolute right-4 w-5 h-5 text-emerald-400" />
+                    )}
+                  </div>
                 </div>
                 
                 <Button
                   onClick={handleSearchCustomer}
                   disabled={loading || mobile.length !== 10}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full py-4 bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 transition-all disabled:opacity-50 disabled:shadow-none"
                   data-testid="search-customer-btn"
                 >
-                  {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
+                  {loading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <Search className="w-5 h-5 mr-2" />
+                  )}
                   Search Customer
                 </Button>
+                
+                {/* Info Cards */}
+                <div className="grid grid-cols-2 gap-3 pt-4">
+                  <div className="p-3 bg-gray-800/30 rounded-xl border border-gray-800/50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs text-gray-400">Secure</span>
+                    </div>
+                    <p className="text-xs text-gray-500">256-bit encryption</p>
+                  </div>
+                  <div className="p-3 bg-gray-800/30 rounded-xl border border-gray-800/50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs text-gray-400">Instant</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Real-time transfer</p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -771,51 +905,66 @@ const DMTPage = ({ user }) => {
               </div>
             )}
 
-            {/* Step 3: Recipients */}
+            {/* Step 3: Recipients - Premium Style */}
             {step === 3 && (
-              <div className="space-y-4" data-testid="step-recipients">
-                <Button variant="ghost" onClick={resetFlow} className="text-gray-400 mb-4">
+              <div className="space-y-5" data-testid="step-recipients">
+                <Button variant="ghost" onClick={resetFlow} className="text-gray-400 hover:text-white hover:bg-white/5 rounded-xl mb-2">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Start Over
                 </Button>
                 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-white">Select Recipient</h2>
-                    <p className="text-sm text-gray-400">Customer: {mobile}</p>
+                    <h2 className="text-xl font-bold text-white">Select Recipient</h2>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                      <Phone className="w-4 h-4" /> {mobile}
+                      {customer?.name && <span className="text-violet-400">• {customer.name}</span>}
+                    </p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowAddRecipient(true)}
-                    className="border-orange-500/30 text-orange-400"
+                    className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 rounded-xl"
                     data-testid="add-recipient-btn"
                   >
-                    <UserPlus className="w-4 h-4 mr-1" /> Add
+                    <UserPlus className="w-4 h-4 mr-1" /> Add New
                   </Button>
                 </div>
 
-                {/* Add Recipient Form */}
+                {/* Add Recipient Form - Premium */}
                 {showAddRecipient && (
-                  <Card className="bg-gray-800/50 border-gray-700 p-4 mb-4" data-testid="add-recipient-form">
-                    <h3 className="text-sm font-medium text-white mb-3">Add New Recipient</h3>
-                    <div className="space-y-3">
-                      <Input
-                        placeholder="Recipient Name"
-                        value={newRecipient.recipient_name}
-                        onChange={(e) => setNewRecipient({...newRecipient, recipient_name: e.target.value})}
-                        className="bg-gray-900 border-gray-700 text-white"
-                        data-testid="recipient-name-input"
-                      />
-                      <Input
-                        placeholder="Account Number"
-                        value={newRecipient.account_number}
-                        onChange={(e) => setNewRecipient({...newRecipient, account_number: e.target.value.replace(/\D/g, '')})}
-                        className="bg-gray-900 border-gray-700 text-white"
-                        data-testid="account-number-input"
-                      />
-                      <div className="relative">
+                  <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-700/50 p-5 rounded-2xl" data-testid="add-recipient-form">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-violet-500/10 rounded-xl">
+                        <UserPlus className="w-5 h-5 text-violet-400" />
+                      </div>
+                      <h3 className="font-semibold text-white">Add New Recipient</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Recipient Name</label>
                         <Input
-                          placeholder="IFSC Code (e.g., SBIN0001234)"
+                          placeholder="Full name as per bank account"
+                          value={newRecipient.recipient_name}
+                          onChange={(e) => setNewRecipient({...newRecipient, recipient_name: e.target.value})}
+                          className="bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-violet-500/50"
+                          data-testid="recipient-name-input"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Account Number</label>
+                        <Input
+                          placeholder="Bank account number"
+                          value={newRecipient.account_number}
+                          onChange={(e) => setNewRecipient({...newRecipient, account_number: e.target.value.replace(/\D/g, '')})}
+                          className="bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-violet-500/50"
+                          data-testid="account-number-input"
+                        />
+                      </div>
+                      <div className="relative">
+                        <label className="text-xs text-gray-500 mb-1 block">IFSC Code</label>
+                        <Input
+                          placeholder="e.g., SBIN0001234"
                           value={newRecipient.ifsc}
                           onChange={(e) => {
                             const ifsc = e.target.value.toUpperCase().slice(0, 11);
@@ -887,64 +1036,87 @@ const DMTPage = ({ user }) => {
                             setBeneficiaryId(recipient.beneficiary_id.toString());
                           }
                         }}
-                        className={`p-4 rounded-xl cursor-pointer transition-all ${
+                        className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 ${
                           selectedRecipient?.recipient_id === recipient.recipient_id
-                            ? 'bg-orange-500/20 border-2 border-orange-500'
-                            : 'bg-gray-800/50 border border-gray-700 hover:border-orange-500/50'
+                            ? 'bg-gradient-to-r from-violet-600/20 to-cyan-600/20 border-2 border-violet-500 shadow-lg shadow-violet-500/10'
+                            : 'bg-gray-800/30 border border-gray-800 hover:border-violet-500/30 hover:bg-gray-800/50'
                         }`}
                         data-testid={`recipient-${idx}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-500/20 rounded-lg">
-                            <Building className="w-5 h-5 text-blue-400" />
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-xl ${
+                            selectedRecipient?.recipient_id === recipient.recipient_id
+                              ? 'bg-violet-500/20'
+                              : 'bg-gray-800'
+                          }`}>
+                            <Building className={`w-5 h-5 ${
+                              selectedRecipient?.recipient_id === recipient.recipient_id
+                                ? 'text-violet-400'
+                                : 'text-gray-400'
+                            }`} />
                           </div>
                           <div className="flex-1">
-                            <p className="text-white font-medium">{recipient.recipient_name || recipient.name}</p>
-                            <p className="text-sm text-gray-400">
+                            <p className="text-white font-semibold">{recipient.recipient_name || recipient.name}</p>
+                            <p className="text-sm text-gray-500">
                               {recipient.bank || recipient.bank_name} • ****{(recipient.acc || recipient.account_number || '').slice(-4)}
                             </p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-500" />
+                          {selectedRecipient?.recipient_id === recipient.recipient_id ? (
+                            <CheckCircle className="w-6 h-6 text-violet-400" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-gray-600" />
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No recipients found</p>
-                    <p className="text-sm">Add a bank account to continue</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <CreditCard className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <p className="text-gray-400 font-medium">No recipients found</p>
+                    <p className="text-sm text-gray-600 mt-1">Add a bank account to continue</p>
                   </div>
                 )}
 
                 {/* Selected Recipient - Amount Input for Levin DMT */}
                 {selectedRecipient && (
-                  <Card className="mt-4 p-4 bg-gray-800/50 border-orange-500/30">
-                    <div className="flex items-center gap-3 mb-4">
-                      <CheckCircle className="w-5 h-5 text-green-400" />
+                  <Card className="mt-5 p-5 bg-gradient-to-br from-violet-600/10 to-cyan-600/10 border border-violet-500/20 rounded-2xl">
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="p-3 bg-emerald-500/10 rounded-xl">
+                        <CheckCircle className="w-6 h-6 text-emerald-400" />
+                      </div>
                       <div>
-                        <p className="text-white font-medium">{selectedRecipient.recipient_name || selectedRecipient.name}</p>
-                        <p className="text-sm text-gray-400">Selected for transfer</p>
+                        <p className="text-white font-semibold">{selectedRecipient.recipient_name || selectedRecipient.name}</p>
+                        <p className="text-sm text-emerald-400">Ready for transfer</p>
                       </div>
                     </div>
                     
-                    <Input
-                      type="number"
-                      placeholder="Enter amount (₹100 - ₹25,000)"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="bg-gray-900 border-gray-700 text-white mb-4"
-                      data-testid="amount-input-step3"
-                    />
+                    <div className="mb-5">
+                      <label className="text-xs text-gray-500 mb-2 block">Transfer Amount</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-500">₹</span>
+                        <Input
+                          type="number"
+                          placeholder="100 - 25,000"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="pl-10 py-4 text-2xl bg-gray-800/50 border-gray-700/50 text-white rounded-xl focus:border-violet-500/50"
+                          data-testid="amount-input-step3"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2">Min ₹100 • Max ₹25,000 per transaction</p>
+                    </div>
                     
                     {dmtType === 'levin' ? (
                       <Button
                         onClick={handleSendTransferOTP}
                         disabled={loading || !amount || parseFloat(amount) < 100}
-                        className="w-full bg-orange-500 hover:bg-orange-600"
+                        className="w-full py-4 bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/20 disabled:opacity-50"
                         data-testid="send-transfer-otp-btn"
                       >
-                        {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                        {loading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <Send className="w-5 h-5 mr-2" />}
                         Send Transfer OTP
                       </Button>
                     ) : (
