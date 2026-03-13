@@ -70,8 +70,9 @@ from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_r
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
 from routes.eko_dmt_service import router as dmt_router, set_db as set_eko_dmt_db
-# V3 DMT disabled - V1 API working with state=2 (immediate verification)
-# from routes.eko_dmt_v3 import router as dmt_v3_router, set_db as set_dmt_v3_db
+# V1 DMT - DEPRECATED (Bank rejection issues)
+# V3 Levin DMT - NEW PRIMARY (OTP required for every transfer)
+from routes.eko_dmt_v3_levin import router as dmt_v3_levin_router, set_db as set_dmt_v3_levin_db
 from routes.eko_dmt_icici import router as dmt_icici_router, set_db as set_dmt_icici_db
 from routes.admin_dmt_routes import router as admin_dmt_router, set_db as set_admin_dmt_db
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
@@ -38727,14 +38728,15 @@ api_router.include_router(kyc_router)
 api_router.include_router(bbps_router)
 
 # EKO DMT (Domestic Money Transfer) Router
-set_eko_dmt_db(db)  # Set DB for EKO DMT v1 (async)
-api_router.include_router(dmt_router)
-api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 (NO OTP)
+# V1 DMT DISABLED - All transfers fail with bank rejection
+# set_eko_dmt_db(db)  # DISABLED
+# api_router.include_router(dmt_router)  # DISABLED
+# api_router.include_router(dmt_icici_router)  # EKO DMT ICICI v1 - DISABLED
 
-# EKO DMT v3 - DISABLED (V1 API working)
-# V3 Fino DMT endpoints not available for this Eko account
-# Using V1 API which gives state=2 (immediate verification)
-# api_router.include_router(dmt_v3_router)
+# EKO DMT V3 LEVIN - PRIMARY (OTP required for every transfer)
+# As per Eko support recommendation - V3 Levin flow is reliable
+set_dmt_v3_levin_db(db)
+api_router.include_router(dmt_v3_levin_router)
 
 # Admin DMT Management Router
 set_admin_dmt_db(db)

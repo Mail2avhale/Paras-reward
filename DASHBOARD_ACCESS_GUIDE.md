@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://dmt-fix.preview.emergentagent.com/setup
+   https://withdrawal-otp.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

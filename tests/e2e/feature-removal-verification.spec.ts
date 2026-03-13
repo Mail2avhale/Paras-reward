@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://dmt-fix.preview.emergentagent.com';
+const BASE_URL = 'https://withdrawal-otp.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   

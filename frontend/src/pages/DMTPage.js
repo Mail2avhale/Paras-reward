@@ -30,6 +30,9 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// V3 API endpoint (Levin DMT - OTP required)
+const DMT_API = `${API_URL}/api/eko/dmt-v3`;
+
 const DMTPage = () => {
   // Get user from localStorage
   const [user, setUser] = useState(null);
@@ -78,9 +81,10 @@ const DMTPage = () => {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferLoading, setTransferLoading] = useState(false);
   
-  // Transfer OTP State (OTP is required during transfer, not registration)
+  // Transfer OTP State (V3 API - OTP REQUIRED for every transfer)
   const [showTransferOTP, setShowTransferOTP] = useState(false);
   const [pendingTransactionId, setPendingTransactionId] = useState(null);
+  const [otpRefId, setOtpRefId] = useState(null);  // V3: otp_ref_id from send-otp
   const [transferOtpValue, setTransferOtpValue] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   
@@ -108,7 +112,7 @@ const DMTPage = () => {
     }
   }, [resendTimer]);
 
-  // Register new customer
+  // Register new customer (V3 API)
   const registerCustomer = async () => {
     if (!registrationName || registrationName.length < 3) {
       toast.error('कृपया पूर्ण नाव टाका (किमान 3 अक्षरे)');
@@ -117,7 +121,7 @@ const DMTPage = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/customer/register`, {
+      const res = await fetch(`${DMT_API}/customer/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,27 +134,18 @@ const DMTPage = () => {
       const data = await res.json();
       
       if (data.success) {
-        const state = data.data.state;
-        
-        // V1 API: Customer registration doesn't need OTP verification
-        // OTP is only required during TRANSFER
-        toast.success('✅ Registration पूर्ण! तुम्ही आता recipient add करू शकता.');
+        toast.success('✅ Registration पूर्ण! आता recipient add करा.');
         setShowRegistration(false);
         setCustomer({
           customer_exists: true,
           customer_id: data.data.customer_id,
           name: registrationName,
           mobile: customerMobile,
-          state: state,
+          state: data.data.state,
           available_limit: data.data.available_limit || 25000,
-          can_transact: true  // V1 API - customer can transact after registration
+          can_transact: true
         });
         fetchRecipients(customerMobile);
-        
-        if (state === '1' || state === 1) {
-          // Inform user that OTP will be required during transfer
-          toast.info('📱 Transfer करताना OTP पाठवला जाईल.');
-        }
       } else {
         toast.error(data.user_message || data.message || 'Registration failed');
       }
@@ -165,10 +160,10 @@ const DMTPage = () => {
   // OTP verification happens during TRANSFER, not registration
   // See executeTransfer() for transfer OTP handling
 
-  // Fetch wallet balance
+  // Fetch wallet balance (V3 API)
   const fetchWallet = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/wallet/${user.uid}`);
+      const res = await fetch(`${DMT_API}/wallet/${user.uid}`);
       const data = await res.json();
       if (data.success) {
         setWallet(data.data);
@@ -178,7 +173,7 @@ const DMTPage = () => {
     }
   };
 
-  // Search customer
+  // Search customer (V3 API)
   const searchCustomer = async () => {
     if (!customerMobile || customerMobile.length !== 10) {
       toast.error('कृपया 10 अंकी मोबाइल नंबर टाका');
@@ -191,7 +186,7 @@ const DMTPage = () => {
 
     setCustomerLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/customer/search`, {
+      const res = await fetch(`${DMT_API}/customer/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,21 +201,13 @@ const DMTPage = () => {
         setCustomer(data.data);
         
         if (data.data.customer_exists) {
-          const state = String(data.data.state);
-          
-          // V1 API: All registered customers can transact
-          // OTP is only required during TRANSFER, not for customer verification
-          toast.success(`✅ ${data.data.name} - Transfer साठी तयार!`);
+          // V3 API: Customer found - ready for transfer
+          toast.success(`✅ ${data.data.name} - OTP मागवा आणि transfer करा!`);
           setCustomer({
             ...data.data,
-            can_transact: true  // V1 API - all registered customers can transact
+            can_transact: true
           });
           fetchRecipients(customerMobile);
-          
-          if (state === '1') {
-            // Inform user that OTP will be required during transfer
-            toast.info('📱 Transfer करताना OTP पाठवला जाईल.');
-          }
         } else {
           // Customer not registered - show registration form
           toast.info('🆕 नवीन customer. कृपया registration करा.');
@@ -236,11 +223,11 @@ const DMTPage = () => {
     }
   };
 
-  // Fetch recipients
+  // Fetch recipients (V3 API)
   const fetchRecipients = async (mobile) => {
     setRecipientsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/recipients/${mobile}?user_id=${user.uid}`);
+      const res = await fetch(`${DMT_API}/recipients/${mobile}?user_id=${user.uid}`);
       const data = await res.json();
       
       if (data.success) {
@@ -253,7 +240,7 @@ const DMTPage = () => {
     }
   };
 
-  // Add recipient
+  // Add recipient (V3 API)
   const addRecipient = async () => {
     if (!newRecipient.recipient_name || !newRecipient.account_number || !newRecipient.ifsc) {
       toast.error('Please fill all recipient details');
@@ -267,7 +254,7 @@ const DMTPage = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/recipient/add`, {
+      const res = await fetch(`${DMT_API}/recipient/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,15 +281,15 @@ const DMTPage = () => {
     }
   };
 
-  // Execute transfer
+  // Execute transfer (V3 LEVIN - OTP REQUIRED for EVERY transfer)
   const executeTransfer = async (withOtp = false) => {
     if (!selectedRecipient) {
       toast.error('Please select a recipient');
       return;
     }
 
-    // If completing with OTP
-    if (withOtp && pendingTransactionId) {
+    // STEP 2: If completing with OTP - execute transfer
+    if (withOtp && pendingTransactionId && otpRefId) {
       if (!transferOtpValue || transferOtpValue.length < 4) {
         toast.error('कृपया OTP टाका');
         return;
@@ -310,16 +297,17 @@ const DMTPage = () => {
       
       setTransferLoading(true);
       try {
-        const res = await fetch(`${API_URL}/api/eko/dmt/transfer`, {
+        // V3 API: Transfer with OTP
+        const res = await fetch(`${DMT_API}/transfer`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: user.uid,
             mobile: customerMobile,
             recipient_id: selectedRecipient.recipient_id,
-            prc_amount: parseFloat(transferAmount) * 100,
+            amount_inr: parseFloat(transferAmount),
             otp: transferOtpValue,
-            pending_transaction_id: pendingTransactionId
+            otp_ref_id: otpRefId
           })
         });
         
@@ -329,13 +317,14 @@ const DMTPage = () => {
           toast.success(data.data.message || 'Transfer successful! ✅');
           setShowTransferOTP(false);
           setPendingTransactionId(null);
+          setOtpRefId(null);
           setTransferOtpValue('');
           setTransferAmount('');
           fetchWallet();
           fetchTransactions();
         } else {
           toast.error(data.user_message || data.message);
-          if (data.message?.includes('refund')) {
+          if (data.user_message?.includes('refund') || data.message?.includes('refund')) {
             fetchWallet();
           }
         }
@@ -347,7 +336,7 @@ const DMTPage = () => {
       return;
     }
 
-    // New transfer - initiate
+    // STEP 1: New transfer - SEND OTP first (V3 mandatory)
     const amount = parseFloat(transferAmount);
     if (!amount || amount < 100) {
       toast.error('Minimum transfer amount is ₹100');
@@ -359,46 +348,37 @@ const DMTPage = () => {
       return;
     }
 
-    const prcRequired = amount * 100;
+    const prcRequired = amount * (wallet.prc_rate || 100);
     if (prcRequired > wallet.prc_balance) {
-      toast.error(`Insufficient PRC balance. Need: ${prcRequired} PRC`);
+      toast.error(`Insufficient PRC balance. Need: ${Math.ceil(prcRequired)} PRC`);
       return;
     }
 
     setTransferLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/transfer`, {
+      // V3 API: Send OTP first
+      const res = await fetch(`${DMT_API}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user.uid,
           mobile: customerMobile,
           recipient_id: selectedRecipient.recipient_id,
-          prc_amount: prcRequired
+          amount_inr: amount
         })
       });
       
       const data = await res.json();
       
-      if (data.success) {
-        // Check if OTP is required
-        if (data.data.status === 'OTP_REQUIRED') {
-          toast.info('📱 OTP पाठवला आहे. कृपया OTP टाकून transfer पूर्ण करा.');
-          setPendingTransactionId(data.data.transaction_id);
-          setShowTransferOTP(true);
-          setResendTimer(30);
-        } else {
-          // Transfer completed
-          toast.success(data.data.message || 'Transfer successful! ✅');
-          fetchWallet();
-          fetchTransactions();
-          setTransferAmount('');
-        }
+      if (data.success && data.data.otp_sent) {
+        // OTP sent - show OTP input
+        toast.info(data.data.message || '📱 OTP पाठवला आहे. कृपया OTP टाकून transfer पूर्ण करा.');
+        setPendingTransactionId(data.data.txn_id);
+        setOtpRefId(data.data.otp_ref_id);
+        setShowTransferOTP(true);
+        setResendTimer(30);
       } else {
-        toast.error(data.user_message || data.message);
-        if (data.message?.includes('refund')) {
-          fetchWallet();
-        }
+        toast.error(data.user_message || data.message || 'OTP पाठवता आला नाही');
       }
     } catch (error) {
       toast.error('Transfer failed. Please try again.');
@@ -407,33 +387,39 @@ const DMTPage = () => {
     }
   };
 
-  // Cancel OTP flow
+  // Cancel OTP flow (V3)
   const cancelTransferOTP = () => {
     setShowTransferOTP(false);
     setPendingTransactionId(null);
+    setOtpRefId(null);
     setTransferOtpValue('');
-    toast.info('Transfer cancelled. PRC will be refunded if deducted.');
+    toast.info('Transfer cancelled.');
   };
 
-  // Resend transfer OTP
+  // Resend transfer OTP (V3 - Send new OTP)
   const resendTransferOTP = async () => {
     if (resendTimer > 0) return;
     
     setTransferLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/customer/resend-otp`, {
+      // V3 API: Send OTP again
+      const res = await fetch(`${DMT_API}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          user_id: user.uid,
           mobile: customerMobile,
-          user_id: user.uid
+          recipient_id: selectedRecipient.recipient_id,
+          amount_inr: parseFloat(transferAmount)
         })
       });
       
       const data = await res.json();
       
-      if (data.success) {
+      if (data.success && data.data.otp_sent) {
         toast.success('✅ OTP पुन्हा पाठवला आहे!');
+        setOtpRefId(data.data.otp_ref_id);  // Update otp_ref_id
+        setPendingTransactionId(data.data.txn_id);
         setResendTimer(30);
       } else {
         toast.error(data.user_message || data.message || 'OTP पाठवता आला नाही');
@@ -445,11 +431,11 @@ const DMTPage = () => {
     }
   };
 
-  // Fetch transactions
+  // Fetch transactions (V3)
   const fetchTransactions = async () => {
     setTransactionsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/eko/dmt/transactions/${user.uid}?limit=20`);
+      const res = await fetch(`${DMT_API}/transactions/${user.uid}?limit=20`);
       const data = await res.json();
       
       if (data.success) {
