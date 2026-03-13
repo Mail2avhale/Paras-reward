@@ -1320,6 +1320,202 @@ async def manual_activate_by_email(request: Request):
 
 
 
+
+@router.post("/admin/find-unfixed-subscriptions")
+async def find_unfixed_subscriptions(request: Request):
+    """
+    Find ALL users with extended subscriptions who haven't been fixed yet.
+    
+    This searches ALL users (not just from transactions) where:
+    - subscription_expires - last_payment_date > 35 days
+    - subscription_fixed_v2 is not True
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all active subscribers
+        users = await db.users.find({
+            "last_payment_date": {"$exists": True, "$ne": None},
+            "subscription_fixed_v2": {"$ne": True}
+        }, {"_id": 0}).limit(1000).to_list(1000)
+        
+        unfixed = []
+        now = datetime.now(timezone.utc)
+        
+        for u in users:
+            payment = u.get("last_payment_date")
+            expiry = u.get("subscription_expires") or u.get("subscription_expiry")
+            
+            if not payment or not expiry:
+                continue
+            
+            # Parse dates
+            if isinstance(payment, str):
+                try:
+                    payment = datetime.fromisoformat(payment.replace('Z', '+00:00'))
+                except:
+                    continue
+            if isinstance(expiry, str):
+                try:
+                    expiry = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                except:
+                    continue
+            
+            if payment.tzinfo is None:
+                payment = payment.replace(tzinfo=timezone.utc)
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            
+            days = (expiry - payment).days
+            
+            if days > 35:  # More than 28 + buffer
+                unfixed.append({
+                    "uid": u.get("uid"),
+                    "name": u.get("name"),
+                    "email": u.get("email"),
+                    "last_payment_date": str(payment),
+                    "current_expiry": str(expiry),
+                    "current_days": days,
+                    "should_be_days": 28,
+                    "extra_days": days - 28
+                })
+        
+        return {
+            "success": True,
+            "total_checked": len(users),
+            "unfixed_count": len(unfixed),
+            "unfixed_users": unfixed,
+            "uids": [u["uid"] for u in unfixed]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIND-UNFIXED] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/batch-fix-users")
+async def batch_fix_users(request: Request):
+    """
+    Fix multiple users by UIDs.
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/batch-fix-users" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "uids": ["uid1", "uid2", ...], "dry_run": true}'
+    """
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        uids = data.get("uids", [])
+        dry_run = data.get("dry_run", True)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not uids:
+            raise HTTPException(status_code=400, detail="uids list required")
+        
+        results = []
+        fixed_count = 0
+        
+        for uid in uids:
+            user = await db.users.find_one({"uid": uid}, {"_id": 0})
+            if not user:
+                results.append({"uid": uid, "status": "NOT_FOUND"})
+                continue
+            
+            payment = user.get("last_payment_date")
+            expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+            
+            if not payment:
+                results.append({"uid": uid, "name": user.get("name"), "status": "NO_PAYMENT_DATE"})
+                continue
+            
+            # Get remaining days from transaction
+            last_txn = await db.transactions.find_one(
+                {"user_id": uid, "type": "subscription_payment"},
+                sort=[("timestamp", -1)]
+            )
+            remaining_days = 0
+            if last_txn:
+                remaining_days = min(last_txn.get("remaining_days_added", 0) or 0, 28)
+            
+            # Parse dates
+            if isinstance(payment, str):
+                payment = datetime.fromisoformat(payment.replace('Z', '+00:00'))
+            if isinstance(expiry, str):
+                expiry = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            
+            if payment.tzinfo is None:
+                payment = payment.replace(tzinfo=timezone.utc)
+            if expiry and expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            
+            current_days = (expiry - payment).days if expiry else 0
+            correct_total = 28 + remaining_days
+            correct_expiry = payment + timedelta(days=correct_total)
+            
+            if current_days <= correct_total + 7:
+                results.append({
+                    "uid": uid, 
+                    "name": user.get("name"), 
+                    "status": "ALREADY_OK",
+                    "current_days": current_days
+                })
+                continue
+            
+            if not dry_run:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_start": payment,
+                            "subscription_expires": correct_expiry,
+                            "subscription_expiry": correct_expiry.isoformat(),
+                            "vip_expiry": correct_expiry.isoformat(),
+                            "subscription_fixed": True,
+                            "subscription_fixed_v2": True,
+                            "fixed_at": datetime.now(timezone.utc),
+                            "original_wrong_days": current_days,
+                            "correct_total_days": correct_total,
+                            "legitimate_remaining_days": remaining_days,
+                            "fix_reason": f"Batch fix: 28 + {remaining_days} = {correct_total} days"
+                        }
+                    }
+                )
+                fixed_count += 1
+            
+            results.append({
+                "uid": uid,
+                "name": user.get("name"),
+                "old_days": current_days,
+                "remaining_days": remaining_days,
+                "new_total_days": correct_total,
+                "new_expiry": correct_expiry.isoformat(),
+                "status": "FIXED" if not dry_run else "WOULD_FIX"
+            })
+        
+        return {
+            "success": True,
+            "mode": "DRY_RUN" if dry_run else "LIVE",
+            "processed": len(uids),
+            "fixed_count": fixed_count if not dry_run else 0,
+            "results": results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[BATCH-FIX] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== FIX DOUBLE-ACTIVATED SUBSCRIPTIONS ====================
 
 @router.post("/admin/fix-double-activation")
