@@ -9,6 +9,9 @@ from typing import Optional
 import uuid
 import logging
 
+# Import WalletService for ledger-based PRC operations (Phase 4 Architecture)
+from app.services import WalletService
+
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Misc"])
 
@@ -575,7 +578,7 @@ async def adjust_profit_wallet(request: Request):
 
 @router.post("/apply-monthly-fees")
 async def apply_monthly_fees(request: Request):
-    """Apply monthly maintenance fees"""
+    """Apply monthly maintenance fees using WalletService (with ledger entries)"""
     data = await request.json()
     admin_id = data.get("admin_id")
     fee_amount = float(data.get("fee_amount", 0))
@@ -589,40 +592,41 @@ async def apply_monthly_fees(request: Request):
         {"_id": 0, "uid": 1}
     ).to_list(10000)
     
-    now = datetime.now(timezone.utc)
     fees_collected = 0
     users_charged = 0
+    failed_users = []
     
     for user in users:
-        await db.users.update_one(
-            {"uid": user["uid"]},
-            {"$inc": {"prc_balance": -fee_amount}}
+        # Use WalletService for ledger-tracked fee deduction
+        result = WalletService.debit(
+            user_id=user["uid"],
+            amount=fee_amount,
+            txn_type="monthly_fee",
+            description="Monthly maintenance fee",
+            reference=f"MONTHLY-FEE-{admin_id or 'system'}"
         )
         
-        await db.transactions.insert_one({
-            "transaction_id": f"MF{now.strftime('%Y%m%d%H%M%S')}{users_charged}",
-            "user_id": user["uid"],
-            "type": "monthly_fee",
-            "amount": -fee_amount,
-            "description": "Monthly maintenance fee",
-            "created_at": now.isoformat()
-        })
-        
-        fees_collected += fee_amount
-        users_charged += 1
+        if result.get("success"):
+            fees_collected += fee_amount
+            users_charged += 1
+        else:
+            failed_users.append(user["uid"])
+    
+    logging.info(f"[ADMIN] Monthly fees applied: {users_charged} users charged, {fees_collected} PRC collected. Failed: {len(failed_users)}")
     
     if log_admin_action:
         await log_admin_action(
             admin_uid=admin_id,
             action="monthly_fees_applied",
             entity_type="system",
-            details={"fee_amount": fee_amount, "users_charged": users_charged, "total_collected": fees_collected}
+            details={"fee_amount": fee_amount, "users_charged": users_charged, "total_collected": fees_collected, "failed_count": len(failed_users)}
         )
     
     return {
         "success": True,
         "users_charged": users_charged,
-        "total_collected": round(fees_collected, 2)
+        "total_collected": round(fees_collected, 2),
+        "failed_count": len(failed_users)
     }
 
 

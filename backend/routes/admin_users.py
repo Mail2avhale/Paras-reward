@@ -9,6 +9,9 @@ from typing import Optional, List
 import logging
 import uuid
 
+# Import WalletService for ledger-based PRC operations (Phase 4 Architecture)
+from app.services import WalletService
+
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Users"])
 
@@ -476,7 +479,7 @@ async def admin_reset_user_password(uid: str, request: Request):
 
 @router.post("/users/{uid}/adjust-balance")
 async def adjust_user_balance(uid: str, request: Request):
-    """Adjust user PRC balance"""
+    """Adjust user PRC balance using WalletService (with ledger entry)"""
     data = await request.json()
     admin_id = data.get("admin_id")
     adjustment = float(data.get("adjustment", 0))
@@ -489,27 +492,38 @@ async def adjust_user_balance(uid: str, request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    new_balance = user.get("prc_balance", 0) + adjustment
-    if new_balance < 0:
+    current_balance = user.get("prc_balance", 0)
+    
+    # Check if resulting balance would be negative (for debits)
+    if adjustment < 0 and current_balance + adjustment < 0:
         raise HTTPException(status_code=400, detail="Resulting balance cannot be negative")
     
-    now = datetime.now(timezone.utc)
+    # Use WalletService for ledger-tracked balance adjustment
+    if adjustment > 0:
+        result = WalletService.credit(
+            user_id=uid,
+            amount=adjustment,
+            txn_type="admin_credit",
+            description=reason,
+            reference=f"ADMIN-{admin_id or 'system'}"
+        )
+    else:
+        result = WalletService.debit(
+            user_id=uid,
+            amount=abs(adjustment),
+            txn_type="admin_debit",
+            description=reason,
+            reference=f"ADMIN-{admin_id or 'system'}"
+        )
     
-    await db.users.update_one(
-        {"uid": uid},
-        {"$set": {"prc_balance": new_balance, "updated_at": now.isoformat()}}
-    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400, 
+            detail=result.get("error", "Failed to adjust balance")
+        )
     
-    # Log transaction
-    await db.transactions.insert_one({
-        "transaction_id": f"ADJ{now.strftime('%Y%m%d%H%M%S')}",
-        "user_id": uid,
-        "type": "admin_credit" if adjustment > 0 else "admin_debit",
-        "amount": adjustment,
-        "description": reason,
-        "admin_id": admin_id,
-        "created_at": now.isoformat()
-    })
+    new_balance = result.get("balance_after", current_balance + adjustment)
+    logging.info(f"[ADMIN] Balance adjusted for {uid}: {adjustment} PRC. Ledger TXN: {result.get('txn_id')}")
     
     if log_admin_action:
         await log_admin_action(
@@ -517,10 +531,10 @@ async def adjust_user_balance(uid: str, request: Request):
             action="balance_adjusted",
             entity_type="user",
             entity_id=uid,
-            details={"adjustment": adjustment, "reason": reason, "new_balance": new_balance}
+            details={"adjustment": adjustment, "reason": reason, "new_balance": new_balance, "ledger_txn": result.get("txn_id")}
         )
     
-    return {"success": True, "new_balance": new_balance}
+    return {"success": True, "new_balance": new_balance, "ledger_txn_id": result.get("txn_id")}
 
 
 # ========== KYC MANAGEMENT ==========

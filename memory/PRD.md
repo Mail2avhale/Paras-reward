@@ -218,6 +218,8 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 - ✅ `mining.py` - PRC credits from mining
 - ✅ `chatbot_withdrawal.py` - PRC debits for withdrawals + refunds
 - ✅ `unified_redeem_v2.py` - ALL PRC deductions and refunds for BBPS services
+- ✅ `admin_users.py` - Admin balance adjustments (credit/debit)
+- ✅ `admin_misc.py` - Monthly maintenance fees
 
 **TaskQueue Features:**
 - 10-second worker interval
@@ -233,14 +235,15 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 
 **Files Modified:**
 - `/app/backend/routes/unified_redeem_v2.py` - WalletService integration for all PRC operations
+- `/app/backend/routes/admin_users.py` - Admin balance adjustment with ledger
+- `/app/backend/routes/admin_misc.py` - Monthly fees with ledger
 
 ---
 
 ## REMAINING TASKS
 
 ### P1 - Important (Architectural Refactor Continuation)
-- [ ] Integrate TaskQueue for BBPS retry logic (auto-retry failed transactions)
-- [ ] Admin panel balance adjustment endpoints → WalletService
+- [ ] TaskQueue integration for BBPS auto-retry logic
 - [ ] Backend `server.py` refactoring into smaller route files
 
 ### P2 - Future
