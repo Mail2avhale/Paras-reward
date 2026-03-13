@@ -15495,8 +15495,185 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
         return {"allowed": True, "reason": None, "usage": None}
 
 
+# ========== FIX DOUBLE SUBSCRIPTION BUG ==========
+
+@api_router.get("/admin/fix-double-subscriptions")
+async def fix_double_subscriptions_preview():
+    """
+    Preview users affected by double subscription bug.
+    Shows users whose subscription days don't match expected (28 days for monthly).
+    """
+    try:
+        import razorpay
+        
+        RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+        RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+        
+        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            raise HTTPException(status_code=500, detail="Razorpay not configured")
+        
+        razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Get recent payments (last 7 days)
+        from_timestamp = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp())
+        payments = await asyncio.to_thread(
+            razorpay_client.payment.all,
+            {"count": 100, "from": from_timestamp}
+        )
+        
+        captured = [p for p in payments.get("items", []) if p.get("status") == "captured"]
+        
+        affected_users = []
+        
+        for payment in captured:
+            notes = payment.get("notes", {})
+            user_id = notes.get("user_id")
+            plan_type = notes.get("plan_type", "monthly")
+            expected_days = PLAN_DURATIONS.get(plan_type, 28)
+            
+            if not user_id:
+                continue
+            
+            # Get user from DB
+            user = await db.users.find_one({"uid": user_id})
+            if not user:
+                continue
+            
+            # Calculate actual days
+            expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            payment_date = datetime.fromtimestamp(payment.get("created_at", 0), tz=timezone.utc)
+            
+            if expiry:
+                try:
+                    if isinstance(expiry, str):
+                        exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                    else:
+                        exp_date = expiry
+                    if exp_date.tzinfo is None:
+                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                    
+                    actual_days = (exp_date - payment_date).days
+                    
+                    # If actual days > expected + 3 (buffer), it's affected
+                    if actual_days > expected_days + 3:
+                        correct_expiry = payment_date + timedelta(days=expected_days)
+                        affected_users.append({
+                            "user_id": user_id,
+                            "name": user.get("name"),
+                            "email": user.get("email"),
+                            "payment_id": payment.get("id"),
+                            "payment_date": payment_date.isoformat(),
+                            "plan_type": plan_type,
+                            "expected_days": expected_days,
+                            "actual_days": actual_days,
+                            "extra_days": actual_days - expected_days,
+                            "current_expiry": exp_date.isoformat(),
+                            "correct_expiry": correct_expiry.isoformat()
+                        })
+                except Exception as e:
+                    logging.error(f"Error processing user {user_id}: {e}")
+        
+        return {
+            "success": True,
+            "affected_count": len(affected_users),
+            "affected_users": affected_users,
+            "message": f"Found {len(affected_users)} users with extra subscription days"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in fix_double_subscriptions_preview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/fix-double-subscriptions")
+async def fix_double_subscriptions_execute(request: Request):
+    """
+    Fix affected users by correcting their expiry dates.
+    Only fixes users who have more days than expected.
+    """
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id", "")
+        dry_run = data.get("dry_run", True)  # Default to dry run for safety
+        
+        # First get affected users
+        preview = await fix_double_subscriptions_preview()
+        affected = preview.get("affected_users", [])
+        
+        if not affected:
+            return {
+                "success": True,
+                "message": "No affected users found",
+                "fixed_count": 0
+            }
+        
+        fixed_users = []
+        
+        for user_data in affected:
+            user_id = user_data["user_id"]
+            correct_expiry = datetime.fromisoformat(user_data["correct_expiry"])
+            
+            if not dry_run:
+                # Update user expiry
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "subscription_expires": correct_expiry,
+                            "subscription_expiry": correct_expiry.isoformat(),
+                            "vip_expiry": correct_expiry.isoformat(),
+                            "double_subscription_fixed": True,
+                            "fixed_at": datetime.now(timezone.utc).isoformat(),
+                            "fixed_by": admin_id,
+                            "original_wrong_expiry": user_data["current_expiry"],
+                            "extra_days_removed": user_data["extra_days"]
+                        }
+                    }
+                )
+                
+                # Log the fix
+                await db.activity_logs.insert_one({
+                    "log_id": str(uuid.uuid4()),
+                    "action": "double_subscription_fix",
+                    "user_id": user_id,
+                    "user_email": user_data["email"],
+                    "original_expiry": user_data["current_expiry"],
+                    "corrected_expiry": correct_expiry.isoformat(),
+                    "extra_days_removed": user_data["extra_days"],
+                    "admin_id": admin_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+            
+            fixed_users.append({
+                "user_id": user_id,
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "original_expiry": user_data["current_expiry"],
+                "corrected_expiry": correct_expiry.isoformat(),
+                "days_removed": user_data["extra_days"]
+            })
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "fixed_count": len(fixed_users),
+            "fixed_users": fixed_users,
+            "message": f"{'Would fix' if dry_run else 'Fixed'} {len(fixed_users)} users"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in fix_double_subscriptions_execute: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ========== SECURITY ALERTS API ==========
+
 async def get_security_alerts(
     admin_uid: str,
     page: int = 1,
