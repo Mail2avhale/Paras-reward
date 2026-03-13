@@ -15572,28 +15572,63 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 # ========== GLOBAL REDEEM LIMIT ==========
 # Formula: 799 * 5 * 10 = 39950 + 20% Direct Referral Bonus
 
-BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC
+BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC per month
 REFERRAL_BONUS_PERCENTAGE = 20  # 20% of direct referral earnings added to limit
+CARRY_FORWARD_START_DATE = datetime(2026, 3, 1, tzinfo=timezone.utc)  # System start date for carry forward
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
-    Calculate total redeem limit for a user.
-    Formula: 39950 (base) + 20% of referral bonus from ACTIVE referrals only
+    Calculate total redeem limit for a user with CARRY FORWARD.
+    
+    Formula: 
+    - Monthly Limit = 39,950 PRC (per month)
+    - Months since joining (or system start) × Monthly Limit
+    - Plus 20% of referral bonus from ACTIVE referrals
+    - Unused limit carries forward to next month
+    
     Active referral = referred user has active subscription
     """
     try:
-        base_limit = BASE_REDEEM_LIMIT
+        monthly_base_limit = BASE_REDEEM_LIMIT
         
-        # Get user's referral code
+        # Get user's data
         user = await db.users.find_one({"uid": user_id})
         if not user:
             return {
-                "base_limit": base_limit,
+                "base_limit": monthly_base_limit,
+                "monthly_limit": monthly_base_limit,
+                "months_active": 1,
                 "active_referrals": 0,
                 "active_referral_bonus": 0,
                 "referral_bonus_addition": 0,
-                "total_limit": base_limit
+                "total_limit": monthly_base_limit,
+                "carry_forward_enabled": True
             }
+        
+        # Calculate months since user joined or system start date
+        user_created = user.get("created_at") or user.get("registered_at")
+        now = datetime.now(timezone.utc)
+        
+        if user_created:
+            if isinstance(user_created, str):
+                try:
+                    user_created = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
+                except:
+                    user_created = CARRY_FORWARD_START_DATE
+            if user_created.tzinfo is None:
+                user_created = user_created.replace(tzinfo=timezone.utc)
+        else:
+            user_created = CARRY_FORWARD_START_DATE
+        
+        # Use the later of user creation or system start date
+        start_date = max(user_created, CARRY_FORWARD_START_DATE)
+        
+        # Calculate months difference (at least 1 month)
+        months_diff = (now.year - start_date.year) * 12 + (now.month - start_date.month)
+        months_active = max(1, months_diff + 1)  # +1 to include current month
+        
+        # Calculate cumulative base limit (carry forward)
+        cumulative_base_limit = monthly_base_limit * months_active
         
         referral_code = user.get("referral_code", "")
         
@@ -15675,24 +15710,30 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         # Calculate 20% of active referral bonus
         referral_bonus_addition = (active_referral_bonus * REFERRAL_BONUS_PERCENTAGE) / 100
         
-        # Total limit
-        total_limit = base_limit + referral_bonus_addition
+        # Total limit with carry forward
+        total_limit = cumulative_base_limit + referral_bonus_addition
         
         return {
-            "base_limit": base_limit,
+            "base_limit": cumulative_base_limit,
+            "monthly_limit": monthly_base_limit,
+            "months_active": months_active,
             "active_referrals": active_referral_count,
             "active_referral_bonus": round(active_referral_bonus, 2),
             "referral_bonus_addition": round(referral_bonus_addition, 2),
-            "total_limit": round(total_limit, 2)
+            "total_limit": round(total_limit, 2),
+            "carry_forward_enabled": True
         }
     except Exception as e:
         logging.error(f"Error calculating redeem limit: {e}")
         return {
             "base_limit": BASE_REDEEM_LIMIT,
+            "monthly_limit": BASE_REDEEM_LIMIT,
+            "months_active": 1,
             "active_referrals": 0,
             "active_referral_bonus": 0,
             "referral_bonus_addition": 0,
-            "total_limit": BASE_REDEEM_LIMIT
+            "total_limit": BASE_REDEEM_LIMIT,
+            "carry_forward_enabled": True
         }
 
 
@@ -15817,7 +15858,7 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
 
 @api_router.get("/user/{user_id}/redeem-limit")
 async def get_user_redeem_limit(user_id: str):
-    """Get user's redeem limit information"""
+    """Get user's redeem limit information with carry forward"""
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
         total_redeemed = await get_user_total_redeemed(user_id)
@@ -15830,13 +15871,16 @@ async def get_user_redeem_limit(user_id: str):
             "user_id": user_id,
             "limit": {
                 "base_limit": limit_info["base_limit"],
+                "monthly_limit": limit_info.get("monthly_limit", BASE_REDEEM_LIMIT),
+                "months_active": limit_info.get("months_active", 1),
                 "active_referrals": limit_info.get("active_referrals", 0),
                 "active_referral_bonus": limit_info.get("active_referral_bonus", 0),
                 "referral_bonus_addition": limit_info["referral_bonus_addition"],
                 "total_limit": limit_info["total_limit"],
                 "total_redeemed": total_redeemed,
-                "remaining_limit": round(remaining, 2),
-                "usage_percentage": round(usage_percentage, 2)
+                "remaining_limit": round(max(0, remaining), 2),
+                "usage_percentage": round(usage_percentage, 2),
+                "carry_forward_enabled": limit_info.get("carry_forward_enabled", True)
             }
         }
     except Exception as e:
