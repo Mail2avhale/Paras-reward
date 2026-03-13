@@ -15497,6 +15497,348 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 
 # ========== FIX DOUBLE SUBSCRIPTION BUG ==========
 
+# ========== PRC STATEMENT API ==========
+
+@api_router.get("/user/prc-statement/{user_id}")
+async def get_prc_statement(
+    user_id: str,
+    start_date: str = None,
+    end_date: str = None,
+    filter_type: str = "all",  # all, redeemed, refunds, credits
+    service_type: str = "all"  # all, bill_payment, bank_redeem, dmt, mining, referral, subscription
+):
+    """
+    Get comprehensive PRC statement for a user including all credits, debits, refunds.
+    """
+    try:
+        # Build date filter
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date + "T23:59:59"
+        
+        # Base query
+        base_query = {"user_id": user_id}
+        if date_filter:
+            base_query["$or"] = [
+                {"created_at": date_filter},
+                {"timestamp": date_filter},
+                {"date": date_filter}
+            ]
+        
+        all_transactions = []
+        
+        # 1. Get transactions from transactions collection
+        tx_query = {"user_id": user_id}
+        if date_filter:
+            tx_query["timestamp"] = date_filter
+        
+        transactions = await db.transactions.find(tx_query).sort("timestamp", -1).limit(500).to_list(500)
+        for tx in transactions:
+            tx_type = tx.get("type", "")
+            amount = tx.get("amount", 0) or tx.get("prc_amount", 0) or 0
+            
+            # Determine if credit or debit
+            is_credit = tx_type in ["mining", "referral_bonus", "signup_bonus", "daily_reward", "refund", "prc_credit", "reward"]
+            
+            all_transactions.append({
+                "id": str(tx.get("_id", "")),
+                "type": "credit" if is_credit else "debit",
+                "category": tx_type,
+                "amount": abs(float(amount)),
+                "description": tx.get("description", "") or tx.get("reason", "") or tx_type.replace("_", " ").title(),
+                "service": tx.get("service_type", "") or tx_type,
+                "status": tx.get("status", "success"),
+                "date": tx.get("timestamp", "") or tx.get("created_at", ""),
+                "reference": tx.get("reference_id", "") or tx.get("txn_id", "")
+            })
+        
+        # 2. Get bill payments
+        if service_type in ["all", "bill_payment"]:
+            bill_query = {"user_id": user_id}
+            if date_filter:
+                bill_query["created_at"] = date_filter
+            
+            bill_payments = await db.bill_payment_requests.find(bill_query).sort("created_at", -1).limit(200).to_list(200)
+            for bp in bill_payments:
+                prc_amount = bp.get("prc_amount", 0) or bp.get("amount", 0) or 0
+                status = bp.get("status", "pending")
+                
+                # Debit transaction
+                all_transactions.append({
+                    "id": str(bp.get("_id", "")),
+                    "type": "debit",
+                    "category": "bill_payment",
+                    "amount": abs(float(prc_amount)),
+                    "description": f"Bill - {bp.get('operator', '')} ({bp.get('customer_id', '')})",
+                    "service": bp.get("service_type", "bill_payment"),
+                    "status": status,
+                    "date": bp.get("created_at", ""),
+                    "reference": bp.get("eko_tid", "") or bp.get("request_id", "")
+                })
+                
+                # If refunded, add refund transaction
+                if status == "refunded" and bp.get("refund_amount"):
+                    all_transactions.append({
+                        "id": f"{bp.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(bp.get("refund_amount", prc_amount))),
+                        "description": f"Refund - Bill Payment",
+                        "service": "refund",
+                        "status": "success",
+                        "date": bp.get("refunded_at", bp.get("updated_at", "")),
+                        "reference": bp.get("request_id", "")
+                    })
+        
+        # 3. Get bank withdrawals
+        if service_type in ["all", "bank_redeem"]:
+            bank_query = {"user_id": user_id}
+            if date_filter:
+                bank_query["created_at"] = date_filter
+            
+            bank_withdrawals = await db.bank_withdrawal_requests.find(bank_query).sort("created_at", -1).limit(200).to_list(200)
+            for bw in bank_withdrawals:
+                prc_amount = bw.get("prc_amount", 0) or bw.get("amount", 0) or 0
+                status = bw.get("status", "pending")
+                
+                all_transactions.append({
+                    "id": str(bw.get("_id", "")),
+                    "type": "debit",
+                    "category": "bank_redeem",
+                    "amount": abs(float(prc_amount)),
+                    "description": f"Bank Transfer - {bw.get('bank_name', '')} ****{str(bw.get('account_number', ''))[-4:]}",
+                    "service": "bank_redeem",
+                    "status": status,
+                    "date": bw.get("created_at", ""),
+                    "reference": bw.get("eko_tid", "") or bw.get("request_id", "")
+                })
+                
+                if status == "refunded" and bw.get("refund_amount"):
+                    all_transactions.append({
+                        "id": f"{bw.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(bw.get("refund_amount", prc_amount))),
+                        "description": f"Refund - Bank Transfer",
+                        "service": "refund",
+                        "status": "success",
+                        "date": bw.get("refunded_at", bw.get("updated_at", "")),
+                        "reference": bw.get("request_id", "")
+                    })
+        
+        # 4. Get DMT transactions
+        if service_type in ["all", "dmt"]:
+            dmt_query = {"user_id": user_id}
+            if date_filter:
+                dmt_query["created_at"] = date_filter
+            
+            dmt_txns = await db.dmt_transactions.find(dmt_query).sort("created_at", -1).limit(200).to_list(200)
+            for dmt in dmt_txns:
+                amount = dmt.get("prc_amount", 0) or dmt.get("amount", 0) or 0
+                status = dmt.get("status", "pending")
+                
+                all_transactions.append({
+                    "id": str(dmt.get("_id", "")),
+                    "type": "debit",
+                    "category": "dmt",
+                    "amount": abs(float(amount)),
+                    "description": f"DMT - {dmt.get('recipient_name', '')} ({dmt.get('customer_mobile', '')})",
+                    "service": "dmt",
+                    "status": status,
+                    "date": dmt.get("created_at", ""),
+                    "reference": dmt.get("eko_tid", "") or dmt.get("txn_id", "")
+                })
+                
+                if status == "refunded":
+                    all_transactions.append({
+                        "id": f"{dmt.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(amount)),
+                        "description": f"Refund - DMT",
+                        "service": "refund",
+                        "status": "success",
+                        "date": dmt.get("refunded_at", ""),
+                        "reference": dmt.get("txn_id", "")
+                    })
+        
+        # 5. Get VIP payments (subscription credits used)
+        if service_type in ["all", "subscription"]:
+            vip_query = {"user_id": user_id}
+            if date_filter:
+                vip_query["created_at"] = date_filter
+            
+            vip_payments = await db.vip_payments.find(vip_query).sort("created_at", -1).limit(100).to_list(100)
+            for vip in vip_payments:
+                all_transactions.append({
+                    "id": str(vip.get("_id", "")),
+                    "type": "credit",
+                    "category": "subscription",
+                    "amount": float(vip.get("amount", 0)),
+                    "description": f"Subscription - {vip.get('subscription_plan', '').title()} Plan",
+                    "service": "subscription",
+                    "status": vip.get("status", "approved"),
+                    "date": vip.get("created_at", ""),
+                    "reference": vip.get("payment_id", "")
+                })
+        
+        # 6. Get mining rewards from prc_ledger if exists
+        if service_type in ["all", "mining"]:
+            mining_query = {"user_id": user_id, "type": {"$in": ["mining", "daily_mining", "hourly_mining"]}}
+            if date_filter:
+                mining_query["timestamp"] = date_filter
+            
+            mining_entries = await db.prc_ledger.find(mining_query).sort("timestamp", -1).limit(200).to_list(200)
+            for entry in mining_entries:
+                all_transactions.append({
+                    "id": str(entry.get("_id", "")),
+                    "type": "credit",
+                    "category": "mining",
+                    "amount": abs(float(entry.get("amount", 0) or entry.get("credit", 0))),
+                    "description": entry.get("description", "Mining Reward"),
+                    "service": "mining",
+                    "status": "success",
+                    "date": entry.get("timestamp", ""),
+                    "reference": entry.get("entry_id", "")
+                })
+        
+        # 7. Get referral bonuses
+        if service_type in ["all", "referral"]:
+            ref_query = {"user_id": user_id, "type": {"$in": ["referral", "referral_bonus", "referral_commission"]}}
+            if date_filter:
+                ref_query["timestamp"] = date_filter
+            
+            ref_entries = await db.prc_ledger.find(ref_query).sort("timestamp", -1).limit(100).to_list(100)
+            for entry in ref_entries:
+                all_transactions.append({
+                    "id": str(entry.get("_id", "")),
+                    "type": "credit",
+                    "category": "referral",
+                    "amount": abs(float(entry.get("amount", 0) or entry.get("credit", 0))),
+                    "description": entry.get("description", "Referral Bonus"),
+                    "service": "referral",
+                    "status": "success",
+                    "date": entry.get("timestamp", ""),
+                    "reference": entry.get("entry_id", "")
+                })
+        
+        # Filter by type
+        if filter_type == "redeemed":
+            all_transactions = [t for t in all_transactions if t["type"] == "debit"]
+        elif filter_type == "refunds":
+            all_transactions = [t for t in all_transactions if t["category"] == "refund"]
+        elif filter_type == "credits":
+            all_transactions = [t for t in all_transactions if t["type"] == "credit"]
+        
+        # Filter by service
+        if service_type != "all":
+            all_transactions = [t for t in all_transactions if t["service"] == service_type or t["category"] == service_type]
+        
+        # Sort by date descending
+        all_transactions.sort(key=lambda x: x.get("date", ""), reverse=True)
+        
+        # Remove duplicates based on ID
+        seen_ids = set()
+        unique_transactions = []
+        for tx in all_transactions:
+            if tx["id"] not in seen_ids:
+                seen_ids.add(tx["id"])
+                unique_transactions.append(tx)
+        
+        # Calculate totals
+        total_credits = sum(t["amount"] for t in unique_transactions if t["type"] == "credit")
+        total_debits = sum(t["amount"] for t in unique_transactions if t["type"] == "debit")
+        total_refunds = sum(t["amount"] for t in unique_transactions if t["category"] == "refund")
+        
+        return {
+            "success": True,
+            "transactions": unique_transactions[:500],
+            "summary": {
+                "total_credits": round(total_credits, 2),
+                "total_debits": round(total_debits, 2),
+                "total_refunds": round(total_refunds, 2),
+                "net_balance": round(total_credits - total_debits, 2),
+                "transaction_count": len(unique_transactions)
+            },
+            "filters": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "filter_type": filter_type,
+                "service_type": service_type
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting PRC statement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/user/prc-statement/{user_id}/download")
+async def download_prc_statement(
+    user_id: str,
+    start_date: str = None,
+    end_date: str = None,
+    filter_type: str = "all",
+    service_type: str = "all"
+):
+    """Download PRC statement as CSV"""
+    try:
+        # Get statement data
+        statement = await get_prc_statement(user_id, start_date, end_date, filter_type, service_type)
+        
+        if not statement.get("success"):
+            raise HTTPException(status_code=500, detail="Failed to generate statement")
+        
+        transactions = statement.get("transactions", [])
+        
+        # Generate CSV
+        import io
+        import csv
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Header
+        writer.writerow(["Date", "Type", "Category", "Description", "Amount (PRC)", "Status", "Reference"])
+        
+        for tx in transactions:
+            writer.writerow([
+                tx.get("date", "")[:19],
+                tx.get("type", "").upper(),
+                tx.get("category", ""),
+                tx.get("description", ""),
+                f"{'+' if tx['type'] == 'credit' else '-'}{tx.get('amount', 0)}",
+                tx.get("status", ""),
+                tx.get("reference", "")
+            ])
+        
+        # Summary
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Total Credits", statement["summary"]["total_credits"]])
+        writer.writerow(["Total Debits", statement["summary"]["total_debits"]])
+        writer.writerow(["Total Refunds", statement["summary"]["total_refunds"]])
+        writer.writerow(["Net Balance", statement["summary"]["net_balance"]])
+        
+        csv_content = output.getvalue()
+        
+        from fastapi.responses import Response
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=prc_statement_{start_date or 'all'}_{end_date or 'all'}.csv"
+            }
+        )
+        
+    except Exception as e:
+        logging.error(f"Error downloading PRC statement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @api_router.get("/admin/fix-double-subscriptions")
 async def fix_double_subscriptions_preview():
     """

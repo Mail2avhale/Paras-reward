@@ -39,15 +39,9 @@ const PRCStatement = ({ user }) => {
       const params = new URLSearchParams({
         start_date: startDate,
         end_date: endDate,
-        page: page.toString(),
-        limit: '20'
+        filter_type: filterType,
+        service_type: categoryFilter
       });
-      if (filterType !== 'all') {
-        params.append('transaction_type', filterType);
-      }
-      if (categoryFilter !== 'all') {
-        params.append('category', categoryFilter);
-      }
       
       const response = await fetch(
         `${API_URL}/api/user/prc-statement/${user.uid}?${params}`,
@@ -59,13 +53,28 @@ const PRCStatement = ({ user }) => {
       if (!response.ok) throw new Error('Failed to fetch statement');
       
       const data = await response.json();
-      setStatement(data);
+      
+      // Transform data for UI
+      setStatement({
+        transactions: data.transactions || [],
+        totals: {
+          total_redeemed: data.summary?.total_debits || 0,
+          total_refunded: data.summary?.total_refunds || 0,
+          total_credits: data.summary?.total_credits || 0,
+          net_prc: data.summary?.net_balance || 0
+        },
+        pagination: {
+          total: data.summary?.transaction_count || 0,
+          page: 1,
+          pages: 1
+        }
+      });
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, token, startDate, endDate, page, filterType, categoryFilter]);
+  }, [user?.uid, token, startDate, endDate, filterType, categoryFilter]);
 
   useEffect(() => {
     fetchStatement();
@@ -76,7 +85,8 @@ const PRCStatement = ({ user }) => {
       const params = new URLSearchParams({
         start_date: startDate,
         end_date: endDate,
-        format: 'csv'
+        filter_type: filterType,
+        service_type: categoryFilter
       });
       
       const response = await fetch(
@@ -106,10 +116,14 @@ const PRCStatement = ({ user }) => {
     switch (category) {
       case 'bill_payment': return <Receipt className="w-4 h-4" />;
       case 'gift_voucher': return <Gift className="w-4 h-4" />;
-      case 'bank_transfer': return <Building2 className="w-4 h-4" />;
+      case 'bank_redeem': return <Building2 className="w-4 h-4" />;
       case 'dmt': return <Send className="w-4 h-4" />;
-      case 'shop': return <ShoppingBag className="w-4 h-4" />;
-      default: return <RefreshCw className="w-4 h-4" />;
+      case 'mining': return <Gift className="w-4 h-4" />;
+      case 'referral': return <Gift className="w-4 h-4" />;
+      case 'subscription': return <Receipt className="w-4 h-4" />;
+      case 'refund': return <RefreshCw className="w-4 h-4" />;
+      case 'subscription_payment': return <Receipt className="w-4 h-4" />;
+      default: return <Receipt className="w-4 h-4" />;
     }
   };
 
@@ -117,10 +131,13 @@ const PRCStatement = ({ user }) => {
     switch (category) {
       case 'bill_payment': return 'bg-blue-500/20 text-blue-400';
       case 'gift_voucher': return 'bg-purple-500/20 text-purple-400';
-      case 'bank_transfer': return 'bg-green-500/20 text-green-400';
+      case 'bank_redeem': return 'bg-green-500/20 text-green-400';
       case 'dmt': return 'bg-cyan-500/20 text-cyan-400';
-      case 'shop': return 'bg-orange-500/20 text-orange-400';
+      case 'mining': return 'bg-amber-500/20 text-amber-400';
+      case 'referral': return 'bg-pink-500/20 text-pink-400';
+      case 'subscription': return 'bg-violet-500/20 text-violet-400';
       case 'refund': return 'bg-yellow-500/20 text-yellow-400';
+      case 'subscription_payment': return 'bg-violet-500/20 text-violet-400';
       default: return 'bg-gray-500/20 text-gray-400';
     }
   };
@@ -192,7 +209,7 @@ const PRCStatement = ({ user }) => {
           </div>
           
           <div className="flex gap-2">
-            {['all', 'redeem', 'refund'].map((type) => (
+            {['all', 'redeemed', 'refunds', 'credits'].map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
@@ -202,7 +219,7 @@ const PRCStatement = ({ user }) => {
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                {type === 'all' ? 'All' : type === 'redeem' ? 'Redeemed' : 'Refunds'}
+                {type === 'all' ? 'All' : type === 'redeemed' ? 'Debits' : type === 'refunds' ? 'Refunds' : 'Credits'}
               </button>
             ))}
           </div>
@@ -218,23 +235,24 @@ const PRCStatement = ({ user }) => {
               <option value="all">All Services</option>
               <option value="bill_payment">BBPS (Bill Payments)</option>
               <option value="dmt">Money Transfer (DMT)</option>
-              <option value="gift_voucher">Gift Vouchers</option>
-              <option value="bank_transfer">Bank Withdrawals</option>
-              <option value="shop">Shop Orders</option>
+              <option value="bank_redeem">Bank Withdrawals</option>
+              <option value="mining">Mining Rewards</option>
+              <option value="referral">Referral Bonus</option>
+              <option value="subscription">Subscription</option>
             </select>
           </div>
         </div>
 
         {/* Summary Cards */}
-        {statement?.summary && (
+        {statement?.totals && (
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-xl p-4 border border-red-800/30">
               <div className="flex items-center gap-2 text-red-400 mb-1">
                 <ArrowUpRight className="w-4 h-4" />
-                <span className="text-xs">Redeemed</span>
+                <span className="text-xs">Total Debits</span>
               </div>
               <p className="text-xl font-bold text-red-300">
-                {statement.summary.total_redeemed_prc.toLocaleString('en-IN')}
+                {statement.totals.total_redeemed?.toLocaleString('en-IN') || 0}
               </p>
               <p className="text-xs text-gray-400">PRC</p>
             </div>
@@ -242,29 +260,34 @@ const PRCStatement = ({ user }) => {
             <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-800/30">
               <div className="flex items-center gap-2 text-green-400 mb-1">
                 <ArrowDownLeft className="w-4 h-4" />
-                <span className="text-xs">Refunded</span>
+                <span className="text-xs">Total Credits</span>
               </div>
               <p className="text-xl font-bold text-green-300">
-                {statement.summary.total_refunded_prc.toLocaleString('en-IN')}
+                {statement.totals.total_credits?.toLocaleString('en-IN') || 0}
               </p>
               <p className="text-xs text-gray-400">PRC</p>
             </div>
             
-            <div className="col-span-2 bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 rounded-xl p-4 border border-emerald-800/30">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-gray-400">Net Redeemed</p>
-                  <p className="text-2xl font-bold text-emerald-300">
-                    {statement.summary.net_redeemed_prc.toLocaleString('en-IN')} PRC
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400">INR Value</p>
-                  <p className="text-lg font-semibold text-white">
-                    ₹{statement.summary.total_inr_value.toLocaleString('en-IN')}
-                  </p>
-                </div>
+            <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/20 rounded-xl p-4 border border-amber-800/30">
+              <div className="flex items-center gap-2 text-amber-400 mb-1">
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-xs">Refunded</span>
               </div>
+              <p className="text-xl font-bold text-amber-300">
+                {statement.totals.total_refunded?.toLocaleString('en-IN') || 0}
+              </p>
+              <p className="text-xs text-gray-400">PRC</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 rounded-xl p-4 border border-emerald-800/30">
+              <div className="flex items-center gap-2 text-emerald-400 mb-1">
+                <Receipt className="w-4 h-4" />
+                <span className="text-xs">Net Balance</span>
+              </div>
+              <p className="text-xl font-bold text-emerald-300">
+                {statement.totals.net_prc?.toLocaleString('en-IN') || 0}
+              </p>
+              <p className="text-xs text-gray-400">PRC</p>
             </div>
           </div>
         )}
@@ -295,13 +318,13 @@ const PRCStatement = ({ user }) => {
                 Retry
               </button>
             </div>
-          ) : statement?.entries?.length === 0 ? (
+          ) : statement?.transactions?.length === 0 ? (
             <div className="p-8 text-center text-gray-400">
               No transactions found for this period
             </div>
           ) : (
             <div className="divide-y divide-gray-700/50">
-              {statement?.entries?.map((entry, idx) => (
+              {statement?.transactions?.map((entry, idx) => (
                 <div key={entry.id || idx} className="p-3 hover:bg-gray-700/30 transition-colors">
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-lg ${getCategoryColor(entry.category)}`}>
@@ -309,12 +332,20 @@ const PRCStatement = ({ user }) => {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{entry.narration}</p>
+                      <p className="text-sm font-medium truncate">{entry.description}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-gray-400">{formatDate(entry.date)}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          entry.status === 'success' ? 'bg-green-500/20 text-green-400' :
+                          entry.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                          entry.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {entry.status}
+                        </span>
                         {entry.reference && (
-                          <span className="text-xs text-gray-500 truncate max-w-[120px]">
-                            Ref: {entry.reference}
+                          <span className="text-xs text-gray-500 truncate max-w-[100px]">
+                            {entry.reference}
                           </span>
                         )}
                       </div>
@@ -322,13 +353,11 @@ const PRCStatement = ({ user }) => {
                     
                     <div className="text-right">
                       <p className={`text-sm font-bold ${
-                        entry.type === 'refund' ? 'text-green-400' : 'text-red-400'
+                        entry.type === 'credit' ? 'text-green-400' : 'text-red-400'
                       }`}>
-                        {entry.type === 'refund' ? '+' : ''}{entry.prc_amount.toLocaleString('en-IN')} PRC
+                        {entry.type === 'credit' ? '+' : '-'}{entry.amount?.toLocaleString('en-IN')} PRC
                       </p>
-                      {entry.inr_value > 0 && (
-                        <p className="text-xs text-gray-400">₹{entry.inr_value}</p>
-                      )}
+                      <p className="text-xs text-gray-500 capitalize">{entry.category}</p>
                     </div>
                   </div>
                 </div>
