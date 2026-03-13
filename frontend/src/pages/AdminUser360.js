@@ -3100,10 +3100,12 @@ const AdminUser360 = ({ user: adminUser }) => {
                               if (!confirm(`Delete subscription record ${deleteId}?`)) return;
                               try {
                                 await axios.delete(`${API}/admin/user/${userData.user.uid}/subscription/${deleteId}`);
-                                toast.success('Subscription record deleted');
+                                toast.success('Subscription plan deleted successfully');
                                 fetchUserData(userData.user.uid);
                               } catch (error) {
-                                toast.error(error.response?.data?.detail || 'Failed to delete');
+                                const errorMsg = error.response?.data?.detail || 'Failed to delete plan';
+                                toast.error(errorMsg);
+                                console.error('Delete plan error:', error.response?.data);
                               }
                             }}
                             className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"

@@ -17403,27 +17403,43 @@ async def get_user_360_view(query: str):
         {"_id": 0, "request_id": 1, "denomination": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
     ).sort("created_at", -1).limit(20).to_list(20)
     
-    # Subscriptions
-    subscriptions = await db.subscriptions.find(
+    # Subscriptions - Include _id for deletion capability
+    subscriptions_raw = await db.subscriptions.find(
         {"user_id": uid},
-        {"_id": 0, "payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+        {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
     ).sort("submitted_at", -1).limit(20).to_list(20)
     
+    # Convert _id to string for JSON serialization
+    subscriptions = []
+    for sub in subscriptions_raw:
+        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+        subscriptions.append(sub)
+    
     # Also check vip_subscriptions collection
-    vip_subscriptions = await db.vip_subscriptions.find(
+    vip_subscriptions_raw = await db.vip_subscriptions.find(
         {"user_id": uid},
-        {"_id": 0, "payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+        {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
     ).sort("submitted_at", -1).limit(20).to_list(20)
+    
+    vip_subscriptions = []
+    for sub in vip_subscriptions_raw:
+        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+        vip_subscriptions.append(sub)
     
     # Merge subscription lists
     all_subscriptions = subscriptions + vip_subscriptions
     all_subscriptions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
     
-    # Get VIP payments history
-    vip_payments = await db.vip_payments.find(
+    # Get VIP payments history - Include _id for deletion capability
+    vip_payments_raw = await db.vip_payments.find(
         {"uid": uid},
-        {"_id": 0, "payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
+        {"payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
     ).sort("created_at", -1).limit(20).to_list(20)
+    
+    vip_payments = []
+    for payment in vip_payments_raw:
+        payment["_id"] = str(payment["_id"]) if "_id" in payment else None
+        vip_payments.append(payment)
     
     # Get Razorpay orders
     razorpay_orders = await db.razorpay_orders.find(

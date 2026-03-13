@@ -23,6 +23,28 @@ Production application (www.parasreward.com) was experiencing severe performance
 
 ## COMPLETED FIXES
 
+### 🎯 Session Updates (March 13, 2026)
+
+**1. DMT V1 Code Cleanup:**
+- Removed all V3 API code (V3 not activated for account)
+- Updated transfer URL to `/v1/customers/mobile_number:{mobile}/transfers`
+- Added proper error handling for 204 responses
+- Transfer blocked: Eko DMT Fund Transfer service not activated
+
+**2. Admin User360 Delete Plan Fix:**
+- **Issue:** "Failed to delete plan" error when deleting subscription
+- **Root Cause:** `_id` field was excluded from API response, but frontend needed it for deletion
+- **Fix:** Modified `/api/admin/user-360` endpoint to include `_id` as string in subscriptions, vip_subscriptions, and vip_payments responses
+- **Files Modified:** `/app/backend/server.py` (lines 17407-17426)
+
+**3. DMTPage.js Improvements:**
+- Added IFSC auto-validation with visual feedback (green/red border)
+- Bank name auto-fills when IFSC is validated
+- Better error messages and loading states
+- Reset state properly on flow reset
+
+---
+
 ### 🎯 DMT Transfer Production Fix (March 12, 2026)
 **Critical bugs fixed in DMT (Domestic Money Transfer) flow:**
 

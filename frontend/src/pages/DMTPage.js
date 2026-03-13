@@ -68,8 +68,39 @@ const DMTPage = ({ user }) => {
   // Transaction history
   const [transactions, setTransactions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [ifscValidating, setIfscValidating] = useState(false);
+  const [ifscValid, setIfscValid] = useState(null);
   
   const steps = ['Customer', 'Verify', 'Recipient', 'Transfer'];
+
+  // Validate IFSC and fetch bank details
+  const validateIFSC = async (ifsc) => {
+    if (!ifsc || ifsc.length !== 11) {
+      setIfscValid(null);
+      setNewRecipient(prev => ({ ...prev, bank_name: '' }));
+      return;
+    }
+    
+    setIfscValidating(true);
+    try {
+      const res = await axios.get(`${API}/eko/dmt/ifsc/${ifsc}`);
+      if (res.data.valid) {
+        setIfscValid(true);
+        setNewRecipient(prev => ({ 
+          ...prev, 
+          bank_name: res.data.bank_name || res.data.bank || ''
+        }));
+      } else {
+        setIfscValid(false);
+        toast.error('Invalid IFSC code');
+      }
+    } catch (error) {
+      setIfscValid(false);
+      console.error('IFSC validation failed:', error);
+    } finally {
+      setIfscValidating(false);
+    }
+  };
 
   // Fetch wallet info
   const fetchWalletInfo = useCallback(async () => {
@@ -316,6 +347,8 @@ const DMTPage = ({ user }) => {
     setAmount('');
     setTransferResult(null);
     setShowAddRecipient(false);
+    setIfscValid(null);
+    setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', bank_name: '' });
   };
 
   return (
@@ -557,32 +590,59 @@ const DMTPage = ({ user }) => {
                         className="bg-gray-900 border-gray-700 text-white"
                         data-testid="account-number-input"
                       />
+                      <div className="relative">
+                        <Input
+                          placeholder="IFSC Code (e.g., SBIN0001234)"
+                          value={newRecipient.ifsc}
+                          onChange={(e) => {
+                            const ifsc = e.target.value.toUpperCase().slice(0, 11);
+                            setNewRecipient({...newRecipient, ifsc});
+                            if (ifsc.length === 11) {
+                              validateIFSC(ifsc);
+                            } else {
+                              setIfscValid(null);
+                            }
+                          }}
+                          className={`bg-gray-900 border-gray-700 text-white pr-10 ${
+                            ifscValid === true ? 'border-green-500' : 
+                            ifscValid === false ? 'border-red-500' : ''
+                          }`}
+                          data-testid="ifsc-input"
+                        />
+                        {ifscValidating && (
+                          <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                        )}
+                        {!ifscValidating && ifscValid === true && (
+                          <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-400" />
+                        )}
+                        {!ifscValidating && ifscValid === false && (
+                          <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />
+                        )}
+                      </div>
                       <Input
-                        placeholder="IFSC Code"
-                        value={newRecipient.ifsc}
-                        onChange={(e) => setNewRecipient({...newRecipient, ifsc: e.target.value.toUpperCase()})}
-                        className="bg-gray-900 border-gray-700 text-white"
-                        data-testid="ifsc-input"
-                      />
-                      <Input
-                        placeholder="Bank Name (optional)"
+                        placeholder="Bank Name (auto-filled from IFSC)"
                         value={newRecipient.bank_name}
                         onChange={(e) => setNewRecipient({...newRecipient, bank_name: e.target.value})}
                         className="bg-gray-900 border-gray-700 text-white"
                         data-testid="bank-name-input"
+                        readOnly={ifscValid === true}
                       />
                       <div className="flex gap-2">
                         <Button
                           onClick={handleAddRecipient}
-                          disabled={loading}
+                          disabled={loading || ifscValidating || (newRecipient.ifsc.length === 11 && ifscValid === false)}
                           className="flex-1 bg-orange-500 hover:bg-orange-600"
                           data-testid="save-recipient-btn"
                         >
-                          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Save'}
+                          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Save Recipient'}
                         </Button>
                         <Button
                           variant="ghost"
-                          onClick={() => setShowAddRecipient(false)}
+                          onClick={() => {
+                            setShowAddRecipient(false);
+                            setIfscValid(null);
+                            setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', bank_name: '' });
+                          }}
                           className="text-gray-400"
                         >
                           Cancel
