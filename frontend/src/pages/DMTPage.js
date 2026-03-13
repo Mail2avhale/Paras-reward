@@ -663,7 +663,7 @@ const DMTPage = ({ user }) => {
           </button>
         </div>
 
-        {/* Premium Wallet Card */}
+        {/* Premium Wallet Card - Global Redeem Limit */}
         {walletInfo && (
           <div className="relative mb-6 group" data-testid="wallet-info-card">
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
@@ -673,9 +673,12 @@ const DMTPage = ({ user }) => {
                   <Wallet className="w-6 h-6 text-violet-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Available Balance</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Global Redeem Limit</p>
                   <p className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-                    {walletInfo.prc_balance?.toLocaleString()} <span className="text-lg">PRC</span>
+                    {(walletInfo.redeem_limit?.remaining_limit || 0).toLocaleString()} <span className="text-lg">PRC</span>
+                  </p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    ≈ ₹{((walletInfo.redeem_limit?.remaining_limit || 0) / 10).toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
                   </p>
                 </div>
               </div>
