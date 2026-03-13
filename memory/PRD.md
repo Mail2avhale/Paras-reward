@@ -37,19 +37,29 @@ Production application (www.parasreward.com) was experiencing severe performance
 | Send OTP | `POST /api/eko/levin-dmt/transfer/send-otp` | ✅ Working |
 | Transfer | `POST /api/eko/levin-dmt/transfer` | ✅ Working |
 
-**Test Results:**
-- Sender: Suvarna Santosh Avhale (9421331342)
-- Available Limit: ₹21,680
-- 3 Recipients found (DBS Bank, Bank of Baroda, SBI)
-- OTP sent successfully
-- Transfer executed (blocked only by "Insufficient balance" - Eko wallet needs recharge)
+**NEW: Admin DMT Controls (March 13, 2026)**
+| Feature | API | Status |
+|---------|-----|--------|
+| DMT Service Toggle | `POST /api/admin/service-toggles/dmt` | ✅ Working |
+| Global DMT Limits | `GET/PUT /api/admin/dmt-limits` | ✅ Working |
+| User DMT Usage | `GET /api/admin/user/{id}/dmt-usage` | ✅ Working |
+
+**Default Limits:**
+- Daily: ₹25,000 per user
+- Weekly: ₹1,00,000 per user  
+- Monthly: ₹2,00,000 per user
+- Per Transaction: ₹25,000
+- Minimum Amount: ₹100
+
+**Admin UI:** Service Toggles page (`/admin/service-toggles`) मध्ये DMT toggle आणि limits section added.
+
+**Test Results:** 51 tests passed (25 backend + 26 frontend)
 
 **Files Modified:**
-- `/app/backend/routes/dmt_levin_service.py` - Fixed all API endpoints:
-  - Recipients: `/customer/payment/dmt-levin/sender/{mobile}/recipients`
-  - OTP: `/customer/payment/dmt-levin/otp`
-  - Transfer: `/customer/payment/dmt-levin`
-- `/app/memory/EKO_LEVIN_DMT_POSTMAN_GUIDE.md` - Updated documentation
+- `/app/backend/routes/dmt_levin_service.py` - Fixed all API endpoints + limit check
+- `/app/backend/server.py` - Added DMT limits APIs
+- `/app/frontend/src/pages/AdminServiceToggles.js` - Added DMT limits UI
+- `/app/frontend/src/pages/DMTPage.js` - Added user_id for tracking
 
 ---
 
