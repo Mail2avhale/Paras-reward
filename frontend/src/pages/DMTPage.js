@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
   Banknote, Search, UserPlus, CreditCard, Send, ArrowLeft,
   CheckCircle, XCircle, Clock, AlertTriangle, Wallet, RefreshCw,
-  Building, User, Phone, Hash, Shield, History, ChevronRight
+  Building, User, Phone, Hash, Shield, History, ChevronRight, Zap
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -179,14 +179,23 @@ const DMTPage = ({ user }) => {
   const fetchWalletInfo = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/eko/dmt/wallet/${user?.uid}`);
-      // Also fetch redeem limit
-      const limitRes = await axios.get(`${API}/user/${user?.uid}/redeem-limit`);
-      setWalletInfo({
-        ...res.data,
-        redeem_limit: limitRes.data?.limit
-      });
+      let walletData = res.data || {};
+      
+      // Also fetch redeem limit (separate try-catch to not break if fails)
+      try {
+        const limitRes = await axios.get(`${API}/user/${user?.uid}/redeem-limit`);
+        if (limitRes.data?.success) {
+          walletData.redeem_limit = limitRes.data.limit;
+        }
+      } catch (limitError) {
+        console.error('Failed to fetch redeem limit:', limitError);
+      }
+      
+      setWalletInfo(walletData);
     } catch (error) {
       console.error('Failed to fetch wallet info:', error);
+      // Set empty wallet info to prevent white screen
+      setWalletInfo({});
     }
   }, [user?.uid]);
 
