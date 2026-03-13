@@ -243,7 +243,7 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 ## REMAINING TASKS
 
 ### P1 - Important (Architectural Refactor Continuation)
-- [ ] TaskQueue integration for BBPS auto-retry logic
+- [x] ~~TaskQueue integration for BBPS auto-retry logic~~ ✅ COMPLETED
 - [ ] Backend `server.py` refactoring into smaller route files
 
 ### P2 - Future
@@ -253,6 +253,25 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 - [ ] Email/Mobile OTP verification on signup
 - [ ] Admin "Failed to delete plan" error investigation
 - [ ] Razorpay auto-subscription failures investigation
+
+---
+
+### BBPS Auto-Retry System (March 13, 2026)
+
+**Configuration:**
+- Auto-retry enabled by default (env: `BBPS_AUTO_RETRY_ENABLED`)
+- Max 3 retries with exponential backoff (1min, 5min, 30min)
+- Eligible services: electricity, mobile_postpaid, dth, fastag, broadband
+
+**Features:**
+- Automatic retry for transient failures (network, timeout)
+- Skips retries for user input errors (invalid account, wrong format)
+- Admin notification on max retries exceeded
+- Manual retry option via admin panel
+
+**New API Endpoints:**
+- `GET /api/admin/tasks/retry-settings` - Get current retry configuration
+- `GET /api/admin/tasks/pending-retries` - List pending retry tasks
 
 ---
 

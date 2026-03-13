@@ -4,9 +4,10 @@ PARAS REWARD - Admin Task Queue Routes
 Admin endpoints for managing background tasks.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from typing import Optional
 from datetime import datetime, timezone
+import os
 
 from app.services import TaskQueue, TaskStatus
 
@@ -66,4 +67,41 @@ async def enqueue_test_task():
     return {
         "success": True,
         "task_id": task_id
+    }
+
+
+@router.get("/retry-settings")
+async def get_retry_settings():
+    """Get current BBPS auto-retry configuration."""
+    return {
+        "success": True,
+        "settings": {
+            "auto_retry_enabled": os.environ.get("BBPS_AUTO_RETRY_ENABLED", "true").lower() == "true",
+            "max_retries": int(os.environ.get("BBPS_MAX_RETRIES", "3")),
+            "retry_delay_seconds": int(os.environ.get("BBPS_RETRY_DELAY", "60")),
+            "eligible_services": ["electricity", "mobile_postpaid", "dth", "fastag", "broadband"],
+            "retry_delays": [60, 300, 1800]  # 1 min, 5 min, 30 min (exponential backoff)
+        }
+    }
+
+
+@router.get("/pending-retries")
+async def get_pending_retries():
+    """Get all pending retry tasks for BBPS payments."""
+    from app.core.database import get_sync_db
+    
+    db = get_sync_db()
+    
+    pending_tasks = list(db.task_queue.find(
+        {
+            "task_name": "retry_failed_transfer",
+            "status": {"$in": ["pending", "retry_scheduled"]}
+        },
+        {"_id": 0}
+    ).sort("scheduled_at", 1).limit(50))
+    
+    return {
+        "success": True,
+        "pending_retries": pending_tasks,
+        "count": len(pending_tasks)
     }

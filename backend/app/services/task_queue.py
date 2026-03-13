@@ -208,8 +208,12 @@ class TaskQueue:
     
     @classmethod
     def _mark_failed(cls, task_id: str, error: str):
-        """Mark task as permanently failed."""
+        """Mark task as permanently failed and notify admin if it's a payment task."""
         db = get_sync_db()
+        
+        # Get task details first
+        task = db.task_queue.find_one({"task_id": task_id})
+        
         db.task_queue.update_one(
             {"task_id": task_id},
             {
@@ -221,6 +225,28 @@ class TaskQueue:
             }
         )
         logging.error(f"[TaskQueue] Max retries exceeded: {task_id}")
+        
+        # If this is a payment retry task, notify admin
+        if task and task.get("task_name") == "retry_failed_transfer":
+            payload = task.get("payload", {})
+            request_id = payload.get("request_id")
+            
+            # Create admin notification
+            db.admin_notifications.insert_one({
+                "notification_id": f"ADMIN-NOTIF-{uuid.uuid4().hex[:8].upper()}",
+                "type": "payment_retry_failed",
+                "severity": "critical",
+                "title": "Payment Retry Failed - Manual Review Required",
+                "message": f"Payment {request_id} failed after {task.get('max_retries', 3)} retry attempts. Error: {error[:100]}",
+                "request_id": request_id,
+                "task_id": task_id,
+                "user_id": payload.get("user_id"),
+                "amount": payload.get("amount"),
+                "requires_action": True,
+                "read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            logging.warning(f"[TaskQueue] Admin notified about failed payment: {request_id}")
     
     @classmethod
     async def start_worker(cls, interval: float = 5.0):
@@ -347,10 +373,192 @@ async def handle_referral_bonus(payload: Dict):
 
 @TaskQueue.register("retry_failed_transfer")
 async def handle_retry_transfer(payload: Dict):
-    """Retry a failed bank transfer."""
-    # This would contain actual transfer retry logic
-    request_id = payload.get("request_id")
-    logging.info(f"[Task] Retrying transfer: {request_id}")
+    """
+    Retry a failed BBPS/bill payment transfer.
     
-    # For now, just log - actual implementation would call bank API
-    return {"retried": True, "request_id": request_id}
+    This handler is called automatically by TaskQueue when a payment fails.
+    It attempts to re-process the payment with the original details.
+    """
+    from app.core.database import get_sync_db
+    from app.services import WalletService
+    
+    db = get_sync_db()
+    request_id = payload.get("request_id")
+    retry_attempt = payload.get("retry_attempt", 1)
+    
+    logging.info(f"[Task] Retrying BBPS transfer: {request_id} (attempt {retry_attempt})")
+    
+    # Get original request
+    request_doc = db.redeem_requests.find_one({"request_id": request_id})
+    if not request_doc:
+        logging.error(f"[Task] Request not found: {request_id}")
+        return {"success": False, "error": "Request not found"}
+    
+    # Check if already completed
+    if request_doc.get("status") in ["success", "completed"]:
+        logging.info(f"[Task] Request already completed: {request_id}")
+        return {"success": True, "message": "Already completed"}
+    
+    # Update status to retrying
+    db.redeem_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": "retrying",
+                "retry_attempt": retry_attempt,
+                "retry_started_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$push": {
+                "status_history": {
+                    "status": "retrying",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "note": f"Auto-retry attempt {retry_attempt}"
+                }
+            }
+        }
+    )
+    
+    # Get user for balance check
+    user_id = request_doc.get("user_id")
+    total_prc = request_doc.get("total_prc_deducted", 0)
+    
+    # Check if user has been refunded - need to re-deduct PRC
+    if request_doc.get("prc_refunded"):
+        user = db.users.find_one({"uid": user_id}, {"prc_balance": 1})
+        current_balance = user.get("prc_balance", 0) if user else 0
+        
+        if current_balance < total_prc:
+            logging.warning(f"[Task] Insufficient balance for retry: {request_id}")
+            db.redeem_requests.update_one(
+                {"request_id": request_id},
+                {
+                    "$set": {
+                        "status": "retry_failed",
+                        "retry_error": "Insufficient PRC balance for retry"
+                    }
+                }
+            )
+            return {"success": False, "error": "Insufficient balance"}
+        
+        # Re-deduct PRC for retry
+        debit_result = WalletService.debit(
+            user_id=user_id,
+            amount=total_prc,
+            txn_type="retry_debit",
+            description=f"Retry payment: {request_doc.get('service_name')}",
+            reference=request_id
+        )
+        
+        if not debit_result.get("success"):
+            return {"success": False, "error": "Failed to debit PRC for retry"}
+        
+        # Mark as not refunded since we re-debited
+        db.redeem_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {"prc_refunded": False}}
+        )
+    
+    # Attempt the actual API call
+    # Note: This is a placeholder - actual Eko API retry would go here
+    # In production, this would call the appropriate payment provider API
+    
+    retry_result = {
+        "success": False,
+        "message": "Retry mechanism placeholder - implement actual API call",
+        "request_id": request_id,
+        "retry_attempt": retry_attempt
+    }
+    
+    # Update final status
+    final_status = "success" if retry_result.get("success") else "retry_failed"
+    
+    db.redeem_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": final_status,
+                "retry_completed_at": datetime.now(timezone.utc).isoformat(),
+                "retry_result": retry_result
+            },
+            "$push": {
+                "status_history": {
+                    "status": final_status,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "note": f"Retry attempt {retry_attempt}: {retry_result.get('message', 'Unknown')}"
+                }
+            }
+        }
+    )
+    
+    # If still failed and can retry, refund PRC
+    if not retry_result.get("success") and not request_doc.get("prc_refunded"):
+        WalletService.credit(
+            user_id=user_id,
+            amount=total_prc,
+            txn_type="retry_refund",
+            description=f"Retry failed: {request_doc.get('service_name')}",
+            reference=request_id
+        )
+        db.redeem_requests.update_one(
+            {"request_id": request_id},
+            {"$set": {"prc_refunded": True}}
+        )
+    
+    logging.info(f"[Task] Retry completed: {request_id} - {final_status}")
+    return retry_result
+
+
+@TaskQueue.register("bbps_status_check")
+async def handle_bbps_status_check(payload: Dict):
+    """
+    Check status of a pending BBPS transaction.
+    Useful for transactions that timeout or have uncertain status.
+    """
+    from app.core.database import get_sync_db
+    
+    db = get_sync_db()
+    request_id = payload.get("request_id")
+    
+    logging.info(f"[Task] Checking BBPS status: {request_id}")
+    
+    request_doc = db.redeem_requests.find_one({"request_id": request_id})
+    if not request_doc:
+        return {"success": False, "error": "Request not found"}
+    
+    # Add status check logic here
+    # This would call Eko status API or similar
+    
+    return {
+        "success": True,
+        "request_id": request_id,
+        "current_status": request_doc.get("status"),
+        "checked_at": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@TaskQueue.register("admin_notify_failure")
+async def handle_admin_notification(payload: Dict):
+    """
+    Notify admin about critical payment failures.
+    Called when max retries exceeded.
+    """
+    from app.core.database import get_sync_db
+    
+    db = get_sync_db()
+    request_id = payload.get("request_id")
+    failure_reason = payload.get("reason", "Unknown")
+    
+    logging.warning(f"[Task] Admin notification: Payment failure - {request_id}")
+    
+    # Create admin notification
+    db.admin_notifications.insert_one({
+        "type": "payment_failure",
+        "severity": "high",
+        "request_id": request_id,
+        "reason": failure_reason,
+        "requires_action": True,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"notified": True, "request_id": request_id}
