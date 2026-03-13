@@ -38,6 +38,9 @@ const StepIndicator = ({ currentStep, steps }) => (
 );
 
 const DMTPage = ({ user }) => {
+  // DMT Type selector - Levin (OTP based) or V1 (Legacy)
+  const [dmtType, setDmtType] = useState('levin'); // 'levin' or 'v1'
+  
   // State management
   const [step, setStep] = useState(1); // 1: Search, 2: Register/OTP, 3: Recipients, 4: Transfer
   const [loading, setLoading] = useState(false);
@@ -58,6 +61,7 @@ const DMTPage = ({ user }) => {
     account_number: '',
     ifsc: '',
     recipient_name: '',
+    recipient_mobile: '',
     bank_name: ''
   });
   
@@ -65,13 +69,25 @@ const DMTPage = ({ user }) => {
   const [amount, setAmount] = useState('');
   const [transferResult, setTransferResult] = useState(null);
   
+  // Levin DMT specific state
+  const [transferOtpSent, setTransferOtpSent] = useState(false);
+  const [transferOtp, setTransferOtp] = useState('');
+  const [otpRefId, setOtpRefId] = useState('');
+  const [beneficiaryId, setBeneficiaryId] = useState('');
+  
   // Transaction history
   const [transactions, setTransactions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [ifscValidating, setIfscValidating] = useState(false);
   const [ifscValid, setIfscValid] = useState(null);
   
-  const steps = ['Customer', 'Verify', 'Recipient', 'Transfer'];
+  // Steps differ based on DMT type
+  const steps = dmtType === 'levin' 
+    ? ['Customer', 'Verify', 'Recipient', 'OTP', 'Transfer']
+    : ['Customer', 'Verify', 'Recipient', 'Transfer'];
+  
+  // API base path based on DMT type
+  const getApiPath = () => dmtType === 'levin' ? 'eko/levin-dmt' : 'eko/dmt';
 
   // Validate IFSC and fetch bank details
   const validateIFSC = async (ifsc) => {
@@ -138,19 +154,36 @@ const DMTPage = ({ user }) => {
     
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/eko/dmt/customer/search`, {
-        mobile,
-        user_id: user?.uid
-      });
-      
-      if (res.data.customer_exists) {
-        setCustomer(res.data.customer);
-        toast.success('Customer found!');
-        setStep(3); // Skip to recipients
-        fetchRecipients();
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.post(`${API}/eko/levin-dmt/sender/check`, {
+          customer_mobile: mobile
+        });
+        
+        if (res.data.sender_exists) {
+          setCustomer(res.data.sender);
+          toast.success('Customer found!');
+          setStep(3); // Skip to recipients
+          fetchRecipients();
+        } else {
+          toast.info('Customer not registered. Please register first.');
+          setStep(2);
+        }
       } else {
-        toast.info('Customer not registered. Please register first.');
-        setStep(2);
+        res = await axios.post(`${API}/eko/dmt/customer/search`, {
+          mobile,
+          user_id: user?.uid
+        });
+        
+        if (res.data.customer_exists) {
+          setCustomer(res.data.customer);
+          toast.success('Customer found!');
+          setStep(3);
+          fetchRecipients();
+        } else {
+          toast.info('Customer not registered. Please register first.');
+          setStep(2);
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Search failed');
@@ -168,17 +201,32 @@ const DMTPage = ({ user }) => {
     
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/eko/dmt/customer/register`, {
-        mobile,
-        name: customerName,
-        user_id: user?.uid
-      });
-      
-      if (res.data.success && res.data.otp_required) {
-        setOtpSent(true);
-        toast.success('OTP sent to customer mobile');
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.post(`${API}/eko/levin-dmt/sender/register`, {
+          customer_mobile: mobile,
+          name: customerName
+        });
+        
+        if (res.data.success && res.data.otp_sent) {
+          setOtpSent(true);
+          toast.success('OTP sent to customer mobile');
+        } else {
+          toast.error(res.data.message || 'Registration failed');
+        }
       } else {
-        toast.error(res.data.message || 'Registration failed');
+        res = await axios.post(`${API}/eko/dmt/customer/register`, {
+          mobile,
+          name: customerName,
+          user_id: user?.uid
+        });
+        
+        if (res.data.success && res.data.otp_required) {
+          setOtpSent(true);
+          toast.success('OTP sent to customer mobile');
+        } else {
+          toast.error(res.data.message || 'Registration failed');
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Registration failed');
@@ -196,19 +244,36 @@ const DMTPage = ({ user }) => {
     
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/eko/dmt/customer/verify-otp`, {
-        mobile,
-        otp,
-        user_id: user?.uid
-      });
-      
-      if (res.data.success) {
-        setCustomer(res.data.customer);
-        toast.success('Customer verified successfully!');
-        setStep(3);
-        fetchRecipients();
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.post(`${API}/eko/levin-dmt/sender/verify-otp`, {
+          customer_mobile: mobile,
+          otp
+        });
+        
+        if (res.data.success) {
+          setCustomer({ customer_id: mobile, name: customerName });
+          toast.success('Customer verified successfully!');
+          setStep(3);
+          fetchRecipients();
+        } else {
+          toast.error(res.data.message || 'OTP verification failed');
+        }
       } else {
-        toast.error(res.data.message || 'OTP verification failed');
+        res = await axios.post(`${API}/eko/dmt/customer/verify-otp`, {
+          mobile,
+          otp,
+          user_id: user?.uid
+        });
+        
+        if (res.data.success) {
+          setCustomer(res.data.customer);
+          toast.success('Customer verified successfully!');
+          setStep(3);
+          fetchRecipients();
+        } else {
+          toast.error(res.data.message || 'OTP verification failed');
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'OTP verification failed');
@@ -241,7 +306,10 @@ const DMTPage = ({ user }) => {
   // Fetch recipients
   const fetchRecipients = async () => {
     try {
-      const res = await axios.get(`${API}/eko/dmt/recipients/${mobile}`);
+      const endpoint = dmtType === 'levin' 
+        ? `${API}/eko/levin-dmt/recipients/${mobile}`
+        : `${API}/eko/dmt/recipients/${mobile}`;
+      const res = await axios.get(endpoint);
       setRecipients(res.data.recipients || []);
     } catch (error) {
       console.error('Failed to fetch recipients:', error);
@@ -257,22 +325,89 @@ const DMTPage = ({ user }) => {
     
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/eko/dmt/recipient/add`, {
-        mobile,
-        ...newRecipient,
-        user_id: user?.uid
-      });
-      
-      if (res.data.success) {
-        toast.success('Recipient added successfully!');
-        setShowAddRecipient(false);
-        setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', bank_name: '' });
-        fetchRecipients();
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.post(`${API}/eko/levin-dmt/recipient/add`, {
+          customer_mobile: mobile,
+          recipient_name: newRecipient.recipient_name,
+          recipient_mobile: newRecipient.recipient_mobile || mobile,
+          account_number: newRecipient.account_number,
+          ifsc_code: newRecipient.ifsc
+        });
+        
+        if (res.data.success) {
+          toast.success('Recipient added! Activating...');
+          // Activate recipient for Levin DMT
+          const activateRes = await axios.post(`${API}/eko/levin-dmt/recipient/activate`, {
+            customer_mobile: mobile,
+            recipient_id: res.data.recipient_id
+          });
+          if (activateRes.data.success) {
+            setBeneficiaryId(activateRes.data.beneficiary_id);
+            toast.success('Recipient activated successfully!');
+          }
+          setShowAddRecipient(false);
+          setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', recipient_mobile: '', bank_name: '' });
+          fetchRecipients();
+        } else {
+          toast.error(res.data.message || 'Failed to add recipient');
+        }
       } else {
-        toast.error(res.data.message || 'Failed to add recipient');
+        res = await axios.post(`${API}/eko/dmt/recipient/add`, {
+          mobile,
+          ...newRecipient,
+          user_id: user?.uid
+        });
+        
+        if (res.data.success) {
+          toast.success('Recipient added successfully!');
+          setShowAddRecipient(false);
+          setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', recipient_mobile: '', bank_name: '' });
+          fetchRecipients();
+        } else {
+          toast.error(res.data.message || 'Failed to add recipient');
+        }
       }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add recipient');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Send Transfer OTP (Levin DMT only)
+  const handleSendTransferOTP = async () => {
+    const transferAmount = parseFloat(amount);
+    
+    if (!transferAmount || transferAmount < 100) {
+      toast.error('Minimum transfer amount is ₹100');
+      return;
+    }
+    
+    if (!selectedRecipient) {
+      toast.error('Please select a recipient');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/eko/levin-dmt/transfer/send-otp`, {
+        customer_mobile: mobile,
+        recipient_id: selectedRecipient.recipient_id?.toString(),
+        beneficiary_id: selectedRecipient.beneficiary_id?.toString() || beneficiaryId,
+        amount: transferAmount
+      });
+      
+      if (res.data.success && res.data.otp_sent) {
+        setOtpRefId(res.data.otp_ref_id);
+        setTransferOtpSent(true);
+        setStep(dmtType === 'levin' ? 4 : step); // Move to OTP step
+        toast.success('Transfer OTP sent to customer mobile');
+      } else {
+        toast.error(res.data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -297,6 +432,12 @@ const DMTPage = ({ user }) => {
       return;
     }
     
+    // For Levin DMT, need transfer OTP
+    if (dmtType === 'levin' && !transferOtp) {
+      toast.error('Please enter the transfer OTP');
+      return;
+    }
+    
     const commission = transferAmount * 0.01;
     const totalPRC = transferAmount + commission;
     
@@ -307,15 +448,28 @@ const DMTPage = ({ user }) => {
     
     setLoading(true);
     try {
-      const res = await axios.post(`${API}/eko/dmt/transfer`, {
-        mobile,
-        recipient_id: selectedRecipient.recipient_id || selectedRecipient.recipient_id_type,
-        amount: transferAmount,
-        user_id: user?.uid,
-        remarks: 'Fund Transfer'
-      });
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.post(`${API}/eko/levin-dmt/transfer`, {
+          customer_mobile: mobile,
+          recipient_id: selectedRecipient.recipient_id?.toString(),
+          beneficiary_id: selectedRecipient.beneficiary_id?.toString() || beneficiaryId,
+          amount: transferAmount,
+          otp: transferOtp,
+          otp_ref_id: otpRefId
+        });
+      } else {
+        res = await axios.post(`${API}/eko/dmt/transfer`, {
+          mobile,
+          recipient_id: selectedRecipient.recipient_id || selectedRecipient.recipient_id_type,
+          amount: transferAmount,
+          user_id: user?.uid,
+          remarks: 'Fund Transfer'
+        });
+      }
       
       setTransferResult(res.data);
+      setStep(dmtType === 'levin' ? 5 : 4); // Move to result step
       
       if (res.data.success) {
         toast.success('Transfer successful!');
@@ -348,7 +502,12 @@ const DMTPage = ({ user }) => {
     setTransferResult(null);
     setShowAddRecipient(false);
     setIfscValid(null);
-    setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', bank_name: '' });
+    setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', recipient_mobile: '', bank_name: '' });
+    // Levin DMT specific reset
+    setTransferOtpSent(false);
+    setTransferOtp('');
+    setOtpRefId('');
+    setBeneficiaryId('');
   };
 
   return (
@@ -364,6 +523,22 @@ const DMTPage = ({ user }) => {
               <h1 className="text-xl font-bold text-white">Money Transfer</h1>
               <p className="text-sm text-gray-400">Send money to any bank account</p>
             </div>
+          </div>
+          
+          {/* DMT Type Selector */}
+          <div className="flex items-center gap-2">
+            <select
+              value={dmtType}
+              onChange={(e) => {
+                setDmtType(e.target.value);
+                resetFlow();
+              }}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
+              data-testid="dmt-type-selector"
+            >
+              <option value="levin">Levin DMT (OTP)</option>
+              <option value="v1">V1 DMT (Legacy)</option>
+            </select>
           </div>
           <Button
             variant="ghost"
@@ -660,7 +835,9 @@ const DMTPage = ({ user }) => {
                         key={recipient.recipient_id || recipient.acc || idx}
                         onClick={() => {
                           setSelectedRecipient(recipient);
-                          setStep(4);
+                          if (recipient.beneficiary_id) {
+                            setBeneficiaryId(recipient.beneficiary_id.toString());
+                          }
                         }}
                         className={`p-4 rounded-xl cursor-pointer transition-all ${
                           selectedRecipient?.recipient_id === recipient.recipient_id
@@ -691,17 +868,112 @@ const DMTPage = ({ user }) => {
                     <p className="text-sm">Add a bank account to continue</p>
                   </div>
                 )}
+
+                {/* Selected Recipient - Amount Input for Levin DMT */}
+                {selectedRecipient && (
+                  <Card className="mt-4 p-4 bg-gray-800/50 border-orange-500/30">
+                    <div className="flex items-center gap-3 mb-4">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <div>
+                        <p className="text-white font-medium">{selectedRecipient.recipient_name || selectedRecipient.name}</p>
+                        <p className="text-sm text-gray-400">Selected for transfer</p>
+                      </div>
+                    </div>
+                    
+                    <Input
+                      type="number"
+                      placeholder="Enter amount (₹100 - ₹25,000)"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="bg-gray-900 border-gray-700 text-white mb-4"
+                      data-testid="amount-input-step3"
+                    />
+                    
+                    {dmtType === 'levin' ? (
+                      <Button
+                        onClick={handleSendTransferOTP}
+                        disabled={loading || !amount || parseFloat(amount) < 100}
+                        className="w-full bg-orange-500 hover:bg-orange-600"
+                        data-testid="send-transfer-otp-btn"
+                      >
+                        {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                        Send Transfer OTP
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => setStep(4)}
+                        disabled={!amount || parseFloat(amount) < 100}
+                        className="w-full bg-orange-500 hover:bg-orange-600"
+                        data-testid="proceed-transfer-btn"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Proceed to Transfer
+                      </Button>
+                    )}
+                  </Card>
+                )}
               </div>
             )}
 
-            {/* Step 4: Transfer */}
+            {/* Step 4: Transfer OTP (Levin) or Transfer (V1) */}
             {step === 4 && (
               <div className="space-y-4" data-testid="step-transfer">
                 <Button variant="ghost" onClick={() => setStep(3)} className="text-gray-400 mb-4">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back to Recipients
                 </Button>
 
-                {!transferResult ? (
+                {dmtType === 'levin' && transferOtpSent ? (
+                  /* Levin DMT - OTP Verification for Transfer */
+                  <Card className="bg-gray-800/50 border-gray-700 p-6">
+                    <div className="text-center mb-6">
+                      <div className="p-4 bg-orange-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                        <Shield className="w-8 h-8 text-orange-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">Enter Transfer OTP</h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        OTP sent to {mobile}
+                      </p>
+                    </div>
+
+                    {/* Transfer Summary */}
+                    <Card className="bg-gray-900/50 border-gray-600 p-4 mb-4">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Recipient</span>
+                          <span className="text-white">{selectedRecipient?.recipient_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Amount</span>
+                          <span className="text-orange-400 font-semibold">₹{parseFloat(amount).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Input
+                      type="text"
+                      placeholder="Enter 6-digit OTP"
+                      value={transferOtp}
+                      onChange={(e) => setTransferOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="text-center text-2xl tracking-widest bg-gray-900 border-gray-700 text-white mb-4"
+                      maxLength={6}
+                      data-testid="transfer-otp-input"
+                    />
+
+                    <Button
+                      onClick={handleTransfer}
+                      disabled={loading || transferOtp.length !== 6}
+                      className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                      data-testid="confirm-transfer-btn"
+                    >
+                      {loading ? (
+                        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+                      ) : (
+                        <Send className="w-5 h-5 mr-2" />
+                      )}
+                      Confirm Transfer ₹{amount}
+                    </Button>
+                  </Card>
+                ) : !transferResult ? (
                   <>
                     <div className="text-center mb-6">
                       <Send className="w-12 h-12 text-green-400 mx-auto mb-3" />

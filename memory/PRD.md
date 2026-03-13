@@ -25,23 +25,38 @@ Production application (www.parasreward.com) was experiencing severe performance
 
 ### 🎯 Session Updates (March 13, 2026)
 
-**1. DMT V1 Code Cleanup:**
+**1. Levin DMT Service Implementation (NEW):**
+- Created new backend service: `/app/backend/routes/dmt_levin_service.py`
+- API Endpoints:
+  - `POST /api/eko/levin-dmt/sender/check` - Check sender ✅ Working
+  - `POST /api/eko/levin-dmt/sender/register` - Register sender
+  - `POST /api/eko/levin-dmt/sender/verify-otp` - Verify OTP
+  - `GET /api/eko/levin-dmt/recipients/{mobile}` - Get recipients
+  - `POST /api/eko/levin-dmt/recipient/add` - Add recipient
+  - `POST /api/eko/levin-dmt/recipient/activate` - Activate recipient
+  - `POST /api/eko/levin-dmt/transfer/send-otp` - Send transfer OTP
+  - `POST /api/eko/levin-dmt/transfer` - Execute transfer
+  - `GET /api/eko/levin-dmt/transaction/{id}` - Check status
+- Uses Eko V3 API with OTP-based transfer flow
+- Awaiting service activation from Eko
+
+**2. Frontend DMTPage.js Updated:**
+- Added DMT type selector (Levin/V1)
+- Levin DMT flow: Customer → Verify → Recipients → OTP → Transfer
+- V1 DMT flow: Customer → Verify → Recipients → Transfer
+- Both flows work with same UI
+
+**3. DMT V1 Code Cleanup:**
 - Removed all V3 API code (V3 not activated for account)
-- Updated transfer URL to `/v1/customers/mobile_number:{mobile}/transfers`
-- Added proper error handling for 204 responses
-- Transfer blocked: Eko DMT Fund Transfer service not activated
+- Updated transfer URL to `/transfers` endpoint
 
-**2. Admin User360 Delete Plan Fix:**
-- **Issue:** "Failed to delete plan" error when deleting subscription
-- **Root Cause:** `_id` field was excluded from API response, but frontend needed it for deletion
-- **Fix:** Modified `/api/admin/user-360` endpoint to include `_id` as string in subscriptions, vip_subscriptions, and vip_payments responses
-- **Files Modified:** `/app/backend/server.py` (lines 17407-17426)
+**4. Admin User360 Delete Plan Fix:**
+- **Issue:** "Failed to delete plan" error
+- **Fix:** Modified `/api/admin/user-360` to include `_id` as string
 
-**3. DMTPage.js Improvements:**
-- Added IFSC auto-validation with visual feedback (green/red border)
+**5. DMTPage.js IFSC Improvements:**
+- Added IFSC auto-validation with visual feedback
 - Bank name auto-fills when IFSC is validated
-- Better error messages and loading states
-- Reset state properly on flow reset
 
 ---
 
