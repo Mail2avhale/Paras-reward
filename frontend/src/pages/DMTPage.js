@@ -608,6 +608,14 @@ const DMTPage = ({ user }) => {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* DMT Type Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full">
+              <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
+              <span className="text-xs text-violet-300 font-medium">
+                {dmtType === 'levin' ? 'Levin V3' : 'Legacy V1'}
+              </span>
+            </div>
+            
             <Button
               variant="ghost"
               size="sm"
@@ -618,6 +626,49 @@ const DMTPage = ({ user }) => {
               <History className="w-5 h-5" />
             </Button>
           </div>
+        </div>
+        
+        {/* DMT Type Selector - Premium Style */}
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => { setDmtType('levin'); resetFlow(); }}
+            className={`flex-1 p-4 rounded-2xl border transition-all duration-300 ${
+              dmtType === 'levin' 
+                ? 'bg-gradient-to-br from-violet-600/20 to-cyan-600/20 border-violet-500/50 shadow-lg shadow-violet-500/10' 
+                : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+            }`}
+            data-testid="dmt-type-levin"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${dmtType === 'levin' ? 'bg-violet-500/20' : 'bg-gray-800'}`}>
+                <Zap className={`w-5 h-5 ${dmtType === 'levin' ? 'text-violet-400' : 'text-gray-500'}`} />
+              </div>
+              <div className="text-left">
+                <p className={`font-semibold ${dmtType === 'levin' ? 'text-white' : 'text-gray-400'}`}>Levin DMT</p>
+                <p className="text-xs text-gray-500">OTP Based • Recommended</p>
+              </div>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => { setDmtType('v1'); resetFlow(); }}
+            className={`flex-1 p-4 rounded-2xl border transition-all duration-300 ${
+              dmtType === 'v1' 
+                ? 'bg-gradient-to-br from-amber-600/20 to-orange-600/20 border-amber-500/50 shadow-lg shadow-amber-500/10' 
+                : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
+            }`}
+            data-testid="dmt-type-v1"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${dmtType === 'v1' ? 'bg-amber-500/20' : 'bg-gray-800'}`}>
+                <Shield className={`w-5 h-5 ${dmtType === 'v1' ? 'text-amber-400' : 'text-gray-500'}`} />
+              </div>
+              <div className="text-left">
+                <p className={`font-semibold ${dmtType === 'v1' ? 'text-white' : 'text-gray-400'}`}>Legacy V1</p>
+                <p className="text-xs text-gray-500">Classic Transfer</p>
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* Premium Wallet Card */}
