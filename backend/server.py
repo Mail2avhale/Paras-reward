@@ -688,7 +688,7 @@ async def is_protected_from_burn(db_ref, uid: str) -> bool:
             if expiry_dt > now:
                 logging.warning(f"[BURN PROTECTED] User {uid} ({user.get('email')}) has ACTIVE subscription until {expiry_dt}")
                 return True
-        except Exception as e:
+        except Exception:
             # If we can't parse expiry, protect the user
             logging.warning(f"[BURN PROTECTED] User {uid} has unparseable expiry: {expiry}, protecting user")
             return True
@@ -737,7 +737,6 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # ========== REQUEST TIMEOUT & DB CHECK MIDDLEWARE ==========
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 class DatabaseCheckMiddleware(BaseHTTPMiddleware):
@@ -1612,7 +1611,7 @@ async def auto_sync_razorpay_payments():
             print("[AUTO-SYNC] ❌ Razorpay not configured, skipping...")
             return
         
-        print(f"[AUTO-SYNC] ✅ Razorpay configured, starting sync...")
+        print("[AUTO-SYNC] ✅ Razorpay configured, starting sync...")
         
         razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
         
@@ -1630,7 +1629,7 @@ async def auto_sync_razorpay_payments():
         }).to_list(20)  # Reduced from 200 to 20 to minimize blocking time
         
         if not pending_orders:
-            print(f"[AUTO-SYNC] No pending orders to sync")
+            print("[AUTO-SYNC] No pending orders to sync")
             return
         
         print(f"[AUTO-SYNC] Found {len(pending_orders)} pending orders to sync")
@@ -1662,6 +1661,12 @@ async def auto_sync_razorpay_payments():
                     if captured_payment:
                         payment_id = captured_payment.get("id")
                         amount = captured_payment.get("amount", 0) / 100
+                        
+                        # CRITICAL: Check if this payment was already used for activation
+                        existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
+                        if existing_vip:
+                            print(f"[AUTO-SYNC] ⚠️ Payment {payment_id} already used, skipping")
+                            continue
                         
                         # Update order status
                         await db.razorpay_orders.update_one(
@@ -1746,6 +1751,26 @@ async def auto_sync_razorpay_payments():
                             "timestamp": now
                         })
                         
+                        # CRITICAL: Also log to vip_payments to prevent double activation
+                        await db.vip_payments.insert_one({
+                            "user_id": user_id,
+                            "order_id": order_id,
+                            "payment_id": payment_id,
+                            "amount": amount,
+                            "subscription_plan": plan_name.lower(),
+                            "plan_type": plan_type,
+                            "status": "approved",
+                            "payment_method": "razorpay",
+                            "payment_captured": True,
+                            "new_expiry": expiry_date.isoformat(),
+                            "duration_days": total_days,
+                            "remaining_days_added": remaining_days,
+                            "approved_at": now.isoformat(),
+                            "created_at": now.isoformat(),
+                            "auto_activated": True,
+                            "activation_source": "auto_sync"
+                        })
+                        
                         synced_count += 1
                         print(f"[AUTO-SYNC] ✅ Activated subscription for user {user_id}, plan: {plan_name}")
                         
@@ -1755,7 +1780,7 @@ async def auto_sync_razorpay_payments():
         if synced_count > 0:
             print(f"[AUTO-SYNC] ✅ Completed - Activated {synced_count} subscriptions")
         else:
-            print(f"[AUTO-SYNC] No new payments to activate")
+            print("[AUTO-SYNC] No new payments to activate")
             
     except Exception as e:
         print(f"[AUTO-SYNC] ❌ Error: {e}")
@@ -1800,7 +1825,7 @@ async def auto_sync_captured_from_razorpay():
         captured_payments = [p for p in all_payments if p.get("status") == "captured"]
         
         if not captured_payments:
-            print(f"[RAZORPAY-CAPTURED-SYNC] No recent captured payments")
+            print("[RAZORPAY-CAPTURED-SYNC] No recent captured payments")
             return
         
         print(f"[RAZORPAY-CAPTURED-SYNC] Found {len(captured_payments)} captured payments in last 24 hours")
@@ -1822,12 +1847,15 @@ async def auto_sync_captured_from_razorpay():
                 if not order:
                     continue
                 
-                if order.get("status") == "paid":
-                    # Check if user subscription is actually active
-                    user_id = order.get("user_id")
-                    user = await db.users.find_one({"uid": user_id})
-                    if user and user.get("last_payment_id") == payment_id:
-                        continue  # Already activated properly
+                # CRITICAL FIX: If order is already paid, skip completely
+                # This prevents double activation when both auto_sync functions run
+                if order.get("status") == "paid" and order.get("payment_captured"):
+                    continue  # Already processed - skip to prevent double activation
+                
+                # Also check if this specific payment was already used
+                existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
+                if existing_vip:
+                    continue  # This payment already activated a subscription
                 
                 # Need to activate!
                 user_id = order.get("user_id")
@@ -1921,7 +1949,7 @@ async def auto_sync_captured_from_razorpay():
         if activated_count > 0:
             print(f"[RAZORPAY-CAPTURED-SYNC] ✅ Activated {activated_count} subscriptions")
         else:
-            print(f"[RAZORPAY-CAPTURED-SYNC] No new activations needed")
+            print("[RAZORPAY-CAPTURED-SYNC] No new activations needed")
             
     except Exception as e:
         print(f"[RAZORPAY-CAPTURED-SYNC] ❌ Error: {e}")
@@ -4395,7 +4423,7 @@ async def burn_expired_prc_for_explorer_users():
                         "prc_transactions": {
                             "type": "debit",
                             "amount": current_balance,
-                            "description": f"PRC Expired (4hr validity for free users)",
+                            "description": "PRC Expired (4hr validity for free users)",
                             "reference_id": f"BURN-{now.strftime('%Y%m%d%H%M%S')}",
                             "balance_after": 0,
                             "timestamp": now.isoformat()
@@ -10779,7 +10807,7 @@ async def check_expired_subscriptions():
                     await db.notifications.insert_one({
                         "notification_id": str(uuid.uuid4()),
                         "user_id": uid,
-                        "title": f"⬇️ Downgraded to Explorer",
+                        "title": "⬇️ Downgraded to Explorer",
                         "message": f"Your {plan.capitalize()} subscription has expired. You've been moved to Explorer (Free) plan. Upgrade anytime to restore benefits!",
                         "notification_type": "subscription_downgraded",
                         "read": False,
@@ -10840,7 +10868,7 @@ async def get_user_fraud_score(uid: str):
                 risk_factors.append(f"New account ({account_age_days} days old)")
             elif account_age_days < 30:
                 score += 10
-                risk_factors.append(f"Account less than 30 days old")
+                risk_factors.append("Account less than 30 days old")
         except:
             pass
     
@@ -15199,7 +15227,7 @@ async def get_public_service_status():
     try:
         status = await get_service_status()
         return {"services": status}
-    except Exception as e:
+    except Exception:
         return {"services": DEFAULT_SERVICE_STATUS}
 
 
@@ -26267,7 +26295,7 @@ async def process_bill_payment_request(request: Request):
                         print(f"   ⚠️ Recipient may already exist: {rec_err}")
                     
                     # Step 3: Initiate DMT transfer
-                    print(f"   💸 Initiating transfer...")
+                    print("   💸 Initiating transfer...")
                     eko_result = await make_eko_request(
                         f"{EKO_BASE_URL}/v1/transactions",
                         method="POST",
