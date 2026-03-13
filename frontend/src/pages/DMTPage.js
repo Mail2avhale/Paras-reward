@@ -608,14 +608,6 @@ const DMTPage = ({ user }) => {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* DMT Type Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full">
-              <div className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
-              <span className="text-xs text-violet-300 font-medium">
-                {dmtType === 'levin' ? 'Levin V3' : 'Legacy V1'}
-              </span>
-            </div>
-            
             <Button
               variant="ghost"
               size="sm"
@@ -628,8 +620,8 @@ const DMTPage = ({ user }) => {
           </div>
         </div>
         
-        {/* DMT Type Selector - Premium Style */}
-        <div className="flex gap-3 mb-6">
+        {/* DMT Type Selector - Hidden (using Levin by default) */}
+        <div className="hidden">
           <button
             onClick={() => { setDmtType('levin'); resetFlow(); }}
             className={`flex-1 p-4 rounded-2xl border transition-all duration-300 ${
