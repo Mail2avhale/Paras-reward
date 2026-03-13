@@ -179,7 +179,12 @@ const DMTPage = ({ user }) => {
   const fetchWalletInfo = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/eko/dmt/wallet/${user?.uid}`);
-      setWalletInfo(res.data);
+      // Also fetch redeem limit
+      const limitRes = await axios.get(`${API}/user/${user?.uid}/redeem-limit`);
+      setWalletInfo({
+        ...res.data,
+        redeem_limit: limitRes.data?.limit
+      });
     } catch (error) {
       console.error('Failed to fetch wallet info:', error);
     }

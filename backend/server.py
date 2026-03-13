@@ -64,7 +64,7 @@ from routes.user_logs import router as user_logs_router, set_db as set_user_logs
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
-from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db
+from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
@@ -15496,6 +15496,212 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 
 
 # ========== FIX DOUBLE SUBSCRIPTION BUG ==========
+
+# ========== GLOBAL REDEEM LIMIT ==========
+# Formula: 799 * 5 * 10 = 39950 + 20% Direct Referral Bonus
+
+BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC
+REFERRAL_BONUS_PERCENTAGE = 20  # 20% of direct referral earnings added to limit
+
+async def calculate_user_redeem_limit(user_id: str) -> dict:
+    """
+    Calculate total redeem limit for a user.
+    Formula: 39950 (base) + 20% of direct referral bonus earned
+    """
+    try:
+        base_limit = BASE_REDEEM_LIMIT
+        
+        # Get direct referral bonus earned by user
+        direct_referral_bonus = 0
+        
+        # From transactions collection
+        referral_txns = await db.transactions.find({
+            "user_id": user_id,
+            "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
+        }).to_list(1000)
+        
+        for txn in referral_txns:
+            direct_referral_bonus += float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
+        
+        # From prc_ledger if exists
+        ledger_entries = await db.prc_ledger.find({
+            "user_id": user_id,
+            "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
+        }).to_list(1000)
+        
+        for entry in ledger_entries:
+            direct_referral_bonus += abs(float(entry.get("amount", 0) or entry.get("credit", 0) or 0))
+        
+        # Calculate 20% of referral bonus
+        referral_bonus_addition = (direct_referral_bonus * REFERRAL_BONUS_PERCENTAGE) / 100
+        
+        # Total limit
+        total_limit = base_limit + referral_bonus_addition
+        
+        return {
+            "base_limit": base_limit,
+            "direct_referral_earned": round(direct_referral_bonus, 2),
+            "referral_bonus_addition": round(referral_bonus_addition, 2),
+            "total_limit": round(total_limit, 2)
+        }
+    except Exception as e:
+        logging.error(f"Error calculating redeem limit: {e}")
+        return {
+            "base_limit": BASE_REDEEM_LIMIT,
+            "direct_referral_earned": 0,
+            "referral_bonus_addition": 0,
+            "total_limit": BASE_REDEEM_LIMIT
+        }
+
+
+async def get_user_total_redeemed(user_id: str) -> float:
+    """Get total PRC redeemed by user across all services"""
+    try:
+        total_redeemed = 0
+        
+        # 1. Bill payments
+        bill_payments = await db.bill_payment_requests.find({
+            "user_id": user_id,
+            "status": {"$in": ["approved", "success", "completed", "pending"]}
+        }).to_list(5000)
+        
+        for bp in bill_payments:
+            prc = float(bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
+            # Subtract refunds
+            if bp.get("status") == "refunded":
+                continue
+            total_redeemed += prc
+        
+        # 2. Bank withdrawals
+        bank_withdrawals = await db.bank_withdrawal_requests.find({
+            "user_id": user_id,
+            "status": {"$in": ["approved", "success", "completed", "pending"]}
+        }).to_list(5000)
+        
+        for bw in bank_withdrawals:
+            prc = float(bw.get("prc_amount", 0) or bw.get("amount", 0) or 0)
+            if bw.get("status") == "refunded":
+                continue
+            total_redeemed += prc
+        
+        # 3. DMT transactions
+        dmt_txns = await db.dmt_transactions.find({
+            "user_id": user_id,
+            "status": {"$in": ["success", "pending"]}
+        }).to_list(5000)
+        
+        for dmt in dmt_txns:
+            prc = float(dmt.get("prc_amount", 0) or dmt.get("amount", 0) or 0)
+            total_redeemed += prc
+        
+        # 4. Gift vouchers
+        gift_vouchers = await db.gift_voucher_orders.find({
+            "user_id": user_id,
+            "status": {"$in": ["success", "completed", "pending"]}
+        }).to_list(5000)
+        
+        for gv in gift_vouchers:
+            prc = float(gv.get("prc_amount", 0) or gv.get("amount", 0) or 0)
+            total_redeemed += prc
+        
+        # 5. Redeem transactions
+        redeem_txns = await db.transactions.find({
+            "user_id": user_id,
+            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher"]}
+        }).to_list(5000)
+        
+        # Don't double count - check if already counted above
+        counted_refs = set()
+        for bp in bill_payments:
+            counted_refs.add(bp.get("request_id", ""))
+        for bw in bank_withdrawals:
+            counted_refs.add(bw.get("request_id", ""))
+        for dmt in dmt_txns:
+            counted_refs.add(dmt.get("txn_id", ""))
+        
+        for txn in redeem_txns:
+            ref = txn.get("reference_id", "") or txn.get("txn_id", "")
+            if ref not in counted_refs and ref:
+                prc = float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
+                total_redeemed += abs(prc)
+        
+        return round(total_redeemed, 2)
+    except Exception as e:
+        logging.error(f"Error getting total redeemed: {e}")
+        return 0
+
+
+async def check_redeem_limit(user_id: str, amount: float) -> dict:
+    """
+    Check if user can redeem the specified amount.
+    Returns: {"allowed": bool, "reason": str, "limit_info": dict}
+    """
+    try:
+        # Get limit info
+        limit_info = await calculate_user_redeem_limit(user_id)
+        total_limit = limit_info["total_limit"]
+        
+        # Get total redeemed
+        total_redeemed = await get_user_total_redeemed(user_id)
+        
+        # Calculate remaining
+        remaining = total_limit - total_redeemed
+        
+        limit_info["total_redeemed"] = total_redeemed
+        limit_info["remaining_limit"] = round(remaining, 2)
+        
+        # Check if amount exceeds remaining
+        if amount > remaining:
+            return {
+                "allowed": False,
+                "reason": f"Redeem limit exceeded. Remaining limit: {remaining:.2f} PRC. Total limit: {total_limit:.2f} PRC",
+                "limit_info": limit_info
+            }
+        
+        return {
+            "allowed": True,
+            "reason": None,
+            "limit_info": limit_info
+        }
+    except Exception as e:
+        logging.error(f"Error checking redeem limit: {e}")
+        # Fail open - allow transaction on error
+        return {
+            "allowed": True,
+            "reason": None,
+            "limit_info": {"error": str(e)}
+        }
+
+
+@api_router.get("/user/{user_id}/redeem-limit")
+async def get_user_redeem_limit(user_id: str):
+    """Get user's redeem limit information"""
+    try:
+        limit_info = await calculate_user_redeem_limit(user_id)
+        total_redeemed = await get_user_total_redeemed(user_id)
+        
+        remaining = limit_info["total_limit"] - total_redeemed
+        usage_percentage = (total_redeemed / limit_info["total_limit"]) * 100 if limit_info["total_limit"] > 0 else 0
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "limit": {
+                "base_limit": limit_info["base_limit"],
+                "direct_referral_earned": limit_info["direct_referral_earned"],
+                "referral_bonus_addition": limit_info["referral_bonus_addition"],
+                "total_limit": limit_info["total_limit"],
+                "total_redeemed": total_redeemed,
+                "remaining_limit": round(remaining, 2),
+                "usage_percentage": round(usage_percentage, 2)
+            },
+            "formula": "Base (799×5×10 = 39950) + 20% of Direct Referral Bonus"
+        }
+    except Exception as e:
+        logging.error(f"Error getting redeem limit: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # ========== PRC STATEMENT API ==========
 
@@ -39545,6 +39751,7 @@ api_router.include_router(dmt_levin_router)
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)
+set_redeem_limit_check(check_redeem_limit)  # Pass the redeem limit check function
 api_router.include_router(redeem_v2_router)
 
 # Error Monitor Router

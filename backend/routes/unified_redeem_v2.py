@@ -37,6 +37,14 @@ except ImportError:
     # Fallback if import fails
     async def log_error(*args, **kwargs): pass
     async def log_payment_event(*args, **kwargs): pass
+
+# Import redeem limit check function
+check_redeem_limit_func = None
+
+def set_redeem_limit_check(func):
+    """Set the redeem limit check function from server.py"""
+    global check_redeem_limit_func
+    check_redeem_limit_func = func
 import time
 import json
 
@@ -805,6 +813,23 @@ async def create_redeem_request(request: RedeemRequestCreate):
         raise  # Re-raise HTTP exceptions
     except Exception as e:
         logging.error(f"[REDEEM] Emergency check error: {e}")
+        # On error, allow (fail-open)
+    
+    # GLOBAL REDEEM LIMIT CHECK (799*5*10 + 20% referral)
+    if check_redeem_limit_func:
+        try:
+            limit_check = await check_redeem_limit_func(request.user_id, request.amount)
+            if not limit_check.get("allowed"):
+                limit_info = limit_check.get("limit_info", {})
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Redeem limit exceeded. Your limit: ₹{limit_info.get('total_limit', 0):,.2f}, Used: ₹{limit_info.get('total_redeemed', 0):,.2f}, Remaining: ₹{limit_info.get('remaining_limit', 0):,.2f}"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"[REDEEM] Limit check error: {e}")
+            # On error, allow (fail-open)
         # On error, allow (fail-open)
     
     # Check time restriction (8 AM to 8 PM IST) - TEMPORARILY DISABLED FOR TESTING

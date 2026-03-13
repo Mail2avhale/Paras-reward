@@ -499,7 +499,7 @@ async def initiate_transfer(request: TransferRequest):
     """
     try:
         # Import check_dmt_limits from server
-        from server import check_dmt_limits, check_service_enabled, db
+        from server import check_dmt_limits, check_service_enabled, db, check_redeem_limit
         
         # Check if DMT service is enabled
         dmt_enabled = await check_service_enabled("dmt")
@@ -509,6 +509,21 @@ async def initiate_transfer(request: TransferRequest):
                 "message": "DMT service is currently disabled by admin",
                 "error_code": "SERVICE_DISABLED"
             }
+        
+        # Check Global Redeem Limit (799*5*10 + 20% referral)
+        if request.user_id:
+            try:
+                redeem_check = await check_redeem_limit(request.user_id, request.amount)
+                if not redeem_check.get("allowed"):
+                    limit_info = redeem_check.get("limit_info", {})
+                    return {
+                        "success": False,
+                        "message": f"Redeem limit exceeded. Remaining: ₹{limit_info.get('remaining_limit', 0):,.2f}",
+                        "error_code": "REDEEM_LIMIT_EXCEEDED",
+                        "limit_info": limit_info
+                    }
+            except Exception as e:
+                logging.error(f"Redeem limit check error: {e}")
         
         # Check DMT limits if user_id is provided
         if request.user_id:
