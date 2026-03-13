@@ -1,7 +1,8 @@
 # Paras Reward Platform - PRD
 
 ## Latest Update (March 13, 2026)
-- ✅ **Floating "?" Help Button REMOVED** - AIContextualHelp component deleted
+- ✅ **DMT Page Simplified** - Removed confusing "Levin DMT" and "Legacy V1" cards
+- ✅ **Floating "?" Help Button REMOVED** - AIContextualHelp component restored but cards removed
 - ✅ **DMT Page White Screen Bug FIXED** - Page now loads correctly
 - ✅ **AI Chatbot KEPT** - "Need Help? Ask me!" button retained per user request
 
