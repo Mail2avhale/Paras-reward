@@ -542,18 +542,18 @@ async def initiate_transfer(request: TransferRequest):
         # Call Eko V1 API for transfer (V3 NOT ACTIVATED - using V1 only)
         headers = get_eko_headers()
         
-        # V1 Fund Transfer API - Direct POST to transfer endpoint
-        # URL format: /v1/customers/mobile_number:{mobile}/recipients/recipient_id:{recipient_id}/transfer
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{request.mobile}/recipients/recipient_id:{request.recipient_id}/transfer?initiator_id={EKO_INITIATOR_ID}"
+        # V1 Fund Transfer API - POST /v1/customers/mobile_number:{mobile}/transfers
+        # As per Eko V1 documentation (updated format)
+        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{request.mobile}/transfers"
         
         # V1 Transfer request body - x-www-form-urlencoded format
         # Required params as per Eko V1 docs
         data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "recipient_id": request.recipient_id,
             "amount": str(int(request.amount)),
             "client_ref_id": txn_id[:20],  # Max 20 chars, unique reference
-            "channel": "2",  # 2 = IMPS
-            "user_code": EKO_USER_CODE,
-            "latlong": "28.6139,77.2090"  # Mandatory lat-long
+            "user_code": EKO_USER_CODE
         }
         
         logging.info(f"[DMT V1] Transfer Request: {txn_id}")

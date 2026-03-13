@@ -339,3 +339,37 @@ await asyncio.to_thread(razorpay_client.order.fetch, order_id)
 3. **MongoDB cursor leaks** - Always use `.to_list()` instead of `async for`
 4. **N+1 queries** - Use batch fetching or aggregation pipelines
 5. **Always verify API endpoints with documentation** - Eko v3 GET endpoint didn't work, v2 POST did
+6. **Eko DMT V1 requires service activation** - Transfer API returns 204 if service not activated
+
+---
+
+## DMT V1 Service Status (March 13, 2026)
+
+### What's Working:
+- ✅ Customer Search API (`GET /v1/customers/mobile_number:{mobile}`)
+- ✅ Customer Registration API
+- ✅ OTP Send/Resend API
+- ✅ Recipients List API (`GET /v1/customers/mobile_number:{mobile}/recipients`)
+- ✅ IFSC Validation API (via Razorpay)
+- ✅ Authentication (secret-key generation)
+
+### What's Blocked:
+- ❌ **Transfer API** - Returns 204 No Content
+- ❌ **Beneficiary Verify API** - Returns 204 No Content
+
+### Root Cause:
+**DMT Fund Transfer service not activated on Eko account**
+
+### Resolution Required:
+Contact Eko Support:
+- Request: "Activate DMT Fund Transfer service"
+- `initiator_id`: 9936606966
+- `user_code`: 20810200
+- Also: Top-up Eko wallet (current balance: ₹1.35)
+
+### Code Changes Made:
+1. Removed all V3 API code (V3 not activated)
+2. Updated transfer URL to `/v1/customers/mobile_number:{mobile}/transfers`
+3. Added proper error handling for 204 responses
+4. File: `/app/backend/routes/dmt_v1_service.py`
+
