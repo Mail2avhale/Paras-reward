@@ -561,12 +561,16 @@ async def initiate_transfer(request: TransferRequest):
             # Success
             eko_data = result.get("data", {})
             
+            # Extract UTR/Bank Reference Number
+            utr_number = eko_data.get("bank_ref_num") or eko_data.get("utr") or eko_data.get("txstatus_desc")
+            
             await db.dmt_transactions.update_one(
                 {"txn_id": txn_id},
                 {
                     "$set": {
                         "status": "success",
                         "eko_txn_id": eko_data.get("tid"),
+                        "utr_number": utr_number,
                         "eko_data": eko_data,
                         "completed_at": datetime.now(timezone.utc).isoformat()
                     }
@@ -575,12 +579,16 @@ async def initiate_transfer(request: TransferRequest):
             
             return {
                 "success": True,
-                "message": "Transfer successful",
+                "message": "Transfer successful! Money sent via IMPS.",
                 "txn_id": txn_id,
                 "eko_txn_id": eko_data.get("tid"),
+                "utr_number": utr_number,
                 "amount": request.amount,
                 "charges": charges,
-                "new_balance": debit_result.get("balance_after")
+                "recipient_id": request.recipient_id,
+                "customer_mobile": request.mobile,
+                "new_balance": debit_result.get("balance_after"),
+                "transfer_mode": "IMPS"
             }
         else:
             # Failed - Refund PRC
@@ -654,6 +662,188 @@ async def get_transfer_status(txn_id: str):
         "success": True,
         "transaction": transaction
     }
+
+
+@router.get("/status/check/{txn_id}")
+async def check_status_from_eko(txn_id: str, user_id: str):
+    """
+    Check transaction status directly from Eko API.
+    Useful for pending transactions or status verification.
+    """
+    if not DMT_ENABLED:
+        raise HTTPException(status_code=503, detail="DMT service is currently disabled")
+    
+    # Get local transaction
+    transaction = await db.dmt_transactions.find_one({"txn_id": txn_id})
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    eko_txn_id = transaction.get("eko_txn_id")
+    
+    if not eko_txn_id:
+        return {
+            "success": True,
+            "status": transaction.get("status"),
+            "message": "Transaction did not reach Eko (failed before API call)",
+            "local_data": {
+                "txn_id": txn_id,
+                "status": transaction.get("status"),
+                "error": transaction.get("error")
+            }
+        }
+    
+    try:
+        headers = get_eko_headers()
+        url = f"{EKO_BASE_URL}/v1/transactions/{eko_txn_id}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.get(url, headers=headers)
+            result = response.json()
+        
+        logging.info(f"[DMT] Status check {txn_id}: {result.get('response_status_id')}")
+        
+        if result.get("response_status_id") == 0:
+            eko_data = result.get("data", {})
+            eko_status = eko_data.get("tx_status")
+            
+            # Map Eko status to our status
+            status_map = {
+                0: "success",
+                1: "failed", 
+                2: "pending",
+                3: "refund_pending"
+            }
+            new_status = status_map.get(eko_status, "unknown")
+            
+            # Update local record
+            update_data = {
+                "eko_status_check": result,
+                "eko_tx_status": eko_status,
+                "status_checked_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # If status changed to success, update
+            if new_status == "success" and transaction.get("status") != "success":
+                update_data["status"] = "success"
+                update_data["utr_number"] = eko_data.get("bank_ref_num") or eko_data.get("utr")
+                update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+            
+            # If failed and not refunded, process refund
+            if new_status == "failed" and not transaction.get("refunded"):
+                update_data["status"] = "failed"
+                
+                # Auto refund PRC
+                refund_result = WalletService.credit(
+                    user_id=transaction.get("user_id"),
+                    amount=transaction.get("total_deducted", 0),
+                    txn_type="dmt_status_refund",
+                    description=f"DMT Failed (status check): {txn_id}",
+                    reference=txn_id
+                )
+                update_data["refunded"] = True
+                update_data["refund_txn"] = refund_result.get("txn_id")
+            
+            await db.dmt_transactions.update_one(
+                {"txn_id": txn_id},
+                {"$set": update_data}
+            )
+            
+            return {
+                "success": True,
+                "eko_status": eko_status,
+                "status": new_status,
+                "utr_number": eko_data.get("bank_ref_num") or eko_data.get("utr"),
+                "eko_data": eko_data
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message", "Failed to get status"),
+                "error_code": result.get("response_status_id")
+            }
+            
+    except Exception as e:
+        logging.error(f"[DMT] Status check error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+
+
+@router.get("/banks")
+async def get_bank_list():
+    """Get list of supported banks for DMT."""
+    banks = [
+        {"code": "SBIN", "name": "State Bank of India"},
+        {"code": "HDFC", "name": "HDFC Bank"},
+        {"code": "ICIC", "name": "ICICI Bank"},
+        {"code": "AXIS", "name": "Axis Bank"},
+        {"code": "PUNB", "name": "Punjab National Bank"},
+        {"code": "BARB", "name": "Bank of Baroda"},
+        {"code": "CNRB", "name": "Canara Bank"},
+        {"code": "UBIN", "name": "Union Bank of India"},
+        {"code": "IDFB", "name": "IDFC First Bank"},
+        {"code": "KKBK", "name": "Kotak Mahindra Bank"},
+        {"code": "YESB", "name": "Yes Bank"},
+        {"code": "INDB", "name": "IndusInd Bank"},
+        {"code": "MAHB", "name": "Bank of Maharashtra"},
+        {"code": "CBIN", "name": "Central Bank of India"},
+        {"code": "BKID", "name": "Bank of India"},
+        {"code": "IOBA", "name": "Indian Overseas Bank"},
+        {"code": "IDIB", "name": "Indian Bank"},
+        {"code": "PSIB", "name": "Punjab & Sind Bank"},
+        {"code": "UCBA", "name": "UCO Bank"},
+    ]
+    
+    return {
+        "success": True,
+        "banks": banks,
+        "count": len(banks)
+    }
+
+
+@router.get("/ifsc/{ifsc_code}")
+async def validate_ifsc(ifsc_code: str):
+    """Validate IFSC code and get bank/branch details."""
+    if not ifsc_code or len(ifsc_code) != 11:
+        return {
+            "success": False,
+            "valid": False,
+            "message": "IFSC code must be 11 characters"
+        }
+    
+    bank_code = ifsc_code[:4].upper()
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"https://ifsc.razorpay.com/{ifsc_code.upper()}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "valid": True,
+                    "ifsc": ifsc_code.upper(),
+                    "bank": data.get("BANK"),
+                    "branch": data.get("BRANCH"),
+                    "address": data.get("ADDRESS"),
+                    "city": data.get("CITY"),
+                    "state": data.get("STATE")
+                }
+            else:
+                return {
+                    "success": True,
+                    "valid": False,
+                    "message": "Invalid IFSC code"
+                }
+    except Exception as e:
+        logging.warning(f"IFSC validation failed: {str(e)}")
+        return {
+            "success": True,
+            "valid": True,
+            "ifsc": ifsc_code.upper(),
+            "bank_code": bank_code,
+            "message": "IFSC format valid (external validation unavailable)"
+        }
+
 
 @router.get("/transactions/{user_id}")
 async def get_user_transactions(user_id: str, limit: int = 20, skip: int = 0):
