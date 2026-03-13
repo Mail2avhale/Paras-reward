@@ -74,6 +74,7 @@ from routes.leaderboard import router as leaderboard_router, set_db as set_leade
 from routes.chatbot_withdrawal import router as chatbot_withdrawal_router, set_db as set_chatbot_withdrawal_db
 from routes.chatbot_payment_fix import router as chatbot_payment_fix_router, set_db as set_chatbot_payment_fix_db
 from routes.admin_ledger import router as admin_ledger_router, set_db as set_admin_ledger_db
+from routes.admin_ledger_view import router as admin_ledger_view_router, set_db as set_admin_ledger_view_db
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 # Removed: social.py, support.py - routes exist in server.py with better implementation
@@ -38730,6 +38731,10 @@ api_router.include_router(chatbot_payment_fix_router)
 # Admin Ledger Router (Complete Ledger System - Audit Ready)
 set_admin_ledger_db(db)
 api_router.include_router(admin_ledger_router)
+
+# Admin Ledger View Router (Phase 2 - Double Entry Ledger)
+set_admin_ledger_view_db(db)
+api_router.include_router(admin_ledger_view_router)
 
 # PRC Statement Router (User-facing Redeem/Refund Statement)
 set_prc_statement_db(db)

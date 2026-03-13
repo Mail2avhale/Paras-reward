@@ -14,6 +14,10 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import uuid
 import asyncio
+import logging
+
+# Import WalletService for ledger tracking (Phase 2)
+from app.services import WalletService
 
 router = APIRouter(prefix="/mining", tags=["Mining"])
 
@@ -308,15 +312,31 @@ async def claim_mining(uid: str):
     # User receives 100% (vault disabled)
     user_receives = mined_amount
     
-    # Update user balance
-    current_balance = user.get("prc_balance") or 0
-    if not isinstance(current_balance, (int, float)):
-        current_balance = 0
+    # PHASE 2: Use WalletService for ledger tracking
+    if user_receives > 0:
+        credit_result = WalletService.credit(
+            user_id=uid,
+            amount=user_receives,
+            txn_type="mining",
+            description=f"Mining reward ({round(elapsed_minutes, 1)} mins)",
+            reference=f"MINE-{int(now.timestamp())}"
+        )
+        if credit_result["success"]:
+            logging.info(f"[Mining] Credited {user_receives} PRC to {uid} via WalletService")
+            new_balance = credit_result["balance_after"]
+        else:
+            logging.error(f"[Mining] WalletService credit failed: {credit_result}")
+            # Fallback to direct update
+            current_balance = user.get("prc_balance") or 0
+            new_balance = current_balance + user_receives
+    else:
+        current_balance = user.get("prc_balance") or 0
+        new_balance = current_balance
+    
+    # Get current total mined
     current_total_mined = user.get("total_mined") or 0
     if not isinstance(current_total_mined, (int, float)):
         current_total_mined = 0
-    
-    new_balance = current_balance + user_receives
     new_total_mined = current_total_mined + mined_amount
     
     # Calculate expiry date (never for VIP)
@@ -340,10 +360,9 @@ async def claim_mining(uid: str):
         if total_bonus > 0 and rate_per_minute > 0:
             referral_bonus_portion = (total_bonus / (rate_per_minute * 1440)) * mined_amount
     
-    # Build update operation
+    # Build update operation (prc_balance already updated by WalletService)
     update_op = {
         "$set": {
-            "prc_balance": new_balance,
             "total_mined": new_total_mined,
             "mining_start_time": now.isoformat(),
             "mining_active": True
@@ -521,15 +540,27 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
     if prc_to_collect < 0.01:
         raise HTTPException(status_code=400, detail="Minimum collection is 0.01 PRC")
     
-    # Update user balance
-    current_balance = user.get("prc_balance") or 0
-    if not isinstance(current_balance, (int, float)):
-        current_balance = 0
+    # PHASE 2: Use WalletService for ledger tracking
+    credit_result = WalletService.credit(
+        user_id=uid,
+        amount=prc_to_collect,
+        txn_type="mining_collect",
+        description=f"Mining collection ({round(elapsed_minutes, 1)} mins)",
+        reference=f"COLLECT-{int(now.timestamp())}"
+    )
+    
+    if credit_result["success"]:
+        new_balance = credit_result["balance_after"]
+        logging.info(f"[Mining] Collected {prc_to_collect} PRC for {uid} via WalletService")
+    else:
+        # Fallback
+        current_balance = user.get("prc_balance") or 0
+        new_balance = current_balance + prc_to_collect
+    
+    # Get current total mined
     current_total_mined = user.get("total_mined") or 0
     if not isinstance(current_total_mined, (int, float)):
         current_total_mined = 0
-    
-    new_balance = current_balance + prc_to_collect
     new_total_mined = current_total_mined + prc_to_collect
     
     expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
@@ -542,11 +573,11 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         "membership_type": membership_type
     }
     
+    # Update user (prc_balance already updated by WalletService)
     await db.users.update_one(
         {"uid": uid},
         {
             "$set": {
-                "prc_balance": new_balance,
                 "total_mined": new_total_mined,
                 "mining_start_time": now.isoformat()
             },
