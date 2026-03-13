@@ -35,9 +35,13 @@ def set_db(database):
     global db
     db = database
 
-# ==================== EKO V1 CONFIGURATION ====================
+# ==================== EKO CONFIGURATION ====================
 
+# Base URLs for Eko API
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
+EKO_BASE_URL_V3 = os.environ.get("EKO_BASE_URL_V3", "https://api.eko.in:25002/ekoicici/v3")
+
+# Credentials
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "7c179a397b4710e71b2248d1f5892d19")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "7a2529f5-3587-4add-a2df-3d0606d62460")
@@ -49,6 +53,9 @@ DMT_DAILY_LIMIT = 200000  # ₹2 lakh per day
 DMT_PER_TXN_LIMIT = 25000  # ₹25,000 per transaction
 DMT_MIN_AMOUNT = 100  # Minimum ₹100
 DMT_COMMISSION_RATE = 0.01  # 1% commission
+
+# API Version to use (v1 or v3)
+DMT_API_VERSION = os.environ.get("DMT_API_VERSION", "v3")
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -536,23 +543,79 @@ async def initiate_transfer(request: TransferRequest):
     await db.dmt_transactions.insert_one(transaction)
     
     try:
-        # Call Eko API for transfer
+        # Call Eko API for transfer - Using V3 API
         headers = get_eko_headers()
-        timestamp = str(int(now.timestamp() * 1000))
         
-        # Generate request hash
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{request.mobile}/recipients/recipient_id:{request.recipient_id}/transfer?initiator_id={EKO_INITIATOR_ID}"
+        # V3 Fund Transfer API
+        url = f"{EKO_BASE_URL_V3}/users/payment/fund-transfer"
         
+        # Get recipient details for V3 API
+        recipient = await db.dmt_recipients.find_one({
+            "customer_mobile": request.mobile,
+            "$or": [
+                {"recipient_id": request.recipient_id},
+                {"bank_recipient_id": int(request.recipient_id) if request.recipient_id.isdigit() else None}
+            ]
+        })
+        
+        # If not in local DB, fetch from Eko
+        if not recipient:
+            try:
+                recipients_url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{request.mobile}/recipients?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
+                async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+                    resp = await client.get(recipients_url, headers=headers)
+                    resp_data = resp.json()
+                    if resp_data.get("response_status_id") == 0:
+                        for r in resp_data.get("data", {}).get("recipient_list", []):
+                            if str(r.get("recipient_id")) == request.recipient_id or str(r.get("bank_recipient_id")) == request.recipient_id:
+                                recipient = r
+                                break
+            except Exception as e:
+                logging.warning(f"[DMT] Failed to fetch recipient: {e}")
+        
+        # Build V3 request data
         data = {
-            "amount": str(int(request.amount)),
-            "client_ref_id": txn_id,
-            "channel": "2",  # IMPS
+            "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "latlong": "28.6139,77.2090"  # Delhi coordinates
+            "client_ref_id": txn_id[:20],  # Max 20 chars
+            "service_code": "45",  # Fund Transfer
+            "payment_mode": "5",  # IMPS
+            "recipient_name": recipient.get("recipient_name") or recipient.get("name") if recipient else "Beneficiary",
+            "account": recipient.get("acc") or recipient.get("account_number") if recipient else request.recipient_id,
+            "ifsc": recipient.get("ifsc", "").upper() if recipient else "",
+            "amount": str(int(request.amount)),
+            "sender_name": "PARAS User",
+            "source": "API",
+            "latlong": "28.6139,77.2090"
         }
+        
+        logging.info(f"[DMT] V3 Transfer Request: {txn_id} -> {url}")
+        logging.info(f"[DMT] V3 Data: {data}")
         
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             response = await client.post(url, headers=headers, data=data)
+            
+            # Check for empty response (204)
+            if response.status_code == 204 or not response.text:
+                logging.warning(f"[DMT] Empty response from Eko: {response.status_code}")
+                # Fallback: Try V1 endpoint
+                url_v1 = f"{EKO_BASE_URL}/v1/customers/mobile_number:{request.mobile}/recipients/recipient_id:{request.recipient_id}/transfer?initiator_id={EKO_INITIATOR_ID}"
+                data_v1 = {
+                    "amount": str(int(request.amount)),
+                    "client_ref_id": txn_id[:20],
+                    "channel": "2",
+                    "user_code": EKO_USER_CODE,
+                    "latlong": "28.6139,77.2090"
+                }
+                response = await client.post(url_v1, headers=headers, data=data_v1)
+                logging.info(f"[DMT] V1 Fallback Response: {response.status_code}")
+            
+            if response.status_code == 500:
+                raise Exception("Eko API returned 500 Internal Server Error. Please contact Eko support.")
+            
+            if not response.text:
+                raise Exception("Empty response from Eko API")
+            
             result = response.json()
         
         logging.info(f"[DMT] Transfer: {txn_id} -> {result.get('response_status_id')}")
