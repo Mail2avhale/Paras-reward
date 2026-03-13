@@ -518,12 +518,14 @@ const AdminKYC = ({ user }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      hour12: true
+    }) + ' IST';
   };
 
   const pendingInSelection = filteredDocs.filter(d => selectedIds.has(d.kyc_id) && d.status === 'pending').length;

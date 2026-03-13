@@ -632,13 +632,16 @@ const AdminUser360 = ({ user: adminUser }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
+    // Convert UTC to IST (Indian Standard Time)
     return new Date(dateString).toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      hour12: true
+    }) + ' IST';
   };
 
   const formatNumber = (num) => {

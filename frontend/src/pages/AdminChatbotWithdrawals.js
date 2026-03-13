@@ -424,7 +424,7 @@ const AdminChatbotWithdrawals = ({ user }) => {
                     {getStatusBadge(req.status)}
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-sm">
-                    {new Date(req.created_at).toLocaleDateString()}
+                    {new Date(req.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -576,12 +576,12 @@ const AdminChatbotWithdrawals = ({ user }) => {
               <div className="text-sm text-gray-400">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  Created: {new Date(selectedRequest.created_at).toLocaleString()}
+                  Created: {new Date(selectedRequest.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST
                 </div>
                 {selectedRequest.processed_at && (
                   <div className="flex items-center gap-2 mt-1">
                     <CheckCircle className="w-4 h-4" />
-                    Processed: {new Date(selectedRequest.processed_at).toLocaleString()}
+                    Processed: {new Date(selectedRequest.processed_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })} IST
                   </div>
                 )}
               </div>

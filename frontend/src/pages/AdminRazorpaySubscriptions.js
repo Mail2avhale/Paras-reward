@@ -285,9 +285,11 @@ const AdminRazorpaySubscriptions = ({ user }) => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
+    // Convert UTC to IST (Indian Standard Time)
     return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+    }) + ' IST';
   };
 
   // Apply sorting
