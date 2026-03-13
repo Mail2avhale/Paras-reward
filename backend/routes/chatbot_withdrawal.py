@@ -622,312 +622,69 @@ async def get_fee_calculation(amount: float):
     return calculate_fees(amount)
 
 # ==================== EKO OTP VERIFICATION APIs ====================
+# NOTE: Eko DMT API DISABLED - All endpoints return "service disabled"
+# Admin will process withdrawals manually without Eko API
 
 @router.post("/eko/check-customer")
 async def check_eko_customer(req: EkoCheckRequest):
     """
-    Step 1: Check if customer exists in Eko system
-    Returns customer status and whether OTP verification is needed
+    Eko customer check - DISABLED
+    Returns skip_otp=True so withdrawal flow continues without Eko verification
     """
-    if not is_eko_configured():
-        logging.warning("[Withdrawal] Eko not configured, skipping verification")
-        return {
-            "success": True,
-            "customer_exists": True,
-            "verified": True,
-            "skip_otp": True,
-            "message": "Eko verification skipped (not configured)"
-        }
-    
-    try:
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        headers = get_eko_headers()
-        del headers["Content-Type"]  # GET request
-        
-        response = await chatbot_get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-        logging.info(f"[Withdrawal] Eko customer check: {response.status_code}")
-        
-        if response.status_code == 403:
-            logging.error("[Withdrawal] Eko 403 - IP not whitelisted")
-            return {
-                "success": True,
-                "customer_exists": True,
-                "verified": True,
-                "skip_otp": True,
-                "message": "Verification skipped (service unavailable)"
-            }
-        
-        result = response.json()
-        eko_status = result.get("status")
-        eko_data = result.get("data", {})
-        
-        if eko_status == 0:
-            # Customer found
-            customer_state = eko_data.get("state", 0)
-            # Convert to int for comparison (Eko returns string)
-            try:
-                customer_state_int = int(customer_state)
-            except:
-                customer_state_int = 0
-            
-            # State meanings:
-            # 0 = Full KYC verified
-            # 1 = OTP verification pending
-            # 2 = Non-KYC (can transact with ₹25000 limit)
-            # 3 = Blocked
-            
-            # State 0 and 2 can transact directly
-            can_transact = customer_state_int in [0, 2]
-            needs_otp = customer_state_int == 1
-            
-            return {
-                "success": True,
-                "customer_exists": True,
-                "customer_id": eko_data.get("customer_id"),
-                "name": eko_data.get("name"),
-                "state": customer_state,
-                "verified": can_transact,  # State 0 or 2 can proceed
-                "otp_required": needs_otp,  # Only state 1 needs OTP
-                "available_limit": eko_data.get("available_limit", 25000),
-                "message": "Customer verified" if can_transact else "OTP verification pending"
-            }
-        
-        elif eko_status == 463:
-            # Customer not found - needs registration
-            return {
-                "success": True,
-                "customer_exists": False,
-                "verified": False,
-                "needs_registration": True,
-                "message": "Customer not registered in banking system. Registration required."
-            }
-        
-        else:
-            return {
-                "success": False,
-                "error": result.get("message", "Check failed"),
-                "message": "Unable to verify customer status"
-            }
-            
-    except httpx.TimeoutException:
-        return {"success": True, "skip_otp": True, "message": "Verification skipped (timeout)"}
-    except Exception as e:
-        logging.error(f"[Withdrawal] Eko check error: {e}")
-        return {"success": True, "skip_otp": True, "message": "Verification skipped (error)"}
+    return {
+        "success": True,
+        "customer_exists": True,
+        "verified": True,
+        "skip_otp": True,
+        "message": "Eko verification disabled. Admin will process manually."
+    }
 
 
 @router.post("/eko/register-customer")
 async def register_eko_customer(req: EkoRegisterRequest):
     """
-    Step 2: Register new customer in Eko - OTP will be sent automatically
+    Eko register - DISABLED
+    Returns success so flow continues
     """
-    if not is_eko_configured():
-        return {"success": False, "error": "Eko not configured"}
-    
-    try:
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        payload = {
-            "name": req.name.upper(),
-            "pipe": "9"
-        }
-        
-        headers = get_eko_headers()
-        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
-        
-        logging.info(f"[Withdrawal] Eko register: {response.status_code}")
-        
-        if response.status_code == 403:
-            return {"success": False, "error": "Service unavailable", "message": "Banking service temporarily unavailable"}
-        
-        result = response.json()
-        eko_status = result.get("status")
-        eko_data = result.get("data", {})
-        
-        if eko_status == 0:
-            return {
-                "success": True,
-                "registered": True,
-                "customer_id": eko_data.get("customer_id"),
-                "state": eko_data.get("state", 1),
-                "otp_sent": True,
-                "message": f"✅ OTP sent to {req.mobile}. कृपया OTP enter करा."
-            }
-        
-        elif eko_status == 327:
-            # Already registered, OTP pending
-            return {
-                "success": True,
-                "registered": True,
-                "otp_sent": False,
-                "needs_resend": True,
-                "message": "Customer already registered. OTP verification pending. Click 'Resend OTP'."
-            }
-        
-        else:
-            return {
-                "success": False,
-                "error": result.get("message", "Registration failed"),
-                "message": "Registration failed. Please try again."
-            }
-            
-    except Exception as e:
-        logging.error(f"[Withdrawal] Eko register error: {e}")
-        return {"success": False, "error": str(e)}
+    return {
+        "success": True,
+        "registered": True,
+        "skip_otp": True,
+        "message": "Eko registration disabled. Admin will verify manually."
+    }
 
 
 @router.post("/eko/resend-otp")
 async def resend_eko_otp(req: EkoCheckRequest):
     """
-    Resend OTP if expired or not received
+    Eko resend OTP - DISABLED
     """
-    if not is_eko_configured():
-        return {"success": False, "error": "Eko not configured"}
-    
-    try:
-        url = f"{EKO_BASE_URL}/v1/customers/mobile_number:{req.mobile}/otp?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        payload = {"pipe": "9"}
-        headers = get_eko_headers()
-        
-        response = await chatbot_post(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
-        logging.info(f"[Withdrawal] Eko resend OTP: {response.status_code}")
-        
-        if response.status_code == 403:
-            return {"success": False, "error": "Service unavailable"}
-        
-        result = response.json()
-        eko_status = result.get("status")
-        
-        if eko_status == 0:
-            return {
-                "success": True,
-                "otp_sent": True,
-                "message": f"✅ नवीन OTP {req.mobile} वर पाठवला आहे."
-            }
-        else:
-            return {
-                "success": False,
-                "error": result.get("message", "Failed to send OTP"),
-                "message": "OTP पाठवता आला नाही. पुन्हा प्रयत्न करा."
-            }
-            
-    except Exception as e:
-        logging.error(f"[Withdrawal] Eko resend OTP error: {e}")
-        return {"success": False, "error": str(e)}
+    return {
+        "success": True,
+        "skip_otp": True,
+        "message": "OTP verification disabled. Admin will process manually."
+    }
 
 
 @router.post("/eko/verify-otp")
 async def verify_eko_otp(req: EkoVerifyOTPRequest):
     """
-    Step 3: Verify OTP entered by user
-    After successful verification, user can proceed with withdrawal
+    Eko verify OTP - DISABLED
+    Returns verified=True so flow continues
     """
-    if not is_eko_configured():
-        return {"success": True, "verified": True, "skip": True}
-    
-    try:
-        url = f"{EKO_BASE_URL}/v1/customers/verification/otp:{req.otp}?initiator_id={EKO_INITIATOR_ID}&user_code={EKO_USER_CODE}"
-        
-        payload = {
-            "customer_id_type": "mobile_number",
-            "customer_id": req.mobile
-        }
-        
-        headers = get_eko_headers()
-        response = await chatbot_put(url, headers=headers, data=payload, timeout=REQUEST_TIMEOUT)
-        
-        logging.info(f"[Withdrawal] Eko verify OTP: {response.status_code}")
-        
-        if response.status_code == 403:
-            return {"success": False, "error": "Service unavailable"}
-        
-        result = response.json()
-        eko_status = result.get("status")
-        eko_data = result.get("data", {})
-        
-        if eko_status == 0:
-            # Save verification status in database
-            await db.eko_verified_customers.update_one(
-                {"mobile": req.mobile},
-                {
-                    "$set": {
-                        "mobile": req.mobile,
-                        "uid": req.uid,
-                        "customer_id": eko_data.get("customer_id"),
-                        "verified": True,
-                        "verified_at": datetime.now(timezone.utc).isoformat(),
-                        "available_limit": eko_data.get("available_limit", 25000)
-                    }
-                },
-                upsert=True
-            )
-            
-            return {
-                "success": True,
-                "verified": True,
-                "customer_id": eko_data.get("customer_id"),
-                "available_limit": eko_data.get("available_limit", 25000),
-                "message": "✅ OTP verified! आता withdrawal request करा."
-            }
-        
-        elif eko_status == 302:
-            return {
-                "success": False,
-                "verified": False,
-                "error": "wrong_otp",
-                "message": "❌ चुकीचा OTP. कृपया योग्य OTP enter करा."
-            }
-        
-        elif eko_status == 303:
-            return {
-                "success": False,
-                "verified": False,
-                "error": "otp_expired",
-                "message": "⏰ OTP expired. 'Resend OTP' वर click करा."
-            }
-        
-        elif eko_status == 327:
-            return {
-                "success": False,
-                "verified": False,
-                "error": "otp_not_sent",
-                "message": "OTP पाठवला नाही. 'Resend OTP' वर click करा."
-            }
-        
-        else:
-            return {
-                "success": False,
-                "verified": False,
-                "error": result.get("message", "Verification failed"),
-                "message": "Verification failed. पुन्हा प्रयत्न करा."
-            }
-            
-    except Exception as e:
-        logging.error(f"[Withdrawal] Eko verify OTP error: {e}")
-        return {"success": False, "error": str(e)}
+    return {
+        "success": True,
+        "verified": True,
+        "message": "OTP verification disabled. Admin will verify manually."
+    }
 
 
 @router.get("/eko/verification-status/{mobile}")
 async def get_verification_status(mobile: str):
-    """Check if user's mobile is already verified in Eko"""
-    # Check our database first
-    verified_record = await db.eko_verified_customers.find_one(
-        {"mobile": mobile, "verified": True},
-        {"_id": 0}
-    )
-    
-    if verified_record:
-        return {
-            "verified": True,
-            "customer_id": verified_record.get("customer_id"),
-            "verified_at": verified_record.get("verified_at"),
-            "message": "Already verified"
-        }
-    
+    """Check verification status - DISABLED, always returns verified"""
     return {
-        "verified": False,
-        "message": "Not verified. Please complete OTP verification."
+        "verified": True,
+        "message": "Eko verification disabled. Admin will process manually."
     }
 
 # ==================== WITHDRAWAL REQUEST API ====================

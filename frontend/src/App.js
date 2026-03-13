@@ -154,7 +154,7 @@ const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit")
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
-const DMTPage = lazy(() => import("@/pages/DMTPage"));
+// DMTPage - REMOVED (Eko API not working)
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -224,7 +224,7 @@ const AdminUnifiedPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpack
 const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
 const AdminRedeemDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminRedeemDashboard"));
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
-const AdminDMTDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminDMTDashboard"));
+// AdminDMTDashboard - REMOVED (Eko API not working)
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
@@ -345,8 +345,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
             <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
-            <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
-            <Route path="/bank-transfer" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage />) : <Navigate to="/login" />} />
+            {/* DMT routes removed - Eko API not working */}
+            <Route path="/dmt" element={<Navigate to="/redeem" />} />
+            <Route path="/bank-transfer" element={<Navigate to="/redeem" />} />
             <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
             <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
             
@@ -407,7 +408,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/redeem" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/dmt" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminDMTDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* Admin DMT removed - Eko API not working */}
+                <Route path="/admin/dmt" element={<Navigate to="/admin" />} />
                 <Route path="/admin/popup-messages" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPopupMessages user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
