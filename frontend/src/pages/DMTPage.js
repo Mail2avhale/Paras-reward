@@ -12,6 +12,53 @@ import {
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Helper function to sanitize error messages for users
+const sanitizeErrorMessage = (error) => {
+  const technicalPatterns = [
+    /insufficient balance.*key/i,
+    /last_used/i,
+    /okeykey/i,
+    /internal server error/i,
+    /exception/i,
+    /traceback/i,
+    /stack trace/i,
+    /undefined/i,
+    /null pointer/i,
+    /connection refused/i,
+    /timeout/i,
+    /api error/i,
+    /status code/i,
+    /response_status_id/i,
+  ];
+  
+  const errorStr = String(error || '');
+  
+  // Check if error contains technical details
+  for (const pattern of technicalPatterns) {
+    if (pattern.test(errorStr)) {
+      return 'Service temporarily unavailable. Please try again later.';
+    }
+  }
+  
+  // Map common errors to user-friendly messages
+  if (errorStr.toLowerCase().includes('insufficient balance')) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  if (errorStr.toLowerCase().includes('network') || errorStr.toLowerCase().includes('fetch')) {
+    return 'Network error. Please check your connection and try again.';
+  }
+  if (errorStr.toLowerCase().includes('unauthorized') || errorStr.toLowerCase().includes('403')) {
+    return 'Session expired. Please login again.';
+  }
+  
+  // Return generic message for any unhandled error
+  if (errorStr.length > 100 || /[{}\[\]<>]/.test(errorStr)) {
+    return 'Service temporarily unavailable. Please try again later.';
+  }
+  
+  return errorStr || 'Something went wrong. Please try again.';
+};
+
 // Step indicator component
 const StepIndicator = ({ currentStep, steps }) => (
   <div className="flex items-center justify-center gap-2 mb-6">
@@ -186,7 +233,7 @@ const DMTPage = ({ user }) => {
         }
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Search failed');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Search failed');
     } finally {
       setLoading(false);
     }
@@ -212,7 +259,7 @@ const DMTPage = ({ user }) => {
           setOtpSent(true);
           toast.success('OTP sent to customer mobile');
         } else {
-          toast.error(res.data.message || 'Registration failed');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'Registration failed');
         }
       } else {
         res = await axios.post(`${API}/eko/dmt/customer/register`, {
@@ -225,11 +272,11 @@ const DMTPage = ({ user }) => {
           setOtpSent(true);
           toast.success('OTP sent to customer mobile');
         } else {
-          toast.error(res.data.message || 'Registration failed');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'Registration failed');
         }
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -257,7 +304,7 @@ const DMTPage = ({ user }) => {
           setStep(3);
           fetchRecipients();
         } else {
-          toast.error(res.data.message || 'OTP verification failed');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'OTP verification failed');
         }
       } else {
         res = await axios.post(`${API}/eko/dmt/customer/verify-otp`, {
@@ -272,11 +319,11 @@ const DMTPage = ({ user }) => {
           setStep(3);
           fetchRecipients();
         } else {
-          toast.error(res.data.message || 'OTP verification failed');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'OTP verification failed');
         }
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'OTP verification failed');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'OTP verification failed');
     } finally {
       setLoading(false);
     }
@@ -294,10 +341,10 @@ const DMTPage = ({ user }) => {
       if (res.data.success) {
         toast.success('OTP resent successfully');
       } else {
-        toast.error(res.data.message || 'Failed to resend OTP');
+        toast.error(sanitizeErrorMessage(res.data.message) || 'Failed to resend OTP');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to resend OTP');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Failed to resend OTP');
     } finally {
       setLoading(false);
     }
@@ -350,7 +397,7 @@ const DMTPage = ({ user }) => {
           setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', recipient_mobile: '', bank_name: '' });
           fetchRecipients();
         } else {
-          toast.error(res.data.message || 'Failed to add recipient');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'Failed to add recipient');
         }
       } else {
         res = await axios.post(`${API}/eko/dmt/recipient/add`, {
@@ -365,11 +412,11 @@ const DMTPage = ({ user }) => {
           setNewRecipient({ account_number: '', ifsc: '', recipient_name: '', recipient_mobile: '', bank_name: '' });
           fetchRecipients();
         } else {
-          toast.error(res.data.message || 'Failed to add recipient');
+          toast.error(sanitizeErrorMessage(res.data.message) || 'Failed to add recipient');
         }
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add recipient');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Failed to add recipient');
     } finally {
       setLoading(false);
     }
@@ -404,10 +451,10 @@ const DMTPage = ({ user }) => {
         setStep(dmtType === 'levin' ? 4 : step); // Move to OTP step
         toast.success('Transfer OTP sent to customer mobile');
       } else {
-        toast.error(res.data.message || 'Failed to send OTP');
+        toast.error(sanitizeErrorMessage(res.data.message) || 'Failed to send OTP');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to send OTP');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -477,13 +524,13 @@ const DMTPage = ({ user }) => {
         fetchWalletInfo();
         fetchTransactions();
       } else {
-        toast.error(res.data.message || 'Transfer failed');
+        toast.error(sanitizeErrorMessage(res.data.message) || 'Transfer failed');
         if (res.data.refunded) {
           toast.info('Amount has been refunded to your wallet');
         }
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Transfer failed');
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail || error.response?.data?.message) || 'Service temporarily unavailable');
     } finally {
       setLoading(false);
     }
@@ -1086,7 +1133,7 @@ const DMTPage = ({ user }) => {
                       <>
                         <XCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-white mb-2">Transfer Failed</h2>
-                        <p className="text-gray-400 mb-4">{transferResult.message}</p>
+                        <p className="text-gray-400 mb-4">{sanitizeErrorMessage(transferResult.message)}</p>
                         {transferResult.refunded && (
                           <p className="text-green-400 text-sm mb-4">
                             <CheckCircle className="w-4 h-4 inline mr-1" />

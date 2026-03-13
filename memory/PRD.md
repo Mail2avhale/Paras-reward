@@ -23,6 +23,31 @@ Production application (www.parasreward.com) was experiencing severe performance
 
 ## COMPLETED FIXES
 
+### 🚨 CRITICAL: Double Subscription Bug Fix (March 13, 2026)
+
+**Problem:** Users paying ₹799 for monthly plan (28 days) were getting 56 days (double).
+
+**Root Cause:** Two auto-sync functions were both activating the same payment:
+1. `auto_sync_razorpay_payments()` - checks pending orders
+2. `auto_sync_captured_from_razorpay()` - checks captured payments
+
+**Fix Applied:**
+- Added duplicate check in `vip_payments` collection before activation
+- Both functions now verify payment wasn't already used
+- Each activation creates a record in `vip_payments` for tracking
+
+**Admin Tools Added:**
+- `GET /api/admin/fix-double-subscriptions` - Preview affected users
+- `POST /api/admin/fix-double-subscriptions` - Fix affected users (dry_run option)
+
+### 🎯 DMT Error Messages Sanitized (March 13, 2026)
+- Technical errors (like "Insufficient balance Last_used_OkeyKey: 6") now show user-friendly message
+- Users see: "Service temporarily unavailable. Please try again later."
+
+### 🎯 DMT Menu Link Added (March 13, 2026)
+- "Money Transfer" option added to user sidebar
+- Route: `/dmt`
+
 ### 🎯 Levin DMT V3 - FULLY WORKING (March 13, 2026)
 
 **Critical Fix: API Endpoints Corrected**
