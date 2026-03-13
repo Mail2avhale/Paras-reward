@@ -65,6 +65,7 @@ class TransferRequest(BaseModel):
     otp: str
     otp_ref_id: str
     client_ref_id: Optional[str] = None
+    user_id: Optional[str] = None  # For limit tracking
 
 class TransactionStatusRequest(BaseModel):
     transaction_id: str
@@ -497,6 +498,29 @@ async def initiate_transfer(request: TransferRequest):
     POST /v3/customer/payment/dmt-levin
     """
     try:
+        # Import check_dmt_limits from server
+        from server import check_dmt_limits, check_service_enabled, db
+        
+        # Check if DMT service is enabled
+        dmt_enabled = await check_service_enabled("dmt")
+        if not dmt_enabled:
+            return {
+                "success": False,
+                "message": "DMT service is currently disabled by admin",
+                "error_code": "SERVICE_DISABLED"
+            }
+        
+        # Check DMT limits if user_id is provided
+        if request.user_id:
+            limit_check = await check_dmt_limits(request.user_id, request.amount)
+            if not limit_check.get("allowed"):
+                return {
+                    "success": False,
+                    "message": limit_check.get("reason", "Transfer limit exceeded"),
+                    "error_code": "LIMIT_EXCEEDED",
+                    "usage": limit_check.get("usage")
+                }
+        
         # Levin DMT uses /dmt-levin path for transfer
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin"
         
@@ -541,6 +565,25 @@ async def initiate_transfer(request: TransferRequest):
             tx_desc = result.get("data", {}).get("txstatus_desc", "")
             
             if result.get("response_status_id") == 0:
+                # Save transaction record for limit tracking
+                if request.user_id:
+                    tx_record = {
+                        "txn_id": str(uuid.uuid4()),
+                        "user_id": request.user_id,
+                        "customer_mobile": request.customer_mobile,
+                        "recipient_id": request.recipient_id,
+                        "amount": request.amount,
+                        "eko_tid": result.get("data", {}).get("tid"),
+                        "bank_ref_num": result.get("data", {}).get("bank_ref_num"),
+                        "client_ref_id": client_ref_id,
+                        "tx_status": tx_status,
+                        "tx_status_desc": tx_desc,
+                        "status": "success" if tx_status == "0" else "pending",
+                        "service_type": "levin_dmt",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.dmt_transactions.insert_one(tx_record)
+                
                 return {
                     "success": tx_status == "0",
                     "transaction_id": result.get("data", {}).get("tid"),
@@ -553,6 +596,22 @@ async def initiate_transfer(request: TransferRequest):
                     "data": result.get("data", {})
                 }
             else:
+                # Save failed transaction too
+                if request.user_id:
+                    tx_record = {
+                        "txn_id": str(uuid.uuid4()),
+                        "user_id": request.user_id,
+                        "customer_mobile": request.customer_mobile,
+                        "recipient_id": request.recipient_id,
+                        "amount": request.amount,
+                        "client_ref_id": client_ref_id,
+                        "status": "failed",
+                        "error_message": result.get("message", "Transfer failed"),
+                        "service_type": "levin_dmt",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.dmt_transactions.insert_one(tx_record)
+                
                 return {
                     "success": False,
                     "message": result.get("message", "Transfer failed"),

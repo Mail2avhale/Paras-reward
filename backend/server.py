@@ -2698,7 +2698,8 @@ DEFAULT_SERVICE_STATUS = {
     "loan_emi": True,
     "gift_voucher": True,
     "shopping": True,
-    "bank_redeem": True
+    "bank_redeem": True,
+    "dmt": True  # DMT - Domestic Money Transfer
 }
 
 async def get_service_status(service_type: str = None) -> dict:
@@ -15122,7 +15123,8 @@ async def get_all_service_toggles():
             "loan_emi": "Pay EMI",
             "gift_voucher": "Gift Voucher",
             "shopping": "Shopping",
-            "bank_redeem": "Redeem to Bank"
+            "bank_redeem": "Redeem to Bank",
+            "dmt": "Money Transfer (DMT)"
         }
         
         for key, name in service_names.items():
@@ -15145,7 +15147,7 @@ async def toggle_service(service_key: str, request: Request):
         admin_id = data.get("admin_id", "")
         
         valid_services = ["mobile_recharge", "dish_recharge", "electricity_bill", 
-                         "credit_card_payment", "loan_emi", "gift_voucher", "shopping", "bank_redeem"]
+                         "credit_card_payment", "loan_emi", "gift_voucher", "shopping", "bank_redeem", "dmt"]
         
         if service_key not in valid_services:
             raise HTTPException(status_code=400, detail=f"Invalid service: {service_key}")
@@ -15199,6 +15201,272 @@ async def get_public_service_status():
         return {"services": status}
     except Exception as e:
         return {"services": DEFAULT_SERVICE_STATUS}
+
+
+# ========== DMT GLOBAL LIMITS MANAGEMENT ==========
+
+# Default DMT limits
+DEFAULT_DMT_LIMITS = {
+    "daily_limit": 25000,      # ₹25,000 per day per user
+    "weekly_limit": 100000,    # ₹1,00,000 per week per user
+    "monthly_limit": 200000,   # ₹2,00,000 per month per user
+    "per_txn_limit": 25000,    # Max ₹25,000 per transaction
+    "min_amount": 100          # Min ₹100 per transaction
+}
+
+@api_router.get("/admin/dmt-limits")
+async def get_dmt_limits():
+    """Get global DMT limits for all users"""
+    try:
+        settings = await db.settings.find_one({"key": "dmt_limits"}, {"_id": 0})
+        if settings:
+            return {
+                "success": True,
+                "limits": {
+                    "daily_limit": settings.get("daily_limit", DEFAULT_DMT_LIMITS["daily_limit"]),
+                    "weekly_limit": settings.get("weekly_limit", DEFAULT_DMT_LIMITS["weekly_limit"]),
+                    "monthly_limit": settings.get("monthly_limit", DEFAULT_DMT_LIMITS["monthly_limit"]),
+                    "per_txn_limit": settings.get("per_txn_limit", DEFAULT_DMT_LIMITS["per_txn_limit"]),
+                    "min_amount": settings.get("min_amount", DEFAULT_DMT_LIMITS["min_amount"]),
+                    "updated_at": settings.get("updated_at"),
+                    "updated_by": settings.get("updated_by")
+                }
+            }
+        return {"success": True, "limits": DEFAULT_DMT_LIMITS}
+    except Exception as e:
+        logging.error(f"Error getting DMT limits: {e}")
+        return {"success": True, "limits": DEFAULT_DMT_LIMITS}
+
+@api_router.put("/admin/dmt-limits")
+async def update_dmt_limits(request: Request):
+    """Update global DMT limits for all users"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id", "")
+        
+        # Validate limits
+        daily_limit = data.get("daily_limit", DEFAULT_DMT_LIMITS["daily_limit"])
+        weekly_limit = data.get("weekly_limit", DEFAULT_DMT_LIMITS["weekly_limit"])
+        monthly_limit = data.get("monthly_limit", DEFAULT_DMT_LIMITS["monthly_limit"])
+        per_txn_limit = data.get("per_txn_limit", DEFAULT_DMT_LIMITS["per_txn_limit"])
+        min_amount = data.get("min_amount", DEFAULT_DMT_LIMITS["min_amount"])
+        
+        # Validation
+        if daily_limit <= 0 or weekly_limit <= 0 or monthly_limit <= 0:
+            raise HTTPException(status_code=400, detail="Limits must be positive")
+        if per_txn_limit > daily_limit:
+            raise HTTPException(status_code=400, detail="Per transaction limit cannot exceed daily limit")
+        if daily_limit > weekly_limit:
+            raise HTTPException(status_code=400, detail="Daily limit cannot exceed weekly limit")
+        if weekly_limit > monthly_limit:
+            raise HTTPException(status_code=400, detail="Weekly limit cannot exceed monthly limit")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        await db.settings.update_one(
+            {"key": "dmt_limits"},
+            {
+                "$set": {
+                    "key": "dmt_limits",
+                    "daily_limit": daily_limit,
+                    "weekly_limit": weekly_limit,
+                    "monthly_limit": monthly_limit,
+                    "per_txn_limit": per_txn_limit,
+                    "min_amount": min_amount,
+                    "updated_at": now,
+                    "updated_by": admin_id
+                }
+            },
+            upsert=True
+        )
+        
+        # Log the change
+        await db.activity_logs.insert_one({
+            "log_id": str(uuid.uuid4()),
+            "action": "dmt_limits_updated",
+            "limits": {
+                "daily_limit": daily_limit,
+                "weekly_limit": weekly_limit,
+                "monthly_limit": monthly_limit,
+                "per_txn_limit": per_txn_limit,
+                "min_amount": min_amount
+            },
+            "admin_id": admin_id,
+            "timestamp": now
+        })
+        
+        return {
+            "success": True,
+            "message": "DMT limits updated successfully",
+            "limits": {
+                "daily_limit": daily_limit,
+                "weekly_limit": weekly_limit,
+                "monthly_limit": monthly_limit,
+                "per_txn_limit": per_txn_limit,
+                "min_amount": min_amount
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating DMT limits: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/user/{user_id}/dmt-usage")
+async def get_user_dmt_usage(user_id: str):
+    """Get DMT usage stats for a specific user"""
+    try:
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Week start (Monday)
+        days_since_monday = now.weekday()
+        week_start = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Month start
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Get limits
+        settings = await db.settings.find_one({"key": "dmt_limits"}, {"_id": 0})
+        limits = settings if settings else DEFAULT_DMT_LIMITS
+        
+        # Daily usage
+        daily_usage = await db.dmt_transactions.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$in": ["success", "pending"]},
+                    "created_at": {"$gte": today_start.isoformat()}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Weekly usage
+        weekly_usage = await db.dmt_transactions.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$in": ["success", "pending"]},
+                    "created_at": {"$gte": week_start.isoformat()}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        # Monthly usage
+        monthly_usage = await db.dmt_transactions.aggregate([
+            {
+                "$match": {
+                    "user_id": user_id,
+                    "status": {"$in": ["success", "pending"]},
+                    "created_at": {"$gte": month_start.isoformat()}
+                }
+            },
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]).to_list(1)
+        
+        daily_used = daily_usage[0]["total"] if daily_usage else 0
+        weekly_used = weekly_usage[0]["total"] if weekly_usage else 0
+        monthly_used = monthly_usage[0]["total"] if monthly_usage else 0
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "usage": {
+                "daily": {
+                    "used": daily_used,
+                    "limit": limits.get("daily_limit", DEFAULT_DMT_LIMITS["daily_limit"]),
+                    "remaining": max(0, limits.get("daily_limit", DEFAULT_DMT_LIMITS["daily_limit"]) - daily_used),
+                    "count": daily_usage[0]["count"] if daily_usage else 0
+                },
+                "weekly": {
+                    "used": weekly_used,
+                    "limit": limits.get("weekly_limit", DEFAULT_DMT_LIMITS["weekly_limit"]),
+                    "remaining": max(0, limits.get("weekly_limit", DEFAULT_DMT_LIMITS["weekly_limit"]) - weekly_used),
+                    "count": weekly_usage[0]["count"] if weekly_usage else 0
+                },
+                "monthly": {
+                    "used": monthly_used,
+                    "limit": limits.get("monthly_limit", DEFAULT_DMT_LIMITS["monthly_limit"]),
+                    "remaining": max(0, limits.get("monthly_limit", DEFAULT_DMT_LIMITS["monthly_limit"]) - monthly_used),
+                    "count": monthly_usage[0]["count"] if monthly_usage else 0
+                }
+            },
+            "limits": {
+                "per_txn_limit": limits.get("per_txn_limit", DEFAULT_DMT_LIMITS["per_txn_limit"]),
+                "min_amount": limits.get("min_amount", DEFAULT_DMT_LIMITS["min_amount"])
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error getting user DMT usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def check_dmt_limits(user_id: str, amount: int) -> dict:
+    """
+    Check if a DMT transaction is within limits.
+    Returns: {"allowed": bool, "reason": str or None, "usage": dict}
+    """
+    try:
+        # Check if DMT service is enabled
+        dmt_enabled = await check_service_enabled("dmt")
+        if not dmt_enabled:
+            return {"allowed": False, "reason": "DMT service is currently disabled", "usage": None}
+        
+        # Get limits
+        settings = await db.settings.find_one({"key": "dmt_limits"}, {"_id": 0})
+        limits = settings if settings else DEFAULT_DMT_LIMITS
+        
+        per_txn_limit = limits.get("per_txn_limit", DEFAULT_DMT_LIMITS["per_txn_limit"])
+        min_amount = limits.get("min_amount", DEFAULT_DMT_LIMITS["min_amount"])
+        daily_limit = limits.get("daily_limit", DEFAULT_DMT_LIMITS["daily_limit"])
+        weekly_limit = limits.get("weekly_limit", DEFAULT_DMT_LIMITS["weekly_limit"])
+        monthly_limit = limits.get("monthly_limit", DEFAULT_DMT_LIMITS["monthly_limit"])
+        
+        # Check min/max amount
+        if amount < min_amount:
+            return {"allowed": False, "reason": f"Minimum transfer amount is ₹{min_amount}", "usage": None}
+        if amount > per_txn_limit:
+            return {"allowed": False, "reason": f"Maximum transfer amount is ₹{per_txn_limit} per transaction", "usage": None}
+        
+        # Get usage stats
+        usage_result = await get_user_dmt_usage(user_id)
+        usage = usage_result.get("usage", {})
+        
+        # Check daily limit
+        daily_remaining = usage.get("daily", {}).get("remaining", daily_limit)
+        if amount > daily_remaining:
+            return {
+                "allowed": False, 
+                "reason": f"Daily limit exceeded. Remaining: ₹{daily_remaining}", 
+                "usage": usage
+            }
+        
+        # Check weekly limit
+        weekly_remaining = usage.get("weekly", {}).get("remaining", weekly_limit)
+        if amount > weekly_remaining:
+            return {
+                "allowed": False, 
+                "reason": f"Weekly limit exceeded. Remaining: ₹{weekly_remaining}", 
+                "usage": usage
+            }
+        
+        # Check monthly limit
+        monthly_remaining = usage.get("monthly", {}).get("remaining", monthly_limit)
+        if amount > monthly_remaining:
+            return {
+                "allowed": False, 
+                "reason": f"Monthly limit exceeded. Remaining: ₹{monthly_remaining}", 
+                "usage": usage
+            }
+        
+        return {"allowed": True, "reason": None, "usage": usage}
+    except Exception as e:
+        logging.error(f"Error checking DMT limits: {e}")
+        # On error, allow transaction (fail-open for better UX)
+        return {"allowed": True, "reason": None, "usage": None}
+
+
 
 # ========== SECURITY ALERTS API ==========
 async def get_security_alerts(

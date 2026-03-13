@@ -456,7 +456,8 @@ const DMTPage = ({ user }) => {
           beneficiary_id: selectedRecipient.beneficiary_id?.toString() || beneficiaryId,
           amount: transferAmount,
           otp: transferOtp,
-          otp_ref_id: otpRefId
+          otp_ref_id: otpRefId,
+          user_id: user?.uid  // For limit tracking
         });
       } else {
         res = await axios.post(`${API}/eko/dmt/transfer`, {

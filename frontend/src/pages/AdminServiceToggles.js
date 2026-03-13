@@ -7,7 +7,7 @@ import axios from 'axios';
 import { 
   Smartphone, Tv, Zap, CreditCard, Building, Gift, ShoppingBag, 
   Banknote, RefreshCw, Loader2, AlertTriangle, CheckCircle, XCircle,
-  ArrowLeft
+  ArrowLeft, Send
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,16 @@ const AdminServiceToggles = ({ user }) => {
   const [toggling, setToggling] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const navigate = useNavigate();
+  
+  // DMT Limits State
+  const [dmtLimits, setDmtLimits] = useState({
+    daily_limit: 25000,
+    weekly_limit: 100000,
+    monthly_limit: 200000,
+    per_txn_limit: 25000,
+    min_amount: 100
+  });
+  const [savingLimits, setSavingLimits] = useState(false);
 
   const serviceIcons = {
     mobile_recharge: Smartphone,
@@ -28,7 +38,8 @@ const AdminServiceToggles = ({ user }) => {
     loan_emi: Building,
     gift_voucher: Gift,
     shopping: ShoppingBag,
-    bank_redeem: Banknote
+    bank_redeem: Banknote,
+    dmt: Send
   };
 
   const serviceColors = {
@@ -39,11 +50,13 @@ const AdminServiceToggles = ({ user }) => {
     loan_emi: 'red',
     gift_voucher: 'pink',
     shopping: 'orange',
-    bank_redeem: 'emerald'
+    bank_redeem: 'emerald',
+    dmt: 'cyan'
   };
 
   useEffect(() => {
     fetchServices();
+    fetchDmtLimits();
   }, []);
 
   const fetchServices = async () => {
@@ -56,6 +69,34 @@ const AdminServiceToggles = ({ user }) => {
       toast.error('Failed to load service status');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchDmtLimits = async () => {
+    try {
+      const response = await axios.get(`${API}/api/admin/dmt-limits`);
+      if (response.data.success && response.data.limits) {
+        setDmtLimits(response.data.limits);
+      }
+    } catch (error) {
+      console.error('Failed to load DMT limits');
+    }
+  };
+  
+  const saveDmtLimits = async () => {
+    setSavingLimits(true);
+    try {
+      const response = await axios.put(`${API}/api/admin/dmt-limits`, {
+        ...dmtLimits,
+        admin_id: user?.uid
+      });
+      if (response.data.success) {
+        toast.success('DMT limits saved successfully');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save DMT limits');
+    } finally {
+      setSavingLimits(false);
     }
   };
 
@@ -195,6 +236,100 @@ const AdminServiceToggles = ({ user }) => {
             Last updated: {new Date(updatedAt).toLocaleString()}
           </p>
         )}
+        
+        {/* DMT Limits Section */}
+        <Card className="mt-8 p-6 bg-gray-900 border-gray-800">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-cyan-500/20">
+              <Send className="w-5 h-5 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">DMT Global Limits</h2>
+              <p className="text-gray-400 text-sm">Set transfer limits for all users</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Daily Limit */}
+            <div>
+              <label className="block text-gray-400 text-sm mb-2">Daily Limit (₹)</label>
+              <input
+                type="number"
+                value={dmtLimits.daily_limit}
+                onChange={(e) => setDmtLimits(prev => ({...prev, daily_limit: parseInt(e.target.value) || 0}))}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            
+            {/* Weekly Limit */}
+            <div>
+              <label className="block text-gray-400 text-sm mb-2">Weekly Limit (₹)</label>
+              <input
+                type="number"
+                value={dmtLimits.weekly_limit}
+                onChange={(e) => setDmtLimits(prev => ({...prev, weekly_limit: parseInt(e.target.value) || 0}))}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            
+            {/* Monthly Limit */}
+            <div>
+              <label className="block text-gray-400 text-sm mb-2">Monthly Limit (₹)</label>
+              <input
+                type="number"
+                value={dmtLimits.monthly_limit}
+                onChange={(e) => setDmtLimits(prev => ({...prev, monthly_limit: parseInt(e.target.value) || 0}))}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            
+            {/* Per Transaction Limit */}
+            <div>
+              <label className="block text-gray-400 text-sm mb-2">Per Transaction Limit (₹)</label>
+              <input
+                type="number"
+                value={dmtLimits.per_txn_limit}
+                onChange={(e) => setDmtLimits(prev => ({...prev, per_txn_limit: parseInt(e.target.value) || 0}))}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            
+            {/* Min Amount */}
+            <div>
+              <label className="block text-gray-400 text-sm mb-2">Minimum Amount (₹)</label>
+              <input
+                type="number"
+                value={dmtLimits.min_amount}
+                onChange={(e) => setDmtLimits(prev => ({...prev, min_amount: parseInt(e.target.value) || 0}))}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <Button 
+              onClick={saveDmtLimits}
+              disabled={savingLimits}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              {savingLimits ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save DMT Limits'
+              )}
+            </Button>
+          </div>
+          
+          {dmtLimits.updated_at && (
+            <p className="text-gray-500 text-xs mt-4">
+              Last updated: {new Date(dmtLimits.updated_at).toLocaleString()}
+              {dmtLimits.updated_by && ` by ${dmtLimits.updated_by}`}
+            </p>
+          )}
+        </Card>
       </div>
     </div>
   );
