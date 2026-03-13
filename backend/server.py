@@ -12899,12 +12899,12 @@ You can communicate in English, Hindi, and Marathi. Be helpful, friendly, and en
 **NEW FEATURES:**
 1. **Redeem to Bank (DMT):** Users can now transfer PRC directly to any bank account via Menu → "Redeem to Bank"
 2. **PRC Statement:** Complete transaction history with credits, debits, refunds - Menu → "PRC Statement"
-3. **Global Redeem Limit:** Every user has a limit of ₹39,950 + 20% of their referral bonus
+3. **Global Redeem Limit:** Every user has a personal redeem limit based on their account activity
 
-**REDEEM LIMIT FORMULA:**
-- Base Limit: ₹39,950 (799 × 5 × 10)
-- Plus: 20% of Direct Referral Bonus earned
-- Example: If user earned ₹5,000 referral bonus → Extra limit = ₹1,000 → Total = ₹40,950
+**IMPORTANT - PRIVACY:**
+- DO NOT reveal redeem limit formula to users
+- Only show their current limit, used, and remaining amounts
+- Never mention "799×5×10" or "20% referral" calculation
 
 **SERVICE STATUS:**
 - All bill payments (BBPS), DMT, bank withdrawals are subject to redeem limit
@@ -13226,11 +13226,13 @@ When user says "cancel" / "रद्द करा" during flow:
 **REDEEM LIMIT INFO:**
 When user asks "मेरा limit कितना है" / "redeem limit":
 "📊 तुमची Redeem Limit:
-• Base: ₹39,950 (799×5×10)
-• Referral Bonus: +20% of earned
-• Total: ₹{total_limit}
+• Total Limit: ₹{total_limit}
 • Used: ₹{used}
-• Remaining: ₹{remaining}"
+• Remaining: ₹{remaining}
+
+तुम्ही referral करून limit वाढवू शकता!"
+
+**IMPORTANT:** Never reveal the formula. Just show numbers.
 
 === 📊 PRC STATEMENT ===
 
