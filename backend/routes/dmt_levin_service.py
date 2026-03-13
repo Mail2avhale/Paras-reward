@@ -131,20 +131,24 @@ async def check_sender(request: SenderCheckRequest):
             
             result = response.json()
             
-            # Check if sender exists
-            if result.get("response_status_id") == 0:
-                data = result.get("data", {})
+            logging.info(f"[Levin DMT] Sender check result: {result}")
+            
+            # Check if sender exists - look for is_registered in data
+            data = result.get("data", {})
+            is_registered = data.get("is_registered", 0)
+            customer_profile = data.get("customer_profile", {})
+            
+            if is_registered == 1 or result.get("response_status_id") == 0:
                 return {
                     "success": True,
                     "sender_exists": True,
                     "sender": {
-                        "customer_id": data.get("customer_id"),
-                        "name": data.get("name"),
-                        "state": data.get("state"),
-                        "state_desc": data.get("state_desc"),
-                        "available_limit": data.get("available_limit"),
-                        "used_limit": data.get("used_limit"),
-                        "total_limit": data.get("total_limit")
+                        "customer_id": request.customer_mobile,
+                        "name": customer_profile.get("name", data.get("name")),
+                        "mobile": customer_profile.get("mobile"),
+                        "available_limit": customer_profile.get("next_allowed_limit", data.get("available_limit")),
+                        "used_limit": customer_profile.get("chart", [{}])[0].get("data", {}).get("used", 0) if customer_profile.get("chart") else 0,
+                        "total_limit": customer_profile.get("total_monthly_limit", data.get("total_limit"))
                     }
                 }
             else:
@@ -183,12 +187,19 @@ async def register_sender(request: SenderRegisterRequest):
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Register response: {response.status_code} - {response.text[:200]}")
+            logging.info(f"[Levin DMT] Register response: {response.status_code} - {response.text[:500] if response.text else 'EMPTY'}")
             
             if response.status_code == 204 or not response.text:
                 raise HTTPException(status_code=500, detail="Service not activated. Contact Eko support.")
             
-            result = response.json()
+            try:
+                result = response.json()
+            except Exception as json_err:
+                logging.error(f"[Levin DMT] Register JSON error: {json_err}, raw: {response.text[:300]}")
+                return {
+                    "success": False,
+                    "message": f"Eko API error: {response.text[:200]}"
+                }
             
             if result.get("response_status_id") == 0:
                 return {
