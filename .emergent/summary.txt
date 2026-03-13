@@ -1,157 +1,156 @@
 <analysis>**original_problem_statement:**
 The user initially wanted to fix a broken Eko Domestic Money Transfer (DMT) feature. After discovering the V1 API was unreliable and the V3 API was not activated for their account, the user decided to pivot completely. The new goal is to perform a major architectural refactor of the entire fintech platform to make it more scalable, maintainable, and robust, following a professional microservices-style architecture pattern provided by the user. This involves moving from a monolithic  and unstructured database to a service-oriented backend with a proper ledger system, transaction state management, and background workers. The original DMT feature has been completely removed from the codebase.
 
+Subsequently, the user requested to re-implement the Eko DMT V1 feature from scratch, in parallel with finishing the refactor.
+
 PRODUCT REQUIREMENTS:
-1.  Remove all existing Eko DMT V1 and V3 code from the frontend and backend.
-2.  Restructure the backend from a single  file into a service-oriented architecture with distinct layers for API, Services, Models, and Core configuration.
-3.  Implement a double-entry ledger system to immutably track all value movements (e.g., PRC credits/debits).
-4.  Introduce a transaction state machine to manage the lifecycle of financial operations (e.g., , , , ).
-5.  Create a system for background task processing to handle asynchronous operations like retries and webhooks.
-6.  Gradually migrate all existing application logic (PRC mining, withdrawals, BBPS, referrals) to use these new core services without impacting the 5000 live users.
+1.  Restructure the backend from a single  file into a service-oriented architecture with distinct layers for API, Services, Models, and Core configuration.
+2.  Implement a double-entry ledger system to immutably track all value movements (e.g., PRC credits/debits).
+3.  Introduce a transaction state machine to manage the lifecycle of financial operations.
+4.  Create a system for background task processing to handle asynchronous operations.
+5.  Gradually migrate all existing application logic (PRC mining, withdrawals, BBPS, referrals) to use these new core services.
+6.  Re-implement the Eko DMT V1 feature (Full E2E).
+7.  Add a Payment Retry Queue widget to the admin dashboard.
+8.  Implement Eko DMT refund APIs.
 
 **User's preferred language**: The user communicates in **Marathi**. The next agent **MUST** respond in **Marathi**.
 
 **what currently exists?**
-The application has undergone a significant architectural refactor. The problematic Eko DMT feature has been completely removed from both the frontend and backend. The backend has been restructured from a monolithic  into a new service-oriented architecture under .
-
-The following foundational components of the new architecture have been built and partially integrated:
-1.  **Code Organization (Phase 1):** New directory structure (, , , ) is in place.
-2.  **Ledger System (Phase 2):** A  now manages a double-entry  collection in MongoDB. It has been integrated into the chatbot withdrawal and PRC mining claim flows.
-3.  **Transaction State Machine (Phase 3):** A  has been created to track transactions with different states. It's partially integrated into the withdrawal flow.
-4.  **Background Tasks (Phase 4):** A simple, database-backed  and a background worker have been implemented to enable asynchronous processing.
-5.  **Admin UI:** A new Ledger page has been added to the admin panel to view all ledger transactions.
-
-All original user-facing features (Auth, PRC Economy, Payments, BBPS, etc.) remain functional, with some now operating on the new, more robust backend services.
+The backend architectural refactor is substantially complete. The monolithic  is being progressively broken down, and new services are handling core logic.
+-   ** (Ledger):** Fully integrated into BBPS () and Admin balance adjustment endpoints. All PRC credit/debit operations in these areas are now logged in the ledger.
+-   ** (Background Worker):** Implemented and verified. It is now used to power an automatic retry mechanism for failed BBPS transactions.
+-   **Admin Dashboard Widget:** A new Payment Retry Queue widget has been added to the admin dashboard UI.
+-   **Eko DMT V1 Re-implementation:** The entire feature has been rebuilt from the ground up. This includes:
+    -   Backend routes in  covering customer management, recipient management, transaction status, bank utilities (IFSC validation), and admin controls.
+    -   Frontend pages for DMT () and Admin Refunds ().
+-   The core issue is that while most DMT APIs (customer search, recipient list) work correctly, the main **money transfer API is failing**.
 
 **Last working item**:
--   **Last item agent was working:** Implementing Phase 4 of the architectural refactor: a simple, database-backed background task queue and worker () to handle asynchronous operations. The agent created the service, the database model for tasks, an admin API to manage the queue, and a startup event to run the worker loop.
+-   **Last item agent was working:** Debugging the re-implemented Eko DMT V1  API. The user explicitly instructed the agent to focus **only on V1** and ignore V3, providing detailed debugging documents. The API call was returning a  status, which means the request was accepted by Eko's server but no transaction was being created. The agent was following the user's provided troubleshooting guide and was about to restart the debugging process by testing the basic  API to verify authentication and headers.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (Agent verified the service creation, worker startup via server logs, and tested the admin API endpoint for the task queue).
--   **Which testing method agent to use?** Backend testing agent. The agent should create a test that adds a task to the queue, waits for the worker to process it, and verifies that the task's status is updated to  or  in the database.
+-   **Agent Testing Done:** Y (for most APIs), N (for the failing transfer API)
+-   **Which testing method agent to use?** Manual testing by curl.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the Architectural Refactor (P0)**
+-   **Issue 1: Eko DMT V1 Transfer API fails with 204 No Content (P0)**
 
 **Issues Detail:**
--   **Issue 1: Complete the Architectural Refactor**
-    -   **Attempted fixes:** This is the main ongoing task. Phases 1-4 have been established, but the new services are not yet used by all parts of the application.
-    -   **Next debug checklist:** The next step is to continue integrating the new services (, , ) into the remaining legacy parts of the application.
-        1.  Refactor all PRC credit/debit logic in the BBPS routes (, etc.) to use the .
-        2.  Refactor referral commission and other earnings logic in the referral routes to use the .
-        3.  Refactor any admin panel endpoints that manually adjust user balances to use the  to ensure a ledger entry is created.
-        4.  Integrate the  into a real-world flow, such as creating a background task to retry a failed BBPS transaction.
-        5.  Continue breaking down the monolithic  and other files in  by moving API definitions to  and business logic into the respective services.
-    -   **Why fix this issue and what will be achieved with the fix?** Completing the refactor is critical to achieving the user's goal of a scalable, maintainable, and debuggable platform. It will stabilize the application and make future development (like adding a new DMT provider) much faster and safer.
+-   **Issue 1: Eko DMT V1 Transfer API fails with 204 No Content**
+    -   **Attempted fixes:** The agent first suspected a service activation issue. It then explored using the Eko V3 API, which led to . The user then clarified to **strictly use V1** and provided debugging documentation. The agent was at the beginning of this new debugging process when the session ended.
+    -   **Next debug checklist:** Follow the user-provided document  precisely.
+        1.  **Test the basic Balance API:** Call . If this returns , it confirms authentication (), headers, and IP whitelisting are correct. If it fails, the problem is in the authentication layer.
+        2.  **Verify Transfer Request:** If the balance API works, scrutinize the  request again.
+            -   **HTTP Method:** Confirm it's .
+            -   **Endpoint Path:** Double-check the exact URL structure as per V1 docs.
+            -   **Headers:** Ensure , , , and  are all present and correct.
+            -   **Request Body:** Verify the body is , not JSON. Ensure all required parameters like  are included.
+            -   **Secret Key:** Re-verify the secret key generation logic in  against the user-provided Python example.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the final blocker to making the entire DMT feature functional. Fixing it will complete a major user requirement.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both. Backend testing is crucial for service logic, and frontend regression testing is needed to ensure no user-facing functionality breaks.
-    -   **Blocked on other issue:** None.
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend first (via curl), then a full E2E frontend test.
+    -   **Blocked on other issue:** None. This is the main blocker.
 
 **In progress Task List**:
--   **Task 1: Full integration of new architectural services (P0)**
-    -   **Where to resume:** Resume with Phase 4/5 by integrating the  into a functional part of the app. Then, continue refactoring the remaining routes (BBPS, Referrals, Admin) to use the  and .
-    -   **What will be achieved with this?** A fully decoupled, service-oriented backend architecture where all financial logic is handled by the new, robust services.
+-   **Task 1: Complete and Test DMT V1 E2E Flow (P1)**
+    -   **Where to resume:** After fixing the  API, the full end-to-end flow needs to be tested from the frontend. The current frontend pages are basic placeholders.
+    -   **What will be achieved with this?** A fully functional and tested Domestic Money Transfer feature, available to users.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on something:** None.
+    -   **Blocked on something:** Issue 1 (Eko DMT V1 Transfer API fails).
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P0:** Integrate background workers () for async processing (e.g., BBPS transaction retries, webhook handling).
-*   **P1:** Once the refactor is stable, re-implement a reliable Domestic Money Transfer (DMT) solution by either resolving the Eko V3 activation issue with their support or integrating a new, reliable payment provider.
+*   **P1:** Once the DMT feature is working, enhance the frontend UI for  and  to be more user-friendly and handle the full E2E flow (customer search, registration, recipient selection, transfer, status check).
+*   **P2:** Investigate and fix the Admin Panel Failed to delete plan error.
+*   **P2:** Investigate and fix potential Razorpay auto-subscription failures.
 
 **Future Tasks:**
-*   Migrate the database from MongoDB to PostgreSQL as envisioned in the user's architecture document.
+*   Migrate the database from MongoDB to PostgreSQL.
 *   Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
 *   Add Email/Mobile OTP verification on user signup.
-*   Investigate and fix the Admin Panel Failed to delete plan error.
-*   Investigate and fix potential Razorpay auto-subscription failures.
 
 **Completed work in this session**
--   **Eko/DMT Code Deletion:** All code, routes, and UI components related to the non-functional Eko DMT feature (both V1 and V3) have been completely removed from the entire codebase.
--   **Architectural Refactor (Phase 1 - Organization):** Created a new service-oriented directory structure: .
--   **Architectural Refactor (Phase 2 - Ledger System):** Implemented a  with a double-entry ledger model. Integrated it into chatbot withdrawals and mining claims, ensuring all PRC movements are now logged immutably.
--   **Architectural Refactor (Phase 3 - Transaction State Machine):** Created a  to manage transaction lifecycles with states (e.g., , ).
--   **Architectural Refactor (Phase 4 - Background Tasks):** Built a simple, database-backed task queue and background worker () for future async operations.
--   **Admin Ledger UI:** Added a new Ledger page to the admin panel for viewing transaction ledger entries.
+-   **Architectural Refactor (BBPS):** Integrated  into , ensuring all BBPS-related PRC movements are recorded in the ledger.
+-   **Architectural Refactor (Admin):** Integrated  into admin balance adjustment endpoints (, ).
+-   **Background Task Integration:** Implemented an auto-retry mechanism for failed BBPS payments using the .
+-   **Admin Dashboard Widget:** Created and added a Payment Retry Queue React component to the admin dashboard.
+-   **Eko DMT V1 Re-implementation:**
+    -   Built all required backend APIs from scratch in .
+    -   Added refund management APIs as requested.
+    -   Added utility APIs for listing banks and validating IFSC codes.
+    -   Created placeholder frontend pages for DMT and Admin Refunds.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Admin Panel Failed to delete plan error**
-    -   This was mentioned in a previous handoff but has not been addressed.
--   **Issue 2: Razorpay auto-subscription failures**
-    -   This was mentioned in a previous handoff but has not been addressed.
+-   **Issue 1: Admin Panel Failed to delete plan error:** Mentioned in previous handoffs, not yet addressed.
+-   **Issue 2: Razorpay auto-subscription failures:** Mentioned in previous handoffs, not yet addressed.
 
 **Known issue recurrence from previous fork**
--   The primary recurring issue was the unreliability of the Eko V1 DMT API. This has been resolved by completely removing the feature from the application as per the user's request.
+-   The unreliability of the Eko DMT API is the core recurring theme. The problem has shifted from API unavailability to a specific  error on the  endpoint.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Service-Oriented Architecture (SOA):** The backend is being refactored from a monolith into decoupled services for better maintainability and scalability.
--   **Double-Entry Ledger:** An immutable accounting system to track all value transfers, ensuring financial integrity. Every debit has a corresponding credit.
--   **Transaction State Machine:** A system to manage the lifecycle of transactions through defined states (, , , ).
--   **Database-backed Task Queue:** A simple mechanism for handling asynchronous background jobs without adding new infrastructure like Redis/Celery yet.
+-   Service-Oriented Architecture (SOA)
+-   Double-Entry Ledger
+-   Database-backed Task Queue
+-   **Eko DMT V1 API Integration:** Interacting with Eko's Domestic Money Transfer API, including header-based HMAC-SHA256 authentication ().
+-    requests
 
 **key DB schema**
--   : {, , ,  ('CREDIT'/'DEBIT'), , , , , }
+-   : {, , , , , , , , }
 -   : {, , , , , , }
--   : {, ,  ('PENDING', 'PROCESSING', 'DONE', 'FAILED'), , , }
-
-**changes in tech stack**
--   No change in the underlying technologies (FastAPI, React, MongoDB).
--   A significant change in the architectural pattern, moving towards a microservices-style design.
--   The user has indicated a future goal of migrating from MongoDB to PostgreSQL.
+-   : {, , , , , }
+-   : (Implicitly created by the  router) for tracking DMT states.
 
 **All files of reference**
--   : Core service for all balance and ledger operations.
--   : Core service for managing transaction states.
--   : Core service for the background job queue.
--   : The legacy monolith, which still contains most of the application's routes and logic that needs to be migrated.
--   : The new UI for viewing ledger entries.
+-   : The core file for the entire DMT V1 feature and the location of the bug.
+-   : User-provided debugging document (present in last user message).
+-   : User-provided debugging document (present in last user message).
+-   : Used for PRC debit/credit.
+-   : The frontend for the DMT feature.
 
 **Areas that need refactoring**:
--   The entire  directory and the  file are the primary targets for refactoring. The logic within these files must be moved into the new services under  and the API endpoints moved to .
+-   The frontend pages  and  are currently placeholders and require proper UI/UX implementation to handle the complete E2E user flow.
 
 **key api endpoints**
--   : (New) Fetches ledger entries for the admin panel.
--   : (New) Lists tasks from the background task queue.
+-   : **(BLOCKED)** The failing money transfer endpoint.
+-   : (Working) To find an Eko customer by mobile number.
+-   : (Working) To get a customer's saved bank accounts.
+-   : (New) To configure BBPS retry settings.
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   The project has fundamentally pivoted. **Do not** attempt to work on the Eko DMT integration. The sole focus is to **continue and complete the architectural refactor** that has already begun.
--   Your main task is to migrate the remaining business logic from  and the  directory into the new service layer (, , ).
--   Proceed phase by phase as planned. The current state is that the foundational services are built but only partially integrated. Your job is to complete the integration across all features (BBPS, Referrals, Admin functions).
--   This is a live application with 5000 users. All changes must be made carefully to avoid regressions. Use feature flags if necessary and test thoroughly.
+-   **Focus exclusively on Eko DMT V1.** The user has explicitly forbidden working on V3.
+-   **The user has provided detailed debugging documents in the last message.** You MUST follow the  guide step-by-step to debug the failing  API. Do not deviate from this guide.
+-   The root cause of the  error is likely an issue with authentication, headers, or request format, as Eko support claims the service is active. Start by testing the  API to isolate the problem.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to delete all DMT-related code (V1, V3, frontend, backend). (Status: Completed)
-2.  **User:** Asks for a summary of the current application structure after the deletion. (Status: Addressed)
-3.  **User:** Provides a detailed professional architecture plan for a fintech platform. (Status: Acknowledged)
-4.  **User:** Chooses to proceed with a safe, phased migration to the new architecture and asks for a detailed plan. (Status: Addressed)
-5.  **User:** Approves the migration plan and asks to start Phase 1. (Status: Completed)
-6.  **User:** Resume - prompts the agent to continue working. (Status: Addressed)
-7.  **User:** Next action - prompts the agent to continue working. (Status: Addressed)
-8.  **User:** Next - prompts the agent to continue working. (Status: Addressed)
-9.  **User:** Next - prompts the agent to continue working. (Status: Addressed)
-10. **User:** Next - prompts the agent to continue working. (Status: Addressed)
+- User provided detailed documentation on how to debug Eko V1  and  errors.
+- User explicitly instructed: **You only focus on V1, not V3, it creates conflict**. (Status: Acknowledged, Last action was based on this)
+- User asks for a final test and report on the Eko DMT flow. (Status: Addressed, report was generated showing the blocker)
+- User asks for a full review of the DMT implementation to ensure nothing is missed. (Status: Addressed, agent found and fixed several issues)
+- User asks for a detailed breakdown of the DMT E2E process. (Status: Addressed)
+- User provided Eko refund API documentation. (Status: Addressed, APIs implemented)
+- User requested adding a Payment Retry Queue widget to the admin dashboard and then implementing the DMT V1 E2E flow. (Status: Addressed, both tasks were worked on)
 
 **Project Health Check:**
 -   **Broken:**
-    -   None. The previously broken DMT feature has been removed.
+    -   The core money transfer functionality of the Eko DMT V1 feature is broken ( endpoint).
 -   **In Refactor:**
-    -   The entire backend is in a transitional state. It is functional but consists of a mix of the old monolithic structure and the new service-oriented architecture.
+    -   The application is in a stable, partially refactored state. New features are being built on the new architecture.
 
 **3rd Party Integrations**
--   **Razorpay:** Used for handling subscriptions.
--   **Eko (DMT API):** Has been completely removed from the codebase.
+-   **Razorpay:** Used for subscriptions and IFSC validation.
+-   **Eko (DMT API):** Re-implemented for Domestic Money Transfer. The  functionality is currently blocked.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** None so far, but the risk is high due to the ongoing refactor.
+-   **Known regressions:** None.
 
 **What agent forgot to execute**
--   The agent has followed the user's plan closely. The forgotten work is simply the remainder of the large refactoring task. The integration of the new services is still incomplete and must be applied to the rest of the application's features (like BBPS and referrals).</analysis>
+-   The agent correctly followed user directives, which involved a significant pivot from the original refactoring plan to rebuilding the DMT V1 feature. The frontend for the new DMT feature remains underdeveloped and largely untested because the backend is blocked.</analysis>

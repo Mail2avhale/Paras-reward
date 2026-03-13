@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://wallet-core-rebuild.preview.emergentagent.com';
+const BASE_URL = 'https://fintech-refactor-3.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

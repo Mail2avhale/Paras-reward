@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://wallet-core-rebuild.preview.emergentagent.com/setup
+   https://fintech-refactor-3.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
