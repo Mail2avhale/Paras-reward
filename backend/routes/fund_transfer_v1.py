@@ -558,3 +558,377 @@ async def check_balance():
     except Exception as e:
         logging.error(f"[FUND TRANSFER] Balance check error: {str(e)}")
         return create_error_response(500, f"Balance check failed: {str(e)}")
+
+
+
+# ==================== PRC REFUND MODULE ====================
+
+# Database reference for PRC operations
+db = None
+
+def set_db(database):
+    """Set database reference for PRC operations"""
+    global db
+    db = database
+
+
+async def refund_prc_on_failure(user_id: str, prc_amount: int, transaction_id: str, reason: str) -> dict:
+    """
+    Refund PRC to user when transaction fails or is reversed.
+    
+    Args:
+        user_id: User's unique ID
+        prc_amount: Amount of PRC to refund
+        transaction_id: Transaction ID for reference
+        reason: Reason for refund
+    
+    Returns:
+        dict with success status and details
+    """
+    if db is None:
+        logging.error("[PRC-REFUND] Database not available")
+        return {"success": False, "error": "Database not available"}
+    
+    if not user_id or not prc_amount:
+        return {"success": False, "error": "Missing user_id or prc_amount"}
+    
+    try:
+        # Get current user balance
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
+        if not user:
+            logging.error(f"[PRC-REFUND] User not found: {user_id}")
+            return {"success": False, "error": "User not found"}
+        
+        current_balance = user.get("prc_balance", 0)
+        new_balance = current_balance + prc_amount
+        
+        # Update user balance
+        update_result = await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$inc": {"prc_balance": prc_amount},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        if update_result.modified_count == 0:
+            logging.error(f"[PRC-REFUND] Failed to update balance for user: {user_id}")
+            return {"success": False, "error": "Failed to update balance"}
+        
+        # Log the refund transaction
+        refund_record = {
+            "user_id": user_id,
+            "type": "refund",
+            "amount": prc_amount,
+            "transaction_id": transaction_id,
+            "reason": reason,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.prc_transactions.insert_one(refund_record)
+        
+        logging.info(f"[PRC-REFUND] Refunded {prc_amount} PRC to user {user_id}. Reason: {reason}")
+        
+        return {
+            "success": True,
+            "refunded_amount": prc_amount,
+            "new_balance": new_balance,
+            "transaction_id": transaction_id
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC-REFUND] Error: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
+async def deduct_prc_for_transfer(user_id: str, prc_amount: int, transaction_id: str, description: str) -> dict:
+    """
+    Deduct PRC from user balance for fund transfer.
+    
+    Args:
+        user_id: User's unique ID
+        prc_amount: Amount of PRC to deduct
+        transaction_id: Transaction ID for reference
+        description: Description of the transaction
+    
+    Returns:
+        dict with success status and details
+    """
+    if db is None:
+        logging.error("[PRC-DEDUCT] Database not available")
+        return {"success": False, "error": "Database not available"}
+    
+    if not user_id or not prc_amount:
+        return {"success": False, "error": "Missing user_id or prc_amount"}
+    
+    try:
+        # Get current user balance
+        user = await db.users.find_one({"uid": user_id}, {"_id": 0, "prc_balance": 1, "name": 1})
+        if not user:
+            return {"success": False, "error": "User not found"}
+        
+        current_balance = user.get("prc_balance", 0)
+        
+        # Check if sufficient balance
+        if current_balance < prc_amount:
+            return {
+                "success": False, 
+                "error": "Insufficient PRC balance",
+                "required": prc_amount,
+                "available": current_balance
+            }
+        
+        new_balance = current_balance - prc_amount
+        
+        # Deduct balance
+        update_result = await db.users.update_one(
+            {"uid": user_id, "prc_balance": {"$gte": prc_amount}},  # Atomic check
+            {
+                "$inc": {"prc_balance": -prc_amount},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        if update_result.modified_count == 0:
+            return {"success": False, "error": "Insufficient balance or concurrent modification"}
+        
+        # Log the deduction
+        deduct_record = {
+            "user_id": user_id,
+            "type": "debit",
+            "amount": prc_amount,
+            "transaction_id": transaction_id,
+            "description": description,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.prc_transactions.insert_one(deduct_record)
+        
+        logging.info(f"[PRC-DEDUCT] Deducted {prc_amount} PRC from user {user_id}")
+        
+        return {
+            "success": True,
+            "deducted_amount": prc_amount,
+            "new_balance": new_balance,
+            "transaction_id": transaction_id
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC-DEDUCT] Error: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
+# ==================== TRANSACTION CALLBACK ====================
+
+class TransactionCallback(BaseModel):
+    """Eko Transaction Status Callback payload"""
+    tx_status: int
+    amount: float
+    payment_mode: str
+    txstatus_desc: str
+    fee: Optional[float] = 0
+    gst: Optional[float] = 0
+    sender_name: Optional[str] = None
+    tid: str
+    beneficiary_account_type: Optional[int] = None
+    client_ref_id: str
+    old_tx_status: Optional[int] = None
+    old_tx_status_desc: Optional[str] = None
+    bank_ref_num: Optional[str] = None
+    ifsc: Optional[str] = None
+    recipient_name: Optional[str] = None
+    account: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+@router.post("/callback")
+async def transaction_status_callback(callback: TransactionCallback):
+    """
+    Eko Transaction Status Callback Endpoint
+    
+    Eko will call this endpoint to update transaction status.
+    Reference: https://developers.eko.in/v1/docs/fund-transfer#setup-transaction-status-callback
+    
+    Flow:
+    1. Receive callback from Eko
+    2. Update transaction status in database
+    3. If status changed to FAILED/REVERSED, refund PRC to user
+    4. Return 200 to acknowledge
+    """
+    logging.info(f"[CALLBACK] Received: TID={callback.tid}, status={callback.tx_status}, old_status={callback.old_tx_status}")
+    
+    try:
+        if db is None:
+            logging.warning("[CALLBACK] Database not available")
+            return {"status": "acknowledged", "warning": "Database not available"}
+        
+        # Find the transaction in our records
+        transaction = await db.fund_transfers.find_one(
+            {"$or": [
+                {"tid": callback.tid},
+                {"tid": str(callback.tid)},
+                {"client_ref_id": callback.client_ref_id}
+            ]},
+            {"_id": 0}
+        )
+        
+        # Get tx_status info
+        tx_info = get_tx_status_info(callback.tx_status)
+        old_status = callback.old_tx_status
+        
+        # Update transaction record
+        update_data = {
+            "tx_status": callback.tx_status,
+            "tx_status_desc": callback.txstatus_desc,
+            "status": tx_info["status"],
+            "bank_ref_num": callback.bank_ref_num or "",
+            "fee": callback.fee,
+            "gst": callback.gst,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "callback_received_at": datetime.now(timezone.utc).isoformat(),
+            "old_tx_status": old_status,
+            "is_final": tx_info["is_final"]
+        }
+        
+        await db.fund_transfers.update_one(
+            {"$or": [
+                {"tid": callback.tid},
+                {"tid": str(callback.tid)},
+                {"client_ref_id": callback.client_ref_id}
+            ]},
+            {"$set": update_data}
+        )
+        
+        # Check if we need to refund PRC
+        # Refund if: status changed to FAILED (1), REFUND_PENDING (3), or REFUNDED (4)
+        should_refund = callback.tx_status in [1, 3, 4]
+        was_success_before = old_status in [0, 2, None]  # Was success or processing before
+        
+        if should_refund and was_success_before and transaction:
+            user_id = transaction.get("user_id")
+            prc_amount = transaction.get("prc_deducted", 0)
+            
+            if user_id and prc_amount and not transaction.get("prc_refunded"):
+                # Refund PRC
+                refund_result = await refund_prc_on_failure(
+                    user_id=user_id,
+                    prc_amount=prc_amount,
+                    transaction_id=str(callback.tid),
+                    reason=f"Transaction {tx_info['status']}: {callback.txstatus_desc}"
+                )
+                
+                if refund_result.get("success"):
+                    # Mark as refunded
+                    await db.fund_transfers.update_one(
+                        {"tid": str(callback.tid)},
+                        {"$set": {"prc_refunded": True, "prc_refund_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                    logging.info(f"[CALLBACK] PRC refunded for TID {callback.tid}")
+                else:
+                    logging.error(f"[CALLBACK] PRC refund failed: {refund_result.get('error')}")
+        
+        logging.info(f"[CALLBACK] Processed TID={callback.tid}, new_status={tx_info['status']}")
+        
+        return {
+            "status": "acknowledged",
+            "tid": callback.tid,
+            "tx_status": callback.tx_status,
+            "processed": True
+        }
+        
+    except Exception as e:
+        logging.error(f"[CALLBACK] Error processing callback: {str(e)}")
+        # Still return 200 to acknowledge receipt
+        return {"status": "acknowledged", "error": str(e)}
+
+
+# ==================== MANUAL STATUS CHECK WITH AUTO-REFUND ====================
+
+@router.post("/check-and-refund/{tid}")
+async def check_status_and_refund(tid: str, user_id: Optional[str] = None):
+    """
+    Check transaction status and auto-refund PRC if failed/reversed.
+    
+    Use this for manual reconciliation when callback is missed.
+    """
+    if not validate_config():
+        return create_error_response(500, "Service configuration error")
+    
+    try:
+        # First check status from Eko
+        url = f"{BASE_URL}/v1/transactions/{tid}"
+        timestamp = str(int(round(time.time() * 1000)))
+        headers = generate_headers(timestamp)
+        
+        params = {"initiator_id": INITIATOR_ID}
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.get(url, headers=headers, params=params)
+        
+        if response.status_code != 200:
+            return create_error_response(response.status_code, "Status check failed")
+        
+        result = response.json()
+        tx_data = result.get("data", {})
+        tx_status = tx_data.get("tx_status")
+        
+        if isinstance(tx_status, str) and tx_status.isdigit():
+            tx_status = int(tx_status)
+        
+        tx_info = get_tx_status_info(tx_status) if tx_status is not None else {"status": "UNKNOWN"}
+        
+        # Check if refund needed
+        refund_result = None
+        if tx_status in [1, 3, 4]:  # FAILED, REFUND_PENDING, REFUNDED
+            # Try to get transaction from DB
+            if db is not None:
+                transaction = await db.fund_transfers.find_one(
+                    {"$or": [{"tid": tid}, {"tid": str(tid)}]},
+                    {"_id": 0}
+                )
+                
+                if transaction:
+                    stored_user_id = transaction.get("user_id") or user_id
+                    prc_amount = transaction.get("prc_deducted", 0)
+                    already_refunded = transaction.get("prc_refunded", False)
+                    
+                    if stored_user_id and prc_amount and not already_refunded:
+                        refund_result = await refund_prc_on_failure(
+                            user_id=stored_user_id,
+                            prc_amount=prc_amount,
+                            transaction_id=str(tid),
+                            reason=f"Manual check: Transaction {tx_info['status']}"
+                        )
+                        
+                        if refund_result.get("success"):
+                            await db.fund_transfers.update_one(
+                                {"$or": [{"tid": tid}, {"tid": str(tid)}]},
+                                {"$set": {
+                                    "prc_refunded": True,
+                                    "prc_refund_at": datetime.now(timezone.utc).isoformat(),
+                                    "tx_status": tx_status,
+                                    "status": tx_info["status"]
+                                }}
+                            )
+        
+        return {
+            "success": True,
+            "tid": tid,
+            "tx_status": str(tx_status) if tx_status is not None else None,
+            "status": tx_info["status"],
+            "tx_status_desc": tx_data.get("txstatus_desc", tx_info.get("description", "")),
+            "amount": tx_data.get("amount"),
+            "bank_ref_num": tx_data.get("bank_ref_num", ""),
+            "is_refundable": tx_status in [1, 3, 4],
+            "refund_processed": refund_result.get("success") if refund_result else None,
+            "refund_details": refund_result,
+            "data": tx_data
+        }
+        
+    except Exception as e:
+        logging.error(f"[CHECK-REFUND] Error: {str(e)}")
+        return create_error_response(500, f"Check failed: {str(e)}")

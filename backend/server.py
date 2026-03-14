@@ -80,7 +80,7 @@ from routes.prc_statement import router as prc_statement_router, set_db as set_p
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 from routes.dmt_v1_service import router as dmt_v1_router, set_db as set_dmt_v1_db
 from routes.dmt_levin_service import router as dmt_levin_router
-from routes.fund_transfer_v1 import router as fund_transfer_v1_router
+from routes.fund_transfer_v1 import router as fund_transfer_v1_router, set_db as set_fund_transfer_db
 # Removed: social.py, support.py - routes exist in server.py with better implementation
 
 # ========== SECURITY CONFIGURATION ==========
@@ -39901,6 +39901,7 @@ api_router.include_router(dmt_v1_router)
 api_router.include_router(dmt_levin_router)
 
 # V1 Fund Transfer Router (Direct transfer without OTP)
+set_fund_transfer_db(db)
 api_router.include_router(fund_transfer_v1_router)
 
 # Unified Redeem v2 Router
