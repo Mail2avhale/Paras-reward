@@ -1335,10 +1335,11 @@ const RedeemPageV2 = ({ user }) => {
       details.additional_params[paramName] = formData.additional_param_2;
     }
     
-    // Check PRC balance
-    if (charges && userData) {
-      if (userData.prc_balance < charges.total_prc_required) {
-        toast.error(`Insufficient PRC balance. Required: ${charges.total_prc_required} PRC`);
+    // Check Available Redeem Limit (NOT prc_balance)
+    if (charges && redeemLimit) {
+      const availableLimit = redeemLimit.remaining || 0;
+      if (availableLimit < charges.total_prc_required) {
+        toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${charges.total_prc_required.toLocaleString()} PRC`);
         return;
       }
     }
@@ -2485,21 +2486,9 @@ const RedeemPageV2 = ({ user }) => {
             </div>
           </div>
           
-          {/* Right: Balance & Recent Requests */}
+          {/* Right: Redeem Limit & Recent Requests */}
           <div className="space-y-6">
-            {/* Balance Card */}
-            <div className="bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-amber-600/20 rounded-3xl p-6 border border-amber-500/30">
-              <div className="flex items-center gap-3 mb-4">
-                <Wallet className="h-8 w-8 text-amber-400" />
-                <div>
-                  <p className="text-amber-300/70 text-xs uppercase">Reward Points</p>
-                  <p className="text-3xl font-bold text-white">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
-                </div>
-              </div>
-              <p className="text-amber-300/70 text-xs">Use for bill payments, vouchers & more</p>
-            </div>
-            
-            {/* Global Redeem Limit Card */}
+            {/* Global Redeem Limit Card - PRIMARY */}
             {redeemLimit && (
               <div data-testid="bbps-redeem-limit" className="bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-emerald-600/20 rounded-3xl p-6 border border-emerald-500/30">
                 <div className="flex items-center justify-between mb-3">

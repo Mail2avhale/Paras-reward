@@ -224,8 +224,10 @@ const BankRedeemPage = ({ user: initialUser }) => {
       return;
     }
     
-    if (user.prc_balance < fees.total_prc) {
-      toast.error(`Insufficient PRC balance. Required: ${fees.total_prc.toLocaleString()} PRC`);
+    // Check Available Redeem Limit (NOT prc_balance)
+    const availableLimit = redeemLimit?.remaining || 0;
+    if (availableLimit < fees.total_prc) {
+      toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${fees.total_prc.toLocaleString()} PRC`);
       return;
     }
     
@@ -306,23 +308,9 @@ const BankRedeemPage = ({ user: initialUser }) => {
             </div>
           </div>
           
-          {/* Balance Card */}
-          <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-white/60 text-sm">Available Balance</p>
-                <p className="text-2xl font-bold text-white">{user?.prc_balance?.toLocaleString() || 0} PRC</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/60 text-sm">Approx Value</p>
-                <p className="text-lg font-semibold text-white">₹{Math.floor((user?.prc_balance || 0) / config.prc_rate).toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Redeem Limit Card */}
+          {/* Redeem Limit Card - PRIMARY */}
           {redeemLimit && (
-            <div data-testid="redeem-limit-card" className="mt-3 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div data-testid="redeem-limit-card" className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-white/80 text-sm font-medium">Monthly Redeem Limit</p>
                 <p className="text-white/60 text-xs">{Math.round(redeemLimit.usage_percentage || 0)}% used</p>
