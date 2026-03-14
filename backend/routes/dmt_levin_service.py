@@ -182,40 +182,41 @@ async def check_sender(request: SenderCheckRequest):
 async def register_sender(request: SenderRegisterRequest):
     """
     Step 2: Onboard new sender for Levin DMT
-    POST /v3/customer/account/{customer_id}/dmt-levin
-    Content-Type: application/json
+    POST /v3/customer/account/{customer_id}
+    Content-Type: application/x-www-form-urlencoded
+    service_code: 80 for Levin DMT
     """
     try:
-        # Correct Levin DMT registration endpoint
-        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
+        # Correct URL - NO /dmt-levin suffix!
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}"
         
-        # JSON body as per documentation - residence_address as object NOT string
-        json_body = {
+        # residence_address as JSON STRING (not object)
+        residence_address = json.dumps({
+            "line": request.address,
+            "city": "Mumbai",
+            "state": "Maharashtra", 
+            "pincode": "400001",
+            "district": "Mumbai",
+            "area": "India"
+        })
+        
+        # Form data (NOT JSON!)
+        form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": {
-                "line": request.address,
-                "city": "Mumbai",
-                "state": "Maharashtra", 
-                "pincode": "400001",
-                "district": "Mumbai",
-                "area": "India"
-            }
+            "residence_address": residence_address,
+            "service_code": "80"  # 80 = Levin DMT
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
         logging.info(f"[Levin DMT] Register URL: {url}")
-        logging.info(f"[Levin DMT] Register JSON body: {json_body}")
-        
-        # Headers with Content-Type: application/json
-        headers = get_headers()
-        headers["Content-Type"] = "application/json"
+        logging.info(f"[Levin DMT] Register form data: {form_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            # Use JSON body
-            response = await client.post(url, headers=headers, json=json_body)
+            # Use form data with default headers (application/x-www-form-urlencoded)
+            response = await client.post(url, headers=get_headers(), data=form_data)
             
             logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
             
