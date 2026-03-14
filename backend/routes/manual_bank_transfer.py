@@ -221,16 +221,16 @@ async def verify_ifsc_eko(ifsc: str) -> dict:
 @router.get("/config")
 async def get_config():
     """Get redeem configuration for frontend with dynamic PRC rate."""
-    # Get dynamic PRC rate from settings
-    prc_rate = PRC_RATE  # Default
+    # Get dynamic PRC rate from settings (default 10)
+    prc_rate = 10  # Default fallback
     try:
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
-            prc_rate = rate_setting.get("value", PRC_RATE)
+            prc_rate = rate_setting.get("value", 10)
         else:
             settings = await db.settings.find_one({})
             if settings and settings.get("prc_to_inr_rate"):
-                prc_rate = settings.get("prc_to_inr_rate", PRC_RATE)
+                prc_rate = settings.get("prc_to_inr_rate", 10)
     except Exception as e:
         logging.warning(f"Error fetching PRC rate: {e}")
     
