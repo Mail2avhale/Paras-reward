@@ -252,7 +252,12 @@ const DailyRewards = ({ user }) => {
         setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
         setSessionStartTime(sessionStart);
         setSessionProgress(Math.min(100, (elapsed / totalDuration) * 100));
-        setSessionPRC(miningData.mined_this_session || 0);
+        
+        // Only set sessionPRC on initial load, not on background refresh
+        // This prevents the counter from jumping backwards
+        if (isInitialLoad) {
+          setSessionPRC(miningData.mined_this_session || 0);
+        }
         
         console.log('Session restored from API:', {
           remaining: miningData.remaining_hours,
