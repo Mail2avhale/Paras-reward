@@ -1007,10 +1007,10 @@ async def delete_recipient(request: RecipientDeleteRequest):
 async def send_transaction_otp(request: TransactionOTPRequest):
     """
     Step 7: Send OTP for transaction
-    POST /v3/customer/payment/dmt-levin/otp
+    Uses dmt-levin/otp endpoint which generates OTP for both DMT and DMT-Levin
     """
     try:
-        # DMT-Levin endpoint for OTP
+        # dmt-levin/otp endpoint works for generating OTP
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/otp"
         
         data = {
@@ -1102,11 +1102,12 @@ async def initiate_transfer(request: TransferRequest):
                     "usage": limit_check.get("usage")
                 }
         
-        # DMT-Levin endpoint for transfer
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin"
+        # DMT endpoint for transfer (using regular DMT, not dmt-levin which requires separate registration)
+        # Regular DMT uses pipe 4, DMT-Levin uses pipe 14
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt"
         
         # Generate unique client_ref_id if not provided
-        client_ref_id = request.client_ref_id or f"LEVIN{uuid.uuid4().hex[:12].upper()}"
+        client_ref_id = request.client_ref_id or f"DMT{uuid.uuid4().hex[:12].upper()}"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -1117,7 +1118,6 @@ async def initiate_transfer(request: TransferRequest):
             "currency": "INR",
             "channel": "2",  # IMPS
             "state": "1",  # Required field for transfer
-            "pipe": "14",  # DMT-Levin pipe
             "client_ref_id": client_ref_id,
             "otp": request.otp,
             "otp_ref_id": request.otp_ref_id
