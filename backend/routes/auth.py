@@ -465,6 +465,7 @@ async def login(
     user_agent = request.headers.get("user-agent", "unknown")
     
     logging.info(f"[LOGIN DEBUG] Attempt for: {identifier}, IP: {real_ip}")
+    print(f"[LOGIN DEBUG] Attempt for: {identifier}, IP: {real_ip}", flush=True)
     
     # PARALLEL: Run fraud check and rate limit check together
     ip_check_task = fraud_detector.check_ip_login_limit(real_ip)
@@ -528,6 +529,8 @@ async def login(
     
     # Verify password - RUN IN THREAD POOL to avoid blocking event loop
     stored_password = user.get("pin_hash") or user.get("password_hash") or user.get("password")
+    logging.info(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}")
+    print(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}", flush=True)
     if stored_password:
         # Run bcrypt verification in thread pool (non-blocking)
         loop = asyncio.get_event_loop()
@@ -537,6 +540,8 @@ async def login(
             password,
             stored_password
         )
+        logging.info(f"[LOGIN DEBUG] Password verification result: {is_valid}")
+        print(f"[LOGIN DEBUG] Password verification result: {is_valid}", flush=True)
         
         if not is_valid:
             record_login_attempt(identifier, False)
