@@ -106,31 +106,46 @@ async def health_check():
 @router.post("/sender/check")
 async def check_sender(request: SenderCheckRequest):
     """
-    Step 1: Check if sender exists and get their profile
-    GET /v3/customer/profile/{customer_id}
+    Step 1: Check if sender exists and get their profile for Levin DMT
+    GET /v3/customer/payment/dmt-levin/sender/{customer_id}
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}"
+        # First try Levin-specific endpoint
+        levin_url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
         }
         
-        logging.info(f"[Levin DMT] Check sender: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Check sender (Levin path): {request.customer_mobile}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.get(url, headers=get_headers(), params=params)
+            response = await client.get(levin_url, headers=get_headers(), params=params)
             
-            logging.info(f"[Levin DMT] Sender check response: {response.status_code}")
+            logging.info(f"[Levin DMT] Sender check response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
             
             if response.status_code == 204 or not response.text:
+                # Fallback to generic customer profile endpoint
+                fallback_url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}"
+                response = await client.get(fallback_url, headers=get_headers(), params=params)
+                
+                if response.status_code == 204 or not response.text:
+                    return {
+                        "success": True,
+                        "sender_exists": False,
+                        "needs_levin_registration": True,
+                        "message": "Sender not registered for Levin DMT. Please register."
+                    }
+            
+            try:
+                result = response.json()
+            except:
                 return {
                     "success": True,
                     "sender_exists": False,
-                    "message": "Sender not found. Please register."
+                    "needs_levin_registration": True,
+                    "message": "Sender not registered for Levin DMT"
                 }
-            
-            result = response.json()
             
             logging.info(f"[Levin DMT] Sender check result: {result}")
             
@@ -139,10 +154,14 @@ async def check_sender(request: SenderCheckRequest):
             is_registered = data.get("is_registered", 0)
             customer_profile = data.get("customer_profile", {})
             
+            # Check if specifically registered for Levin DMT
+            levin_registered = data.get("levin_registered", is_registered)
+            
             if is_registered == 1 or result.get("response_status_id") == 0:
                 return {
                     "success": True,
                     "sender_exists": True,
+                    "levin_registered": levin_registered == 1,
                     "sender": {
                         "customer_id": request.customer_mobile,
                         "name": customer_profile.get("name", data.get("name")),
@@ -156,7 +175,8 @@ async def check_sender(request: SenderCheckRequest):
                 return {
                     "success": True,
                     "sender_exists": False,
-                    "message": result.get("message", "Sender not registered")
+                    "needs_levin_registration": True,
+                    "message": result.get("message", "Sender not registered for Levin DMT")
                 }
                 
     except Exception as e:
