@@ -6,7 +6,7 @@ import { DMT_TEST_CREDENTIALS } from '../fixtures/helpers';
  * Iteration 105: User subscription page improvements
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://levin-dmt-revamp.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redeem-limit-dmtv3.preview.emergentagent.com';
 const TEST_USER_ID = DMT_TEST_CREDENTIALS.userId;
 
 test.describe('Payment History API Integration', () => {

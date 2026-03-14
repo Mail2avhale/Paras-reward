@@ -11,7 +11,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://levin-dmt-revamp.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-limit-dmtv3.preview.emergentagent.com')
 
 
 class TestAutoDetectOperatorAPI:

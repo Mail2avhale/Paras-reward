@@ -1,158 +1,175 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to fix a broken Eko DMT feature. This evolved into a major architectural refactor. The focus then shifted to implementing the **Eko Levin DMT V3** feature. In the last session, the user requested several critical features and bug fixes:
-1.  **Admin Controls:** Add the ability for an admin to enable/disable services and set global DMT limits (daily, weekly, monthly).
-2.  **Razorpay Bug:** Fix a critical bug causing a single payment to grant double subscription days (e.g., 56 days for a 28-day plan).
-3.  **UI/UX:** Overhaul the DMT page UI/UX, fix a blank PRC statement page, and make error messages more user-friendly.
-4.  **Global Redeem Limit:** Implement a redeem limit across all services based on active referrals.
-5.  **Policy/Wording Changes:** Rename Money Transfer to Redeem to Bank and update the app's chatbot with all recent changes, while keeping its responses non-technical.
-6.  **Bugs:** Fix a white screen error on the Redeem to Bank page and remove a floating help widget.
+The user's primary goal is to fix and enhance the Eko Levin DMT (Domestic Money Transfer) feature. This has involved several iterative requests and bug fixes:
+1.  **DMT Core Functionality:** Fix the Transaction Declined and Customer is not registered errors that are blocking all DMT transfers. Implement the correct sender onboarding flow, which requires Aadhaar validation. Fix the Add/Delete Beneficiary functionality.
+2.  **Global Redeem Limit:** Implement and refine a Global Redeem Limit that applies across all withdrawal services (DMT, Bill Pay, etc.). The logic should include a monthly carry-forward of unused limits starting from the user's join date.
+3.  **Referral Bonus Logic:** The formula for the redeem limit bonus was changed to: .
+4.  **Admin Features:** Create a new page in the admin panel to view all DMT transactions, complete with filters (by status, date, etc.) and pagination.
+5.  **UI/UX:** Simplify the DMT page by removing the confusing choice between Levin DMT and Legacy V1. Improve spacing and layout on the DMT page.
+6.  **Deployment Stability:** Address recurring production deployment failures that occur after frontend code changes.
 
 **User's preferred language**: The user communicates in **Marathi** and English. The next agent **MUST** respond primarily in **Marathi**.
 
 **what currently exists?**
-The application has undergone significant feature additions and bug fixes.
-- **Eko Levin DMT V3:** The feature is fully implemented and functional, with correct API endpoints. The flow (recipient fetch, OTP, transfer) was tested successfully, failing only on Insufficient balance from Eko's side, which is an expected API response.
-- **Admin Controls:** The admin panel now has UI and backend logic to toggle the DMT service on/off and to set global daily, weekly, and monthly DMT limits.
-- **Razorpay Double Subscription Fix:** A critical bug causing double subscription activation was identified in the background sync jobs. A fix has been implemented by adding duplicate-payment checks and has been deployed. An admin API endpoint () was also created to correct data for users who were affected before the fix.
-- **Global Redeem Limit:** A global redeem limit, calculated based on the number of **active** referrals, is now applied to all withdrawal/payment services (Redeem, Bill Pay, DMT).
-- **UI/UX Enhancements:** The Redeem to Bank (formerly DMT) page has a completely new, modern UI. The PRC statement page is now functional, fetching and displaying a unified transaction history. Technical error messages in the frontend have been replaced with user-friendly ones like Service not available.
-- **Wording & Chatbot:** Money Transfer has been renamed to Redeem to Bank throughout the UI. The integrated chatbot has been updated to reflect all recent features and changes, with its responses tailored to be less technical.
+-   The backend has API endpoints for the Eko Levin DMT flow, but the sender onboarding and transfer logic are incorrect and causing failures. The agent was in the process of fixing this by following new documentation provided by the user.
+-   The Global Redeem Limit logic is implemented in the backend (). It calculates a user's total redeemable limit based on their tenure (months active) and the number of active referrals, with unused limits carrying over month-to-month.
+-   The DMT page UI () has been updated to hide the Legacy V1 option and display the user's Available Redeem Limit with an INR conversion.
+-   A new admin page () has been created with a corresponding backend API () to display transaction history with filters and pagination. The UI is built but could not be fully tested via screenshot due to login complexities.
+-   A backend endpoint to delete a beneficiary has been created, and a delete button has been added to the frontend UI.
 
 **Last working item**:
--   **Last item agent was working:** Fixing a white screen error on the Redeem to Bank page (formerly DMT page). The user reported the page was blank after the recent UI revamp. The agent identified the cause as an unhandled exception from a failing API call () that blocked the component from rendering. A fix was applied in  to gracefully handle this API call failure.
+-   **Last item agent was working:** Debugging the Eko Levin DMT sender registration flow. The root cause of the Customer is not registered error during transfer was identified: the sender was being onboarded with Minimum KYC (State 8), but the Eko platform still required an explicit Aadhaar OTP validation to fully enable the Levin DMT service for that user profile.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N (The code fix was applied, but the agent was unable to get a screenshot of the fixed page before the session ended).
--   **Which testing method agent to use?** Frontend testing agent. The agent should instruct the testing agent to log in and navigate to the  page to confirm it renders correctly without a white screen.
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** Backend testing. The agent must complete the Aadhaar validation flow and then test the entire DMT sequence using . This involves multiple dependent API calls: Sender Check -> Onboard (if needed) -> Generate Aadhaar OTP -> Validate Aadhaar OTP -> Send Transfer OTP -> Execute Transfer.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Razorpay double subscription bug (P0)**
--   **Issue 2: White screen on Redeem to Bank page (P1)**
+-   **Issue 1: Eko Levin DMT transfer fails with Customer is not registered (P0)**
+-   **Issue 2: Production app crashes on deployment after frontend changes (P1)**
+-   **Issue 3: Razorpay double subscription bug (P1)**
+-   **Issue 4: Add/Delete Beneficiary functionality is not fully tested (P2)**
 
 **Issues Detail:**
--   **Issue 1: Razorpay double subscription bug**
-    -   **Attempted fixes:** The agent identified that two background sync jobs were activating subscriptions for the same payment. The fix involved adding checks in  within  and  to use the  collection as a lock to prevent duplicate processing. The fix has been deployed.
+-   **Issue 1: Eko Levin DMT transfer fails with Customer is not registered**
+    -   **Attempted fixes:** The agent spent significant time debugging, trying different API endpoints and request formats based on trial-and-error. After the user provided correct documentation, the agent fixed the Onboard Sender API call (). This resulted in a Minimum KYC Approved (State 8) status, but the sender's profile check still returned Aadhaar Validation Pending, which continued to block transfers. The user confirmed Aadhaar validation is mandatory.
     -   **Next debug checklist:**
-        1.  Ask the user to monitor new subscriptions made *after* the last deployment.
-        2.  Verify with the user that new users are getting the correct subscription duration (e.g., 28 days, not 56).
-        3.  Guide the user to use the new admin API endpoint  to correct the  date for all users who were affected *before* the deployment.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical business logic bug causing direct financial loss. Fixing it ensures correct subscription management.
-    -   **Status:** USER VERIFICATION PENDING
+        1.  In , add a new step to the transfer wizard to collect the user's Aadhaar number if their profile status indicates Aadhaar Validation Pending.
+        2.  In , implement two new API endpoints that the frontend can call:
+            -   An endpoint to trigger Aadhaar OTP generation ().
+            -   An endpoint to validate the submitted Aadhaar OTP ().
+        3.  Ensure these new endpoints use the correct  as specified in the Eko documentation.
+        4.  After successful validation, re-test the entire transfer flow for user .
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical, core feature of the application. It is completely unusable and is the highest priority.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend (already tested via code review), user verification on production data is key.
-    -   **Blocked on other issue:** None.
--   **Issue 2: White screen on Redeem to Bank page**
-    -   **Attempted fixes:** The agent added a  block in  within  to prevent a failing API call from crashing the page.
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on other issue:** None. This is the primary blocker.
+-   **Issue 2: Production app crashes on deployment after frontend changes**
+    -   **Attempted fixes:** The agent encountered this twice. The first time, deleting a component from  broke the deployment, and the fix was to revert the code. The second time, removing JSX from  broke the deployment. The workaround was to hide the JSX using a CSS class () instead of removing it.
     -   **Next debug checklist:**
-        1.  Verify the fix by logging into the application and navigating to the  page.
-        2.  Use the  tool to confirm the page loads correctly and displays UI elements, even if some data (like wallet info) fails to load.
-        3.  Alternatively, use the  to perform an E2E test.
-    -   **Why fix this issue and what will be achieved with the fix?** This bug makes a core feature of the application completely unusable.
-    -   **Status:** TESTING PENDING
-    -   **Is recurring issue?** N
+        1.  This is likely an issue with the production build process (e.g., webpack config, babel, or tree-shaking).
+        2.  Investigate the deployment logs or configuration for any aggressive optimizations that might be causing issues with dynamic components.
+        3.  As a general rule, prefer safer modification patterns (like conditional rendering or CSS hiding) over deleting JSX until the root cause is found.
+    -   **Why fix this issue and what will be achieved with the fix?** This instability slows down development and introduces high risk with every frontend change.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend.
     -   **Blocked on other issue:** None.
+-   **Issue 3: Razorpay double subscription bug**
+    -   **Attempted fixes:** A fix was deployed in a previous session by adding transaction locks. An admin API () was also created to correct historical data.
+    -   **Next debug checklist:**
+        1.  Ask the user if they have noticed the issue with any **new** subscriptions since the fix was deployed.
+        2.  Guide the user on how to use the admin API with  or a frontend button to fix the  date for affected users.
+    -   **Why fix this issue and what will be achieved with the fix?** This bug causes direct financial loss. Verification is crucial.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Blocked on other issue:** None.
+-   **Issue 4: Add/Delete Beneficiary functionality is not fully tested**
+    -   **Attempted fixes:** The agent created the  endpoint in  and added a trash icon/button in .
+    -   **Next debug checklist:** Once the main transfer flow (Issue 1) is unblocked, perform a full end-to-end test: Add a new beneficiary -> Activate it -> Send a small transfer to it -> Delete it -> Verify it no longer appears in the list.
+    -   **Why fix this issue and what will be achieved with the fix?** Provides essential beneficiary management for the user.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on other issue:** Issue 1.
 
 **In progress Task List**:
--   **Task 1: Verify all recent feature implementations (P1)**
-    -   **Where to resume:** The agent has completed a large number of features. The next step is a holistic verification.
-    -   **What will be achieved with this?** Confirmation that the new DMT limits, global redeem limits, UI changes, PRC statement, and error handling are all working as expected in an integrated manner.
-    -   **Status:** TESTING PENDING
-    -   **Should Test frontend/backend/both after fix?** Both. A testing agent run would be ideal.
-    -   **Blocked on something:**  must be resolved first, as it blocks access to the DMT page.
+-   **Task 1: Implement Aadhaar Validation for Eko Levin DMT (P0)**
+    -   **Where to resume:**  and .
+    -   **What will be achieved with this?** This will unblock the entire DMT transfer feature, resolving the Customer is not registered error.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on something:** Nothing.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P1:** Guide the user on running the  admin API to correct historical data.
-*   **P2:** Full regression test of the application after the large number of recent changes, preferably using the testing agent.
+*   **P1:** Guide user on using the  admin API.
+*   **P2:** Full regression test of the application after the large number of recent changes.
 
 **Future Tasks:**
+*   Investigate the root cause of production deployment failures after frontend changes.
 *   Migrate the database from MongoDB to PostgreSQL.
 *   Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
 *   Add Email/Mobile OTP verification on user signup.
 *   Refactor the large  component into smaller, more manageable sub-components.
 
 **Completed work in this session**
--   **Eko Levin DMT V3 Functional:** Fixed all API endpoints, making the entire flow functional.
--   **Admin DMT Controls:** Implemented UI and backend for service toggles and global DMT limits.
--   **Razorpay Double Subscription Bug:** Identified the root cause in background jobs and deployed a fix to prevent recurrence.
--   **Admin Data-Fix API:** Created an endpoint () to repair incorrect subscription data.
--   **PRC Statement Implemented:** Created a new backend API and updated the frontend to show a unified transaction history.
--   **Global Redeem Limit:** Implemented and enforced a global redeem limit based on active referrals across all relevant services.
--   **UI/UX Overhaul:**
-    -   Completely redesigned the Redeem to Bank page ().
-    -   Added the Redeem to Bank link to the user sidebar.
-    -   Replaced technical frontend errors with user-friendly messages.
-    -   Removed the floating help widget from all pages.
--   **Chatbot Updated:** Updated the chatbot's knowledge base with all recent changes and made its tone less technical.
--   **Redeem Limit Logic:** Refined the redeem limit calculation to count **active** referrals only.
--   **White Screen Bug Fix:** Applied a code fix for the white screen error on the Redeem to Bank page.
+-   **Global Redeem Limit Logic:** Implemented and refined the carry-forward logic for the global redeem limit, starting from the user's join date.
+-   **Referral Bonus Formula:** Updated the redeem limit formula to increase the monthly limit by 20% for each active direct referral.
+-   **DMT Page UI Simplification:** Successfully removed the confusing Levin vs. Legacy card selection by hiding the elements with CSS, providing a cleaner user flow.
+-   **Admin DMT Transactions Page:** Created a new admin page and backend API to view DMT transaction history with comprehensive filters, stats, and pagination.
+-   **Beneficiary Deletion:** Added the backend API endpoint and frontend UI button for deleting a beneficiary.
+-   **DMT Error Debugging:** Identified the root cause of the DMT failure as a pending Aadhaar validation step in the Eko onboarding process.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   Eko Levin DMT V3 API
--   Admin Feature Flagging & Global Settings
--   Debugging race conditions in background jobs (Razorpay sync)
--   Global, cross-service financial limit enforcement
--   Frontend error handling (graceful degradation)
--   UI/UX revamping with modern CSS
--   Chatbot system prompt engineering
+-   Eko Levin DMT V3 API (Onboarding, Aadhaar Validation, Transfer)
+-   Debugging third-party APIs with incorrect or incomplete documentation.
+-   Stateful financial limit calculation with monthly carry-forward.
+-   Safe frontend modification patterns to avoid breaking a fragile production build pipeline.
+-   Creating new admin-facing features (UI and API).
 
 **key DB schema**
--   **app_settings:** Stores global toggles and limits (, ).
--   **dmt_transactions:** New collection to log successful DMT transfers.
--   **vip_payments:** Now used as a transaction lock to prevent duplicate subscription activations from Razorpay webhooks.
--   **users:**  field was being incorrectly updated by the bug. The  function now depends on counting related users with .
+No new collections or major schema changes were made in this session. The logic operates on the existing  and  collections.
 
 **All files of reference**
--    (critical bug fix for Razorpay)
--    (UI revamp and white screen bug fix)
--    (new admin APIs)
--    (new admin UI)
--    (limit checks)
+-    (Main file for the current bug)
+-    (Frontend for the current bug and UI changes)
+-    (Redeem limit formula changes)
+-    (New feature)
+-    (New feature API)
 
 **key api endpoints**
--   : New admin API to fix historical data.
--   : New admin API to get DMT settings.
--   : New admin API to update DMT settings.
--   : New API for unified transaction history.
--   : API to calculate and return the user's global redeem limit.
+-   : Eko API to onboard a sender (fixed).
+-   : Eko API to generate Aadhaar OTP (**to be implemented**).
+-   : Eko API to validate Aadhaar OTP (**to be implemented**).
+-   : Eko API to perform the transfer.
+-   : Internal API with the updated carry-forward logic.
+-   : New internal API to delete a beneficiary.
+-   : New internal API for the admin DMT history page.
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   The absolute highest priority is verifying the **Razorpay double subscription bug fix** in production. The user is losing money daily. The code is deployed, but you need to confirm with the user that it's working for new payments and guide them on fixing old data using the new admin API.
--   Your first implementation task is to verify the fix for the **white screen on the Redeem to Bank page** (). This is blocking a core feature.
--   The Global Redeem Limit is a new, important concept. It's calculated based on **active** referrals and applies to DMT, Bill Pay, and other redeem services.
+-   The highest priority is fixing the Eko Levin DMT transfer flow. This is blocked on implementing the **Aadhaar validation** steps. Follow the Eko developer documentation precisely, which requires  for the Aadhaar APIs. The user has provided all necessary info (Aadhaar number, test credentials).
+-   **Be extremely cautious with frontend changes.** The production deployment process is fragile. Deleting or significantly refactoring JSX has previously crashed the deployed app. **Prefer hiding elements with CSS or using conditional rendering** over removing code until the underlying build issue is resolved.
+-   The global redeem limit formula is now , where . The unused portion carries forward.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   **User:** Requested a global redeem limit for all services based on a formula. (Completed)
--   **User:** Requested to rename Money Transfer to Redeem to Bank for policy reasons and update the chatbot. (Completed)
--   **User:** Requested the chatbot not to reveal specific business formulas. (Completed)
--   **User:** Clarified that the redeem limit should count **active** referrals, not just invites. (Completed)
--   **User:** Reported a critical white screen error on the DMT/Redeem page with a video. (Fix In Progress)
--   **User:** Asked to remove a floating question mark widget from all pages. (Completed)
--   **User:** Urgently reported another user affected by the double subscription bug, stressing the financial loss. (Fix Deployed, Verification Pending)
--   **User:** Requested that technical errors on the frontend be replaced with user-friendly messages. (Completed)
--   **User:** Asked the agent to verify the double subscription bug fix on production post-deployment. (Verification Pending)
--   **User:** Requested a full UI and color revamp of the DMT page to make it look much better. (Completed)
+1.  **User:** States that if Aadhaar is mandatory, the agent should implement the Aadhaar validation flow. (Task In Progress)
+2.  **User:** Provided Eko documentation stating No need aadhar validation for minimum kyc, which was later found to be context-dependent. (Handled)
+3.  **User:** Provided a link to the correct Eko developer documentation for , which helped the agent fix the request format. (Handled)
+4.  **User:** Provided an Eko documentation snippet for  with a  example, which was critical in identifying the incorrect API path and . (Handled)
+5.  **User:** Confirmed that the Eko DMT Levin service is active on their account. (Handled)
+6.  **User:** Asks for an explanation of the revised Global Redeem Limit formula. (Completed)
+7.  **User:** Asks to change the referral bonus from a percentage of PRC to a percentage increase in the limit per active referral. (Completed)
+8.  **User:** Reports that Add/Delete Beneficiary is not working and mentions Balance added in wallet. (In Progress)
+9.  **User:** Provides test credentials: ,  and beneficiary details. (In Use)
+10. **User:** Provides OTPs multiple times for testing the transfer flow. (Handled)
 
 **Project Health Check:**
 -   **Broken:**
-    -   The Redeem to Bank page () is currently inaccessible due to a white screen bug (fix is implemented but not verified).
+    -   The core Eko Levin DMT feature is non-functional due to the registration/Aadhaar validation issue.
 -   **In Progress:**
-    -   Verification of the critical Razorpay double subscription bug fix on the production environment.
+    -   Verification of the Razorpay double subscription bug fix.
+    -   End-to-end testing of beneficiary management.
 
 **3rd Party Integrations**
--   **Razorpay:** For subscriptions. A critical double-activation bug was fixed.
--   **Eko:** For Domestic Money Transfer (DMT), using the Levin V3 API.
+-   **Razorpay:** Used for subscriptions. A bug fix is pending user verification.
+-   **Eko (Levin V3 API):** Used for Domestic Money Transfer. This integration is the primary focus and is currently broken.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, the agent was called after implementing the DMT admin controls and passed all tests.
+-   **Testing agent used after significant changes:** YES, it was used to confirm that hiding the DMT cards via CSS worked as expected.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** The testing agent generated test files in the background, but no new manual test files were created.
--   **Known regressions:** The UI revamp of  introduced a white screen bug.
+-   **Test files created:** None in this session.
+-   **Known regressions:** Frontend changes are causing production deployment failures.
+
+**Credentials to test flow:**
+-   **Login:** , 
+-   **Aadhaar Number (for testing):** 
 
 **What agent forgot to execute**
-- The agent successfully implemented a vast number of features and fixes. The only thing forgotten was to perform a final verification test (e.g., a screenshot) of the  after applying the white screen fix. The agent was in the process of debugging when the session ended.</analysis>
+-   The agent has not yet investigated the root cause of why frontend changes are breaking the production deployment pipeline. This is a recurring and high-risk issue that has only been worked around, not solved.
+-   The user's comment about Balance added in wallet in conjunction with the beneficiary issue was not investigated. This could be a separate bug where a failed transfer might be incorrectly crediting a wallet. This needs clarification from the user.</analysis>

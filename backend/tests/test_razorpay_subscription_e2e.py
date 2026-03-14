@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://levin-dmt-revamp.preview.emergentagent.com'
+    BASE_URL = 'https://redeem-limit-dmtv3.preview.emergentagent.com'
 
 
 class TestRazorpayConfigEndpoint:

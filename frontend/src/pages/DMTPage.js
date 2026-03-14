@@ -132,6 +132,14 @@ const DMTPage = ({ user }) => {
   const [otpRefId, setOtpRefId] = useState('');
   const [beneficiaryId, setBeneficiaryId] = useState('');
   
+  // Aadhaar Validation state (for Levin DMT)
+  const [needsAadhaar, setNeedsAadhaar] = useState(false);
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarOtpSent, setAadhaarOtpSent] = useState(false);
+  const [aadhaarOtpRefId, setAadhaarOtpRefId] = useState('');
+  const [aadhaarIntentId, setAadhaarIntentId] = useState('');
+  
   // Transaction history
   const [transactions, setTransactions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -140,7 +148,9 @@ const DMTPage = ({ user }) => {
   
   // Steps differ based on DMT type
   const steps = dmtType === 'levin' 
-    ? ['Customer', 'Verify', 'Recipient', 'OTP', 'Transfer']
+    ? needsAadhaar 
+      ? ['Customer', 'Aadhaar', 'Recipient', 'OTP', 'Transfer']
+      : ['Customer', 'Verify', 'Recipient', 'OTP', 'Transfer']
     : ['Customer', 'Verify', 'Recipient', 'Transfer'];
   
   // API base path based on DMT type
@@ -236,6 +246,12 @@ const DMTPage = ({ user }) => {
           toast.success('Customer found!');
           setStep(3); // Skip to recipients
           fetchRecipients();
+        } else if (res.data.needs_aadhaar) {
+          // Customer needs Aadhaar validation
+          setNeedsAadhaar(true);
+          setAadhaarOtpRefId(res.data.otp_ref_id || '');
+          toast.info('Aadhaar validation required to proceed');
+          setStep(2); // Go to Aadhaar step
         } else {
           toast.info('Customer not registered. Please register first.');
           setStep(2);
@@ -301,6 +317,68 @@ const DMTPage = ({ user }) => {
       }
     } catch (error) {
       toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2A: Generate Aadhaar OTP (Levin DMT)
+  const handleGenerateAadhaarOTP = async () => {
+    if (aadhaarNumber.length !== 12) {
+      toast.error('कृपया 12 अंकी आधार क्रमांक टाका');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/eko/levin-dmt/sender/aadhaar/generate-otp`, {
+        customer_mobile: mobile,
+        aadhaar: aadhaarNumber,
+        otp_ref_id: aadhaarOtpRefId
+      });
+      
+      if (res.data.success && res.data.otp_sent) {
+        setAadhaarOtpSent(true);
+        setAadhaarOtpRefId(res.data.otp_ref_id || aadhaarOtpRefId);
+        setAadhaarIntentId(res.data.intent_id || '20');
+        toast.success('आधार OTP आधार-registered मोबाईलवर पाठवला');
+      } else {
+        toast.error(sanitizeErrorMessage(res.data.message) || 'OTP पाठवणे अयशस्वी');
+      }
+    } catch (error) {
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'OTP पाठवणे अयशस्वी');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2B: Verify Aadhaar OTP (Levin DMT)
+  const handleVerifyAadhaarOTP = async () => {
+    if (aadhaarOtp.length !== 6) {
+      toast.error('कृपया 6 अंकी OTP टाका');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/eko/levin-dmt/sender/aadhaar/verify-otp`, {
+        customer_mobile: mobile,
+        otp: aadhaarOtp,
+        otp_ref_id: aadhaarOtpRefId,
+        intent_id: aadhaarIntentId || '20'
+      });
+      
+      if (res.data.success) {
+        setCustomer({ customer_id: mobile, name: customerName || mobile });
+        toast.success('आधार सत्यापन यशस्वी! आता तुम्ही transfer करू शकता.');
+        setNeedsAadhaar(false);
+        setStep(3);
+        fetchRecipients();
+      } else {
+        toast.error(sanitizeErrorMessage(res.data.message) || 'OTP verification अयशस्वी');
+      }
+    } catch (error) {
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'OTP verification अयशस्वी');
     } finally {
       setLoading(false);
     }
@@ -622,6 +700,13 @@ const DMTPage = ({ user }) => {
     setTransferOtp('');
     setOtpRefId('');
     setBeneficiaryId('');
+    // Aadhaar validation reset
+    setNeedsAadhaar(false);
+    setAadhaarNumber('');
+    setAadhaarOtp('');
+    setAadhaarOtpSent(false);
+    setAadhaarOtpRefId('');
+    setAadhaarIntentId('');
   };
 
   return (
@@ -861,14 +946,123 @@ const DMTPage = ({ user }) => {
               </div>
             )}
 
-            {/* Step 2: Register / OTP */}
+            {/* Step 2: Register / OTP / Aadhaar Validation */}
             {step === 2 && (
               <div className="space-y-4" data-testid="step-register">
                 <Button variant="ghost" onClick={() => setStep(1)} className="text-gray-400 mb-4">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
                 
-                {!otpSent ? (
+                {/* Aadhaar Validation Flow (for Levin DMT) */}
+                {needsAadhaar && dmtType === 'levin' ? (
+                  !aadhaarOtpSent ? (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="relative inline-block mb-4">
+                          <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full blur-lg opacity-30" />
+                          <div className="relative w-16 h-16 bg-gradient-to-br from-orange-600/20 to-amber-600/20 rounded-full flex items-center justify-center border border-orange-500/20">
+                            <Shield className="w-8 h-8 text-orange-400" />
+                          </div>
+                        </div>
+                        <h2 className="text-xl font-bold text-white mb-2">आधार सत्यापन आवश्यक</h2>
+                        <p className="text-sm text-gray-400">DMT service वापरण्यासाठी आधार verify करा</p>
+                        <p className="text-xs text-gray-500 mt-1">Mobile: {mobile}</p>
+                      </div>
+                      
+                      <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-4">
+                        <p className="text-sm text-amber-400">
+                          ⚠️ OTP आधार-registered मोबाईल नंबरवर येईल (तुमच्या Eko account मोबाईलवर नाही)
+                        </p>
+                      </div>
+                      
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-amber-600/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <div className="relative">
+                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-orange-400 transition-colors" />
+                          <Input
+                            type="text"
+                            placeholder="12-अंकी आधार क्रमांक"
+                            value={aadhaarNumber}
+                            onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                            className="pl-12 py-4 bg-gray-800/50 border-gray-700/50 text-white text-lg rounded-xl focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition-all tracking-widest"
+                            data-testid="aadhaar-input"
+                          />
+                          {aadhaarNumber.length === 12 && (
+                            <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleGenerateAadhaarOTP}
+                        disabled={loading || aadhaarNumber.length !== 12}
+                        className="w-full py-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all disabled:opacity-50"
+                        data-testid="generate-aadhaar-otp-btn"
+                      >
+                        {loading ? (
+                          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+                        ) : (
+                          <Send className="w-5 h-5 mr-2" />
+                        )}
+                        आधार OTP पाठवा
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="relative inline-block mb-4">
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full blur-lg opacity-30" />
+                          <div className="relative w-16 h-16 bg-gradient-to-br from-emerald-600/20 to-green-600/20 rounded-full flex items-center justify-center border border-emerald-500/20">
+                            <Shield className="w-8 h-8 text-emerald-400" />
+                          </div>
+                        </div>
+                        <h2 className="text-xl font-bold text-white mb-2">आधार OTP टाका</h2>
+                        <p className="text-sm text-gray-400">OTP आधार-registered मोबाईलवर पाठवला</p>
+                        <p className="text-xs text-amber-400 mt-2">Aadhaar: ****{aadhaarNumber.slice(-4)}</p>
+                      </div>
+                      
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-green-600/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <div className="relative">
+                          <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-emerald-400 transition-colors" />
+                          <Input
+                            type="text"
+                            placeholder="6-अंकी OTP"
+                            value={aadhaarOtp}
+                            onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            className="pl-12 py-4 bg-gray-800/50 border-gray-700/50 text-white text-2xl rounded-xl focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all text-center tracking-[0.5em]"
+                            data-testid="aadhaar-otp-input"
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleVerifyAadhaarOTP}
+                        disabled={loading || aadhaarOtp.length !== 6}
+                        className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all disabled:opacity-50"
+                        data-testid="verify-aadhaar-otp-btn"
+                      >
+                        {loading ? (
+                          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
+                        ) : (
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                        )}
+                        आधार Verify करा
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setAadhaarOtpSent(false);
+                          setAadhaarOtp('');
+                        }}
+                        className="w-full text-gray-400 hover:text-white hover:bg-white/5 rounded-xl"
+                      >
+                        आधार नंबर बदला
+                      </Button>
+                    </>
+                  )
+                ) : !otpSent ? (
                   <>
                     <div className="text-center mb-6">
                       <UserPlus className="w-12 h-12 text-blue-400 mx-auto mb-3" />

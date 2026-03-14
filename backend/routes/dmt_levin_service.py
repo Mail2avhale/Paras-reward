@@ -336,32 +336,55 @@ class AadhaarOTPRequest(BaseModel):
 async def generate_aadhaar_otp(request: AadhaarOTPRequest):
     """
     Generate Aadhaar OTP for sender verification
-    POST /v3/customer/account/{customer_id}/dmt-levin/aadhaar
+    Two possible endpoints to try:
+    1. POST /v3/customer/verification/aadhaar/{customer_id} (as per Eko docs)
+    2. POST /v3/customer/account/{customer_id}/dmt-levin/aadhaar (alternative)
+    Content-Type: application/json
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/aadhaar"
+        # Try the primary endpoint first
+        url = f"{EKO_BASE_URL_V3}/customer/verification/aadhaar/{request.customer_mobile}"
         
-        # Use form data, not JSON
-        form_data = {
+        # JSON body as per documentation
+        json_body = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "aadhar": request.aadhaar,
+            "aadhar_no": request.aadhaar,  # Try aadhar_no instead of aadhar
             "otp_ref_id": request.otp_ref_id,
-            "additional_info": "1"
         }
         
         logging.info(f"[Levin DMT] Generate Aadhaar OTP for: {request.customer_mobile}")
-        logging.info(f"[Levin DMT] Aadhaar data: {form_data}")
+        logging.info(f"[Levin DMT] Aadhaar URL: {url}")
+        
+        # Headers with Content-Type: application/json
+        headers = get_headers()
+        headers["Content-Type"] = "application/json"
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.post(url, headers=get_headers(), data=form_data)
+            response = await client.post(url, headers=headers, json=json_body)
             
-            logging.error(f"[Levin DMT] Aadhaar OTP response: {response.status_code} - FULL: {response.text}")
+            logging.error(f"[Levin DMT] Aadhaar OTP response (endpoint 1): {response.status_code} - FULL: {response.text}")
+            
+            # If first endpoint fails, try alternative endpoint
+            if response.status_code != 200 or "failed" in response.text.lower() or "error" in response.text.lower():
+                # Try alternative endpoint
+                alt_url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/aadhaar"
+                alt_body = {
+                    "initiator_id": EKO_INITIATOR_ID,
+                    "user_code": EKO_USER_CODE,
+                    "aadhar": request.aadhaar,
+                    "otp_ref_id": request.otp_ref_id,
+                    "additional_info": "1"
+                }
+                
+                logging.info(f"[Levin DMT] Trying alternative endpoint: {alt_url}")
+                response = await client.post(alt_url, headers=headers, json=alt_body)
+                logging.error(f"[Levin DMT] Aadhaar OTP response (endpoint 2): {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
                 return {
                     "success": False,
-                    "message": "Aadhaar service not available"
+                    "message": "Aadhaar service not available. कृपया Eko support शी संपर्क साधा."
                 }
             
             try:
@@ -378,16 +401,21 @@ async def generate_aadhaar_otp(request: AadhaarOTPRequest):
                     "success": True,
                     "otp_sent": True,
                     "message": "OTP sent to Aadhaar-registered mobile number",
-                    "otp_ref_id": data.get("otp_ref_id"),
+                    "otp_ref_id": data.get("otp_ref_id") or request.otp_ref_id,
                     "intent_id": data.get("intent_id"),
                     "kyc_request_id": data.get("kyc_request_id"),
                     "data": data
                 }
             else:
+                error_msg = result.get("message", "Failed to send Aadhaar OTP")
+                # Provide user-friendly message
+                if "failed" in error_msg.lower() or result.get("response_status_id") == 2138:
+                    error_msg = "आधार validation service अजून activate नाही. कृपया Eko support शी संपर्क साधा किंवा थोड्या वेळाने पुन्हा प्रयत्न करा."
                 return {
                     "success": False,
-                    "message": result.get("message", "Failed to send Aadhaar OTP"),
-                    "error_code": result.get("response_status_id")
+                    "message": error_msg,
+                    "error_code": result.get("response_status_id"),
+                    "eko_message": result.get("message")
                 }
                 
     except Exception as e:
@@ -410,12 +438,13 @@ async def verify_aadhaar_otp(request: AadhaarOTPVerifyRequest):
     """
     Verify Aadhaar OTP
     PUT /v3/customer/account/{customer_id}/dmt-levin/otp/verify
+    Content-Type: application/json
     """
     try:
         url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/otp/verify"
         
-        # Use form data, not JSON
-        form_data = {
+        # JSON body as per documentation
+        json_body = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "otp": request.otp,
@@ -425,9 +454,15 @@ async def verify_aadhaar_otp(request: AadhaarOTPVerifyRequest):
         }
         
         logging.info(f"[Levin DMT] Verify Aadhaar OTP for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Verify URL: {url}")
+        logging.info(f"[Levin DMT] Verify JSON body: {json_body}")
+        
+        # Headers with Content-Type: application/json
+        headers = get_headers()
+        headers["Content-Type"] = "application/json"
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.put(url, headers=get_headers(), data=form_data)
+            response = await client.put(url, headers=headers, json=json_body)
             
             logging.error(f"[Levin DMT] Aadhaar verify response: {response.status_code} - FULL: {response.text}")
             

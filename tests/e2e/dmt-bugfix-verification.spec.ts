@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://levin-dmt-revamp.preview.emergentagent.com';
+const BASE_URL = 'https://redeem-limit-dmtv3.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

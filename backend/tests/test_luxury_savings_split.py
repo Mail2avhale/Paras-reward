@@ -9,7 +9,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://levin-dmt-revamp.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-limit-dmtv3.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_USER_UID = "73b95483-f36b-4637-a5ee-d447300c6835"

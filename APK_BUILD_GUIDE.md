@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://levin-dmt-revamp.preview.emergentagent.com",
+    "url": "https://redeem-limit-dmtv3.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
