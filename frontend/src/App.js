@@ -154,7 +154,8 @@ const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit")
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
-const DMTPage = lazy(() => import("@/pages/DMTPage")); // DMT V1 - Money Transfer
+const DMTPage = lazy(() => import("@/pages/DMTPage")); // DMT V1 - Money Transfer (Legacy)
+const FundTransferV1Page = lazy(() => import("@/pages/FundTransferV1Page")); // V1 Fund Transfer - No OTP
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -350,8 +351,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
             {/* DMT V1 - Money Transfer */}
             <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-transfer" element={user ? <Navigate to="/dmt" /> : <Navigate to="/login" />} />
-            <Route path="/money-transfer" element={user ? <Navigate to="/dmt" /> : <Navigate to="/login" />} />
+            <Route path="/fund-transfer" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FundTransferV1Page user={user} />) : <Navigate to="/login" />} />
+            <Route path="/bank-transfer" element={user ? <Navigate to="/fund-transfer" /> : <Navigate to="/login" />} />
+            <Route path="/money-transfer" element={user ? <Navigate to="/fund-transfer" /> : <Navigate to="/login" />} />
             <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
             <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
             

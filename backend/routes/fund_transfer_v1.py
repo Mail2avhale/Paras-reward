@@ -215,6 +215,7 @@ async def initiate_fund_transfer(request: FundTransferRequest):
         # Build request data
         data = {
             "initiator_id": INITIATOR_ID,
+            "service_code": "45",  # Fund Transfer service code
             "recipient_name": request.recipient_name,
             "account": request.account,
             "ifsc": request.ifsc,
