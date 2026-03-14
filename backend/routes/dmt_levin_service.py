@@ -184,15 +184,16 @@ async def check_sender(request: SenderCheckRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# STEP 2: Register Sender
+# STEP 2: Register Sender for Levin DMT
 @router.post("/sender/register")
 async def register_sender(request: SenderRegisterRequest):
     """
-    Step 2: Register new sender
-    POST /v3/customer/account
+    Step 2: Register new sender specifically for Levin DMT
+    POST /v3/customer/payment/dmt-levin/sender
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/account"
+        # Levin DMT specific registration endpoint
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -203,15 +204,26 @@ async def register_sender(request: SenderRegisterRequest):
             "residence_address": f'["{request.address}","India"]'
         }
         
-        logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Register sender (Levin path): {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Register data: {data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Register response: {response.status_code} - {response.text[:500] if response.text else 'EMPTY'}")
+            logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
+            
+            # If Levin-specific endpoint fails, fallback to generic
+            if response.status_code != 200 or not response.text or "error" in response.text.lower():
+                logging.info("[Levin DMT] Levin registration failed, trying generic endpoint")
+                fallback_url = f"{EKO_BASE_URL_V3}/customer/account"
+                response = await client.post(fallback_url, headers=get_headers(), data=data)
+                logging.error(f"[Levin DMT] Fallback register response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
-                raise HTTPException(status_code=500, detail="Service not activated. Contact Eko support.")
+                return {
+                    "success": False,
+                    "message": "Registration service not available. Contact Eko support."
+                }
             
             try:
                 result = response.json()
@@ -240,23 +252,26 @@ async def register_sender(request: SenderRegisterRequest):
         raise
     except Exception as e:
         logging.error(f"[Levin DMT] Register sender error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": "Registration failed. Please try again."
+        }
 
 
-# STEP 3: Verify Sender OTP
+# STEP 3: Verify Sender OTP for Levin DMT
 @router.post("/sender/verify-otp")
 async def verify_sender_otp(request: SenderOTPVerifyRequest):
     """
-    Step 3: Verify sender OTP
-    PUT /v3/customer/account/otp/verify
+    Step 3: Verify sender OTP for Levin DMT
+    PUT /v3/customer/payment/dmt-levin/sender/{customer_id}/otp
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/account/otp/verify"
+        # Levin DMT specific OTP verify
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/otp"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "customer_id": request.customer_mobile,
             "otp": request.otp
         }
         
@@ -265,17 +280,33 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.put(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] OTP verify response: {response.status_code}")
+            logging.error(f"[Levin DMT] OTP verify response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
-                raise HTTPException(status_code=500, detail="Service not activated")
+                # Fallback to generic endpoint
+                fallback_url = f"{EKO_BASE_URL_V3}/customer/account/otp/verify"
+                data["customer_id"] = request.customer_mobile
+                response = await client.put(fallback_url, headers=get_headers(), data=data)
+                logging.info(f"[Levin DMT] Fallback OTP verify: {response.status_code} - {response.text[:300] if response.text else 'empty'}")
             
-            result = response.json()
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "OTP verification service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error. Please try again."
+                }
             
             if result.get("response_status_id") == 0:
                 return {
                     "success": True,
-                    "message": "Sender verified successfully",
+                    "message": "Sender verified and registered for Levin DMT!",
                     "data": result.get("data", {})
                 }
             else:
@@ -289,7 +320,79 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
         raise
     except Exception as e:
         logging.error(f"[Levin DMT] Verify OTP error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": "Verification failed. Please try again."
+        }
+
+
+# STEP 3B: Resend OTP for Levin DMT registration
+class ResendOTPRequest(BaseModel):
+    customer_mobile: str
+
+@router.post("/sender/resend-otp")
+async def resend_sender_otp(request: ResendOTPRequest):
+    """
+    Resend OTP for Levin DMT sender registration
+    POST /v3/customer/payment/dmt-levin/sender/{customer_id}/otp
+    """
+    try:
+        # Levin DMT resend OTP
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/otp"
+        
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        logging.info(f"[Levin DMT] Resend OTP for: {request.customer_mobile}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.post(url, headers=get_headers(), data=data)
+            
+            logging.error(f"[Levin DMT] Resend OTP response: {response.status_code} - FULL: {response.text}")
+            
+            if response.status_code != 200 or not response.text or "error" in response.text.lower():
+                # Fallback
+                fallback_url = f"{EKO_BASE_URL_V3}/customer/account/otp/resend"
+                data["customer_id"] = request.customer_mobile
+                response = await client.post(fallback_url, headers=get_headers(), data=data)
+                logging.error(f"[Levin DMT] Fallback resend OTP: {response.status_code} - {response.text}")
+            
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "OTP service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error"
+                }
+            
+            if result.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "otp_sent": True,
+                    "message": "OTP sent to customer mobile",
+                    "data": result.get("data", {})
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to send OTP"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except Exception as e:
+        logging.error(f"[Levin DMT] Resend OTP error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Failed to send OTP"
+        }
 
 
 # STEP 4: Get Recipients List
