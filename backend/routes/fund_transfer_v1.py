@@ -41,6 +41,79 @@ ACCOUNT_TYPE = {
     "CURRENT": "2"
 }
 
+# ==================== EKO ERROR CODES ====================
+# Reference: https://developers.eko.in/docs/error-codes
+
+EKO_ERROR_CODES = {
+    0: {"message": "Success", "action": None},
+    463: {"message": "User not found", "action": "Check user_code registration"},
+    327: {"message": "Enrollment done. Verification pending", "action": "Complete verification"},
+    17: {"message": "User wallet already exists", "action": None},
+    31: {"message": "Agent cannot be registered", "action": "Contact Eko support"},
+    132: {"message": "Sender name should only contain letters", "action": "Remove special characters from sender name"},
+    302: {"message": "Wrong OTP", "action": "Enter correct OTP"},
+    303: {"message": "OTP expired", "action": "Request new OTP"},
+    342: {"message": "Recipient already registered", "action": "Use existing recipient"},
+    145: {"message": "Recipient mobile number should be numeric", "action": "Enter valid mobile number"},
+    140: {"message": "Recipient mobile number should be 10 digit", "action": "Enter 10 digit mobile"},
+    131: {"message": "Recipient name should only contain letters", "action": "Remove special characters"},
+    122: {"message": "Recipient name length should be 1-50 characters", "action": "Adjust name length"},
+    39: {"message": "Maximum recipient limit reached", "action": "Delete unused recipients"},
+    41: {"message": "Wrong IFSC code", "action": "Verify IFSC code"},
+    536: {"message": "Invalid recipient type format", "action": "Check recipient type"},
+    537: {"message": "Invalid recipient type length", "action": "Check recipient type length"},
+    44: {"message": "Incomplete IFSC Code", "action": "Enter complete 11-character IFSC"},
+    45: {"message": "Incomplete IFSC Code", "action": "Enter complete 11-character IFSC"},
+    48: {"message": "Recipient bank not found", "action": "Verify bank IFSC"},
+    102: {"message": "Invalid account number length", "action": "Check account number (9-18 digits)"},
+    136: {"message": "Invalid IFSC format", "action": "Check IFSC format (e.g., HDFC0001234)"},
+    508: {"message": "Invalid IFSC for selected bank", "action": "Verify IFSC belongs to the bank"},
+    521: {"message": "IFSC not found in system", "action": "Verify IFSC code exists"},
+    313: {"message": "Recipient registration not done", "action": "Register recipient first"},
+    317: {"message": "NEFT not allowed", "action": "Use IMPS instead"},
+    53: {"message": "IMPS transaction not allowed", "action": "Use NEFT instead or check limits"},
+    55: {"message": "Error from NPCI", "action": "Retry after some time"},
+    460: {"message": "Invalid channel", "action": "Contact Eko support"},
+    319: {"message": "Invalid Sender/Initiator", "action": "Verify initiator_id"},
+    314: {"message": "Monthly limit exceeded", "action": "Wait for next month or KYC upgrade"},
+    350: {"message": "Verification failed - Recipient name not found", "action": "Check account holder name"},
+    344: {"message": "IMPS not available for this bank", "action": "Use NEFT instead"},
+    46: {"message": "Invalid account details", "action": "Verify account number and IFSC"},
+    168: {"message": "Transaction ID does not exist", "action": "Check correct TID"},
+    1237: {"message": "ID proof already exists", "action": "Use existing ID"},
+    585: {"message": "Customer already KYC approved", "action": None},
+    347: {"message": "Insufficient balance", "action": "Add balance to Eko wallet"},
+    945: {"message": "Sender/Beneficiary limit exhausted for this month", "action": "Wait for next month"},
+    544: {"message": "Bank not available now", "action": "Retry after some time"},
+    97: {"message": "Missing required field", "action": "Check all required parameters"},
+}
+
+# Transaction status codes
+TX_STATUS_CODES = {
+    0: {"status": "SUCCESS", "description": "Transaction successful", "is_final": True, "refund": False},
+    1: {"status": "FAILED", "description": "Transaction failed", "is_final": True, "refund": False},
+    2: {"status": "PROCESSING", "description": "Response awaited / Initiated", "is_final": False, "refund": False},
+    3: {"status": "REFUND_PENDING", "description": "Refund is pending", "is_final": False, "refund": True},
+    4: {"status": "REFUNDED", "description": "Amount refunded to source", "is_final": True, "refund": True},
+    5: {"status": "ON_HOLD", "description": "On hold - inquiry required", "is_final": False, "refund": False},
+}
+
+def get_error_message(status_code: int) -> dict:
+    """Get user-friendly error message for Eko status code"""
+    return EKO_ERROR_CODES.get(status_code, {
+        "message": f"Unknown error (code: {status_code})",
+        "action": "Contact support with error code"
+    })
+
+def get_tx_status_info(tx_status: int) -> dict:
+    """Get transaction status information"""
+    return TX_STATUS_CODES.get(tx_status, {
+        "status": "UNKNOWN",
+        "description": f"Unknown status (code: {tx_status})",
+        "is_final": False,
+        "refund": False
+    })
+
 # ==================== MODELS ====================
 
 class FundTransferRequest(BaseModel):
@@ -158,7 +231,7 @@ async def activate_fund_transfer_service():
             "latlong": "19.9975,73.7898"
         }
         
-        logging.info(f"[FUND TRANSFER] Activating service 45")
+        logging.info("[FUND TRANSFER] Activating service 45")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.put(url, headers=headers, data=data)
@@ -252,53 +325,114 @@ async def initiate_fund_transfer(request: FundTransferRequest):
         
         try:
             result = response.json()
-        except:
+        except Exception:
             return create_error_response(500, "Invalid response from server")
         
-        # Check response status
+        # Check response status code from Eko
+        eko_status = result.get("status")
         tx_status = result.get("data", {}).get("tx_status", result.get("tx_status"))
+        tx_data = result.get("data", {})
         
-        if result.get("status") == 0 or tx_status in [0, "0"]:
-            tx_data = result.get("data", {})
+        # Convert tx_status to int if string
+        if isinstance(tx_status, str) and tx_status.isdigit():
+            tx_status = int(tx_status)
+        
+        # Get error info if status is not 0 (success)
+        if eko_status != 0 and eko_status is not None:
+            error_info = get_error_message(eko_status)
+            logging.warning(f"[FUND TRANSFER] Eko error: {eko_status} - {error_info['message']}")
+            return {
+                "success": False,
+                "status": "FAILED",
+                "error_code": eko_status,
+                "message": error_info["message"],
+                "user_message": f"{error_info['message']}. {error_info.get('action', '')}".strip(),
+                "client_ref_id": client_ref_id,
+                "action_required": error_info.get("action"),
+                "data": tx_data
+            }
+        
+        # Get transaction status info
+        tx_info = get_tx_status_info(tx_status) if tx_status is not None else get_tx_status_info(0)
+        
+        # Build response based on tx_status
+        response_data = {
+            "tid": str(tx_data.get("tid", result.get("tid", ""))),
+            "client_ref_id": client_ref_id,
+            "amount": request.amount,
+            "recipient_name": request.recipient_name,
+            "account": request.account,
+            "ifsc": request.ifsc,
+            "bank_ref_num": tx_data.get("bank_ref_num", ""),
+            "payment_mode": request.payment_mode,
+            "tx_status": str(tx_status) if tx_status is not None else "0",
+            "tx_status_desc": tx_data.get("txstatus_desc", tx_info["description"]),
+            "fee": tx_data.get("fee", "0"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "data": tx_data
+        }
+        
+        # SUCCESS: tx_status = 0
+        if tx_status == 0:
             return {
                 "success": True,
                 "status": "SUCCESS",
                 "message": "Transfer initiated successfully",
-                "tid": str(tx_data.get("tid", result.get("tid", ""))),
-                "client_ref_id": client_ref_id,
-                "amount": request.amount,
-                "recipient_name": request.recipient_name,
-                "account": request.account,
-                "ifsc": request.ifsc,
-                "bank_ref_num": tx_data.get("bank_ref_num", ""),
-                "payment_mode": request.payment_mode,
-                "tx_status": tx_status,
-                "tx_status_desc": tx_data.get("txstatus_desc", "Initiated"),
-                "fee": tx_data.get("fee", "0"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "data": tx_data
+                "user_message": f"₹{request.amount} transfer initiated to account ending ****{request.account[-4:]}",
+                **response_data
             }
-        elif tx_status in [1, "1", 2, "2"]:
-            # Pending status
-            tx_data = result.get("data", {})
+        
+        # PROCESSING: tx_status = 2
+        elif tx_status == 2:
             return {
                 "success": True,
-                "status": "PENDING",
-                "message": result.get("message", "Transfer pending"),
-                "tid": str(tx_data.get("tid", result.get("tid", ""))),
-                "client_ref_id": client_ref_id,
-                "tx_status": tx_status,
-                "tx_status_desc": tx_data.get("txstatus_desc", "Pending"),
-                "data": tx_data
+                "status": "PROCESSING",
+                "message": "Transfer is being processed",
+                "user_message": "Your transfer is in progress. Please check status after few minutes.",
+                "requires_status_check": True,
+                **response_data
             }
-        else:
+        
+        # ON_HOLD: tx_status = 5
+        elif tx_status == 5:
+            return {
+                "success": True,
+                "status": "ON_HOLD",
+                "message": "Transfer on hold - status check required",
+                "user_message": "Transfer is on hold. Please check status or contact support.",
+                "requires_status_check": True,
+                **response_data
+            }
+        
+        # FAILED: tx_status = 1
+        elif tx_status == 1:
             return {
                 "success": False,
                 "status": "FAILED",
                 "message": result.get("message", "Transfer failed"),
-                "error_code": result.get("response_status_id", tx_status),
-                "client_ref_id": client_ref_id,
-                "data": result.get("data", {})
+                "user_message": "Transfer failed. Amount will be refunded if deducted.",
+                **response_data
+            }
+        
+        # REFUND states: tx_status = 3 or 4
+        elif tx_status in [3, 4]:
+            refund_status = "REFUNDED" if tx_status == 4 else "REFUND_PENDING"
+            return {
+                "success": False,
+                "status": refund_status,
+                "message": tx_info["description"],
+                "user_message": "Transfer was reversed. Amount will be refunded." if tx_status == 3 else "Transfer reversed. Amount has been refunded.",
+                "is_refunded": tx_status == 4,
+                **response_data
+            }
+        
+        # Default: treat as success if status=0 from Eko
+        else:
+            return {
+                "success": True,
+                "status": "SUCCESS",
+                "message": "Transfer initiated successfully",
+                **response_data
             }
             
     except Exception as e:
@@ -345,20 +479,47 @@ async def check_transfer_status(identifier: str, id_type: str = "tid"):
         result = response.json()
         tx_data = result.get("data", {})
         
-        return {
+        # Get tx_status
+        tx_status = tx_data.get("tx_status")
+        if isinstance(tx_status, str) and tx_status.isdigit():
+            tx_status = int(tx_status)
+        
+        # Get status info
+        tx_info = get_tx_status_info(tx_status) if tx_status is not None else {"status": "UNKNOWN", "description": "Unknown"}
+        
+        # Build detailed response
+        response_data = {
             "success": True,
             "tid": tx_data.get("tid", identifier),
             "client_ref_id": tx_data.get("client_ref_id", ""),
-            "tx_status": tx_data.get("tx_status"),
-            "tx_status_desc": tx_data.get("txstatus_desc", "Unknown"),
+            "tx_status": str(tx_status) if tx_status is not None else None,
+            "tx_status_desc": tx_data.get("txstatus_desc", tx_info["description"]),
+            "status": tx_info["status"],
             "amount": tx_data.get("amount"),
             "bank_ref_num": tx_data.get("bank_ref_num", ""),
             "recipient_name": tx_data.get("recipient_name", ""),
             "account": tx_data.get("account", ""),
             "ifsc": tx_data.get("ifsc", ""),
+            "fee": tx_data.get("fee", "0"),
+            "payment_mode": tx_data.get("payment_mode"),
             "timestamp": tx_data.get("timestamp", ""),
+            "is_final": tx_info.get("is_final", False),
+            "is_refunded": tx_info.get("refund", False),
             "data": tx_data
         }
+        
+        # Add user-friendly message based on status
+        status_messages = {
+            0: "Transfer completed successfully.",
+            1: "Transfer failed. Please try again or contact support.",
+            2: "Transfer is being processed. Please check again in few minutes.",
+            3: "Transfer reversed. Refund is being processed.",
+            4: "Transfer reversed. Amount has been refunded to your account.",
+            5: "Transfer is on hold. Please contact support."
+        }
+        response_data["user_message"] = status_messages.get(tx_status, "Please contact support for status.")
+        
+        return response_data
         
     except Exception as e:
         logging.error(f"[FUND TRANSFER] Status check error: {str(e)}")
