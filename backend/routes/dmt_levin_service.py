@@ -182,13 +182,12 @@ async def check_sender(request: SenderCheckRequest):
 async def register_sender(request: SenderRegisterRequest):
     """
     Step 2: Onboard new sender for Levin DMT
-    POST /v3/customer/account/{customer_id}
+    POST /v3/customer/account/{customer_id}/dmt-levin
     Content-Type: application/x-www-form-urlencoded
-    service_code: 80 for Levin DMT
     """
     try:
-        # Correct URL - NO /dmt-levin suffix!
-        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}"
+        # CORRECT URL with /dmt-levin suffix!
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
         
         # residence_address as JSON STRING (not object)
         residence_address = json.dumps({
@@ -206,8 +205,7 @@ async def register_sender(request: SenderRegisterRequest):
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": residence_address,
-            "service_code": "80"  # 80 = Levin DMT
+            "residence_address": residence_address
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
