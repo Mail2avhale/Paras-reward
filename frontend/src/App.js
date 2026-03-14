@@ -228,7 +228,9 @@ const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackCh
 // AdminDMTDashboard - REMOVED (Eko API not working)
 const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminLedgerView"));
 const AdminPopupMessages = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminPopupMessages"));
+const AdminBankTransfers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBankTransfers"));
 // BillPayments removed - merged into RedeemPageV2, /bill-payments redirects to /redeem
+const BankRedeemPage = lazy(() => import("@/pages/BankRedeemPage"));
 const GiftVoucherRedemption = lazy(() => import("@/pages/GiftVoucherRedemption"));
 const KYCVerification = lazy(() => import("@/pages/KYCVerification"));
 const BillPaymentHistory = lazy(() => import("@/pages/BillPaymentHistory"));
@@ -345,8 +347,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/recurring-deposit" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/rd" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-redeem" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
-            <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
+            <Route path="/prc-to-bank" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
             {/* DMT/Fund Transfer REMOVED - Eko API not working, redirect to redeem */}
             <Route path="/dmt" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
             <Route path="/fund-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
@@ -420,6 +422,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/dmt-refunds" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminLedgerView user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/popup-messages" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPopupMessages user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/bank-transfers" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBankTransfers user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-charges" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceCharges user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/service-toggles" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminServiceToggles user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

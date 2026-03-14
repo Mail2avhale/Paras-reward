@@ -1,0 +1,65 @@
+{
+  "summary": "Manual Bank Transfer Feature - All 52 tests passed (26 backend + 26 frontend)",
+  "mode": "generate",
+  "baseline_commit": "6893a61c15fbf2d59081eb4a61b24661ad1d55f0",
+  "head_commit": "f5ce3d7477662443e6e79f33d822b9e976c3184a",
+  "specs_created": [
+    "/app/backend/tests/test_manual_bank_transfer.py",
+    "/app/tests/e2e/manual-bank-transfer.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_manual_bank_transfer.py",
+    "/app/test_reports/pytest/manual_bank_transfer_results.xml",
+    "/app/tests/e2e/manual-bank-transfer.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 52,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "IMP-001",
+      "issue_type": "improvement",
+      "severity": "MEDIUM",
+      "description": "BankRedeemPage.js has no data-testid attributes for automated testing. Add data-testid to interactive elements like amount input, IFSC input, verify button, submit button, tab buttons, etc.",
+      "endpoint_or_component": "/app/frontend/src/pages/BankRedeemPage.js"
+    },
+    {
+      "id": "IMP-002",
+      "issue_type": "improvement",
+      "severity": "MEDIUM",
+      "description": "AdminBankTransfers.js has no data-testid attributes for automated testing. Add data-testid to table rows, action buttons (Mark Paid/Failed), filters, search input, and pagination controls.",
+      "endpoint_or_component": "/app/frontend/src/pages/Admin/AdminBankTransfers.js"
+    }
+  ],
+  "action_items": [
+    "Add data-testid attributes to BankRedeemPage.js for better E2E testing",
+    "Add data-testid attributes to AdminBankTransfers.js for better E2E testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_manual_bank_transfer.py",
+    "/app/tests/e2e/manual-bank-transfer.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% (26/26 passed)",
+    "frontend": "100% (26/26 passed)"
+  },
+  "seed_data_creation": "None - tests use API endpoints without database seed data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Manual Bank Transfer Feature Testing Complete - Iteration 121\n\n## Backend Tests (26 passed):\n- Bank Transfer Config API: GET /api/bank-transfer/config - Returns PRC rate (10), fees (₹10 + 20%), limits (₹200-₹10,000)\n- Fee Calculation API: GET /api/bank-transfer/calculate-fees - Correctly calculates all fees and PRC requirements\n- IFSC Verification API: POST /api/bank-transfer/verify-ifsc - Validates IFSC format, returns bank names (HDFC, ICICI, SBI, Axis)\n- Admin Requests API: GET /api/bank-transfer/admin/requests - Returns paginated list with stats, supports filters\n- Admin Stats API: GET /api/bank-transfer/admin/stats - Returns pending/paid/failed counts and amounts\n- User Requests API: GET /api/bank-transfer/my-requests/{user_id} - Returns user's request history\n\n## Frontend Tests (26 passed):\n- Same API validations through Playwright request API\n- UI redirection tests: Both BankRedeemPage and AdminBankTransfers correctly redirect to login when unauthenticated\n\n## Notes:\n1. Full UI testing requires authentication - login test credentials needed\n2. No data-testid attributes in frontend pages - reported as improvement items\n3. All APIs working correctly with proper validation\n4. Preview database has no test bank transfer requests yet\n\n## API Summary:\n- Config: 1 INR = 10 PRC, ₹10 transaction fee, 20% admin fee\n- Limits: Min ₹200, Max ₹10,000\n- IFSC: Supports major banks via Eko API with fallback to IFSC prefix lookup",
+  "features_tested": {
+    "Bank Transfer Config API": "PASSED - GET /api/bank-transfer/config returns correct PRC rate and fee structure",
+    "Fee Calculation API": "PASSED - GET /api/bank-transfer/calculate-fees correctly computes fees for ₹200-₹10,000 range",
+    "IFSC Verification API": "PASSED - POST /api/bank-transfer/verify-ifsc validates format and returns bank details",
+    "Admin Requests List API": "PASSED - GET /api/bank-transfer/admin/requests with pagination, filters, search",
+    "Admin Stats API": "PASSED - GET /api/bank-transfer/admin/stats returns pending/paid/failed statistics",
+    "User Requests History API": "PASSED - GET /api/bank-transfer/my-requests/{user_id} returns user history",
+    "BankRedeemPage Authentication": "PASSED - Redirects to login when unauthenticated",
+    "AdminBankTransfers Authentication": "PASSED - Redirects to login when unauthenticated"
+  }
+}
