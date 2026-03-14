@@ -381,11 +381,11 @@ const DailyRewards = ({ user }) => {
         setTimeout(() => setShowFloatingCoin(false), 800);
       }, 5000);
       
-      // Live counter updates every 100ms for smooth real-time feel
+      // Live counter updates every 1 second
       liveCounterRef.current = setInterval(() => {
-        const prcPer100ms = miningRate / 36000; // Per 100ms
-        setSessionPRC(prev => Math.max(0, prev + prcPer100ms));
-      }, 100);
+        const prcPerSecond = miningRate / 3600; // Per second
+        setSessionPRC(prev => Math.max(0, prev + prcPerSecond));
+      }, 1000);
       
       // Progress bar updates every second for smooth progression
       progressRef.current = setInterval(() => {
@@ -721,35 +721,49 @@ const DailyRewards = ({ user }) => {
                   ))}
                 </div>
                 
-                {/* Earned PRC Display - Clean Dark Design */}
+                {/* Earned PRC Display - Advanced Digital Odometer */}
                 <div className="mt-6 bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-5 relative overflow-hidden border border-zinc-700/50">
                   
-                  <p className="text-zinc-500 text-xs mb-2 relative z-10">{globalT('sessionEarnings')}</p>
-                  <div className="flex items-center justify-center gap-3 relative z-10">
-                    {/* Simple coin icon */}
-                    <Coins className="w-6 h-6 text-amber-500" />
+                  <p className="text-zinc-500 text-xs mb-3 relative z-10 text-center">{globalT('sessionEarnings')}</p>
+                  
+                  {/* Digital Odometer Display */}
+                  <div className="flex items-center justify-center gap-1 relative z-10">
+                    <Coins className="w-5 h-5 text-amber-500 mr-2" />
                     
-                    {/* Live counter with gold gradient */}
-                    <span className="text-4xl font-semibold text-amber-400 font-mono tabular-nums tracking-wide">
-                      <AnimatedCounter value={sessionPRC} decimals={4} />
-                    </span>
-                    <span className="text-lg font-medium text-amber-500/70">
-                      PRC
-                    </span>
+                    {/* Odometer digits */}
+                    {sessionPRC.toFixed(2).split('').map((char, i) => (
+                      <motion.div
+                        key={`${i}-${char}`}
+                        className={`
+                          ${char === '.' 
+                            ? 'w-3 flex items-end justify-center pb-1' 
+                            : 'w-9 h-12 bg-zinc-900 border border-amber-500/30 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                          }
+                        `}
+                        initial={{ y: -5, opacity: 0.5 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <span 
+                          className={`font-mono font-bold ${
+                            char === '.' 
+                              ? 'text-amber-400 text-2xl' 
+                              : 'text-2xl bg-gradient-to-b from-amber-300 to-amber-500 bg-clip-text text-transparent'
+                          }`}
+                        >
+                          {char}
+                        </span>
+                      </motion.div>
+                    ))}
                     
-                    {/* Floating +PRC indicator */}
-                    <AnimatePresence>
-                      {showFloatingCoin && (
-                        <FloatingCoin onComplete={() => setShowFloatingCoin(false)} />
-                      )}
-                    </AnimatePresence>
+                    <span className="text-amber-500 font-semibold ml-2">PRC</span>
                   </div>
                   
                   {/* Per-second rate indicator */}
-                  <div className="flex items-center justify-center gap-2 mt-3 relative z-10">
+                  <div className="flex items-center justify-center gap-2 mt-4 relative z-10">
                     <Zap className="w-3 h-3 text-emerald-500" />
                     <p className="text-emerald-500 text-xs font-mono">
-                      +{(miningRate / 3600).toFixed(6)} PRC/sec
+                      +{(miningRate / 3600).toFixed(4)} PRC/sec
                     </p>
                   </div>
                   
@@ -769,6 +783,7 @@ const DailyRewards = ({ user }) => {
                           background: 'linear-gradient(90deg, #10b981, #34d399)',
                           boxShadow: '0 0 10px rgba(16, 185, 129, 0.5)'
                         }}
+                      />
                       />
                     </div>
                   </div>
