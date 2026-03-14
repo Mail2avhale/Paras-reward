@@ -258,6 +258,36 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             logging.warning(f"[RAZORPAY] Duplicate payment attempt: {request.razorpay_payment_id}")
             raise HTTPException(status_code=400, detail="This payment has already been processed")
         
+        # ==================== STEP 5.1: ATOMIC CLAIM - PREVENT RACE CONDITION ====================
+        # Use atomic findOneAndUpdate to claim this order/payment
+        # This prevents double activation if verify-payment and webhook arrive simultaneously
+        claim_result = await db.razorpay_orders.find_one_and_update(
+            {
+                "order_id": request.razorpay_order_id,
+                "status": {"$ne": "paid"},  # Only if not already paid
+                "$or": [
+                    {"payment_id": {"$exists": False}},
+                    {"payment_id": None},
+                    {"payment_id": request.razorpay_payment_id}  # Allow if same payment
+                ]
+            },
+            {
+                "$set": {
+                    "claiming": True,
+                    "claimed_at": datetime.now(timezone.utc),
+                    "claimed_by": "verify_payment"
+                }
+            }
+        )
+        
+        if not claim_result:
+            logging.warning(f"[RAZORPAY] RACE CONDITION BLOCKED - Order {request.razorpay_order_id} already being processed")
+            # Check if it was just activated
+            check_order = await db.razorpay_orders.find_one({"order_id": request.razorpay_order_id})
+            if check_order and check_order.get("status") == "paid":
+                raise HTTPException(status_code=400, detail="Payment already processed successfully")
+            raise HTTPException(status_code=400, detail="Order is being processed. Please wait.")
+        
         # ==================== STEP 6: VERIFY AMOUNT MATCHES ====================
         expected_amount = order.get("amount", 0)
         if abs(payment_amount - expected_amount) > 1:  # Allow ₹1 tolerance
@@ -455,104 +485,149 @@ async def razorpay_webhook(request: Request):
             amount = payment.get("amount", 0) / 100  # Convert paise to INR
             
             if db is not None and order_id:
-                # Get order details
-                order = await db.razorpay_orders.find_one({"order_id": order_id})
-                
-                if order and order.get("status") != "paid":
-                    # Update order status
-                    await db.razorpay_orders.update_one(
-                        {"order_id": order_id},
-                        {
-                            "$set": {
-                                "status": "paid",
-                                "payment_id": payment_id,
-                                "webhook_payment_id": payment_id,
-                                "captured_at": datetime.now(timezone.utc),
-                                "payment_captured": True,
-                                "verified_amount": amount
-                            }
+                # ==================== ATOMIC CLAIM TO PREVENT RACE CONDITION ====================
+                # Use atomic findOneAndUpdate - only claim if not already paid/claimed
+                claim_result = await db.razorpay_orders.find_one_and_update(
+                    {
+                        "order_id": order_id,
+                        "status": {"$ne": "paid"},  # Only if not already paid
+                        "$or": [
+                            {"webhook_claimed": {"$exists": False}},
+                            {"webhook_claimed": False}
+                        ]
+                    },
+                    {
+                        "$set": {
+                            "webhook_claimed": True,
+                            "webhook_claimed_at": datetime.now(timezone.utc)
                         }
-                    )
-                    
-                    # ACTIVATE SUBSCRIPTION - Same logic as verify-payment
-                    # But with extra check to prevent double activation
-                    user_id = order.get("user_id")
-                    plan_type = order.get("plan_type", "monthly")
-                    plan_name = order.get("plan_name", "startup")
-                    duration_days = PLAN_DURATIONS.get(plan_type, 28)
-                    
-                    now = datetime.now(timezone.utc)
-                    
-                    # Check for existing subscription and add remaining days
-                    user = await db.users.find_one({"uid": user_id})
-                    remaining_days = 0
-                    
-                    # CRITICAL: Check if this payment was already processed via verify-payment
-                    if user and user.get("last_payment_id") == payment_id:
-                        logging.info(f"[WEBHOOK] Payment {payment_id} already activated via verify-payment, skipping webhook activation")
-                        # Skip the entire activation block
-                    else:
-                        # Proceed with activation only if not already done
-                        if user:
-                            # Check BOTH field names for expiry
-                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
-                            if existing_expiry:
-                                if isinstance(existing_expiry, str):
-                                    try:
-                                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                    except:
-                                        existing_expiry = None
-                                
-                                if existing_expiry:
-                                    if existing_expiry.tzinfo is None:
-                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
-                                    
-                                    if existing_expiry > now:
-                                        remaining_days = (existing_expiry - now).days
-                                        logging.info(f"[WEBHOOK] User {user_id} has {remaining_days} remaining days to add")
-                        
-                        total_days = duration_days + remaining_days
-                        expiry_date = now + timedelta(days=total_days)
-                        
-                        # Update user subscription
-                        await db.users.update_one(
-                            {"uid": user_id},
-                            {
-                                "$set": {
-                                    "subscription_plan": plan_name,
-                                    "subscription_start": now,
-                                    "subscription_expires": expiry_date,
-                                    "subscription_expiry": expiry_date.isoformat(),
-                                    "vip_expiry": expiry_date.isoformat(),
-                                    "membership_type": "vip",
-                                    "subscription_status": "active",
-                                    "last_payment_id": payment_id,
-                                    "last_payment_date": now,
-                                    "previous_remaining_days_added": remaining_days,
-                                    "activated_via": "webhook"
-                                }
-                            }
-                        )
-                        
-                        # Log transaction
-                        await db.transactions.insert_one({
-                            "user_id": user_id,
-                            "type": "subscription_payment",
-                            "amount": amount,
+                    }
+                )
+                
+                if not claim_result:
+                    # Order already processed or being processed
+                    existing_order = await db.razorpay_orders.find_one({"order_id": order_id})
+                    if existing_order and existing_order.get("status") == "paid":
+                        logging.info(f"[WEBHOOK] Order {order_id} already paid, skipping webhook activation")
+                        return {"status": "ok", "message": "Order already processed"}
+                    logging.info(f"[WEBHOOK] Order {order_id} being processed elsewhere, skipping")
+                    return {"status": "ok", "message": "Order being processed"}
+                
+                order = claim_result  # Use the claimed order
+                
+                # Update order status
+                await db.razorpay_orders.update_one(
+                    {"order_id": order_id},
+                    {
+                        "$set": {
+                            "status": "paid",
                             "payment_id": payment_id,
-                            "order_id": order_id,
-                            "plan_name": plan_name,
-                            "plan_type": plan_type,
-                            "duration_days": duration_days,
-                            "remaining_days_added": remaining_days,
-                            "total_days": total_days,
-                            "activated_via": "webhook",
-                            "timestamp": now
-                        })
+                            "webhook_payment_id": payment_id,
+                            "captured_at": datetime.now(timezone.utc),
+                            "payment_captured": True,
+                            "verified_amount": amount
+                        }
+                    }
+                )
+                
+                # ACTIVATE SUBSCRIPTION - Same logic as verify-payment
+                # But with extra check to prevent double activation
+                user_id = order.get("user_id")
+                plan_type = order.get("plan_type", "monthly")
+                plan_name = order.get("plan_name", "startup")
+                duration_days = PLAN_DURATIONS.get(plan_type, 28)
+                
+                now = datetime.now(timezone.utc)
+                
+                # Check for existing subscription and add remaining days
+                user = await db.users.find_one({"uid": user_id})
+                remaining_days = 0
+                
+                # CRITICAL: Check if this payment was already processed via verify-payment
+                if user and user.get("last_payment_id") == payment_id:
+                    logging.info(f"[WEBHOOK] Payment {payment_id} already activated via verify-payment, skipping webhook activation")
+                    return {"status": "ok", "message": "Already activated via verify-payment"}
+                
+                # ATOMIC CHECK: Try to claim this payment for this user
+                # This prevents double activation even with race conditions
+                claim_user = await db.users.find_one_and_update(
+                    {
+                        "uid": user_id,
+                        "$or": [
+                            {"last_payment_id": {"$ne": payment_id}},
+                            {"last_payment_id": {"$exists": False}}
+                        ]
+                    },
+                    {
+                        "$set": {"_claiming_payment": payment_id}
+                    }
+                )
+                
+                if not claim_user:
+                    logging.info(f"[WEBHOOK] Payment {payment_id} already being processed for user {user_id}, skipping")
+                    return {"status": "ok", "message": "Payment already processed"}
+                
+                # Proceed with activation only if claim succeeded
+                user = claim_user  # Use claimed user data
+                
+                # Calculate remaining days from existing subscription
+                existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                if existing_expiry:
+                    if isinstance(existing_expiry, str):
+                        try:
+                            existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                        except:
+                            existing_expiry = None
+                    
+                    if existing_expiry:
+                        if existing_expiry.tzinfo is None:
+                            existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
                         
-                        logging.info(f"[WEBHOOK] Subscription activated for user {user_id}, plan: {plan_name}, total days: {total_days}")
-                else:
-                    logging.info(f"[WEBHOOK] Order {order_id} already paid, skipping activation")
+                        if existing_expiry > now:
+                            remaining_days = (existing_expiry - now).days
+                            logging.info(f"[WEBHOOK] User {user_id} has {remaining_days} remaining days to add")
+                
+                total_days = duration_days + remaining_days
+                expiry_date = now + timedelta(days=total_days)
+                
+                # Update user subscription
+                await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {
+                            "subscription_plan": plan_name,
+                            "subscription_start": now,
+                            "subscription_expires": expiry_date,
+                            "subscription_expiry": expiry_date.isoformat(),
+                            "vip_expiry": expiry_date.isoformat(),
+                            "membership_type": "vip",
+                            "subscription_status": "active",
+                            "last_payment_id": payment_id,
+                            "last_payment_date": now,
+                            "previous_remaining_days_added": remaining_days,
+                            "activated_via": "webhook"
+                        },
+                        "$unset": {"_claiming_payment": ""}
+                    }
+                )
+                
+                # Log transaction
+                await db.transactions.insert_one({
+                    "user_id": user_id,
+                    "type": "subscription_payment",
+                    "amount": amount,
+                    "payment_id": payment_id,
+                    "order_id": order_id,
+                    "plan_name": plan_name,
+                    "plan_type": plan_type,
+                    "duration_days": duration_days,
+                    "remaining_days_added": remaining_days,
+                    "total_days": total_days,
+                    "activated_via": "webhook",
+                    "timestamp": now
+                })
+                
+                logging.info(f"[WEBHOOK] Subscription activated for user {user_id}, plan: {plan_name}, total days: {total_days}")
             
             logging.info(f"Payment captured via webhook: {payment_id}")
         
