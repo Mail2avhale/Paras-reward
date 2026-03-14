@@ -70,6 +70,9 @@ const BankRedeemPage = () => {
   // Policy agreement
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
+  
+  // Redeem limit info
+  const [redeemLimit, setRedeemLimit] = useState(null);
 
   // Load user and config
   useEffect(() => {
@@ -81,14 +84,20 @@ const BankRedeemPage = () => {
           return;
         }
         
-        // Fetch fresh user data
-        const [userRes, configRes] = await Promise.all([
+        // Fetch fresh user data, config, and redeem limit
+        const [userRes, configRes, limitRes] = await Promise.all([
           axios.get(`${API}/users/${userData.uid}`),
-          axios.get(`${API}/bank-transfer/config`)
+          axios.get(`${API}/bank-transfer/config`),
+          axios.get(`${API}/user/${userData.uid}/redeem-limit`).catch(() => ({ data: null }))
         ]);
         
         setUser(userRes.data);
         setConfig(configRes.data);
+        
+        // Set redeem limit info
+        if (limitRes.data?.success) {
+          setRedeemLimit(limitRes.data.limit);
+        }
         
         // Pre-fill account holder name
         if (userRes.data.name) {
@@ -304,6 +313,46 @@ const BankRedeemPage = () => {
               </div>
             </div>
           </div>
+          
+          {/* Redeem Limit Card */}
+          {redeemLimit && (
+            <div data-testid="redeem-limit-card" className="mt-3 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-white/80 text-sm font-medium">Monthly Redeem Limit</p>
+                <p className="text-white/60 text-xs">{Math.round(redeemLimit.usage_percentage || 0)}% used</p>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-white/20 rounded-full h-2 mb-3">
+                <div 
+                  className="bg-emerald-400 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min(redeemLimit.usage_percentage || 0, 100)}%` }}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-white/50 text-xs">Total Limit</p>
+                  <p className="text-white font-semibold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()} PRC</p>
+                </div>
+                <div>
+                  <p className="text-white/50 text-xs">Used</p>
+                  <p className="text-yellow-400 font-semibold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()} PRC</p>
+                </div>
+                <div>
+                  <p className="text-white/50 text-xs">Available</p>
+                  <p className="text-emerald-400 font-semibold text-sm">{(redeemLimit.remaining || 0).toLocaleString()} PRC</p>
+                </div>
+              </div>
+              
+              {/* Additional Info */}
+              {(redeemLimit.active_referrals > 0 || redeemLimit.referral_percentage_increase > 0) && (
+                <div className="mt-3 pt-3 border-t border-white/10 text-xs text-white/60">
+                  <p>Active Referrals: {redeemLimit.active_referrals || 0} (+{redeemLimit.referral_percentage_increase || 0}% bonus)</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -311,6 +360,7 @@ const BankRedeemPage = () => {
         {/* Tab Switcher */}
         <div className="flex gap-2 mb-4">
           <button
+            data-testid="new-request-tab"
             onClick={() => setActiveTab('new')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all ${
               activeTab === 'new' 
@@ -322,6 +372,7 @@ const BankRedeemPage = () => {
             New Request
           </button>
           <button
+            data-testid="history-tab"
             onClick={() => setActiveTab('history')}
             className={`flex-1 py-3 rounded-xl font-medium transition-all ${
               activeTab === 'history' 
@@ -335,10 +386,10 @@ const BankRedeemPage = () => {
         </div>
 
         {activeTab === 'new' ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} data-testid="bank-redeem-form" className="space-y-4">
             {/* KYC Check */}
             {user?.kyc_status !== 'verified' && (
-              <Card className="bg-yellow-500/10 border-yellow-500/30 p-4">
+              <Card data-testid="kyc-warning" className="bg-yellow-500/10 border-yellow-500/30 p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
                   <div>
@@ -348,6 +399,7 @@ const BankRedeemPage = () => {
                     </p>
                     <Button 
                       type="button"
+                      data-testid="complete-kyc-btn"
                       onClick={() => navigate('/kyc')}
                       className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-black"
                       size="sm"
@@ -365,6 +417,7 @@ const BankRedeemPage = () => {
               <div className="relative">
                 <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <Input
+                  data-testid="amount-input"
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -424,6 +477,7 @@ const BankRedeemPage = () => {
               <div>
                 <Label className="text-slate-300 mb-2 block">Account Holder Name</Label>
                 <Input
+                  data-testid="account-holder-input"
                   value={accountHolder}
                   onChange={(e) => setAccountHolder(e.target.value)}
                   placeholder="As per bank records"
@@ -437,6 +491,7 @@ const BankRedeemPage = () => {
                 <Label className="text-slate-300 mb-2 block">IFSC Code</Label>
                 <div className="flex gap-2">
                   <Input
+                    data-testid="ifsc-input"
                     value={ifscCode}
                     onChange={(e) => handleIFSCChange(e.target.value)}
                     placeholder="e.g., HDFC0001234"
@@ -445,6 +500,7 @@ const BankRedeemPage = () => {
                     required
                   />
                   <Button
+                    data-testid="verify-ifsc-btn"
                     type="button"
                     onClick={verifyIFSC}
                     disabled={ifscCode.length !== 11 || verifyingIFSC}
@@ -454,7 +510,7 @@ const BankRedeemPage = () => {
                   </Button>
                 </div>
                 {ifscVerified && bankName && (
-                  <div className="flex items-center gap-2 mt-2 text-emerald-400 text-sm">
+                  <div data-testid="bank-verified" className="flex items-center gap-2 mt-2 text-emerald-400 text-sm">
                     <CheckCircle className="w-4 h-4" />
                     <span>{bankName}</span>
                   </div>
@@ -465,6 +521,7 @@ const BankRedeemPage = () => {
               <div>
                 <Label className="text-slate-300 mb-2 block">Account Number</Label>
                 <Input
+                  data-testid="account-number-input"
                   type="text"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 18))}
@@ -478,6 +535,7 @@ const BankRedeemPage = () => {
               <div>
                 <Label className="text-slate-300 mb-2 block">Confirm Account Number</Label>
                 <Input
+                  data-testid="confirm-account-input"
                   type="text"
                   value={confirmAccountNumber}
                   onChange={(e) => setConfirmAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 18))}
@@ -486,10 +544,10 @@ const BankRedeemPage = () => {
                   required
                 />
                 {confirmAccountNumber && accountNumber !== confirmAccountNumber && (
-                  <p className="text-red-400 text-xs mt-1">Account numbers do not match</p>
+                  <p data-testid="account-mismatch" className="text-red-400 text-xs mt-1">Account numbers do not match</p>
                 )}
                 {confirmAccountNumber && accountNumber === confirmAccountNumber && accountNumber.length >= 9 && (
-                  <p className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
+                  <p data-testid="account-match" className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" /> Account numbers match
                   </p>
                 )}
@@ -500,6 +558,7 @@ const BankRedeemPage = () => {
             <Card className="bg-slate-800/50 border-slate-700 p-4">
               <div className="flex items-start gap-3">
                 <input
+                  data-testid="policy-checkbox"
                   type="checkbox"
                   id="policy"
                   checked={agreedToPolicy}
@@ -510,6 +569,7 @@ const BankRedeemPage = () => {
                   I agree to the{' '}
                   <button
                     type="button"
+                    data-testid="view-policy-btn"
                     onClick={() => setShowPolicy(true)}
                     className="text-emerald-400 underline hover:text-emerald-300"
                   >
@@ -522,6 +582,7 @@ const BankRedeemPage = () => {
 
             {/* Submit Button */}
             <Button
+              data-testid="submit-request-btn"
               type="submit"
               disabled={submitting || !agreedToPolicy || !ifscVerified || !fees || user?.kyc_status !== 'verified'}
               className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-6 text-lg font-semibold"

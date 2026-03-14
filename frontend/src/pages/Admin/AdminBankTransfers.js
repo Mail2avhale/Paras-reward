@@ -226,13 +226,14 @@ const AdminBankTransfers = () => {
         </div>
 
         {/* Filters */}
-        <Card className="bg-slate-800/50 border-slate-700 p-4 mb-6">
+        <Card data-testid="filters-card" className="bg-slate-800/50 border-slate-700 p-4 mb-6">
           <div className="flex flex-wrap gap-4">
             {/* Search */}
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
+                  data-testid="search-input"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, phone, account..."
@@ -243,6 +244,7 @@ const AdminBankTransfers = () => {
             
             {/* Status Filter */}
             <select
+              data-testid="status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white min-w-[150px]"
@@ -257,6 +259,7 @@ const AdminBankTransfers = () => {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-slate-400" />
               <Input
+                data-testid="date-from"
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
@@ -269,6 +272,7 @@ const AdminBankTransfers = () => {
             <div className="flex items-center gap-2">
               <span className="text-slate-400">to</span>
               <Input
+                data-testid="date-to"
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
@@ -358,6 +362,7 @@ const AdminBankTransfers = () => {
                           {req.status === 'pending' ? (
                             <div className="flex gap-2">
                               <Button
+                                data-testid={`mark-paid-${req.request_id}`}
                                 size="sm"
                                 onClick={() => openActionModal(req, 'paid')}
                                 className="bg-green-600 hover:bg-green-700 text-white"
@@ -366,6 +371,7 @@ const AdminBankTransfers = () => {
                                 Paid
                               </Button>
                               <Button
+                                data-testid={`mark-failed-${req.request_id}`}
                                 size="sm"
                                 onClick={() => openActionModal(req, 'failed')}
                                 variant="outline"

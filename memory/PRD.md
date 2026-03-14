@@ -1,13 +1,11 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-User's main objectives are to fix and improve Eko DMT and BBPS features:
-1. **DMT Functionality:** Fix DMT transactions failing with "Transaction Declined" and "Customer is not registered" errors
-2. **BBPS Functionality:** Fix all BBPS transactions failing except mobile recharge (Electricity, Gas, DTH, Credit Card, etc.)
-3. **New DMT Implementation:** Stop current V3 DMT system and implement new DMT using Eko's V1 Fund Transfer API
-4. **Receipt Generation:** Generate receipts for successful bill payments
-5. **Beneficiary Management:** Fix issues with adding and deleting beneficiaries
-6. **Transaction Issues:** Investigate successful transactions where money is not credited to account
+User's main objectives are to build a complete fintech rewards and cashback platform with:
+1. **Manual Bank Transfer Redeem System:** PRC to INR bank transfer with admin approval
+2. **BBPS Instant Payments:** Mobile recharge, DTH, electricity, gas bills etc.
+3. **Subscription Management:** Razorpay integration for VIP plans
+4. **PRC Economy:** Mining, referrals, expiry, limits
 
 ## User Language
 **Primary Language: Marathi (मराठी)**
@@ -16,28 +14,60 @@ User's main objectives are to fix and improve Eko DMT and BBPS features:
 
 ## What's Been Implemented
 
-### March 2026 - Session Updates
+### March 14, 2026 - Manual Bank Transfer System
 
-#### ✅ DMT Transfer Fixed
-- Switched from failing `/dmt-levin` endpoint to working `/v3/customer/payment/dmt` endpoint
-- Transactions now successful through API
+#### ✅ Backend APIs Complete
+- `GET /api/bank-transfer/config` - Returns PRC rate, fees, limits
+- `GET /api/bank-transfer/calculate-fees` - Fee calculation for any amount
+- `POST /api/bank-transfer/verify-ifsc` - IFSC verification with Eko API + fallback
+- `POST /api/bank-transfer/request` - Create new bank transfer request
+- `GET /api/bank-transfer/my-requests/{user_id}` - User's request history
+- `GET /api/bank-transfer/admin/requests` - Admin view with pagination, search, filters
+- `POST /api/bank-transfer/admin/mark-paid` - Mark request as paid with UTR
+- `POST /api/bank-transfer/admin/mark-failed` - Mark failed with PRC refund
+- `GET /api/bank-transfer/admin/stats` - Dashboard statistics
 
-#### ✅ Beneficiary Management Fixed  
-- "Add Beneficiary" and "List Beneficiaries" now working with corrected `/dmt` API path
+#### ✅ Frontend Pages Complete
+- **BankRedeemPage.js** - User page with:
+  - Amount input with validation (₹200-₹10,000)
+  - Fee breakdown display
+  - IFSC verification with auto bank name
+  - Account number validation (match confirmation)
+  - Policy agreement modal
+  - Request history tab
+  - **Global Redeem Limit Display** (Total/Used/Remaining PRC)
+  
+- **AdminBankTransfers.js** - Admin panel with:
+  - Stats cards (Pending/Paid/Failed counts and amounts)
+  - Search by name, phone, account
+  - Filter by status
+  - Date range filter
+  - Sort order (Oldest/Newest first)
+  - Pagination
+  - Mark Paid (with UTR) / Mark Failed (with refund) actions
 
-#### ✅ BBPS Feature Implemented & Fixed
-- Diagnosed and fixed `403 Forbidden` error by discovering BBPS service activation (service code 53)
-- Created `/api/bbps/activate-service` endpoint
-- Successfully tested `v2/billpayments/paybill` API for mobile recharge
-- Built backend support for various BBPS services (Electricity, Gas, DTH, Credit Card, etc.)
+#### ✅ Routing & Navigation
+- User route: `/prc-to-bank` or `/bank-redeem`
+- Admin route: `/admin/bank-transfers`
+- Sidebar menu items added for both user and admin
 
-#### ✅ Instant BBPS Integration (March 14, 2026)
-- **Backend**: Rewrote `execute_eko_recharge` function in `unified_redeem_v2.py` to use verified working `bbps_services.py` API
-- **Frontend**: Updated `RedeemPageV2.js`:
-  - Changed "Submit Request" → "Pay Now"
-  - Changed "Admin will process 24-48 hours" → "Instant payment via BBPS"
-  - Changed "Submitting..." → "Processing Payment..."
-- **Tested**: Direct BBPS API on production - ₹19 Jio recharge successful (TID: 3548867123)
+#### ✅ Fee Structure
+- 1 INR = 10 PRC
+- Transaction Fee: ₹10 flat
+- Admin Fee: 20% of withdrawal amount
+- Min: ₹200, Max: ₹10,000
+
+#### ✅ Double Subscription Fix
+- Added atomic locking in Razorpay verify-payment and webhook handlers
+- Prevents race condition between verify-payment and webhook
+- Uses `find_one_and_update` with claim mechanism
+
+### Previous Sessions
+- DMT V1/V3 removed completely
+- Old admin pages (bill-payments, unified-payments) removed
+- Production PRC deduction bug fixed with wallet_service_v2
+- Global redeem limit system implemented
+- PRC expiry disabled
 
 ---
 
@@ -47,88 +77,126 @@ User's main objectives are to fix and improve Eko DMT and BBPS features:
 /app
 ├── backend/
 │   ├── routes/
-│   │   ├── bbps_services.py        # Working BBPS API (verified)
-│   │   ├── unified_redeem_v2.py    # Updated to use bbps_services.py
-│   │   ├── dmt_levin_service.py    # Legacy V3 DMT (to be disabled)
-│   │   └── eko_auth.py             # Eko header generation
+│   │   ├── manual_bank_transfer.py  # NEW: Manual bank redeem system
+│   │   ├── unified_redeem_v2.py     # BBPS instant payments
+│   │   ├── bbps_services.py         # Eko BBPS API
+│   │   ├── razorpay_payments.py     # Subscription with double-fix
+│   │   ├── admin_ledger_view.py     # Ledger view + diagnostic APIs
+│   │   └── wallet.py                # Wallet routes
+│   ├── app/services/
+│   │   └── wallet_service_v2.py     # PRC debit/credit service
 │   └── server.py
 └── frontend/
     └── src/
-        └── pages/
-            ├── RedeemPageV2.js     # Updated for instant BBPS
-            ├── BBPSServices.js     # Direct BBPS page
-            └── DMTPage.js
+        ├── pages/
+        │   ├── BankRedeemPage.js         # NEW: User bank transfer page
+        │   ├── Admin/AdminBankTransfers.js # NEW: Admin bank transfers
+        │   ├── RedeemPageV2.js           # BBPS instant payments
+        │   └── AdminRazorpaySubscriptions.js
+        └── components/
+            ├── Sidebar.js                # User menu
+            └── layouts/AdminLayout.js    # Admin menu
 ```
 
 ---
 
-## Key API Endpoints
+## Key Database Collections
 
-### Working & In Use
-- `POST /api/bbps/pay` - Instant BBPS payments (verified working)
-- `POST /v3/customer/payment/dmt` - Successful money transfers
-- `POST /v2/billpayments/paybill` - BBPS payments via Eko
-- `PUT /v1/user/service/activate` - Activate Eko services
-- `GET /v2/billpayments/operators` - Get BBPS operators
-
-### To be Implemented
-- `POST /v1/user/fundtransfer/initiate` - New V1 DMT endpoint
-- Receipt generation endpoint
+### bank_transfer_requests (NEW)
+```javascript
+{
+  request_id: "BTR-20260314...",
+  user_id: "...",
+  user_name: "...",
+  user_phone: "...",
+  withdrawal_amount: 500,    // INR
+  admin_fee: 100,            // INR
+  transaction_fee: 10,       // INR
+  total_inr: 610,            // INR
+  prc_deducted: 6100,        // PRC
+  account_holder_name: "...",
+  account_number: "...",
+  ifsc_code: "...",
+  bank_name: "...",
+  status: "pending|paid|failed",
+  utr_number: "...",         // For paid
+  admin_remark: "...",
+  prc_refunded: false,
+  created_at: "...",
+  processed_at: "..."
+}
+```
 
 ---
 
-## P0 - Critical/Blocked Issues
+## Pending Issues
 
-### Issue 1: Transaction successful but money not received
-- **Status:** BLOCKED on Eko Support
-- **Details:** Transaction ID 3548834855 shows success but funds not credited, `bank_ref_num` empty
-- **Action:** User needs to contact Eko support
+### P1: Production Deployment Crashes
+- App sometimes crashes after frontend deployment
+- Needs investigation of build process
 
-### Issue 2: Delete Beneficiary 500 error
-- **Status:** BLOCKED on Eko Support
-- **Details:** Eko API returns 500 Internal Server Error for delete requests
-- **Action:** User needs to contact Eko support
+### P2: 145 Failed BBPS Transactions (No Eko TID)
+- Root cause unknown
+- Likely fixed by code updates but unconfirmed
+
+### P3: PRC Double Issue
+- User reported PRC doubled for user `166c67d6-99c4-4cb0-9ca3-38cd8b0c5fa2`
+- Diagnostic API created: `/api/admin/ledger/diagnose-prc-double/{user_id}`
+- Needs production investigation
 
 ---
 
-## Prioritized Backlog
+## Upcoming Tasks
 
-### P0 (Critical)
-- [x] Instant BBPS integration in Redeem page
-- [ ] **DEPLOY TO PRODUCTION** (changes ready, need deployment)
+### P1
+- [ ] Test Manual Bank Transfer on production after deploy
+- [ ] Investigate PRC double issue on production
+- [ ] Add Firebase/Email notifications for bank transfer status
 
-### P1 (High Priority)
-- [ ] V1 Fund Transfer implementation (user documentation provided)
-- [ ] Receipt Generation for successful payments
-- [ ] Block/comment V3 DMT code (`dmt_levin_service.py`)
+### P2
+- [ ] Admin analytics dashboard for bank transfers
+- [ ] Rate limiting on new APIs
+- [ ] Receipt generation for bank transfers
 
-### P2 (Medium Priority)
-- [ ] End-to-end testing of all BBPS services with valid user data
-- [ ] Razorpay double subscription bug fix
-- [ ] Production deployment crash investigation
-
-### P3 (Future)
-- [ ] MongoDB to PostgreSQL migration
-- [ ] KYC/Receipt images file storage solution
-- [ ] DMTPage.js component refactoring
-- [ ] Email/Mobile OTP verification on signup
+### P3
+- [ ] MongoDB to PostgreSQL migration (user requested)
+- [ ] Email/Mobile OTP verification
+- [ ] Large component refactoring
 
 ---
 
 ## Test Credentials
-- **Login:** `9421331342` / PIN: `942133`
-- **Eko Initiator ID:** `9936606966`
-- **Eko User Code:** `19560001`
+- **User Login:** `9421331342` / PIN: `942133`
+- **Admin Login:** `Admin@paras.com` / PIN: `153759`
 
 ---
 
-## 3rd Party Integrations
-1. **Eko** - DMT and BBPS (V1, V2, V3 APIs)
-2. **Razorpay** - Subscriptions (has pending bug)
+## API Endpoints Summary
+
+### Bank Transfer
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/bank-transfer/config | Get config (rates, limits) |
+| GET | /api/bank-transfer/calculate-fees | Calculate fees |
+| POST | /api/bank-transfer/verify-ifsc | Verify IFSC code |
+| POST | /api/bank-transfer/request | Create request |
+| GET | /api/bank-transfer/my-requests/{uid} | User history |
+| GET | /api/bank-transfer/admin/requests | Admin list |
+| GET | /api/bank-transfer/admin/stats | Admin stats |
+| POST | /api/bank-transfer/admin/mark-paid | Mark as paid |
+| POST | /api/bank-transfer/admin/mark-failed | Mark as failed |
+
+### Redeem Limit
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/user/{uid}/redeem-limit | Get user's limit info |
+
+### Diagnostic
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/admin/ledger/diagnose-prc-double/{uid} | PRC double diagnosis |
+| POST | /api/admin/ledger/fix-prc-double/{uid} | Fix PRC double |
 
 ---
 
-## Technical Notes
-- BBPS 403 error was solved by activating service code 53 (not IP whitelist issue)
-- All BBPS services now use `bbps_services.py` which is verified working
-- PRC flow: Deduct → API Call → Success/Refund on failure
+Last Updated: March 14, 2026
