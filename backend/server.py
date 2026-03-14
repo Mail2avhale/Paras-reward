@@ -10652,6 +10652,14 @@ async def get_public_settings():
     if razorpay_setting:
         razorpay_enabled = razorpay_setting.get("value", True)
     
+    # Get PRC to INR rate from settings (default 10)
+    prc_to_inr_rate = 10
+    prc_rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+    if prc_rate_setting:
+        prc_to_inr_rate = prc_rate_setting.get("value", 10)
+    elif settings and settings.get("prc_to_inr_rate"):
+        prc_to_inr_rate = settings.get("prc_to_inr_rate", 10)
+    
     result = {
         "payment_upi_id": payment_upi or "paras@upi",
         "qr_code_url": qr_code_url,
@@ -10661,7 +10669,8 @@ async def get_public_settings():
         "support_email": settings.get("support_email", "support@parasreward.com") if settings else "support@parasreward.com",
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210",
         "manual_subscription_enabled": manual_subscription_enabled,
-        "razorpay_enabled": razorpay_enabled
+        "razorpay_enabled": razorpay_enabled,
+        "prc_to_inr_rate": prc_to_inr_rate
     }
     
     # Cache for 10 minutes (settings rarely change)
@@ -10698,6 +10707,49 @@ async def toggle_manual_subscription(request: Request):
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/update-prc-rate")
+async def update_prc_rate(request: Request):
+    """Admin: Update PRC to INR conversion rate"""
+    try:
+        data = await request.json()
+        new_rate = data.get("prc_to_inr_rate")
+        admin_pin = data.get("admin_pin")
+        
+        if not new_rate or new_rate <= 0:
+            raise HTTPException(status_code=400, detail="Invalid rate. Must be a positive number")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Update rate in app_settings
+        await db.app_settings.update_one(
+            {"key": "prc_to_inr_rate"},
+            {"$set": {"key": "prc_to_inr_rate", "value": new_rate, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True
+        )
+        
+        # Also update in main settings collection
+        await db.settings.update_one(
+            {},
+            {"$set": {"prc_to_inr_rate": new_rate}},
+            upsert=True
+        )
+        
+        # Clear public settings cache
+        await cache.delete("public_settings")
+        
+        return {
+            "success": True,
+            "message": f"PRC to INR rate updated to {new_rate}",
+            "prc_to_inr_rate": new_rate
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

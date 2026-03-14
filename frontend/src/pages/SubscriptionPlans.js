@@ -68,8 +68,8 @@ const SubscriptionPlans = ({ user }) => {
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
 
-  // PRC Rate for subscription (1 INR = 10 PRC, 2x multiplier)
-  const PRC_RATE = 10;
+  // PRC Rate for subscription (dynamic, 2x multiplier)
+  const [prcRate, setPrcRate] = useState(10);
   const PRC_MULTIPLIER = 2;
 
   // Special Offer Prices - Startup discontinued
@@ -116,6 +116,11 @@ const SubscriptionPlans = ({ user }) => {
       // Fetch payment config
       const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
+      
+      // Get dynamic PRC rate from settings
+      if (configRes.data.prc_to_inr_rate) {
+        setPrcRate(configRes.data.prc_to_inr_rate);
+      }
       
       // Get gateway statuses from public settings
       const isManualEnabled = configRes.data.manual_subscription_enabled !== false;
@@ -348,10 +353,10 @@ const SubscriptionPlans = ({ user }) => {
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
   };
 
-  // Calculate PRC price for subscription (Price × 2 × PRC_RATE)
+  // Calculate PRC price for subscription (Price × 2 × prcRate)
   const getPRCPrice = () => {
     const inrPrice = getPrice();
-    return inrPrice * PRC_MULTIPLIER * PRC_RATE;
+    return inrPrice * PRC_MULTIPLIER * prcRate;
   };
 
   // Handle PRC Payment for Subscription
@@ -1208,7 +1213,7 @@ const SubscriptionPlans = ({ user }) => {
                     </span>
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {getPRCPrice().toLocaleString()} PRC (₹{getPrice()} × 2 × 10)
+                    {getPRCPrice().toLocaleString()} PRC (₹{getPrice()} × 2 × {prcRate})
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Available: {(redeemLimit?.remaining || 0).toLocaleString()} PRC
@@ -1331,7 +1336,7 @@ const SubscriptionPlans = ({ user }) => {
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-purple-400" />
-                    Rate: ₹{getPrice()} × 2 × 10 = {getPRCPrice().toLocaleString()} PRC
+                    Rate: ₹{getPrice()} × 2 × {prcRate} = {getPRCPrice().toLocaleString()} PRC
                   </li>
                 </ul>
               </div>

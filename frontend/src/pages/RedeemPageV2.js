@@ -466,8 +466,23 @@ const RedeemPageV2 = ({ user }) => {
   // Global Redeem Limit
   const [redeemLimit, setRedeemLimit] = useState(null);
   
-  // PRC Rate for INR conversion
-  const PRC_RATE = 10;
+  // PRC Rate for INR conversion (fetched from settings)
+  const [prcRate, setPrcRate] = useState(10);
+  
+  // Fetch PRC Rate from public settings
+  useEffect(() => {
+    const fetchPrcRate = async () => {
+      try {
+        const res = await axios.get(`${API}/settings/public`);
+        if (res.data?.prc_to_inr_rate) {
+          setPrcRate(res.data.prc_to_inr_rate);
+        }
+      } catch (error) {
+        console.error('Error fetching PRC rate:', error);
+      }
+    };
+    fetchPrcRate();
+  }, []);
   
   // Fetch Global Redeem Limit
   useEffect(() => {
@@ -2512,17 +2527,17 @@ const RedeemPageV2 = ({ user }) => {
                   <div>
                     <p className="text-emerald-300/50 text-[10px] uppercase">Total</p>
                     <p className="text-white font-bold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()}</p>
-                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / PRC_RATE).toLocaleString()}</p>
+                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / prcRate).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-yellow-300/50 text-[10px] uppercase">Used</p>
                     <p className="text-yellow-400 font-bold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()}</p>
-                    <p className="text-yellow-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / PRC_RATE).toLocaleString()}</p>
+                    <p className="text-yellow-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / prcRate).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-emerald-300/50 text-[10px] uppercase">Available</p>
                     <p className="text-emerald-400 font-bold text-sm">{(redeemLimit.remaining || 0).toLocaleString()}</p>
-                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining || 0) / PRC_RATE).toLocaleString()}</p>
+                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining || 0) / prcRate).toLocaleString()}</p>
                   </div>
                 </div>
                 

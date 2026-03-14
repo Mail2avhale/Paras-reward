@@ -206,14 +206,27 @@ async def verify_ifsc_eko(ifsc: str) -> dict:
 
 @router.get("/config")
 async def get_config():
-    """Get redeem configuration for frontend."""
+    """Get redeem configuration for frontend with dynamic PRC rate."""
+    # Get dynamic PRC rate from settings
+    prc_rate = PRC_RATE  # Default
+    try:
+        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            prc_rate = rate_setting.get("value", PRC_RATE)
+        else:
+            settings = await db.settings.find_one({})
+            if settings and settings.get("prc_to_inr_rate"):
+                prc_rate = settings.get("prc_to_inr_rate", PRC_RATE)
+    except Exception as e:
+        logging.warning(f"Error fetching PRC rate: {e}")
+    
     return {
-        "prc_rate": PRC_RATE,
+        "prc_rate": prc_rate,
         "transaction_fee": TRANSACTION_FEE,
         "admin_fee_percent": ADMIN_FEE_PERCENT,
         "min_withdrawal": MIN_WITHDRAWAL,
         "max_withdrawal": MAX_WITHDRAWAL,
-        "note": f"1 INR = {PRC_RATE} PRC"
+        "note": f"1 INR = {prc_rate} PRC"
     }
 
 @router.get("/calculate-fees")
