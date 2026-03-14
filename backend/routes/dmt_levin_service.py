@@ -230,14 +230,15 @@ async def register_sender(request: SenderRegisterRequest):
             "area": "Mumbai"
         })
         
-        # Form data with service_code=80 for DMT-Levin
+        # Form data with service_code for DMT-Levin
+        # Try service_code=83 (Remittance Levin) or 84 (PPI Remittance Levin)
         form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
             "residence_address": residence_address,
-            "service_code": "80"  # CRITICAL: DMT-Levin service code
+            "service_code": "83"  # Remittance Levin service code
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
