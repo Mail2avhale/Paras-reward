@@ -408,12 +408,22 @@ async def activate_recipient(request: RecipientActivateRequest):
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Activate response: {response.status_code}")
+            logging.info(f"[Levin DMT] Activate response: {response.status_code} - {response.text[:300] if response.text else 'empty'}")
             
-            if response.status_code == 204 or not response.text:
-                raise HTTPException(status_code=500, detail="Service not activated")
+            # Handle empty response
+            if response.status_code == 204 or not response.text.strip():
+                return {
+                    "success": False,
+                    "message": "Activation service temporarily unavailable. Recipient added but not activated."
+                }
             
-            result = response.json()
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service temporarily unavailable"
+                }
             
             if result.get("response_status_id") == 0:
                 return {
@@ -433,7 +443,10 @@ async def activate_recipient(request: RecipientActivateRequest):
         raise
     except Exception as e:
         logging.error(f"[Levin DMT] Activate recipient error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": "Activation failed. Please try again."
+        }
 
 
 # STEP 6B: Delete Recipient
