@@ -1,91 +1,134 @@
-# Paras Reward - DMT Application
+# PARAS REWARD - Product Requirements Document
 
-## Problem Statement
-Build and maintain a Domestic Money Transfer (DMT) application using Eko API integration. The app allows users to transfer money to bank accounts using OTP verification.
+## Original Problem Statement
+User's main objectives are to fix and improve Eko DMT and BBPS features:
+1. **DMT Functionality:** Fix DMT transactions failing with "Transaction Declined" and "Customer is not registered" errors
+2. **BBPS Functionality:** Fix all BBPS transactions failing except mobile recharge (Electricity, Gas, DTH, Credit Card, etc.)
+3. **New DMT Implementation:** Stop current V3 DMT system and implement new DMT using Eko's V1 Fund Transfer API
+4. **Receipt Generation:** Generate receipts for successful bill payments
+5. **Beneficiary Management:** Fix issues with adding and deleting beneficiaries
+6. **Transaction Issues:** Investigate successful transactions where money is not credited to account
 
-## Core Features
-1. **DMT Transfers** - Send money to bank accounts via IMPS
-2. **Beneficiary Management** - Add/Delete recipients
-3. **Transaction History** - View past transactions
-4. **Global Redeem Limit** - Apply limits across withdrawal services
-5. **Referral Bonus** - Bonus system for referrals
-6. **Admin Panel** - Manage users, view transactions
+## User Language
+**Primary Language: Marathi (मराठी)**
 
-## Technical Architecture
-
-### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: MongoDB
-- **API Integration**: Eko DMT API (V3)
-
-### Frontend
-- **Framework**: React
-- **UI Library**: Tailwind CSS, Shadcn/UI
-
-### Key API Endpoints
-- `POST /api/eko/levin-dmt/sender/check` - Check sender profile
-- `POST /api/eko/levin-dmt/sender/register` - Register sender (service_code=83)
-- `GET /api/eko/levin-dmt/recipients/{mobile}` - Get beneficiary list
-- `POST /api/eko/levin-dmt/recipient/add` - Add beneficiary
-- `DELETE /api/eko/levin-dmt/recipient/delete` - Delete beneficiary
-- `POST /api/eko/levin-dmt/transfer/send-otp` - Generate transfer OTP
-- `POST /api/eko/levin-dmt/transfer` - Execute transfer
-
-### Eko API Configuration
-- **Base URL V3**: `https://api.eko.in:25002/ekoicici/v3`
-- **OTP Endpoint**: `/customer/payment/dmt-levin/otp` (works for both)
-- **Transfer Endpoint**: `/customer/payment/dmt` (Regular DMT, pipe 4)
-- **Note**: DMT-Levin (pipe 14) requires separate registration - use Regular DMT (pipe 4) instead
+---
 
 ## What's Been Implemented
 
-### March 14, 2026
-- **DMT Transfer Fixed**: Changed from DMT-Levin endpoint (`/dmt-levin`, pipe 14) to Regular DMT endpoint (`/dmt`, pipe 4)
-- **Root Cause**: Customer was registered for Regular DMT (pipe 4) but not for DMT-Levin (pipe 14)
-- **Registration**: Uses `service_code=83` for Remittance Levin registration
-- **Successful Test**: ₹100 transferred to Mr SANTOSH SHAMRAO AVHALE (SBI, Transaction ID: 3548834855)
-- **Transaction History API**: Added `/api/eko/levin-dmt/transactions/{user_id}` endpoint to fetch recent transactions
+### March 2026 - Session Updates
 
-### Previous Sessions
-- Eko API integration with authentication (HMAC-SHA256)
-- Sender registration/verification flow
-- Beneficiary management (Add/Delete)
-- Transaction OTP generation
-- Global Redeem Limit implementation
-- Admin panel for DMT transactions
-- V2 verification endpoint discovery
+#### ✅ DMT Transfer Fixed
+- Switched from failing `/dmt-levin` endpoint to working `/v3/customer/payment/dmt` endpoint
+- Transactions now successful through API
 
-## Known Issues
+#### ✅ Beneficiary Management Fixed  
+- "Add Beneficiary" and "List Beneficiaries" now working with corrected `/dmt` API path
 
-### P1 - Production Deployment Crashes
-- **Issue**: Production app crashes after frontend changes
-- **Workaround**: Hide JSX with CSS instead of deleting
-- **Status**: NOT STARTED
+#### ✅ BBPS Feature Implemented & Fixed
+- Diagnosed and fixed `403 Forbidden` error by discovering BBPS service activation (service code 53)
+- Created `/api/bbps/activate-service` endpoint
+- Successfully tested `v2/billpayments/paybill` API for mobile recharge
+- Built backend support for various BBPS services (Electricity, Gas, DTH, Credit Card, etc.)
 
-### P1 - Razorpay Double Subscription Bug
-- **Status**: USER VERIFICATION PENDING
+#### ✅ Instant BBPS Integration (March 14, 2026)
+- **Backend**: Rewrote `execute_eko_recharge` function in `unified_redeem_v2.py` to use verified working `bbps_services.py` API
+- **Frontend**: Updated `RedeemPageV2.js`:
+  - Changed "Submit Request" → "Pay Now"
+  - Changed "Admin will process 24-48 hours" → "Instant payment via BBPS"
+  - Changed "Submitting..." → "Processing Payment..."
+- **Tested**: Direct BBPS API on production - ₹19 Jio recharge successful (TID: 3548867123)
 
-## Upcoming Tasks
+---
 
-### P1
-1. Guide user on `fix-double-subscriptions` admin API
-2. Full regression test of Add/Delete Beneficiary functionality
+## Current Architecture
 
-### P2
-1. Full regression test of the application
-2. Investigate production deployment failures
+```
+/app
+├── backend/
+│   ├── routes/
+│   │   ├── bbps_services.py        # Working BBPS API (verified)
+│   │   ├── unified_redeem_v2.py    # Updated to use bbps_services.py
+│   │   ├── dmt_levin_service.py    # Legacy V3 DMT (to be disabled)
+│   │   └── eko_auth.py             # Eko header generation
+│   └── server.py
+└── frontend/
+    └── src/
+        └── pages/
+            ├── RedeemPageV2.js     # Updated for instant BBPS
+            ├── BBPSServices.js     # Direct BBPS page
+            └── DMTPage.js
+```
 
-## Future/Backlog Tasks
-1. Migrate database from MongoDB to PostgreSQL
-2. Migrate KYC/Receipt images from base64 to file storage
-3. Add Email/Mobile OTP verification on signup
-4. Refactor large DMTPage.js component
+---
+
+## Key API Endpoints
+
+### Working & In Use
+- `POST /api/bbps/pay` - Instant BBPS payments (verified working)
+- `POST /v3/customer/payment/dmt` - Successful money transfers
+- `POST /v2/billpayments/paybill` - BBPS payments via Eko
+- `PUT /v1/user/service/activate` - Activate Eko services
+- `GET /v2/billpayments/operators` - Get BBPS operators
+
+### To be Implemented
+- `POST /v1/user/fundtransfer/initiate` - New V1 DMT endpoint
+- Receipt generation endpoint
+
+---
+
+## P0 - Critical/Blocked Issues
+
+### Issue 1: Transaction successful but money not received
+- **Status:** BLOCKED on Eko Support
+- **Details:** Transaction ID 3548834855 shows success but funds not credited, `bank_ref_num` empty
+- **Action:** User needs to contact Eko support
+
+### Issue 2: Delete Beneficiary 500 error
+- **Status:** BLOCKED on Eko Support
+- **Details:** Eko API returns 500 Internal Server Error for delete requests
+- **Action:** User needs to contact Eko support
+
+---
+
+## Prioritized Backlog
+
+### P0 (Critical)
+- [x] Instant BBPS integration in Redeem page
+- [ ] **DEPLOY TO PRODUCTION** (changes ready, need deployment)
+
+### P1 (High Priority)
+- [ ] V1 Fund Transfer implementation (user documentation provided)
+- [ ] Receipt Generation for successful payments
+- [ ] Block/comment V3 DMT code (`dmt_levin_service.py`)
+
+### P2 (Medium Priority)
+- [ ] End-to-end testing of all BBPS services with valid user data
+- [ ] Razorpay double subscription bug fix
+- [ ] Production deployment crash investigation
+
+### P3 (Future)
+- [ ] MongoDB to PostgreSQL migration
+- [ ] KYC/Receipt images file storage solution
+- [ ] DMTPage.js component refactoring
+- [ ] Email/Mobile OTP verification on signup
+
+---
 
 ## Test Credentials
-- **Login**: Mobile: `9970100782`, PIN: `153759`
-- **Aadhaar**: `433252933775`
+- **Login:** `9421331342` / PIN: `942133`
+- **Eko Initiator ID:** `9936606966`
+- **Eko User Code:** `19560001`
+
+---
 
 ## 3rd Party Integrations
-- **Eko API** - DMT transfers (V2 & V3)
-- **Razorpay** - Subscriptions
-- **MSG91** - OTP services
+1. **Eko** - DMT and BBPS (V1, V2, V3 APIs)
+2. **Razorpay** - Subscriptions (has pending bug)
+
+---
+
+## Technical Notes
+- BBPS 403 error was solved by activating service code 53 (not IP whitelist issue)
+- All BBPS services now use `bbps_services.py` which is verified working
+- PRC flow: Deduct → API Call → Success/Refund on failure
