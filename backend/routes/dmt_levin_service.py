@@ -106,36 +106,31 @@ async def health_check():
 @router.post("/sender/check")
 async def check_sender(request: SenderCheckRequest):
     """
-    Step 1: Check if sender exists and get their profile for Levin DMT
-    GET /v3/customer/payment/dmt-levin/sender/{customer_id}
+    Step 1: Check if sender exists for Levin DMT
+    GET /v3/customer/profile/{customer_id}/dmt-levin
     """
     try:
-        # First try Levin-specific endpoint
-        levin_url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}"
+        # Correct Levin DMT endpoint: /customer/profile/{customer_id}/dmt-levin
+        url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}/dmt-levin"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
         }
         
-        logging.info(f"[Levin DMT] Check sender (Levin path): {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Check sender: {request.customer_mobile}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.get(levin_url, headers=get_headers(), params=params)
+            response = await client.get(url, headers=get_headers(), params=params)
             
-            logging.info(f"[Levin DMT] Sender check response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
+            logging.error(f"[Levin DMT] Sender check response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
-                # Fallback to generic customer profile endpoint
-                fallback_url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}"
-                response = await client.get(fallback_url, headers=get_headers(), params=params)
-                
-                if response.status_code == 204 or not response.text:
-                    return {
-                        "success": True,
-                        "sender_exists": False,
-                        "needs_levin_registration": True,
-                        "message": "Sender not registered for Levin DMT. Please register."
-                    }
+                return {
+                    "success": True,
+                    "sender_exists": False,
+                    "needs_registration": True,
+                    "message": "Sender not found. Please register."
+                }
             
             try:
                 result = response.json()
@@ -143,39 +138,36 @@ async def check_sender(request: SenderCheckRequest):
                 return {
                     "success": True,
                     "sender_exists": False,
-                    "needs_levin_registration": True,
-                    "message": "Sender not registered for Levin DMT"
+                    "needs_registration": True,
+                    "message": "Sender not registered"
                 }
             
             logging.info(f"[Levin DMT] Sender check result: {result}")
             
-            # Check if sender exists - look for is_registered in data
+            # Check response
             data = result.get("data", {})
-            is_registered = data.get("is_registered", 0)
-            customer_profile = data.get("customer_profile", {})
             
-            # Check if specifically registered for Levin DMT
-            levin_registered = data.get("levin_registered", is_registered)
-            
-            if is_registered == 1 or result.get("response_status_id") == 0:
+            if result.get("response_status_id") == 0:
                 return {
                     "success": True,
                     "sender_exists": True,
-                    "levin_registered": levin_registered == 1,
                     "sender": {
                         "customer_id": request.customer_mobile,
-                        "name": customer_profile.get("name", data.get("name")),
-                        "mobile": customer_profile.get("mobile"),
-                        "available_limit": customer_profile.get("next_allowed_limit", data.get("available_limit")),
-                        "used_limit": customer_profile.get("chart", [{}])[0].get("data", {}).get("used", 0) if customer_profile.get("chart") else 0,
-                        "total_limit": customer_profile.get("total_monthly_limit", data.get("total_limit"))
+                        "name": data.get("name"),
+                        "mobile": data.get("mobile", request.customer_mobile),
+                        "available_limit": data.get("available_limit") or data.get("next_allowed_limit"),
+                        "used_limit": data.get("used_limit", 0),
+                        "total_limit": data.get("total_limit") or data.get("total_monthly_limit")
                     }
                 }
             else:
+                # Customer needs Aadhaar validation or registration
                 return {
                     "success": True,
                     "sender_exists": False,
-                    "needs_levin_registration": True,
+                    "needs_registration": True,
+                    "needs_aadhaar": True,
+                    "otp_ref_id": data.get("otp_ref_id"),  # Needed for Aadhaar OTP
                     "message": result.get("message", "Sender not registered for Levin DMT")
                 }
                 
@@ -184,40 +176,42 @@ async def check_sender(request: SenderCheckRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# STEP 2: Register Sender for Levin DMT
+# STEP 2: Register/Onboard Sender for Levin DMT
 @router.post("/sender/register")
 async def register_sender(request: SenderRegisterRequest):
     """
-    Step 2: Register new sender specifically for Levin DMT
-    POST /v3/customer/payment/dmt-levin/sender
+    Step 2: Onboard new sender for Levin DMT
+    POST /v3/customer/account/{customer_id}/dmt-levin
     """
     try:
-        # Levin DMT specific registration endpoint
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender"
+        # Correct Levin DMT registration endpoint
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
         
-        data = {
+        # JSON body as per documentation
+        json_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "customer_id": request.customer_mobile,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": f'["{request.address}","India"]'
+            "residence_address": {
+                "line": request.address,
+                "city": "India",
+                "state": "Maharashtra",
+                "pincode": "400001",
+                "district": "Mumbai",
+                "area": "India"
+            }
         }
         
-        logging.info(f"[Levin DMT] Register sender (Levin path): {request.customer_mobile}")
-        logging.info(f"[Levin DMT] Register data: {data}")
+        logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Register URL: {url}")
+        logging.info(f"[Levin DMT] Register data: {json_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.post(url, headers=get_headers(), data=data)
+            # Use JSON body instead of form data
+            response = await client.post(url, headers=get_headers(), json=json_data)
             
             logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
-            
-            # If Levin-specific endpoint fails, fallback to generic
-            if response.status_code != 200 or not response.text or "error" in response.text.lower():
-                logging.info("[Levin DMT] Levin registration failed, trying generic endpoint")
-                fallback_url = f"{EKO_BASE_URL_V3}/customer/account"
-                response = await client.post(fallback_url, headers=get_headers(), data=data)
-                logging.error(f"[Levin DMT] Fallback register response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -238,6 +232,7 @@ async def register_sender(request: SenderRegisterRequest):
                 return {
                     "success": True,
                     "otp_sent": True,
+                    "otp_ref_id": result.get("data", {}).get("otp_ref_id"),
                     "message": "OTP sent to customer mobile. Please verify.",
                     "data": result.get("data", {})
                 }
@@ -326,7 +321,144 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
         }
 
 
-# STEP 3B: Resend OTP for Levin DMT registration
+# STEP 3B: Generate Aadhaar OTP for Levin DMT
+class AadhaarOTPRequest(BaseModel):
+    customer_mobile: str
+    aadhaar: str
+    otp_ref_id: str  # From sender check response
+
+@router.post("/sender/aadhaar/generate-otp")
+async def generate_aadhaar_otp(request: AadhaarOTPRequest):
+    """
+    Generate Aadhaar OTP for sender verification
+    POST /v3/customer/account/{customer_id}/dmt-levin/aadhaar
+    """
+    try:
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/aadhaar"
+        
+        json_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "aadhar": request.aadhaar,
+            "otp_ref_id": request.otp_ref_id,
+            "additional_info": "1"
+        }
+        
+        logging.info(f"[Levin DMT] Generate Aadhaar OTP for: {request.customer_mobile}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.post(url, headers=get_headers(), json=json_data)
+            
+            logging.error(f"[Levin DMT] Aadhaar OTP response: {response.status_code} - FULL: {response.text}")
+            
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "Aadhaar service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error"
+                }
+            
+            if result.get("response_status_id") == 0:
+                data = result.get("data", {})
+                return {
+                    "success": True,
+                    "otp_sent": True,
+                    "message": "OTP sent to Aadhaar-registered mobile number",
+                    "otp_ref_id": data.get("otp_ref_id"),
+                    "intent_id": data.get("intent_id"),
+                    "kyc_request_id": data.get("kyc_request_id"),
+                    "data": data
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to send Aadhaar OTP"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except Exception as e:
+        logging.error(f"[Levin DMT] Aadhaar OTP error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Failed to send OTP"
+        }
+
+
+# STEP 3C: Validate Aadhaar OTP for Levin DMT
+class AadhaarOTPVerifyRequest(BaseModel):
+    customer_mobile: str
+    otp: str
+    otp_ref_id: str
+    intent_id: str = "20"  # 19 for onboarding, 20 for aadhaar validation
+
+@router.post("/sender/aadhaar/verify-otp")
+async def verify_aadhaar_otp(request: AadhaarOTPVerifyRequest):
+    """
+    Verify Aadhaar OTP
+    PUT /v3/customer/account/{customer_id}/dmt-levin/otp/verify
+    """
+    try:
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/otp/verify"
+        
+        json_data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "otp": request.otp,
+            "otp_ref_id": request.otp_ref_id,
+            "intent_id": request.intent_id,
+            "additional_info": "1"
+        }
+        
+        logging.info(f"[Levin DMT] Verify Aadhaar OTP for: {request.customer_mobile}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.put(url, headers=get_headers(), json=json_data)
+            
+            logging.error(f"[Levin DMT] Aadhaar verify response: {response.status_code} - FULL: {response.text}")
+            
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "Verification service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error"
+                }
+            
+            if result.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "message": "Aadhaar verified successfully! Customer can now use Levin DMT.",
+                    "data": result.get("data", {})
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Aadhaar verification failed"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except Exception as e:
+        logging.error(f"[Levin DMT] Aadhaar verify error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Verification failed"
+        }
+
+
+# STEP 3D: Resend OTP for Levin DMT registration
 class ResendOTPRequest(BaseModel):
     customer_mobile: str
 
