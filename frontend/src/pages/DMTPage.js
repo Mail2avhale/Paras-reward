@@ -583,7 +583,7 @@ const DMTPage = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] p-4 md:p-6">
+    <div className="min-h-screen bg-[#0a0a0f] pt-20 pb-24 px-4 md:px-6">
       {/* Animated Background Gradient */}
       <div className="fixed inset-0 bg-gradient-to-br from-violet-950/30 via-transparent to-cyan-950/20 pointer-events-none" />
       <div className="fixed top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -663,7 +663,7 @@ const DMTPage = ({ user }) => {
           </button>
         </div>
 
-        {/* Premium Wallet Card - Global Redeem Limit */}
+        {/* Premium Wallet Card - Available Redeem Limit */}
         {walletInfo && (
           <div className="relative mb-6 group" data-testid="wallet-info-card">
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
@@ -673,7 +673,7 @@ const DMTPage = ({ user }) => {
                   <Wallet className="w-6 h-6 text-violet-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Global Redeem Limit</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider">Available Redeem Limit</p>
                   <p className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
                     {(walletInfo.redeem_limit?.remaining_limit || 0).toLocaleString()} <span className="text-lg">PRC</span>
                   </p>

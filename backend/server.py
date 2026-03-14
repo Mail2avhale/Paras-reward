@@ -15574,17 +15574,23 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 
 BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC per month
 REFERRAL_BONUS_PERCENTAGE = 20  # 20% of direct referral earnings added to limit
-CARRY_FORWARD_START_DATE = datetime(2026, 3, 1, tzinfo=timezone.utc)  # System start date for carry forward
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
-    Calculate total redeem limit for a user with CARRY FORWARD.
+    Calculate total redeem limit for a user with CARRY FORWARD from USER JOIN DATE.
     
     Formula: 
     - Monthly Limit = 39,950 PRC (per month)
-    - Months since joining (or system start) × Monthly Limit
+    - Months since USER JOINED × Monthly Limit
     - Plus 20% of referral bonus from ACTIVE referrals
-    - Unused limit carries forward to next month
+    - Unused limit automatically carries forward (Total Limit - Used = Remaining)
+    
+    Example:
+    - User joined in January
+    - Now it's March (3 months)
+    - Total Limit = 3 × 39,950 = 1,19,850 PRC
+    - If user redeemed 50,000 across all services
+    - Remaining = 1,19,850 - 50,000 = 69,850 PRC (unused carries forward)
     
     Active referral = referred user has active subscription
     """
@@ -15605,8 +15611,8 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                 "carry_forward_enabled": True
             }
         
-        # Calculate months since user joined or system start date
-        user_created = user.get("created_at") or user.get("registered_at")
+        # Calculate months since USER JOINED (not system start date)
+        user_created = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
         now = datetime.now(timezone.utc)
         
         if user_created:
@@ -15614,14 +15620,15 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                 try:
                     user_created = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
                 except:
-                    user_created = CARRY_FORWARD_START_DATE
+                    user_created = now  # Fallback to now if can't parse
             if user_created.tzinfo is None:
                 user_created = user_created.replace(tzinfo=timezone.utc)
         else:
-            user_created = CARRY_FORWARD_START_DATE
+            # If no creation date, assume current month only
+            user_created = now.replace(day=1)
         
-        # Use the later of user creation or system start date
-        start_date = max(user_created, CARRY_FORWARD_START_DATE)
+        # Use user join date directly (no system start date limitation)
+        start_date = user_created
         
         # Calculate months difference (at least 1 month)
         months_diff = (now.year - start_date.year) * 12 + (now.month - start_date.month)
