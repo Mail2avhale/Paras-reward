@@ -301,7 +301,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <Banknote className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">PRC to Bank</h1>
+              <h1 className="text-2xl font-bold text-white">Redeem to Bank</h1>
               <p className="text-white/80 text-sm">Transfer PRC to your bank account</p>
             </div>
           </div>
@@ -336,24 +336,28 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 />
               </div>
               
-              <div className="grid grid-cols-3 gap-2 text-center">
+              {/* PRC Values */}
+              <div className="grid grid-cols-3 gap-2 text-center mb-2">
                 <div>
                   <p className="text-white/50 text-xs">Total Limit</p>
                   <p className="text-white font-semibold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()} PRC</p>
+                  <p className="text-white/40 text-xs">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / config.prc_rate).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/50 text-xs">Used</p>
                   <p className="text-yellow-400 font-semibold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()} PRC</p>
+                  <p className="text-yellow-400/60 text-xs">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / config.prc_rate).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/50 text-xs">Available</p>
                   <p className="text-emerald-400 font-semibold text-sm">{(redeemLimit.remaining || 0).toLocaleString()} PRC</p>
+                  <p className="text-emerald-400/60 text-xs">≈ ₹{Math.floor((redeemLimit.remaining || 0) / config.prc_rate).toLocaleString()}</p>
                 </div>
               </div>
               
               {/* Additional Info */}
               {(redeemLimit.active_referrals > 0 || redeemLimit.referral_percentage_increase > 0) && (
-                <div className="mt-3 pt-3 border-t border-white/10 text-xs text-white/60">
+                <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/60">
                   <p>Active Referrals: {redeemLimit.active_referrals || 0} (+{redeemLimit.referral_percentage_increase || 0}% bonus)</p>
                 </div>
               )}
@@ -581,7 +585,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   >
                     Terms & Conditions
                   </button>
-                  {' '}for PRC to Bank transfers. I confirm that the bank details provided are correct and belong to me.
+                  {' '}for Redeem to Bank redemptions. I confirm that the bank details provided are correct and belong to me.
                 </label>
               </div>
             </Card>
@@ -612,7 +616,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <div className="text-sm text-blue-300">
                 <p className="font-medium mb-1">Processing Time</p>
                 <p className="text-blue-300/80">
-                  Bank transfers are processed manually within 24-48 hours. You will receive a notification once your transfer is complete.
+                  Bank redemptions are processed within 3-7 working days. You will receive a notification once your redemption is complete.
                 </p>
               </div>
             </div>
@@ -708,7 +712,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Shield className="w-5 h-5 text-emerald-400" />
-                  PRC to Bank Transfer Policy
+                  Redeem to Bank Transfer Policy
                 </h2>
                 <button onClick={() => setShowPolicy(false)} className="text-slate-400 hover:text-white">
                   <XCircle className="w-6 h-6" />
@@ -738,7 +742,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 <div>
                   <h3 className="font-semibold text-white mb-2">3. Processing</h3>
                   <ul className="list-disc list-inside space-y-1 text-slate-400">
-                    <li>Requests are processed manually within 24-48 hours</li>
+                    <li>Requests are processed manually within 3-7 working days</li>
                     <li>PRC is deducted immediately upon request submission</li>
                     <li>Failed transfers will be refunded to your PRC balance</li>
                   </ul>

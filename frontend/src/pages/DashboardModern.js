@@ -817,7 +817,7 @@ const DashboardModern = ({ user, onLogout }) => {
           {[
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
             { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
-            { icon: Banknote, label: 'PRC to Bank', route: '/prc-to-bank', gradient: 'from-emerald-600 to-teal-700' },
+            { icon: Banknote, label: 'Redeem to Bank', route: '/prc-to-bank', gradient: 'from-emerald-600 to-teal-700' },
             { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-blue-600 to-indigo-700' },
           ].map((action, index) => (
             <motion.button
@@ -1088,7 +1088,7 @@ const DashboardModern = ({ user, onLogout }) => {
                   <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-emerald-200/80 text-xs">Transfer to Bank</p>
+                        <p className="text-emerald-200/80 text-xs">Redeem to Bank</p>
                         <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}*</p>
                       </div>
                       <div className="text-right">

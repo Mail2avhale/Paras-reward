@@ -64,7 +64,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
     // Orders removed - feature deprecated
     { id: 'gift-vouchers', label: t('giftVouchers'), icon: Gift, route: '/gift-vouchers' },
     { id: 'bill-payments', label: t('billPayments'), icon: FileText, route: '/redeem' },
-    { id: 'prc-to-bank', label: 'PRC to Bank', icon: Send, route: '/prc-to-bank' },
+    { id: 'prc-to-bank', label: 'Redeem to Bank', icon: Send, route: '/prc-to-bank' },
     // DMT/Money Transfer removed - Eko API not working
     // Bank Redeem removed - now handled via chatbot only
     { id: 'prc-statement', label: 'PRC Statement', icon: FileText, route: '/prc-statement' },

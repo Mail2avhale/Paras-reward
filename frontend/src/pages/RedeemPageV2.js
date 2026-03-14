@@ -463,6 +463,28 @@ const RedeemPageV2 = ({ user }) => {
   // Charges calculation
   const [charges, setCharges] = useState(null);
   
+  // Global Redeem Limit
+  const [redeemLimit, setRedeemLimit] = useState(null);
+  
+  // PRC Rate for INR conversion
+  const PRC_RATE = 10;
+  
+  // Fetch Global Redeem Limit
+  useEffect(() => {
+    const fetchRedeemLimit = async () => {
+      if (!user?.uid) return;
+      try {
+        const res = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
+        if (res.data?.success) {
+          setRedeemLimit(res.data.limit);
+        }
+      } catch (error) {
+        console.error('Error fetching redeem limit:', error);
+      }
+    };
+    fetchRedeemLimit();
+  }, [user?.uid]);
+  
   // Check subscription and KYC
   useEffect(() => {
     if (!user) {
@@ -2476,6 +2498,52 @@ const RedeemPageV2 = ({ user }) => {
               </div>
               <p className="text-amber-300/70 text-xs">Use for bill payments, vouchers & more</p>
             </div>
+            
+            {/* Global Redeem Limit Card */}
+            {redeemLimit && (
+              <div data-testid="bbps-redeem-limit" className="bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-emerald-600/20 rounded-3xl p-6 border border-emerald-500/30">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-emerald-400 font-semibold text-sm flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Monthly Redeem Limit
+                  </h3>
+                  <span className="text-emerald-300/60 text-xs">{Math.round(redeemLimit.usage_percentage || 0)}% used</span>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-emerald-900/50 rounded-full h-2 mb-4">
+                  <div 
+                    className="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min(redeemLimit.usage_percentage || 0, 100)}%` }}
+                  />
+                </div>
+                
+                {/* Limit Values */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-emerald-300/50 text-[10px] uppercase">Total</p>
+                    <p className="text-white font-bold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()}</p>
+                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / PRC_RATE).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-yellow-300/50 text-[10px] uppercase">Used</p>
+                    <p className="text-yellow-400 font-bold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()}</p>
+                    <p className="text-yellow-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / PRC_RATE).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-emerald-300/50 text-[10px] uppercase">Available</p>
+                    <p className="text-emerald-400 font-bold text-sm">{(redeemLimit.remaining || 0).toLocaleString()}</p>
+                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining || 0) / PRC_RATE).toLocaleString()}</p>
+                  </div>
+                </div>
+                
+                {redeemLimit.active_referrals > 0 && (
+                  <p className="text-emerald-300/50 text-[10px] mt-3 pt-2 border-t border-emerald-500/20">
+                    Referral Bonus: +{redeemLimit.referral_percentage_increase || 0}% limit
+                  </p>
+                )}
+              </div>
+            )}
             
             {/* Charges Info */}
             <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-3xl p-6 border border-blue-500/20">
