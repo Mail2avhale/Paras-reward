@@ -759,11 +759,11 @@ async def resend_sender_otp(request: ResendOTPRequest):
 async def get_recipients(customer_mobile: str):
     """
     Step 4: Get list of recipients for a sender
-    GET /v3/customer/payment/dmt-levin/sender/{mobile}/recipients
+    GET /v3/customer/payment/dmt/sender/{mobile}/recipients (regular DMT)
     """
     try:
-        # DMT-Levin endpoint for recipients
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{customer_mobile}/recipients"
+        # Regular DMT endpoint for recipients (works with pipe 4)
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt/sender/{customer_mobile}/recipients"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
@@ -818,11 +818,11 @@ async def get_recipients(customer_mobile: str):
 async def add_recipient(request: RecipientAddRequest):
     """
     Step 5: Add a new recipient
-    POST /v3/customer/payment/dmt-levin/sender/{mobile}/recipient
+    POST /v3/customer/payment/dmt/sender/{mobile}/recipient (regular DMT)
     """
     try:
-        # DMT-Levin endpoint for adding recipient
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient"
+        # Regular DMT endpoint for adding recipient (works with pipe 4)
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt/sender/{request.customer_mobile}/recipient"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -834,13 +834,14 @@ async def add_recipient(request: RecipientAddRequest):
             "recipient_type": "3"  # Bank account
         }
         
-        logging.info(f"[Levin DMT] Add recipient for: {request.customer_mobile}")
-        logging.info(f"[Levin DMT] URL: {url}")
+        logging.error(f"[Levin DMT] Add recipient for: {request.customer_mobile}")
+        logging.error(f"[Levin DMT] URL: {url}")
+        logging.error(f"[Levin DMT] Data: {data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Add recipient response: {response.status_code} - {response.text[:300]}")
+            logging.error(f"[Levin DMT] Add recipient response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
                 raise HTTPException(status_code=500, detail="Service not activated")
@@ -874,11 +875,11 @@ async def add_recipient(request: RecipientAddRequest):
 async def activate_recipient(request: RecipientActivateRequest):
     """
     Step 6: Register recipient with bank
-    POST /v3/customer/payment/dmt-levin/sender/{mobile}/bank/recipient
+    POST /v3/customer/payment/dmt/sender/{mobile}/bank/recipient (regular DMT)
     """
     try:
-        # DMT-Levin endpoint for activating recipient
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/bank/recipient"
+        # Regular DMT endpoint for activating recipient (works with pipe 4)
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt/sender/{request.customer_mobile}/bank/recipient"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -886,13 +887,13 @@ async def activate_recipient(request: RecipientActivateRequest):
             "recipient_id": request.recipient_id
         }
         
-        logging.info(f"[Levin DMT] Activate recipient: {request.recipient_id}")
-        logging.info(f"[Levin DMT] URL: {url}")
+        logging.error(f"[Levin DMT] Activate recipient: {request.recipient_id}")
+        logging.error(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Activate response: {response.status_code} - {response.text[:300] if response.text else 'empty'}")
+            logging.error(f"[Levin DMT] Activate response: {response.status_code} - FULL: {response.text if response.text else 'empty'}")
             
             # Handle empty response
             if response.status_code == 204 or not response.text.strip():
@@ -942,22 +943,24 @@ class RecipientDeleteRequest(BaseModel):
 async def delete_recipient(request: RecipientDeleteRequest):
     """
     Delete a recipient/beneficiary
-    DELETE /v3/customer/payment/dmt-levin/sender/{mobile}/recipient/{recipient_id}
+    DELETE /v3/customer/payment/dmt/sender/{mobile}/recipient/{recipient_id} (regular DMT)
     """
     try:
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient/{request.recipient_id}"
+        # Regular DMT endpoint for deleting recipient (works with pipe 4)
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt/sender/{request.customer_mobile}/recipient/{request.recipient_id}"
         
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
         }
         
-        logging.info(f"[Levin DMT] Delete recipient: {request.recipient_id} for {request.customer_mobile}")
+        logging.error(f"[Levin DMT] Delete recipient: {request.recipient_id} for {request.customer_mobile}")
+        logging.error(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.delete(url, headers=get_headers(), params=params)
             
-            logging.info(f"[Levin DMT] Delete recipient response: {response.status_code} - {response.text[:200] if response.text else 'empty'}")
+            logging.error(f"[Levin DMT] Delete recipient response: {response.status_code} - FULL: {response.text if response.text else 'empty'}")
             
             # Handle empty response (success for DELETE)
             if response.status_code in [200, 204] or not response.text.strip():
