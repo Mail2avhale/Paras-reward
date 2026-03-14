@@ -646,11 +646,12 @@ async def initiate_transfer(request: TransferRequest):
         }
         
         logging.info(f"[Levin DMT] Transfer: customer={request.customer_mobile}, amount={request.amount}, ref={client_ref_id}")
+        logging.info(f"[Levin DMT] Transfer data: {data}")
         
         async with httpx.AsyncClient(timeout=60.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] Transfer response: {response.status_code} - {response.text[:500]}")
+            logging.error(f"[Levin DMT] Transfer response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
                 raise HTTPException(status_code=500, detail="Service not activated. Contact Eko support.")
