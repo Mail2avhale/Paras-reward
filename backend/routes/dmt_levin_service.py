@@ -10,6 +10,7 @@ import hmac
 import hashlib
 import base64
 import uuid
+import json
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException
@@ -187,29 +188,31 @@ async def register_sender(request: SenderRegisterRequest):
         # Correct Levin DMT registration endpoint
         url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
         
-        # JSON body as per documentation
-        json_data = {
+        # residence_address as JSON string
+        residence_address = json.dumps({
+            "line": request.address,
+            "city": "Mumbai",
+            "state": "Maharashtra", 
+            "pincode": "400001",
+            "district": "Mumbai",
+            "area": "India"
+        })
+        
+        # Use form data
+        form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": {
-                "line": request.address,
-                "city": "India",
-                "state": "Maharashtra",
-                "pincode": "400001",
-                "district": "Mumbai",
-                "area": "India"
-            }
+            "residence_address": residence_address
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
         logging.info(f"[Levin DMT] Register URL: {url}")
-        logging.info(f"[Levin DMT] Register data: {json_data}")
+        logging.info(f"[Levin DMT] Register data: {form_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            # Use JSON body instead of form data
-            response = await client.post(url, headers=get_headers(), json=json_data)
+            response = await client.post(url, headers=get_headers(), data=form_data)
             
             logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
             
