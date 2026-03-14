@@ -929,25 +929,101 @@ async def set_dmt_limit(request: Request):
 @router.get("/admin/transactions")
 async def get_all_transactions(
     status: Optional[str] = None,
+    user_id: Optional[str] = None,
+    mobile: Optional[str] = None,
+    txn_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
+    dmt_type: Optional[str] = None,  # 'levin' or 'v1'
     limit: int = 50,
-    skip: int = 0
+    skip: int = 0,
+    sort_by: str = "created_at",
+    sort_order: str = "desc"
 ):
-    """Get all DMT transactions (admin)."""
+    """Get all DMT transactions (admin) with advanced filters and pagination."""
     query = {}
-    if status:
+    
+    # Status filter
+    if status and status != "all":
         query["status"] = status
+    
+    # User filter
+    if user_id:
+        query["user_id"] = user_id
+    
+    # Mobile filter (customer mobile)
+    if mobile:
+        query["$or"] = [
+            {"customer_mobile": {"$regex": mobile}},
+            {"recipient_mobile": {"$regex": mobile}},
+            {"sender_mobile": {"$regex": mobile}}
+        ]
+    
+    # Transaction ID filter
+    if txn_id:
+        query["$or"] = query.get("$or", []) + [
+            {"txn_id": {"$regex": txn_id, "$options": "i"}},
+            {"eko_tid": {"$regex": txn_id, "$options": "i"}},
+            {"bank_ref_num": {"$regex": txn_id, "$options": "i"}}
+        ]
+    
+    # Date range filter
+    if start_date:
+        query["created_at"] = query.get("created_at", {})
+        query["created_at"]["$gte"] = start_date
+    if end_date:
+        query["created_at"] = query.get("created_at", {})
+        query["created_at"]["$lte"] = end_date + "T23:59:59"
+    
+    # Amount range filter
+    if min_amount is not None:
+        query["amount"] = query.get("amount", {})
+        query["amount"]["$gte"] = min_amount
+    if max_amount is not None:
+        query["amount"] = query.get("amount", {})
+        query["amount"]["$lte"] = max_amount
+    
+    # DMT type filter
+    if dmt_type and dmt_type != "all":
+        query["dmt_type"] = dmt_type
+    
+    # Sort direction
+    sort_dir = -1 if sort_order == "desc" else 1
     
     transactions = await db.dmt_transactions.find(
         query,
         {"_id": 0}
-    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    ).sort(sort_by, sort_dir).skip(skip).limit(limit).to_list(limit)
     
     total = await db.dmt_transactions.count_documents(query)
+    
+    # Calculate total amount for filtered results
+    amount_pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": None,
+            "total_amount": {"$sum": "$amount"},
+            "total_prc": {"$sum": "$prc_amount"}
+        }}
+    ]
+    amount_stats = await db.dmt_transactions.aggregate(amount_pipeline).to_list(1)
     
     return {
         "success": True,
         "transactions": transactions,
-        "total": total
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "pages": (total + limit - 1) // limit,
+            "current_page": (skip // limit) + 1
+        },
+        "summary": {
+            "total_amount": amount_stats[0]["total_amount"] if amount_stats else 0,
+            "total_prc": amount_stats[0]["total_prc"] if amount_stats else 0
+        }
     }
 
 @router.get("/admin/stats")
