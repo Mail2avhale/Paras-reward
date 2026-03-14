@@ -4941,17 +4941,40 @@ async def calculate_bill_payment_prc(amount_inr: float):
     return amount_inr * prc_rate
 
 async def get_dynamic_prc_rate():
-    """Get dynamic PRC rate from database, default 10"""
+    """
+    Get dynamic PRC rate from Token Economy system.
+    Auto-calculates based on 5 factors: Supply, Redeem, Burn, User, Utility
+    Falls back to database setting or default 10 if economy calculation fails.
+    Returns: int (final rate value, e.g., 11 means 11 PRC = ₹1)
+    """
+    try:
+        # Import economy module
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        
+        # Get auto-calculated rate from economy system
+        rate_data = await calculate_dynamic_prc_rate(db)
+        logging.info(f"[PRC RATE] Economy returned: type={type(rate_data)}, final_rate={rate_data.get('final_rate') if isinstance(rate_data, dict) else rate_data}")
+        
+        if rate_data:
+            if isinstance(rate_data, dict):
+                final_rate = rate_data.get("final_rate", 10)
+                return int(final_rate)
+            else:
+                return int(rate_data)
+    except Exception as e:
+        logging.warning(f"[PRC RATE] Economy rate calculation failed, using fallback: {e}")
+    
+    # Fallback: Check database settings
     try:
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
-            return rate_setting.get("value")
+            return int(rate_setting.get("value"))
         settings = await db.settings.find_one({})
         if settings and settings.get("prc_to_inr_rate"):
-            return settings.get("prc_to_inr_rate")
+            return int(settings.get("prc_to_inr_rate"))
     except:
         pass
-    return 10  # Default fallback
+    return 10  # Ultimate fallback
 
 async def get_redemption_charge_settings():
     """
@@ -10616,12 +10639,9 @@ async def get_database_stats():
 
 @api_router.get("/settings/public")
 async def get_public_settings():
-    """Get public settings (payment UPI, company info, etc.) - CACHED 10 min"""
-    # Check cache first
-    cache_key = "public_settings"
-    cached = await cache.get(cache_key)
-    if cached:
-        return cached
+    """Get public settings (payment UPI, company info, etc.)"""
+    # Get fresh PRC rate from economy (always fresh, no cache for this value)
+    prc_to_inr_rate = await get_dynamic_prc_rate()
     
     settings = await db.settings.find_one({}, {"_id": 0})
     payment_config = await db.payment_config.find_one({}, {"_id": 0})
@@ -10660,13 +10680,7 @@ async def get_public_settings():
     if razorpay_setting:
         razorpay_enabled = razorpay_setting.get("value", True)
     
-    # Get PRC to INR rate from settings (default 10)
-    prc_to_inr_rate = 10
-    prc_rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
-    if prc_rate_setting:
-        prc_to_inr_rate = prc_rate_setting.get("value", 10)
-    elif settings and settings.get("prc_to_inr_rate"):
-        prc_to_inr_rate = settings.get("prc_to_inr_rate", 10)
+    # prc_to_inr_rate already fetched above
     
     result = {
         "payment_upi_id": payment_upi or "paras@upi",
@@ -10680,9 +10694,6 @@ async def get_public_settings():
         "razorpay_enabled": razorpay_enabled,
         "prc_to_inr_rate": prc_to_inr_rate
     }
-    
-    # Cache for 10 minutes (settings rarely change)
-    await cache.set(cache_key, result, ttl=600)
     
     return result
 
@@ -10758,7 +10769,29 @@ async def update_prc_rate(request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/prc-economy/current-rate")
+async def get_current_prc_economy_rate():
+    """
+    Get current PRC rate from Token Economy system.
+    Shows all 5 factors and the calculated final rate.
+    """
+    try:
+        from routes.prc_economy import calculate_dynamic_prc_rate
+        rate_data = await calculate_dynamic_prc_rate(db)
+        return {
+            "success": True,
+            "rate": rate_data,
+            "description": "Rate auto-calculated from Token Economy (5 factors)"
+        }
+    except Exception as e:
+        logging.error(f"Error getting economy rate: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "fallback_rate": 10
+        }
 
 
 @api_router.get("/admin/payment-gateways-status")
@@ -10771,6 +10804,16 @@ async def get_payment_gateways_status():
         "razorpay_enabled": razorpay_setting.get("value", True) if razorpay_setting else True,
         "manual_subscription_enabled": manual_setting.get("value", True) if manual_setting else True
     }
+
+
+@api_router.delete("/admin/clear-cache/{cache_key}")
+async def admin_clear_cache(cache_key: str):
+    """Admin: Clear specific cache key"""
+    try:
+        await cache.delete(cache_key)
+        return {"success": True, "message": f"Cache cleared: {cache_key}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # ========== AUTO-RENEWAL NOTIFICATIONS ==========
@@ -39944,9 +39987,9 @@ async def get_prc_economy_dashboard():
 
 
 @api_router.get("/admin/prc-economy/rate")
-async def get_dynamic_prc_rate():
+async def get_admin_prc_economy_rate():
     """
-    Get current dynamic PRC rate calculated using 5 ecosystem factors:
+    Admin API: Get current dynamic PRC rate calculated using 5 ecosystem factors:
     - Supply Factor
     - Redeem Demand Factor  
     - Burn Factor
