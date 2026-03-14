@@ -260,9 +260,10 @@ const BankRedeemPage = () => {
         setIfscVerified(false);
         setAgreedToPolicy(false);
         
-        // Switch to history tab
-        setActiveTab('history');
-        loadRequests();
+        // Redirect to dashboard after successful submission
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
       }
     } catch (error) {
       const msg = error.response?.data?.detail || 'Failed to submit request';
