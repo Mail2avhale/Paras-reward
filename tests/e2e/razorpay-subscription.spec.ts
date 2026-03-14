@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { dismissToasts } from '../fixtures/helpers';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://money-transfer-debug.preview.emergentagent.com';
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://prc-cash-out.preview.emergentagent.com';
 
 test.describe('Razorpay Integration & Subscription Plans', () => {
   

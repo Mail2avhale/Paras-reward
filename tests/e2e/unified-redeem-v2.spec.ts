@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://money-transfer-debug.preview.emergentagent.com';
+const BASE_URL = 'https://prc-cash-out.preview.emergentagent.com';
 
 test.describe('Unified Redeem System v2 - API Tests', () => {
 

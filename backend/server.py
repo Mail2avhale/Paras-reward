@@ -67,6 +67,7 @@ from routes.razorpay_payments import router as razorpay_router, set_db as set_ra
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
+from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
@@ -40023,6 +40024,11 @@ api_router.include_router(razorpay_router)
 set_redeem_v2_db(db)
 set_redeem_limit_check(check_redeem_limit)  # Pass the redeem limit check function
 api_router.include_router(redeem_v2_router)
+
+# Manual Bank Transfer Router
+set_bank_transfer_db(db)
+set_bank_transfer_limit_check(check_redeem_limit)
+api_router.include_router(bank_transfer_router)
 
 # Error Monitor Router
 set_monitor_db(db)

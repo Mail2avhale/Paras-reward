@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260313_100615/results.json' }],
   ],
   use: {
-    baseURL: 'https://money-transfer-debug.preview.emergentagent.com',
+    baseURL: 'https://prc-cash-out.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

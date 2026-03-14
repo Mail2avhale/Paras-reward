@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://money-transfer-debug.preview.emergentagent.com/setup
+   https://prc-cash-out.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

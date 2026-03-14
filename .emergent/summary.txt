@@ -1,156 +1,193 @@
 <analysis>**original_problem_statement:**
-वापरकर्त्याची (User) मुख्य उद्दिष्ट्ये Eko DMT आणि BBPS वैशिष्ट्ये दुरुस्त करणे आणि सुधारणे हे आहे. यात अनेक विनंत्या आणि बग निराकरणे समाविष्ट आहेत:
-1.  **BBPS कार्यक्षमता:** Production वातावरणात BBPS मोबाईल रिचार्जची चाचणी करणे आणि यशस्वी करणे.
-2.  **PRC रिडीम फ्लो:** Admin will process या मॅन्युअल फ्लोला त्वरित (instant) BBPS रिचार्जने बदलणे.
-3.  **नवीन DMT अंमलबजावणी:** सध्याची V3 DMT प्रणाली थांबवून, Eko च्या V1 Fund Transfer API चा वापर करून नवीन DMT प्रणाली लागू करणे.
-4.  **DMT व्यवहार समस्या:** SUCCESS स्थिती मिळूनही रक्कम खात्यात जमा न होण्याची गंभीर समस्या तपासणे आणि दुरुस्त करणे.
-5.  **DMT V3 अंमलबजावणी:** अखेरीस, वापरकर्त्याने V1 Fund Transfer ऐवजी पूर्ण DMT (Customer Onboarding सह) फ्लो लागू करण्याची विनंती केली.
+वापरकर्त्याची (User) नवीन आणि सर्वोच्च प्राधान्याची विनंती एक नवीन 'मॅन्युअल फिनटेक रिडीम सिस्टम' तयार करणे आहे. या प्रणालीमध्ये, वापरकर्ते त्यांचे PRC पॉइंट्स भारतीय रुपयांमध्ये (INR) बँक ट्रान्सफरसाठी विनंती करू शकतील. ॲडमिन मॅन्युअली बँक ट्रान्सफर करेल आणि विनंती 'पेड' किंवा 'फेल्ड' म्हणून चिन्हांकित करेल.
 
-**User's preferred language**: The user communicates primarily in **Marathi**. The next agent **MUST** respond in **Marathi**.
+**PRODUCT REQUIREMENTS (as specified by user):**
+-   **Core Flow:** User requests PRC-to-INR transfer -> Admin manually pays -> Admin marks request as 'Paid' or 'Failed' (with PRC refund on failure).
+-   **Conversion & Fees:** 1 INR = 10 PRC. A flat ₹10 transaction fee and a 20% admin fee will be applied.
+-   **User UI:** A redeem page where users enter bank details (Account Holder, Account Number, IFSC). The system will verify the IFSC using the Eko API and auto-fill the bank name.
+-   **Admin Panel:** A dashboard to view and manage redeem requests (Pending, Paid, Failed). Admins can view request details and mark them as 'Paid' or 'Failed' (with a remark).
+-   **Withdrawal Rules:** Minimum ₹200, Maximum ₹10,000.
+-   **APIs:**
+    -   
+    -    (new manual bank transfer endpoint)
+    -   
+    -   
+    -   
+    -   
+-   **Tech Stack:** Python FastAPI backend, Next.js frontend, PostgreSQL database (currently MongoDB).
+-   **Security:** JWT auth, admin roles, input validation.
+-   **Notifications:** Firebase/Email for status updates.
+
+**User's preferred language**: वापरकर्त्याची प्राथमिक भाषा **मराठी** आहे. पुढील एजंटने **केवळ मराठीत** प्रतिसाद दिला पाहिजे.
 
 **what currently exists?**
--   **BBPS (Bharat Bill Payment System):** The BBPS mobile recharge feature is confirmed to be working on the production environment. The  has been updated to use this instant BBPS API instead of the old manual admin approval flow.
--   **Eko V1 Fund Transfer:** The backend API () is implemented in . It includes comprehensive error handling to identify reversed transactions and a mechanism to refund PRC points () via a callback (). The frontend  has been completely replaced with a new UI that uses this V1 Fund Transfer API.
--   **Eko V3 DMT (Legacy):** The old DMT service () has been disabled. A more complete V3 DMT service () exists with endpoints for customer lookup, recipient management, and payments. Customer lookup and recipient listing work, but adding a recipient and making a transfer are failing.
+The application now has the foundational backend for the new manual bank transfer system. The previous DMT (Domestic Money Transfer) V1 and V3 features have been completely removed from the codebase at the user's request. A critical production bug where successful BBPS recharges did not deduct PRC points has been fixed by rewriting the  and manually correcting past transactions. Old, unused admin pages for manual approvals have also been removed after clearing out pending requests.
 
 **Last working item**:
--   **Last item agent was working:** The agent was trying to debug the Eko V3 DMT (Money Transfer) payment endpoint (). The Eko API consistently returns an empty  response, even though the request appears to be correctly formatted. The agent added logging to  to capture the raw response from Eko but was unable to see the log output. The primary goal was to make a successful DMT transfer using the full onboarding-based flow.
--   **Status:** BLOCKED
--   **Agent Testing Done:** Y
--   **Which testing method agent to use?** Backend testing agent or manual . The agent needs to inspect backend logs to see the raw response from the Eko API.
+-   **Last item agent was working:** The agent started building the new Manual Fintech Redeem System. The initial backend structure was created, including a new router and API endpoints for IFSC verification and creating a redeem request. The global redeem limit check was also integrated into this new flow.
+    -   A new route file  was created.
+    -   A placeholder frontend page  was created.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both (frontend and backend testing agent once the full feature is built)
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: V3 DMT transfer fails with an empty 204 response from Eko (P0)**
--   **Issue 2: V1 Fund Transfer transactions are reversed by the bank (P1)**
--   **Issue 3: Delete Beneficiary functionality fails with Eko API 500 error (P2)**
--   **Issue 4: Production app crashes on deployment after frontend changes (P2)**
+-   **Issue 1: Production app crashes on deployment after frontend changes (P1)**
+-   **Issue 2: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown (P2)**
 
 **Issues Detail:**
--   **Issue 1: V3 DMT transfer fails with an empty 204 response from Eko**
-    -   **Attempted fixes:** The agent verified that the DMT service (code ) is active. The request format was checked against V3 documentation. The agent tried different API endpoints and methods (PUT/POST). The current implementation in  calls the  endpoint. Despite a valid request payload, Eko returns . The agent added logging to see the raw  response, but the logs didn't appear in the console.
+-   **Issue 1: Production app crashes on deployment after frontend changes**
+    -   **Attempted fixes:** None. This issue was mentioned in the previous handoff but was not investigated in this session.
     -   **Next debug checklist:**
-        1.  Verify that  or  statements in  are correctly configured to output to  logs. Check .
-        2.  Inside the  function, log the exact URL, headers, and payload being sent to Eko.
-        3.  Log the , , and  from the  call to Eko, even if the response is empty.
-        4.  Advise the user to contact Eko support with the request details and ask why a valid request is receiving a 204 response instead of a success or error JSON.
-    -   **Why fix this issue and what will be achieved with the fix?** This is the user's current highest priority. Fixing it will enable the core Domestic Money Transfer functionality as per Eko's standard flow.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** Potentially Eko API issue.
-
--   **Issue 2: V1 Fund Transfer transactions are reversed by the bank**
-    -   **Attempted fixes:** The agent successfully initiated a transfer, and the Eko API initially reported SUCCESS. However, the user confirmed the money was not received. A subsequent status check revealed the transaction was Reversed (). The agent implemented detailed error handling in  to correctly identify and process these reversals and trigger a PRC refund.
-    -   **Next debug checklist:** This is a bank-side rejection. The application-side logic is now correct (it detects the reversal). The next step is for the user to contact Eko support with the Transaction ID (e.g., ) and  to understand the exact reason for the reversal from the beneficiary bank.
-    -   **Why fix this issue and what will be achieved with the fix?** Makes the Fund Transfer feature reliable.
-    -   **Status:** BLOCKED (on Eko Support)
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-
--   **Issue 3: Delete Beneficiary functionality fails with Eko API 500 error**
-    -   **Status:** BLOCKED (on Eko Support) - From previous session, not re-tested.
--   **Issue 4: Production app crashes on deployment after frontend changes**
+        1.  After the next frontend change, monitor deployment logs closely.
+        2.  Check for build errors, dependency mismatches ( vs ), or environment variable issues during the build process.
+        3.  Review recent frontend commits to identify any potentially breaking changes.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical underlying stability issue that hinders rapid development and deployment. Fixing it will ensure new features can be deployed reliably.
     -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on other issue:** None.
+
+-   **Issue 2: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown**
+    -   **Attempted fixes:** The agent identified these transactions but the focus shifted to fixing the PRC deduction for successful ones. These were not investigated further.
+    -   **Next debug checklist:**
+        1.  Examine the logs for the timeframe when these transactions occurred (if available).
+        2.  Analyze the  data for these 145 transactions to find common patterns (e.g., specific service, user, time of day).
+        3.  The most likely cause was an old version of the code on production that didn't handle certain services correctly. While the code is fixed now, understanding the failure can prevent future issues.
+    -   **Why fix this issue and what will be achieved with the fix?** Prevents future revenue loss and ensures all BBPS services are reliable.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** N (likely fixed by code updates, but root cause unconfirmed)
+    -   **Should Test frontend/backend/both after fix?** Backend.
 
 **In progress Task List**:
--   **Task 1: Complete and Fix V3 DMT Implementation (P0)**
-    -   **Where to resume:** Resume debugging the  function in . The immediate goal is to get a meaningful response (success or error JSON) from the Eko transfer API instead of .
-    -   **What will be achieved with this?** A fully functional Domestic Money Transfer feature, which was the user's final request in the session.
+-   **Task 1: Complete the Manual Fintech Redeem System (P0)**
+    -   **Where to resume:**
+        1.  **Frontend:** Build the UI for the  page according to the user's detailed specification (IFSC verification, fee calculation, submission form).
+        2.  **Backend:** Implement the remaining API endpoints in :
+            -   
+            -   
+            -   
+            -   
+        3.  **Admin Panel:** Create the new admin dashboard for managing these bank transfer requests.
+        4.  **User History:** Create a page for users to see their bank transfer request history.
+    -   **What will be achieved with this?** A fully functional, production-ready system for users to redeem PRC to their bank accounts, managed by an admin.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both. The frontend ( and/or ) will need to be connected to these V3 DMT endpoints.
-    -   **Blocked on something:** Issue #1.
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P1:** Connect the frontend ( or ) to the working V3 DMT endpoints once the backend is fixed. This includes customer lookup, recipient selection/addition, and transfer initiation.
-*   **P1:** Implement a receipt generation feature for successful BBPS and DMT transactions.
-*   **P2:** End-to-end testing of all BBPS services (Electricity, Gas, FASTag, Credit Card).
+-   **P1:** Implement notifications (Firebase/Email) for the new manual redeem system.
+-   **P1:** Create the admin analytics dashboard (Total Pending/Paid/Failed Redeems, etc.) for the new system.
+-   **P2:** Implement security enhancements like rate limiting on the new API endpoints.
 
 **Future Tasks:**
-*   Investigate the root cause of production deployment failures.
-*   Refactor the large  and  components.
-*   Migrate the database from MongoDB to PostgreSQL.
-*   Migrate KYC/Receipt images to a dedicated file storage solution.
-*   Add Email/Mobile OTP verification on user signup.
+-   Investigate migrating the database from MongoDB to PostgreSQL, as requested in the project brief.
+-   Add Email/Mobile OTP verification on user signup.
+-   Refactor large components like .
+-   Add a receipt generation feature for all successful transactions (BBPS and Bank Transfers).
 
 **Completed work in this session**
--   **BBPS Production Test:** Successfully tested and verified the BBPS mobile recharge on the production environment.
--   **Instant Redeem Flow:** Replaced the manual admin approval flow in  with an instant BBPS API call.
--   **V1 Fund Transfer Implementation:**
-    -   Implemented a full-featured backend for Eko's V1 Fund Transfer API in .
-    -   Created a new simplified frontend for this feature in .
--   **Advanced Error Handling:** Implemented robust error handling for V1 Fund Transfer to detect reversed transactions and other Eko-specific statuses.
--   **PRC Refund Module:** Created a service () and a callback endpoint () to automatically refund user points (PRC) when a transaction fails or is reversed.
--   **V3 DMT Disabled:** The legacy V3 DMT service () was successfully disabled.
+-   **Full DMT Code Removal:** Deleted all files and references related to DMT V1 and V3 from the entire codebase.
+-   **Production PRC Deduction Fix:**
+    -   Identified and fixed a critical bug where PRC was not being deducted for successful BBPS transactions.
+    -   Rewrote the wallet service () for robustness and data consistency.
+    -   Created and executed a  endpoint to retroactively deduct PRC for 55 past transactions, correcting a financial loss.
+-   **Old Admin Pages Cleanup:**
+    -   Rejected and refunded PRC for over 1500 pending requests from old, manual admin systems (, ).
+    -   Removed the associated frontend pages and backend code entirely.
+-   **Scheduler & Config Verification:**
+    -   Made the auto-burn scheduler job more reliable with a fallback mechanism.
+    -   Confirmed that PRC Expiry is disabled and that a Global Redeem Limit is active and configurable.
+-   **New Redeem System Scaffolding:** Began building the new manual bank transfer system by creating the initial backend router and a placeholder frontend page.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Production Deployment Crashes:** The handoff mentioned the app crashes on deployment after frontend changes. This was never investigated and remains a significant risk.
+-   **Root Cause of 145 Failed BBPS Transactions:** The reason why 145 BBPS transactions failed without generating an Eko TID was not determined.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork:** Production app crashes on deployment after frontend changes.
+-   **Recurrence count:** 1+
+-   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Eko API Dichotomy:** There are two distinct products: Fund Transfer (for business payments, no customer onboarding) and Money Transfer/DMT (for retail remittance, requires customer onboarding). The current focus is on the latter.
--   **Transaction States:** Eko transactions have multiple states. A transaction can be SUCCESS initially but later become Reversed. It's crucial to use the status check/callback API to get the final status.
--   **API Error Debugging:** Debugging Eko involved handling various HTTP status codes (, , , ) and response bodies with specific error codes. An empty  response is the current blocker for V3 DMT.
--   **Service Activation:** Eko services (like BBPS code  or DMT code ) must be activated before use.
+-   **Manual Redeem Flow:** A system where user requests are fulfilled manually by an admin, who then updates the status in the system.
+-   **Data Consistency:** The  was created to solve a data consistency problem by writing to multiple ledger collections (, ) to ensure the backend data and frontend UI views are synchronized.
+-   **Bulk Data Correction:** Special admin API endpoints (, , ) were created and used to fix historical data issues at scale.
+-   **Configurable System Rules:** Features like the Global Redeem Limit are now managed via database settings and can be updated through an admin API.
+-   **Robust Scheduling:** The  job for PRC auto-burn was improved with a self-healing fallback mechanism to ensure it runs reliably.
+
+**key DB schema**
+-   **Note:** The user requested a migration to PostgreSQL, but the current DB is **MongoDB**.
+-   **New Collection ( - for manual bank transfers):**
+    -   : ObjectId
+    -   : float (e.g., 500.00)
+    -   : float
+    -   : float
+    -   : float
+    -   : float
+    -   : string
+    -   : string
+    -   : string
+    -   : string
+    -   : string ('pending', 'paid', 'failed')
+    -   : string
+    -   , : datetime
 
 **All files of reference**
--   : Contains the V3 DMT logic that is currently blocked. The  function is the main point of failure.
--   : Contains the working V1 Fund Transfer implementation with advanced error handling.
--   : Rewritten to be a simple V1 Fund Transfer UI.
--   : Connects to multiple backend services (BBPS, and eventually DMT).
-
-**key api endpoints**
-**Working:**
--   : For BBPS payments.
--   : For V1 Fund Transfers (though they may be reversed by the bank).
--   : Webhook to receive final transaction status.
-
-**Not Working / Blocked:**
--   : The V3 DMT transfer endpoint. This is the highest priority to fix.
+-   : Core logic for the new feature being built.
+-   : The new, mandatory service for all PRC debit/credit operations.
+-   : Contains the one-off scripts and settings endpoints created to fix production issues.
+-   : The new frontend page that needs to be implemented.
+-   : The existing redeem flow that now uses the new .
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   The user has pivoted to implementing the full **V3 Money Transfer (DMT)** flow. Do not work on V1 Fund Transfer unless requested.
--   The main blocker is that the V3 DMT payment API call ( in ) receives an empty  response from Eko. Your first task is to debug this. Focus on logging the raw  response.
--   The reversed transaction issue with V1 Fund Transfer is a bank-side problem. The app correctly detects it and refunds PRC. Advise the user to contact Eko support for that. Do not spend time debugging it further.
+-   Your absolute top priority is to build out the **Manual Fintech Redeem System**. The user has provided a very detailed specification. The backend foundation is laid; you need to build the frontend UI and the admin management panel.
+-   All PRC transactions (debit, credit, refund) **must** go through the new  to ensure data consistency.
+-   A lot of old code was deleted (DMT, old admin pages). Do not attempt to revive or work on them. Focus only on the new requirements.
+-   Be aware of the uninvestigated issue where production deployments can crash after frontend changes. Test deployments carefully.
+
+**documents and test reports created in this job**
+None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to check Eko's general FAQs. (DONE - led to checking service activation)
-2.  **User:** Provides links to Eko's Fund Transfer and Agent Management documentation and requests PRC refund on failure. (DONE - agent implemented PRC refund and callback)
-3.  **User:** Asks to review developer docs for error handling. (DONE - agent implemented comprehensive error handling)
-4.  **User:** Reports V1 Fund Transfer was successful in API but money not received. (DONE - agent diagnosed it as a Reversed transaction)
-5.  **User:** Provides their bank account details for a test transfer. (DONE - test was performed)
-6.  **User:** Asks to perform a full E2E test for DMT V1. (DONE - screenshot showed an error, which agent fixed by replacing )
-7.  **User:** Reports a DMT error with a screenshot. (DONE)
-8.  **User:** Asks if the Redeem to bank page is connected. (DONE - agent began refactoring )
-9.  **User:** Asks to test V1 fund transfer with the frontend. (DONE)
-10. **User:** Requests to use the Eko V1 Fund Transfer API and block the old V3 implementation. (DONE)
+1.  **User:** Asks to run the  for today's BBPS transactions. (COMPLETED)
+2.  **User:** Asks for a detailed, user-wise list of the 55 transactions that were fixed. (COMPLETED)
+3.  **User:** Confirms if the PRC was actually deleted for the users. (COMPLETED - Agent verified with examples)
+4.  **User:** Asks to implement three things: No PRC expiry, a global redeem limit, and a fix for the auto-burn job not triggering. (COMPLETED)
+5.  **User:** Asks if the global redeem limit is checked during the redeem process. (COMPLETED - Agent confirmed it is.)
+6.  **User:** Provides a very detailed specification to build a brand new Manual Fintech Redeem System for bank transfers. This is the new primary goal. (IN PROGRESS)
+7.  **User:** Asks to reject all pending requests from old admin pages (, ), refund the PRC, and then remove the pages and code completely. (COMPLETED)
+8.  **User:** Confirms the deployment is done for the agent's changes. (Agent then proceeded with data-fixing tasks).
+9.  **User:** Asks if PRC will be cut for new transactions after the fixes. (COMPLETED - Agent confirmed the fix works on preview but needs deployment).
+10. **User:** Reports that even after a BBPS recharge is successful, the PRC is not cut and is instead refunded. This is a major financial loss. (COMPLETED - This was the main bug fixed in the session).
 
 **Project Health Check:**
 -   **Broken:**
-    -   **V3 DMT:** The core transfer functionality is not working due to an Eko API issue ( response). This is the highest priority.
-    -   **V1 Fund Transfer:** While the API integration works, the feature is unreliable as a significant number of transactions are reversed by the beneficiary bank.
+    -   The new Manual Fintech Redeem System is incomplete and not functional for users.
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
--   **Eko:** The primary integration, used for:
-    -   **BBPS:** Working.
-    -   **V1 Fund Transfer:** Backend working, but transactions are unreliable.
-    -   **V3 Money Transfer (DMT):** In progress, currently blocked.
--   **Razorpay:** Exists but was not touched in this session.
+-   **Eko:** Used for BBPS and IFSC verification. Credentials seem to be an issue on the preview environment () but work on production.
+-   **Razorpay:** Exists in the codebase but is not currently used.
+-   **Firebase/Email:** Requested for notifications but not yet implemented.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** Production deployment fails after frontend changes (from previous sessions, not addressed).
+-   **Known regressions:** The issue of production crashing on deployment after frontend changes remains unaddressed.
 
 **Credentials to test flow:**
 -   **Login:** , 
--   **Eko Initiator ID:** 
--   **Eko Customer Mobile (for DMT):** 
+-   **Admin Login:** , 
 
 **What agent forgot to execute**
--   The recurring production deployment crash after frontend changes has still not been investigated.
--   The user's earlier comment about Balance added in wallet from a previous fork was never investigated.</analysis>
+-   The agent never investigated the root cause of production deployments crashing after frontend changes, despite it being a known recurring issue.
+-   The root cause for the 145 failed BBPS transactions (which had no Eko TID) was not investigated.</analysis>
