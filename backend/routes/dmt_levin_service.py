@@ -21,6 +21,7 @@ router = APIRouter(prefix="/eko/levin-dmt", tags=["Levin DMT"])
 # ==================== CONFIGURATION ====================
 
 EKO_BASE_URL_V3 = os.environ.get("EKO_BASE_URL_V3", "https://api.eko.in:25002/ekoicici/v3")
+EKO_BASE_URL_V2 = os.environ.get("EKO_BASE_URL_V2", "https://api.eko.in:25002/ekoicici/v2")
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "7c179a397b4710e71b2248d1f5892d19")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "7a2529f5-3587-4add-a2df-3d0606d62460")
@@ -295,7 +296,7 @@ async def register_sender(request: SenderRegisterRequest):
         }
 
 
-# STEP 3: Verify Sender OTP
+# STEP 3: Verify Sender OTP (V3 - may not work for all accounts)
 @router.post("/sender/verify-otp")
 async def verify_sender_otp(request: SenderOTPVerifyRequest):
     """
@@ -356,6 +357,138 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
         return {
             "success": False,
             "message": "Verification failed. Please try again."
+        }
+
+
+# STEP 3-V2: Verify Sender OTP using V2 API (WORKING endpoint from handoff)
+class SenderV2VerifyRequest(BaseModel):
+    customer_mobile: str
+    otp: str
+
+@router.post("/sender/verify-otp-v2")
+async def verify_sender_otp_v2(request: SenderV2VerifyRequest):
+    """
+    Verify sender OTP using V2 API - This endpoint WORKS!
+    PUT /v2/customers/verification/otp:{OTP}
+    """
+    try:
+        # V2 endpoint that was confirmed working in handoff
+        url = f"{EKO_BASE_URL_V2}/customers/verification/otp:{request.otp}"
+        
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "customer_id": request.customer_mobile
+        }
+        
+        logging.info(f"[Levin DMT V2] Verify OTP for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT V2] URL: {url}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.put(url, headers=get_headers(), data=data)
+            
+            logging.error(f"[Levin DMT V2] OTP verify response: {response.status_code} - FULL: {response.text}")
+            
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "OTP verification service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error. Please try again."
+                }
+            
+            # Check for success
+            if result.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "message": "Customer verified! आता तुम्ही transfer करू शकता.",
+                    "data": result.get("data", {})
+                }
+            # Also check if already verified (response may indicate this)
+            elif "already verified" in str(result).lower():
+                return {
+                    "success": True,
+                    "message": "Customer already verified! Ready for transfer.",
+                    "data": result.get("data", {})
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "OTP verification failed"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except Exception as e:
+        logging.error(f"[Levin DMT V2] Verify OTP error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Verification failed. Please try again."
+        }
+
+
+# STEP 3-V2-OTP: Request OTP for V2 verification
+@router.post("/sender/request-otp-v2")
+async def request_sender_otp_v2(request: SenderCheckRequest):
+    """
+    Request OTP for sender verification using V2 API
+    POST /v2/customers/otp
+    """
+    try:
+        url = f"{EKO_BASE_URL_V2}/customers/otp"
+        
+        data = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE,
+            "customer_id": request.customer_mobile
+        }
+        
+        logging.info(f"[Levin DMT V2] Request OTP for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT V2] URL: {url}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.post(url, headers=get_headers(), data=data)
+            
+            logging.error(f"[Levin DMT V2] Request OTP response: {response.status_code} - FULL: {response.text}")
+            
+            if response.status_code == 204 or not response.text:
+                return {
+                    "success": False,
+                    "message": "OTP service not available"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                return {
+                    "success": False,
+                    "message": "Service error"
+                }
+            
+            if result.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "otp_sent": True,
+                    "message": "OTP customer mobile वर पाठवला",
+                    "data": result.get("data", {})
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to send OTP"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except Exception as e:
+        logging.error(f"[Levin DMT V2] Request OTP error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Failed to send OTP"
         }
 
 
@@ -965,7 +1098,6 @@ async def initiate_transfer(request: TransferRequest):
             "amount": str(request.amount),
             "currency": "INR",
             "channel": "2",  # IMPS
-            "state": "1",
             "client_ref_id": client_ref_id,
             "otp": request.otp,
             "otp_ref_id": request.otp_ref_id
