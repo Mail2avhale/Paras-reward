@@ -169,18 +169,19 @@ def generate_headers() -> Dict[str, str]:
     
     BBPS uses DIFFERENT algorithm than DMT:
     1. timestamp = current time in MILLISECONDS (not seconds like DMT)
-    2. encoded_key = Base64(authenticator_key)
+    2. encoded_key = Base64(authenticator_key) as BYTES
     3. secret_key = Base64(HMAC_SHA256(encoded_key, timestamp))
     
     Reference: https://developers.eko.in/reference/pay-bills-api
     """
     timestamp = str(round(time.time() * 1000))  # MILLISECONDS for BBPS
     
-    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+    # encoded_key must be BYTES for hmac
+    encoded_key = base64.b64encode(AUTH_KEY.encode())  # Returns bytes
     
     secret_key = base64.b64encode(
         hmac.new(
-            encoded_key.encode(),
+            encoded_key,  # Use bytes directly
             timestamp.encode(),
             hashlib.sha256
         ).digest()
@@ -190,21 +191,21 @@ def generate_headers() -> Dict[str, str]:
         "developer_key": DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "initiator_id": INITIATOR_ID,
-        "Content-Type": "application/json"  # BBPS fetch uses JSON
+        "Content-Type": "application/json"
     }
 
 
 def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
     """
     Generate authentication headers for bill PAYMENT.
-    Exactly as per Eko documentation curl example.
+    Exactly as per Eko documentation.
     """
-    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+    # encoded_key must be BYTES for hmac, not string!
+    encoded_key = base64.b64encode(AUTH_KEY.encode())  # Returns bytes
     
     secret_key = base64.b64encode(
         hmac.new(
-            encoded_key.encode(),
+            encoded_key,  # Use bytes directly
             timestamp.encode(),
             hashlib.sha256
         ).digest()
@@ -227,15 +228,16 @@ def generate_request_hash(timestamp: str, account: str, amount: str) -> str:
     
     Formula: Base64(HMAC_SHA256(encoded_key, timestamp + account + amount + user_code))
     
-    Reference: https://developers.eko.in/reference/pay-bills-api
+    IMPORTANT: encoded_key must be BYTES for hmac!
     """
-    encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
+    # encoded_key must be BYTES for hmac
+    encoded_key = base64.b64encode(AUTH_KEY.encode())  # Returns bytes
     
     concatenated = f"{timestamp}{account}{amount}{USER_CODE}"
     
     request_hash = base64.b64encode(
         hmac.new(
-            encoded_key.encode(),
+            encoded_key,  # Use bytes directly
             concatenated.encode(),
             hashlib.sha256
         ).digest()
