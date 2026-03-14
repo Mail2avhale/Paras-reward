@@ -709,10 +709,31 @@ async def initiate_transfer(request: TransferRequest):
                     }
                     await db.dmt_transactions.insert_one(tx_record)
                 
+                # Parse error message for user-friendly display
+                error_msg = result.get("message", "Transfer failed")
+                error_code = result.get("response_status_id")
+                
+                # Map common Eko error codes to user-friendly messages
+                user_messages = {
+                    1: "Invalid request. Please check beneficiary details.",
+                    2: "Transaction limit exceeded for today.",
+                    3: "Insufficient balance in Eko wallet.",
+                    5: "Beneficiary bank is temporarily unavailable.",
+                    6: "Invalid OTP. Please request a new OTP.",
+                    43: "Transaction declined by bank. Please try later.",
+                    45: "Service temporarily unavailable.",
+                    51: "Insufficient balance in merchant wallet.",
+                    150: "Transfer limit exceeded. Try smaller amount.",
+                    302: "Account not verified. Please verify beneficiary."
+                }
+                
+                friendly_msg = user_messages.get(error_code, error_msg)
+                
                 return {
                     "success": False,
-                    "message": result.get("message", "Transfer failed"),
-                    "error_code": result.get("response_status_id"),
+                    "message": friendly_msg,
+                    "error_code": error_code,
+                    "eko_message": error_msg,
                     "client_ref_id": client_ref_id
                 }
                 
