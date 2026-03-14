@@ -591,7 +591,7 @@ async def get_recipients(customer_mobile: str):
     GET /v3/customer/payment/dmt-levin/sender/{mobile}/recipients
     """
     try:
-        # DMT-LEVIN endpoint
+        # DMT-Levin endpoint for recipients
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{customer_mobile}/recipients"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -650,7 +650,7 @@ async def add_recipient(request: RecipientAddRequest):
     POST /v3/customer/payment/dmt-levin/sender/{mobile}/recipient
     """
     try:
-        # DMT-LEVIN endpoint
+        # DMT-Levin endpoint for adding recipient
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient"
         
         data = {
@@ -706,7 +706,7 @@ async def activate_recipient(request: RecipientActivateRequest):
     POST /v3/customer/payment/dmt-levin/sender/{mobile}/bank/recipient
     """
     try:
-        # DMT-LEVIN endpoint
+        # DMT-Levin endpoint for activating recipient
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/bank/recipient"
         
         data = {
@@ -839,7 +839,7 @@ async def send_transaction_otp(request: TransactionOTPRequest):
     POST /v3/customer/payment/dmt-levin/otp
     """
     try:
-        # DMT-LEVIN endpoint
+        # DMT-Levin endpoint for OTP
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/otp"
         
         data = {
@@ -849,10 +849,6 @@ async def send_transaction_otp(request: TransactionOTPRequest):
             "recipient_id": request.recipient_id,
             "amount": str(request.amount)
         }
-        
-        # Add beneficiary_id if provided
-        if request.beneficiary_id:
-            data["beneficiary_id"] = request.beneficiary_id
         
         logging.info(f"[Levin DMT] Send transaction OTP: {request.customer_mobile}, amount={request.amount}")
         logging.info(f"[Levin DMT] URL: {url}")
@@ -935,14 +931,11 @@ async def initiate_transfer(request: TransferRequest):
                     "usage": limit_check.get("usage")
                 }
         
-        # Levin DMT uses /dmt-levin path for transfer
+        # DMT-Levin endpoint for transfer
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin"
         
         # Generate unique client_ref_id if not provided
         client_ref_id = request.client_ref_id or f"LEVIN{uuid.uuid4().hex[:12].upper()}"
-        
-        # Current timestamp
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
@@ -953,12 +946,9 @@ async def initiate_transfer(request: TransferRequest):
             "currency": "INR",
             "channel": "2",  # IMPS
             "state": "1",
-            "timestamp": timestamp,
-            "latlong": "28.6139,77.2090",
             "client_ref_id": client_ref_id,
             "otp": request.otp,
-            "otp_ref_id": request.otp_ref_id,
-            "recipient_id_type": "1"
+            "otp_ref_id": request.otp_ref_id
         }
         
         logging.info(f"[Levin DMT] Transfer: customer={request.customer_mobile}, amount={request.amount}, ref={client_ref_id}")
