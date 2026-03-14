@@ -209,22 +209,29 @@ async def check_sender(request: SenderCheckRequest):
 @router.post("/sender/register")
 async def register_sender(request: SenderRegisterRequest):
     """
-    Step 2: Register new sender
-    POST /v3/customer/account
-    Body: initiator_id, user_code, customer_id, name, dob, residence_address
+    Step 2: Register new sender for DMT-Levin
+    POST /v3/customer/account/{customer_id}/dmt-levin
+    Body: initiator_id, user_code, name, dob, residence_address
     """
     try:
-        # CORRECT endpoint as per Eko docs
-        url = f"{EKO_BASE_URL_V3}/customer/account"
+        # DMT-Levin specific registration endpoint
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
+        
+        # residence_address as JSON string
+        residence_address = json.dumps({
+            "line": request.address or "India",
+            "city": "Mumbai",
+            "state": "Maharashtra",
+            "pincode": "400001"
+        })
         
         # Form data (application/x-www-form-urlencoded)
         form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
-            "customer_id": request.customer_mobile,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": json.dumps([request.address or "India", "Maharashtra"])
+            "residence_address": residence_address
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
@@ -251,13 +258,26 @@ async def register_sender(request: SenderRegisterRequest):
                 }
             
             if result.get("response_status_id") == 0:
-                return {
-                    "success": True,
-                    "otp_sent": True,
-                    "otp_ref_id": result.get("data", {}).get("otp_ref_id"),
-                    "message": "OTP customer mobile वर पाठवला. कृपया verify करा.",
-                    "data": result.get("data", {})
-                }
+                data = result.get("data", {})
+                state = data.get("state")
+                
+                # State 8 = Minimum KYC, ready for transfers up to ₹25,000/month
+                if state == "8" or state == 8:
+                    return {
+                        "success": True,
+                        "otp_sent": False,
+                        "registered": True,
+                        "message": "Customer registered! ₹25,000 monthly limit available.",
+                        "data": data
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "otp_sent": True,
+                        "otp_ref_id": data.get("otp_ref_id"),
+                        "message": "OTP customer mobile वर पाठवला. कृपया verify करा.",
+                        "data": data
+                    }
             else:
                 return {
                     "success": False,
