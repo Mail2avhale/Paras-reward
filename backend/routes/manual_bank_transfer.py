@@ -32,6 +32,9 @@ db = None
 # Global redeem limit check function (set by server.py)
 check_redeem_limit_func = None
 
+# Weekly one service limit check function (set by server.py)
+check_weekly_one_service_func = None
+
 def set_db(database):
     global db
     db = database
@@ -39,6 +42,10 @@ def set_db(database):
 def set_redeem_limit_check(func):
     global check_redeem_limit_func
     check_redeem_limit_func = func
+
+def set_weekly_one_service_check(func):
+    global check_weekly_one_service_func
+    check_weekly_one_service_func = func
 
 # ==================== CONSTANTS ====================
 
@@ -267,6 +274,15 @@ async def create_redeem_request(request: RedeemRequest):
         # 3. Check KYC
         if user.get("kyc_status") != "verified":
             raise HTTPException(status_code=403, detail="KYC verification required for bank transfers")
+        
+        # 3.5. Check Weekly ONE SERVICE Limit
+        if check_weekly_one_service_func:
+            weekly_check = await check_weekly_one_service_func(user_id, "bank_transfer")
+            if not weekly_check.get("allowed"):
+                raise HTTPException(
+                    status_code=403,
+                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached"))
+                )
         
         # 4. Calculate fees
         fees = calculate_fees(amount)

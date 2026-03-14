@@ -40,11 +40,18 @@ except ImportError:
 
 # Import redeem limit check function
 check_redeem_limit_func = None
+check_weekly_one_service_func = None
 
 def set_redeem_limit_check(func):
     """Set the redeem limit check function from server.py"""
     global check_redeem_limit_func
     check_redeem_limit_func = func
+
+def set_weekly_one_service_check(func):
+    """Set the weekly one service limit check function from server.py"""
+    global check_weekly_one_service_func
+    check_weekly_one_service_func = func
+
 import time
 import json
 
@@ -823,6 +830,21 @@ async def create_redeem_request(request: RedeemRequestCreate):
             logging.error(f"[REDEEM] Limit check error: {e}")
             # On error, allow (fail-open)
         # On error, allow (fail-open)
+    
+    # WEEKLY ONE SERVICE LIMIT CHECK
+    if check_weekly_one_service_func:
+        try:
+            weekly_check = await check_weekly_one_service_func(request.user_id, request.service_type)
+            if not weekly_check.get("allowed"):
+                raise HTTPException(
+                    status_code=403,
+                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached. You can only use 1 service per week."))
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"[REDEEM] Weekly limit check error: {e}")
+            # On error, allow (fail-open)
     
     # Check time restriction (8 AM to 8 PM IST) - TEMPORARILY DISABLED FOR TESTING
     # from datetime import timezone, timedelta

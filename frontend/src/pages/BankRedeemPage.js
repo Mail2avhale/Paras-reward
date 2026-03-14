@@ -34,9 +34,9 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const BankRedeemPage = () => {
+const BankRedeemPage = ({ user: initialUser }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(initialUser || null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [verifyingIFSC, setVerifyingIFSC] = useState(false);
@@ -78,8 +78,13 @@ const BankRedeemPage = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        if (!userData.uid) {
+        // Use initial user from props or localStorage
+        let userData = initialUser;
+        if (!userData?.uid) {
+          userData = JSON.parse(localStorage.getItem('user') || '{}');
+        }
+        
+        if (!userData?.uid) {
           navigate('/login');
           return;
         }

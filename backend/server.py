@@ -64,10 +64,10 @@ from routes.user_logs import router as user_logs_router, set_db as set_user_logs
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
-from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check
+from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
 from routes.bbps_services import router as bbps_router
-from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check
+from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
 from routes.admin_popup_routes import router as admin_popup_router, set_db as set_admin_popup_db
@@ -2761,6 +2761,133 @@ def get_current_week_bounds():
     sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
     next_monday = monday + timedelta(days=7)
     return monday, sunday, next_monday
+
+
+async def check_weekly_one_service_limit(user_id: str, requested_service: str) -> dict:
+    """
+    STRICT RULE: User can use ONLY 1 SERVICE per week across all service types.
+    
+    Services tracked:
+    - mobile_recharge (BBPS)
+    - electricity_bill (BBPS)
+    - dth_recharge (BBPS)
+    - credit_card_payment (BBPS)
+    - loan_emi (BBPS)
+    - gift_voucher
+    - bank_transfer (PRC to Bank)
+    
+    If user has used ANY service this week, ALL other services are blocked until next Monday.
+    """
+    monday, sunday, next_monday = get_current_week_bounds()
+    monday_str = monday.isoformat()
+    
+    services_used = []
+    
+    # 1. Check BBPS/Bill Payment requests (redeem_requests collection)
+    bbps_request = await db.redeem_requests.find_one({
+        "user_id": user_id,
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled", "failed"]}
+    }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1})
+    
+    if bbps_request:
+        services_used.append({
+            "type": "bbps",
+            "service": bbps_request.get("service_type", "recharge"),
+            "request_id": bbps_request.get("request_id"),
+            "date": bbps_request.get("created_at")
+        })
+    
+    # 2. Check Gift Voucher requests
+    gift_request = await db.gift_voucher_requests.find_one({
+        "user_id": user_id,
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled", "failed"]}
+    }, {"_id": 0, "created_at": 1, "request_id": 1})
+    
+    if gift_request:
+        services_used.append({
+            "type": "gift_voucher",
+            "service": "gift_voucher",
+            "request_id": gift_request.get("request_id"),
+            "date": gift_request.get("created_at")
+        })
+    
+    # 3. Check Bank Transfer requests (new manual bank transfer)
+    bank_request = await db.bank_transfer_requests.find_one({
+        "user_id": user_id,
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled", "failed"]}
+    }, {"_id": 0, "created_at": 1, "request_id": 1})
+    
+    if bank_request:
+        services_used.append({
+            "type": "bank_transfer",
+            "service": "prc_to_bank",
+            "request_id": bank_request.get("request_id"),
+            "date": bank_request.get("created_at")
+        })
+    
+    # 4. Check old bank withdrawal requests (if any)
+    old_bank_request = await db.bank_withdrawal_requests.find_one({
+        "user_id": user_id,
+        "created_at": {"$gte": monday_str},
+        "status": {"$nin": ["rejected", "cancelled", "failed"]}
+    }, {"_id": 0, "created_at": 1, "request_id": 1})
+    
+    if old_bank_request:
+        services_used.append({
+            "type": "bank_withdrawal",
+            "service": "bank_withdrawal",
+            "request_id": old_bank_request.get("request_id"),
+            "date": old_bank_request.get("created_at")
+        })
+    
+    # Calculate days until next Monday
+    now = datetime.now(timezone.utc)
+    days_until_reset = (next_monday - now).days
+    hours_until_reset = int((next_monday - now).total_seconds() // 3600)
+    next_monday_formatted = next_monday.strftime("%A, %d %B")
+    
+    # If any service used this week, block all services
+    if services_used:
+        used_service = services_used[0]
+        service_name_map = {
+            "mobile_recharge": "Mobile Recharge",
+            "electricity_bill": "Electricity Bill",
+            "dth_recharge": "DTH Recharge",
+            "credit_card_payment": "Credit Card Payment",
+            "loan_emi": "Loan EMI",
+            "gift_voucher": "Gift Voucher",
+            "prc_to_bank": "PRC to Bank Transfer",
+            "bank_withdrawal": "Bank Withdrawal",
+            "recharge": "Recharge"
+        }
+        used_name = service_name_map.get(used_service["service"], used_service["service"])
+        
+        return {
+            "allowed": False,
+            "reason": f"आपण या आठवड्यात आधीच '{used_name}' सेवा वापरली आहे. पुढील सेवा {next_monday_formatted} पासून उपलब्ध होईल.",
+            "reason_en": f"You have already used '{used_name}' this week. Next service available from {next_monday_formatted}.",
+            "service_used_this_week": used_service,
+            "services_count": len(services_used),
+            "requested_service": requested_service,
+            "next_reset": next_monday.isoformat(),
+            "days_until_reset": days_until_reset,
+            "hours_until_reset": hours_until_reset,
+            "cooldown_display": f"{days_until_reset} दिवस, {hours_until_reset % 24} तास"
+        }
+    
+    # No service used - allowed
+    return {
+        "allowed": True,
+        "reason": "OK",
+        "services_count": 0,
+        "requested_service": requested_service,
+        "next_reset": next_monday.isoformat(),
+        "message": "या आठवड्यात तुम्ही 1 सेवा वापरू शकता."
+    }
+
 
 async def check_weekly_emi_or_bank_redeem(user_id: str) -> dict:
     """
@@ -7781,6 +7908,9 @@ async def get_user_weekly_limits(uid: str):
         now = datetime.now(timezone.utc)
         days_until_reset = (next_monday - now).days
         hours_until_reset = int((next_monday - now).total_seconds() // 3600)
+        
+        # Check ONE SERVICE PER WEEK limit
+        one_service_check = await check_weekly_one_service_limit(uid, "check")
         
         # Get usage for each service type
         services_status = {}
@@ -40023,11 +40153,13 @@ api_router.include_router(razorpay_router)
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)
 set_redeem_limit_check(check_redeem_limit)  # Pass the redeem limit check function
+set_redeem_v2_weekly_check(check_weekly_one_service_limit)  # Pass weekly one service limit check
 api_router.include_router(redeem_v2_router)
 
 # Manual Bank Transfer Router
 set_bank_transfer_db(db)
 set_bank_transfer_limit_check(check_redeem_limit)
+set_bank_transfer_weekly_check(check_weekly_one_service_limit)
 api_router.include_router(bank_transfer_router)
 
 # Error Monitor Router
