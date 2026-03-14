@@ -896,7 +896,6 @@ async def initiate_transfer(request: TransferRequest):
             "user_code": EKO_USER_CODE,
             "customer_id": request.customer_mobile,
             "recipient_id": request.recipient_id,
-            "beneficiary_id": request.beneficiary_id,
             "amount": str(request.amount),
             "currency": "INR",
             "channel": "2",  # IMPS
