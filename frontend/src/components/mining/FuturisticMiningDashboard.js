@@ -27,16 +27,16 @@ const triggerHaptic = (type = 'light') => {
 };
 
 // ============================================
-// SPEEDOMETER GAUGE COMPONENT
+// SPEEDOMETER GAUGE COMPONENT - Compact
 // ============================================
-const SpeedometerGauge = ({ rate, maxRate = 100 }) => {
+const SpeedometerGauge = ({ rate, maxRate = 250 }) => {
   const percentage = Math.min((rate / maxRate) * 100, 100);
   const angle = (percentage / 100) * 180 - 90; // -90 to 90 degrees
 
   return (
-    <div className="relative w-full aspect-[2/1] max-w-[200px]">
-      {/* Background Arc */}
-      <svg viewBox="0 0 200 100" className="w-full h-full">
+    <div className="relative w-full flex flex-col items-center">
+      {/* SVG Gauge */}
+      <svg viewBox="0 0 200 110" className="w-full max-w-[160px]">
         <defs>
           <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#06b6d4" />
@@ -44,7 +44,7 @@ const SpeedometerGauge = ({ rate, maxRate = 100 }) => {
             <stop offset="100%" stopColor="#67e8f9" />
           </linearGradient>
           <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -54,80 +54,55 @@ const SpeedometerGauge = ({ rate, maxRate = 100 }) => {
         
         {/* Background track */}
         <path
-          d="M 20 90 A 80 80 0 0 1 180 90"
+          d="M 25 95 A 75 75 0 0 1 175 95"
           fill="none"
           stroke="#1e293b"
-          strokeWidth="12"
+          strokeWidth="10"
           strokeLinecap="round"
         />
         
         {/* Speed arc - animated */}
         <motion.path
-          d="M 20 90 A 80 80 0 0 1 180 90"
+          d="M 25 95 A 75 75 0 0 1 175 95"
           fill="none"
           stroke="url(#speedGradient)"
-          strokeWidth="12"
+          strokeWidth="10"
           strokeLinecap="round"
           filter="url(#glow)"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: percentage / 100 }}
           transition={{ duration: 1.5, ease: "easeOut" }}
           style={{
-            strokeDasharray: "251.2",
-            strokeDashoffset: 251.2 * (1 - percentage / 100)
+            strokeDasharray: "236",
+            strokeDashoffset: 236 * (1 - percentage / 100)
           }}
         />
-        
-        {/* Tick marks */}
-        {[0, 25, 50, 75, 100].map((tick, i) => {
-          const tickAngle = (tick / 100) * 180 - 90;
-          const x1 = 100 + 70 * Math.cos((tickAngle * Math.PI) / 180);
-          const y1 = 90 - 70 * Math.sin((tickAngle * Math.PI) / 180);
-          const x2 = 100 + 60 * Math.cos((tickAngle * Math.PI) / 180);
-          const y2 = 90 - 60 * Math.sin((tickAngle * Math.PI) / 180);
-          return (
-            <line
-              key={i}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#475569"
-              strokeWidth="2"
-            />
-          );
-        })}
         
         {/* Needle */}
         <motion.g
           initial={{ rotate: -90 }}
           animate={{ rotate: angle }}
           transition={{ duration: 1, ease: "easeOut", type: "spring", stiffness: 60 }}
-          style={{ transformOrigin: "100px 90px" }}
+          style={{ transformOrigin: "100px 95px" }}
         >
           <polygon
-            points="100,30 95,90 105,90"
+            points="100,35 96,95 104,95"
             fill="#22d3ee"
             filter="url(#glow)"
           />
         </motion.g>
         
         {/* Center circle */}
-        <circle cx="100" cy="90" r="8" fill="#0f172a" stroke="#22d3ee" strokeWidth="2" />
-      </svg>
-      
-      {/* Rate display */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
-        <motion.p 
-          className="text-2xl font-bold text-cyan-400 font-mono"
-          key={rate}
-          initial={{ scale: 1.2 }}
-          animate={{ scale: 1 }}
-        >
+        <circle cx="100" cy="95" r="6" fill="#0f172a" stroke="#22d3ee" strokeWidth="2" />
+        
+        {/* Rate text inside SVG */}
+        <text x="100" y="80" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '18px' }}>
           {rate.toFixed(1)}
-        </motion.p>
-        <p className="text-[10px] text-cyan-500/70 uppercase tracking-wider">PRC/hr</p>
-      </div>
+        </text>
+        <text x="100" y="108" textAnchor="middle" className="fill-cyan-500/70 uppercase" style={{ fontSize: '8px', letterSpacing: '1px' }}>
+          PRC/HR
+        </text>
+      </svg>
     </div>
   );
 };
@@ -297,32 +272,23 @@ const CircularTimer = ({
 };
 
 // ============================================
-// ODOMETER COMPONENT
+// ODOMETER COMPONENT - Compact for mobile
 // ============================================
 const OdometerDisplay = ({ value, label }) => {
-  const digits = value.toFixed(2).padStart(10, '0').split('');
+  // Format value with commas for readability, max 2 decimal places
+  const formattedValue = value.toLocaleString('en-IN', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
   
   return (
-    <div className="text-center">
-      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">{label}</p>
-      <div className="flex items-center justify-center gap-[2px]">
-        {digits.map((digit, i) => (
-          <motion.div
-            key={`${i}-${digit}`}
-            className={`
-              w-6 h-9 flex items-center justify-center rounded
-              ${digit === '.' ? 'bg-transparent w-2' : 'bg-slate-800 border border-slate-700'}
-            `}
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: i * 0.02 }}
-          >
-            <span className={`font-mono font-bold ${digit === '.' ? 'text-cyan-400 text-xl' : 'text-cyan-400 text-lg'}`}>
-              {digit}
-            </span>
-          </motion.div>
-        ))}
-        <span className="ml-2 text-sm text-cyan-500 font-semibold">PRC</span>
+    <div className="text-center w-full overflow-hidden">
+      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+      <div className="flex items-center justify-center">
+        <span className="text-xl font-bold text-cyan-400 font-mono truncate">
+          {formattedValue}
+        </span>
+        <span className="ml-1 text-xs text-cyan-500 font-semibold">PRC</span>
       </div>
     </div>
   );
@@ -598,15 +564,15 @@ const FuturisticMiningDashboard = ({ user }) => {
         </div>
         
         {/* Speed and Total - Side by Side */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {/* Speed Gauge */}
-          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Mining Speed</p>
-            <SpeedometerGauge rate={miningRate} maxRate={100} />
+          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center overflow-hidden">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Mining Speed</p>
+            <SpeedometerGauge rate={miningRate} maxRate={250} />
           </div>
           
-          {/* Total Mined - Odometer */}
-          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center">
+          {/* Total Mined - Simple display */}
+          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center overflow-hidden">
             <OdometerDisplay value={lifetimeEarnings} label="Total Mined" />
           </div>
         </div>
@@ -614,14 +580,14 @@ const FuturisticMiningDashboard = ({ user }) => {
         {/* Balance Card */}
         <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 mb-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-xs text-slate-500 mb-1">Current Balance</p>
-              <p className="text-2xl font-bold text-slate-100 font-mono">
-                {(userData?.prc_balance || 0).toFixed(2)} <span className="text-cyan-400 text-base">PRC</span>
+              <p className="text-xl font-bold text-slate-100 font-mono truncate">
+                {(userData?.prc_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-cyan-400 text-sm">PRC</span>
               </p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-cyan-400" />
+            <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center flex-shrink-0 ml-3">
+              <Zap className="w-5 h-5 text-cyan-400" />
             </div>
           </div>
         </div>
