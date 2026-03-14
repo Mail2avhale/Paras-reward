@@ -443,3 +443,241 @@ async def fix_prc_double(user_id: str, deduct_amount: float, admin_reason: str =
         }
     else:
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to deduct PRC"))
+
+
+
+@router.get("/scan-prc-double-all")
+async def scan_all_users_prc_double(
+    min_balance: float = Query(default=100, description="Only check users with balance >= this"),
+    limit: int = Query(default=500, description="Max users to scan")
+):
+    """
+    SCAN ALL USERS for PRC double credit issues.
+    
+    This endpoint scans all users and identifies:
+    1. Users with duplicate references in prc_transactions
+    2. Users with balance mismatch (stored vs calculated from transactions)
+    
+    Returns a list of affected users with details.
+    """
+    affected_users = []
+    total_extra_prc = 0
+    total_scanned = 0
+    
+    # Get all users with significant balance
+    users_cursor = db.users.find(
+        {"prc_balance": {"$gte": min_balance}},
+        {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "prc_balance": 1, "prc_transactions": 1}
+    ).limit(limit)
+    
+    users = await users_cursor.to_list(limit)
+    
+    for user in users:
+        total_scanned += 1
+        user_id = user.get("uid")
+        stored_balance = user.get("prc_balance", 0)
+        txns = user.get("prc_transactions", [])
+        
+        if not txns:
+            continue
+        
+        # Check for duplicate references
+        ref_counts = {}
+        for t in txns:
+            ref = t.get("reference", t.get("txn_id", 'NO_REF'))
+            if ref and ref != 'NO_REF':
+                if ref not in ref_counts:
+                    ref_counts[ref] = []
+                ref_counts[ref].append(t)
+        
+        duplicates = {k: v for k, v in ref_counts.items() if len(v) > 1}
+        
+        # Calculate extra credited due to duplicates
+        extra_credit = 0
+        duplicate_details = []
+        
+        for ref, items in duplicates.items():
+            # Only count credits, not debits
+            credit_items = [i for i in items if i.get("type") in ["credit", "referral_bonus", "mining", "mining_reward"]]
+            if len(credit_items) > 1:
+                amounts = [i.get("amount", 0) for i in credit_items]
+                expected = amounts[0] if amounts else 0
+                actual_total = sum(amounts)
+                extra = actual_total - expected
+                if extra > 0:
+                    extra_credit += extra
+                    duplicate_details.append({
+                        "reference": ref,
+                        "count": len(credit_items),
+                        "expected": expected,
+                        "actual_total": actual_total,
+                        "extra": extra
+                    })
+        
+        # Calculate balance from transactions
+        calculated_balance = 0
+        for t in txns:
+            amt = t.get("amount", 0)
+            t_type = t.get("type", "")
+            if t_type in ["credit", "referral_bonus", "mining", "mining_reward", "refund", "admin_credit"]:
+                calculated_balance += amt
+            elif t_type in ["debit", "withdrawal", "burn", "admin_debit"]:
+                calculated_balance -= amt
+        
+        balance_diff = abs(stored_balance - calculated_balance)
+        
+        # If there are issues, add to affected list
+        if extra_credit > 0 or balance_diff > 10:  # Allow small rounding differences
+            total_extra_prc += extra_credit
+            affected_users.append({
+                "user_id": user_id,
+                "name": user.get("name", "Unknown"),
+                "mobile": user.get("mobile", "N/A"),
+                "stored_balance": round(stored_balance, 2),
+                "calculated_balance": round(calculated_balance, 2),
+                "balance_diff": round(balance_diff, 2),
+                "extra_credit_from_duplicates": round(extra_credit, 2),
+                "duplicate_count": len(duplicate_details),
+                "duplicate_details": duplicate_details[:5],  # Limit details
+                "total_transactions": len(txns),
+                "issue_types": [
+                    "DUPLICATE_CREDITS" if extra_credit > 0 else None,
+                    "BALANCE_MISMATCH" if balance_diff > 10 else None
+                ]
+            })
+    
+    # Sort by extra credit (highest first)
+    affected_users.sort(key=lambda x: x["extra_credit_from_duplicates"], reverse=True)
+    
+    return {
+        "success": True,
+        "scan_summary": {
+            "total_users_scanned": total_scanned,
+            "affected_users_count": len(affected_users),
+            "total_extra_prc_credited": round(total_extra_prc, 2),
+            "min_balance_filter": min_balance
+        },
+        "affected_users": affected_users
+    }
+
+
+@router.post("/bulk-fix-prc-double")
+async def bulk_fix_prc_double(
+    user_ids: List[str],
+    dry_run: bool = Query(default=True, description="If true, only calculate but don't deduct")
+):
+    """
+    BULK FIX PRC double credit for multiple users.
+    
+    - dry_run=true: Only calculates what would be deducted (safe preview)
+    - dry_run=false: Actually deducts the extra PRC
+    
+    WARNING: Set dry_run=false only after reviewing the dry_run=true results!
+    """
+    from app.services.wallet_service_v2 import WalletServiceV2
+    
+    results = []
+    total_to_deduct = 0
+    
+    for user_id in user_ids:
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            results.append({
+                "user_id": user_id,
+                "status": "NOT_FOUND",
+                "deduct_amount": 0
+            })
+            continue
+        
+        txns = user.get("prc_transactions", [])
+        stored_balance = user.get("prc_balance", 0)
+        
+        # Calculate extra credit from duplicates
+        ref_counts = {}
+        for t in txns:
+            ref = t.get("reference", t.get("txn_id", 'NO_REF'))
+            if ref and ref != 'NO_REF':
+                if ref not in ref_counts:
+                    ref_counts[ref] = []
+                ref_counts[ref].append(t)
+        
+        extra_credit = 0
+        for ref, items in ref_counts.items():
+            credit_items = [i for i in items if i.get("type") in ["credit", "referral_bonus", "mining", "mining_reward"]]
+            if len(credit_items) > 1:
+                amounts = [i.get("amount", 0) for i in credit_items]
+                expected = amounts[0] if amounts else 0
+                actual_total = sum(amounts)
+                extra = actual_total - expected
+                if extra > 0:
+                    extra_credit += extra
+        
+        if extra_credit <= 0:
+            results.append({
+                "user_id": user_id,
+                "name": user.get("name"),
+                "status": "NO_EXTRA_CREDIT",
+                "deduct_amount": 0
+            })
+            continue
+        
+        total_to_deduct += extra_credit
+        
+        if dry_run:
+            results.append({
+                "user_id": user_id,
+                "name": user.get("name"),
+                "mobile": user.get("mobile"),
+                "status": "DRY_RUN",
+                "current_balance": round(stored_balance, 2),
+                "deduct_amount": round(extra_credit, 2),
+                "balance_after": round(stored_balance - extra_credit, 2)
+            })
+        else:
+            # Actually deduct
+            if stored_balance < extra_credit:
+                results.append({
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "status": "INSUFFICIENT_BALANCE",
+                    "current_balance": round(stored_balance, 2),
+                    "deduct_amount": round(extra_credit, 2)
+                })
+                continue
+            
+            debit_result = WalletServiceV2.debit(
+                user_id=user_id,
+                amount=extra_credit,
+                txn_type="double_credit_fix",
+                description=f"Bulk PRC double credit correction",
+                reference=f"BULK-FIX-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{user_id[:8]}",
+                check_balance=True
+            )
+            
+            if debit_result.get("success"):
+                results.append({
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "status": "FIXED",
+                    "deducted": round(extra_credit, 2),
+                    "balance_before": debit_result.get("balance_before"),
+                    "balance_after": debit_result.get("balance_after")
+                })
+            else:
+                results.append({
+                    "user_id": user_id,
+                    "name": user.get("name"),
+                    "status": "FAILED",
+                    "error": debit_result.get("error"),
+                    "deduct_amount": round(extra_credit, 2)
+                })
+    
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "summary": {
+            "total_users": len(user_ids),
+            "total_to_deduct": round(total_to_deduct, 2)
+        },
+        "results": results
+    }
