@@ -385,6 +385,82 @@ async def debug_config():
     }
 
 
+# ==================== BBPS SERVICE ACTIVATION ====================
+
+@router.put("/activate-service")
+async def activate_bbps_service(service_code: str = "53"):
+    """
+    Activate BBPS service for user.
+    Service code 53 = BBPS Bill Payment
+    
+    MUST be called before using fetch/pay APIs.
+    Reference: https://developers.eko.in/reference/bbps-overview
+    """
+    if not validate_bbps_config():
+        return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
+    
+    try:
+        url = f"{BASE_URL}/v1/user/service/activate"
+        timestamp = str(round(time.time() * 1000))
+        
+        # Generate headers for activation - form-urlencoded
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        # Form data for activation
+        data = {
+            "service_code": service_code,
+            "initiator_id": INITIATOR_ID,
+            "user_code": USER_CODE,
+            "latlong": DEFAULT_LATLONG
+        }
+        
+        logging.info(f"[BBPS ACTIVATE] Activating service {service_code}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.put(url, headers=headers, data=data)
+        
+        logging.info(f"[BBPS ACTIVATE] Status: {response.status_code}")
+        logging.info(f"[BBPS ACTIVATE] Response: {response.text}")
+        
+        if response.status_code != 200:
+            return create_error_response(
+                response.status_code,
+                "Activation failed",
+                f"Failed to activate BBPS service. Please contact support."
+            )
+        
+        result = response.json()
+        
+        if result.get("status") == 0:
+            return {
+                "success": True,
+                "message": "BBPS Service activated successfully",
+                "service_code": service_code,
+                "service_status": result.get("data", {}).get("service_status_desc", "Activated"),
+                "data": result.get("data", {})
+            }
+        else:
+            return create_error_response(
+                result.get("response_status_id", 500),
+                result.get("message", "Activation failed"),
+                "Failed to activate BBPS service"
+            )
+            
+    except Exception as e:
+        logging.error(f"[BBPS ACTIVATE] Error: {str(e)}")
+        return create_error_response(500, str(e), "Service activation failed")
+
+
 # ==================== GET OPERATOR PARAMETERS API (NEW) ====================
 
 @router.get("/operator-params/{operator_id}")
