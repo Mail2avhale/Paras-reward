@@ -817,8 +817,8 @@ const DashboardModern = ({ user, onLogout }) => {
           {[
             { icon: Star, label: t('rewards'), route: '/daily-rewards', gradient: 'from-purple-600 to-violet-700' },
             { icon: Users, label: t('referrals'), route: '/referrals', gradient: 'from-pink-600 to-rose-700' },
-            { icon: CreditCard, label: t('redeem'), route: '/redeem', gradient: 'from-blue-600 to-indigo-700' },
-            { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-emerald-600 to-teal-700' },
+            { icon: Banknote, label: 'PRC to Bank', route: '/prc-to-bank', gradient: 'from-emerald-600 to-teal-700' },
+            { icon: ShoppingBag, label: t('shop'), route: '/marketplace', gradient: 'from-blue-600 to-indigo-700' },
           ].map((action, index) => (
             <motion.button
               key={action.route}
@@ -1045,20 +1045,20 @@ const DashboardModern = ({ user, onLogout }) => {
         const isKycPending = ['pending', 'submitted', 'under_review'].includes(kycStatus);
         const isKycRejected = ['rejected', 'failed'].includes(kycStatus);
         
-        // KYC Verified + Paid Plan = Show full Redeem card
+        // KYC Verified + Paid Plan = Show full PRC to Bank card
         if (isPaidPlan && isKycVerified) {
           return (
             <div className="px-5 mb-4">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/redeem')}
+                onClick={() => navigate('/prc-to-bank')}
                 className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
                 style={{
                   background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
                   boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
                 }}
-                data-testid="redeem-to-bank-card"
+                data-testid="prc-to-bank-card"
               >
                 {/* Background decorations */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
@@ -1084,16 +1084,16 @@ const DashboardModern = ({ user, onLogout }) => {
                     </div>
                   </div>
                   
-                  {/* Redeem Info */}
+                  {/* PRC to Bank Info */}
                   <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-emerald-200/80 text-xs">Estimated Redeem Value</p>
+                        <p className="text-emerald-200/80 text-xs">Transfer to Bank</p>
                         <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}*</p>
                       </div>
                       <div className="text-right">
                         <p className="text-emerald-200/60 text-[10px]">*Approx. value</p>
-                        <p className="text-emerald-300 text-xs font-medium">Subject to terms</p>
+                        <p className="text-emerald-300 text-xs font-medium">Min ₹200 - Max ₹10,000</p>
                       </div>
                     </div>
                   </div>
@@ -1102,13 +1102,13 @@ const DashboardModern = ({ user, onLogout }) => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate('/redeem');
+                      navigate('/prc-to-bank');
                     }}
                     className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
-                    data-testid="redeem-to-bank-btn"
+                    data-testid="prc-to-bank-btn"
                   >
                     <Building2 className="w-5 h-5" />
-                    Redeem Points
+                    PRC to Bank
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
