@@ -2803,25 +2803,18 @@ const RedeemPageV2 = ({ user }) => {
                   {submitting ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      {selectedService === 'dmt' ? 'Processing Transfer...' : 'Submitting...'}
+                      {selectedService === 'dmt' ? 'Processing Transfer...' : 'Processing Payment...'}
                     </>
                   ) : selectedService === 'dmt' ? (
                     <>Transfer to Bank</>
                   ) : (
-                    <>Submit Request</>
+                    <>Pay Now</>
                   )}
                 </Button>
                 
-                {selectedService !== 'dmt' && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Admin will process your request within 24-48 hours
-                  </p>
-                )}
-                {selectedService === 'dmt' && (
-                  <p className="text-xs text-green-400 text-center">
-                    Direct instant transfer via IMPS
-                  </p>
-                )}
+                <p className="text-xs text-green-400 text-center">
+                  {selectedService === 'dmt' ? 'Direct instant transfer via IMPS' : 'Instant payment via BBPS'}
+                </p>
               </form>
             </div>
           </div>
