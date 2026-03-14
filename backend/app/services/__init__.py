@@ -1,5 +1,6 @@
 # Services module exports
-from .wallet_service import WalletService
+# Use WalletServiceV2 as default - has dual ledger support
+from .wallet_service_v2 import WalletServiceV2 as WalletService
 from .transaction_service import TransactionService, TransactionState
 from .task_queue import TaskQueue, TaskStatus
 

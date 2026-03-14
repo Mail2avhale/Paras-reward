@@ -49,7 +49,8 @@ import time
 import json
 
 # Import WalletService for ledger-based PRC operations (Phase 2 Architecture)
-from app.services import WalletService
+# Using V2 with dual ledger support (ledger + prc_ledger)
+from app.services.wallet_service_v2 import WalletServiceV2 as WalletService
 
 # Import TaskQueue for auto-retry functionality (Phase 4 Architecture)
 from app.services import TaskQueue
@@ -2184,6 +2185,35 @@ async def force_prc_deduct(
                             "prc_fix_at": datetime.now(timezone.utc).isoformat()
                         }}
                     )
+                    
+                    # Add to prc_ledger for UI visibility
+                    await db.prc_ledger.insert_one({
+                        "user_id": user_id,
+                        "type": "bbps_fix",
+                        "entry_type": "debit",
+                        "amount": -prc_to_deduct,
+                        "balance_after": new_balance,
+                        "description": f"BBPS Fix: {req.get('service_type')} ₹{req.get('amount_inr')} TID:{req.get('eko_tid')}",
+                        "reference": request_id,
+                        "txn_id": txn_id,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
+                    
+                    # Add to main ledger
+                    await db.ledger.insert_one({
+                        "entry_id": f"LED-FIX-{txn_id[-8:]}",
+                        "txn_id": txn_id,
+                        "user_id": user_id,
+                        "entry_type": "debit",
+                        "txn_type": "bbps_fix",
+                        "amount": prc_to_deduct,
+                        "balance_before": current_balance,
+                        "balance_after": new_balance,
+                        "description": f"BBPS Fix: {req.get('service_type')} ₹{req.get('amount_inr')} TID:{req.get('eko_tid')}",
+                        "reference": request_id,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
                     
                     results.append({
                         "user_id": user_id,
