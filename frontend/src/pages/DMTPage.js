@@ -212,7 +212,7 @@ const DMTPage = ({ user }) => {
   // Fetch transaction history
   const fetchTransactions = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/eko/dmt/transactions/${user?.uid}`);
+      const res = await axios.get(`${API}/eko/levin-dmt/transactions/${user?.uid}`);
       setTransactions(res.data.transactions || []);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);

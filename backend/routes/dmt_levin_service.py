@@ -1274,3 +1274,36 @@ async def get_transaction_status(transaction_id: str):
     except Exception as e:
         logging.error(f"[Levin DMT] Transaction status error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# STEP 10: Get Transaction History
+@router.get("/transactions/{user_id}")
+async def get_transaction_history(user_id: str, limit: int = 10):
+    """
+    Get recent DMT transactions for a user
+    """
+    try:
+        from server import db
+        
+        # Fetch recent transactions from database
+        cursor = db.dmt_transactions.find(
+            {"user_id": user_id},
+            {"_id": 0}  # Exclude MongoDB _id
+        ).sort("created_at", -1).limit(limit)
+        
+        transactions = await cursor.to_list(length=limit)
+        
+        return {
+            "success": True,
+            "transactions": transactions,
+            "count": len(transactions)
+        }
+        
+    except Exception as e:
+        logging.error(f"[Levin DMT] Get transactions error: {str(e)}")
+        return {
+            "success": True,
+            "transactions": [],
+            "count": 0
+        }

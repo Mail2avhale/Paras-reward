@@ -44,6 +44,7 @@ Build and maintain a Domestic Money Transfer (DMT) application using Eko API int
 - **Root Cause**: Customer was registered for Regular DMT (pipe 4) but not for DMT-Levin (pipe 14)
 - **Registration**: Uses `service_code=83` for Remittance Levin registration
 - **Successful Test**: ₹100 transferred to Mr SANTOSH SHAMRAO AVHALE (SBI, Transaction ID: 3548834855)
+- **Transaction History API**: Added `/api/eko/levin-dmt/transactions/{user_id}` endpoint to fetch recent transactions
 
 ### Previous Sessions
 - Eko API integration with authentication (HMAC-SHA256)
