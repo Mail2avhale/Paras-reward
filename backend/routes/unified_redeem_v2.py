@@ -2079,6 +2079,136 @@ async def get_bbps_request_details(request_id: str):
 
 
 
+@router.post("/admin/bulk-prc-deduct")
+async def bulk_prc_deduct(
+    date: str = None,
+    dry_run: bool = True
+):
+    """
+    EMERGENCY: Deduct PRC from users for successful BBPS transactions where PRC was not deducted.
+    
+    Args:
+        date: Date to process (YYYY-MM-DD format), defaults to today
+        dry_run: If True, only show what would be deducted. If False, actually deduct.
+    """
+    from datetime import datetime, timezone
+    
+    try:
+        if not date:
+            date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        
+        # Find all completed BBPS requests for the date with Eko TID (successful)
+        requests = await db.redeem_requests.find({
+            "created_at": {"$regex": f"^{date}"},
+            "eko_tid": {"$exists": True, "$ne": None},
+            "$or": [
+                {"status": "completed"},
+                {"eko_status": "SUCCESS"}
+            ]
+        }).to_list(1000)
+        
+        results = []
+        total_prc = 0
+        success_count = 0
+        already_deducted = 0
+        failed_count = 0
+        
+        for req in requests:
+            user_id = req.get("user_id")
+            request_id = req.get("request_id")
+            prc_to_deduct = req.get("total_prc_deducted") or req.get("charges", {}).get("total_prc_required", 0)
+            
+            if not prc_to_deduct or prc_to_deduct <= 0:
+                continue
+            
+            # Check if already marked as PRC deducted in ledger
+            existing_ledger = await db.ledger.find_one({
+                "reference": request_id,
+                "entry_type": "debit",
+                "txn_type": "redeem"
+            })
+            
+            if existing_ledger:
+                already_deducted += 1
+                results.append({
+                    "user_id": user_id,
+                    "user_name": req.get("user_name"),
+                    "prc": prc_to_deduct,
+                    "status": "ALREADY_DEDUCTED",
+                    "ledger_txn": existing_ledger.get("txn_id")
+                })
+                continue
+            
+            total_prc += prc_to_deduct
+            
+            if dry_run:
+                results.append({
+                    "user_id": user_id,
+                    "user_name": req.get("user_name"),
+                    "prc": prc_to_deduct,
+                    "request_id": request_id,
+                    "eko_tid": req.get("eko_tid"),
+                    "status": "WILL_DEDUCT"
+                })
+            else:
+                # Actually deduct PRC
+                debit_result = WalletService.debit(
+                    user_id=user_id,
+                    amount=prc_to_deduct,
+                    txn_type="redeem",
+                    description=f"BBPS Fix: {req.get('service_type')} - ₹{req.get('amount_inr', 0)} | TID: {req.get('eko_tid')}",
+                    reference=request_id,
+                    check_balance=False  # Don't check balance for historical fix
+                )
+                
+                if debit_result.get("success"):
+                    success_count += 1
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name"),
+                        "prc": prc_to_deduct,
+                        "status": "DEDUCTED",
+                        "txn_id": debit_result.get("txn_id"),
+                        "new_balance": debit_result.get("balance_after")
+                    })
+                    
+                    # Update request to mark PRC deducted
+                    await db.redeem_requests.update_one(
+                        {"request_id": request_id},
+                        {"$set": {"prc_deducted_fixed": True, "prc_fix_txn": debit_result.get("txn_id")}}
+                    )
+                else:
+                    failed_count += 1
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name"),
+                        "prc": prc_to_deduct,
+                        "status": "FAILED",
+                        "error": debit_result.get("error")
+                    })
+        
+        return {
+            "success": True,
+            "date": date,
+            "dry_run": dry_run,
+            "summary": {
+                "total_transactions": len(requests),
+                "already_deducted": already_deducted,
+                "to_deduct": len([r for r in results if r.get("status") in ["WILL_DEDUCT", "DEDUCTED"]]),
+                "success": success_count,
+                "failed": failed_count,
+                "total_prc": total_prc
+            },
+            "transactions": results
+        }
+        
+    except Exception as e:
+        logging.error(f"Bulk PRC deduct error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/admin/fix-amounts")
 async def fix_missing_amounts():
     """
