@@ -2765,127 +2765,178 @@ def get_current_week_bounds():
 
 async def check_weekly_one_service_limit(user_id: str, requested_service: str) -> dict:
     """
-    STRICT RULE: User can use ONLY 1 SERVICE per week across all service types.
+    WEEKLY SERVICE LIMIT - NEW LOGIC:
     
-    Services tracked:
-    - mobile_recharge (BBPS)
-    - electricity_bill (BBPS)
-    - dth_recharge (BBPS)
-    - credit_card_payment (BBPS)
-    - loan_emi (BBPS)
-    - gift_voucher
-    - bank_transfer (PRC to Bank)
+    1. BBPS Services (any ONE per week from request date):
+       - mobile_recharge, electricity_bill, dth_recharge, credit_card_payment, loan_emi, gift_voucher
+       - User can use ONE of these per week
+       - Cooldown: 7 days from the request date
     
-    If user has used ANY service this week, ALL other services are blocked until next Monday.
+    2. PRC to Bank Transfer (ONE per week, separate from BBPS):
+       - bank_transfer
+       - User can use ONE per week
+       - Cooldown: 7 days from the request date
+    
+    So user can do: 1 BBPS service + 1 Bank Transfer per week (both independent)
     """
-    monday, sunday, next_monday = get_current_week_bounds()
-    monday_str = monday.isoformat()
-    
-    services_used = []
-    
-    # 1. Check BBPS/Bill Payment requests (redeem_requests collection)
-    bbps_request = await db.redeem_requests.find_one({
-        "user_id": user_id,
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled", "failed"]}
-    }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1})
-    
-    if bbps_request:
-        services_used.append({
-            "type": "bbps",
-            "service": bbps_request.get("service_type", "recharge"),
-            "request_id": bbps_request.get("request_id"),
-            "date": bbps_request.get("created_at")
-        })
-    
-    # 2. Check Gift Voucher requests
-    gift_request = await db.gift_voucher_requests.find_one({
-        "user_id": user_id,
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled", "failed"]}
-    }, {"_id": 0, "created_at": 1, "request_id": 1})
-    
-    if gift_request:
-        services_used.append({
-            "type": "gift_voucher",
-            "service": "gift_voucher",
-            "request_id": gift_request.get("request_id"),
-            "date": gift_request.get("created_at")
-        })
-    
-    # 3. Check Bank Transfer requests (new manual bank transfer)
-    bank_request = await db.bank_transfer_requests.find_one({
-        "user_id": user_id,
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled", "failed"]}
-    }, {"_id": 0, "created_at": 1, "request_id": 1})
-    
-    if bank_request:
-        services_used.append({
-            "type": "bank_transfer",
-            "service": "prc_to_bank",
-            "request_id": bank_request.get("request_id"),
-            "date": bank_request.get("created_at")
-        })
-    
-    # 4. Check old bank withdrawal requests (if any)
-    old_bank_request = await db.bank_withdrawal_requests.find_one({
-        "user_id": user_id,
-        "created_at": {"$gte": monday_str},
-        "status": {"$nin": ["rejected", "cancelled", "failed"]}
-    }, {"_id": 0, "created_at": 1, "request_id": 1})
-    
-    if old_bank_request:
-        services_used.append({
-            "type": "bank_withdrawal",
-            "service": "bank_withdrawal",
-            "request_id": old_bank_request.get("request_id"),
-            "date": old_bank_request.get("created_at")
-        })
-    
-    # Calculate days until next Monday
     now = datetime.now(timezone.utc)
-    days_until_reset = (next_monday - now).days
-    hours_until_reset = int((next_monday - now).total_seconds() // 3600)
-    next_monday_formatted = next_monday.strftime("%A, %d %B")
+    seven_days_ago = now - timedelta(days=7)
+    seven_days_ago_str = seven_days_ago.isoformat()
     
-    # If any service used this week, block all services
-    if services_used:
-        used_service = services_used[0]
-        service_name_map = {
-            "mobile_recharge": "Mobile Recharge",
-            "electricity_bill": "Electricity Bill",
-            "dth_recharge": "DTH Recharge",
-            "credit_card_payment": "Credit Card Payment",
-            "loan_emi": "Loan EMI",
-            "gift_voucher": "Gift Voucher",
-            "prc_to_bank": "PRC to Bank Transfer",
-            "bank_withdrawal": "Bank Withdrawal",
-            "recharge": "Recharge"
-        }
-        used_name = service_name_map.get(used_service["service"], used_service["service"])
+    # Define service categories
+    BBPS_SERVICES = ["mobile_recharge", "electricity_bill", "dth_recharge", "dish_recharge",
+                    "credit_card_payment", "loan_emi", "gift_voucher", "recharge", "postpaid"]
+    BANK_SERVICES = ["bank_transfer", "prc_to_bank", "bank_withdrawal"]
+    
+    # Determine which category the requested service belongs to
+    is_bbps_request = requested_service in BBPS_SERVICES or requested_service not in BANK_SERVICES
+    is_bank_request = requested_service in BANK_SERVICES
+    
+    service_name_map = {
+        "mobile_recharge": "Mobile Recharge",
+        "electricity_bill": "Electricity Bill",
+        "dth_recharge": "DTH Recharge",
+        "dish_recharge": "DTH Recharge",
+        "credit_card_payment": "Credit Card Payment",
+        "loan_emi": "Loan EMI",
+        "gift_voucher": "Gift Voucher",
+        "prc_to_bank": "PRC to Bank Transfer",
+        "bank_transfer": "PRC to Bank Transfer",
+        "bank_withdrawal": "Bank Withdrawal",
+        "recharge": "Recharge",
+        "postpaid": "Postpaid Bill"
+    }
+    
+    # ========== CHECK BBPS LIMIT (if requesting BBPS service) ==========
+    if is_bbps_request:
+        # Find most recent BBPS request in last 7 days
+        bbps_request = await db.redeem_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": seven_days_ago_str},
+            "status": {"$nin": ["rejected", "cancelled", "failed"]}
+        }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
-        return {
-            "allowed": False,
-            "reason": f"You have already used '{used_name}' this week. Next service available from {next_monday_formatted}.",
-            "reason_en": f"You have already used '{used_name}' this week. Next service available from {next_monday_formatted}.",
-            "service_used_this_week": used_service,
-            "services_count": len(services_used),
-            "requested_service": requested_service,
-            "next_reset": next_monday.isoformat(),
-            "days_until_reset": days_until_reset,
-            "hours_until_reset": hours_until_reset,
-            "cooldown_display": f"{days_until_reset} days, {hours_until_reset % 24} hours"
-        }
+        # Also check gift voucher requests
+        gift_request = await db.gift_voucher_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": seven_days_ago_str},
+            "status": {"$nin": ["rejected", "cancelled", "failed"]}
+        }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
+        
+        # Find the most recent BBPS-category service
+        last_bbps = None
+        if bbps_request:
+            last_bbps = {
+                "service": bbps_request.get("service_type", "recharge"),
+                "date": bbps_request.get("created_at"),
+                "request_id": bbps_request.get("request_id")
+            }
+        if gift_request:
+            gift_date = gift_request.get("created_at", "")
+            if not last_bbps or gift_date > last_bbps["date"]:
+                last_bbps = {
+                    "service": "gift_voucher",
+                    "date": gift_date,
+                    "request_id": gift_request.get("request_id")
+                }
+        
+        if last_bbps:
+            # Calculate cooldown from request date
+            try:
+                request_date = datetime.fromisoformat(last_bbps["date"].replace('Z', '+00:00'))
+                if request_date.tzinfo is None:
+                    request_date = request_date.replace(tzinfo=timezone.utc)
+                
+                cooldown_end = request_date + timedelta(days=7)
+                
+                if now < cooldown_end:
+                    days_left = (cooldown_end - now).days
+                    hours_left = int((cooldown_end - now).total_seconds() // 3600) % 24
+                    cooldown_date_formatted = cooldown_end.strftime("%d %B, %Y at %I:%M %p")
+                    used_name = service_name_map.get(last_bbps["service"], last_bbps["service"])
+                    
+                    return {
+                        "allowed": False,
+                        "reason": f"You have already used '{used_name}' on {request_date.strftime('%d %B')}. Next BBPS service available after {cooldown_date_formatted}.",
+                        "category": "bbps",
+                        "service_used": last_bbps,
+                        "requested_service": requested_service,
+                        "cooldown_end": cooldown_end.isoformat(),
+                        "days_until_reset": days_left,
+                        "hours_until_reset": hours_left,
+                        "cooldown_display": f"{days_left} days, {hours_left} hours"
+                    }
+            except Exception as e:
+                logging.error(f"[WEEKLY_LIMIT] Error parsing date: {e}")
     
-    # No service used - allowed
+    # ========== CHECK BANK TRANSFER LIMIT (if requesting bank service) ==========
+    if is_bank_request:
+        # Check new bank transfer requests
+        bank_request = await db.bank_transfer_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": seven_days_ago_str},
+            "status": {"$nin": ["rejected", "cancelled", "failed"]}
+        }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
+        
+        # Also check old bank withdrawal requests
+        old_bank_request = await db.bank_withdrawal_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": seven_days_ago_str},
+            "status": {"$nin": ["rejected", "cancelled", "failed"]}
+        }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
+        
+        # Find most recent bank service
+        last_bank = None
+        if bank_request:
+            last_bank = {
+                "service": "prc_to_bank",
+                "date": bank_request.get("created_at"),
+                "request_id": bank_request.get("request_id")
+            }
+        if old_bank_request:
+            old_date = old_bank_request.get("created_at", "")
+            if not last_bank or old_date > last_bank["date"]:
+                last_bank = {
+                    "service": "bank_withdrawal",
+                    "date": old_date,
+                    "request_id": old_bank_request.get("request_id")
+                }
+        
+        if last_bank:
+            # Calculate cooldown from request date
+            try:
+                request_date = datetime.fromisoformat(last_bank["date"].replace('Z', '+00:00'))
+                if request_date.tzinfo is None:
+                    request_date = request_date.replace(tzinfo=timezone.utc)
+                
+                cooldown_end = request_date + timedelta(days=7)
+                
+                if now < cooldown_end:
+                    days_left = (cooldown_end - now).days
+                    hours_left = int((cooldown_end - now).total_seconds() // 3600) % 24
+                    cooldown_date_formatted = cooldown_end.strftime("%d %B, %Y at %I:%M %p")
+                    used_name = service_name_map.get(last_bank["service"], last_bank["service"])
+                    
+                    return {
+                        "allowed": False,
+                        "reason": f"You have already used '{used_name}' on {request_date.strftime('%d %B')}. Next Bank Transfer available after {cooldown_date_formatted}.",
+                        "category": "bank_transfer",
+                        "service_used": last_bank,
+                        "requested_service": requested_service,
+                        "cooldown_end": cooldown_end.isoformat(),
+                        "days_until_reset": days_left,
+                        "hours_until_reset": hours_left,
+                        "cooldown_display": f"{days_left} days, {hours_left} hours"
+                    }
+            except Exception as e:
+                logging.error(f"[WEEKLY_LIMIT] Error parsing bank date: {e}")
+    
+    # No cooldown - allowed
     return {
         "allowed": True,
         "reason": "OK",
-        "services_count": 0,
         "requested_service": requested_service,
-        "next_reset": next_monday.isoformat(),
-        "message": "You can use 1 service this week."
+        "message": "You can use this service. Limit: 1 BBPS service + 1 Bank Transfer per week (7 days cooldown each)."
     }
 
 
