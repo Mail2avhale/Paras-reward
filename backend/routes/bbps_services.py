@@ -251,7 +251,7 @@ def generate_request_hash(timestamp: str, account: str, amount: str) -> str:
 class FetchBillRequest(BaseModel):
     """Request model for bill fetch - supports operator-specific parameters"""
     operator_id: str
-    account: str          # utility_acc_no
+    account: str          # utility_acc_no (or last 4 digits for Credit Card)
     mobile: str           # confirmation_mobile_no
     sender_name: Optional[str] = "Customer"
     # Operator-specific optional parameters
@@ -260,6 +260,7 @@ class FetchBillRequest(BaseModel):
     cycle_number: Optional[str] = None  # For MSEB
     authenticator: Optional[str] = None  # For MSEB
     dob: Optional[str] = None  # For LIC - DD/MM/YYYY format
+    mobile_number: Optional[str] = None  # For Credit Card BBPS - registered mobile
     extra_params: Optional[Dict[str, str]] = None  # For any other operator-specific params
     
     @validator('mobile')
@@ -282,7 +283,9 @@ class PayBillRequest(BaseModel):
     amount: str
     mobile: str
     sender_name: Optional[str] = "Customer"
-    bill_fetch_response: Optional[str] = None  # Required when billFetchResponse=1
+    bill_fetch_response: Optional[str] = None  # Required when fetchBill=1
+    payment_amount_breakup: Optional[str] = None  # For Credit Card BBPS - JSON string with billid and amount
+    hc_channel: Optional[str] = "0"  # For Credit Card BBPS
     
     @validator('mobile')
     def validate_mobile(cls, v):
@@ -731,6 +734,10 @@ async def fetch_bill(data: FetchBillRequest):
         if data.dob:
             request_body["dob"] = data.dob
         
+        # For Credit Card BBPS - registered mobile number
+        if data.mobile_number:
+            request_body["mobile_number"] = data.mobile_number
+        
         # Add any extra operator-specific params
         if data.extra_params:
             for key, value in data.extra_params.items():
@@ -950,9 +957,15 @@ async def pay_bill(data: PayBillRequest):
             "latlong": DEFAULT_LATLONG
         }
         
-        # Add bill_fetch_response if provided (required for some operators)
+        # Add bill_fetch_response if provided (required for fetchBill=1 operators)
         if data.bill_fetch_response:
             body["billfetchresponse"] = data.bill_fetch_response
+        
+        # Add Credit Card BBPS specific fields
+        if data.payment_amount_breakup:
+            body["payment_amount_breakup"] = data.payment_amount_breakup
+        if data.hc_channel:
+            body["hc_channel"] = data.hc_channel
         
         logging.error(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
         logging.error(f"[BBPS PAY] URL: {url}")
