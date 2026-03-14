@@ -214,17 +214,18 @@ const SERVICE_CONFIG = {
     category: 'tax'
   },
   
-  // Money Transfer (REMOVED - Now handled via Chatbot)
-  // dmt service disabled - users can request bank withdrawal via chatbot
-  // dmt: { 
-  //   name: 'Bank Transfer', 
-  //   icon: Banknote, 
-  //   color: 'green',
-  //   gradient: 'from-green-500 to-emerald-500',
-  //   fields: ['account_number', 'ifsc_code', 'account_holder', 'mobile', 'bank_name'],
-  //   category: 'transfer',
-  //   requiresAdmin: false
-  // }
+  // V1 Fund Transfer - Direct Bank Transfer (No OTP Required)
+  dmt: { 
+    name: 'Bank Transfer', 
+    icon: Banknote, 
+    color: 'emerald',
+    gradient: 'from-emerald-500 to-green-500',
+    fields: ['recipient_name', 'account_number', 'ifsc_code'],
+    category: 'transfer',
+    requiresAdmin: false,
+    isInstant: true,
+    description: 'Direct IMPS transfer - No OTP required'
+  }
 };
 
 // Static operator data (will be replaced with Eko API data)
@@ -1322,47 +1323,78 @@ const RedeemPageV2 = ({ user }) => {
     
     setSubmitting(true);
     try {
-      // For DMT, ALWAYS use direct EKO transfer API - NO ADMIN APPROVAL EVER
+      // For DMT/Bank Transfer, use V1 Fund Transfer API - Direct IMPS, No OTP
       if (selectedService === 'dmt') {
-        // Check if we have a recipient selected
-        if (!dmtRecipientId) {
-          toast.error('Please select or add a bank account first');
+        // Check required fields for V1 Fund Transfer
+        if (!formData.recipient_name || !formData.recipient_name.trim()) {
+          toast.error('Please enter recipient name');
           setSubmitting(false);
           return;
         }
         
-        // Check if we have sender mobile
-        if (!senderMobile || senderMobile.length !== 10) {
-          toast.error('Please verify your mobile number first');
-          setDmtStep(1);
+        if (!formData.account_number || formData.account_number.length < 9) {
+          toast.error('Please enter valid account number (min 9 digits)');
           setSubmitting(false);
           return;
         }
         
-        const transferResponse = await axios.post(`${API}/eko/dmt/transfer`, {
+        if (!formData.ifsc_code || formData.ifsc_code.length !== 11) {
+          toast.error('Please enter valid IFSC code (11 characters)');
+          setSubmitting(false);
+          return;
+        }
+        
+        const amountInr = parseFloat(formData.amount);
+        if (!amountInr || amountInr < 10) {
+          toast.error('Minimum transfer amount is ₹10');
+          setSubmitting(false);
+          return;
+        }
+        
+        if (amountInr > 200000) {
+          toast.error('Maximum transfer amount is ₹2,00,000');
+          setSubmitting(false);
+          return;
+        }
+        
+        // Call V1 Fund Transfer API
+        const transferResponse = await axios.post(`${API}/fund-transfer/initiate`, {
+          recipient_name: formData.recipient_name.trim(),
+          account: formData.account_number,
+          ifsc: formData.ifsc_code.toUpperCase(),
+          amount: String(Math.round(amountInr)),
+          payment_mode: 'IMPS',
+          account_type: formData.account_type || 'SAVINGS',
+          // PRC deduction will be handled by backend
           user_id: user.uid,
-          mobile: senderMobile,
-          recipient_id: dmtRecipientId,
-          prc_amount: Math.round(parseFloat(formData.amount) * 100) // Convert INR to PRC
+          prc_amount: charges?.total_prc_required || Math.round(amountInr * 10)
         });
         
         if (transferResponse.data.success) {
-          toast.success(transferResponse.data.message || 'Transfer successful!');
-          // Reset DMT flow
-          setDmtStep(1);
-          setDmtCustomer(null);
-          setDmtRecipientId(null);
-          setSenderMobile('');
-          setExistingRecipients([]);
-          setFormData(prev => ({ ...prev, amount: '', account_number: '', ifsc_code: '', account_holder: '' }));
+          toast.success(`₹${amountInr} transferred successfully!`);
+          // Show transaction details
+          if (transferResponse.data.tid) {
+            toast.info(`Transaction ID: ${transferResponse.data.tid}`);
+          }
+          // Reset form
+          setFormData(prev => ({ 
+            ...prev, 
+            amount: '', 
+            recipient_name: '',
+            account_number: '', 
+            ifsc_code: '',
+            account_type: 'SAVINGS'
+          }));
           fetchUserData();
         } else {
           toast.error(transferResponse.data.user_message || transferResponse.data.message || 'Transfer failed');
-          if (transferResponse.data.data?.prc_refunded) {
-            toast.info('PRC has been refunded');
+          // Check if PRC was refunded
+          if (transferResponse.data.prc_refunded) {
+            toast.info(`${transferResponse.data.prc_refunded} PRC has been refunded`);
             fetchUserData();
           }
         }
+        setSubmitting(false);
         return;
       }
       
@@ -2250,519 +2282,131 @@ const RedeemPageV2 = ({ user }) => {
                   </>
                 )}
                 
-                {/* DMT (Bank Transfer) Fields - Step-by-Step Flow */}
+                {/* DMT (Bank Transfer) Fields - V1 Fund Transfer (Simple, No OTP) */}
                 {selectedService === 'dmt' && (
-                  <>
-                    {/* DMT Progress Indicator */}
-                    <div className="flex items-center justify-between mb-6 px-2">
-                      {['Mobile', 'Verify', 'Bank Details', 'Amount'].map((step, idx) => (
-                        <div key={step} className="flex items-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            dmtStep > idx + 1 ? 'bg-green-500 text-white' :
-                            dmtStep === idx + 1 ? 'bg-amber-500 text-black' :
-                            'bg-gray-700 text-gray-400'
-                          }`}>
-                            {dmtStep > idx + 1 ? <CheckCircle className="h-4 w-4" /> : idx + 1}
-                          </div>
-                          <span className={`ml-2 text-xs hidden sm:inline ${dmtStep >= idx + 1 ? 'text-white' : 'text-gray-500'}`}>
-                            {step}
-                          </span>
-                          {idx < 3 && <div className={`w-8 h-0.5 mx-2 ${dmtStep > idx + 1 ? 'bg-green-500' : 'bg-gray-700'}`} />}
-                        </div>
-                      ))}
+                  <div className="space-y-5 animate-fadeIn">
+                    {/* Info Banner */}
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                      <div className="flex items-center gap-2 text-emerald-400">
+                        <Zap className="h-5 w-5" />
+                        <span className="font-semibold">Instant Bank Transfer (IMPS)</span>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Direct transfer to any bank account • No OTP required • Fee: ₹5
+                      </p>
                     </div>
                     
-                    {/* Step 1: Enter Sender Mobile */}
-                    {dmtStep === 1 && (
-                      <div className="space-y-4 animate-fadeIn">
-                        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl mb-4">
-                          <p className="text-blue-400 text-sm">
-                            <Info className="inline h-4 w-4 mr-2" />
-                            Enter your mobile number to start the bank transfer process
-                          </p>
-                        </div>
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          Your Mobile Number *
-                        </Label>
-                        <Input
-                          type="tel"
-                          value={senderMobile}
-                          onChange={(e) => setSenderMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          placeholder="Enter 10-digit mobile number"
-                          maxLength={10}
-                          className="h-14 text-lg bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                        />
-                        <Button
-                          type="button"
-                          onClick={verifyDmtCustomer}
-                          disabled={senderMobile.length !== 10 || verifyingCustomer}
-                          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
-                        >
-                          {verifyingCustomer ? (
-                            <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Verifying...</>
-                          ) : (
-                            <>Continue <ArrowRight className="h-5 w-5 ml-2" /></>
-                          )}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Step 1: Recipient Name */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">1</span>
+                        Recipient Name (Account Holder) *
+                      </Label>
+                      <Input
+                        type="text"
+                        value={formData.recipient_name || ''}
+                        onChange={(e) => setFormData({ ...formData, recipient_name: e.target.value })}
+                        placeholder="Enter account holder name"
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                        data-testid="dmt-recipient-name"
+                      />
+                    </div>
                     
-                    {/* Step 2: Customer Registration/OTP (for new customers) */}
-                    {dmtStep === 2 && dmtCustomer?.needs_registration && (
-                      <div className="space-y-4 animate-fadeIn">
-                        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-4">
-                          <p className="text-amber-400 text-sm">
-                            <Info className="inline h-4 w-4 mr-2" />
-                            New customer. Enter your name to register.
-                          </p>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">First Name *</Label>
-                            <Input
-                              value={formData.first_name || ''}
-                              onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
-                              placeholder="First Name"
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-gray-300 text-sm mb-2 block">Last Name *</Label>
-                            <Input
-                              value={formData.last_name || ''}
-                              onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
-                              placeholder="Last Name"
-                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                        </div>
-                        
-                        <Button
-                          type="button"
-                          onClick={async () => {
-                            if (!formData.first_name || !formData.last_name) {
-                              toast.error('Please enter your name');
-                              return;
-                            }
-                            setVerifyingCustomer(true);
-                            try {
-                              // Register customer
-                              const regRes = await axios.post(`${API}/eko/dmt/customer/register`, {
-                                user_id: user?.uid || 'guest',
-                                mobile: senderMobile,
-                                first_name: formData.first_name,
-                                last_name: formData.last_name
-                              });
-                              
-                              if (regRes.data.success) {
-                                // Send OTP
-                                await axios.post(`${API}/eko/dmt/customer/resend-otp`, {
-                                  user_id: user?.uid || 'guest',
-                                  mobile: senderMobile
-                                });
-                                toast.success('OTP sent to your mobile');
-                                setDmtCustomer(prev => ({ ...prev, otp_sent: true, needs_registration: false }));
-                              } else {
-                                toast.error(regRes.data.user_message || 'Registration failed');
-                              }
-                            } catch (error) {
-                              toast.error('Registration failed. Please try again.');
-                            } finally {
-                              setVerifyingCustomer(false);
-                            }
-                          }}
-                          disabled={!formData.first_name || !formData.last_name || verifyingCustomer}
-                          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
-                        >
-                          {verifyingCustomer ? (
-                            <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Registering...</>
-                          ) : (
-                            <>Register & Send OTP</>
-                          )}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Step 2: Account Number */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                        Bank Account Number *
+                      </Label>
+                      <Input
+                        type="text"
+                        value={formData.account_number || ''}
+                        onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '') })}
+                        placeholder="Enter bank account number"
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                        data-testid="dmt-account-number"
+                      />
+                    </div>
                     
-                    {/* Step 2: OTP Verification */}
-                    {dmtStep === 2 && dmtCustomer?.otp_sent && (
-                      <div className="space-y-4 animate-fadeIn">
-                        {dmtCustomer?.verification_pending && (
-                          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl mb-2">
-                            <p className="text-amber-400 text-sm font-medium">
-                              ⏳ Verification Pending
-                            </p>
-                            <p className="text-amber-300/70 text-xs mt-1">
-                              {dmtCustomer?.name ? `Name: ${dmtCustomer.name}` : ''}
-                            </p>
-                          </div>
-                        )}
-                        <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl mb-4">
-                          <p className="text-green-400 text-sm">
-                            <CheckCircle className="inline h-4 w-4 mr-2" />
-                            OTP sent to {senderMobile}
-                          </p>
-                          <p className="text-green-300/70 text-xs mt-1">
-                            Check SMS on your registered mobile. OTP valid for 10 minutes.
-                          </p>
-                          <p className="text-amber-300/70 text-xs mt-2">
-                            💡 OTP न आल्यास: DND बंद करा, network check करा, किंवा 2 मिनिटानंतर Resend करा
-                          </p>
-                        </div>
-                        
-                        <Label className="text-gray-300 text-sm mb-2 block">Enter OTP *</Label>
-                        <Input
-                          type="tel"
-                          value={formData.otp || ''}
-                          onChange={(e) => setFormData(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                          placeholder="Enter 6-digit OTP"
-                          maxLength={6}
-                          className="h-14 text-lg bg-gray-800/50 border-gray-700/50 text-white rounded-xl text-center tracking-widest"
-                        />
-                        
-                        <Button
-                          type="button"
-                          onClick={async () => {
-                            if (!formData.otp || formData.otp.length < 4) {
-                              toast.error('Please enter OTP');
-                              return;
-                            }
-                            setVerifyingCustomer(true);
-                            try {
-                              const verifyRes = await axios.post(`${API}/eko/dmt/customer/verify-otp`, {
-                                user_id: user?.uid || 'guest',
-                                mobile: senderMobile,
-                                otp: formData.otp
-                              });
-                              
-                              if (verifyRes.data.success) {
-                                toast.success('Customer verified!');
-                                setDmtCustomer(verifyRes.data.data);
-                                setDmtStep(3);
-                              } else {
-                                toast.error(verifyRes.data.user_message || 'Invalid OTP');
-                              }
-                            } catch (error) {
-                              toast.error('Verification failed');
-                            } finally {
-                              setVerifyingCustomer(false);
-                            }
-                          }}
-                          disabled={!formData.otp || formData.otp.length < 4 || verifyingCustomer}
-                          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-xl"
-                        >
-                          {verifyingCustomer ? (
-                            <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Verifying...</>
-                          ) : (
-                            <>Verify OTP</>
-                          )}
-                        </Button>
-                        
+                    {/* Step 3: IFSC Code */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
+                        IFSC Code *
+                      </Label>
+                      <Input
+                        type="text"
+                        value={formData.ifsc_code || ''}
+                        onChange={(e) => setFormData({ ...formData, ifsc_code: e.target.value.toUpperCase().slice(0, 11) })}
+                        placeholder="Enter 11-character IFSC code"
+                        maxLength={11}
+                        className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
+                        data-testid="dmt-ifsc-code"
+                      />
+                      {formData.ifsc_code?.length === 11 && (
+                        <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" /> Valid IFSC format
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Step 4: Account Type */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">4</span>
+                        Account Type
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await axios.post(`${API}/eko/dmt/customer/resend-otp`, {
-                                user_id: user?.uid || 'guest',
-                                mobile: senderMobile
-                              });
-                              toast.success('OTP resent');
-                            } catch (e) {
-                              toast.error('Could not resend OTP');
-                            }
-                          }}
-                          className="w-full text-amber-400 hover:text-amber-300 text-sm"
+                          onClick={() => setFormData({ ...formData, account_type: 'SAVINGS' })}
+                          className={`p-3 rounded-xl border text-center transition-all ${
+                            (formData.account_type || 'SAVINGS') === 'SAVINGS'
+                              ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                              : 'border-gray-700 bg-gray-800/50 text-gray-400'
+                          }`}
                         >
-                          Resend OTP
+                          Savings Account
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, account_type: 'CURRENT' })}
+                          className={`p-3 rounded-xl border text-center transition-all ${
+                            formData.account_type === 'CURRENT'
+                              ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                              : 'border-gray-700 bg-gray-800/50 text-gray-400'
+                          }`}
+                        >
+                          Current Account
                         </button>
                       </div>
-                    )}
+                    </div>
                     
-                    {/* Step 2: Customer Verified - Show info */}
-                    {dmtStep >= 2 && dmtCustomer && !dmtCustomer.needs_registration && !dmtCustomer.otp_sent && (
-                      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-xl mb-4">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-400" />
-                          <span className="text-green-400 text-sm">Customer: {senderMobile}</span>
-                          <button
-                            type="button"
-                            onClick={() => { setDmtStep(1); setDmtCustomer(null); setSenderMobile(''); }}
-                            className="ml-auto text-gray-400 hover:text-white text-xs"
-                          >
-                            Change
-                          </button>
-                        </div>
+                    {/* Step 5: Amount */}
+                    <div>
+                      <Label className="text-gray-300 text-sm mb-2 block">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">5</span>
+                        Transfer Amount (₹10 - ₹2,00,000) *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
+                        <Input
+                          type="number"
+                          value={formData.amount}
+                          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                          placeholder="Enter amount"
+                          min="10"
+                          max="200000"
+                          className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                          data-testid="dmt-amount"
+                        />
                       </div>
-                    )}
-                    
-                    {/* Step 3: Bank Account Details */}
-                    {dmtStep === 3 && (
-                      <div className="space-y-4 animate-fadeIn">
-                        {/* Show Existing Recipients */}
-                        {existingRecipients.length > 0 && (
-                          <div className="mb-4">
-                            <Label className="text-gray-300 text-sm mb-2 block">
-                              Your Saved Bank Accounts
-                            </Label>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {existingRecipients.map((recipient) => (
-                                <button
-                                  key={recipient.recipient_id}
-                                  type="button"
-                                  onClick={() => {
-                                    setDmtRecipientId(recipient.recipient_id);
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      account_holder: recipient.recipient_name,
-                                      account_number: recipient.account || recipient.acc_no
-                                    }));
-                                    setDmtStep(4);
-                                    toast.success('Bank account selected');
-                                  }}
-                                  className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-amber-500 transition-colors text-left"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-white font-medium">{recipient.recipient_name}</p>
-                                      <p className="text-gray-400 text-sm">
-                                        {recipient.bank} • ****{(recipient.account || recipient.acc_no || '').slice(-4)}
-                                      </p>
-                                    </div>
-                                    <ArrowRight className="h-5 w-5 text-amber-500" />
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="relative my-4">
-                              <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-gray-700" />
-                              </div>
-                              <div className="relative flex justify-center text-xs">
-                                <span className="bg-gray-900 px-2 text-gray-500">OR ADD NEW</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
-                          Select Bank *
-                        </Label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <Input
-                            value={bankSearch}
-                            onChange={(e) => { setBankSearch(e.target.value); setShowBankDropdown(true); }}
-                            onFocus={() => setShowBankDropdown(true)}
-                            placeholder="Search bank (e.g., SBI, HDFC)"
-                            className="pl-10 h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                          />
-                        </div>
-                        
-                        {/* Bank Dropdown */}
-                        {showBankDropdown && bankSearch && !formData.selected_bank && (
-                          <div className="max-h-48 overflow-y-auto bg-gray-800 border border-gray-700 rounded-xl">
-                            {bankList.filter(b => b.name.toLowerCase().includes(bankSearch.toLowerCase())).slice(0, 10).map((bank, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => {
-                                  setFormData(prev => ({ ...prev, selected_bank: bank, bank_name: bank.name }));
-                                  setBankSearch(bank.name);
-                                  setShowBankDropdown(false);
-                                }}
-                                className="w-full px-4 py-3 text-left hover:bg-gray-700 text-white border-b border-gray-700/50 last:border-0"
-                              >
-                                {bank.name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {formData.selected_bank && (
-                          <div className="space-y-4 animate-fadeIn">
-                            <div className="p-2 bg-green-500/10 border border-green-500/30 rounded-lg">
-                              <span className="text-green-400 text-sm">{formData.selected_bank.name}</span>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-gray-300 text-sm mb-2 block">Account Holder *</Label>
-                                <Input
-                                  value={formData.account_holder}
-                                  onChange={(e) => setFormData({ ...formData, account_holder: e.target.value })}
-                                  placeholder="Name as per bank"
-                                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-gray-300 text-sm mb-2 block">Account Number *</Label>
-                                <Input
-                                  value={formData.account_number}
-                                  onChange={(e) => setFormData({ ...formData, account_number: e.target.value.replace(/\D/g, '') })}
-                                  placeholder="Account number"
-                                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label className="text-gray-300 text-sm mb-2 block">
-                                  IFSC Code *
-                                  {loadingIfsc && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
-                                </Label>
-                                <Input
-                                  value={formData.ifsc_code}
-                                  onChange={(e) => {
-                                    const ifsc = e.target.value.toUpperCase();
-                                    setFormData({ ...formData, ifsc_code: ifsc });
-                                    if (ifsc.length === 11) lookupIfsc(ifsc);
-                                  }}
-                                  placeholder="e.g., SBIN0001234"
-                                  maxLength={11}
-                                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl uppercase"
-                                />
-                                {ifscDetails && (
-                                  <p className="text-xs text-green-400 mt-1">{ifscDetails.branch}, {ifscDetails.city}</p>
-                                )}
-                              </div>
-                              <div>
-                                <Label className="text-gray-300 text-sm mb-2 block">Recipient Mobile</Label>
-                                <Input
-                                  type="tel"
-                                  value={formData.mobile}
-                                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                                  placeholder="10-digit mobile"
-                                  maxLength={10}
-                                  className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* Account Verification Section */}
-                            <div className="mt-4 p-4 bg-gray-800/70 border border-gray-700/50 rounded-xl">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Shield className="h-4 w-4 text-blue-400" />
-                                <span className="text-gray-300 text-sm font-medium">Bank Account Verification</span>
-                                <span className="text-xs text-amber-400 ml-auto">* Mandatory</span>
-                              </div>
-                              
-                              {!accountVerified ? (
-                                <div className="space-y-3">
-                                  <p className="text-gray-400 text-xs">
-                                    Verify the bank account details before adding. This ensures successful transfers.
-                                  </p>
-                                  <Button
-                                    type="button"
-                                    onClick={verifyBankAccount}
-                                    disabled={!formData.account_number || !formData.ifsc_code || verifyingAccount}
-                                    className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-                                  >
-                                    {verifyingAccount ? (
-                                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Verifying Account...</>
-                                    ) : (
-                                      <><Shield className="h-4 w-4 mr-2" /> Verify Bank Account</>
-                                    )}
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <CheckCircle className="h-5 w-5 text-green-400" />
-                                    <span className="text-green-400 font-medium">Account Verified</span>
-                                  </div>
-                                  <p className="text-white text-sm">{verifiedAccountDetails?.account_holder_name}</p>
-                                  {verifiedAccountDetails?.bank_name && (
-                                    <p className="text-gray-400 text-xs mt-1">{verifiedAccountDetails.bank_name}</p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <Button
-                              type="button"
-                              onClick={addDmtRecipient}
-                              disabled={!formData.account_number || !formData.ifsc_code || !formData.account_holder || addingRecipient || !accountVerified}
-                              className={`w-full h-12 font-semibold rounded-xl ${accountVerified ? 'bg-amber-500 hover:bg-amber-600 text-black' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`}
-                            >
-                              {addingRecipient ? (
-                                <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Adding Bank Account...</>
-                              ) : !accountVerified ? (
-                                <>Verify Account First</>
-                              ) : (
-                                <>Add Bank Account & Continue <ArrowRight className="h-5 w-5 ml-2" /></>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Step 4: Amount Entry */}
-                    {dmtStep === 4 && (
-                      <div className="space-y-4 animate-fadeIn">
-                        {/* Show recipient info */}
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                          <p className="text-blue-400 text-sm font-medium">Transfer To:</p>
-                          <p className="text-white">{formData.account_holder}</p>
-                          <p className="text-gray-400 text-xs">{formData.bank_name} - A/C: XXXX{formData.account_number?.slice(-4)}</p>
-                        </div>
-                        
-                        {/* Transfer Mode */}
-                        <div>
-                          <Label className="text-gray-300 text-sm mb-2 block">Transfer Mode</Label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'IMPS' }))}
-                              className={`p-3 rounded-xl border-2 ${
-                                formData.transfer_mode === 'IMPS' || !formData.transfer_mode
-                                  ? 'bg-green-500/20 border-green-500/50 text-green-400'
-                                  : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
-                              }`}
-                            >
-                              <p className="font-medium">IMPS</p>
-                              <p className="text-xs opacity-70">Instant</p>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, transfer_mode: 'NEFT' }))}
-                              className={`p-3 rounded-xl border-2 ${
-                                formData.transfer_mode === 'NEFT'
-                                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
-                                  : 'bg-gray-800/50 border-gray-700/50 text-gray-400'
-                              }`}
-                            >
-                              <p className="font-medium">NEFT</p>
-                              <p className="text-xs opacity-70">2-4 hours</p>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Amount */}
-                        <div>
-                          <Label className="text-gray-300 text-sm mb-2 block">
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
-                            Transfer Amount (₹) *
-                          </Label>
-                          <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
-                            <Input
-                              type="number"
-                              value={formData.amount}
-                              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                              placeholder="0.00"
-                              min="1"
-                              className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                      <p className="text-xs text-gray-500 mt-1">Min: ₹10 • Max: ₹2,00,000 • Transfer Fee: ₹5</p>
+                    </div>
+                  </div>
                 )}
                 
+                {/* ============================================ */}
                 {/* ============================================ */}
                 {/* CHARGES BREAKDOWN - Common for all services */}
                 {/* ============================================ */}
@@ -2796,7 +2440,7 @@ const RedeemPageV2 = ({ user }) => {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={submitting || !formData.amount || (userData?.kyc_status !== 'verified') || (selectedService === 'dmt' && !dmtRecipientId)}
+                  disabled={submitting || !formData.amount || (userData?.kyc_status !== 'verified') || (selectedService === 'dmt' && (!formData.recipient_name || !formData.account_number || !formData.ifsc_code || formData.ifsc_code?.length !== 11))}
                   className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:via-orange-400 hover:to-amber-400 text-gray-900 font-bold rounded-2xl"
                   data-testid="submit-redeem-btn"
                 >
@@ -2813,7 +2457,7 @@ const RedeemPageV2 = ({ user }) => {
                 </Button>
                 
                 <p className="text-xs text-green-400 text-center">
-                  {selectedService === 'dmt' ? 'Direct instant transfer via IMPS' : 'Instant payment via BBPS'}
+                  {selectedService === 'dmt' ? 'Direct instant transfer via IMPS • No OTP required' : 'Instant payment via BBPS'}
                 </p>
               </form>
             </div>
