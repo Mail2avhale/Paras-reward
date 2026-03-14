@@ -200,7 +200,7 @@ const AdminSubscriptionManagement = IS_USER_BUILD ? null : lazy(() => import(/* 
 const AdminMembers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMembers"));
 const AdminPRCBurnControl = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCBurnControl"));
 const AdminDataBackup = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
-const AdminBillPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminBillPayments"));
+// AdminBillPayments - REMOVED (all pending rejected + refunded)
 const AdminRazorpaySubscriptions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRazorpaySubscriptions"));
 const AdminErrorMonitor = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/ErrorMonitor"));
 // AdminBankWithdrawals removed - merged into AdminUnifiedPayments
@@ -221,7 +221,7 @@ const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* web
 const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
 const AdminRecurringDeposits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
-const AdminUnifiedPayments = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUnifiedPayments"));
+// AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
 const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
 const AdminRedeemDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminRedeemDashboard"));
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
@@ -400,7 +400,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} />
                 <Route path="/admin/prc-burn-control" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCBurnControl user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/data-backup" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminDataBackup user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/bill-payments" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBillPayments user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminBillPayments - REMOVED, redirect to admin */}
+                <Route path="/admin/bill-payments" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/razorpay-subscriptions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRazorpaySubscriptions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* /admin/bank-withdrawals merged into /admin/unified-payments */}
                 <Route path="/admin/bank-withdrawals" element={<Navigate to="/admin/unified-payments" replace />} />
@@ -408,7 +409,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 {/* /admin/luxury-claims route REMOVED - deprecated feature */}
                 <Route path="/admin/recurring-deposits" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRecurringDeposits user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/rd" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRecurringDeposits user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/unified-payments" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUnifiedPayments user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminUnifiedPayments - REMOVED, redirect to admin */}
+                <Route path="/admin/unified-payments" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/redeem" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

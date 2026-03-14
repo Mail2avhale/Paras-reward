@@ -190,9 +190,9 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'redeem-v2', label: 'Redeem Requests', icon: Receipt, path: '/admin/redeem', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
         // DMT Bank Transfer removed - Eko API not working
-        { id: 'unified-payments', label: 'All Payments (Old)', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
+        // unified-payments removed - all pending rejected + refunded
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
-        { id: 'bill-payments', label: 'Bill Payments (Old)', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },
+        // bill-payments removed - all pending rejected + refunded
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
         { id: 'recurring-deposits', label: 'PRC Savings Vault', icon: Building2, path: '/admin/recurring-deposits', pendingCount: pendingCounts.rdRedeem },
       ]
