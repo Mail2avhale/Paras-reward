@@ -336,7 +336,8 @@ async def generate_aadhaar_otp(request: AadhaarOTPRequest):
     try:
         url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/aadhaar"
         
-        json_data = {
+        # Use form data, not JSON
+        form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "aadhar": request.aadhaar,
@@ -345,9 +346,10 @@ async def generate_aadhaar_otp(request: AadhaarOTPRequest):
         }
         
         logging.info(f"[Levin DMT] Generate Aadhaar OTP for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] Aadhaar data: {form_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.post(url, headers=get_headers(), json=json_data)
+            response = await client.post(url, headers=get_headers(), data=form_data)
             
             logging.error(f"[Levin DMT] Aadhaar OTP response: {response.status_code} - FULL: {response.text}")
             
@@ -407,7 +409,8 @@ async def verify_aadhaar_otp(request: AadhaarOTPVerifyRequest):
     try:
         url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin/otp/verify"
         
-        json_data = {
+        # Use form data, not JSON
+        form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "otp": request.otp,
@@ -419,7 +422,7 @@ async def verify_aadhaar_otp(request: AadhaarOTPVerifyRequest):
         logging.info(f"[Levin DMT] Verify Aadhaar OTP for: {request.customer_mobile}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.put(url, headers=get_headers(), json=json_data)
+            response = await client.put(url, headers=get_headers(), data=form_data)
             
             logging.error(f"[Levin DMT] Aadhaar verify response: {response.status_code} - FULL: {response.text}")
             
