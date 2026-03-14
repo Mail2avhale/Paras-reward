@@ -10982,7 +10982,7 @@ async def upgrade_subscription(uid: str, request: Request):
 async def subscription_pay_with_prc(request: Request):
     """
     Pay for subscription using PRC from Available Redeem Limit.
-    Formula: INR Price × 2 × PRC_RATE (10)
+    Formula: INR Price × 2 × Dynamic PRC Rate
     """
     data = await request.json()
     user_id = data.get("user_id")
@@ -10992,6 +10992,27 @@ async def subscription_pay_with_prc(request: Request):
     
     if not user_id or not plan_name or not prc_amount:
         raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Get dynamic PRC rate
+    prc_rate = 10  # Default
+    try:
+        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            prc_rate = rate_setting.get("value", 10)
+    except:
+        pass
+    
+    # Get plan price and verify PRC amount
+    plan_prices = {"startup": 299, "growth": 499, "elite": 799}
+    plan_price = plan_prices.get(plan_name, 799)
+    expected_prc = plan_price * 2 * prc_rate
+    
+    # Allow small variance for rounding
+    if abs(prc_amount - expected_prc) > 1:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid PRC amount. Expected: {expected_prc} PRC (₹{plan_price} × 2 × {prc_rate})"
+        )
     
     # Validate plan
     valid_plans = ["startup", "growth", "elite"]
