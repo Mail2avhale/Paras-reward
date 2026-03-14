@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Zap, Crown, TrendingUp, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Zap, Users, TrendingUp, Bell, Send, Download, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import smartToast from '@/utils/smartToast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,40 +10,33 @@ import { Button } from '@/components/ui/button';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// ============================================
-// HAPTIC FEEDBACK UTILITY
-// ============================================
+// Haptic feedback
 const triggerHaptic = (type = 'light') => {
   if ('vibrate' in navigator) {
-    const patterns = {
-      light: [10],
-      medium: [20],
-      heavy: [30],
-      success: [10, 50, 10, 50, 30],
-      collect: [15, 30, 15, 30, 50, 100]
-    };
+    const patterns = { light: [10], medium: [20], success: [10, 50, 10, 50, 30] };
     navigator.vibrate(patterns[type] || patterns.light);
   }
 };
 
 // ============================================
-// SPEEDOMETER GAUGE COMPONENT - Compact
+// CLASSIC SPEEDOMETER GAUGE (GREEN-YELLOW-RED)
 // ============================================
-const SpeedometerGauge = ({ rate, maxRate = 250 }) => {
+const ClassicSpeedometer = ({ rate, maxRate = 100 }) => {
   const percentage = Math.min((rate / maxRate) * 100, 100);
-  const angle = (percentage / 100) * 180 - 90; // -90 to 90 degrees
+  const needleAngle = -135 + (percentage / 100) * 270; // -135 to 135 degrees
 
   return (
     <div className="relative w-full flex flex-col items-center">
-      {/* SVG Gauge */}
-      <svg viewBox="0 0 200 110" className="w-full max-w-[160px]">
+      <svg viewBox="0 0 200 120" className="w-full max-w-[180px]">
         <defs>
-          <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="50%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#67e8f9" />
+          {/* Gradient for the gauge arc */}
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="40%" stopColor="#eab308" />
+            <stop offset="70%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#ef4444" />
           </linearGradient>
-          <filter id="glow">
+          <filter id="glow2">
             <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
@@ -52,108 +45,89 @@ const SpeedometerGauge = ({ rate, maxRate = 250 }) => {
           </filter>
         </defs>
         
-        {/* Background track */}
+        {/* Background arc */}
         <path
-          d="M 25 95 A 75 75 0 0 1 175 95"
+          d="M 20 100 A 80 80 0 1 1 180 100"
           fill="none"
           stroke="#1e293b"
-          strokeWidth="10"
+          strokeWidth="14"
           strokeLinecap="round"
         />
         
-        {/* Speed arc - animated */}
-        <motion.path
-          d="M 25 95 A 75 75 0 0 1 175 95"
+        {/* Colored gauge arc */}
+        <path
+          d="M 20 100 A 80 80 0 1 1 180 100"
           fill="none"
-          stroke="url(#speedGradient)"
-          strokeWidth="10"
+          stroke="url(#gaugeGradient)"
+          strokeWidth="14"
           strokeLinecap="round"
-          filter="url(#glow)"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: percentage / 100 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          style={{
-            strokeDasharray: "236",
-            strokeDashoffset: 236 * (1 - percentage / 100)
-          }}
+          filter="url(#glow2)"
         />
+        
+        {/* Labels */}
+        <text x="35" y="85" fill="#64748b" fontSize="10" fontWeight="bold">LOW</text>
+        <text x="90" y="30" fill="#64748b" fontSize="10" fontWeight="bold">MID</text>
+        <text x="150" y="85" fill="#64748b" fontSize="10" fontWeight="bold">HIGH</text>
         
         {/* Needle */}
-        <motion.g
-          initial={{ rotate: -90 }}
-          animate={{ rotate: angle }}
-          transition={{ duration: 1, ease: "easeOut", type: "spring", stiffness: 60 }}
-          style={{ transformOrigin: "100px 95px" }}
-        >
+        <g transform={`rotate(${needleAngle}, 100, 100)`}>
           <polygon
-            points="100,35 96,95 104,95"
-            fill="#22d3ee"
-            filter="url(#glow)"
+            points="100,25 96,100 104,100"
+            fill="#f97316"
+            filter="url(#glow2)"
           />
-        </motion.g>
-        
-        {/* Center circle */}
-        <circle cx="100" cy="95" r="6" fill="#0f172a" stroke="#22d3ee" strokeWidth="2" />
-        
-        {/* Rate text inside SVG */}
-        <text x="100" y="80" textAnchor="middle" className="fill-cyan-400 font-mono font-bold" style={{ fontSize: '18px' }}>
-          {rate.toFixed(1)}
-        </text>
-        <text x="100" y="108" textAnchor="middle" className="fill-cyan-500/70 uppercase" style={{ fontSize: '8px', letterSpacing: '1px' }}>
-          PRC/HR
-        </text>
+          <circle cx="100" cy="100" r="8" fill="#1e293b" stroke="#f97316" strokeWidth="2" />
+        </g>
       </svg>
+      
+      {/* Rate display */}
+      <div className="text-center -mt-2">
+        <p className="text-2xl font-bold text-white font-mono">{rate.toFixed(2)} <span className="text-sm text-blue-400">PRC/hr</span></p>
+        <div className="flex items-center justify-center gap-1 mt-1">
+          <Zap className="w-3 h-3 text-yellow-400" />
+          <span className="text-xs text-yellow-400 font-semibold">Referral Boost</span>
+        </div>
+      </div>
     </div>
   );
 };
 
 // ============================================
-// CIRCULAR TIMER / TAP TO COLLECT COMPONENT
+// FUTURISTIC CIRCULAR TIMER
 // ============================================
-const CircularTimer = ({ 
-  sessionPRC, 
-  timeRemaining, 
-  totalTime = 86400, 
-  isMining, 
-  onCollect, 
-  onStart, 
-  isCollecting, 
-  isStarting,
-  canCollect,
-  isFreeUser
-}) => {
-  const progress = isMining ? ((totalTime - timeRemaining) / totalTime) * 100 : 0;
-  const radius = 120;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-  
+const FuturisticTimer = ({ timeRemaining, sessionPRC, isMining, onTap, isLoading }) => {
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const progress = isMining ? ((86400 - timeRemaining) / 86400) * 100 : 0;
+
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Outer glow ring */}
-      <div className={`absolute w-[280px] h-[280px] rounded-full ${isMining ? 'animate-pulse' : ''}`}
-        style={{
-          background: isMining 
-            ? 'radial-gradient(circle, rgba(34,211,238,0.15) 0%, transparent 70%)' 
-            : 'radial-gradient(circle, rgba(71,85,105,0.1) 0%, transparent 70%)'
-        }}
-      />
+    <motion.div 
+      className="relative flex items-center justify-center cursor-pointer"
+      onClick={onTap}
+      whileTap={{ scale: 0.95 }}
+      data-testid="mining-timer-button"
+    >
+      {/* Outer glow rings */}
+      <div className="absolute w-[160px] h-[160px] rounded-full border-2 border-blue-500/20" />
+      <div className="absolute w-[150px] h-[150px] rounded-full border border-blue-400/30" />
       
-      {/* SVG Circle */}
-      <svg width="260" height="260" className="transform -rotate-90">
+      {/* Main circular progress */}
+      <svg width="140" height="140" className="transform -rotate-90">
         <defs>
-          <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#22d3ee" />
+          <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
-          <filter id="timerGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <filter id="timerGlow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -162,188 +136,153 @@ const CircularTimer = ({
         </defs>
         
         {/* Background circle */}
-        <circle
-          cx="130"
-          cy="130"
-          r={radius}
-          fill="none"
-          stroke="#1e293b"
-          strokeWidth="8"
-        />
+        <circle cx="70" cy="70" r="60" fill="none" stroke="#1e293b" strokeWidth="6" />
         
-        {/* Progress circle */}
-        <motion.circle
-          cx="130"
-          cy="130"
-          r={radius}
+        {/* Progress arc */}
+        <circle
+          cx="70"
+          cy="70"
+          r="60"
           fill="none"
-          stroke="url(#timerGradient)"
-          strokeWidth="8"
+          stroke="url(#timerGrad)"
+          strokeWidth="6"
           strokeLinecap="round"
           filter="url(#timerGlow)"
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          style={{
-            strokeDasharray: circumference,
-          }}
+          strokeDasharray={`${progress * 3.77} 377`}
         />
         
-        {/* Animated dots on the progress */}
-        {isMining && (
-          <motion.circle
-            cx={130 + radius * Math.cos((progress / 100) * 2 * Math.PI - Math.PI / 2)}
-            cy={130 + radius * Math.sin((progress / 100) * 2 * Math.PI - Math.PI / 2)}
-            r="6"
-            fill="#22d3ee"
-            filter="url(#timerGlow)"
-            animate={{ scale: [1, 1.3, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-        )}
+        {/* Inner decorative circles */}
+        <circle cx="70" cy="70" r="50" fill="none" stroke="#1e3a5f" strokeWidth="1" />
+        <circle cx="70" cy="70" r="40" fill="none" stroke="#1e3a5f" strokeWidth="1" strokeDasharray="4 4" />
       </svg>
       
-      {/* Center content - Tappable */}
-      <motion.button
-        className="absolute flex flex-col items-center justify-center w-[200px] h-[200px] rounded-full bg-slate-900/80 backdrop-blur-sm border border-cyan-500/30 cursor-pointer"
-        onClick={() => {
-          triggerHaptic('medium');
-          if (isMining && canCollect && !isFreeUser) {
-            onCollect();
-          } else if (!isMining) {
-            onStart();
-          }
-        }}
-        disabled={isCollecting || isStarting || (isMining && isFreeUser)}
-        whileTap={{ scale: 0.95 }}
-        whileHover={{ scale: 1.02 }}
-        data-testid="mining-collect-button"
-      >
-        {isMining ? (
+      {/* Center content */}
+      <div className="absolute flex flex-col items-center justify-center">
+        {isLoading ? (
+          <motion.div
+            className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+        ) : isMining ? (
           <>
-            {/* Mining active - show PRC earned */}
-            <motion.p 
-              className="text-4xl font-bold text-cyan-400 font-mono mb-1"
-              key={sessionPRC.toFixed(2)}
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 0.3 }}
-            >
-              {sessionPRC.toFixed(2)}
-            </motion.p>
-            <p className="text-sm text-cyan-500/70 mb-2">PRC Earned</p>
-            <p className="text-xs text-slate-400 font-mono">{formatTime(timeRemaining)}</p>
-            
-            {/* Tap instruction */}
-            {canCollect && !isFreeUser && (
-              <motion.p 
-                className="text-[10px] text-cyan-400 mt-2 uppercase tracking-wider"
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                Tap to Collect
-              </motion.p>
-            )}
-            {isFreeUser && (
-              <p className="text-[10px] text-amber-400 mt-2">Upgrade to Collect</p>
-            )}
+            <p className="text-3xl font-bold text-white font-mono tracking-wider">
+              {formatTime(timeRemaining)}
+            </p>
+            <p className="text-xs text-blue-400 mt-1">+{sessionPRC.toFixed(2)} PRC</p>
           </>
         ) : (
           <>
-            {/* Not mining - show start prompt */}
-            <Zap className="w-12 h-12 text-cyan-400 mb-2" />
-            <p className="text-lg font-semibold text-cyan-400">Start Mining</p>
-            <p className="text-xs text-slate-500 mt-1">Tap to begin session</p>
+            <Zap className="w-8 h-8 text-blue-400 mb-1" />
+            <p className="text-xs text-blue-400">TAP TO START</p>
           </>
         )}
-        
-        {/* Loading states */}
-        {(isCollecting || isStarting) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/90 rounded-full">
-            <motion.div
-              className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            />
-          </div>
-        )}
-      </motion.button>
-    </div>
+      </div>
+      
+      {/* Animated dot on progress */}
+      {isMining && (
+        <motion.div
+          className="absolute w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_10px_#22d3ee]"
+          style={{
+            top: 70 - 60 * Math.cos((progress / 100) * Math.PI * 2 - Math.PI / 2),
+            left: 70 + 60 * Math.sin((progress / 100) * Math.PI * 2 - Math.PI / 2),
+          }}
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
+      )}
+    </motion.div>
   );
 };
 
 // ============================================
-// ODOMETER COMPONENT - Compact for mobile
+// ODOMETER DISPLAY
 // ============================================
-const OdometerDisplay = ({ value, label }) => {
-  // Format value with commas for readability, max 2 decimal places
-  const formattedValue = value.toLocaleString('en-IN', { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
-  });
+const OdometerDisplay = ({ value }) => {
+  const formatted = Math.floor(value).toString().padStart(6, '0');
+  const colors = ['#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6'];
   
   return (
-    <div className="text-center w-full overflow-hidden">
-      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
-      <div className="flex items-center justify-center">
-        <span className="text-xl font-bold text-cyan-400 font-mono truncate">
-          {formattedValue}
-        </span>
-        <span className="ml-1 text-xs text-cyan-500 font-semibold">PRC</span>
-      </div>
+    <div className="flex items-center gap-1">
+      {formatted.split('').map((digit, i) => (
+        <motion.div
+          key={i}
+          className="w-7 h-9 rounded flex items-center justify-center text-white font-mono font-bold text-lg"
+          style={{ backgroundColor: colors[i % colors.length] + '33', border: `1px solid ${colors[i % colors.length]}` }}
+          initial={{ y: -5, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: i * 0.05 }}
+        >
+          {digit}
+        </motion.div>
+      ))}
     </div>
   );
 };
 
 // ============================================
-// MAIN FUTURISTIC MINING DASHBOARD
+// MINI BAR CHART
+// ============================================
+const MiniBarChart = () => {
+  const bars = [40, 60, 30, 80, 50, 70, 45, 90, 55, 65];
+  return (
+    <div className="flex items-end gap-[2px] h-10">
+      {bars.map((height, i) => (
+        <motion.div
+          key={i}
+          className="w-1.5 bg-blue-500/60 rounded-t"
+          initial={{ height: 0 }}
+          animate={{ height: `${height}%` }}
+          transition={{ delay: i * 0.05, duration: 0.3 }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// MAIN DASHBOARD
 // ============================================
 const FuturisticMiningDashboard = ({ user }) => {
   const navigate = useNavigate();
   const { t: globalT } = useLanguage();
   
-  // State
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(user);
   const [isMining, setIsMining] = useState(false);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(0);
   const [sessionPRC, setSessionPRC] = useState(0);
   const [miningRate, setMiningRate] = useState(20.83);
-  const [isStarting, setIsStarting] = useState(false);
-  const [isCollecting, setIsCollecting] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(0);
-  const [baseRate, setBaseRate] = useState(20.83);
   const [referralBreakdown, setReferralBreakdown] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
   
-  // Refs
   const timerRef = useRef(null);
   const liveCounterRef = useRef(null);
-  const sessionEndNotifiedRef = useRef(false);
-  
-  // Derived state
-  const subscriptionPlan = userData?.subscription_plan || user?.subscription_plan || 'explorer';
-  const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free' || subscriptionPlan === '';
-  const hasPaidPlan = ['startup', 'growth', 'elite'].includes(subscriptionPlan);
-  const canCollect = sessionPRC >= 0.01;
 
-  // Fetch user data and mining status
+  const subscriptionPlan = userData?.subscription_plan || user?.subscription_plan || 'explorer';
+  const isFreeUser = !subscriptionPlan || subscriptionPlan === 'explorer' || subscriptionPlan === 'free';
+  const activeReferrals = (referralBreakdown?.level_1?.active_count || 0) + 
+                          (referralBreakdown?.level_2?.active_count || 0) + 
+                          (referralBreakdown?.level_3?.active_count || 0);
+  const referralBoost = (referralBreakdown?.level_1?.bonus || 0) + 
+                        (referralBreakdown?.level_2?.bonus || 0) + 
+                        (referralBreakdown?.level_3?.bonus || 0);
+
   const fetchUserData = useCallback(async (isInitialLoad = false) => {
     try {
       const miningResponse = await axios.get(`${API}/mining/status/${user.uid}`, { timeout: 8000 });
       const miningData = miningResponse.data;
       
-      const rate = miningData.mining_rate_per_hour || miningData.mining_rate || 20.83;
-      setMiningRate(rate);
+      setMiningRate(miningData.mining_rate_per_hour || miningData.mining_rate || 20.83);
       setReferralBreakdown(miningData.referral_breakdown || null);
-      setBaseRate(miningData.base_rate || 20.83);
       
       if (miningData.session_active && miningData.remaining_hours > 0) {
-        const sessionStart = new Date(miningData.session_start).getTime();
         setIsMining(true);
         setSessionTimeRemaining(Math.floor(miningData.remaining_hours * 3600));
-        setSessionStartTime(sessionStart);
         setSessionPRC(miningData.mined_this_session || 0);
-      } else if (miningData.session_active === false) {
+      } else {
         setIsMining(false);
         setSessionTimeRemaining(0);
       }
@@ -357,30 +296,28 @@ const FuturisticMiningDashboard = ({ user }) => {
       
       setUserData(userResponse.data);
       setLifetimeEarnings(statsResponse.data.total_earned || 0);
+      
+      // Mock recent activity
+      setRecentActivity([
+        { type: 'Referral Bonus', amount: 5.00, time: '2h ago' },
+        { type: 'Mining Reward', amount: miningData.mining_rate_per_hour || 4.55, time: '2h ago' },
+      ]);
     } catch (error) {
-      console.error('Error fetching user data:', error);
-      setUserData(user);
+      console.error('Error fetching data:', error);
       if (isInitialLoad) setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    if (user?.uid) {
-      fetchUserData(true);
-    }
-    
-    const refreshInterval = setInterval(() => {
-      if (user?.uid) fetchUserData(false);
-    }, 30000);
-    
+    if (user?.uid) fetchUserData(true);
+    const interval = setInterval(() => user?.uid && fetchUserData(false), 30000);
     return () => {
-      clearInterval(refreshInterval);
+      clearInterval(interval);
       if (timerRef.current) clearInterval(timerRef.current);
       if (liveCounterRef.current) clearInterval(liveCounterRef.current);
     };
   }, [user, fetchUserData]);
 
-  // Timer effect
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (liveCounterRef.current) clearInterval(liveCounterRef.current);
@@ -388,24 +325,17 @@ const FuturisticMiningDashboard = ({ user }) => {
     if (isMining && sessionTimeRemaining > 0) {
       timerRef.current = setInterval(() => {
         setSessionTimeRemaining(prev => {
-          if (prev <= 5) {
+          if (prev <= 1) {
             setIsMining(false);
-            smartToast.success('Session complete! Collect your rewards.');
-            if (!sessionEndNotifiedRef.current) {
-              triggerHaptic('success');
-              sessionEndNotifiedRef.current = true;
-            }
-            clearInterval(timerRef.current);
-            if (liveCounterRef.current) clearInterval(liveCounterRef.current);
+            smartToast.success('Session complete!');
             return 0;
           }
-          return prev - 5;
+          return prev - 1;
         });
-      }, 5000);
+      }, 1000);
       
       liveCounterRef.current = setInterval(() => {
-        const prcPer100ms = miningRate / 36000;
-        setSessionPRC(prev => Math.max(0, prev + prcPer100ms));
+        setSessionPRC(prev => prev + miningRate / 36000);
       }, 100);
     }
     
@@ -415,84 +345,43 @@ const FuturisticMiningDashboard = ({ user }) => {
     };
   }, [isMining, miningRate]);
 
-  const startSession = async () => {
+  const handleTimerTap = async () => {
     triggerHaptic('medium');
-    setIsStarting(true);
+    setIsProcessing(true);
+    
     try {
-      const response = await axios.post(`${API}/mining/start/${user.uid}`);
-      if (response.data) {
+      if (!isMining) {
+        // Start mining
+        await axios.post(`${API}/mining/start/${user.uid}`);
         setIsMining(true);
-        setSessionTimeRemaining(24 * 60 * 60);
+        setSessionTimeRemaining(86400);
         setSessionPRC(0);
-        setSessionStartTime(Date.now());
         triggerHaptic('success');
-        smartToast.success('Session started! Earning PRC...');
-        sessionEndNotifiedRef.current = false;
-        setTimeout(() => fetchUserData(), 500);
-      }
-    } catch (error) {
-      const detail = error.response?.data?.detail || 'Failed to start session';
-      if (detail.includes('already active')) {
-        smartToast.info('Session already active!');
+        smartToast.success('Mining started!');
+      } else if (sessionPRC >= 0.01 && !isFreeUser) {
+        // Collect rewards
+        const response = await axios.post(`${API}/mining/claim/${user.uid}`);
+        const claimed = response.data.claimed_amount || sessionPRC;
+        triggerHaptic('success');
+        smartToast.success(`Collected ${claimed.toFixed(2)} PRC!`);
+        setSessionPRC(0);
+        if (response.data.session_reset) {
+          setSessionTimeRemaining(Math.floor(response.data.remaining_hours * 3600));
+        }
         fetchUserData();
-      } else {
-        smartToast.error(detail);
       }
-    } finally {
-      setIsStarting(false);
-    }
-  };
-
-  const collectRewards = async () => {
-    if (sessionPRC < 0.01) {
-      smartToast.error('Not enough PRC to collect');
-      return;
-    }
-    
-    triggerHaptic('medium');
-    setIsCollecting(true);
-    
-    try {
-      const response = await axios.post(`${API}/mining/claim/${user.uid}`);
-      const data = response.data;
-      const claimed = data.claimed_amount || data.prc_collected || sessionPRC;
-      
-      triggerHaptic('success');
-      smartToast.success(`Collected ${claimed.toFixed(2)} PRC!`);
-      setSessionPRC(0);
-      sessionEndNotifiedRef.current = false;
-      
-      if (data.session_reset) {
-        const newStartTime = new Date(data.new_session_start).getTime();
-        setSessionStartTime(newStartTime);
-        setSessionTimeRemaining(Math.floor(data.remaining_hours * 3600));
-        setIsMining(true);
-      } else {
-        setSessionStartTime(Date.now());
-      }
-      
-      if (data.new_balance && userData) {
-        setUserData(prev => ({
-          ...prev,
-          prc_balance: data.new_balance,
-          total_mined: data.total_mined || prev.total_mined
-        }));
-      }
-      
-      setTimeout(() => fetchUserData(), 1000);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Failed to collect rewards';
-      smartToast.error(errorMsg);
+      smartToast.error(error.response?.data?.detail || 'Action failed');
     } finally {
-      setIsCollecting(false);
+      setIsProcessing(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center">
         <motion.div
-          className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full"
+          className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -501,190 +390,164 @@ const FuturisticMiningDashboard = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24 overflow-hidden">
-      {/* Animated background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px]" />
-        {/* Grid pattern */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(34,211,238,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.3) 1px, transparent 1px)',
-            backgroundSize: '50px 50px'
-          }}
-        />
-      </div>
-      
+    <div className="min-h-screen bg-[#0a1628] pb-24">
       {/* Header */}
-      <div className="relative z-10 px-5 pb-4 pt-16" style={{ paddingTop: 'max(4rem, calc(env(safe-area-inset-top, 0px) + 3rem))' }}>
+      <div className="px-4 pt-12 pb-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button 
-              onClick={() => {
-                triggerHaptic('light');
-                navigate('/dashboard');
-              }}
-              className="w-10 h-10 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center hover:bg-slate-800 transition-colors backdrop-blur-sm"
+              onClick={() => navigate('/dashboard')}
+              className="w-8 h-8 rounded-full bg-slate-800/50 flex items-center justify-center"
               data-testid="back-button"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-400" />
+              <ArrowLeft className="w-4 h-4 text-slate-400" />
             </button>
-            <div>
-              <h1 className="text-slate-100 text-xl font-semibold tracking-tight">Mining Station</h1>
-              <p className="text-slate-500 text-sm">Earn PRC rewards</p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">P</span>
+              </div>
+              <span className="text-white font-semibold text-lg">Paras <span className="text-blue-400">Reward</span></span>
             </div>
           </div>
-          
-          {hasPaidPlan && (
-            <div className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 backdrop-blur-sm">
-              <span className="text-xs font-semibold text-amber-400 flex items-center gap-1">
-                <Crown className="w-3 h-3" /> VIP
-              </span>
-            </div>
-          )}
+          <button className="relative">
+            <Bell className="w-5 h-5 text-slate-400" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          </button>
         </div>
       </div>
-      
-      {/* Main Dashboard Content */}
-      <div className="relative z-10 px-5">
-        {/* Circular Timer - Main Element */}
-        <div className="flex justify-center mb-6">
-          <CircularTimer
-            sessionPRC={sessionPRC}
-            timeRemaining={sessionTimeRemaining}
-            isMining={isMining}
-            onCollect={collectRewards}
-            onStart={startSession}
-            isCollecting={isCollecting}
-            isStarting={isStarting}
-            canCollect={canCollect}
-            isFreeUser={isFreeUser}
-          />
+
+      {/* Balance Section */}
+      <div className="px-4 mb-4">
+        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-700/50">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-3xl font-bold text-white font-mono">
+                {(userData?.prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} <span className="text-blue-400 text-lg">PRC</span>
+              </p>
+              <p className="text-slate-400 text-sm">₹{((userData?.prc_balance || 0) / 10).toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR</p>
+            </div>
+            <MiniBarChart />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button className="bg-slate-700/50 hover:bg-slate-700 rounded-xl py-2.5 flex items-center justify-center gap-2 transition-colors">
+              <Send className="w-4 h-4 text-white" />
+              <span className="text-white text-sm font-medium">Send</span>
+            </button>
+            <button 
+              onClick={() => navigate('/prc-to-bank')}
+              className="bg-slate-700/50 hover:bg-slate-700 rounded-xl py-2.5 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span className="text-white text-sm font-medium">Receive</span>
+            </button>
+          </div>
         </div>
-        
-        {/* Speed and Total - Side by Side */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {/* Speed Gauge */}
-          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center overflow-hidden">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Mining Speed</p>
-            <SpeedometerGauge rate={miningRate} maxRate={250} />
+      </div>
+
+      {/* Mining Speed & Session */}
+      <div className="px-4 mb-4">
+        <div className="grid grid-cols-2 gap-3">
+          {/* Mining Speed */}
+          <div className="bg-slate-800/30 rounded-2xl p-3 border border-slate-700/50">
+            <div className="flex items-center gap-1 mb-2">
+              <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+              <p className="text-slate-400 text-xs font-medium">Mining Speed</p>
+              <div className="flex-1 border-t border-dashed border-slate-600 mx-1" />
+            </div>
+            <ClassicSpeedometer rate={miningRate} maxRate={100} />
           </div>
           
-          {/* Total Mined - Simple display */}
-          <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center overflow-hidden">
-            <OdometerDisplay value={lifetimeEarnings} label="Total Mined" />
-          </div>
-        </div>
-        
-        {/* Balance Card */}
-        <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-500 mb-1">Current Balance</p>
-              <p className="text-xl font-bold text-slate-100 font-mono truncate">
-                {(userData?.prc_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-cyan-400 text-sm">PRC</span>
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center flex-shrink-0 ml-3">
-              <Zap className="w-5 h-5 text-cyan-400" />
-            </div>
-          </div>
-        </div>
-        
-        {/* Free User Upgrade Prompt */}
-        {isFreeUser && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30 mb-6"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <Crown className="w-6 h-6 text-amber-400" />
-              <div>
-                <p className="text-amber-400 font-semibold text-sm">Upgrade to Collect PRC!</p>
-                <p className="text-gray-400 text-xs">Plan upgrade करा आणि PRC collect करा</p>
+          {/* Mining Session */}
+          <div className="bg-slate-800/30 rounded-2xl p-3 border border-slate-700/50">
+            <div className="flex items-center gap-1 mb-2">
+              <div className="flex gap-0.5">
+                {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-blue-400 rounded-full" />)}
               </div>
+              <p className="text-slate-400 text-xs font-medium">Mining Session</p>
+              <div className="flex-1 border-t border-dashed border-slate-600 mx-1" />
             </div>
+            <div className="flex justify-center">
+              <FuturisticTimer
+                timeRemaining={sessionTimeRemaining}
+                sessionPRC={sessionPRC}
+                isMining={isMining}
+                onTap={handleTimerTap}
+                isLoading={isProcessing}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Referral & Total Mined */}
+      <div className="px-4 mb-4">
+        <div className="grid grid-cols-2 gap-3">
+          {/* Referral Boost */}
+          <div className="bg-slate-800/30 rounded-2xl p-3 border border-slate-700/50">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <Users className="w-3 h-3 text-yellow-400" />
+              </div>
+              <span className="text-slate-300 text-sm font-medium">Referral Boost</span>
+              <span className="text-yellow-400 font-bold">+{referralBoost.toFixed(0)}</span>
+            </div>
+            <p className="text-emerald-400 text-sm font-semibold">+{activeReferrals} Active Referrals</p>
+          </div>
+          
+          {/* Total PRC Mined */}
+          <div className="bg-slate-800/30 rounded-2xl p-3 border border-slate-700/50">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-3 h-3 text-blue-400" />
+              </div>
+              <span className="text-slate-300 text-sm font-medium">Total PRC Mined</span>
+            </div>
+            <OdometerDisplay value={lifetimeEarnings} />
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="px-4">
+        <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-700/50">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold">Recent Activity</h3>
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </div>
+          <div className="space-y-3">
+            {recentActivity.map((item, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-white text-sm font-medium">{item.type}</p>
+                    <p className="text-slate-500 text-xs">{item.time}</p>
+                  </div>
+                </div>
+                <p className="text-emerald-400 font-semibold">+{item.amount.toFixed(2)} PRC</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Free User Upgrade */}
+      {isFreeUser && (
+        <div className="px-4 mt-4">
+          <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
+            <p className="text-amber-400 font-semibold mb-2">Upgrade to Collect PRC!</p>
             <Button 
               onClick={() => navigate('/subscription')}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-semibold"
               data-testid="upgrade-button"
             >
-              <Crown className="w-4 h-4 mr-2" />
               Upgrade Now
             </Button>
-          </motion.div>
-        )}
-        
-        {/* Mining Speed Breakdown */}
-        <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4">
-          <h2 className="text-slate-100 font-semibold text-sm mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-cyan-400" />
-            Speed Breakdown
-          </h2>
-          
-          <div className="space-y-3">
-            {/* Base Rate */}
-            <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-emerald-500/20 flex items-center justify-center">
-                  <Zap className="w-3 h-3 text-emerald-400" />
-                </div>
-                <span className="text-slate-300 text-sm">Base Rate</span>
-              </div>
-              <span className="text-emerald-400 font-mono text-sm">{baseRate.toFixed(2)}</span>
-            </div>
-            
-            {/* Level 1 */}
-            <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 text-[10px] font-bold">L1</div>
-                <span className="text-slate-300 text-sm">Direct ({referralBreakdown?.level_1?.active_count || 0})</span>
-              </div>
-              <span className={`font-mono text-sm ${(referralBreakdown?.level_1?.bonus || 0) > 0 ? 'text-blue-400' : 'text-slate-600'}`}>
-                +{(referralBreakdown?.level_1?.bonus || 0).toFixed(2)}
-              </span>
-            </div>
-            
-            {/* Level 2 */}
-            <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-purple-500/20 flex items-center justify-center text-purple-400 text-[10px] font-bold">L2</div>
-                <span className="text-slate-300 text-sm">Level 2 ({referralBreakdown?.level_2?.active_count || 0})</span>
-              </div>
-              <span className={`font-mono text-sm ${(referralBreakdown?.level_2?.bonus || 0) > 0 ? 'text-purple-400' : 'text-slate-600'}`}>
-                +{(referralBreakdown?.level_2?.bonus || 0).toFixed(2)}
-              </span>
-            </div>
-            
-            {/* Level 3 */}
-            <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-orange-500/20 flex items-center justify-center text-orange-400 text-[10px] font-bold">L3</div>
-                <span className="text-slate-300 text-sm">Level 3 ({referralBreakdown?.level_3?.active_count || 0})</span>
-              </div>
-              <span className={`font-mono text-sm ${(referralBreakdown?.level_3?.bonus || 0) > 0 ? 'text-orange-400' : 'text-slate-600'}`}>
-                +{(referralBreakdown?.level_3?.bonus || 0).toFixed(2)}
-              </span>
-            </div>
-            
-            {/* Total */}
-            <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-cyan-500/30">
-              <span className="text-cyan-400 text-sm font-bold">TOTAL SPEED</span>
-              <span className="text-cyan-400 font-mono text-lg font-bold">{miningRate.toFixed(2)} PRC/hr</span>
-            </div>
-          </div>
-          
-          {/* Info */}
-          <div className="mt-4 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
-            <p className="text-cyan-300 text-xs flex items-start gap-2">
-              <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Bonus is calculated from active PAID users only.</span>
-            </p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
