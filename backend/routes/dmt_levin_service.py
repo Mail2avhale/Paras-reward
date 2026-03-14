@@ -206,42 +206,48 @@ async def check_sender(request: SenderCheckRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# STEP 2: Register/Onboard Sender
+# STEP 2: Register/Onboard Sender for DMT-Levin (service_code: 80)
 @router.post("/sender/register")
 async def register_sender(request: SenderRegisterRequest):
     """
     Step 2: Register new sender for DMT-Levin
-    POST /v3/customer/account/{customer_id}/dmt-levin
-    Body: initiator_id, user_code, name, dob, residence_address
+    POST /v3/customer/account/{customer_id}
+    Body: initiator_id, user_code, name, dob, residence_address, service_code=80
+    
+    IMPORTANT: service_code=80 is required for DMT-Levin!
     """
     try:
-        # DMT-Levin specific registration endpoint
-        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
+        # CORRECT endpoint: /v3/customer/account/{mobile} with service_code=80
+        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}"
         
-        # residence_address as JSON string
+        # residence_address as JSON string (required format)
         residence_address = json.dumps({
             "line": request.address or "India",
             "city": "Mumbai",
             "state": "Maharashtra",
-            "pincode": "400001"
+            "pincode": "400001",
+            "district": "Mumbai",
+            "area": "Mumbai"
         })
         
-        # Form data (application/x-www-form-urlencoded)
+        # Form data with service_code=80 for DMT-Levin
         form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": residence_address
+            "residence_address": residence_address,
+            "service_code": "80"  # CRITICAL: DMT-Levin service code
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
         logging.info(f"[Levin DMT] Register URL: {url}")
+        logging.info(f"[Levin DMT] Register data: {form_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=form_data)
             
-            logging.info(f"[Levin DMT] Register response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
+            logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -258,20 +264,23 @@ async def register_sender(request: SenderRegisterRequest):
                     "message": f"Eko API error: {response.text[:200]}"
                 }
             
-            if result.get("response_status_id") == 0:
-                data = result.get("data", {})
-                state = data.get("state")
-                
+            response_status = result.get("response_status_id")
+            data = result.get("data", {})
+            state = data.get("state")
+            
+            # Success or customer already exists
+            if response_status == 0 or response_status == -1:
                 # State 8 = Minimum KYC, ready for transfers up to ₹25,000/month
                 if state == "8" or state == 8:
                     return {
                         "success": True,
                         "otp_sent": False,
                         "registered": True,
-                        "message": "Customer registered! ₹25,000 monthly limit available.",
+                        "message": "Customer registered for DMT-Levin! ₹25,000 monthly limit available.",
                         "data": data
                     }
-                else:
+                # State 1 = OTP verification pending
+                elif state == "1" or state == 1:
                     return {
                         "success": True,
                         "otp_sent": True,
@@ -279,11 +288,19 @@ async def register_sender(request: SenderRegisterRequest):
                         "message": "OTP customer mobile वर पाठवला. कृपया verify करा.",
                         "data": data
                     }
+                else:
+                    return {
+                        "success": True,
+                        "otp_sent": bool(data.get("otp_ref_id")),
+                        "otp_ref_id": data.get("otp_ref_id"),
+                        "message": f"Registration state: {state}. Please verify if OTP sent.",
+                        "data": data
+                    }
             else:
                 return {
                     "success": False,
                     "message": result.get("message", "Registration failed"),
-                    "error_code": result.get("response_status_id")
+                    "error_code": response_status
                 }
                 
     except HTTPException:
