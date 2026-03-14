@@ -1,6 +1,21 @@
 """
-EKO LEVIN DMT SERVICE - OTP Based Fund Transfer
-Base URL: https://api.eko.in:25002/ekoicici/v3
+================================================================================
+⚠️ DEPRECATED - V3 LEVIN DMT SERVICE
+================================================================================
+
+This service has been DISABLED as per user request.
+
+Reason: Moving to V1 Fund Transfer API which doesn't require OTP.
+New API: /api/fund-transfer/initiate
+
+Reference: https://developers.eko.in/v1/reference/fund-transfer-overview
+
+To use new V1 Fund Transfer:
+1. PUT /api/fund-transfer/activate (activate service_code 45)
+2. POST /api/fund-transfer/initiate (initiate transfer)
+3. GET /api/fund-transfer/status/{tid} (check status)
+
+================================================================================
 """
 
 import os
@@ -16,7 +31,31 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/eko/levin-dmt", tags=["Levin DMT"])
+# ================================================================================
+# ⚠️ DISABLED ROUTER - All endpoints will return 410 Gone
+# ================================================================================
+
+router = APIRouter(prefix="/eko/levin-dmt", tags=["Levin DMT - DEPRECATED"])
+
+# Global flag to disable all endpoints
+SERVICE_DISABLED = True
+DISABLED_MESSAGE = "V3 Levin DMT is deprecated. Please use V1 Fund Transfer API at /api/fund-transfer"
+
+
+def check_disabled():
+    """Check if service is disabled and raise exception"""
+    if SERVICE_DISABLED:
+        raise HTTPException(
+            status_code=410,  # Gone
+            detail={
+                "message": DISABLED_MESSAGE,
+                "new_api": {
+                    "activate": "PUT /api/fund-transfer/activate",
+                    "initiate": "POST /api/fund-transfer/initiate",
+                    "status": "GET /api/fund-transfer/status/{tid}"
+                }
+            }
+        )
 
 # ==================== CONFIGURATION ====================
 
@@ -94,12 +133,12 @@ def get_headers() -> dict:
 
 @router.get("/health")
 async def health_check():
-    """Check Levin DMT service health"""
+    """Check Levin DMT service status"""
     return {
-        "status": "healthy",
+        "status": "DEPRECATED",
         "service": "Levin DMT V3",
-        "base_url": EKO_BASE_URL_V3,
-        "user_code": EKO_USER_CODE,
+        "message": DISABLED_MESSAGE,
+        "new_api": "/api/fund-transfer",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -109,9 +148,10 @@ async def health_check():
 async def check_sender(request: SenderCheckRequest):
     """
     Step 1: Check if sender exists
-    GET /v3/customer/profile/{mobile}
-    Without Aadhaar = ₹25,000 monthly limit
+    DEPRECATED - Use V1 Fund Transfer API instead
     """
+    check_disabled()
+    # Old code below - never executed due to check_disabled()
     try:
         # CORRECT endpoint as per Eko docs
         url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}"
