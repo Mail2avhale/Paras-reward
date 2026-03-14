@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://eko-levin-debug.preview.emergentagent.com';
+const BASE_URL = 'https://fund-transfer-app-4.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {
