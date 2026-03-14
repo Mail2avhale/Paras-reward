@@ -1352,7 +1352,7 @@ const RedeemPageV2 = ({ user }) => {
     
     // Check Available Redeem Limit (NOT prc_balance)
     if (charges && redeemLimit) {
-      const availableLimit = redeemLimit.remaining || 0;
+      const availableLimit = redeemLimit.remaining_limit || redeemLimit.remaining || 0;
       if (availableLimit < charges.total_prc_required) {
         toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${charges.total_prc_required.toLocaleString()} PRC`);
         return;
@@ -2536,8 +2536,8 @@ const RedeemPageV2 = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-emerald-300/50 text-[10px] uppercase">Available</p>
-                    <p className="text-emerald-400 font-bold text-sm">{(redeemLimit.remaining || 0).toLocaleString()}</p>
-                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining || 0) / prcRate).toLocaleString()}</p>
+                    <p className="text-emerald-400 font-bold text-sm">{(redeemLimit.remaining_limit || redeemLimit.remaining || 0).toLocaleString()}</p>
+                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining_limit || redeemLimit.remaining || 0) / prcRate).toLocaleString()}</p>
                   </div>
                 </div>
                 

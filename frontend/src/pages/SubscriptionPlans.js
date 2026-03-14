@@ -161,7 +161,9 @@ const SubscriptionPlans = ({ user }) => {
       // Fetch redeem limit for PRC payment option
       try {
         const limitRes = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
-        setRedeemLimit(limitRes.data);
+        if (limitRes.data?.success && limitRes.data?.limit) {
+          setRedeemLimit(limitRes.data.limit);
+        }
       } catch (err) {
         console.log('Could not fetch redeem limit');
       }
@@ -362,7 +364,7 @@ const SubscriptionPlans = ({ user }) => {
   // Handle PRC Payment for Subscription
   const handlePRCPayment = async () => {
     const prcRequired = getPRCPrice();
-    const availableLimit = redeemLimit?.remaining || 0;
+    const availableLimit = redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
     
     if (availableLimit < prcRequired) {
       toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
@@ -1216,7 +1218,7 @@ const SubscriptionPlans = ({ user }) => {
                     {getPRCPrice().toLocaleString()} PRC
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Available: {(redeemLimit?.remaining || 0).toLocaleString()} PRC
+                    Available: {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0).toLocaleString()} PRC
                   </p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1345,22 +1347,22 @@ const SubscriptionPlans = ({ user }) => {
               <div className="p-4 bg-gray-800/50 rounded-2xl">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-400 text-sm">Available Redeem Limit</span>
-                  <span className={`font-bold ${(redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {(redeemLimit?.remaining || 0).toLocaleString()} PRC
+                  <span className={`font-bold ${(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0).toLocaleString()} PRC
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Required</span>
                   <span className="text-purple-400 font-bold">{getPRCPrice().toLocaleString()} PRC</span>
                 </div>
-                {(redeemLimit?.remaining || 0) < getPRCPrice() && (
+                {(redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) < getPRCPrice() && (
                   <p className="text-red-400 text-xs mt-2">⚠️ Insufficient redeem limit. Mine more PRC or use another payment method.</p>
                 )}
               </div>
 
               <button
                 onClick={handlePRCPayment}
-                disabled={prcPaymentLoading || (redeemLimit?.remaining || 0) < getPRCPrice()}
+                disabled={prcPaymentLoading || (redeemLimit?.remaining_limit || redeemLimit?.remaining || 0) < getPRCPrice()}
                 className="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {prcPaymentLoading ? (
