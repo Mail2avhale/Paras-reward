@@ -2432,3 +2432,254 @@ async def fix_missing_amounts():
     except Exception as e:
         logging.error(f"Fix amounts error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/admin/bulk-reject-refund")
+async def bulk_reject_refund(
+    collection: str,
+    dry_run: bool = True
+):
+    """
+    CLEANUP: Reject all pending requests and refund PRC.
+    
+    Args:
+        collection: 'bill_payments' or 'bank_withdrawals'
+        dry_run: If True, only show what would be done
+    """
+    from datetime import datetime, timezone
+    from app.services.wallet_service_v2 import WalletServiceV2
+    
+    try:
+        if collection == "bill_payments":
+            coll = db.bill_payment_requests
+            prc_field = "prc_amount"
+            amount_field = "amount_inr"
+        elif collection == "bank_withdrawals":
+            coll = db.bank_withdrawal_requests
+            prc_field = "total_prc"
+            amount_field = "amount_inr"
+        else:
+            raise HTTPException(status_code=400, detail="Invalid collection. Use 'bill_payments' or 'bank_withdrawals'")
+        
+        # Find all pending requests
+        pending = await coll.find({"status": "pending"}).to_list(5000)
+        
+        results = []
+        total_prc = 0
+        success_count = 0
+        failed_count = 0
+        
+        for req in pending:
+            user_id = req.get("user_id")
+            request_id = req.get("request_id") or str(req.get("_id"))
+            prc_to_refund = req.get(prc_field) or req.get("prc_amount") or req.get("total_prc") or 0
+            amount_inr = req.get(amount_field) or req.get("amount") or 0
+            
+            # Calculate PRC if not stored
+            if not prc_to_refund and amount_inr:
+                prc_to_refund = amount_inr * 100  # 100 PRC = ₹1
+            
+            if not prc_to_refund or prc_to_refund <= 0:
+                continue
+            
+            total_prc += prc_to_refund
+            
+            if dry_run:
+                results.append({
+                    "user_id": user_id,
+                    "user_name": req.get("user_name") or req.get("name"),
+                    "prc": prc_to_refund,
+                    "amount_inr": amount_inr,
+                    "request_id": request_id,
+                    "service_type": req.get("service_type") or req.get("type") or collection,
+                    "status": "WILL_REJECT_REFUND"
+                })
+            else:
+                # Credit PRC back to user
+                credit_result = WalletServiceV2.credit(
+                    user_id=user_id,
+                    amount=prc_to_refund,
+                    txn_type="refund",
+                    description=f"Bulk Refund: {collection} request rejected - ₹{amount_inr}",
+                    reference=request_id,
+                    service_type=collection
+                )
+                
+                if credit_result.get("success"):
+                    # Update request status to rejected
+                    await coll.update_one(
+                        {"_id": req.get("_id")},
+                        {
+                            "$set": {
+                                "status": "rejected",
+                                "rejected_at": datetime.now(timezone.utc).isoformat(),
+                                "rejection_reason": "Bulk cleanup - PRC refunded",
+                                "refund_txn_id": credit_result.get("txn_id"),
+                                "prc_refunded": True
+                            }
+                        }
+                    )
+                    success_count += 1
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name") or req.get("name"),
+                        "prc": prc_to_refund,
+                        "new_balance": credit_result.get("balance_after"),
+                        "txn_id": credit_result.get("txn_id"),
+                        "status": "REJECTED_REFUNDED"
+                    })
+                else:
+                    failed_count += 1
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name") or req.get("name"),
+                        "prc": prc_to_refund,
+                        "status": "REFUND_FAILED",
+                        "error": credit_result.get("error")
+                    })
+        
+        return {
+            "success": True,
+            "collection": collection,
+            "dry_run": dry_run,
+            "summary": {
+                "total_pending": len(pending),
+                "to_process": len(results),
+                "success": success_count,
+                "failed": failed_count,
+                "total_prc_to_refund": total_prc
+            },
+            "transactions": results[:100]  # Limit response size
+        }
+        
+    except Exception as e:
+        logging.error(f"Bulk reject refund error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/audit-paid-requests")
+async def audit_paid_requests(
+    collection: str = "all",
+    start_date: str = None,
+    end_date: str = None
+):
+    """
+    AUDIT: Get all approved/paid requests for audit purposes.
+    
+    Args:
+        collection: 'bill_payments', 'bank_withdrawals', 'redeem_requests', or 'all'
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+    """
+    from datetime import datetime, timezone
+    
+    try:
+        audit_data = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "filters": {
+                "collection": collection,
+                "start_date": start_date,
+                "end_date": end_date
+            },
+            "summary": {},
+            "collections": {}
+        }
+        
+        # Build date filter
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date + "T23:59:59"
+        
+        # Bill Payments Audit
+        if collection in ["all", "bill_payments"]:
+            query = {"status": {"$in": ["approved", "completed", "paid"]}}
+            if date_filter:
+                query["created_at"] = date_filter
+            
+            bills = await db.bill_payment_requests.find(query).to_list(10000)
+            
+            bill_summary = {
+                "total_count": len(bills),
+                "total_inr": sum(b.get("amount_inr", 0) for b in bills),
+                "total_prc": sum(b.get("prc_amount", 0) for b in bills),
+                "by_service": {}
+            }
+            
+            # Group by service type
+            for b in bills:
+                svc = b.get("service_type", "unknown")
+                if svc not in bill_summary["by_service"]:
+                    bill_summary["by_service"][svc] = {"count": 0, "inr": 0}
+                bill_summary["by_service"][svc]["count"] += 1
+                bill_summary["by_service"][svc]["inr"] += b.get("amount_inr", 0)
+            
+            audit_data["collections"]["bill_payments"] = bill_summary
+        
+        # Bank Withdrawals Audit
+        if collection in ["all", "bank_withdrawals"]:
+            query = {"status": {"$in": ["approved", "completed", "paid"]}}
+            if date_filter:
+                query["created_at"] = date_filter
+            
+            withdrawals = await db.bank_withdrawal_requests.find(query).to_list(10000)
+            
+            withdrawal_summary = {
+                "total_count": len(withdrawals),
+                "total_inr": sum(w.get("amount_inr", 0) for w in withdrawals),
+                "total_prc": sum(w.get("total_prc", 0) for w in withdrawals),
+                "by_type": {}
+            }
+            
+            for w in withdrawals:
+                wtype = w.get("type", "bank")
+                if wtype not in withdrawal_summary["by_type"]:
+                    withdrawal_summary["by_type"][wtype] = {"count": 0, "inr": 0}
+                withdrawal_summary["by_type"][wtype]["count"] += 1
+                withdrawal_summary["by_type"][wtype]["inr"] += w.get("amount_inr", 0)
+            
+            audit_data["collections"]["bank_withdrawals"] = withdrawal_summary
+        
+        # BBPS/Redeem Requests Audit
+        if collection in ["all", "redeem_requests"]:
+            query = {"status": {"$in": ["completed"]}, "eko_tid": {"$exists": True}}
+            if date_filter:
+                query["created_at"] = date_filter
+            
+            redeems = await db.redeem_requests.find(query).to_list(10000)
+            
+            redeem_summary = {
+                "total_count": len(redeems),
+                "total_inr": sum(r.get("amount_inr", 0) for r in redeems),
+                "total_prc": sum(r.get("total_prc_deducted", 0) for r in redeems),
+                "by_service": {}
+            }
+            
+            for r in redeems:
+                svc = r.get("service_type", "unknown")
+                if svc not in redeem_summary["by_service"]:
+                    redeem_summary["by_service"][svc] = {"count": 0, "inr": 0, "prc": 0}
+                redeem_summary["by_service"][svc]["count"] += 1
+                redeem_summary["by_service"][svc]["inr"] += r.get("amount_inr", 0)
+                redeem_summary["by_service"][svc]["prc"] += r.get("total_prc_deducted", 0)
+            
+            audit_data["collections"]["redeem_requests"] = redeem_summary
+        
+        # Calculate grand totals
+        audit_data["summary"] = {
+            "total_transactions": sum(c.get("total_count", 0) for c in audit_data["collections"].values()),
+            "total_inr": sum(c.get("total_inr", 0) for c in audit_data["collections"].values()),
+            "total_prc": sum(c.get("total_prc", 0) for c in audit_data["collections"].values())
+        }
+        
+        return audit_data
+        
+    except Exception as e:
+        logging.error(f"Audit error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
