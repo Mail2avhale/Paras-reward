@@ -4699,7 +4699,56 @@ async def run_prc_burn_job():
     }
     
     logging.info(f"[PRC BURN JOB] Completed: {total_users} users, {total_burned:.2f} PRC burned")
+    
+    # Save burn log to database for tracking
+    try:
+        await db.burn_job_logs.insert_one({
+            "job_type": "prc_burn",
+            "executed_at": now.isoformat(),
+            "date": now.strftime("%Y-%m-%d"),
+            "results": results,
+            "total_users": total_users,
+            "total_burned": total_burned
+        })
+    except Exception as e:
+        logging.error(f"[PRC BURN] Failed to save burn log: {e}")
+    
     return results
+
+
+async def check_and_run_missed_burn_job():
+    """
+    Auto-recovery: Check if burn job ran today, if not - run it.
+    Called every hour as fallback for missed cron jobs.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        
+        # Check if burn job already ran today
+        existing_log = await db.burn_job_logs.find_one({
+            "job_type": "prc_burn",
+            "date": today
+        })
+        
+        if existing_log:
+            logging.debug(f"[BURN FALLBACK] Burn job already ran today at {existing_log.get('executed_at')}")
+            return {"status": "already_ran", "executed_at": existing_log.get("executed_at")}
+        
+        # Check current hour (IST = UTC + 5:30)
+        ist_hour = (now.hour + 5) % 24 + (30 / 60)
+        
+        # Only run if it's after 11 AM IST and burn hasn't run
+        if ist_hour >= 11:
+            logging.info(f"[BURN FALLBACK] Burn job missed today! Running now...")
+            result = await run_prc_burn_job()
+            return {"status": "executed_fallback", "result": result}
+        else:
+            return {"status": "waiting", "message": "Too early for burn job (before 11 AM IST)"}
+            
+    except Exception as e:
+        logging.error(f"[BURN FALLBACK] Error: {e}")
+        return {"status": "error", "error": str(e)}
 
 # ==================== END PRC BURN SYSTEM ====================
 
@@ -15569,18 +15618,92 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 
 # ========== GLOBAL REDEEM LIMIT ==========
 # Formula: 799 * 5 * 10 = 39950 + 20% Direct Referral Bonus
+# These values can be updated via admin API
 
+# Default values (can be overridden from database)
 BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC per month
 REFERRAL_LIMIT_INCREASE_PER_ACTIVE = 20  # 1 active direct referral = 20% limit increase
+
+async def get_global_redeem_settings():
+    """Get global redeem limit settings from database or return defaults."""
+    try:
+        settings = await db.app_settings.find_one({"type": "global_redeem_limits"})
+        if settings:
+            return {
+                "base_limit": settings.get("base_limit", BASE_REDEEM_LIMIT),
+                "referral_increase_percent": settings.get("referral_increase_percent", REFERRAL_LIMIT_INCREASE_PER_ACTIVE),
+                "carry_forward_enabled": settings.get("carry_forward_enabled", True),
+                "updated_at": settings.get("updated_at"),
+                "source": "database"
+            }
+    except Exception as e:
+        logging.error(f"Error getting global redeem settings: {e}")
+    
+    return {
+        "base_limit": BASE_REDEEM_LIMIT,
+        "referral_increase_percent": REFERRAL_LIMIT_INCREASE_PER_ACTIVE,
+        "carry_forward_enabled": True,
+        "source": "default"
+    }
+
+@api_router.get("/admin/global-redeem-settings")
+async def get_redeem_settings():
+    """Get current global redeem limit settings."""
+    settings = await get_global_redeem_settings()
+    return {
+        "success": True,
+        "settings": settings,
+        "explanation": {
+            "base_limit": f"Base monthly PRC limit for all users ({settings['base_limit']} PRC = ₹{settings['base_limit']/100:.2f})",
+            "referral_increase_percent": f"Each active referral adds {settings['referral_increase_percent']}% to user's limit",
+            "carry_forward_enabled": "Unused monthly limit carries forward to next month"
+        }
+    }
+
+@api_router.put("/admin/global-redeem-settings")
+async def update_redeem_settings(
+    base_limit: int = None,
+    referral_increase_percent: int = None,
+    carry_forward_enabled: bool = None
+):
+    """Update global redeem limit settings (Admin only)."""
+    try:
+        current = await get_global_redeem_settings()
+        
+        update_data = {
+            "type": "global_redeem_limits",
+            "base_limit": base_limit if base_limit is not None else current["base_limit"],
+            "referral_increase_percent": referral_increase_percent if referral_increase_percent is not None else current["referral_increase_percent"],
+            "carry_forward_enabled": carry_forward_enabled if carry_forward_enabled is not None else current["carry_forward_enabled"],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.app_settings.update_one(
+            {"type": "global_redeem_limits"},
+            {"$set": update_data},
+            upsert=True
+        )
+        
+        logging.info(f"[ADMIN] Global redeem settings updated: {update_data}")
+        
+        return {
+            "success": True,
+            "message": "Global redeem settings updated",
+            "settings": update_data
+        }
+        
+    except Exception as e:
+        logging.error(f"Error updating global redeem settings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
     Calculate total redeem limit for a user with CARRY FORWARD from USER JOIN DATE.
     
     NEW Formula (Updated): 
-    - Monthly Base Limit = 39,950 PRC
-    - 1 Active Direct Referral = 20% increase in limit
-    - Monthly Limit = Base × (1 + (Active Referrals × 20%))
+    - Monthly Base Limit = Configurable (default 39,950 PRC)
+    - 1 Active Direct Referral = Configurable % increase in limit
+    - Monthly Limit = Base × (1 + (Active Referrals × Increase%))
     - Total Limit = Months × Monthly Limit (with referral bonus)
     - Unused limit automatically carries forward
     
@@ -15592,7 +15715,11 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
     Active referral = referred user has active subscription
     """
     try:
-        monthly_base_limit = BASE_REDEEM_LIMIT
+        # Get configurable settings from database
+        global_settings = await get_global_redeem_settings()
+        monthly_base_limit = global_settings.get("base_limit", BASE_REDEEM_LIMIT)
+        referral_increase = global_settings.get("referral_increase_percent", REFERRAL_LIMIT_INCREASE_PER_ACTIVE)
+        carry_forward = global_settings.get("carry_forward_enabled", True)
         
         # Get user's data
         user = await db.users.find_one({"uid": user_id})
@@ -40425,6 +40552,17 @@ async def startup_db():
             CronTrigger(hour=3, minute=0),  # Daily at 3 AM
             id='daily_wallet_reconciliation',
             name='Daily wallet reconciliation and profit calculation',
+            replace_existing=True
+        )
+        
+        # FALLBACK: Check and run missed burn job every hour
+        # This ensures burn job runs even if cron trigger was missed
+        scheduler.add_job(
+            check_and_run_missed_burn_job,
+            'interval',
+            hours=1,
+            id='burn_job_fallback',
+            name='Fallback check for missed PRC burn job',
             replace_existing=True
         )
         
