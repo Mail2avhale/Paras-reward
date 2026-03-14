@@ -102,7 +102,8 @@ class WalletService:
         
         # Update balance and log transaction
         try:
-            db.users.update_one(
+            # CRITICAL: Check if update was successful  
+            update_result = db.users.update_one(
                 {"uid": user_id},
                 {
                     "$set": {"prc_balance": balance_after},
@@ -118,10 +119,14 @@ class WalletService:
                 }
             )
             
+            # VERIFY update was applied
+            if update_result.modified_count == 0:
+                logging.error(f"[Wallet] CRITICAL: Credit update not applied for {user_id}. matched={update_result.matched_count}, modified={update_result.modified_count}")
+            
             # Save ledger entry
             db.ledger.insert_one(ledger_entry)
             
-            logging.info(f"[Wallet] Credit {amount} PRC to {user_id}. New balance: {balance_after}")
+            logging.info(f"[Wallet] Credit {amount} PRC to {user_id}. New balance: {balance_after}. matched={update_result.matched_count}, modified={update_result.modified_count}")
             
             return {
                 "success": True,
@@ -133,6 +138,8 @@ class WalletService:
             
         except Exception as e:
             logging.error(f"[Wallet] Credit failed for {user_id}: {e}")
+            import traceback
+            logging.error(f"[Wallet] Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
@@ -202,7 +209,8 @@ class WalletService:
         
         # Update balance and log transaction
         try:
-            db.users.update_one(
+            # CRITICAL: Check if update was successful
+            update_result = db.users.update_one(
                 {"uid": user_id},
                 {
                     "$set": {"prc_balance": balance_after},
@@ -218,10 +226,25 @@ class WalletService:
                 }
             )
             
+            # VERIFY update was applied
+            if update_result.modified_count == 0:
+                logging.error(f"[Wallet] CRITICAL: Debit update not applied for {user_id}. matched={update_result.matched_count}, modified={update_result.modified_count}")
+                # Double-check by reading back
+                verify_user = db.users.find_one({"uid": user_id}, {"prc_balance": 1})
+                if verify_user:
+                    actual_balance = verify_user.get("prc_balance", 0)
+                    if actual_balance != balance_after:
+                        logging.error(f"[Wallet] VERIFICATION FAILED: Expected {balance_after}, Actual {actual_balance}")
+                        return {"success": False, "error": "Balance update not applied"}
+                    else:
+                        logging.info(f"[Wallet] Balance already correct (idempotent)")
+                else:
+                    return {"success": False, "error": "User not found after update"}
+            
             # Save ledger entry
             db.ledger.insert_one(ledger_entry)
             
-            logging.info(f"[Wallet] Debit {amount} PRC from {user_id}. New balance: {balance_after}")
+            logging.info(f"[Wallet] Debit {amount} PRC from {user_id}. New balance: {balance_after}. matched={update_result.matched_count}, modified={update_result.modified_count}")
             
             return {
                 "success": True,
@@ -233,6 +256,8 @@ class WalletService:
             
         except Exception as e:
             logging.error(f"[Wallet] Debit failed for {user_id}: {e}")
+            import traceback
+            logging.error(f"[Wallet] Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
