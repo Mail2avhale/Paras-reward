@@ -183,36 +183,39 @@ async def register_sender(request: SenderRegisterRequest):
     """
     Step 2: Onboard new sender for Levin DMT
     POST /v3/customer/account/{customer_id}/dmt-levin
+    Content-Type: application/json
     """
     try:
         # Correct Levin DMT registration endpoint
         url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
         
-        # residence_address as JSON string
-        residence_address = json.dumps({
-            "line": request.address,
-            "city": "Mumbai",
-            "state": "Maharashtra", 
-            "pincode": "400001",
-            "district": "Mumbai",
-            "area": "India"
-        })
-        
-        # Use form data
-        form_data = {
+        # JSON body as per documentation - residence_address as object NOT string
+        json_body = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": residence_address
+            "residence_address": {
+                "line": request.address,
+                "city": "Mumbai",
+                "state": "Maharashtra", 
+                "pincode": "400001",
+                "district": "Mumbai",
+                "area": "India"
+            }
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
         logging.info(f"[Levin DMT] Register URL: {url}")
-        logging.info(f"[Levin DMT] Register data: {form_data}")
+        logging.info(f"[Levin DMT] Register JSON body: {json_body}")
+        
+        # Headers with Content-Type: application/json
+        headers = get_headers()
+        headers["Content-Type"] = "application/json"
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.post(url, headers=get_headers(), data=form_data)
+            # Use JSON body
+            response = await client.post(url, headers=headers, json=json_body)
             
             logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
             
