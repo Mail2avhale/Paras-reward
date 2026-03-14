@@ -1,193 +1,184 @@
 <analysis>**original_problem_statement:**
-वापरकर्त्याची (User) नवीन आणि सर्वोच्च प्राधान्याची विनंती एक नवीन 'मॅन्युअल फिनटेक रिडीम सिस्टम' तयार करणे आहे. या प्रणालीमध्ये, वापरकर्ते त्यांचे PRC पॉइंट्स भारतीय रुपयांमध्ये (INR) बँक ट्रान्सफरसाठी विनंती करू शकतील. ॲडमिन मॅन्युअली बँक ट्रान्सफर करेल आणि विनंती 'पेड' किंवा 'फेल्ड' म्हणून चिन्हांकित करेल.
+वापरकर्त्याची (User) सर्वोच्च प्राधान्याची विनंती 'मायनिंग सेशन UI' ला एका नवीन, भविष्यवेधी (futuristic) आणि गेमिफाईड डिझाइनमध्ये पुन्हा तयार करणे आहे. या डिझाइनमध्ये स्पीडोमीटर गेज, वर्तुळाकार टायमर आणि ओडोमीटर सारखे घटक असतील.
+
+याव्यतिरिक्त, वापरकर्त्याने 'मॅन्युअल फिनटेक रिडीम सिस्टम' पूर्ण करण्याची विनंती केली आहे, जिथे वापरकर्ते बँक ट्रान्सफरसाठी PRC पॉइंट्स रिडीम करू शकतात आणि ॲडमिन त्या विनंत्या व्यवस्थापित करू शकतात.
 
 **PRODUCT REQUIREMENTS (as specified by user):**
--   **Core Flow:** User requests PRC-to-INR transfer -> Admin manually pays -> Admin marks request as 'Paid' or 'Failed' (with PRC refund on failure).
--   **Conversion & Fees:** 1 INR = 10 PRC. A flat ₹10 transaction fee and a 20% admin fee will be applied.
--   **User UI:** A redeem page where users enter bank details (Account Holder, Account Number, IFSC). The system will verify the IFSC using the Eko API and auto-fill the bank name.
--   **Admin Panel:** A dashboard to view and manage redeem requests (Pending, Paid, Failed). Admins can view request details and mark them as 'Paid' or 'Failed' (with a remark).
--   **Withdrawal Rules:** Minimum ₹200, Maximum ₹10,000.
--   **APIs:**
-    -   
-    -    (new manual bank transfer endpoint)
-    -   
-    -   
-    -   
-    -   
--   **Tech Stack:** Python FastAPI backend, Next.js frontend, PostgreSQL database (currently MongoDB).
--   **Security:** JWT auth, admin roles, input validation.
--   **Notifications:** Firebase/Email for status updates.
+1.  **Futuristic Mining Dashboard (New Top Priority):**
+    *   **Core Idea:** Replace the current mining page with a gamified UI inspired by a speedometer/cockpit design.
+    *   **Components:**
+        *   **Mining Speed:** A speedometer-style gauge showing the current PRC/hr mining rate.
+        *   **Mining Session:** A large, central, circular timer that users can tap to collect PRC and reset the session.
+        *   **Total PRC Mined:** An odometer-style counter showing the lifetime PRC mined.
+    *   **Aesthetics:** Dark, futuristic theme with cyan/blue glow effects.
+    *   **Layout:** For mobile, the main circular timer should be large and tappable at the top, with the speed gauge and total counter smaller and side-by-side below.
 
-**User's preferred language**: वापरकर्त्याची प्राथमिक भाषा **मराठी** आहे. पुढील एजंटने **केवळ मराठीत** प्रतिसाद दिला पाहिजे.
+2.  **Manual Fintech Redeem System:**
+    *   **Core Flow:** User requests PRC-to-INR transfer -> Admin manually pays -> Admin marks request as 'Paid' or 'Failed'.
+    *   **User UI:** A Redeem to Bank page with bank detail entry (Account Holder, Number, IFSC), fee calculation, and submission. Must show the Global Redeem Limit.
+    *   **Admin Panel:** A dashboard to manage redeem requests (Pending, Paid, Failed) with pagination, search, and filters.
+    *   **Weekly Limits:** A user can make **one** Redeem to Bank request per week (7-day cooldown from the last request). This is separate from the BBPS limit.
+    *   **UI Text:** All labels should be updated (e.g., Redeem to Bank, Processing time: 3-7 working days).
+
+**User's preferred language**: वापरकर्त्याची प्राथमिक भाषा **मराठी** आहे. पुढील एजंटने **केवळ मराठीत** प्रतिसाद दिला पाहिजे. (The user's primary language is **Marathi**. The next agent MUST respond only in **Marathi**.)
 
 **what currently exists?**
-The application now has the foundational backend for the new manual bank transfer system. The previous DMT (Domestic Money Transfer) V1 and V3 features have been completely removed from the codebase at the user's request. A critical production bug where successful BBPS recharges did not deduct PRC points has been fixed by rewriting the  and manually correcting past transactions. Old, unused admin pages for manual approvals have also been removed after clearing out pending requests.
+The application backend has been updated with several critical fixes and new features. The Razorpay double subscription issue was resolved by implementing an atomic  lock to prevent race conditions. A major investigation into a reported PRC double issue concluded that there were no duplicate credits; the perceived issue was a harmless data mismatch from before the  was implemented, and no fix is needed.
+
+A complex weekly service limit has been implemented: users can perform **one BBPS service** (any type) and **one Redeem to Bank** transfer per week, each with its own independent 7-day cooldown period starting from the request date.
+
+The frontend for the Manual Bank Redeem System has been created, including the user-facing  and the  panel, complete with sidebar links. UI text has been updated as per user requests, and the Global Redeem Limit is now displayed on both the BBPS and the Bank Redeem pages.
+
+However, a persistent routing issue prevents the  page from opening correctly in the preview environment. The agent has just started scaffolding the new futuristic mining dashboard.
 
 **Last working item**:
--   **Last item agent was working:** The agent started building the new Manual Fintech Redeem System. The initial backend structure was created, including a new router and API endpoints for IFSC verification and creating a redeem request. The global redeem limit check was also integrated into this new flow.
-    -   A new route file  was created.
-    -   A placeholder frontend page  was created.
+-   **Last item agent was working:** The agent started implementing the new futuristic Mining Dashboard UI. After getting user confirmation on a detailed design plan, the agent analyzed the existing  and created a new component file  to begin the implementation.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both (frontend and backend testing agent once the full feature is built)
+-   **Which testing method agent to use?** frontend testing agent (once the UI is built).
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Production app crashes on deployment after frontend changes (P1)**
--   **Issue 2: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown (P2)**
+-   **Issue 1: Redeem to Bank page is not routing correctly (P0)**
+-   **Issue 2: Production app crashes on deployment after frontend changes (P1)**
+-   **Issue 3: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown (P2)**
 
 **Issues Detail:**
--   **Issue 1: Production app crashes on deployment after frontend changes**
-    -   **Attempted fixes:** None. This issue was mentioned in the previous handoff but was not investigated in this session.
+-   **Issue 1: Redeem to Bank page is not routing correctly**
+    -   **Attempted fixes:** The agent debugged this extensively. It confirmed the React Router routes in  are correct. It tried creating a test user and logging in via the screenshot tool but failed due to complexities with the login flow (hashed PINs, state management) in the preview environment. The agent suspects the issue is specific to the preview environment's state propagation and that it might work on production, but this is unverified. When a user clicks a link to , they are redirected back to the login page.
     -   **Next debug checklist:**
-        1.  After the next frontend change, monitor deployment logs closely.
-        2.  Check for build errors, dependency mismatches ( vs ), or environment variable issues during the build process.
-        3.  Review recent frontend commits to identify any potentially breaking changes.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical underlying stability issue that hinders rapid development and deployment. Fixing it will ensure new features can be deployed reliably.
+        1.  Deploy the current code to production as requested by the user.
+        2.  Have the user test the login flow and navigation to  on the production environment.
+        3.  If it fails on production, investigate how the  state is managed and passed from  to the routed components, as this seems to be the root cause. Check for issues with  or context providers.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a blocker for the entire Redeem to Bank feature. Users cannot access the page to make withdrawal requests.
+    -   **Status:** BLOCKED (on production testing)
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend.
+    -   **Blocked on other issue:** None.
+
+-   **Issue 2: Production app crashes on deployment after frontend changes**
+    -   **Attempted fixes:** None. This is a recurring issue from a previous session that has not been prioritized.
+    -   **Next debug checklist:** Monitor deployment logs for build errors, dependency mismatches, or environment variable issues.
+    -   **Why fix this issue and what will be achieved with the fix?** Critical for development stability.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
 
--   **Issue 2: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown**
-    -   **Attempted fixes:** The agent identified these transactions but the focus shifted to fixing the PRC deduction for successful ones. These were not investigated further.
-    -   **Next debug checklist:**
-        1.  Examine the logs for the timeframe when these transactions occurred (if available).
-        2.  Analyze the  data for these 145 transactions to find common patterns (e.g., specific service, user, time of day).
-        3.  The most likely cause was an old version of the code on production that didn't handle certain services correctly. While the code is fixed now, understanding the failure can prevent future issues.
-    -   **Why fix this issue and what will be achieved with the fix?** Prevents future revenue loss and ensures all BBPS services are reliable.
+-   **Issue 3: Root cause of 145 failed BBPS transactions (no Eko TID) is unknown**
+    -   **Attempted fixes:** None. Not prioritized.
+    -   **Next debug checklist:** Analyze historical logs and transaction data for patterns.
+    -   **Why fix this issue and what will be achieved with the fix?** Prevents potential future revenue loss.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N (likely fixed by code updates, but root cause unconfirmed)
+    -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Backend.
 
 **In progress Task List**:
--   **Task 1: Complete the Manual Fintech Redeem System (P0)**
-    -   **Where to resume:**
-        1.  **Frontend:** Build the UI for the  page according to the user's detailed specification (IFSC verification, fee calculation, submission form).
-        2.  **Backend:** Implement the remaining API endpoints in :
-            -   
-            -   
-            -   
-            -   
-        3.  **Admin Panel:** Create the new admin dashboard for managing these bank transfer requests.
-        4.  **User History:** Create a page for users to see their bank transfer request history.
-    -   **What will be achieved with this?** A fully functional, production-ready system for users to redeem PRC to their bank accounts, managed by an admin.
+-   **Task 1: Complete the Futuristic Mining Dashboard UI (P0)**
+    -   **Where to resume:** Continue building the UI in . Implement the three main components (Speedometer, Circular Timer, Odometer) using SVG and CSS animations as planned.
+    -   **What will be achieved with this?** A new, engaging, and modern UI for the core mining feature, as per the user's top-priority request.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Should Test frontend/backend/both after fix?** Frontend.
     -   **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** Implement notifications (Firebase/Email) for the new manual redeem system.
--   **P1:** Create the admin analytics dashboard (Total Pending/Paid/Failed Redeems, etc.) for the new system.
--   **P2:** Implement security enhancements like rate limiting on the new API endpoints.
+-   **P0:** Verify and fix the  page functionality on production.
+-   **P1:** Integrate the new  component into the main  page.
+-   **P1:** Finalize and polish the Admin panel UI for bank transfers ().
+-   **P2:** Implement notifications (Firebase/Email) for the manual redeem system.
 
 **Future Tasks:**
--   Investigate migrating the database from MongoDB to PostgreSQL, as requested in the project brief.
+-   Investigate migrating the database from MongoDB to PostgreSQL.
 -   Add Email/Mobile OTP verification on user signup.
--   Refactor large components like .
--   Add a receipt generation feature for all successful transactions (BBPS and Bank Transfers).
+-   Refactor large components.
+-   Add a receipt generation feature for all successful transactions.
 
 **Completed work in this session**
--   **Full DMT Code Removal:** Deleted all files and references related to DMT V1 and V3 from the entire codebase.
--   **Production PRC Deduction Fix:**
-    -   Identified and fixed a critical bug where PRC was not being deducted for successful BBPS transactions.
-    -   Rewrote the wallet service () for robustness and data consistency.
-    -   Created and executed a  endpoint to retroactively deduct PRC for 55 past transactions, correcting a financial loss.
--   **Old Admin Pages Cleanup:**
-    -   Rejected and refunded PRC for over 1500 pending requests from old, manual admin systems (, ).
-    -   Removed the associated frontend pages and backend code entirely.
--   **Scheduler & Config Verification:**
-    -   Made the auto-burn scheduler job more reliable with a fallback mechanism.
-    -   Confirmed that PRC Expiry is disabled and that a Global Redeem Limit is active and configurable.
--   **New Redeem System Scaffolding:** Began building the new manual bank transfer system by creating the initial backend router and a placeholder frontend page.
+-   **Razorpay Double Subscription Fix:** Prevented a race condition by implementing an atomic  lock in .
+-   **PRC Double Issue Investigation (Resolved):** Built diagnostic APIs, scanned the entire user base, and proved that no double credit issue exists. The problem was a harmless legacy data mismatch. Advised the user that no further action is needed.
+-   **Weekly Service Limit V2:** Implemented the user's final, complex logic: one BBPS service and one Bank Transfer per week, each with a separate 7-day cooldown from the request date, in .
+-   **Manual Redeem System Frontend:**
+    -   Created  and .
+    -   Added all user-requested UI text changes (e.g., Redeem to Bank, 3-7 working days).
+    -   Added the Global Redeem Limit display (with PRC/INR values) to both  and the BBPS page ().
+-   **Dashboard Routing Fix:** Updated buttons and cards on the main dashboard to route from  to .
 
 **Earlier issues found/mentioned but not fixed**
--   **Production Deployment Crashes:** The handoff mentioned the app crashes on deployment after frontend changes. This was never investigated and remains a significant risk.
--   **Root Cause of 145 Failed BBPS Transactions:** The reason why 145 BBPS transactions failed without generating an Eko TID was not determined.
+-   **Production Deployment Crashes:** The app crashes on deployment after some frontend changes. This was never investigated and remains a significant risk.
+-   **Root Cause of 145 Failed BBPS Transactions:** The reason why 145 BBPS transactions failed without an Eko TID was not determined.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Production app crashes on deployment after frontend changes.
--   **Recurrence count:** 1+
+-   **Recurrence count:** 2+
 -   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Manual Redeem Flow:** A system where user requests are fulfilled manually by an admin, who then updates the status in the system.
--   **Data Consistency:** The  was created to solve a data consistency problem by writing to multiple ledger collections (, ) to ensure the backend data and frontend UI views are synchronized.
--   **Bulk Data Correction:** Special admin API endpoints (, , ) were created and used to fix historical data issues at scale.
--   **Configurable System Rules:** Features like the Global Redeem Limit are now managed via database settings and can be updated through an admin API.
--   **Robust Scheduling:** The  job for PRC auto-burn was improved with a self-healing fallback mechanism to ensure it runs reliably.
+-   **Race Condition Prevention:** Used MongoDB's  to create an atomic lock, preventing double processing of Razorpay subscriptions between a direct API call and a webhook.
+-   **Complex Business Logic:** Implemented a multi-tiered weekly service limit (separate limits for BBPS and Bank Transfers) with a rolling 7-day cooldown based on the last transaction date.
+-   **Remote Diagnostics:** Created temporary, secure admin API endpoints to diagnose a production data issue without direct database access. This led to disproving the user's PRC double theory.
+-   **React State Propagation:** A likely cause of the current routing bug, where state managed in the top-level  component is not correctly passed down to child routes in the preview environment's test setup.
 
 **key DB schema**
--   **Note:** The user requested a migration to PostgreSQL, but the current DB is **MongoDB**.
--   **New Collection ( - for manual bank transfers):**
-    -   : ObjectId
-    -   : float (e.g., 500.00)
-    -   : float
-    -   : float
-    -   : float
-    -   : float
-    -   : string
-    -   : string
-    -   : string
-    -   : string
-    -   : string ('pending', 'paid', 'failed')
-    -   : string
-    -   , : datetime
+No changes to the DB schema in this session.
 
 **All files of reference**
--   : Core logic for the new feature being built.
--   : The new, mandatory service for all PRC debit/credit operations.
--   : Contains the one-off scripts and settings endpoints created to fix production issues.
--   : The new frontend page that needs to be implemented.
--   : The existing redeem flow that now uses the new .
+-   : **Resume work here.** New component for the mining UI.
+-   : The page where the new dashboard will be integrated.
+-   : The page with the persistent routing issue.
+-   : Contains the latest weekly service limit logic in .
+-   : Contains the fix for the double subscription race condition.
+-   : Example of where the Global Redeem Limit was successfully added.
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   Your absolute top priority is to build out the **Manual Fintech Redeem System**. The user has provided a very detailed specification. The backend foundation is laid; you need to build the frontend UI and the admin management panel.
--   All PRC transactions (debit, credit, refund) **must** go through the new  to ensure data consistency.
--   A lot of old code was deleted (DMT, old admin pages). Do not attempt to revive or work on them. Focus only on the new requirements.
--   Be aware of the uninvestigated issue where production deployments can crash after frontend changes. Test deployments carefully.
+-   The user's new highest priority is completing the **Futuristic Mining Dashboard**. You should resume building the UI in .
+-   The PRC Double issue is **NOT a real issue**. It has been thoroughly investigated and disproven. Do not spend any time on it. The diagnostic APIs in  can be considered obsolete.
+-   The routing to the  page is **blocked and unverified**. The agent was unable to fix it in the preview environment. The next step is to have the user test it on production after deployment. Be prepared to debug this if it fails there.
+-   The weekly service limit logic is now: **1 BBPS service per week** AND **1 Bank Transfer per week**, each with a 7-day cooldown. Do not change this unless requested.
 
 **documents and test reports created in this job**
-None.
+-    (All 52 tests passed for the initial Bank Redeem frontend).
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to run the  for today's BBPS transactions. (COMPLETED)
-2.  **User:** Asks for a detailed, user-wise list of the 55 transactions that were fixed. (COMPLETED)
-3.  **User:** Confirms if the PRC was actually deleted for the users. (COMPLETED - Agent verified with examples)
-4.  **User:** Asks to implement three things: No PRC expiry, a global redeem limit, and a fix for the auto-burn job not triggering. (COMPLETED)
-5.  **User:** Asks if the global redeem limit is checked during the redeem process. (COMPLETED - Agent confirmed it is.)
-6.  **User:** Provides a very detailed specification to build a brand new Manual Fintech Redeem System for bank transfers. This is the new primary goal. (IN PROGRESS)
-7.  **User:** Asks to reject all pending requests from old admin pages (, ), refund the PRC, and then remove the pages and code completely. (COMPLETED)
-8.  **User:** Confirms the deployment is done for the agent's changes. (Agent then proceeded with data-fixing tasks).
-9.  **User:** Asks if PRC will be cut for new transactions after the fixes. (COMPLETED - Agent confirmed the fix works on preview but needs deployment).
-10. **User:** Reports that even after a BBPS recharge is successful, the PRC is not cut and is instead refunded. This is a major financial loss. (COMPLETED - This was the main bug fixed in the session).
+10.  - User confirms the design plan for the new mining dashboard. (IN PROGRESS)
+9.   - User provides preferences for the new mining dashboard. (COMPLETED)
+8.   - User requests a complete redesign of the mining UI. (ACKNOWLEDGED)
+7.   - User confirms the format for the redeem limit display. (COMPLETED)
+6.   - User requests several UI text and logic changes for the redeem pages. (COMPLETED)
+5.   - User reports the routing to the bank redeem page is still broken and asks to test it. (IN PROGRESS - BLOCKED)
+4.   - User completely changes the weekly limit logic. (COMPLETED)
+3.   - User asks for error messages to be in English. (COMPLETED)
+2.   - User reports the routing bug again and requests a new weekly limit feature. (PARTIALLY COMPLETE)
+1.   - User provides the output of the PRC double scan, showing the issue was a false alarm. (COMPLETED)
 
 **Project Health Check:**
 -   **Broken:**
-    -   The new Manual Fintech Redeem System is incomplete and not functional for users.
+    -   The  page is inaccessible due to a persistent routing issue.
+    -   The new  is an empty scaffold and non-functional.
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
--   **Eko:** Used for BBPS and IFSC verification. Credentials seem to be an issue on the preview environment () but work on production.
--   **Razorpay:** Exists in the codebase but is not currently used.
+-   **Eko:** Used for BBPS and IFSC verification.
+-   **Razorpay:** Exists in the codebase. A critical race condition in its webhook/API flow was fixed.
 -   **Firebase/Email:** Requested for notifications but not yet implemented.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (For the initial creation of the Bank Redeem frontend pages, resulting in ).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** The issue of production crashing on deployment after frontend changes remains unaddressed.
+-   **Test files created:** None.
+-   **Known regressions:** The routing to  was implemented but is not working.
 
 **Credentials to test flow:**
 -   **Login:** , 
 -   **Admin Login:** , 
+-   **Note:** Login in the preview environment is difficult. Agent created a test user  with PIN  (hashed) but still faced issues with state propagation. Production testing is likely required.
 
 **What agent forgot to execute**
--   The agent never investigated the root cause of production deployments crashing after frontend changes, despite it being a known recurring issue.
--   The root cause for the 145 failed BBPS transactions (which had no Eko TID) was not investigated.</analysis>
+-   The agent did not address the two long-standing issues from the previous handoff:
+    1.  The root cause of production crashes after frontend deployments.
+    2.  The root cause of 145 failed BBPS transactions.
+    This was due to being consistently redirected by the user to work on new, higher-priority features and critical production bugs.</analysis>

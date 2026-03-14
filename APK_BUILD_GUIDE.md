@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://prc-cash-out.preview.emergentagent.com",
+    "url": "https://mining-dash-2.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
