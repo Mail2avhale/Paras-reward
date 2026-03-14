@@ -154,7 +154,20 @@ SERVICE_TYPES = {
 # Charging Logic
 PLATFORM_FEE = 10  # ₹10 flat fee
 ADMIN_CHARGE_PERCENT = 20  # 20% of transaction amount
-PRC_RATE = 10  # 10 PRC = ₹1
+
+# Dynamic PRC Rate helper function
+async def get_dynamic_prc_rate():
+    """Get PRC rate from database, default 10"""
+    try:
+        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            return rate_setting.get("value")
+        settings = await db.settings.find_one({})
+        if settings and settings.get("prc_to_inr_rate"):
+            return settings.get("prc_to_inr_rate")
+    except:
+        pass
+    return 10  # Default fallback
 
 # Status Flow
 STATUS_PENDING = "pending"
@@ -584,7 +597,7 @@ class AdminCompleteRequest(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-def calculate_charges(amount: float) -> dict:
+async def calculate_charges(amount: float) -> dict:
     """
     Calculate all charges for a transaction
     
@@ -592,14 +605,16 @@ def calculate_charges(amount: float) -> dict:
     - Platform Fee: ₹10 (flat)
     - Admin Charge: 20% of transaction amount
     - Total = Amount + Platform Fee + Admin Charge
-    
-    Note: Eko's service charge is included in the amount itself
+    - PRC Rate: Dynamic from database
     """
     amount_inr = float(amount)
     platform_fee = PLATFORM_FEE
     admin_charge = round(amount_inr * (ADMIN_CHARGE_PERCENT / 100))
     total_charges = platform_fee + admin_charge
     total_amount = amount_inr + total_charges
+    
+    # Get dynamic PRC rate
+    prc_rate = await get_dynamic_prc_rate()
     
     return {
         "amount_inr": amount_inr,
@@ -608,12 +623,13 @@ def calculate_charges(amount: float) -> dict:
         "admin_charge_percent": ADMIN_CHARGE_PERCENT,
         "total_charges_inr": total_charges,
         "total_amount_inr": total_amount,
-        # PRC equivalents (10 PRC = ₹1)
-        "amount_prc": int(amount_inr * PRC_RATE),
-        "platform_fee_prc": platform_fee * PRC_RATE,
-        "admin_charge_prc": admin_charge * PRC_RATE,
-        "total_charges_prc": total_charges * PRC_RATE,
-        "total_prc_required": int(total_amount * PRC_RATE)
+        # PRC equivalents (dynamic rate)
+        "amount_prc": int(amount_inr * prc_rate),
+        "platform_fee_prc": platform_fee * prc_rate,
+        "admin_charge_prc": admin_charge * prc_rate,
+        "total_charges_prc": total_charges * prc_rate,
+        "total_prc_required": int(total_amount * prc_rate),
+        "prc_rate": prc_rate
     }
 
 
@@ -652,13 +668,17 @@ async def get_available_services():
             "icon": info["icon"],
             "eko_category": info["category"]
         })
+    
+    # Get dynamic PRC rate
+    prc_rate = await get_dynamic_prc_rate()
+    
     return {
         "success": True,
         "services": services,
         "charges_info": {
             "platform_fee": f"₹{PLATFORM_FEE} (flat)",
             "admin_charge": f"{ADMIN_CHARGE_PERCENT}% of amount",
-            "prc_rate": f"{PRC_RATE} PRC = ₹1"
+            "prc_rate": f"{prc_rate} PRC = ₹1"
         }
     }
 
@@ -675,7 +695,7 @@ async def calculate_charges_api(amount: float = Query(..., gt=0)):
     
     return {
         "success": True,
-        "charges": calculate_charges(amount)
+        "charges": await calculate_charges(amount)
     }
 
 
@@ -919,7 +939,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
         )
     
     # Calculate charges
-    charges = calculate_charges(request.amount)
+    charges = await calculate_charges(request.amount)
     total_prc_required = charges["total_prc_required"]
     
     # Check PRC balance

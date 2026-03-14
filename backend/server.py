@@ -4935,26 +4935,34 @@ async def check_and_run_missed_burn_job():
 
 async def calculate_bill_payment_prc(amount_inr: float):
     """
-    Calculate PRC required for bill payment
-    Conversion: 100 INR = 1000 PRC
-    Formula: INR * 10 = PRC
+    Calculate PRC required for bill payment with dynamic rate
     """
-    return amount_inr * 10
+    prc_rate = await get_dynamic_prc_rate()
+    return amount_inr * prc_rate
+
+async def get_dynamic_prc_rate():
+    """Get dynamic PRC rate from database, default 10"""
+    try:
+        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            return rate_setting.get("value")
+        settings = await db.settings.find_one({})
+        if settings and settings.get("prc_to_inr_rate"):
+            return settings.get("prc_to_inr_rate")
+    except:
+        pass
+    return 10  # Default fallback
 
 async def get_redemption_charge_settings():
     """
-    Get redemption charge settings from database
-    Returns: {
-        processing_fee_inr: 10,  # Flat processing fee in INR
-        admin_charge_percent: 20,  # Admin charge percentage
-        prc_to_inr_rate: 10  # 10 PRC = 1 INR
-    }
+    Get redemption charge settings from database with dynamic PRC rate
     """
     settings = await db.settings.find_one({})
+    prc_rate = await get_dynamic_prc_rate()
     return {
         "processing_fee_inr": settings.get("processing_fee_inr", 10) if settings else 10,
         "admin_charge_percent": settings.get("admin_charge_percent", 20) if settings else 20,
-        "prc_to_inr_rate": 10  # Fixed: 10 PRC = 1 INR
+        "prc_to_inr_rate": prc_rate
     }
 
 async def calculate_redemption_charges(amount_inr: float, request_type: str = None):

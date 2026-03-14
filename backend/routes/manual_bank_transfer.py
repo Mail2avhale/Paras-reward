@@ -49,7 +49,6 @@ def set_weekly_one_service_check(func):
 
 # ==================== CONSTANTS ====================
 
-PRC_RATE = 10  # 1 INR = 10 PRC
 TRANSACTION_FEE = 10  # ₹10 flat fee
 ADMIN_FEE_PERCENT = 20  # 20% admin fee
 MIN_WITHDRAWAL = 200  # ₹200 minimum
@@ -59,6 +58,20 @@ MAX_WITHDRAWAL = 10000  # ₹10,000 maximum
 EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
+
+# Dynamic PRC Rate helper
+async def get_dynamic_prc_rate():
+    """Get PRC rate from database, default 10"""
+    try:
+        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            return rate_setting.get("value")
+        settings = await db.settings.find_one({})
+        if settings and settings.get("prc_to_inr_rate"):
+            return settings.get("prc_to_inr_rate")
+    except:
+        pass
+    return 10  # Default fallback
 
 # ==================== MODELS ====================
 
@@ -94,11 +107,12 @@ class AdminActionRequest(BaseModel):
 
 # ==================== HELPER FUNCTIONS ====================
 
-def calculate_fees(amount: int) -> dict:
-    """Calculate all fees for a withdrawal amount."""
+async def calculate_fees(amount: int) -> dict:
+    """Calculate all fees for a withdrawal amount with dynamic PRC rate."""
+    prc_rate = await get_dynamic_prc_rate()
     admin_fee = int(amount * ADMIN_FEE_PERCENT / 100)
     total_inr = amount + admin_fee + TRANSACTION_FEE
-    total_prc = total_inr * PRC_RATE
+    total_prc = total_inr * prc_rate
     
     return {
         "withdrawal_amount": amount,
@@ -107,7 +121,7 @@ def calculate_fees(amount: int) -> dict:
         "transaction_fee": TRANSACTION_FEE,
         "total_inr": total_inr,
         "total_prc": total_prc,
-        "prc_rate": PRC_RATE,
+        "prc_rate": prc_rate,
         "user_receives": amount  # What user actually gets in bank
     }
 
@@ -234,7 +248,7 @@ async def calculate_fees_api(amount: int = Query(..., ge=MIN_WITHDRAWAL, le=MAX_
     """Calculate fees for a given withdrawal amount."""
     return {
         "success": True,
-        "fees": calculate_fees(amount)
+        "fees": await calculate_fees(amount)
     }
 
 @router.post("/verify-ifsc")
@@ -297,8 +311,8 @@ async def create_redeem_request(request: RedeemRequest):
                     detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached"))
                 )
         
-        # 4. Calculate fees
-        fees = calculate_fees(amount)
+        # 4. Calculate fees with dynamic PRC rate
+        fees = await calculate_fees(amount)
         total_prc = fees["total_prc"]
         
         # 5. Check Global Redeem Limit

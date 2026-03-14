@@ -18,8 +18,22 @@ import logging
 
 # ==================== CONSTANTS ====================
 
-# Base Token Value
+# Base Token Value (default, can be overridden by database)
 PRC_INR_RATE = 10  # 10 PRC = ₹1 (Base reference rate)
+
+# Dynamic PRC Rate helper
+async def get_dynamic_prc_rate_economy(database):
+    """Get PRC rate from database for economy calculations"""
+    try:
+        rate_setting = await database.app_settings.find_one({"key": "prc_to_inr_rate"})
+        if rate_setting and rate_setting.get("value"):
+            return rate_setting.get("value")
+        settings = await database.settings.find_one({})
+        if settings and settings.get("prc_to_inr_rate"):
+            return settings.get("prc_to_inr_rate")
+    except:
+        pass
+    return PRC_INR_RATE  # Default fallback
 
 # Price Safety Limits (Section 13)
 MINIMUM_RATE = 6   # Minimum: 6 PRC = ₹1 (most valuable)
