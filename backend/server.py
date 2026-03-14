@@ -15573,24 +15573,23 @@ async def check_dmt_limits(user_id: str, amount: int) -> dict:
 # Formula: 799 * 5 * 10 = 39950 + 20% Direct Referral Bonus
 
 BASE_REDEEM_LIMIT = 799 * 5 * 10  # 39,950 PRC per month
-REFERRAL_BONUS_PERCENTAGE = 20  # 20% of direct referral earnings added to limit
+REFERRAL_LIMIT_INCREASE_PER_ACTIVE = 20  # 1 active direct referral = 20% limit increase
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
     Calculate total redeem limit for a user with CARRY FORWARD from USER JOIN DATE.
     
-    Formula: 
-    - Monthly Limit = 39,950 PRC (per month)
-    - Months since USER JOINED × Monthly Limit
-    - Plus 20% of referral bonus from ACTIVE referrals
-    - Unused limit automatically carries forward (Total Limit - Used = Remaining)
+    NEW Formula (Updated): 
+    - Monthly Base Limit = 39,950 PRC
+    - 1 Active Direct Referral = 20% increase in limit
+    - Monthly Limit = Base × (1 + (Active Referrals × 20%))
+    - Total Limit = Months × Monthly Limit (with referral bonus)
+    - Unused limit automatically carries forward
     
     Example:
-    - User joined in January
-    - Now it's March (3 months)
-    - Total Limit = 3 × 39,950 = 1,19,850 PRC
-    - If user redeemed 50,000 across all services
-    - Remaining = 1,19,850 - 50,000 = 69,850 PRC (unused carries forward)
+    - User has 2 active referrals = 40% increase
+    - Monthly Limit = 39,950 × 1.4 = 55,930 PRC
+    - 3 months active = 55,930 × 3 = 1,67,790 PRC total limit
     
     Active referral = referred user has active subscription
     """
@@ -15605,13 +15604,12 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                 "monthly_limit": monthly_base_limit,
                 "months_active": 1,
                 "active_referrals": 0,
-                "active_referral_bonus": 0,
-                "referral_bonus_addition": 0,
+                "referral_percentage_increase": 0,
                 "total_limit": monthly_base_limit,
                 "carry_forward_enabled": True
             }
         
-        # Calculate months since USER JOINED (not system start date)
+        # Calculate months since USER JOINED
         user_created = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
         now = datetime.now(timezone.utc)
         
@@ -15620,43 +15618,33 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                 try:
                     user_created = datetime.fromisoformat(user_created.replace('Z', '+00:00'))
                 except:
-                    user_created = now  # Fallback to now if can't parse
+                    user_created = now
             if user_created.tzinfo is None:
                 user_created = user_created.replace(tzinfo=timezone.utc)
         else:
-            # If no creation date, assume current month only
             user_created = now.replace(day=1)
         
-        # Use user join date directly (no system start date limitation)
         start_date = user_created
         
         # Calculate months difference (at least 1 month)
         months_diff = (now.year - start_date.year) * 12 + (now.month - start_date.month)
-        months_active = max(1, months_diff + 1)  # +1 to include current month
-        
-        # Calculate cumulative base limit (carry forward)
-        cumulative_base_limit = monthly_base_limit * months_active
+        months_active = max(1, months_diff + 1)
         
         referral_code = user.get("referral_code", "")
         
-        # Find users who were referred by this user AND have active subscription
-        active_referral_bonus = 0
+        # Count ACTIVE direct referrals (referred users with active subscription)
         active_referral_count = 0
         
         if referral_code:
-            # Get all users referred by this user
             referred_users = await db.users.find({
                 "referred_by": referral_code
             }).to_list(1000)
             
-            now = datetime.now(timezone.utc)
-            
             for referred_user in referred_users:
-                # Check if referred user has active subscription
                 is_active = False
                 
                 # Check subscription expiry
-                sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry")
+                sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry") or referred_user.get("valid_till")
                 if sub_expiry:
                     try:
                         if isinstance(sub_expiry, str):
@@ -15671,62 +15659,31 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                     except:
                         pass
                 
-                # Also check is_premium flag
-                if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
+                # Also check is_premium or is_active_subscription flag
+                if referred_user.get("is_premium") or referred_user.get("is_active_subscription") or referred_user.get("membership_type") == "vip":
                     is_active = True
                 
                 if is_active:
                     active_referral_count += 1
-                    
-                    # Get referral bonus earned for this specific referred user
-                    referred_uid = referred_user.get("uid")
-                    
-                    # From transactions
-                    ref_txns = await db.transactions.find({
-                        "user_id": user_id,
-                        "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]},
-                        "$or": [
-                            {"referred_user_id": referred_uid},
-                            {"from_user_id": referred_uid},
-                            {"source_user_id": referred_uid}
-                        ]
-                    }).to_list(100)
-                    
-                    for txn in ref_txns:
-                        active_referral_bonus += abs(float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0))
         
-        # If no specific referral tracking, calculate from total referral bonus proportionally
-        if active_referral_bonus == 0 and active_referral_count > 0:
-            # Get total referral bonus
-            total_ref_bonus = 0
-            all_ref_txns = await db.transactions.find({
-                "user_id": user_id,
-                "type": {"$in": ["referral_bonus", "referral", "referral_commission", "direct_referral"]}
-            }).to_list(1000)
-            
-            for txn in all_ref_txns:
-                total_ref_bonus += abs(float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0))
-            
-            # Get total referred count
-            total_referred = await db.users.count_documents({"referred_by": referral_code})
-            
-            # Calculate proportional bonus for active referrals
-            if total_referred > 0:
-                active_referral_bonus = (total_ref_bonus * active_referral_count) / total_referred
+        # NEW FORMULA: 1 Active Referral = 20% increase
+        # Percentage increase = Active Referrals × 20%
+        referral_percentage_increase = active_referral_count * REFERRAL_LIMIT_INCREASE_PER_ACTIVE
         
-        # Calculate 20% of active referral bonus
-        referral_bonus_addition = (active_referral_bonus * REFERRAL_BONUS_PERCENTAGE) / 100
+        # Monthly limit with referral bonus
+        # Monthly Limit = Base × (1 + percentage/100)
+        monthly_limit_with_bonus = monthly_base_limit * (1 + referral_percentage_increase / 100)
         
-        # Total limit with carry forward
-        total_limit = cumulative_base_limit + referral_bonus_addition
+        # Total limit = Months × Monthly Limit (carry forward)
+        total_limit = months_active * monthly_limit_with_bonus
         
         return {
-            "base_limit": cumulative_base_limit,
+            "base_limit": round(months_active * monthly_base_limit, 2),  # Without referral bonus
             "monthly_limit": monthly_base_limit,
+            "monthly_limit_with_bonus": round(monthly_limit_with_bonus, 2),
             "months_active": months_active,
             "active_referrals": active_referral_count,
-            "active_referral_bonus": round(active_referral_bonus, 2),
-            "referral_bonus_addition": round(referral_bonus_addition, 2),
+            "referral_percentage_increase": referral_percentage_increase,
             "total_limit": round(total_limit, 2),
             "carry_forward_enabled": True
         }
@@ -15735,10 +15692,10 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         return {
             "base_limit": BASE_REDEEM_LIMIT,
             "monthly_limit": BASE_REDEEM_LIMIT,
+            "monthly_limit_with_bonus": BASE_REDEEM_LIMIT,
             "months_active": 1,
             "active_referrals": 0,
-            "active_referral_bonus": 0,
-            "referral_bonus_addition": 0,
+            "referral_percentage_increase": 0,
             "total_limit": BASE_REDEEM_LIMIT,
             "carry_forward_enabled": True
         }
@@ -15865,7 +15822,7 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
 
 @api_router.get("/user/{user_id}/redeem-limit")
 async def get_user_redeem_limit(user_id: str):
-    """Get user's redeem limit information with carry forward"""
+    """Get user's redeem limit information with carry forward and new referral formula"""
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
         total_redeemed = await get_user_total_redeemed(user_id)
@@ -15879,10 +15836,10 @@ async def get_user_redeem_limit(user_id: str):
             "limit": {
                 "base_limit": limit_info["base_limit"],
                 "monthly_limit": limit_info.get("monthly_limit", BASE_REDEEM_LIMIT),
+                "monthly_limit_with_bonus": limit_info.get("monthly_limit_with_bonus", BASE_REDEEM_LIMIT),
                 "months_active": limit_info.get("months_active", 1),
                 "active_referrals": limit_info.get("active_referrals", 0),
-                "active_referral_bonus": limit_info.get("active_referral_bonus", 0),
-                "referral_bonus_addition": limit_info["referral_bonus_addition"],
+                "referral_percentage_increase": limit_info.get("referral_percentage_increase", 0),
                 "total_limit": limit_info["total_limit"],
                 "total_redeemed": total_redeemed,
                 "remaining_limit": round(max(0, remaining), 2),
