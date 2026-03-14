@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
   Banknote, Search, UserPlus, CreditCard, Send, ArrowLeft,
   CheckCircle, XCircle, Clock, AlertTriangle, Wallet, RefreshCw,
-  Building, User, Phone, Hash, Shield, History, ChevronRight, Zap
+  Building, User, Phone, Hash, Shield, History, ChevronRight, Zap, Trash2
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -441,6 +441,48 @@ const DMTPage = ({ user }) => {
       }
     } catch (error) {
       toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Failed to add recipient');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete recipient
+  const handleDeleteRecipient = async (recipientId) => {
+    if (!window.confirm('Are you sure you want to delete this recipient?')) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      let res;
+      if (dmtType === 'levin') {
+        res = await axios.delete(`${API}/eko/levin-dmt/recipient/delete`, {
+          data: {
+            customer_mobile: mobile,
+            recipient_id: recipientId.toString()
+          }
+        });
+      } else {
+        res = await axios.delete(`${API}/eko/dmt/recipient/delete`, {
+          data: {
+            mobile,
+            recipient_id: recipientId.toString()
+          }
+        });
+      }
+      
+      if (res.data.success) {
+        toast.success('Recipient deleted successfully!');
+        fetchRecipients();
+        // Clear selection if deleted recipient was selected
+        if (selectedRecipient?.recipient_id === recipientId) {
+          setSelectedRecipient(null);
+        }
+      } else {
+        toast.error(sanitizeErrorMessage(res.data.message) || 'Failed to delete recipient');
+      }
+    } catch (error) {
+      toast.error(sanitizeErrorMessage(error.response?.data?.detail) || 'Failed to delete recipient');
     } finally {
       setLoading(false);
     }
@@ -1056,11 +1098,25 @@ const DMTPage = ({ user }) => {
                               {recipient.bank || recipient.bank_name} • ****{(recipient.acc || recipient.account_number || '').slice(-4)}
                             </p>
                           </div>
-                          {selectedRecipient?.recipient_id === recipient.recipient_id ? (
-                            <CheckCircle className="w-6 h-6 text-violet-400" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5 text-gray-600" />
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRecipient(recipient.recipient_id);
+                              }}
+                              className="p-2 hover:bg-red-500/20 rounded-xl text-gray-400 hover:text-red-400 transition-colors"
+                              data-testid={`delete-recipient-${idx}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                            {selectedRecipient?.recipient_id === recipient.recipient_id ? (
+                              <CheckCircle className="w-6 h-6 text-violet-400" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-gray-600" />
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -436,6 +436,75 @@ async def activate_recipient(request: RecipientActivateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# STEP 6B: Delete Recipient
+class RecipientDeleteRequest(BaseModel):
+    customer_mobile: str
+    recipient_id: str
+
+@router.delete("/recipient/delete")
+async def delete_recipient(request: RecipientDeleteRequest):
+    """
+    Delete a recipient/beneficiary
+    DELETE /v3/customer/payment/dmt-levin/sender/{customer_id}/recipient/{recipient_id}
+    """
+    try:
+        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient/{request.recipient_id}"
+        
+        params = {
+            "initiator_id": EKO_INITIATOR_ID,
+            "user_code": EKO_USER_CODE
+        }
+        
+        logging.info(f"[Levin DMT] Delete recipient: {request.recipient_id} for {request.customer_mobile}")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.delete(url, headers=get_headers(), params=params)
+            
+            logging.info(f"[Levin DMT] Delete recipient response: {response.status_code} - {response.text[:200] if response.text else 'empty'}")
+            
+            # Handle empty response (success for DELETE)
+            if response.status_code in [200, 204] or not response.text.strip():
+                return {
+                    "success": True,
+                    "message": "Recipient deleted successfully"
+                }
+            
+            try:
+                result = response.json()
+            except:
+                # JSON parse error - treat as success if status code is OK
+                if response.status_code < 400:
+                    return {
+                        "success": True,
+                        "message": "Recipient deleted successfully"
+                    }
+                return {
+                    "success": False,
+                    "message": "Service temporarily unavailable"
+                }
+            
+            if result.get("response_status_id") == 0:
+                return {
+                    "success": True,
+                    "message": "Recipient deleted successfully"
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": result.get("message", "Failed to delete recipient"),
+                    "error_code": result.get("response_status_id")
+                }
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[Levin DMT] Delete recipient error: {str(e)}")
+        return {
+            "success": False,
+            "message": "Failed to delete recipient. Please try again."
+        }
+
+
 # STEP 7: Send Transaction OTP
 @router.post("/transfer/send-otp")
 async def send_transaction_otp(request: TransactionOTPRequest):
