@@ -45,11 +45,13 @@ const SubscriptionPlans = ({ user }) => {
   // UTR validation state
   const [utrValidating, setUtrValidating] = useState(false);
   const [utrValidationResult, setUtrValidationResult] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'manual'
+  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay', 'manual', or 'prc'
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false); // true = instant activation, false = pending verification
   const [razorpayEnabled, setRazorpayEnabled] = useState(true); // Gateway enabled status
   const [manualEnabled, setManualEnabled] = useState(true); // Manual subscription enabled status
+  const [redeemLimit, setRedeemLimit] = useState(null); // For PRC payment option
+  const [prcPaymentLoading, setPrcPaymentLoading] = useState(false);
   
   // Steps: 1=Select Plan, 2=Select Duration, 3=Payment Info, 4=Upload Proof
   const [currentStep, setCurrentStep] = useState(1);
@@ -65,6 +67,10 @@ const SubscriptionPlans = ({ user }) => {
   const [paymentAttempts, setPaymentAttempts] = useState([]);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [hasUnactivatedPayment, setHasUnactivatedPayment] = useState(false);
+
+  // PRC Rate for subscription (1 INR = 10 PRC, 2x multiplier)
+  const PRC_RATE = 10;
+  const PRC_MULTIPLIER = 2;
 
   // Special Offer Prices - Startup discontinued
   const specialOffers = {
@@ -145,6 +151,14 @@ const SubscriptionPlans = ({ user }) => {
         }
       } catch (err) {
         console.log('No payment history');
+      }
+      
+      // Fetch redeem limit for PRC payment option
+      try {
+        const limitRes = await axios.get(`${API}/user/${user.uid}/redeem-limit`);
+        setRedeemLimit(limitRes.data);
+      } catch (err) {
+        console.log('Could not fetch redeem limit');
       }
       
     } catch (error) {
@@ -332,6 +346,47 @@ const SubscriptionPlans = ({ user }) => {
   const getPrice = () => {
     if (!selectedPlan || !selectedPlan.pricing) return 0;
     return selectedPlan.pricing[selectedDuration] || selectedPlan.pricing.monthly;
+  };
+
+  // Calculate PRC price for subscription (Price × 2 × PRC_RATE)
+  const getPRCPrice = () => {
+    const inrPrice = getPrice();
+    return inrPrice * PRC_MULTIPLIER * PRC_RATE;
+  };
+
+  // Handle PRC Payment for Subscription
+  const handlePRCPayment = async () => {
+    const prcRequired = getPRCPrice();
+    const availableLimit = redeemLimit?.remaining || 0;
+    
+    if (availableLimit < prcRequired) {
+      toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);
+      return;
+    }
+    
+    setPrcPaymentLoading(true);
+    try {
+      const response = await axios.post(`${API}/subscription/pay-with-prc`, {
+        user_id: user.uid,
+        plan_name: selectedPlan.id,
+        plan_type: selectedDuration,
+        prc_amount: prcRequired
+      });
+      
+      if (response.data.success) {
+        toast.success('Subscription activated with PRC!');
+        setPaymentSuccess(true);
+        setCurrentStep(4);
+        
+        // Refresh data
+        fetchData();
+      }
+    } catch (error) {
+      console.error('PRC payment error:', error);
+      toast.error(error.response?.data?.detail || 'PRC payment failed');
+    } finally {
+      setPrcPaymentLoading(false);
+    }
   };
 
   // Real-time UTR validation with debounce
@@ -1126,6 +1181,46 @@ const SubscriptionPlans = ({ user }) => {
               </div>
             </button>
             )}
+
+            {/* Pay with PRC - From Redeem Limit */}
+            <button
+              onClick={() => setPaymentMethod('prc')}
+              className={`w-full p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'prc'
+                  ? 'border-purple-500 bg-purple-500/10'
+                  : 'border-gray-700 bg-gray-900/50 hover:border-gray-600'
+              }`}
+              data-testid="prc-payment-option"
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  paymentMethod === 'prc' ? 'bg-purple-500/20' : 'bg-gray-800'
+                }`}>
+                  <Star className={`w-6 h-6 ${paymentMethod === 'prc' ? 'text-purple-400' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`font-semibold ${paymentMethod === 'prc' ? 'text-purple-400' : 'text-white'}`}>
+                      Pay with PRC
+                    </p>
+                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                      ⚡ Instant
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm">
+                    {getPRCPrice().toLocaleString()} PRC (₹{getPrice()} × 2 × 10)
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Available: {(redeemLimit?.remaining || 0).toLocaleString()} PRC
+                  </p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  paymentMethod === 'prc' ? 'border-purple-500 bg-purple-500' : 'border-gray-600'
+                }`}>
+                  {paymentMethod === 'prc' && <Check className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+            </button>
           </div>
 
           {/* Razorpay Pay Now Button */}
@@ -1206,6 +1301,72 @@ const SubscriptionPlans = ({ user }) => {
                   <>
                     <CreditCard className="w-5 h-5" />
                     Pay ₹{getPrice()} Now
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">⚡ Instant</span>
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
+
+          {/* PRC Payment Section */}
+          {paymentMethod === 'prc' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+            >
+              <div className="p-4 bg-purple-500/10 rounded-2xl border border-purple-500/30">
+                <div className="flex items-center gap-3 mb-3">
+                  <Star className="w-5 h-5 text-purple-400" />
+                  <p className="text-purple-400 font-semibold">Pay with PRC Points</p>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-400" />
+                    Instant subscription activation
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-400" />
+                    Deducted from your Available Redeem Limit
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-purple-400" />
+                    Rate: ₹{getPrice()} × 2 × 10 = {getPRCPrice().toLocaleString()} PRC
+                  </li>
+                </ul>
+              </div>
+
+              {/* PRC Balance Info */}
+              <div className="p-4 bg-gray-800/50 rounded-2xl">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-400 text-sm">Available Redeem Limit</span>
+                  <span className={`font-bold ${(redeemLimit?.remaining || 0) >= getPRCPrice() ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {(redeemLimit?.remaining || 0).toLocaleString()} PRC
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">Required</span>
+                  <span className="text-purple-400 font-bold">{getPRCPrice().toLocaleString()} PRC</span>
+                </div>
+                {(redeemLimit?.remaining || 0) < getPRCPrice() && (
+                  <p className="text-red-400 text-xs mt-2">⚠️ Insufficient redeem limit. Mine more PRC or use another payment method.</p>
+                )}
+              </div>
+
+              <button
+                onClick={handlePRCPayment}
+                disabled={prcPaymentLoading || (redeemLimit?.remaining || 0) < getPRCPrice()}
+                className="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {prcPaymentLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Star className="w-5 h-5" />
+                    Pay {getPRCPrice().toLocaleString()} PRC
                     <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">⚡ Instant</span>
                   </>
                 )}

@@ -10926,6 +10926,145 @@ async def upgrade_subscription(uid: str, request: Request):
         "new_expiry": new_expiry
     }
 
+@api_router.post("/subscription/pay-with-prc")
+async def subscription_pay_with_prc(request: Request):
+    """
+    Pay for subscription using PRC from Available Redeem Limit.
+    Formula: INR Price × 2 × PRC_RATE (10)
+    """
+    data = await request.json()
+    user_id = data.get("user_id")
+    plan_name = data.get("plan_name")
+    plan_type = data.get("plan_type", "monthly")  # monthly/quarterly/yearly
+    prc_amount = data.get("prc_amount")
+    
+    if not user_id or not plan_name or not prc_amount:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Validate plan
+    valid_plans = ["startup", "growth", "elite"]
+    if plan_name not in valid_plans:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check redeem limit
+    redeem_limit = await get_user_redeem_limit(user_id, user)
+    available = redeem_limit.get("remaining", 0)
+    
+    if available < prc_amount:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Insufficient Redeem Limit. Available: {available:.2f} PRC, Required: {prc_amount:.2f} PRC"
+        )
+    
+    # Calculate subscription duration
+    duration_days = {"monthly": 28, "quarterly": 84, "yearly": 365}.get(plan_type, 28)
+    now = datetime.now(timezone.utc)
+    
+    # Check current subscription expiry
+    current_expiry = user.get("subscription_expiry")
+    if current_expiry:
+        try:
+            expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            # If still active, extend from current expiry
+            if expiry_dt > now:
+                new_expiry = (expiry_dt + timedelta(days=duration_days)).isoformat()
+            else:
+                new_expiry = (now + timedelta(days=duration_days)).isoformat()
+        except:
+            new_expiry = (now + timedelta(days=duration_days)).isoformat()
+    else:
+        new_expiry = (now + timedelta(days=duration_days)).isoformat()
+    
+    # Deduct PRC from balance using wallet service
+    try:
+        from app.services.wallet_service_v2 import WalletServiceV2
+        wallet_service = WalletServiceV2(db)
+        
+        debit_result = await wallet_service.debit(
+            user_id=user_id,
+            amount=prc_amount,
+            transaction_type="subscription_prc",
+            description=f"Subscription payment: {plan_name.capitalize()} ({plan_type})",
+            reference_id=f"sub_prc_{user_id}_{int(now.timestamp())}",
+            metadata={
+                "plan_name": plan_name,
+                "plan_type": plan_type,
+                "prc_amount": prc_amount
+            }
+        )
+        
+        if not debit_result.get("success"):
+            raise HTTPException(status_code=400, detail=debit_result.get("error", "Failed to deduct PRC"))
+            
+    except ImportError:
+        # Fallback: Direct balance deduction
+        current_balance = user.get("prc_balance", 0)
+        if current_balance < prc_amount:
+            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+        
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$inc": {"prc_balance": -prc_amount}}
+        )
+    
+    # Update subscription
+    await db.users.update_one(
+        {"uid": user_id},
+        {
+            "$set": {
+                "subscription_plan": plan_name,
+                "subscription_expiry": new_expiry,
+                "subscription_start": now.isoformat(),
+                "membership_type": "vip"
+            }
+        }
+    )
+    
+    # Record payment
+    payment_record = {
+        "user_id": user_id,
+        "plan_name": plan_name,
+        "plan_type": plan_type,
+        "payment_method": "prc",
+        "prc_amount": prc_amount,
+        "status": "paid",
+        "created_at": now.isoformat(),
+        "subscription_expiry": new_expiry
+    }
+    await db.subscription_payments.insert_one(payment_record)
+    
+    # Log activity
+    await log_activity(
+        user_id=user_id,
+        action_type="subscription_prc_payment",
+        description=f"Paid {prc_amount} PRC for {plan_name} subscription ({plan_type})",
+        metadata=payment_record
+    )
+    
+    # Create notification
+    await create_notification(
+        user_id=user_id,
+        title="Subscription Activated!",
+        message=f"Your {plan_name.capitalize()} subscription is now active until {new_expiry[:10]}. Paid {prc_amount:.0f} PRC.",
+        notification_type="subscription"
+    )
+    
+    return {
+        "success": True,
+        "plan_name": plan_name,
+        "plan_type": plan_type,
+        "prc_deducted": prc_amount,
+        "subscription_expiry": new_expiry,
+        "message": f"Subscription activated! {plan_name.capitalize()} valid until {new_expiry[:10]}"
+    }
+
 @api_router.post("/subscription/downgrade/{uid}")
 async def downgrade_subscription(uid: str, request: Request):
     """Admin: Downgrade user to Explorer (free) plan"""
