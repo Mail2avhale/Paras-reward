@@ -198,7 +198,6 @@ def generate_headers() -> Dict[str, str]:
 def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
     """
     Generate authentication headers for bill PAYMENT.
-    NOTE: Payment API also uses JSON (as per Eko curl example) - NOT form-urlencoded!
     """
     encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
     
@@ -214,8 +213,7 @@ def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
         "developer_key": DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "initiator_id": INITIATOR_ID,
-        "Content-Type": "application/json"  # FIXED: Payment also uses JSON per Eko docs
+        "Content-Type": "application/json"  # Eko requires JSON
     }
 
 
@@ -840,16 +838,9 @@ async def pay_bill(data: PayBillRequest):
     
     client_ref_id = f"PAY{int(time.time() * 1000)}"
     
-    # Pre-validation
-    is_valid, validation_error = validate_bbps_request(
-        data.operator_id,
-        data.account,
-        data.amount,
-        data.mobile
-    )
-    
-    if not is_valid:
-        return create_error_response(400, validation_error, validation_error)
+    # Pre-validation - just check required fields are present
+    if not data.operator_id or not data.account or not data.amount or not data.mobile:
+        return create_error_response(400, "Missing required fields", "Please fill all required fields")
     
     try:
         url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
@@ -865,16 +856,15 @@ async def pay_bill(data: PayBillRequest):
         headers["request_hash"] = request_hash
         
         body = {
-            "amount": float(data.amount),  # FIXED: Eko requires numeric amount, not string
-            "operator_id": data.operator_id,
-            "utility_acc_no": data.account,
-            "confirmation_mobile_no": data.mobile,
+            "amount": float(data.amount),  # Eko requires numeric
+            "operator_id": str(data.operator_id),
+            "utility_acc_no": str(data.account),
+            "confirmation_mobile_no": str(data.mobile),
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
             "latlong": DEFAULT_LATLONG,
-            "source_ip": "127.0.0.1",  # FIXED: Required parameter per Eko docs
-            "initiator_id": INITIATOR_ID  # FIXED: Also include initiator_id in body
+            "source_ip": "127.0.0.1"
         }
         
         # Add bill_fetch_response if provided (required for some operators)
@@ -884,7 +874,7 @@ async def pay_bill(data: PayBillRequest):
         logging.info(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
         logging.info(f"[BBPS PAY] Request body keys: {list(body.keys())}")
         
-        # FIXED: Use JSON format for payment (as per Eko documentation curl example)
+        # Use JSON format for payment
         response = await bbps_post(url, headers=headers, json_body=body, timeout=REQUEST_TIMEOUT)
         
         logging.info(f"[BBPS PAY] HTTP Status: {response.status_code}")
