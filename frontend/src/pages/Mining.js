@@ -705,8 +705,20 @@ const DailyRewards = ({ user }) => {
             {isMining ? (
               <div className="text-center mb-6">
                 <p className="text-zinc-500 text-sm mb-2">{globalT('timeRemaining')}</p>
-                <div className="text-5xl font-semibold text-zinc-100 font-mono tracking-wider">
-                  {formatTime(sessionTimeRemaining)}
+                {/* Digital Clock Display */}
+                <div className="flex items-center justify-center gap-1">
+                  {formatTime(sessionTimeRemaining).split('').map((char, i) => (
+                    <div 
+                      key={i}
+                      className={`
+                        ${char === ':' ? 'w-4 text-amber-400' : 'w-10 h-14 bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center'}
+                      `}
+                    >
+                      <span className={`font-mono font-bold ${char === ':' ? 'text-2xl' : 'text-3xl text-zinc-100'}`}>
+                        {char}
+                      </span>
+                    </div>
+                  ))}
                 </div>
                 
                 {/* Earned PRC Display - Clean Dark Design */}
