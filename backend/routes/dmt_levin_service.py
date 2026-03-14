@@ -1117,6 +1117,7 @@ async def initiate_transfer(request: TransferRequest):
             "currency": "INR",
             "channel": "2",  # IMPS
             "state": "1",  # Required field for transfer
+            "pipe": "14",  # DMT-Levin pipe
             "client_ref_id": client_ref_id,
             "otp": request.otp,
             "otp_ref_id": request.otp_ref_id
