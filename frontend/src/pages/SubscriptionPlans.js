@@ -1213,7 +1213,7 @@ const SubscriptionPlans = ({ user }) => {
                     </span>
                   </div>
                   <p className="text-gray-400 text-sm">
-                    {getPRCPrice().toLocaleString()} PRC (₹{getPrice()} × 2 × {prcRate})
+                    {getPRCPrice().toLocaleString()} PRC
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Available: {(redeemLimit?.remaining || 0).toLocaleString()} PRC
@@ -1336,7 +1336,7 @@ const SubscriptionPlans = ({ user }) => {
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-purple-400" />
-                    Rate: ₹{getPrice()} × 2 × {prcRate} = {getPRCPrice().toLocaleString()} PRC
+                    Required: {getPRCPrice().toLocaleString()} PRC
                   </li>
                 </ul>
               </div>
