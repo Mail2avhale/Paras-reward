@@ -24,7 +24,7 @@ EKO_BASE_URL_V3 = os.environ.get("EKO_BASE_URL_V3", "https://api.eko.in:25002/ek
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "7c179a397b4710e71b2248d1f5892d19")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "7a2529f5-3587-4add-a2df-3d0606d62460")
-EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
+EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "19560001")
 
 # ==================== MODELS ====================
 
@@ -107,23 +107,25 @@ async def health_check():
 @router.post("/sender/check")
 async def check_sender(request: SenderCheckRequest):
     """
-    Step 1: Check if sender exists for Levin DMT
-    GET /v3/customer/profile/{customer_id}/dmt-levin
+    Step 1: Check if sender exists
+    GET /v3/customer/profile/{mobile}
+    Without Aadhaar = ₹25,000 monthly limit
     """
     try:
-        # Correct Levin DMT endpoint: /customer/profile/{customer_id}/dmt-levin
-        url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}/dmt-levin"
+        # CORRECT endpoint as per Eko docs
+        url = f"{EKO_BASE_URL_V3}/customer/profile/{request.customer_mobile}"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
         }
         
         logging.info(f"[Levin DMT] Check sender: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.get(url, headers=get_headers(), params=params)
             
-            logging.error(f"[Levin DMT] Sender check response: {response.status_code} - FULL: {response.text}")
+            logging.info(f"[Levin DMT] Sender check response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -147,29 +149,55 @@ async def check_sender(request: SenderCheckRequest):
             
             # Check response
             data = result.get("data", {})
+            response_type = result.get("response_type_id")
+            response_status = result.get("response_status_id")
             
-            if result.get("response_status_id") == 0:
+            # response_status_id = 0 or -1 with is_registered=1 means customer exists
+            is_registered = data.get("is_registered") == 1
+            customer_profile = data.get("customer_profile", {})
+            
+            if is_registered or response_status == 0 or (response_status == -1 and customer_profile):
+                # Customer exists and is registered
+                available_limit = data.get("next_allowed_limit") or customer_profile.get("next_allowed_limit") or 25000
+                total_limit = customer_profile.get("total_monthly_limit") or 25000
+                name = data.get("sender_name") or customer_profile.get("name") or "Customer"
+                
                 return {
                     "success": True,
                     "sender_exists": True,
                     "sender": {
                         "customer_id": request.customer_mobile,
-                        "name": data.get("name"),
-                        "mobile": data.get("mobile", request.customer_mobile),
-                        "available_limit": data.get("available_limit") or data.get("next_allowed_limit"),
-                        "used_limit": data.get("used_limit", 0),
-                        "total_limit": data.get("total_limit") or data.get("total_monthly_limit")
-                    }
+                        "name": name,
+                        "mobile": customer_profile.get("mobile", request.customer_mobile),
+                        "available_limit": float(available_limit) if available_limit else 25000,
+                        "used_limit": float(total_limit) - float(available_limit) if available_limit else 0,
+                        "total_limit": float(total_limit) if total_limit else 25000,
+                        "state": data.get("kyc_state") or customer_profile.get("kyc_state"),
+                        "state_desc": "Minimum KYC Approved" if customer_profile.get("kyc_state") == 8 else "Verified"
+                    },
+                    "message": "Customer found! Ready for transfer."
+                }
+            # response_type_id = 2136 means Aadhaar Validation Pending
+            elif response_type == 2136:
+                return {
+                    "success": True,
+                    "sender_exists": True,
+                    "needs_aadhaar": True,
+                    "otp_ref_id": data.get("otp_ref_id"),
+                    "sender": {
+                        "customer_id": request.customer_mobile,
+                        "state": "8",
+                        "state_desc": "Aadhaar Validation Pending"
+                    },
+                    "message": "Aadhaar validation pending. कृपया आधार verify करा."
                 }
             else:
-                # Customer needs Aadhaar validation or registration
+                # Customer needs registration
                 return {
                     "success": True,
                     "sender_exists": False,
                     "needs_registration": True,
-                    "needs_aadhaar": True,
-                    "otp_ref_id": data.get("otp_ref_id"),  # Needed for Aadhaar OTP
-                    "message": result.get("message", "Sender not registered for Levin DMT")
+                    "message": result.get("message", "Customer not registered. Please register first.")
                 }
                 
     except Exception as e:
@@ -177,46 +205,35 @@ async def check_sender(request: SenderCheckRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# STEP 2: Register/Onboard Sender for Levin DMT
+# STEP 2: Register/Onboard Sender
 @router.post("/sender/register")
 async def register_sender(request: SenderRegisterRequest):
     """
-    Step 2: Onboard new sender for Levin DMT
-    POST /v3/customer/account/{customer_id}/dmt-levin
-    Content-Type: application/x-www-form-urlencoded
+    Step 2: Register new sender
+    POST /v3/customer/account
+    Body: initiator_id, user_code, customer_id, name, dob, residence_address
     """
     try:
-        # CORRECT URL with /dmt-levin suffix!
-        url = f"{EKO_BASE_URL_V3}/customer/account/{request.customer_mobile}/dmt-levin"
+        # CORRECT endpoint as per Eko docs
+        url = f"{EKO_BASE_URL_V3}/customer/account"
         
-        # residence_address as JSON STRING (not object)
-        residence_address = json.dumps({
-            "line": request.address,
-            "city": "Mumbai",
-            "state": "Maharashtra", 
-            "pincode": "400001",
-            "district": "Mumbai",
-            "area": "India"
-        })
-        
-        # Form data (NOT JSON!)
+        # Form data (application/x-www-form-urlencoded)
         form_data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
+            "customer_id": request.customer_mobile,
             "name": request.name,
             "dob": request.dob,
-            "residence_address": residence_address
+            "residence_address": json.dumps([request.address or "India", "Maharashtra"])
         }
         
         logging.info(f"[Levin DMT] Register sender: {request.customer_mobile}")
         logging.info(f"[Levin DMT] Register URL: {url}")
-        logging.info(f"[Levin DMT] Register form data: {form_data}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            # Use form data with default headers (application/x-www-form-urlencoded)
             response = await client.post(url, headers=get_headers(), data=form_data)
             
-            logging.error(f"[Levin DMT] Register response: {response.status_code} - FULL: {response.text}")
+            logging.info(f"[Levin DMT] Register response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -227,7 +244,7 @@ async def register_sender(request: SenderRegisterRequest):
             try:
                 result = response.json()
             except Exception as json_err:
-                logging.error(f"[Levin DMT] Register JSON error: {json_err}, raw: {response.text[:300]}")
+                logging.error(f"[Levin DMT] Register JSON error: {json_err}")
                 return {
                     "success": False,
                     "message": f"Eko API error: {response.text[:200]}"
@@ -238,7 +255,7 @@ async def register_sender(request: SenderRegisterRequest):
                     "success": True,
                     "otp_sent": True,
                     "otp_ref_id": result.get("data", {}).get("otp_ref_id"),
-                    "message": "OTP sent to customer mobile. Please verify.",
+                    "message": "OTP customer mobile वर पाठवला. कृपया verify करा.",
                     "data": result.get("data", {})
                 }
             else:
@@ -258,36 +275,32 @@ async def register_sender(request: SenderRegisterRequest):
         }
 
 
-# STEP 3: Verify Sender OTP for Levin DMT
+# STEP 3: Verify Sender OTP
 @router.post("/sender/verify-otp")
 async def verify_sender_otp(request: SenderOTPVerifyRequest):
     """
-    Step 3: Verify sender OTP for Levin DMT
-    PUT /v3/customer/payment/dmt-levin/sender/{customer_id}/otp
+    Step 3: Verify sender OTP
+    PUT /v3/customer/account/otp/verify
+    Body: initiator_id, user_code, customer_id, otp
     """
     try:
-        # Levin DMT specific OTP verify
-        url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/otp"
+        # CORRECT endpoint as per Eko docs
+        url = f"{EKO_BASE_URL_V3}/customer/account/otp/verify"
         
         data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
+            "customer_id": request.customer_mobile,
             "otp": request.otp
         }
         
         logging.info(f"[Levin DMT] Verify OTP for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.put(url, headers=get_headers(), data=data)
             
-            logging.error(f"[Levin DMT] OTP verify response: {response.status_code} - FULL: {response.text}")
-            
-            if response.status_code == 204 or not response.text:
-                # Fallback to generic endpoint
-                fallback_url = f"{EKO_BASE_URL_V3}/customer/account/otp/verify"
-                data["customer_id"] = request.customer_mobile
-                response = await client.put(fallback_url, headers=get_headers(), data=data)
-                logging.info(f"[Levin DMT] Fallback OTP verify: {response.status_code} - {response.text[:300] if response.text else 'empty'}")
+            logging.info(f"[Levin DMT] OTP verify response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
             
             if response.status_code == 204 or not response.text:
                 return {
@@ -306,7 +319,7 @@ async def verify_sender_otp(request: SenderOTPVerifyRequest):
             if result.get("response_status_id") == 0:
                 return {
                     "success": True,
-                    "message": "Sender verified and registered for Levin DMT!",
+                    "message": "Customer verified! आता तुम्ही transfer करू शकता.",
                     "data": result.get("data", {})
                 }
             else:
@@ -575,18 +588,18 @@ async def resend_sender_otp(request: ResendOTPRequest):
 async def get_recipients(customer_mobile: str):
     """
     Step 4: Get list of recipients for a sender
-    GET /v3/customer/payment/dmt-levin/sender/{customer_id}/recipients
+    GET /v3/customer/payment/dmt-levin/sender/{mobile}/recipients
     """
     try:
-        # Levin DMT uses /dmt-levin/ path, NOT /ppi/
+        # DMT-LEVIN endpoint
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{customer_mobile}/recipients"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
-            "user_code": EKO_USER_CODE,
-            "additional_info": "1"  # Required for Levin DMT
+            "user_code": EKO_USER_CODE
         }
         
         logging.info(f"[Levin DMT] Get recipients for: {customer_mobile}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.get(url, headers=get_headers(), params=params)
@@ -603,11 +616,11 @@ async def get_recipients(customer_mobile: str):
             try:
                 result = response.json()
             except Exception as json_err:
-                logging.error(f"[Levin DMT] JSON parse error: {json_err}, raw: {response.text[:200]}")
+                logging.error(f"[Levin DMT] JSON parse error: {json_err}")
                 return {
                     "success": False,
                     "recipients": [],
-                    "message": f"API error: {response.text[:200]}"
+                    "message": f"API error"
                 }
             
             if result.get("response_status_id") == 0:
@@ -634,10 +647,10 @@ async def get_recipients(customer_mobile: str):
 async def add_recipient(request: RecipientAddRequest):
     """
     Step 5: Add a new recipient
-    POST /v3/customer/payment/dmt-levin/sender/{customer_id}/recipient
+    POST /v3/customer/payment/dmt-levin/sender/{mobile}/recipient
     """
     try:
-        # Levin DMT uses /dmt-levin/ path
+        # DMT-LEVIN endpoint
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient"
         
         data = {
@@ -646,11 +659,12 @@ async def add_recipient(request: RecipientAddRequest):
             "recipient_name": request.recipient_name,
             "recipient_mobile": request.recipient_mobile,
             "account": request.account_number,
-            "ifsc": request.ifsc_code,  # Changed from bank_code to ifsc
+            "ifsc": request.ifsc_code,
             "recipient_type": "3"  # Bank account
         }
         
         logging.info(f"[Levin DMT] Add recipient for: {request.customer_mobile}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
@@ -688,11 +702,11 @@ async def add_recipient(request: RecipientAddRequest):
 @router.post("/recipient/activate")
 async def activate_recipient(request: RecipientActivateRequest):
     """
-    Step 6: Activate recipient for transfers
-    POST /v3/customer/payment/dmt-levin/sender/{customer_id}/bank/recipient
+    Step 6: Register recipient with bank
+    POST /v3/customer/payment/dmt-levin/sender/{mobile}/bank/recipient
     """
     try:
-        # Levin DMT uses /dmt-levin/ path
+        # DMT-LEVIN endpoint
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/bank/recipient"
         
         data = {
@@ -702,6 +716,7 @@ async def activate_recipient(request: RecipientActivateRequest):
         }
         
         logging.info(f"[Levin DMT] Activate recipient: {request.recipient_id}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
@@ -726,7 +741,7 @@ async def activate_recipient(request: RecipientActivateRequest):
             if result.get("response_status_id") == 0:
                 return {
                     "success": True,
-                    "message": "Recipient activated successfully",
+                    "message": "Recipient activated! Beneficiary ID generated.",
                     "beneficiary_id": result.get("data", {}).get("beneficiary_id"),
                     "data": result.get("data", {})
                 }
@@ -756,7 +771,7 @@ class RecipientDeleteRequest(BaseModel):
 async def delete_recipient(request: RecipientDeleteRequest):
     """
     Delete a recipient/beneficiary
-    DELETE /v3/customer/payment/dmt-levin/sender/{customer_id}/recipient/{recipient_id}
+    DELETE /v3/customer/payment/dmt-levin/sender/{mobile}/recipient/{recipient_id}
     """
     try:
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/sender/{request.customer_mobile}/recipient/{request.recipient_id}"
@@ -824,10 +839,9 @@ async def send_transaction_otp(request: TransactionOTPRequest):
     POST /v3/customer/payment/dmt-levin/otp
     """
     try:
-        # Levin DMT uses /dmt-levin/otp path
+        # DMT-LEVIN endpoint
         url = f"{EKO_BASE_URL_V3}/customer/payment/dmt-levin/otp"
         
-        # Note: service_code is NOT required for Levin DMT OTP
         data = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE,
@@ -836,12 +850,17 @@ async def send_transaction_otp(request: TransactionOTPRequest):
             "amount": str(request.amount)
         }
         
+        # Add beneficiary_id if provided
+        if request.beneficiary_id:
+            data["beneficiary_id"] = request.beneficiary_id
+        
         logging.info(f"[Levin DMT] Send transaction OTP: {request.customer_mobile}, amount={request.amount}")
+        logging.info(f"[Levin DMT] URL: {url}")
         
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, headers=get_headers(), data=data)
             
-            logging.info(f"[Levin DMT] OTP send response: {response.status_code}")
+            logging.info(f"[Levin DMT] OTP send response: {response.status_code} - {response.text[:500] if response.text else 'empty'}")
             
             if response.status_code == 204 or not response.text:
                 raise HTTPException(status_code=500, detail="Service not activated")
@@ -852,7 +871,7 @@ async def send_transaction_otp(request: TransactionOTPRequest):
                 return {
                     "success": True,
                     "otp_sent": True,
-                    "message": "OTP sent to customer mobile",
+                    "message": "OTP customer mobile वर पाठवला",
                     "otp_ref_id": result.get("data", {}).get("otp_ref_id"),
                     "data": result.get("data", {})
                 }
