@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://redeem-limit-dmtv3.preview.emergentagent.com/setup
+   https://eko-levin-debug.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

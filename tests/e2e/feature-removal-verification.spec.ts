@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://redeem-limit-dmtv3.preview.emergentagent.com';
+const BASE_URL = 'https://eko-levin-debug.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   

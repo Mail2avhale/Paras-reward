@@ -9,7 +9,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://redeem-limit-dmtv3.preview.emergentagent.com';
+const BASE_URL = 'https://eko-levin-debug.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

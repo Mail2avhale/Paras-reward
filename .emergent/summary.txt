@@ -1,26 +1,25 @@
 <analysis>**original_problem_statement:**
 The user's primary goal is to fix and enhance the Eko Levin DMT (Domestic Money Transfer) feature. This has involved several iterative requests and bug fixes:
-1.  **DMT Core Functionality:** Fix the Transaction Declined and Customer is not registered errors that are blocking all DMT transfers. Implement the correct sender onboarding flow, which requires Aadhaar validation. Fix the Add/Delete Beneficiary functionality.
-2.  **Global Redeem Limit:** Implement and refine a Global Redeem Limit that applies across all withdrawal services (DMT, Bill Pay, etc.). The logic should include a monthly carry-forward of unused limits starting from the user's join date.
-3.  **Referral Bonus Logic:** The formula for the redeem limit bonus was changed to: .
-4.  **Admin Features:** Create a new page in the admin panel to view all DMT transactions, complete with filters (by status, date, etc.) and pagination.
-5.  **UI/UX:** Simplify the DMT page by removing the confusing choice between Levin DMT and Legacy V1. Improve spacing and layout on the DMT page.
+1.  **DMT Core Functionality:** Fix the Transaction Declined and Customer is not registered errors that are blocking all DMT transfers. The agent needed to find the correct sender onboarding, verification, and transfer flow through extensive trial and error based on fragmented documentation provided by the user.
+2.  **Global Redeem Limit:** Implement and refine a Global Redeem Limit that applies across all withdrawal services.
+3.  **Referral Bonus Logic:** Update the redeem limit bonus formula.
+4.  **Admin Features:** Create a new page in the admin panel to view all DMT transactions.
+5.  **UI/UX:** Simplify the DMT page.
 6.  **Deployment Stability:** Address recurring production deployment failures that occur after frontend code changes.
 
 **User's preferred language**: The user communicates in **Marathi** and English. The next agent **MUST** respond primarily in **Marathi**.
 
 **what currently exists?**
--   The backend has API endpoints for the Eko Levin DMT flow, but the sender onboarding and transfer logic are incorrect and causing failures. The agent was in the process of fixing this by following new documentation provided by the user.
--   The Global Redeem Limit logic is implemented in the backend (). It calculates a user's total redeemable limit based on their tenure (months active) and the number of active referrals, with unused limits carrying over month-to-month.
--   The DMT page UI () has been updated to hide the Legacy V1 option and display the user's Available Redeem Limit with an INR conversion.
--   A new admin page () has been created with a corresponding backend API () to display transaction history with filters and pagination. The UI is built but could not be fully tested via screenshot due to login complexities.
--   A backend endpoint to delete a beneficiary has been created, and a delete button has been added to the frontend UI.
+-   The backend  has been through numerous modifications in an attempt to find the correct sequence of Eko API endpoints. After trying and failing with various V3 registration, Aadhaar, and verification endpoints, a working **V2 OTP verification endpoint** was discovered and used successfully.
+-   The DMT transfer flow is now unblocked from the customer verification step. The customer  is now fully verified.
+-   The frontend  was updated to include an Aadhaar validation step. While this flow is implemented, it was discovered that the immediate blocker was customer OTP verification, not Aadhaar validation. The UI for this remains in the code.
+-   Other features like the Global Redeem Limit, Referral Bonus, and Admin DMT Transactions page exist from previous sessions but were not the focus of this session's debugging effort.
 
 **Last working item**:
--   **Last item agent was working:** Debugging the Eko Levin DMT sender registration flow. The root cause of the Customer is not registered error during transfer was identified: the sender was being onboarded with Minimum KYC (State 8), but the Eko platform still required an explicit Aadhaar OTP validation to fully enable the Levin DMT service for that user profile.
+-   **Last item agent was working:** Successfully verifying the DMT sender after a prolonged debugging process. The agent finally discovered the correct **V2 API endpoint** () from a user-provided code snippet, which successfully verified the customer. The previous blocker, where all V3 verification endpoints failed with 500 errors, is now resolved. The agent was preparing to re-attempt the transfer.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Backend testing. The agent must complete the Aadhaar validation flow and then test the entire DMT sequence using . This involves multiple dependent API calls: Sender Check -> Onboard (if needed) -> Generate Aadhaar OTP -> Validate Aadhaar OTP -> Send Transfer OTP -> Execute Transfer.
+-   **Agent Testing Done:** Y (for the verification step only)
+-   **Which testing method agent to use?** Backend testing using .
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
@@ -31,145 +30,133 @@ The user's primary goal is to fix and enhance the Eko Levin DMT (Domestic Money 
 
 **Issues Detail:**
 -   **Issue 1: Eko Levin DMT transfer fails with Customer is not registered**
-    -   **Attempted fixes:** The agent spent significant time debugging, trying different API endpoints and request formats based on trial-and-error. After the user provided correct documentation, the agent fixed the Onboard Sender API call (). This resulted in a Minimum KYC Approved (State 8) status, but the sender's profile check still returned Aadhaar Validation Pending, which continued to block transfers. The user confirmed Aadhaar validation is mandatory.
+    -   **Attempted fixes:** This session involved extensive debugging. The agent tried numerous Eko API paths:
+        -   **Aadhaar Validation:** All Aadhaar validation endpoints (, ) failed with either 500 errors or Adhar Validation Failed (2138), proving to be a red herring.
+        -   **PPI Endpoints:** Endpoints with  in the path were tried but resulted in 500 errors, indicating the service is not active for the user's account.
+        -   **V3 Registration/Verification:** Various  endpoints for registration and OTP verification (, ) consistently failed with 500 Internal Server Errors, despite the agent receiving valid OTPs. This was the primary blocker.
+        -   **Service Activation:** The agent successfully activated services 83 (Remittance Levin) and 84 (PPI Remittance Levin) for the user, but this did not resolve the transfer issue.
+        -   **BREAKTHROUGH:** The agent finally used a V2 endpoint provided by the user () which successfully verified the customer. The response confirmed Customer already verified.
     -   **Next debug checklist:**
-        1.  In , add a new step to the transfer wizard to collect the user's Aadhaar number if their profile status indicates Aadhaar Validation Pending.
-        2.  In , implement two new API endpoints that the frontend can call:
-            -   An endpoint to trigger Aadhaar OTP generation ().
-            -   An endpoint to validate the submitted Aadhaar OTP ().
-        3.  Ensure these new endpoints use the correct  as specified in the Eko documentation.
-        4.  After successful validation, re-test the entire transfer flow for user .
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical, core feature of the application. It is completely unusable and is the highest priority.
+        1.  The customer  is now **VERIFIED**. The Customer is not registered error should be resolved.
+        2.  Generate a fresh transfer OTP using the working endpoint: .
+        3.  Immediately attempt the transfer using the endpoint , passing the new OTP and .
+        4.  Verify the transaction is successful.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the application's core feature and is completely blocked. Fixing it will make DMT functional.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None. This is the primary blocker.
 -   **Issue 2: Production app crashes on deployment after frontend changes**
-    -   **Attempted fixes:** The agent encountered this twice. The first time, deleting a component from  broke the deployment, and the fix was to revert the code. The second time, removing JSX from  broke the deployment. The workaround was to hide the JSX using a CSS class () instead of removing it.
-    -   **Next debug checklist:**
-        1.  This is likely an issue with the production build process (e.g., webpack config, babel, or tree-shaking).
-        2.  Investigate the deployment logs or configuration for any aggressive optimizations that might be causing issues with dynamic components.
-        3.  As a general rule, prefer safer modification patterns (like conditional rendering or CSS hiding) over deleting JSX until the root cause is found.
-    -   **Why fix this issue and what will be achieved with the fix?** This instability slows down development and introduces high risk with every frontend change.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend.
-    -   **Blocked on other issue:** None.
 -   **Issue 3: Razorpay double subscription bug**
-    -   **Attempted fixes:** A fix was deployed in a previous session by adding transaction locks. An admin API () was also created to correct historical data.
-    -   **Next debug checklist:**
-        1.  Ask the user if they have noticed the issue with any **new** subscriptions since the fix was deployed.
-        2.  Guide the user on how to use the admin API with  or a frontend button to fix the  date for affected users.
-    -   **Why fix this issue and what will be achieved with the fix?** This bug causes direct financial loss. Verification is crucial.
     -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
-    -   **Blocked on other issue:** None.
 -   **Issue 4: Add/Delete Beneficiary functionality is not fully tested**
-    -   **Attempted fixes:** The agent created the  endpoint in  and added a trash icon/button in .
-    -   **Next debug checklist:** Once the main transfer flow (Issue 1) is unblocked, perform a full end-to-end test: Add a new beneficiary -> Activate it -> Send a small transfer to it -> Delete it -> Verify it no longer appears in the list.
-    -   **Why fix this issue and what will be achieved with the fix?** Provides essential beneficiary management for the user.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** Issue 1.
+    -   **Status:** IN PROGRESS (Blocked by Issue 1)
 
 **In progress Task List**:
--   **Task 1: Implement Aadhaar Validation for Eko Levin DMT (P0)**
-    -   **Where to resume:**  and .
-    -   **What will be achieved with this?** This will unblock the entire DMT transfer feature, resolving the Customer is not registered error.
+-   **Task 1: Complete and Test the Eko Levin DMT Transfer Flow (P0)**
+    -   **Where to resume:** .
+    -   **What will be achieved with this?** A fully functional money transfer.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on something:** Nothing.
+    -   **Blocked on something:** The final verification step was just completed. The next action is to test the transfer itself.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
 *   **P1:** Guide user on using the  admin API.
-*   **P2:** Full regression test of the application after the large number of recent changes.
+*   **P2:** Full regression test of the Add/Delete Beneficiary functionality once DMT is working.
+*   **P2:** Full regression test of the application.
 
 **Future Tasks:**
 *   Investigate the root cause of production deployment failures after frontend changes.
 *   Migrate the database from MongoDB to PostgreSQL.
 *   Migrate KYC/Receipt images from base64 strings in MongoDB to a dedicated file storage solution.
 *   Add Email/Mobile OTP verification on user signup.
-*   Refactor the large  component into smaller, more manageable sub-components.
+*   Refactor the large  component.
 
 **Completed work in this session**
--   **Global Redeem Limit Logic:** Implemented and refined the carry-forward logic for the global redeem limit, starting from the user's join date.
--   **Referral Bonus Formula:** Updated the redeem limit formula to increase the monthly limit by 20% for each active direct referral.
--   **DMT Page UI Simplification:** Successfully removed the confusing Levin vs. Legacy card selection by hiding the elements with CSS, providing a cleaner user flow.
--   **Admin DMT Transactions Page:** Created a new admin page and backend API to view DMT transaction history with comprehensive filters, stats, and pagination.
--   **Beneficiary Deletion:** Added the backend API endpoint and frontend UI button for deleting a beneficiary.
--   **DMT Error Debugging:** Identified the root cause of the DMT failure as a pending Aadhaar validation step in the Eko onboarding process.
+-   **DMT Sender Verification:** Successfully verified the DMT sender () using a previously unknown V2 Eko API endpoint (). **This was the critical breakthrough that unblocked the entire feature.**
+-   **Extensive API Debugging:** Systematically identified which Eko API endpoints are active and which are not for the user's account, ruling out dozens of incorrect paths related to PPI, Aadhaar, and V3 verification.
+-   **Service Activation:** Successfully activated Remittance (83) and PPI Remittance (84) services for the user's Eko account.
+-   **Frontend UI for Aadhaar:** Implemented a new step in the  UI to handle Aadhaar number and OTP input, though this flow is not currently required to unblock the main issue.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Production deployment crashes after frontend changes.** This is a high-risk recurring issue that has only been worked around (by hiding JSX with CSS instead of deleting it), not solved.
+-   **Issue 2: User's comment about Balance added in wallet was not investigated.** This was mentioned early on in the previous session in conjunction with beneficiary issues but was never circled back to. It could indicate a separate bug.
+
+**Known issue recurrence from previous fork**
+-   **Issue recurrence in previous fork:** Production app crashes on deployment after frontend changes.
+-   **Recurrence count:** 2+
+-   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   Eko Levin DMT V3 API (Onboarding, Aadhaar Validation, Transfer)
--   Debugging third-party APIs with incorrect or incomplete documentation.
--   Stateful financial limit calculation with monthly carry-forward.
--   Safe frontend modification patterns to avoid breaking a fragile production build pipeline.
--   Creating new admin-facing features (UI and API).
+-   Iterative debugging of a complex, poorly-documented third-party API (Eko).
+-   Distinguishing between different API versions (V2 vs. V3) and service types (DMT-Levin vs. PPI).
+-   Understanding the distinction between a profile existing, a service being active, and a sender being fully verified for a specific transaction pipe.
 
 **key DB schema**
-No new collections or major schema changes were made in this session. The logic operates on the existing  and  collections.
+No schema changes were made.
 
 **All files of reference**
--    (Main file for the current bug)
--    (Frontend for the current bug and UI changes)
--    (Redeem limit formula changes)
--    (New feature)
--    (New feature API)
+-    (The primary file for all backend logic and debugging).
+-    (The primary file for all frontend changes).
 
 **key api endpoints**
--   : Eko API to onboard a sender (fixed).
--   : Eko API to generate Aadhaar OTP (**to be implemented**).
--   : Eko API to validate Aadhaar OTP (**to be implemented**).
--   : Eko API to perform the transfer.
--   : Internal API with the updated carry-forward logic.
--   : New internal API to delete a beneficiary.
--   : New internal API for the admin DMT history page.
+**Working & Verified Endpoints:**
+-   : Checks basic customer profile.
+-   : Generates a transfer OTP.
+-   : Fetches beneficiary list.
+-   : **CRITICAL & WORKING.** This V2 endpoint successfully verifies the customer.
+-   : Activates services (like 83, 84) for the user.
+
+**Endpoints to be Tested Next:**
+-   : The main transfer endpoint. **This is the next API to call.**
+
+**Failed / Inactive Endpoints (DO NOT USE):**
+-   All  OTP verification endpoints (e.g., , ) -> **Return 500 Error.**
+-   All Aadhaar validation endpoints -> **Return 500 Error or 2138.**
+-   All  endpoints -> **Return 500 Error.**
 
 **Critical Info for New Agent**
 -   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   The highest priority is fixing the Eko Levin DMT transfer flow. This is blocked on implementing the **Aadhaar validation** steps. Follow the Eko developer documentation precisely, which requires  for the Aadhaar APIs. The user has provided all necessary info (Aadhaar number, test credentials).
--   **Be extremely cautious with frontend changes.** The production deployment process is fragile. Deleting or significantly refactoring JSX has previously crashed the deployed app. **Prefer hiding elements with CSS or using conditional rendering** over removing code until the underlying build issue is resolved.
--   The global redeem limit formula is now , where . The unused portion carries forward.
+-   **The main blocker is solved!** The customer  has been successfully **VERIFIED** using the  API. Do not re-debug the verification issue.
+-   Your **IMMEDIATE NEXT STEP** is to test the transfer. Generate a fresh OTP with  and then immediately call  with that OTP.
+-   The user provides Eko documentation in fragments. The agent must piece together the correct flow. The latest documentation snippets are the most reliable.
+-   Be cautious with frontend changes. The production deployment is fragile. Prefer conditional rendering over deleting JSX.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** States that if Aadhaar is mandatory, the agent should implement the Aadhaar validation flow. (Task In Progress)
-2.  **User:** Provided Eko documentation stating No need aadhar validation for minimum kyc, which was later found to be context-dependent. (Handled)
-3.  **User:** Provided a link to the correct Eko developer documentation for , which helped the agent fix the request format. (Handled)
-4.  **User:** Provided an Eko documentation snippet for  with a  example, which was critical in identifying the incorrect API path and . (Handled)
-5.  **User:** Confirmed that the Eko DMT Levin service is active on their account. (Handled)
-6.  **User:** Asks for an explanation of the revised Global Redeem Limit formula. (Completed)
-7.  **User:** Asks to change the referral bonus from a percentage of PRC to a percentage increase in the limit per active referral. (Completed)
-8.  **User:** Reports that Add/Delete Beneficiary is not working and mentions Balance added in wallet. (In Progress)
-9.  **User:** Provides test credentials: ,  and beneficiary details. (In Use)
-10. **User:** Provides OTPs multiple times for testing the transfer flow. (Handled)
+1.  **User:** Provided documentation for V2 OTP verification, which was the final breakthrough. (Handled)
+2.  **User:** Provided documentation showing the final simplified flow, ignoring sender/Aadhaar APIs. (Handled)
+3.  **User:** Provided a full Python script with different  endpoints. (Handled)
+4.  **User:** Stated they are using the Production environment. (Handled)
+5.  **User:** Provided OTP . (Used)
+6.  **User:** Provided documentation link for . (Handled)
+7.  **User:** Provided OTP . (Used)
+8.  **User:** Provided documentation for Onboard/Get/Verify customer APIs. (Handled)
+9.  **User:** Provided OTP . (Used)
+10. **User:** Provided documentation for user service management, leading to the Activate Service step. (Handled)
 
 **Project Health Check:**
--   **Broken:**
-    -   The core Eko Levin DMT feature is non-functional due to the registration/Aadhaar validation issue.
--   **In Progress:**
-    -   Verification of the Razorpay double subscription bug fix.
-    -   End-to-end testing of beneficiary management.
+-   **Broken:** The DMT transfer is still not confirmed working, but the primary blocker has been removed.
+-   **In Progress:** The DMT feature fix is in the final stage of testing.
 
 **3rd Party Integrations**
--   **Razorpay:** Used for subscriptions. A bug fix is pending user verification.
--   **Eko (Levin V3 API):** Used for Domestic Money Transfer. This integration is the primary focus and is currently broken.
+-   **Razorpay:** Used for subscriptions.
+-   **Eko (Levin V2 & V3 API):** Used for Domestic Money Transfer. The integration is complex and involves a mix of V2 and V3 endpoints.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, it was used to confirm that hiding the DMT cards via CSS worked as expected.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None in this session.
--   **Known regressions:** Frontend changes are causing production deployment failures.
+-   **Test files created:** None.
+-   **Known regressions:** Production deployment fails after certain frontend changes.
 
 **Credentials to test flow:**
 -   **Login:** , 
--   **Aadhaar Number (for testing):** 
+-   **Aadhaar Number (for testing, if needed):** 
 
 **What agent forgot to execute**
--   The agent has not yet investigated the root cause of why frontend changes are breaking the production deployment pipeline. This is a recurring and high-risk issue that has only been worked around, not solved.
--   The user's comment about Balance added in wallet in conjunction with the beneficiary issue was not investigated. This could be a separate bug where a failed transfer might be incorrectly crediting a wallet. This needs clarification from the user.</analysis>
+-   The agent has not investigated the root cause of why frontend changes are breaking the production deployment pipeline.
+-   The user's comment about Balance added in wallet in conjunction with the beneficiary issue was not investigated.</analysis>

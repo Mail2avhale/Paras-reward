@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://redeem-limit-dmtv3.preview.emergentagent.com';
+const BASE_URL = 'https://eko-levin-debug.preview.emergentagent.com';
 
 // Test data
 const TEST_USER_ID = 'test_playwright_user_' + Date.now();
