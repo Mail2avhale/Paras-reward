@@ -198,6 +198,7 @@ def generate_headers() -> Dict[str, str]:
 def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
     """
     Generate authentication headers for bill PAYMENT.
+    Exactly as per Eko documentation curl example.
     """
     encoded_key = base64.b64encode(AUTH_KEY.encode()).decode()
     
@@ -213,7 +214,10 @@ def generate_headers_for_payment(timestamp: str) -> Dict[str, str]:
         "developer_key": DEVELOPER_KEY,
         "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
-        "Content-Type": "application/json"  # Eko requires JSON
+        "Content-Type": "application/json",
+        "Connection": "Keep-Alive",
+        "Accept-Encoding": "gzip",
+        "User-Agent": "okhttp/3.9.0"
     }
 
 
@@ -856,23 +860,26 @@ async def pay_bill(data: PayBillRequest):
         headers["request_hash"] = request_hash
         
         body = {
-            "amount": float(data.amount),  # Eko requires numeric
-            "operator_id": str(data.operator_id),
+            "initiator_id": INITIATOR_ID,  # Required in body as per Eko docs
+            "source_ip": "127.0.0.1",
+            "user_code": USER_CODE,
+            "amount": str(data.amount),  # String as per Eko docs
+            "client_ref_id": client_ref_id,
             "utility_acc_no": str(data.account),
             "confirmation_mobile_no": str(data.mobile),
-            "user_code": USER_CODE,
-            "client_ref_id": client_ref_id,
             "sender_name": data.sender_name or "Customer",
-            "latlong": DEFAULT_LATLONG,
-            "source_ip": "127.0.0.1"
+            "operator_id": str(data.operator_id),
+            "latlong": DEFAULT_LATLONG
         }
         
         # Add bill_fetch_response if provided (required for some operators)
         if data.bill_fetch_response:
             body["billfetchresponse"] = data.bill_fetch_response
         
-        logging.info(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
-        logging.info(f"[BBPS PAY] Request body keys: {list(body.keys())}")
+        logging.error(f"[BBPS PAY] client_ref={client_ref_id}, operator={data.operator_id}, amount={data.amount}")
+        logging.error(f"[BBPS PAY] URL: {url}")
+        logging.error(f"[BBPS PAY] Headers: developer_key={DEVELOPER_KEY[:10]}..., timestamp={timestamp}, request_hash={request_hash[:20]}...")
+        logging.error(f"[BBPS PAY] Body: {body}")
         
         # Use JSON format for payment
         response = await bbps_post(url, headers=headers, json_body=body, timeout=REQUEST_TIMEOUT)
