@@ -114,9 +114,7 @@ const parseResponseForActions = (text) => {
   if (lowerText.includes('redeem') || lowerText.includes('voucher') || lowerText.includes('gift')) {
     actions.push({ label: 'Gift Vouchers', route: '/gift-vouchers', icon: ShoppingBag, variant: 'default' });
   }
-  if (lowerText.includes('bank') || lowerText.includes('transfer') || lowerText.includes('dmt') || lowerText.includes('money transfer')) {
-    actions.push({ label: 'Bank Transfer', route: '/redeem?service=dmt', icon: TrendingUp, variant: 'success' });
-  }
+  // DMT Bank Transfer removed - Eko API not working
   if (lowerText.includes('kyc') || lowerText.includes('verify') || lowerText.includes('document')) {
     actions.push({ label: 'Complete KYC', route: '/kyc', icon: Target, variant: 'default' });
   }
@@ -355,12 +353,12 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       setMessages(prev => [...prev, userMessage]);
       setInputMessage('');
       
-      // Add bot response about starting withdrawal flow
+      // Add bot response about withdrawal - DMT disabled, use other methods
       const botMessage = {
         type: 'bot',
-        text: '🏦 **Bank Withdrawal Request Detected!**\n\nमी तुम्हाला bank withdrawal process मध्ये guide करतो. हा secure flow Eko DMT द्वारे आहे.\n\n✅ OTP verification\n✅ Bank details collection\n✅ Secure transfer\n\n👇 खालील button वर click करा:',
+        text: '🏦 **Bank Withdrawal Request**\n\nसध्या DMT bank transfer सेवा तात्पुरती बंद आहे. कृपया दुसऱ्या पद्धतीने redeem करा:\n\n✅ Mobile Recharge\n✅ Bill Payments\n✅ Gift Vouchers\n\n👉 /redeem वर जा',
         timestamp: new Date(),
-        showWithdrawalButton: true
+        showWithdrawalButton: false
       };
       setMessages(prev => [...prev, botMessage]);
       return;

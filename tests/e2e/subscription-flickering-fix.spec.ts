@@ -10,7 +10,7 @@ import { test, expect, Page } from '@playwright/test';
  * Fix: Initialize state from user prop instead of hardcoded 'explorer'
  */
 
-const BASE_URL = process.env.BASE_URL || 'https://fund-transfer-app-4.preview.emergentagent.com';
+const BASE_URL = process.env.BASE_URL || 'https://money-transfer-debug.preview.emergentagent.com';
 
 // Test user with ELITE subscription
 const TEST_USER_EMAIL = 'elite_test@test.com';

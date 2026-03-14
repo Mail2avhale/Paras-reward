@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
  * 10. Active filters summary shows current filters
  */
 
-const BASE_URL = 'https://fund-transfer-app-4.preview.emergentagent.com';
+const BASE_URL = 'https://money-transfer-debug.preview.emergentagent.com';
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';
 const ADMIN_PIN = '123456';
 

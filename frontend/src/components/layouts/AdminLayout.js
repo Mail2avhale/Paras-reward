@@ -189,7 +189,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
         { id: 'redeem-v2', label: 'Redeem Requests', icon: Receipt, path: '/admin/redeem', highlight: true },
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
-        { id: 'dmt-dashboard', label: 'DMT Bank Transfer', icon: Send, path: '/admin/dmt', highlight: true },
+        // DMT Bank Transfer removed - Eko API not working
         { id: 'unified-payments', label: 'All Payments (Old)', icon: CreditCard, path: '/admin/unified-payments', highlight: true, pendingCount: pendingCounts.bankWithdrawals },
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
         { id: 'bill-payments', label: 'Bill Payments (Old)', icon: FileText, path: '/admin/bill-payments', pendingCount: pendingCounts.bills },

@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://fund-transfer-app-4.preview.emergentagent.com/setup
+   https://money-transfer-debug.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

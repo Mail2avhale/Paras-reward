@@ -214,18 +214,18 @@ const SERVICE_CONFIG = {
     category: 'tax'
   },
   
-  // V1 Fund Transfer - Direct Bank Transfer (No OTP Required)
-  dmt: { 
-    name: 'Bank Transfer', 
-    icon: Banknote, 
-    color: 'emerald',
-    gradient: 'from-emerald-500 to-green-500',
-    fields: ['recipient_name', 'account_number', 'ifsc_code'],
-    category: 'transfer',
-    requiresAdmin: false,
-    isInstant: true,
-    description: 'Direct IMPS transfer - No OTP required'
-  }
+  // V1 Fund Transfer - DISABLED - Eko API not working
+  // dmt: { 
+  //   name: 'Bank Transfer', 
+  //   icon: Banknote, 
+  //   color: 'emerald',
+  //   gradient: 'from-emerald-500 to-green-500',
+  //   fields: ['recipient_name', 'account_number', 'ifsc_code'],
+  //   category: 'transfer',
+  //   requiresAdmin: false,
+  //   isInstant: true,
+  //   description: 'Direct IMPS transfer - No OTP required'
+  // }
 };
 
 // Static operator data (will be replaced with Eko API data)

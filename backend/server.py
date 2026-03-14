@@ -78,10 +78,7 @@ from routes.admin_ledger_view import router as admin_ledger_view_router, set_db 
 from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
-from routes.dmt_v1_service import router as dmt_v1_router, set_db as set_dmt_v1_db
-from routes.dmt_levin_service import router as dmt_levin_router
-from routes.fund_transfer_v1 import router as fund_transfer_v1_router, set_db as set_fund_transfer_db
-# Removed: social.py, support.py - routes exist in server.py with better implementation
+# DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -39893,16 +39890,7 @@ api_router.include_router(razorpay_router)
 # set_eko_db(db)
 # api_router.include_router(eko_router)
 
-# DMT V1 Service Router (Domestic Money Transfer)
-set_dmt_v1_db(db)
-api_router.include_router(dmt_v1_router)
-
-# DMT Levin Service Router (OTP-based DMT) - DEPRECATED, use fund_transfer_v1
-api_router.include_router(dmt_levin_router)
-
-# V1 Fund Transfer Router (Direct transfer without OTP)
-set_fund_transfer_db(db)
-api_router.include_router(fund_transfer_v1_router)
+# DMT/Fund Transfer Routes REMOVED - Eko API not working
 
 # Unified Redeem v2 Router
 set_redeem_v2_db(db)

@@ -154,8 +154,7 @@ const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit")
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
-const DMTPage = lazy(() => import("@/pages/DMTPage")); // DMT V1 - Money Transfer (Legacy)
-const FundTransferV1Page = lazy(() => import("@/pages/FundTransferV1Page")); // V1 Fund Transfer - No OTP
+// DMT and Fund Transfer REMOVED - Eko API not working
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
@@ -183,9 +182,8 @@ const AdminFraudAlerts = IS_USER_BUILD ? null : lazy(() => import(/* webpackChun
 const AdminFraudDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFraudDashboard"));
 const AdminVideoAds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminVideoAds"));
 const AdminFixedExpenses = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFixedExpenses"));
-const AdminDMTRefunds = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/DMTRefunds"));
-const AdminDMTTransactions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminDMTTransactions"));
 const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminKYC"));
+// AdminDMTRefunds and AdminDMTTransactions REMOVED - Eko API not working
 // AdminOrders removed - Marketplace deprecated (December 2025)
 // const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
 const AdminSupport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
@@ -347,13 +345,13 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/recurring-deposit" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/rd" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-redeem" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
-            <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem?service=dmt" /> : <Navigate to="/login" />} />
-            {/* DMT V1 - Money Transfer */}
-            <Route path="/dmt" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <DMTPage user={user} />) : <Navigate to="/login" />} />
-            <Route path="/fund-transfer" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <FundTransferV1Page user={user} />) : <Navigate to="/login" />} />
-            <Route path="/bank-transfer" element={user ? <Navigate to="/fund-transfer" /> : <Navigate to="/login" />} />
-            <Route path="/money-transfer" element={user ? <Navigate to="/fund-transfer" /> : <Navigate to="/login" />} />
+            <Route path="/bank-redeem" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            <Route path="/bank-redeem/edit/:requestId" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            {/* DMT/Fund Transfer REMOVED - Eko API not working, redirect to redeem */}
+            <Route path="/dmt" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            <Route path="/fund-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            <Route path="/bank-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
+            <Route path="/money-transfer" element={user ? <Navigate to="/redeem" /> : <Navigate to="/login" />} />
             <Route path="/bbps" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BBPSServices user={user} />) : <Navigate to="/login" />} />
             <Route path="/bill-pay" element={user ? <Navigate to="/bbps" /> : <Navigate to="/login" />} />
             
@@ -414,10 +412,10 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/redeem" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                {/* Admin DMT removed - Eko API not working */}
-                <Route path="/admin/dmt" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user}><AdminDMTTransactions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/dmt-transactions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user}><AdminDMTTransactions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/dmt-refunds" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user}><AdminDMTRefunds user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* Admin DMT routes REMOVED - Eko API not working, redirect to admin */}
+                <Route path="/admin/dmt" element={<Navigate to="/admin" replace />} />
+                <Route path="/admin/dmt-transactions" element={<Navigate to="/admin" replace />} />
+                <Route path="/admin/dmt-refunds" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminLedgerView user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/popup-messages" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPopupMessages user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/performance-report" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPerformanceReport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />

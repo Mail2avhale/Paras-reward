@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://fund-transfer-app-4.preview.emergentagent.com';
+const BASE_URL = 'https://money-transfer-debug.preview.emergentagent.com';
 
 const DMT_TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',
