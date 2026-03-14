@@ -2867,7 +2867,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         
         return {
             "allowed": False,
-            "reason": f"आपण या आठवड्यात आधीच '{used_name}' सेवा वापरली आहे. पुढील सेवा {next_monday_formatted} पासून उपलब्ध होईल.",
+            "reason": f"You have already used '{used_name}' this week. Next service available from {next_monday_formatted}.",
             "reason_en": f"You have already used '{used_name}' this week. Next service available from {next_monday_formatted}.",
             "service_used_this_week": used_service,
             "services_count": len(services_used),
@@ -2875,7 +2875,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
             "next_reset": next_monday.isoformat(),
             "days_until_reset": days_until_reset,
             "hours_until_reset": hours_until_reset,
-            "cooldown_display": f"{days_until_reset} दिवस, {hours_until_reset % 24} तास"
+            "cooldown_display": f"{days_until_reset} days, {hours_until_reset % 24} hours"
         }
     
     # No service used - allowed
@@ -2885,7 +2885,7 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         "services_count": 0,
         "requested_service": requested_service,
         "next_reset": next_monday.isoformat(),
-        "message": "या आठवड्यात तुम्ही 1 सेवा वापरू शकता."
+        "message": "You can use 1 service this week."
     }
 
 
