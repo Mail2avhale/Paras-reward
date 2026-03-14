@@ -2079,6 +2079,151 @@ async def get_bbps_request_details(request_id: str):
 
 
 
+@router.post("/admin/force-prc-deduct")
+async def force_prc_deduct(
+    date: str = None,
+    dry_run: bool = True,
+    skip_ledger_check: bool = False
+):
+    """
+    EMERGENCY: Force deduct PRC from users for successful BBPS transactions.
+    This bypasses ledger check and directly updates user balance.
+    
+    Args:
+        date: Date to process (YYYY-MM-DD format), defaults to today
+        dry_run: If True, only show what would be deducted
+        skip_ledger_check: If True, ignore existing ledger entries and deduct anyway
+    """
+    from datetime import datetime, timezone
+    
+    try:
+        if not date:
+            date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        
+        # Find all completed BBPS requests for the date with Eko TID
+        requests = await db.redeem_requests.find({
+            "created_at": {"$regex": f"^{date}"},
+            "eko_tid": {"$exists": True, "$ne": None},
+            "$or": [
+                {"status": "completed"},
+                {"eko_status": "SUCCESS"}
+            ],
+            "prc_balance_deducted": {"$ne": True}  # Not already balance deducted
+        }).to_list(1000)
+        
+        results = []
+        total_prc = 0
+        success_count = 0
+        failed_count = 0
+        
+        for req in requests:
+            user_id = req.get("user_id")
+            request_id = req.get("request_id")
+            prc_to_deduct = req.get("total_prc_deducted") or req.get("charges", {}).get("total_prc_required", 0)
+            
+            if not prc_to_deduct or prc_to_deduct <= 0:
+                continue
+            
+            # Get current user balance
+            user = await db.users.find_one({"uid": user_id}, {"prc_balance": 1, "name": 1})
+            if not user:
+                results.append({
+                    "user_id": user_id,
+                    "user_name": req.get("user_name"),
+                    "prc": prc_to_deduct,
+                    "status": "USER_NOT_FOUND"
+                })
+                failed_count += 1
+                continue
+            
+            current_balance = user.get("prc_balance", 0)
+            new_balance = current_balance - prc_to_deduct
+            
+            total_prc += prc_to_deduct
+            
+            if dry_run:
+                results.append({
+                    "user_id": user_id,
+                    "user_name": req.get("user_name"),
+                    "prc": prc_to_deduct,
+                    "current_balance": current_balance,
+                    "new_balance": new_balance,
+                    "request_id": request_id,
+                    "eko_tid": req.get("eko_tid"),
+                    "status": "WILL_DEDUCT"
+                })
+            else:
+                # DIRECT balance update - bypass WalletService
+                txn_id = f"FIX-{int(datetime.now(timezone.utc).timestamp())}-{request_id[-6:]}"
+                
+                update_result = await db.users.update_one(
+                    {"uid": user_id},
+                    {
+                        "$set": {"prc_balance": new_balance},
+                        "$push": {
+                            "prc_transactions": {
+                                "type": "bbps_fix",
+                                "amount": -prc_to_deduct,
+                                "txn_id": txn_id,
+                                "description": f"BBPS Fix: {req.get('service_type')} ₹{req.get('amount_inr')} TID:{req.get('eko_tid')}",
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }
+                        }
+                    }
+                )
+                
+                if update_result.modified_count > 0:
+                    success_count += 1
+                    
+                    # Mark request as balance deducted
+                    await db.redeem_requests.update_one(
+                        {"request_id": request_id},
+                        {"$set": {
+                            "prc_balance_deducted": True,
+                            "prc_fix_txn": txn_id,
+                            "prc_fix_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name"),
+                        "prc": prc_to_deduct,
+                        "old_balance": current_balance,
+                        "new_balance": new_balance,
+                        "txn_id": txn_id,
+                        "status": "DEDUCTED"
+                    })
+                else:
+                    failed_count += 1
+                    results.append({
+                        "user_id": user_id,
+                        "user_name": req.get("user_name"),
+                        "prc": prc_to_deduct,
+                        "status": "UPDATE_FAILED"
+                    })
+        
+        return {
+            "success": True,
+            "date": date,
+            "dry_run": dry_run,
+            "summary": {
+                "total_requests": len(requests),
+                "to_process": len([r for r in results if r.get("status") in ["WILL_DEDUCT", "DEDUCTED"]]),
+                "success": success_count,
+                "failed": failed_count,
+                "total_prc": total_prc
+            },
+            "transactions": results
+        }
+        
+    except Exception as e:
+        logging.error(f"Force PRC deduct error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/admin/bulk-prc-deduct")
 async def bulk_prc_deduct(
     date: str = None,
