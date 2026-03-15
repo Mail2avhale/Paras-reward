@@ -4929,6 +4929,88 @@ async def check_and_run_missed_burn_job():
         logging.error(f"[BURN FALLBACK] Error: {e}")
         return {"status": "error", "error": str(e)}
 
+
+# ==================== WEBHOOK AUTO-BURN SYSTEM (UNIQUE SOLUTION) ====================
+# This solves the problem of APScheduler not working reliably in Kubernetes/Cloud environments
+# External services like Cron-job.org, UptimeRobot, or EasyCron can trigger this webhook
+
+async def execute_auto_burn_with_logging():
+    """
+    Execute burn and log comprehensive results.
+    Used by both webhook and internal scheduler.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        ist_time = (now + timedelta(hours=5, minutes=30)).strftime("%I:%M %p IST")
+        
+        # Check if already burned today (prevent duplicate burns)
+        existing_burn = await db.burn_job_logs.find_one({
+            "job_type": "prc_burn",
+            "date": today,
+            "status": "completed"
+        })
+        
+        if existing_burn:
+            return {
+                "status": "skipped",
+                "reason": "Already burned today",
+                "burned_at": existing_burn.get("executed_at"),
+                "total_burned": existing_burn.get("total_burned", 0)
+            }
+        
+        # Execute burn
+        result = await run_prc_burn_job()
+        
+        # Log to burn_job_logs
+        daily_burn = result.get("daily_percentage_burn", {})
+        total_burned = daily_burn.get("total_burned", 0)
+        users_affected = daily_burn.get("users_affected", 0)
+        
+        await db.burn_job_logs.insert_one({
+            "job_type": "prc_burn",
+            "date": today,
+            "executed_at": now.isoformat(),
+            "executed_at_ist": ist_time,
+            "status": "completed",
+            "total_burned": total_burned,
+            "users_affected": users_affected,
+            "burn_percentage": 0.5,
+            "trigger_source": "auto_burn_system",
+            "details": result
+        })
+        
+        # Update burn statistics
+        await db.app_settings.update_one(
+            {"key": "burn_statistics"},
+            {
+                "$set": {
+                    "last_burn_date": today,
+                    "last_burn_time": now.isoformat(),
+                    "last_burn_total": total_burned
+                },
+                "$inc": {
+                    "total_burned_all_time": total_burned,
+                    "total_burn_operations": 1
+                }
+            },
+            upsert=True
+        )
+        
+        return {
+            "status": "completed",
+            "date": today,
+            "time_ist": ist_time,
+            "total_burned": total_burned,
+            "users_affected": users_affected,
+            "details": result
+        }
+        
+    except Exception as e:
+        logging.error(f"[AUTO BURN] Error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
 # ==================== END PRC BURN SYSTEM ====================
 
 # ==================== BILL PAYMENT & RECHARGE SYSTEM ====================
@@ -26853,6 +26935,155 @@ async def trigger_prc_burn():
         "message": "PRC burn job completed",
         "results": result
     }
+
+
+# ==================== WEBHOOK AUTO-BURN ENDPOINTS ====================
+# These endpoints can be triggered by external cron services like:
+# - Cron-job.org (FREE)
+# - EasyCron.com
+# - UptimeRobot
+# - Google Cloud Scheduler
+# - AWS EventBridge
+
+@api_router.get("/webhook/auto-burn")
+@api_router.post("/webhook/auto-burn")
+async def webhook_auto_burn(secret: str = None):
+    """
+    🔥 WEBHOOK AUTO-BURN ENDPOINT
+    
+    External cron services can call this endpoint to trigger daily PRC burn.
+    This solves the problem of APScheduler not working in Kubernetes.
+    
+    Setup Instructions:
+    1. Go to https://cron-job.org (FREE service)
+    2. Create account and add new cron job
+    3. URL: https://www.parasreward.com/api/webhook/auto-burn?secret=YOUR_SECRET
+    4. Schedule: 0 5 * * * (5:30 AM UTC = 11 AM IST)
+    5. Method: GET or POST
+    
+    Features:
+    - Prevents duplicate burns (checks if already burned today)
+    - Logs all burn operations
+    - Returns detailed results
+    
+    Query Params:
+    - secret: Optional security token (set in app_settings)
+    """
+    try:
+        # Optional: Verify secret token for security
+        # You can set a webhook_secret in app_settings
+        settings = await db.app_settings.find_one({"key": "webhook_settings"})
+        expected_secret = settings.get("value", {}).get("burn_webhook_secret") if settings else None
+        
+        if expected_secret and secret != expected_secret:
+            # Log unauthorized attempt
+            await db.webhook_logs.insert_one({
+                "endpoint": "auto-burn",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "status": "unauthorized",
+                "provided_secret": secret[:4] + "..." if secret else None
+            })
+            return {"error": "Unauthorized", "message": "Invalid or missing secret"}
+        
+        # Execute auto burn
+        result = await execute_auto_burn_with_logging()
+        
+        # Log successful webhook call
+        await db.webhook_logs.insert_one({
+            "endpoint": "auto-burn",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": result.get("status"),
+            "total_burned": result.get("total_burned", 0)
+        })
+        
+        return {
+            "success": True,
+            "webhook": "auto-burn",
+            "result": result
+        }
+        
+    except Exception as e:
+        logging.error(f"[WEBHOOK AUTO-BURN] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.get("/webhook/burn-status")
+async def webhook_burn_status():
+    """
+    Check today's burn status.
+    Useful for monitoring if auto-burn is working.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        
+        # Get today's burn log
+        today_burn = await db.burn_job_logs.find_one({
+            "job_type": "prc_burn",
+            "date": today
+        })
+        
+        # Get last 7 days burn history
+        seven_days_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        recent_burns = await db.burn_job_logs.find({
+            "job_type": "prc_burn",
+            "date": {"$gte": seven_days_ago}
+        }).sort("date", -1).to_list(7)
+        
+        # Calculate burn health
+        burns_last_7_days = len(recent_burns)
+        health_status = "healthy" if burns_last_7_days >= 5 else "warning" if burns_last_7_days >= 3 else "critical"
+        
+        return {
+            "success": True,
+            "today": {
+                "date": today,
+                "burned": today_burn is not None,
+                "total_burned": today_burn.get("total_burned", 0) if today_burn else 0,
+                "burned_at": today_burn.get("executed_at_ist") if today_burn else None
+            },
+            "last_7_days": {
+                "burns_executed": burns_last_7_days,
+                "expected": 7,
+                "health": health_status,
+                "history": [
+                    {
+                        "date": b.get("date"),
+                        "burned": b.get("total_burned", 0),
+                        "users": b.get("users_affected", 0)
+                    } for b in recent_burns
+                ]
+            },
+            "recommendation": "All good! Auto-burn is working." if health_status == "healthy" else 
+                           "Warning: Some burns may have been missed. Check cron-job.org setup." if health_status == "warning" else
+                           "Critical: Auto-burn is not working! Please set up external cron immediately."
+        }
+        
+    except Exception as e:
+        logging.error(f"[BURN STATUS] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.post("/admin/webhook/set-secret")
+async def set_webhook_secret(secret: str):
+    """Set a secret token for webhook security (Admin only)"""
+    try:
+        await db.app_settings.update_one(
+            {"key": "webhook_settings"},
+            {
+                "$set": {
+                    "value.burn_webhook_secret": secret,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        return {"success": True, "message": f"Webhook secret set. Use ?secret={secret} in your cron URL."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== END WEBHOOK AUTO-BURN ====================
 
 @api_router.post("/admin/clear-free-users-prc")
 async def clear_all_free_users_prc():
