@@ -3671,33 +3671,53 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         if not user_data:
             return False, "user_not_found"
     
-    # ========== CONDITION 0: Active Subscription (MOST IMPORTANT) ==========
-    # Users with valid paid subscription are ALWAYS considered active
+    # ========== UPDATED: Active = Elite subscription + Mining Active ==========
     subscription_plan = (user_data.get("subscription_plan") or "").lower()
-    if subscription_plan in ["elite", "growth", "startup", "vip", "pro"]:
-        # Check if subscription is not expired
-        sub_expiry = user_data.get("subscription_expires") or user_data.get("subscription_expiry") or user_data.get("vip_expiry")
-        if sub_expiry:
-            try:
-                if isinstance(sub_expiry, str):
-                    expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
-                else:
-                    expiry_dt = sub_expiry
-                if expiry_dt.tzinfo is None:
-                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                
-                if expiry_dt > now:
-                    return True, f"subscription_active_{subscription_plan}"
-            except:
-                # If parse fails, trust the plan name
-                return True, f"subscription_plan_{subscription_plan}"
-        else:
-            # Has plan but no expiry date - trust the plan
-            return True, f"subscription_plan_{subscription_plan}"
+    is_elite = subscription_plan == "elite"
     
-    # ========== CONDITION 1: Active Mining Session ==========
+    # Check mining status
     mining_active = user_data.get("mining_active")
     session_end = user_data.get("mining_session_end")
+    is_mining = False
+    
+    if mining_active is True or mining_active == "true":
+        if session_end:
+            try:
+                if isinstance(session_end, str):
+                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                elif isinstance(session_end, datetime):
+                    session_end_dt = session_end
+                else:
+                    session_end_dt = None
+                
+                if session_end_dt:
+                    if session_end_dt.tzinfo is None:
+                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                    if session_end_dt > now:
+                        is_mining = True
+            except:
+                is_mining = True
+        else:
+            is_mining = True
+    
+    # Active only if BOTH elite AND mining
+    if is_elite and is_mining:
+        return True, "elite_and_mining_active"
+    elif is_elite:
+        return False, "elite_but_not_mining"
+    elif is_mining:
+        return False, "mining_but_not_elite"
+    
+    return False, "not_elite_not_mining"
+
+
+# Legacy: Keep old conditions commented for reference
+# ========== OLD CONDITION 0: Active Subscription (MOST IMPORTANT) ==========
+# subscription_plan = (user_data.get("subscription_plan") or "").lower()
+# if subscription_plan in ["elite", "growth", "startup", "vip", "pro"]:
+#     return True, f"subscription_active_{subscription_plan}"
+
+# ========== OLD CONDITION 1: Active Mining Session ==========
     mining_start = user_data.get("mining_start_time")
     
     # Check mining_active flag
@@ -28048,6 +28068,74 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.post("/admin/upgrade-to-elite")
+async def upgrade_pro_growth_to_elite(dry_run: bool = True):
+    """
+    Upgrade all 'pro' and 'growth' subscription users to 'elite'.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find all pro and growth users
+        pro_users = await db.users.find({"subscription_plan": {"$in": ["pro", "Pro", "PRO"]}}).to_list(5000)
+        growth_users = await db.users.find({"subscription_plan": {"$in": ["growth", "Growth", "GROWTH"]}}).to_list(5000)
+        
+        all_users = pro_users + growth_users
+        
+        results = {
+            "pro_count": len(pro_users),
+            "growth_count": len(growth_users),
+            "total": len(all_users),
+            "upgraded": 0,
+            "dry_run": dry_run,
+            "users": []
+        }
+        
+        for user in all_users:
+            uid = user.get("uid")
+            old_plan = user.get("subscription_plan")
+            
+            user_record = {
+                "uid": uid,
+                "name": user.get("name", "Unknown"),
+                "old_plan": old_plan,
+                "new_plan": "elite"
+            }
+            
+            if not dry_run:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "subscription_plan": "elite",
+                            "upgraded_from": old_plan,
+                            "upgrade_date": now.isoformat()
+                        }
+                    }
+                )
+                user_record["status"] = "upgraded"
+            else:
+                user_record["status"] = "would_upgrade"
+            
+            results["upgraded"] += 1
+            results["users"].append(user_record)
+        
+        return {
+            "success": True,
+            "message": "DRY RUN" if dry_run else f"Upgraded {results['upgraded']} users to elite",
+            "summary": {
+                "pro_users": results["pro_count"],
+                "growth_users": results["growth_count"],
+                "total_upgraded": results["upgraded"]
+            },
+            "users": results["users"][:50]
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/check-user/{uid}")
 async def check_user_balance_data(uid: str):
     """Check all balance data for a specific user from all sources"""
@@ -33316,20 +33404,24 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     
     # Format referrals
     result = []
+    now = datetime.now(timezone.utc)
     for ref in direct_referrals:
-        # FIXED: Check active status - paid subscribers are ALWAYS active
+        # UPDATED: Active = Elite subscription + Mining session active
         is_active = False
         subscription_plan = (ref.get("subscription_plan") or "").lower()
         
-        # Paid subscribers are always active
-        if subscription_plan in ["elite", "vip", "pro", "growth", "startup"]:
-            is_active = True
-        elif ref.get("mining_active") and ref.get("mining_session_end"):
+        is_elite = subscription_plan == "elite"
+        is_mining = False
+        
+        if ref.get("mining_active") and ref.get("mining_session_end"):
             try:
                 session_end = datetime.fromisoformat(ref["mining_session_end"].replace('Z', '+00:00'))
-                is_active = session_end > datetime.now(timezone.utc)
+                is_mining = session_end > now
             except:
-                pass
+                is_mining = True
+        
+        # Active only if BOTH elite AND mining
+        is_active = is_elite and is_mining
         
         result.append({
             "uid": ref["uid"],
@@ -34100,45 +34192,46 @@ async def get_referral_levels(user_id: str, force_refresh: bool = False):
         
         for u in users:
             user_uid = u.get("uid")
-            # FIXED: Check active status properly
-            # User is active if:
-            # 1. Has paid subscription (elite, vip, pro, growth, startup) OR
-            # 2. Mining session is active
+            # UPDATED: Active = Elite subscription + Mining session active
             is_active = False
             active_reason = "inactive"
             
-            # Check 1: Paid subscription = ALWAYS ACTIVE
             subscription_plan = (u.get("subscription_plan") or "").lower()
-            if subscription_plan in ["elite", "vip", "pro", "growth", "startup"]:
+            mining_active = u.get("mining_active")
+            session_end = u.get("mining_session_end")
+            
+            # Check: Elite subscription + Mining session active
+            is_elite = subscription_plan == "elite"
+            is_mining = False
+            
+            if mining_active is True or mining_active == "true":
+                if session_end:
+                    try:
+                        if isinstance(session_end, str):
+                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                        elif isinstance(session_end, datetime):
+                            session_end_dt = session_end
+                        else:
+                            session_end_dt = None
+                        
+                        if session_end_dt:
+                            if session_end_dt.tzinfo is None:
+                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                            if session_end_dt > now:
+                                is_mining = True
+                    except:
+                        is_mining = True
+                else:
+                    is_mining = True
+            
+            # Active only if BOTH elite AND mining
+            if is_elite and is_mining:
                 is_active = True
-                active_reason = f"paid_subscriber_{subscription_plan}"
-            else:
-                # Check 2: Mining session active
-                mining_active = u.get("mining_active")
-                session_end = u.get("mining_session_end")
-                
-                if mining_active is True or mining_active == "true":
-                    if session_end:
-                        try:
-                            if isinstance(session_end, str):
-                                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                            elif isinstance(session_end, datetime):
-                                session_end_dt = session_end
-                            else:
-                                session_end_dt = None
-                            
-                            if session_end_dt:
-                                if session_end_dt.tzinfo is None:
-                                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                                if session_end_dt > now:
-                                    is_active = True
-                                    active_reason = "mining_session_active"
-                        except:
-                            is_active = True
-                            active_reason = "mining_active_flag"
-                    else:
-                        is_active = True
-                        active_reason = "mining_active_no_session"
+                active_reason = "elite_and_mining_active"
+            elif is_elite:
+                active_reason = "elite_but_not_mining"
+            elif is_mining:
+                active_reason = "mining_but_not_elite"
             
             if is_active:
                 active_count += 1

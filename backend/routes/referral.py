@@ -150,14 +150,16 @@ async def get_referrals(uid: str, limit: int = 50, page: int = 1):
             "subscription_plan": 1,
             "subscription_expiry": 1,
             "subscription_expires": 1,
+            "mining_active": 1,
+            "mining_session_end": 1,
             "is_active": {
                 "$cond": {
                     "if": {
-                        "$or": [
-                            # Condition 1: Has paid subscription plan
-                            {"$in": [{"$toLower": {"$ifNull": ["$subscription_plan", ""]}}, ["elite", "growth", "startup", "vip", "pro"]]},
-                            # Condition 2: Logged in within last 24 hours
-                            {"$gte": ["$last_login", yesterday]}
+                        "$and": [
+                            # Condition 1: Must be Elite subscription
+                            {"$eq": [{"$toLower": {"$ifNull": ["$subscription_plan", ""]}}, "elite"]},
+                            # Condition 2: Must have mining_active = true
+                            {"$eq": ["$mining_active", True]}
                         ]
                     },
                     "then": True,
@@ -287,22 +289,16 @@ async def get_multi_level_referral_stats(uid: str):
         inactive_count = 0
         
         for user in level_users:
-            last_login = user.get("last_login")
             subscription_plan = (user.get("subscription_plan") or "").lower()
+            mining_active = user.get("mining_active")
             is_active = False
             
-            # FIXED: Active if has paid subscription OR logged in last 24h
-            if subscription_plan in ["elite", "growth", "startup", "vip", "pro"]:
+            # UPDATED: Active = Elite subscription + Mining active
+            is_elite = subscription_plan == "elite"
+            is_mining = mining_active is True or mining_active == "true"
+            
+            if is_elite and is_mining:
                 is_active = True
-            elif last_login:
-                try:
-                    if isinstance(last_login, str):
-                        last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
-                    else:
-                        last_login_dt = last_login
-                    is_active = last_login_dt >= yesterday
-                except Exception:
-                    pass
             
             if is_active:
                 active_count += 1
