@@ -43063,6 +43063,280 @@ api_router.include_router(mining_router)
 # Include all API routes (must be after all route definitions and sub-routers)
 app.include_router(api_router)
 
+
+@api_router.get("/admin/user-lookup/{identifier}")
+async def admin_user_lookup(identifier: str):
+    """
+    🔍 ADMIN USER LOOKUP - Complete user details with mining factors and FAQ answers
+    
+    identifier: Can be UID, mobile number, or email
+    
+    Returns:
+    - Basic user info
+    - Mining speed details with all factors
+    - Referral breakdown
+    - Session info
+    - Balance analysis
+    - Common user questions answered automatically
+    """
+    try:
+        # Find user by UID, mobile, or email
+        user = await db.users.find_one({"uid": identifier}, {"_id": 0})
+        if not user:
+            user = await db.users.find_one({"mobile": identifier}, {"_id": 0})
+        if not user:
+            user = await db.users.find_one({"email": identifier}, {"_id": 0})
+        if not user:
+            # Try partial search
+            user = await db.users.find_one({
+                "$or": [
+                    {"mobile": {"$regex": identifier}},
+                    {"name": {"$regex": identifier, "$options": "i"}}
+                ]
+            }, {"_id": 0})
+        
+        if not user:
+            return {"success": False, "error": "User not found", "searched": identifier}
+        
+        uid = user.get("uid")
+        now = datetime.now(timezone.utc)
+        
+        # ============ BASIC INFO ============
+        basic_info = {
+            "name": user.get("name"),
+            "uid": uid,
+            "mobile": user.get("mobile"),
+            "email": user.get("email"),
+            "subscription_plan": user.get("subscription_plan", "explorer"),
+            "subscription_expiry": user.get("subscription_expiry") or user.get("subscription_expires"),
+            "prc_balance": round(float(user.get("prc_balance", 0) or 0), 2),
+            "total_mined": round(float(user.get("total_mined", 0) or 0), 2),
+            "created_at": user.get("created_at"),
+            "last_login": user.get("last_login"),
+            "referral_code": user.get("referral_code"),
+            "referred_by": user.get("referred_by")
+        }
+        
+        # ============ MINING DETAILS ============
+        subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+        
+        # Base rates by plan
+        base_rates = {
+            "explorer": 6.25,
+            "startup": 12.5,
+            "growth": 18.75,
+            "elite": 31.25,
+            "vip": 50.0,
+            "pro": 25.0
+        }
+        base_rate = base_rates.get(subscription_plan, 6.25)
+        
+        # Get referral counts for bonus calculation
+        l1_active = 0
+        l2_active = 0
+        l3_active = 0
+        l1_total = 0
+        l2_total = 0
+        l3_total = 0
+        
+        # Level 1 referrals
+        l1_refs = await db.users.find({"referred_by": {"$in": [uid, user.get("referral_code"), user.get("mobile"), user.get("email")]}}).to_list(1000)
+        l1_total = len(l1_refs)
+        for ref in l1_refs:
+            ref_plan = (ref.get("subscription_plan") or "").lower()
+            ref_mining = ref.get("mining_active")
+            if ref_plan == "elite" and (ref_mining is True or ref_mining == "true"):
+                l1_active += 1
+        
+        # Level 2 referrals
+        if l1_refs:
+            l1_identifiers = []
+            for r in l1_refs:
+                l1_identifiers.extend([r.get("uid"), r.get("referral_code"), r.get("mobile"), r.get("email")])
+            l1_identifiers = [x for x in l1_identifiers if x]
+            if l1_identifiers:
+                l2_refs = await db.users.find({"referred_by": {"$in": l1_identifiers}}).to_list(1000)
+                l2_total = len(l2_refs)
+                for ref in l2_refs:
+                    ref_plan = (ref.get("subscription_plan") or "").lower()
+                    ref_mining = ref.get("mining_active")
+                    if ref_plan == "elite" and (ref_mining is True or ref_mining == "true"):
+                        l2_active += 1
+        
+        # Calculate referral bonus
+        l1_bonus = l1_active * base_rate * 0.10  # 10% per L1 active
+        l2_bonus = l2_active * base_rate * 0.05  # 5% per L2 active
+        l3_bonus = l3_active * base_rate * 0.03  # 3% per L3 active
+        total_referral_bonus = l1_bonus + l2_bonus + l3_bonus
+        
+        # Boost multiplier (if any active boost)
+        boost_multiplier = float(user.get("mining_multiplier") or user.get("boost_multiplier") or 1.0)
+        
+        # Final mining rate
+        final_rate = (base_rate + total_referral_bonus) * boost_multiplier
+        
+        mining_details = {
+            "base_rate_per_hour": base_rate,
+            "referral_bonus_per_hour": round(total_referral_bonus, 2),
+            "boost_multiplier": boost_multiplier,
+            "final_rate_per_hour": round(final_rate, 2),
+            "final_rate_per_day": round(final_rate * 24, 2),
+            "mining_active": user.get("mining_active"),
+            "session_start": user.get("mining_session_start"),
+            "session_end": user.get("mining_session_end"),
+            "mined_this_session": round(float(user.get("mined_this_session", 0) or 0), 2)
+        }
+        
+        # ============ REFERRAL BREAKDOWN ============
+        referral_breakdown = {
+            "level_1": {
+                "total": l1_total,
+                "active": l1_active,
+                "bonus_percent": "10%",
+                "bonus_prc_per_hour": round(l1_bonus, 2)
+            },
+            "level_2": {
+                "total": l2_total,
+                "active": l2_active,
+                "bonus_percent": "5%",
+                "bonus_prc_per_hour": round(l2_bonus, 2)
+            },
+            "level_3": {
+                "total": l3_total,
+                "active": l3_active,
+                "bonus_percent": "3%",
+                "bonus_prc_per_hour": round(l3_bonus, 2)
+            },
+            "active_condition": "Elite subscription + mining_active=True"
+        }
+        
+        # ============ BALANCE ANALYSIS ============
+        total_mined = float(user.get("total_mined", 0) or 0)
+        current_balance = float(user.get("prc_balance", 0) or 0)
+        
+        # Get redemptions
+        subs = await db.subscriptions.find({"user_id": uid}).to_list(100)
+        sub_total = sum([float(s.get("prc_amount", 0) or 0) for s in subs])
+        
+        orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
+        order_total = sum([float(o.get("prc_amount", 0) or 0) for o in orders])
+        
+        withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
+        withdrawal_total = sum([float(w.get("prc_amount", 0) or 0) for w in withdrawals])
+        
+        pending_withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "pending"}).to_list(100)
+        pending_total = sum([float(w.get("total_prc_deducted", 0) or 0) for w in pending_withdrawals])
+        
+        total_redeemed = sub_total + order_total + withdrawal_total
+        expected_balance = total_mined - total_redeemed
+        balance_difference = current_balance - expected_balance
+        
+        balance_analysis = {
+            "total_mined": round(total_mined, 2),
+            "total_redeemed": round(total_redeemed, 2),
+            "redemption_breakdown": {
+                "subscriptions": round(sub_total, 2),
+                "product_orders": round(order_total, 2),
+                "bank_withdrawals": round(withdrawal_total, 2),
+                "pending_withdrawals": round(pending_total, 2)
+            },
+            "expected_balance": round(expected_balance, 2),
+            "current_balance": round(current_balance, 2),
+            "difference": round(balance_difference, 2),
+            "balance_status": "✅ OK" if abs(balance_difference) < 100 else "⚠️ Mismatch"
+        }
+        
+        # ============ COMMON USER QUESTIONS (AUTO ANSWERED) ============
+        faq_answers = []
+        
+        # Q1: Why is my mining speed low?
+        if final_rate <= base_rate:
+            faq_answers.append({
+                "question": "माझा mining speed कमी का आहे?",
+                "answer": f"तुमचा base rate {base_rate} PRC/hr आहे. Referral bonus {total_referral_bonus} PRC/hr आहे कारण तुमचे {l1_active} L1 आणि {l2_active} L2 active referrals आहेत. Mining speed वाढवण्यासाठी Elite referrals वाढवा.",
+                "suggestion": "L1 वर active Elite referrals वाढवा (प्रत्येकी +10% bonus)"
+            })
+        
+        # Q2: Why are my referrals showing inactive?
+        inactive_refs = l1_total - l1_active
+        if inactive_refs > 0:
+            faq_answers.append({
+                "question": "माझे referrals inactive का दिसत आहेत?",
+                "answer": f"Active होण्यासाठी referral ला Elite subscription + Mining Active असणे आवश्यक आहे. तुमच्या {l1_total} L1 referrals पैकी फक्त {l1_active} active आहेत.",
+                "suggestion": "Referrals ला Elite plan घ्यायला सांगा आणि mining चालू ठेवायला सांगा"
+            })
+        
+        # Q3: Balance mismatch?
+        if abs(balance_difference) > 100:
+            faq_answers.append({
+                "question": "माझे balance चुकीचे वाटते",
+                "answer": f"Expected balance: {expected_balance:,.0f} PRC, Actual: {current_balance:,.0f} PRC, Difference: {balance_difference:,.0f} PRC",
+                "suggestion": "Admin ने /api/admin/prc-balance/check-user/{uid} API वापरून तपासावे"
+            })
+        
+        # Q4: Mining not working?
+        mining_active = user.get("mining_active")
+        session_end = user.get("mining_session_end")
+        if mining_active and session_end:
+            try:
+                session_end_dt = datetime.fromisoformat(str(session_end).replace('Z', '+00:00'))
+                if session_end_dt < now:
+                    faq_answers.append({
+                        "question": "Mining का चालत नाही?",
+                        "answer": f"Mining session संपली आहे ({session_end}). नवीन session start करा.",
+                        "suggestion": "App मध्ये 'Start Mining' button वर click करा"
+                    })
+            except:
+                pass
+        
+        # Q5: Subscription expired?
+        sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        if sub_expiry and subscription_plan != "explorer":
+            try:
+                expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
+                if expiry_dt < now:
+                    faq_answers.append({
+                        "question": "Subscription expire झाली का?",
+                        "answer": f"हो, {subscription_plan} subscription {sub_expiry} ला expire झाली.",
+                        "suggestion": "Subscription renew करा"
+                    })
+                else:
+                    days_left = (expiry_dt - now).days
+                    if days_left <= 7:
+                        faq_answers.append({
+                            "question": "Subscription कधी expire होईल?",
+                            "answer": f"{days_left} दिवस बाकी आहेत. Expiry: {sub_expiry}",
+                            "suggestion": "वेळेवर renew करा"
+                        })
+            except:
+                pass
+        
+        # Q6: Pending withdrawals
+        if pending_total > 0:
+            faq_answers.append({
+                "question": "Withdrawal pending आहे का?",
+                "answer": f"हो, {len(pending_withdrawals)} withdrawals pending आहेत. Total: {pending_total:,.0f} PRC",
+                "suggestion": "Admin approval लागेल, 24-48 तास लागू शकतात"
+            })
+        
+        return {
+            "success": True,
+            "user": basic_info,
+            "mining": mining_details,
+            "referrals": referral_breakdown,
+            "balance": balance_analysis,
+            "faq_answers": faq_answers,
+            "quick_actions": {
+                "check_balance": f"/api/admin/prc-balance/check-user/{uid}",
+                "view_transactions": f"/api/user/{uid}/transactions",
+                "view_referrals": f"/api/referrals/{uid}/levels?force_refresh=true"
+            }
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
 # Note: Health check endpoint is defined earlier in the file at line ~408
 # The /health and /api/health endpoints now return 200 even during DB warmup
 
