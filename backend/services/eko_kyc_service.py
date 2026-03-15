@@ -392,7 +392,7 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
 
 async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> Dict:
     """
-    Step 2: Verify OTP and get Aadhaar details (Fetch Aadhaar XML)
+    Step 2: Verify OTP and get Aadhaar details (Fetch Aadhaar XML/File)
     
     Args:
         aadhaar_number: 12-digit Aadhaar number
@@ -419,13 +419,19 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> 
     
     headers = get_auth_headers()
     
-    # Eko Aadhaar XML endpoint - GET request
-    url = f"{EKO_KYC_BASE}/v2/external/getAdhaarXML"
+    # Generate random 4-digit share_code
+    import random
+    share_code = str(random.randint(1000, 9999))
+    
+    # Eko Aadhaar File endpoint - v1 as per documentation
+    url = f"{EKO_KYC_BASE}/v1/external/getAdhaarFile"
     params = {
-        "source": "NEWCONNECT",
         "initiator_id": EKO_INITIATOR_ID,
         "user_code": EKO_USER_CODE,
+        "aadhar": aadhaar_clean,
+        "is_consent": "Y",
         "otp": otp,
+        "share_code": share_code,
         "access_key": access_key,
         "caseId": aadhaar_clean,
         "realsourceip": "127.0.0.1"
