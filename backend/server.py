@@ -16368,10 +16368,21 @@ async def get_user_total_redeemed(user_id: str) -> float:
             prc = float(gv.get("total_prc_deducted", 0) or gv.get("prc_amount", 0) or gv.get("amount", 0) or 0)
             total_redeemed += prc
         
-        # 6. Redeem transactions from transactions collection
+        # 6. PRC Subscription Payments (when user pays subscription using PRC)
+        prc_subscriptions = await db.subscription_payments.find({
+            "user_id": user_id,
+            "payment_method": "prc",
+            "status": {"$in": ["paid", "success", "completed"]}
+        }).to_list(5000)
+        
+        for sub in prc_subscriptions:
+            prc = float(sub.get("prc_amount", 0) or sub.get("total_prc_deducted", 0) or 0)
+            total_redeemed += prc
+        
+        # 7. Redeem transactions from transactions collection
         redeem_txns = await db.transactions.find({
             "user_id": user_id,
-            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request"]}
+            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc"]}
         }).to_list(5000)
         
         # Don't double count - check if already counted above
@@ -16384,6 +16395,10 @@ async def get_user_total_redeemed(user_id: str) -> float:
             counted_refs.add(bt.get("request_id", ""))
         for dmt in dmt_txns:
             counted_refs.add(dmt.get("txn_id", ""))
+        for sub in prc_subscriptions:
+            # Add reference to avoid double counting
+            sub_ref = f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}"
+            counted_refs.add(sub_ref)
         
         for txn in redeem_txns:
             ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
