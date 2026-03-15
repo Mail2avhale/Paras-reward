@@ -759,6 +759,102 @@ async def mark_request_failed(action: AdminActionRequest):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Server error")
 
+
+class BulkActionRequest(BaseModel):
+    """Request model for bulk actions"""
+    request_ids: list = Field(default=[], description="List of request IDs to process")
+    admin_id: str = Field(..., description="Admin user ID")
+    remark: str = Field(default="Bulk action", description="Reason for bulk action")
+    mark_all_pending: bool = Field(default=False, description="If true, mark ALL pending requests")
+
+
+@router.post("/admin/bulk-mark-failed")
+async def bulk_mark_failed(action: BulkActionRequest):
+    """
+    Bulk mark requests as failed. Can either:
+    1. Mark specific request_ids as failed
+    2. Mark ALL pending requests as failed (if mark_all_pending=True)
+    
+    PRC will be refunded for each failed request.
+    """
+    try:
+        failed_count = 0
+        error_count = 0
+        total_refunded = 0
+        
+        # Get requests to process
+        if action.mark_all_pending:
+            # Get ALL pending requests
+            requests_to_fail = await db.bank_transfer_requests.find(
+                {"status": "pending"}
+            ).to_list(1000)
+        else:
+            # Get specific requests
+            requests_to_fail = await db.bank_transfer_requests.find(
+                {"request_id": {"$in": action.request_ids}, "status": "pending"}
+            ).to_list(len(action.request_ids))
+        
+        if not requests_to_fail:
+            return {
+                "success": True,
+                "message": "No pending requests found to process",
+                "failed_count": 0,
+                "total_refunded": 0
+            }
+        
+        # Process each request
+        for request in requests_to_fail:
+            try:
+                request_id = request.get("request_id")
+                prc_to_refund = request.get("prc_deducted", 0)
+                user_id = request.get("user_id")
+                
+                # Refund PRC directly to user's balance
+                if prc_to_refund > 0 and user_id:
+                    await db.users.update_one(
+                        {"uid": user_id},
+                        {"$inc": {"prc_balance": prc_to_refund}}
+                    )
+                    total_refunded += prc_to_refund
+                
+                # Update request status
+                await db.bank_transfer_requests.update_one(
+                    {"request_id": request_id},
+                    {
+                        "$set": {
+                            "status": "failed",
+                            "admin_remark": action.remark or "Bulk failed by admin",
+                            "processed_by": action.admin_id,
+                            "processed_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                            "prc_refunded": True
+                        }
+                    }
+                )
+                
+                failed_count += 1
+                
+            except Exception as req_err:
+                logging.error(f"Error processing request {request.get('request_id')}: {req_err}")
+                error_count += 1
+        
+        logging.info(f"[BANK TRANSFER] Bulk FAILED: {failed_count} requests | Admin: {action.admin_id} | Refund: {total_refunded} PRC")
+        
+        return {
+            "success": True,
+            "message": f"Marked {failed_count} requests as failed. {total_refunded:,} PRC refunded.",
+            "failed_count": failed_count,
+            "error_count": error_count,
+            "total_refunded": total_refunded
+        }
+        
+    except Exception as e:
+        logging.error(f"Bulk fail error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Server error")
+
+
 @router.get("/admin/stats")
 async def get_admin_stats():
     """Get dashboard statistics for admin."""

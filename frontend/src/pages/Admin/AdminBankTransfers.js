@@ -228,6 +228,45 @@ const AdminBankTransfers = () => {
           </Button>
         </div>
 
+        {/* Bulk Actions */}
+        {stats.pending?.count > 0 && (
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="text-white">
+                <p className="font-semibold">Bulk Actions</p>
+                <p className="text-sm text-slate-400">{stats.pending?.count} pending requests</p>
+              </div>
+              <Button
+                onClick={async () => {
+                  if (!window.confirm(`Are you sure you want to FAIL ALL ${stats.pending?.count} pending requests? PRC will be refunded.`)) return;
+                  try {
+                    setLoading(true);
+                    const admin = JSON.parse(localStorage.getItem('user') || '{}');
+                    const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
+                      mark_all_pending: true,
+                      admin_id: admin.uid || 'admin',
+                      remark: 'Bulk failed - Service discontinued'
+                    });
+                    if (res.data.success) {
+                      toast.success(`${res.data.failed_count} requests failed. ${res.data.total_refunded?.toLocaleString()} PRC refunded.`);
+                      loadRequests();
+                    }
+                  } catch (err) {
+                    toast.error(err.response?.data?.detail || 'Bulk action failed');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={loading}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Fail All Pending & Refund PRC
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <StatCard
