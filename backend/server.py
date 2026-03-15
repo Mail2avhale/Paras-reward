@@ -19103,7 +19103,7 @@ async def get_members_list(
     
     # For redeem limit sorting, we need to fetch all and sort, then paginate
     if sort_by in ["redeem_limit", "used_limit", "available_limit"]:
-        # Fetch more records for proper sorting (up to 500)
+        # Fetch more records for proper sorting (up to 200 for performance)
         members_cursor = await db.users.find(
             query,
             {
@@ -19113,26 +19113,47 @@ async def get_members_list(
                 "reset_token": 0,
                 "biometric_credentials": 0
             }
-        ).limit(500).to_list(500)
+        ).limit(200).to_list(200)
         
-        # Add redeem limit data for each member
+        # OPTIMIZED: Use simplified redeem limit calculation for sorting
+        # Full calculation is too slow for 500 users
+        PLAN_PRICES = {"elite": 799, "growth": 499, "startup": 299, "explorer": 0, "vip": 799, "pro": 799}
+        
         all_members = []
         for member in members_cursor:
-            try:
-                redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
-                member["redeem_limit"] = redeem_limit_data
-            except:
-                member["redeem_limit"] = {
-                    "plan": "explorer",
-                    "total_limit": 0,
-                    "total_redeemed": 0,
-                    "remaining_limit": 0
-                }
+            plan = (member.get("subscription_plan") or "explorer").lower()
+            plan_price = PLAN_PRICES.get(plan, 0)
+            base_limit = plan_price * 5 * 10  # Simplified formula
+            
+            # Quick estimate of months active
+            created_at = member.get("created_at")
+            months_active = 1
+            if created_at:
+                try:
+                    from datetime import datetime, timezone
+                    if isinstance(created_at, str):
+                        start = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    else:
+                        start = created_at
+                    now = datetime.now(timezone.utc)
+                    months_active = max(1, (now - start).days // 30 + 1)
+                except:
+                    months_active = 1
+            
+            total_limit = base_limit * months_active
+            total_redeemed = float(member.get("total_redeemed_cache", 0) or 0)
+            remaining = total_limit - total_redeemed
+            
+            member["redeem_limit"] = {
+                "plan": plan,
+                "total_limit": round(total_limit, 2),
+                "total_redeemed": round(total_redeemed, 2),
+                "remaining_limit": round(max(0, remaining), 2)
+            }
             all_members.append(member)
         
         # Sort by redeem limit field
         reverse = sort_order == "desc"
-        logging.info(f"[ADMIN MEMBERS] Sorting {len(all_members)} members by {sort_by}, reverse={reverse}")
         
         if sort_by == "redeem_limit":
             all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_limit", 0), reverse=reverse)
@@ -19140,8 +19161,6 @@ async def get_members_list(
             all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_redeemed", 0), reverse=reverse)
         elif sort_by == "available_limit":
             all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("remaining_limit", 0), reverse=reverse)
-        
-        logging.info(f"[ADMIN MEMBERS] After sort, first 3: {[m.get('name') for m in all_members[:3]]}")
         
         # Apply pagination after sorting
         members = all_members[skip:skip + limit]
