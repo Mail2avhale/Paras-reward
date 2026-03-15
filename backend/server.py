@@ -27607,6 +27607,207 @@ async def get_user_prc_breakdown(uid: str):
 # ==================== END PRC BALANCE AUDIT ====================
 
 
+# ==================== PRC BALANCE FIX API ====================
+
+@api_router.post("/admin/prc-balance/fix-refund-bug")
+async def fix_refund_bug(dry_run: bool = True, limit: int = 100):
+    """
+    🔧 FIX: Correct PRC balances affected by the bulk refund bug.
+    
+    The bug: Bank withdrawal refunds gave 100x PRC (₹9500 = 950,000 PRC instead of ~95,000)
+    
+    This API:
+    1. Finds users with refund transactions > 100,000 PRC
+    2. Calculates correct refund amount (INR × actual PRC rate)
+    3. Deducts the excess PRC
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max users to process
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find users with suspicious balances (balance >> total_mined)
+        users_to_check = await db.users.find({
+            "prc_balance": {"$gt": 100000}
+        }).sort("prc_balance", -1).limit(limit).to_list(limit)
+        
+        results = {
+            "total_checked": len(users_to_check),
+            "fixed": 0,
+            "skipped": 0,
+            "dry_run": dry_run,
+            "fixes": []
+        }
+        
+        for user in users_to_check:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            total_mined = float(user.get("total_mined", 0) or 0)
+            
+            # Check prc_transactions for suspicious refunds
+            prc_txns = user.get("prc_transactions", [])
+            
+            suspicious_refunds = []
+            total_excess = 0
+            
+            for txn in prc_txns:
+                if txn.get("type") == "refund":
+                    amount = float(txn.get("amount", 0) or 0)
+                    desc = txn.get("description", "")
+                    
+                    # Extract INR amount from description
+                    # "Bulk Refund: bank_withdrawals request rejected - ₹9500"
+                    import re
+                    match = re.search(r'₹(\d+)', desc)
+                    if match:
+                        inr_amount = float(match.group(1))
+                        
+                        # Expected PRC (assuming rate ~10)
+                        # Bank transfers usually deduct: INR × rate × 1.2 (with 20% fee)
+                        expected_prc = inr_amount * 10 * 1.2  # Approximate
+                        
+                        if amount > expected_prc * 2:  # More than 2x expected = bug
+                            excess = amount - expected_prc
+                            total_excess += excess
+                            suspicious_refunds.append({
+                                "description": desc,
+                                "refunded_amount": amount,
+                                "expected_amount": expected_prc,
+                                "excess": excess,
+                                "timestamp": txn.get("timestamp")
+                            })
+            
+            if total_excess > 10000:  # More than 10k excess
+                fix_record = {
+                    "uid": uid,
+                    "name": name,
+                    "current_balance": current_balance,
+                    "total_excess": total_excess,
+                    "new_balance": current_balance - total_excess,
+                    "suspicious_refunds": suspicious_refunds
+                }
+                
+                if not dry_run:
+                    # Apply fix
+                    new_balance = current_balance - total_excess
+                    
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "prc_balance": max(0, new_balance),
+                                "balance_corrected_at": now.isoformat(),
+                                "balance_correction_reason": "Bulk refund bug fix"
+                            },
+                            "$push": {
+                                "prc_transactions": {
+                                    "type": "correction",
+                                    "amount": -total_excess,
+                                    "description": f"Balance correction: Excess refund bug fix",
+                                    "timestamp": now.isoformat()
+                                }
+                            }
+                        }
+                    )
+                    
+                    # Log correction
+                    await db.balance_corrections.insert_one({
+                        "user_id": uid,
+                        "user_name": name,
+                        "old_balance": current_balance,
+                        "new_balance": max(0, new_balance),
+                        "excess_removed": total_excess,
+                        "corrected_at": now.isoformat(),
+                        "reason": "Bulk refund bug fix",
+                        "details": suspicious_refunds
+                    })
+                    
+                    fix_record["status"] = "fixed"
+                else:
+                    fix_record["status"] = "would_fix"
+                
+                results["fixes"].append(fix_record)
+                results["fixed"] += 1
+            else:
+                results["skipped"] += 1
+        
+        return {
+            "success": True,
+            "message": "DRY RUN - No changes made" if dry_run else f"Fixed {results['fixed']} users",
+            "results": results
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC FIX] Error: {e}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
+@api_router.get("/admin/prc-balance/refund-audit")
+async def audit_refund_transactions(limit: int = 50):
+    """
+    🔍 AUDIT: Find all suspicious refund transactions.
+    """
+    try:
+        # Find users with prc_transactions containing refunds
+        users_with_refunds = await db.users.find({
+            "prc_transactions.type": "refund"
+        }).limit(limit).to_list(limit)
+        
+        suspicious = []
+        
+        for user in users_with_refunds:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            
+            prc_txns = user.get("prc_transactions", [])
+            for txn in prc_txns:
+                if txn.get("type") == "refund":
+                    amount = float(txn.get("amount", 0) or 0)
+                    desc = txn.get("description", "")
+                    
+                    # Extract INR
+                    import re
+                    match = re.search(r'₹(\d+)', desc)
+                    if match:
+                        inr_amount = float(match.group(1))
+                        expected = inr_amount * 12  # ~12 PRC per INR with fees
+                        
+                        if amount > expected * 5:  # 5x or more = suspicious
+                            suspicious.append({
+                                "uid": uid,
+                                "name": name,
+                                "inr_amount": inr_amount,
+                                "prc_refunded": amount,
+                                "expected_prc": expected,
+                                "excess": amount - expected,
+                                "multiplier": round(amount / expected, 1),
+                                "timestamp": txn.get("timestamp"),
+                                "description": desc
+                            })
+        
+        # Sort by excess
+        suspicious.sort(key=lambda x: -x["excess"])
+        
+        total_excess = sum(s["excess"] for s in suspicious)
+        
+        return {
+            "success": True,
+            "total_suspicious": len(suspicious),
+            "total_excess_prc": total_excess,
+            "suspicious_refunds": suspicious
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== END PRC BALANCE FIX ====================
+
+
 # ==================== END WEBHOOK AUTO-BURN ====================
 
 @api_router.post("/admin/clear-free-users-prc")
