@@ -16222,43 +16222,51 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         months_active = max(1, months_diff + 1)
         
         referral_code = user.get("referral_code", "")
+        user_uid = user.get("uid", user_id)
         
         # Count ACTIVE direct referrals (referred users with active subscription)
+        # Note: In production, referred_by can be either UID or referral_code
         active_referral_count = 0
+        total_referral_count = 0
         
-        if referral_code:
-            referred_users = await db.users.find({
-                "referred_by": referral_code
-            }).to_list(1000)
+        # Search by both UID and referral_code
+        referred_users = await db.users.find({
+            "$or": [
+                {"referred_by": referral_code} if referral_code else {"referred_by": "___none___"},
+                {"referred_by": user_uid}
+            ]
+        }).to_list(1000)
             
-            for referred_user in referred_users:
-                is_active = False
-                
-                # Check subscription expiry
-                sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry") or referred_user.get("valid_till")
-                if sub_expiry:
-                    try:
-                        if isinstance(sub_expiry, str):
-                            exp_date = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
-                        else:
-                            exp_date = sub_expiry
-                        if exp_date.tzinfo is None:
-                            exp_date = exp_date.replace(tzinfo=timezone.utc)
-                        
-                        if exp_date > now:
-                            is_active = True
-                    except:
-                        pass
-                
-                # Also check plan or membership flags
-                ref_plan = (referred_user.get("subscription_plan") or "").lower()
-                if ref_plan in ["elite", "growth", "startup"]:
-                    is_active = True
-                if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
-                    is_active = True
-                
-                if is_active:
-                    active_referral_count += 1
+        total_referral_count = len(referred_users)
+        
+        for referred_user in referred_users:
+            is_active = False
+            
+            # Check subscription expiry
+            sub_expiry = referred_user.get("subscription_expires") or referred_user.get("subscription_expiry") or referred_user.get("vip_expiry") or referred_user.get("valid_till")
+            if sub_expiry:
+                try:
+                    if isinstance(sub_expiry, str):
+                        exp_date = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                    else:
+                        exp_date = sub_expiry
+                    if exp_date.tzinfo is None:
+                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                    
+                    if exp_date > now:
+                        is_active = True
+                except:
+                    pass
+            
+            # Also check plan or membership flags
+            ref_plan = (referred_user.get("subscription_plan") or "").lower()
+            if ref_plan in ["elite", "growth", "startup"]:
+                is_active = True
+            if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
+                is_active = True
+            
+            if is_active:
+                active_referral_count += 1
         
         # Calculate referral bonus: 20% per active referral
         referral_percentage_increase = active_referral_count * REFERRAL_BONUS_PERCENT
@@ -16275,6 +16283,7 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
             "base_limit": base_monthly_limit,
             "monthly_limit": round(monthly_limit_with_bonus, 2),
             "months_active": months_active,
+            "total_referrals": total_referral_count,
             "active_referrals": active_referral_count,
             "referral_percentage_increase": referral_percentage_increase,
             "total_limit": round(total_limit, 2),
@@ -16300,55 +16309,69 @@ async def get_user_total_redeemed(user_id: str) -> float:
     try:
         total_redeemed = 0
         
-        # 1. Bill payments
+        # 1. Bill payments - check all valid statuses and field names
+        # Database has: completed, processing, rejected, success, approved, pending
+        # Field names: total_prc_deducted, prc_amount, amount
         bill_payments = await db.bill_payment_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["approved", "success", "completed", "pending"]}
+            "status": {"$in": ["approved", "success", "completed", "pending", "processing"]}
         }).to_list(5000)
         
         for bp in bill_payments:
-            prc = float(bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
-            # Subtract refunds
-            if bp.get("status") == "refunded":
+            # Try multiple field names - production uses total_prc_deducted
+            prc = float(bp.get("total_prc_deducted", 0) or bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
+            if bp.get("status") in ["refunded", "rejected", "failed"]:
                 continue
             total_redeemed += prc
         
-        # 2. Bank withdrawals
+        # 2. Bank withdrawals - check multiple field names
         bank_withdrawals = await db.bank_withdrawal_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["approved", "success", "completed", "pending"]}
+            "status": {"$in": ["approved", "success", "completed", "pending", "processing"]}
         }).to_list(5000)
         
         for bw in bank_withdrawals:
-            prc = float(bw.get("prc_amount", 0) or bw.get("amount", 0) or 0)
-            if bw.get("status") == "refunded":
+            prc = float(bw.get("total_prc_deducted", 0) or bw.get("prc_deducted", 0) or bw.get("prc_amount", 0) or bw.get("amount", 0) or 0)
+            if bw.get("status") in ["refunded", "rejected", "failed"]:
                 continue
             total_redeemed += prc
         
-        # 3. DMT transactions
+        # 3. Bank transfer requests (manual bank transfers)
+        bank_transfers = await db.bank_transfer_requests.find({
+            "user_id": user_id,
+            "status": {"$in": ["approved", "success", "completed", "pending", "processing", "paid"]}
+        }).to_list(5000)
+        
+        for bt in bank_transfers:
+            prc = float(bt.get("prc_deducted", 0) or bt.get("total_prc_deducted", 0) or bt.get("prc_amount", 0) or 0)
+            if bt.get("status") in ["refunded", "rejected", "failed"]:
+                continue
+            total_redeemed += prc
+        
+        # 4. DMT transactions
         dmt_txns = await db.dmt_transactions.find({
             "user_id": user_id,
-            "status": {"$in": ["success", "pending"]}
+            "status": {"$in": ["success", "pending", "processing"]}
         }).to_list(5000)
         
         for dmt in dmt_txns:
-            prc = float(dmt.get("prc_amount", 0) or dmt.get("amount", 0) or 0)
+            prc = float(dmt.get("total_prc_deducted", 0) or dmt.get("prc_amount", 0) or dmt.get("amount", 0) or 0)
             total_redeemed += prc
         
-        # 4. Gift vouchers
+        # 5. Gift vouchers
         gift_vouchers = await db.gift_voucher_orders.find({
             "user_id": user_id,
-            "status": {"$in": ["success", "completed", "pending"]}
+            "status": {"$in": ["success", "completed", "pending", "processing"]}
         }).to_list(5000)
         
         for gv in gift_vouchers:
-            prc = float(gv.get("prc_amount", 0) or gv.get("amount", 0) or 0)
+            prc = float(gv.get("total_prc_deducted", 0) or gv.get("prc_amount", 0) or gv.get("amount", 0) or 0)
             total_redeemed += prc
         
-        # 5. Redeem transactions
+        # 6. Redeem transactions from transactions collection
         redeem_txns = await db.transactions.find({
             "user_id": user_id,
-            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher"]}
+            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request"]}
         }).to_list(5000)
         
         # Don't double count - check if already counted above
@@ -16357,11 +16380,13 @@ async def get_user_total_redeemed(user_id: str) -> float:
             counted_refs.add(bp.get("request_id", ""))
         for bw in bank_withdrawals:
             counted_refs.add(bw.get("request_id", ""))
+        for bt in bank_transfers:
+            counted_refs.add(bt.get("request_id", ""))
         for dmt in dmt_txns:
             counted_refs.add(dmt.get("txn_id", ""))
         
         for txn in redeem_txns:
-            ref = txn.get("reference_id", "") or txn.get("txn_id", "")
+            ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
             if ref not in counted_refs and ref:
                 prc = float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
                 total_redeemed += abs(prc)
@@ -16386,7 +16411,9 @@ async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dic
         return {
             "plan": limit_info.get("plan", "explorer"),
             "months_active": limit_info.get("months_active", 1),
+            "total_referrals": limit_info.get("total_referrals", 0),
             "active_referrals": limit_info.get("active_referrals", 0),
+            "referral_bonus_percent": limit_info.get("referral_percentage_increase", 0),
             "total_limit": round(total_limit, 2),
             "total_redeemed": round(total_redeemed, 2),
             "remaining_limit": round(remaining, 2)
