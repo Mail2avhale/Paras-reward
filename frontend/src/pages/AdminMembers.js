@@ -579,7 +579,7 @@ const AdminMembers = () => {
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-green-400 font-medium">
-                            {(member.prc_balance || 0).toLocaleString()}
+                            {(member.prc_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </td>
                         <td className="py-3 px-4">
