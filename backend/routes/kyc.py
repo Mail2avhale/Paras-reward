@@ -634,14 +634,28 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
     Auto-verify PAN using Eko PAN Verification API
     - No OTP required
     - Instant verification
-    - Checks: PAN validity and holder name
+    - Auto KYC approval on success
+    - Duplicate PAN detection
     """
     # Check if user exists
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Verify PAN
+    # Check for duplicate PAN - another user already has this PAN
+    pan_upper = data.pan_number.upper().strip()
+    existing_pan_user = await db.users.find_one({
+        "pan_number": pan_upper,
+        "uid": {"$ne": uid}  # Exclude current user
+    })
+    
+    if existing_pan_user:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"This PAN is already registered with another account. Please use a different PAN or contact support."
+        )
+    
+    # Verify PAN via Eko API
     result = await verify_pan_lite(
         pan_number=data.pan_number,
         name=data.name,
@@ -652,56 +666,78 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     
-    # If verified, update user's KYC status
+    # If verified, update user's KYC status to VERIFIED (auto-approve)
     if result["verified"]:
         now = datetime.now(timezone.utc).isoformat()
         
         # Get holder name from response
         pan_holder_name = result.get("pan_holder_name", "")
         
-        # Update user
+        # Update user - KYC is now VERIFIED (auto-approved)
         await db.users.update_one(
             {"uid": uid},
             {
                 "$set": {
-                    "pan_number": data.pan_number.upper(),
+                    "pan_number": pan_upper,
                     "pan_verified": True,
                     "pan_verified_at": now,
                     "pan_holder_name": pan_holder_name,
                     "pan_category": result.get("pan_category", ""),
-                    "kyc_status": "pan_verified" if not user.get("aadhaar_verified") else "verified"
+                    "kyc_status": "verified",  # Auto-approve KYC
+                    "kyc_verified_at": now,
+                    "kyc_method": "auto_pan_verification"
                 }
             }
+        )
+        
+        # Also update KYC collection if record exists
+        await db.kyc.update_one(
+            {"uid": uid},
+            {
+                "$set": {
+                    "status": "verified",
+                    "pan_number": pan_upper,
+                    "pan_verified": True,
+                    "pan_holder_name": pan_holder_name,
+                    "verified_at": now,
+                    "verification_method": "auto_pan"
+                }
+            },
+            upsert=True
         )
         
         # Log verification
         await db.kyc_verifications.insert_one({
             "uid": uid,
             "type": "pan",
-            "pan_number": data.pan_number.upper(),
+            "pan_number": pan_upper,
             "name": data.name,
             "verified": True,
             "pan_status": result["pan_status"],
             "pan_holder_name": pan_holder_name,
             "verified_at": now,
-            "method": "eko_pan_touras"
+            "method": "eko_pan_touras",
+            "kyc_auto_approved": True
         })
         
         return {
             "success": True,
             "verified": True,
-            "message": "PAN verified successfully!",
+            "kyc_approved": True,
+            "message": "PAN verified successfully! KYC is now approved.",
             "details": {
                 "pan_valid": result["pan_valid"],
                 "pan_holder_name": pan_holder_name,
                 "pan_status": result["pan_status_desc"],
-                "pan_category": result.get("pan_category", "")
+                "pan_category": result.get("pan_category", ""),
+                "kyc_status": "verified"
             }
         }
     else:
         return {
             "success": True,
             "verified": False,
+            "kyc_approved": False,
             "message": result["message"],
             "details": {
                 "pan_status": result.get("pan_status_desc", "Unknown"),
