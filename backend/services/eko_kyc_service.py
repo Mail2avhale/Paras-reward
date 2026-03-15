@@ -163,8 +163,8 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
                 fullname = pan_data.get("fullname", "")
                 category = pan_data.get("category", "")
                 
-                # PAN is valid if status is "VALID" or similar success indicators
-                pan_valid = pan_status.upper() in ["VALID", "E", "EXISTING AND VALID"]
+                # PAN is valid if status is "success", "VALID", or similar success indicators
+                pan_valid = pan_status.lower() in ["success", "valid", "e", "existing and valid"]
                 
                 # Verification successful if PAN is valid
                 verified = pan_valid
