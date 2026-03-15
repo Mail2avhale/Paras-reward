@@ -28048,6 +28048,88 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.get("/admin/prc-balance/restore-batch")
+async def restore_batch(skip: int = 0, limit: int = 100):
+    """
+    🚨 FAST BATCH RESTORE: Restore PRC balances in batches to avoid timeout.
+    
+    Query Params:
+    - skip: Number of corrections to skip (for pagination)
+    - limit: Number of users to restore per batch (default: 100)
+    
+    Run multiple times with increasing skip values:
+    - First: ?skip=0&limit=100
+    - Then: ?skip=100&limit=100
+    - Then: ?skip=200&limit=100
+    - Continue until restored=0
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get batch of corrections
+        corrections = await db.balance_corrections.find({}).skip(skip).limit(limit).to_list(limit)
+        
+        if not corrections:
+            return {
+                "success": True,
+                "message": "No more corrections to restore",
+                "restored": 0,
+                "skip": skip,
+                "done": True
+            }
+        
+        restored_count = 0
+        restores = []
+        
+        for correction in corrections:
+            uid = correction.get("user_id")
+            old_balance = float(correction.get("old_balance", 0) or 0)
+            
+            # Check if already restored
+            user = await db.users.find_one({"uid": uid})
+            if not user:
+                continue
+            
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            
+            # Skip if balance already matches (already restored)
+            if abs(current_balance - old_balance) < 1:
+                continue
+            
+            # Restore balance
+            await db.users.update_one(
+                {"uid": uid},
+                {
+                    "$set": {
+                        "prc_balance": old_balance,
+                        "balance_restored_at": now.isoformat()
+                    }
+                }
+            )
+            
+            restores.append({
+                "uid": uid,
+                "name": user.get("name", "Unknown"),
+                "old": round(current_balance, 2),
+                "restored": round(old_balance, 2)
+            })
+            restored_count += 1
+        
+        return {
+            "success": True,
+            "message": f"Restored {restored_count} users in this batch",
+            "restored": restored_count,
+            "skip": skip,
+            "next_skip": skip + limit,
+            "done": len(corrections) < limit,
+            "restores": restores
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/restore-from-corrections")
 async def restore_from_corrections_collection(dry_run: bool = True):
     """
