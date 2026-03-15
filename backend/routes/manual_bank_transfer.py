@@ -18,8 +18,8 @@ import logging
 import re
 import uuid
 import httpx
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, validator
 import os
