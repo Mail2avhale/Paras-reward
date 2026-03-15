@@ -11509,76 +11509,100 @@ async def subscription_pay_with_prc(request: Request):
         data = await request.json()
         user_id = data.get("user_id")
         plan_name = data.get("plan_name")
-        plan_type = data.get("plan_type", "monthly")  # monthly/quarterly/yearly
+        plan_type = data.get("plan_type", "monthly")
         prc_amount = data.get("prc_amount")
         
-        if not user_id or not plan_name or not prc_amount:
-            raise HTTPException(status_code=400, detail="Missing required fields: user_id, plan_name, or prc_amount")
+        # VALIDATION: Check required fields
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID is required. Please login again.")
+        if not plan_name:
+            raise HTTPException(status_code=400, detail="Plan name is required. Please select a plan.")
+        if not prc_amount or prc_amount <= 0:
+            raise HTTPException(status_code=400, detail="Invalid PRC amount. Please refresh the page.")
+        
+        # Get user first to show better error messages
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User account not found. Please login again.")
+        
+        user_name = user.get("name", "User")
+        current_balance = float(user.get("prc_balance", 0) or 0)
+        
+        logging.info(f"[PRC-SUB] Request: User={user_id}, Plan={plan_name}, Amount={prc_amount}, Balance={current_balance}")
         
         # CHECK COOLDOWN: 15 days between subscriptions
         try:
             cooldown = await check_service_cooldown(user_id, "subscription")
             if not cooldown["allowed"]:
-                wait_days = cooldown.get("wait_days", cooldown.get("wait_hours", 0) / 24)
+                wait_days = cooldown.get("wait_days") or round(cooldown.get("wait_hours", 0) / 24, 1)
+                last_date = cooldown.get("last_request", "recently")
                 raise HTTPException(
                     status_code=429,
-                    detail=f"Please wait {wait_days:.0f} days before purchasing another subscription."
+                    detail=f"Cooldown active. Please wait {wait_days:.0f} more days. Last subscription was on {last_date[:10] if isinstance(last_date, str) and len(last_date) > 10 else last_date}."
                 )
         except HTTPException:
             raise
         except Exception as cooldown_err:
-            # Log but don't block - cooldown check failure shouldn't prevent purchase
             logging.warning(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
+            # Don't block on cooldown check failure
         
-        # Get dynamic PRC rate (same as used in frontend)
-        prc_rate = await get_dynamic_prc_rate()
+        # Get dynamic PRC rate
+        try:
+            prc_rate = await get_dynamic_prc_rate()
+        except Exception as rate_err:
+            logging.error(f"[PRC-SUB] Rate fetch error: {rate_err}")
+            raise HTTPException(status_code=500, detail="Could not fetch current PRC rate. Please try again.")
+        
+        # Validate plan
+        valid_plans = ["startup", "growth", "elite"]
+        if plan_name.lower() not in valid_plans:
+            raise HTTPException(status_code=400, detail=f"Invalid plan '{plan_name}'. Available plans: Startup, Growth, Elite.")
+        plan_name = plan_name.lower()
         
         # Get plan price and verify PRC amount
         plan_prices = {"startup": 299, "growth": 499, "elite": 799}
         plan_price = plan_prices.get(plan_name, 799)
         expected_prc = plan_price * 2 * prc_rate
         
-        # Allow 10% variance for rounding and rate fluctuation (increased from 5%)
-        variance_allowed = expected_prc * 0.10
+        # Allow 15% variance for rounding and rate fluctuation
+        variance_allowed = expected_prc * 0.15
         if abs(prc_amount - expected_prc) > variance_allowed:
-            logging.warning(f"[PRC-SUB] Amount mismatch for {user_id}: expected {expected_prc}, got {prc_amount}")
+            logging.warning(f"[PRC-SUB] Amount mismatch: expected={expected_prc:.0f}, got={prc_amount:.0f}, rate={prc_rate}")
             raise HTTPException(
                 status_code=400, 
-                detail=f"PRC amount mismatch. Expected ~{expected_prc:.0f} PRC. Please refresh the page and try again."
+                detail=f"PRC amount mismatch. Expected {expected_prc:.0f} PRC (at rate {prc_rate} PRC/₹1). Please refresh the page and try again."
             )
-        
-        # Validate plan
-        valid_plans = ["startup", "growth", "elite"]
-        if plan_name not in valid_plans:
-            raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
-        
-        # Get user
-        user = await db.users.find_one({"uid": user_id})
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
         
         # Check redeem limit
         try:
             redeem_limit_data = await calculate_user_redeem_limit(user_id)
             total_limit = redeem_limit_data.get("total_limit", 0)
             total_redeemed = await get_user_total_redeemed(user_id)
-            available = max(0, total_limit - total_redeemed)
+            available_limit = max(0, total_limit - total_redeemed)
         except Exception as limit_err:
             logging.error(f"[PRC-SUB] Redeem limit calc error for {user_id}: {limit_err}")
-            raise HTTPException(status_code=500, detail=f"Error calculating redeem limit: {str(limit_err)}")
+            raise HTTPException(status_code=500, detail=f"Could not calculate redeem limit. Error: {str(limit_err)}")
         
-        if available < prc_amount:
+        if available_limit < prc_amount:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Insufficient Redeem Limit. Available: {available:.0f} PRC, Required: {prc_amount:.0f} PRC"
+                detail=f"Insufficient Redeem Limit. You have {available_limit:,.0f} PRC available, but {prc_amount:,.0f} PRC is required."
             )
         
-        # Calculate subscription duration - Always 28 days for Elite via PRC
+        # Check PRC balance (additional safety check)
+        if current_balance < prc_amount:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient PRC Balance. You have {current_balance:,.0f} PRC, but {prc_amount:,.0f} PRC is required."
+            )
+        
+        # Calculate subscription duration - Always 28 days
         duration_days = 28
         now = datetime.now(timezone.utc)
         
-        # Check current subscription expiry
+        # Check current subscription expiry and extend if active
         current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        remaining_days = 0
         if current_expiry:
             try:
                 if isinstance(current_expiry, str):
@@ -11587,8 +11611,8 @@ async def subscription_pay_with_prc(request: Request):
                     expiry_dt = current_expiry
                 if expiry_dt.tzinfo is None:
                     expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-                # If still active, extend from current expiry
                 if expiry_dt > now:
+                    remaining_days = (expiry_dt - now).days
                     new_expiry = (expiry_dt + timedelta(days=duration_days)).isoformat()
                 else:
                     new_expiry = (now + timedelta(days=duration_days)).isoformat()
@@ -11598,97 +11622,107 @@ async def subscription_pay_with_prc(request: Request):
         else:
             new_expiry = (now + timedelta(days=duration_days)).isoformat()
         
-        # Deduct PRC from balance - Use direct deduction (simpler and more reliable)
-        current_balance = float(user.get("prc_balance", 0) or 0)
-        if current_balance < prc_amount:
-            raise HTTPException(status_code=400, detail=f"Insufficient PRC balance. Have: {current_balance:.0f}, Need: {prc_amount:.0f}")
+        total_days = duration_days + remaining_days
         
-        # Deduct balance
-        await db.users.update_one(
-            {"uid": user_id},
-            {"$inc": {"prc_balance": -prc_amount}}
-        )
+        # DEDUCT PRC FROM BALANCE
+        try:
+            result = await db.users.update_one(
+                {"uid": user_id, "prc_balance": {"$gte": prc_amount}},
+                {"$inc": {"prc_balance": -prc_amount}}
+            )
+            if result.modified_count == 0:
+                # Re-check balance
+                fresh_user = await db.users.find_one({"uid": user_id})
+                fresh_balance = float(fresh_user.get("prc_balance", 0) or 0) if fresh_user else 0
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Could not deduct PRC. Current balance: {fresh_balance:,.0f} PRC. Please try again."
+                )
+        except HTTPException:
+            raise
+        except Exception as deduct_err:
+            logging.error(f"[PRC-SUB] Deduction error: {deduct_err}")
+            raise HTTPException(status_code=500, detail=f"Payment failed. Could not deduct PRC: {str(deduct_err)}")
         
-        # Update subscription
-        await db.users.update_one(
-            {"uid": user_id},
-            {
-                "$set": {
-                    "subscription_plan": plan_name,
-                    "subscription_expiry": new_expiry,
-                    "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
-                    "subscription_start": now.isoformat(),
-                    "membership_type": "vip",
-                    "subscription_status": "active"
+        # UPDATE SUBSCRIPTION
+        try:
+            await db.users.update_one(
+                {"uid": user_id},
+                {
+                    "$set": {
+                        "subscription_plan": plan_name,
+                        "subscription_expiry": new_expiry,
+                        "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                        "subscription_start": now.isoformat(),
+                        "membership_type": "vip",
+                        "subscription_status": "active",
+                        "last_prc_subscription": now.isoformat()
+                    }
                 }
-            }
-        )
+            )
+        except Exception as update_err:
+            # CRITICAL: Refund PRC if subscription update fails
+            logging.error(f"[PRC-SUB] Subscription update failed, refunding PRC: {update_err}")
+            await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amount}})
+            raise HTTPException(status_code=500, detail="Subscription activation failed. PRC has been refunded.")
         
-        # Record payment
+        # RECORD PAYMENT
         payment_record = {
             "user_id": user_id,
+            "user_name": user_name,
             "plan_name": plan_name,
             "plan_type": plan_type,
             "payment_method": "prc",
             "prc_amount": prc_amount,
             "prc_rate_used": prc_rate,
+            "inr_equivalent": plan_price,
             "status": "paid",
             "created_at": now.isoformat(),
-            "subscription_expiry": new_expiry
+            "subscription_expiry": new_expiry,
+            "duration_days": duration_days,
+            "remaining_days_added": remaining_days,
+            "total_days": total_days
         }
         await db.subscription_payments.insert_one(payment_record)
         
-        # Log to transactions for redeem tracking
+        # Log to transactions
         await db.transactions.insert_one({
             "user_id": user_id,
             "type": "subscription_prc",
             "prc_amount": prc_amount,
             "inr_value": plan_price,
-            "description": f"Subscription: {plan_name} via PRC",
+            "description": f"Subscription: {plan_name.capitalize()} ({duration_days} days)",
             "timestamp": now,
             "status": "completed"
         })
         
         # Record service usage for cooldown
         try:
-            await record_service_usage(user_id, "subscription", {
-                "plan_name": plan_name,
-                "prc_amount": prc_amount
-            })
-        except Exception as usage_err:
-            logging.warning(f"[PRC-SUB] Usage record error: {usage_err}")
-        
-        # Log activity
-        try:
-            await log_activity(
-                user_id=user_id,
-                action_type="subscription_prc_payment",
-                description=f"Paid {prc_amount:.0f} PRC for {plan_name} subscription ({plan_type})",
-                metadata=payment_record
-            )
+            await record_service_usage(user_id, "subscription", {"plan_name": plan_name, "prc_amount": prc_amount})
         except:
             pass
         
-        # Create notification
+        # Log activity and notification
         try:
-            await create_notification(
-                user_id=user_id,
-                title="Subscription Activated!",
-                message=f"Your {plan_name.capitalize()} subscription is now active until {new_expiry[:10]}. Paid {prc_amount:.0f} PRC.",
-                notification_type="subscription"
-            )
+            await log_activity(user_id=user_id, action_type="subscription_prc_payment",
+                description=f"Paid {prc_amount:.0f} PRC for {plan_name} subscription", metadata=payment_record)
+            await create_notification(user_id=user_id, title="Subscription Activated!",
+                message=f"Your {plan_name.capitalize()} plan is active until {new_expiry[:10]}. Paid {prc_amount:,.0f} PRC.",
+                notification_type="subscription")
         except:
             pass
         
-        logging.info(f"[PRC-SUB] SUCCESS: User {user_id} bought {plan_name} for {prc_amount:.0f} PRC")
+        logging.info(f"[PRC-SUB] SUCCESS: {user_name} ({user_id}) bought {plan_name} for {prc_amount:.0f} PRC, expires {new_expiry[:10]}")
         
         return {
             "success": True,
-            "message": f"{plan_name.capitalize()} subscription activated!",
+            "message": f"{plan_name.capitalize()} subscription activated successfully!",
             "subscription": {
                 "plan": plan_name,
                 "expiry": new_expiry,
-                "prc_paid": prc_amount
+                "prc_paid": prc_amount,
+                "days_added": duration_days,
+                "total_days": total_days
             }
         }
         
@@ -11698,7 +11732,7 @@ async def subscription_pay_with_prc(request: Request):
         logging.error(f"[PRC-SUB] Unexpected error: {str(e)}")
         import traceback
         logging.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Payment processing error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Subscription failed. Technical error: {str(e)}")
 
 @api_router.post("/subscription/downgrade/{uid}")
 async def downgrade_subscription(uid: str, request: Request):
