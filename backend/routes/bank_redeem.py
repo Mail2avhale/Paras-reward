@@ -540,19 +540,7 @@ async def check_withdrawal_eligibility(user_id: str):
             "message": f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault Redeem allowed per 7 days. You did PRC Vault Redeem recently. Try again after {rd_check['next_eligible'][:10]} ({rd_check['days_remaining']} days remaining)."
         }
     
-    # Check 4: Must have at least 1 subscribed and active referral
-    active_paid_referrals = await db.users.count_documents({
-        "referred_by": user_id,
-        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
-        "mining_active": True
-    })
-    
-    if active_paid_referrals < 1:
-        return {
-            "eligible": False,
-            "reason": "no_active_subscribed_referral",
-            "message": "You need at least 1 subscribed (Startup/Growth/Elite) and actively mining referral to redeem PRC."
-        }
+    # NOTE: Referral requirement removed as per user request (March 2026)
     
     return {
         "eligible": True,
@@ -665,18 +653,7 @@ async def create_withdrawal_request(user_id: str, request: Request):
             detail=f"7-day limit: Only ONE of Pay EMI / Bank Redeem / PRC Vault allowed per 7 days. You did PRC Vault Redeem recently. Try again after {rd_check['next_eligible'][:10]} ({rd_check['days_remaining']} days remaining)."
         )
     
-    # Check 4: Must have at least 1 subscribed and active referral
-    active_paid_referrals = await db.users.count_documents({
-        "referred_by": user_id,
-        "subscription_plan": {"$in": ["startup", "growth", "elite"]},
-        "mining_active": True
-    })
-    
-    if active_paid_referrals < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="You need at least 1 subscribed (Startup/Growth/Elite) and actively mining referral to redeem PRC."
-        )
+    # NOTE: Referral requirement removed as per user request (March 2026)
     
     # Calculate charges - EMI style
     charges = calculate_total_prc(amount_inr)
