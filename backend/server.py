@@ -27609,106 +27609,92 @@ async def get_user_prc_breakdown(uid: str):
 
 # ==================== PRC BALANCE FIX API ====================
 
-@api_router.post("/admin/prc-balance/fix-refund-bug")
-async def fix_refund_bug(dry_run: bool = True, limit: int = 100):
+@api_router.post("/admin/prc-balance/fix-excess-balance")
+async def fix_excess_balance(dry_run: bool = True, threshold: float = 50000, limit: int = 500):
     """
-    🔧 FIX: Correct PRC balances affected by the bulk refund bug.
+    🔧 FIX: Correct PRC balances where balance > total_mined + threshold.
     
-    The bug: Bank withdrawal refunds gave 100x PRC (₹9500 = 950,000 PRC instead of ~95,000)
+    This fixes users who got excess PRC due to:
+    - Bulk refund bug (100x refund amounts)
+    - Double crediting
+    - System errors
     
-    This API:
-    1. Finds users with refund transactions > 100,000 PRC
-    2. Calculates correct refund amount (INR × actual PRC rate)
-    3. Deducts the excess PRC
+    Logic: Set balance = total_mined (since balance cannot exceed total earned)
     
     Query Params:
     - dry_run: If True, only preview (default: True)
-    - limit: Max users to process
+    - threshold: Min excess to consider (default: 50000)
+    - limit: Max users to process (default: 500)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY APPLY FIXES
     """
     try:
         now = datetime.now(timezone.utc)
         
-        # Find users with suspicious balances (balance >> total_mined)
-        users_to_check = await db.users.find({
-            "prc_balance": {"$gt": 100000}
+        # Find ALL users with prc_balance
+        all_users = await db.users.find({
+            "prc_balance": {"$gt": 10000}
         }).sort("prc_balance", -1).limit(limit).to_list(limit)
         
         results = {
-            "total_checked": len(users_to_check),
+            "total_checked": len(all_users),
+            "affected": 0,
             "fixed": 0,
             "skipped": 0,
+            "total_excess_found": 0,
+            "total_excess_removed": 0,
             "dry_run": dry_run,
             "fixes": []
         }
         
-        for user in users_to_check:
+        for user in all_users:
             uid = user.get("uid")
             name = user.get("name", "Unknown")
             current_balance = float(user.get("prc_balance", 0) or 0)
             total_mined = float(user.get("total_mined", 0) or 0)
             
-            # Check prc_transactions for suspicious refunds
-            prc_txns = user.get("prc_transactions", [])
+            # Calculate excess
+            excess = current_balance - total_mined
             
-            suspicious_refunds = []
-            total_excess = 0
-            
-            for txn in prc_txns:
-                if txn.get("type") == "refund":
-                    amount = float(txn.get("amount", 0) or 0)
-                    desc = txn.get("description", "")
-                    
-                    # Extract INR amount from description
-                    # "Bulk Refund: bank_withdrawals request rejected - ₹9500"
-                    import re
-                    match = re.search(r'₹(\d+)', desc)
-                    if match:
-                        inr_amount = float(match.group(1))
-                        
-                        # Expected PRC (assuming rate ~10)
-                        # Bank transfers usually deduct: INR × rate × 1.2 (with 20% fee)
-                        expected_prc = inr_amount * 10 * 1.2  # Approximate
-                        
-                        if amount > expected_prc * 2:  # More than 2x expected = bug
-                            excess = amount - expected_prc
-                            total_excess += excess
-                            suspicious_refunds.append({
-                                "description": desc,
-                                "refunded_amount": amount,
-                                "expected_amount": expected_prc,
-                                "excess": excess,
-                                "timestamp": txn.get("timestamp")
-                            })
-            
-            if total_excess > 10000:  # More than 10k excess
+            if excess > threshold:
+                results["affected"] += 1
+                results["total_excess_found"] += excess
+                
+                # New balance should be total_mined (max they could have)
+                # But we need to account for legitimate referral bonuses
+                # Let's estimate: referral bonus can be up to 30% of mined
+                max_legitimate_bonus = total_mined * 0.3
+                new_balance = total_mined + max_legitimate_bonus
+                
+                # If current balance is way more than this, it's a bug
+                if current_balance > new_balance * 1.5:  # 50% buffer
+                    excess_to_remove = current_balance - new_balance
+                    final_balance = new_balance
+                else:
+                    # Within reasonable range, skip
+                    results["skipped"] += 1
+                    continue
+                
                 fix_record = {
                     "uid": uid,
                     "name": name,
-                    "current_balance": current_balance,
-                    "total_excess": total_excess,
-                    "new_balance": current_balance - total_excess,
-                    "suspicious_refunds": suspicious_refunds
+                    "current_balance": round(current_balance, 2),
+                    "total_mined": round(total_mined, 2),
+                    "excess": round(excess, 2),
+                    "new_balance": round(final_balance, 2),
+                    "removed": round(excess_to_remove, 2)
                 }
                 
                 if not dry_run:
                     # Apply fix
-                    new_balance = current_balance - total_excess
-                    
                     await db.users.update_one(
                         {"uid": uid},
                         {
                             "$set": {
-                                "prc_balance": max(0, new_balance),
+                                "prc_balance": round(final_balance, 2),
                                 "balance_corrected_at": now.isoformat(),
-                                "balance_correction_reason": "Bulk refund bug fix"
-                            },
-                            "$push": {
-                                "prc_transactions": {
-                                    "type": "correction",
-                                    "amount": -total_excess,
-                                    "description": f"Balance correction: Excess refund bug fix",
-                                    "timestamp": now.isoformat()
-                                }
+                                "balance_correction_reason": "Excess balance bug fix",
+                                "old_balance_before_fix": current_balance
                             }
                         }
                     )
@@ -27718,26 +27704,35 @@ async def fix_refund_bug(dry_run: bool = True, limit: int = 100):
                         "user_id": uid,
                         "user_name": name,
                         "old_balance": current_balance,
-                        "new_balance": max(0, new_balance),
-                        "excess_removed": total_excess,
+                        "new_balance": final_balance,
+                        "excess_removed": excess_to_remove,
+                        "total_mined": total_mined,
                         "corrected_at": now.isoformat(),
-                        "reason": "Bulk refund bug fix",
-                        "details": suspicious_refunds
+                        "reason": "Excess balance bug fix (balance >> total_mined)"
                     })
                     
                     fix_record["status"] = "fixed"
+                    results["total_excess_removed"] += excess_to_remove
                 else:
                     fix_record["status"] = "would_fix"
+                    results["total_excess_removed"] += excess_to_remove
                 
                 results["fixes"].append(fix_record)
                 results["fixed"] += 1
-            else:
-                results["skipped"] += 1
         
         return {
             "success": True,
             "message": "DRY RUN - No changes made" if dry_run else f"Fixed {results['fixed']} users",
-            "results": results
+            "summary": {
+                "total_checked": results["total_checked"],
+                "affected_users": results["affected"],
+                "users_to_fix": results["fixed"],
+                "users_skipped": results["skipped"],
+                "total_excess_prc": round(results["total_excess_found"], 2),
+                "excess_to_remove": round(results["total_excess_removed"], 2)
+            },
+            "fixes": results["fixes"][:50],  # First 50 for preview
+            "note": f"Showing first 50 of {len(results['fixes'])} fixes" if len(results['fixes']) > 50 else None
         }
         
     except Exception as e:
