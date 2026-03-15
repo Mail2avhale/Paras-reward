@@ -76,8 +76,8 @@ const AdminBankTransfers = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ pending: {}, paid: {}, failed: {} });
   
-  // Filters
-  const [statusFilter, setStatusFilter] = useState('');
+  // Filters - Default to pending tab
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

@@ -513,7 +513,7 @@ async def get_user_requests(
         requests = await db.bank_transfer_requests.find(
             query,
             {"_id": 0}
-        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)  # 1 = oldest first
         
         total = await db.bank_transfer_requests.count_documents(query)
         
@@ -559,7 +559,7 @@ async def get_all_requests(
         requests = await db.bank_transfer_requests.find(
             query,
             {"_id": 0}
-        ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)  # 1 = oldest first
         
         total = await db.bank_transfer_requests.count_documents(query)
         
