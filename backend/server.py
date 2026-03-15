@@ -21929,6 +21929,32 @@ async def adjust_user_wallet(uid: str, request: Request):
             "admin_id": admin_uid,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
+    elif wallet_type == "prc":
+        # Log PRC adjustment to prc_transactions
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$push": {
+                    "prc_transactions": {
+                        "type": "admin_credit" if adjustment_amount > 0 else "admin_debit",
+                        "amount": adjustment_amount,
+                        "description": reason,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "admin_id": admin_uid
+                    }
+                }
+            }
+        )
+        # Also log to prc_transactions collection
+        await db.prc_transactions.insert_one({
+            "user_id": uid,
+            "type": "credit" if adjustment_amount > 0 else "debit",
+            "amount": adjustment_amount,
+            "description": reason,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "created_by": "admin",
+            "admin_id": admin_uid
+        })
     
     # Also log adjustment for admin audit
     await db.wallet_adjustments.insert_one({
