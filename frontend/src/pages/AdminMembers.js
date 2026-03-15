@@ -4,7 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { 
   Users, UserCheck, UserX, TrendingUp, Crown, Search, Filter,
-  Calendar, ChevronDown, Eye, ArrowUpRight, ArrowDownRight,
+  Calendar, ChevronDown, ChevronUp, Eye, ArrowUpRight, ArrowDownRight,
   RefreshCw, Download, Shield, Clock, MapPin, Award
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -97,20 +97,62 @@ const AdminMembers = () => {
   // Handle column sort
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      // Cycle through: desc -> asc -> none
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else if (sortDirection === 'asc') {
+        // Reset to default
+        setSortField('created_at');
+        setSortDirection('desc');
+      }
     } else {
       setSortField(field);
       setSortDirection('desc');
     }
   };
   
-  // Sort icon component
+  // Enhanced Sort icon component with better visual feedback
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronDown className="w-3 h-3 opacity-30" />;
-    return sortDirection === 'asc' 
-      ? <ArrowUpRight className="w-3 h-3 text-blue-400" />
-      : <ArrowDownRight className="w-3 h-3 text-blue-400" />;
+    const isActive = sortField === field;
+    if (!isActive) {
+      return (
+        <div className="flex flex-col items-center opacity-30 hover:opacity-60 transition-opacity">
+          <ChevronUp className="w-3 h-3 -mb-1" />
+          <ChevronDown className="w-3 h-3 -mt-1" />
+        </div>
+      );
+    }
+    return (
+      <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${isActive ? 'bg-blue-500/20' : ''}`}>
+        {sortDirection === 'asc' ? (
+          <ArrowUpRight className="w-4 h-4 text-blue-400" />
+        ) : (
+          <ArrowDownRight className="w-4 h-4 text-blue-400" />
+        )}
+        <span className="text-[10px] text-blue-400 font-medium">
+          {sortDirection === 'asc' ? '↑' : '↓'}
+        </span>
+      </div>
+    );
   };
+  
+  // Sortable column header component
+  const SortableHeader = ({ field, children, testId }) => (
+    <th 
+      className={`text-left py-3 px-4 font-medium text-sm cursor-pointer transition-colors ${
+        sortField === field 
+          ? 'text-blue-400 bg-blue-500/5' 
+          : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+      }`}
+      onClick={() => handleSort(field)}
+      data-testid={testId}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        <SortIcon field={field} />
+      </div>
+    </th>
+  );
 
   useEffect(() => {
     fetchDashboard();
@@ -557,55 +599,46 @@ const AdminMembers = () => {
 
           {/* Members Table */}
           <div className="overflow-x-auto">
+            {/* Active Sort Indicator */}
+            {sortField !== 'created_at' && (
+              <div className="mb-3 flex items-center gap-2 text-sm">
+                <span className="text-gray-400">Sorted by:</span>
+                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg font-medium">
+                  {sortField === 'prc_balance' ? 'PRC Balance' :
+                   sortField === 'redeem_limit' ? 'Redeem Limit' :
+                   sortField === 'used_limit' ? 'Used' :
+                   sortField === 'available_limit' ? 'Available' :
+                   sortField}
+                  {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+                </span>
+                <button
+                  onClick={() => { setSortField('created_at'); setSortDirection('desc'); }}
+                  className="px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+            
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-member">Member</th>
-                  <th 
-                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
-                    onClick={() => handleSort('prc_balance')}
-                    data-testid="header-prc-balance"
-                  >
-                    <div className="flex items-center gap-1">
-                      PRC Balance <SortIcon field="prc_balance" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
-                    onClick={() => handleSort('redeem_limit')}
-                    data-testid="header-redeem-limit"
-                  >
-                    <div className="flex items-center gap-1">
-                      Redeem Limit <SortIcon field="redeem_limit" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
-                    onClick={() => handleSort('used_limit')}
-                    data-testid="header-used-limit"
-                  >
-                    <div className="flex items-center gap-1">
-                      Used <SortIcon field="used_limit" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
-                    onClick={() => handleSort('available_limit')}
-                    data-testid="header-available-limit"
-                  >
-                    <div className="flex items-center gap-1">
-                      Available <SortIcon field="available_limit" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
-                    onClick={() => handleSort('created_at')}
-                    data-testid="header-joined-date"
-                  >
-                    <div className="flex items-center gap-1">
-                      Joined <SortIcon field="created_at" />
-                    </div>
-                  </th>
+                  <SortableHeader field="prc_balance" testId="header-prc-balance">
+                    PRC Balance
+                  </SortableHeader>
+                  <SortableHeader field="redeem_limit" testId="header-redeem-limit">
+                    Redeem Limit
+                  </SortableHeader>
+                  <SortableHeader field="used_limit" testId="header-used-limit">
+                    Used
+                  </SortableHeader>
+                  <SortableHeader field="available_limit" testId="header-available-limit">
+                    Available
+                  </SortableHeader>
+                  <SortableHeader field="created_at" testId="header-joined-date">
+                    Joined
+                  </SortableHeader>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-status">Status</th>
                 </tr>
               </thead>
