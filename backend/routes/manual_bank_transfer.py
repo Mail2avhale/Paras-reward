@@ -855,6 +855,69 @@ async def bulk_mark_failed(action: BulkActionRequest):
         raise HTTPException(status_code=500, detail="Server error")
 
 
+@router.post("/admin/bulk-mark-paid")
+async def bulk_mark_paid(action: BulkActionRequest):
+    """
+    Bulk mark selected requests as paid.
+    Note: UTR number will be set as "BULK-{timestamp}" for bulk operations.
+    """
+    try:
+        if not action.request_ids or len(action.request_ids) == 0:
+            raise HTTPException(status_code=400, detail="No request IDs provided")
+        
+        paid_count = 0
+        error_count = 0
+        bulk_utr = f"BULK-{int(datetime.now().timestamp())}"
+        
+        for request_id in action.request_ids:
+            try:
+                request = await db.bank_transfer_requests.find_one({
+                    "request_id": request_id,
+                    "status": "pending"
+                })
+                
+                if not request:
+                    error_count += 1
+                    continue
+                
+                await db.bank_transfer_requests.update_one(
+                    {"request_id": request_id},
+                    {
+                        "$set": {
+                            "status": "paid",
+                            "utr_number": bulk_utr,
+                            "admin_remark": action.remark or "Bulk paid by admin",
+                            "processed_by": action.admin_id,
+                            "processed_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                )
+                paid_count += 1
+                
+            except Exception as req_err:
+                logging.error(f"Error processing request {request_id}: {req_err}")
+                error_count += 1
+        
+        logging.info(f"[BANK TRANSFER] Bulk PAID: {paid_count} requests | Admin: {action.admin_id} | UTR: {bulk_utr}")
+        
+        return {
+            "success": True,
+            "message": f"Marked {paid_count} requests as paid.",
+            "paid_count": paid_count,
+            "error_count": error_count,
+            "bulk_utr": bulk_utr
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Bulk paid error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Server error")
+
+
 @router.get("/admin/stats")
 async def get_admin_stats():
     """Get dashboard statistics for admin."""

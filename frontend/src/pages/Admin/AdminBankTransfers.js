@@ -97,6 +97,92 @@ const AdminBankTransfers = () => {
   const [utrNumber, setUtrNumber] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+
+  // Toggle single selection
+  const toggleSelect = (requestId) => {
+    setSelectedIds(prev => 
+      prev.includes(requestId) 
+        ? prev.filter(id => id !== requestId)
+        : [...prev, requestId]
+    );
+  };
+
+  // Toggle select all (current page)
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedIds([]);
+    } else {
+      const pendingIds = requests.filter(r => r.status === 'pending').map(r => r.request_id);
+      setSelectedIds(pendingIds);
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // Bulk mark as paid
+  const handleBulkPaid = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to mark ${selectedIds.length} requests as PAID?`)) return;
+    
+    try {
+      setLoading(true);
+      const admin = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-paid`, {
+        request_ids: selectedIds,
+        admin_id: admin.uid || 'admin',
+        remark: 'Bulk paid by admin'
+      });
+      
+      if (res.data.success) {
+        toast.success(`${res.data.paid_count} requests marked as PAID`);
+        setSelectedIds([]);
+        setSelectAll(false);
+        loadRequests();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Bulk action failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Bulk mark as failed
+  const handleBulkFailed = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('No requests selected');
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to FAIL ${selectedIds.length} requests? PRC will be refunded.`)) return;
+    
+    try {
+      setLoading(true);
+      const admin = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
+        request_ids: selectedIds,
+        admin_id: admin.uid || 'admin',
+        remark: 'Bulk failed by admin'
+      });
+      
+      if (res.data.success) {
+        toast.success(`${res.data.failed_count} requests FAILED. ${res.data.total_refunded?.toLocaleString()} PRC refunded.`);
+        setSelectedIds([]);
+        setSelectAll(false);
+        loadRequests();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Bulk action failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load requests
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -229,40 +315,70 @@ const AdminBankTransfers = () => {
         </div>
 
         {/* Bulk Actions */}
-        {stats.pending?.count > 0 && (
-          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        {stats.pending?.count > 0 && statusFilter === 'pending' && (
+          <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="text-white">
                 <p className="font-semibold">Bulk Actions</p>
-                <p className="text-sm text-slate-400">{stats.pending?.count} pending requests</p>
+                <p className="text-sm text-slate-400">
+                  {selectedIds.length > 0 
+                    ? `${selectedIds.length} selected` 
+                    : `${stats.pending?.count} pending requests`}
+                </p>
               </div>
-              <Button
-                onClick={async () => {
-                  if (!window.confirm(`Are you sure you want to FAIL ALL ${stats.pending?.count} pending requests? PRC will be refunded.`)) return;
-                  try {
-                    setLoading(true);
-                    const admin = JSON.parse(localStorage.getItem('user') || '{}');
-                    const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
-                      mark_all_pending: true,
-                      admin_id: admin.uid || 'admin',
-                      remark: 'Bulk failed - Service discontinued'
-                    });
-                    if (res.data.success) {
-                      toast.success(`${res.data.failed_count} requests failed. ${res.data.total_refunded?.toLocaleString()} PRC refunded.`);
-                      loadRequests();
+              <div className="flex flex-wrap gap-2">
+                {/* Selected Actions */}
+                {selectedIds.length > 0 && (
+                  <>
+                    <Button
+                      onClick={handleBulkPaid}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled={loading}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark Selected as Paid ({selectedIds.length})
+                    </Button>
+                    <Button
+                      onClick={handleBulkFailed}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                      disabled={loading}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Fail Selected & Refund ({selectedIds.length})
+                    </Button>
+                  </>
+                )}
+                {/* Fail All Button */}
+                <Button
+                  onClick={async () => {
+                    if (!window.confirm(`⚠️ DANGER: Are you sure you want to FAIL ALL ${stats.pending?.count} pending requests?\n\nPRC will be refunded to all users.`)) return;
+                    try {
+                      setLoading(true);
+                      const admin = JSON.parse(localStorage.getItem('user') || '{}');
+                      const res = await axios.post(`${API}/bank-transfer/admin/bulk-mark-failed`, {
+                        mark_all_pending: true,
+                        admin_id: admin.uid || 'admin',
+                        remark: 'Bulk failed - Service discontinued'
+                      });
+                      if (res.data.success) {
+                        toast.success(`${res.data.failed_count} requests failed. ${res.data.total_refunded?.toLocaleString()} PRC refunded.`);
+                        setSelectedIds([]);
+                        setSelectAll(false);
+                        loadRequests();
+                      }
+                    } catch (err) {
+                      toast.error(err.response?.data?.detail || 'Bulk action failed');
+                    } finally {
+                      setLoading(false);
                     }
-                  } catch (err) {
-                    toast.error(err.response?.data?.detail || 'Bulk action failed');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                disabled={loading}
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Fail All Pending & Refund PRC
-              </Button>
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={loading}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Fail ALL Pending ({stats.pending?.count})
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -386,6 +502,16 @@ const AdminBankTransfers = () => {
                 <table className="w-full">
                   <thead className="bg-slate-900/50">
                     <tr>
+                      {statusFilter === 'pending' && (
+                        <th className="p-4 w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
+                          />
+                        </th>
+                      )}
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Request ID</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">User</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Amount</th>
@@ -397,7 +523,18 @@ const AdminBankTransfers = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-700">
                     {requests.map((req) => (
-                      <tr key={req.request_id} className="hover:bg-slate-700/30">
+                      <tr key={req.request_id} className={`hover:bg-slate-700/30 ${selectedIds.includes(req.request_id) ? 'bg-emerald-900/20' : ''}`}>
+                        {statusFilter === 'pending' && (
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(req.request_id)}
+                              onChange={() => toggleSelect(req.request_id)}
+                              disabled={req.status !== 'pending'}
+                              className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500 disabled:opacity-50"
+                            />
+                          </td>
+                        )}
                         <td className="p-4">
                           <p className="text-white font-mono text-sm">{req.request_id}</p>
                         </td>
