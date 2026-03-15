@@ -16,7 +16,7 @@ from datetime import datetime, timezone, timedelta
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://mining-dash-2.preview.emergentagent.com'
+    BASE_URL = 'https://dynamic-rate-system-1.preview.emergentagent.com'
 
 # Test user ID from the bug fix requirements
 TEST_USER_ID = "73b95483-f36b-4637-a5ee-d447300c6835"

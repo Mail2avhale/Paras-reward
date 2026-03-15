@@ -75,8 +75,8 @@ const AdminMembers = () => {
       const params = { 
         page, 
         limit: 20,
-        sort_field: sortField,
-        sort_direction: sortDirection
+        sort_by: sortField,
+        sort_order: sortDirection
       };
       if (search) params.search = search;
       if (subscriptionFilter) params.subscription = subscriptionFilter;

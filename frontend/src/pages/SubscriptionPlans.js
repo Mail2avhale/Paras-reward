@@ -975,49 +975,6 @@ const SubscriptionPlans = ({ user }) => {
               );
             })}
           </div>
-
-          {/* Plan Comparison */}
-          <div className="mt-8 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-            <h3 className="text-white font-semibold mb-3">{t('planComparison')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-400 border-b border-gray-800">
-                    <th className="text-left py-2">{t('feature')}</th>
-                    <th className="text-center py-2">Explorer</th>
-                    <th className="text-center py-2 text-amber-500">Elite</th>
-                  </tr>
-                </thead>
-                <tbody className="text-gray-300">
-                  <tr className="border-b border-gray-800/50">
-                    <td className="py-2">{t('rewardRate')}</td>
-                    <td className="text-center">1.0x</td>
-                    <td className="text-center text-amber-400">3.0x</td>
-                  </tr>
-                  <tr className="border-b border-gray-800/50">
-                    <td className="py-2">{t('dailyTapsLimit')}</td>
-                    <td className="text-center">100</td>
-                    <td className="text-center text-amber-400">400</td>
-                  </tr>
-                  <tr className="border-b border-gray-800/50">
-                    <td className="py-2">{t('referralWeight')}</td>
-                    <td className="text-center">1.0x</td>
-                    <td className="text-center text-amber-400">2.0x</td>
-                  </tr>
-                  <tr className="border-b border-gray-800/50">
-                    <td className="py-2">{t('canRedeem')}</td>
-                    <td className="text-center text-red-400">✗</td>
-                    <td className="text-center text-emerald-400">✓</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2">{t('prcExpires')}</td>
-                    <td className="text-center text-red-400">2 {t('days')}</td>
-                    <td className="text-center text-emerald-400">{t('never')}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       )}
 

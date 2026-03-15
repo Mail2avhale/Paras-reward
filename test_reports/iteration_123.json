@@ -1,0 +1,71 @@
+{
+  "summary": "P0 Bug Fix Verified: Admin Members List sorting and PRC Balance display - All 24 tests passed (13 backend + 11 frontend)",
+  "mode": "generate",
+  "baseline_commit": "42baa3ced3a8c6fbaf0d40d5102b822ee7fb9856",
+  "head_commit": "c078df4b57863e00597ce1f1baa2b0b927560e4f",
+  "specs_created": [
+    "/app/backend/tests/test_admin_members_sorting_bugfix.py",
+    "/app/tests/e2e/admin-members-sorting-bugfix.spec.ts"
+  ],
+  "specs_updated": [
+    "/app/backend/tests/test_redeem_limit_system.py"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/test_reports/pytest/admin_members_sorting_bugfix_results.xml",
+    "/app/test_reports/pytest/redeem_limit_system_results.xml",
+    "/app/tests/e2e/admin-members-sorting-bugfix.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 3,
+    "passed": 46,
+    "failed": 1,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "BUG-001",
+      "issue_type": "bug",
+      "severity": "LOW",
+      "description": "Sort by created_at (joined date) returns results not in strict descending order. The dates appear interleaved (e.g., 2026-03-09, 2026-03-14, 2026-03-10). This is a separate issue from the main P0 bug fix which focused on redeem_limit and prc_balance sorting.",
+      "endpoint_or_component": "/api/admin/members/list?sort_by=created_at",
+      "surfaces": ["backend"],
+      "reproduction": "curl 'https://dynamic-rate-system-1.preview.emergentagent.com/api/admin/members/list?sort_by=created_at&sort_order=desc'",
+      "affected_test": "test_redeem_limit_system.py::TestAdminMembersSorting::test_sort_by_joined_date"
+    },
+    {
+      "id": "IMP-001",
+      "issue_type": "improvement",
+      "severity": "LOW",
+      "description": "AdminMembers.js has no data-testid attributes. Consider adding them for better E2E test stability.",
+      "endpoint_or_component": "/app/frontend/src/pages/AdminMembers.js"
+    }
+  ],
+  "action_items": [
+    "Consider fixing created_at sorting (low priority - separate from main bug fix)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_members_sorting_bugfix.py",
+    "/app/backend/tests/test_redeem_limit_system.py",
+    "/app/tests/e2e/admin-members-sorting-bugfix.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% - 13/13 passed (test_admin_members_sorting_bugfix.py)",
+    "frontend": "100% - 11/11 passed (admin-members-sorting-bugfix.spec.ts)"
+  },
+  "seed_data_creation": "None - used existing test users (DMT Test, Test User DMT)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "P0 Bug Fix Testing Complete - Iteration 123\n\n## Bug Fixed:\nFrontend was sending sort_field/sort_direction but backend expected sort_by/sort_order.\nAdminMembers.js now sends correct param names (sort_by, sort_order).\n\n## Verified Functionality:\n1. **Sorting by redeem_limit DESC**: Elite (39950) comes first, Growth (24950) second ✅\n2. **Sorting by prc_balance DESC**: Highest balance (99002.50) comes first ✅\n3. **Sorting by used_limit DESC**: Works correctly ✅\n4. **Sorting by available_limit DESC**: Works correctly ✅\n5. **PRC Balance Display**: Shows actual values (NOT 0) ✅\n6. **Redeem Limit Formula**: Elite = 799×5×10 = 39,950; Growth = 499×5×10 = 24,950 ✅\n\n## Test Credentials:\n- Admin: Admin@paras.com / 153759 (temporarily locked due to testing)\n- Test User: 9421331342 / 942133\n\n## Test Data:\n- DMT Test (Elite): PRC Balance 47,081, Limit 39,950\n- Test User DMT (Growth): PRC Balance 97,063, Limit 24,950\n\n## Minor Issue Found:\n- Sort by created_at doesn't strictly order by date (LOW priority, separate from main bug)",
+  "features_tested": {
+    "Sort by redeem_limit DESC": "PASSED - Elite (39950) before Growth (24950)",
+    "Sort by prc_balance DESC": "PASSED - Highest balance first",
+    "Sort by used_limit DESC": "PASSED",
+    "Sort by available_limit DESC": "PASSED",
+    "PRC Balance shows actual values": "PASSED - Not showing 0",
+    "Elite formula 799×5×10=39950": "PASSED",
+    "Growth formula 499×5×10=24950": "PASSED",
+    "remaining_limit calculation": "PASSED",
+    "redeem_limit object structure": "PASSED"
+  }
+}

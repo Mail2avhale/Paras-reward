@@ -11075,9 +11075,11 @@ async def subscription_pay_with_prc(request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check redeem limit
-    redeem_limit = await get_user_redeem_limit(user_id, user)
-    available = redeem_limit.get("remaining", 0)
+    # Check redeem limit (use remaining_limit not remaining)
+    redeem_limit_data = await calculate_user_redeem_limit(user_id)
+    total_limit = redeem_limit_data.get("total_limit", 0)
+    total_redeemed = await get_user_total_redeemed(user_id)
+    available = max(0, total_limit - total_redeemed)
     
     if available < prc_amount:
         raise HTTPException(
@@ -11085,8 +11087,8 @@ async def subscription_pay_with_prc(request: Request):
             detail=f"Insufficient Redeem Limit. Available: {available:.2f} PRC, Required: {prc_amount:.2f} PRC"
         )
     
-    # Calculate subscription duration
-    duration_days = {"monthly": 28, "quarterly": 84, "yearly": 365}.get(plan_type, 28)
+    # Calculate subscription duration - Always 28 days for Elite via PRC
+    duration_days = 28
     now = datetime.now(timezone.utc)
     
     # Check current subscription expiry
@@ -18957,43 +18959,80 @@ async def get_members_list(
     
     skip = (page - 1) * limit
     
-    # Get total and members
+    # Get total count
     total = await db.users.count_documents(query)
-    members_cursor = await db.users.find(
-        query,
-        {
-            "_id": 0,
-            "password_hash": 0,
-            "password": 0,
-            "reset_token": 0,
-            "biometric_credentials": 0
-        }
-    ).sort(db_sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
     
-    # Add redeem limit data for each member
-    members = []
-    for member in members_cursor:
-        try:
-            # Get redeem limit for this user
-            redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
-            member["redeem_limit"] = redeem_limit_data
-        except:
-            member["redeem_limit"] = {
-                "total_limit": 0,
-                "total_redeemed": 0,
-                "remaining_limit": 0
-            }
-        members.append(member)
-    
-    # Python-side sorting for redeem limit fields
+    # For redeem limit sorting, we need to fetch all and sort, then paginate
     if sort_by in ["redeem_limit", "used_limit", "available_limit"]:
+        # Fetch more records for proper sorting (up to 500)
+        members_cursor = await db.users.find(
+            query,
+            {
+                "_id": 0,
+                "password_hash": 0,
+                "password": 0,
+                "reset_token": 0,
+                "biometric_credentials": 0
+            }
+        ).limit(500).to_list(500)
+        
+        # Add redeem limit data for each member
+        all_members = []
+        for member in members_cursor:
+            try:
+                redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
+                member["redeem_limit"] = redeem_limit_data
+            except:
+                member["redeem_limit"] = {
+                    "plan": "explorer",
+                    "total_limit": 0,
+                    "total_redeemed": 0,
+                    "remaining_limit": 0
+                }
+            all_members.append(member)
+        
+        # Sort by redeem limit field
         reverse = sort_order == "desc"
+        logging.info(f"[ADMIN MEMBERS] Sorting {len(all_members)} members by {sort_by}, reverse={reverse}")
+        
         if sort_by == "redeem_limit":
-            members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_limit", 0), reverse=reverse)
+            all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_limit", 0), reverse=reverse)
         elif sort_by == "used_limit":
-            members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_redeemed", 0), reverse=reverse)
+            all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_redeemed", 0), reverse=reverse)
         elif sort_by == "available_limit":
-            members.sort(key=lambda x: x.get("redeem_limit", {}).get("remaining_limit", 0), reverse=reverse)
+            all_members.sort(key=lambda x: x.get("redeem_limit", {}).get("remaining_limit", 0), reverse=reverse)
+        
+        logging.info(f"[ADMIN MEMBERS] After sort, first 3: {[m.get('name') for m in all_members[:3]]}")
+        
+        # Apply pagination after sorting
+        members = all_members[skip:skip + limit]
+    else:
+        # Normal DB sorting for other fields
+        members_cursor = await db.users.find(
+            query,
+            {
+                "_id": 0,
+                "password_hash": 0,
+                "password": 0,
+                "reset_token": 0,
+                "biometric_credentials": 0
+            }
+        ).sort(db_sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+        
+        # Add redeem limit data for each member
+        members = []
+        for member in members_cursor:
+            try:
+                redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
+                member["redeem_limit"] = redeem_limit_data
+            except:
+                member["redeem_limit"] = {
+                    "plan": "explorer",
+                    "total_limit": 0,
+                    "total_redeemed": 0,
+                    "remaining_limit": 0
+                }
+            members.append(member)
     
     return {
         "members": members,

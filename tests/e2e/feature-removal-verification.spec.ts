@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://mining-dash-2.preview.emergentagent.com';
+const BASE_URL = 'https://dynamic-rate-system-1.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   
