@@ -28048,6 +28048,193 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.get("/admin/prc-balance/check-user/{uid}")
+async def check_user_balance_data(uid: str):
+    """Check all balance data for a specific user from all sources"""
+    
+    # Get user current data
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        return {"error": "User not found"}
+    
+    # Get balance_corrections entry
+    correction = await db.balance_corrections.find_one({"user_id": uid}, {"_id": 0})
+    
+    # Get balance_restores entries
+    restores = await db.balance_restores.find({"user_id": uid}, {"_id": 0}).to_list(10)
+    
+    # Get old_balance_before_fix from user
+    old_balance_field = user.get("old_balance_before_fix")
+    
+    # Calculate what balance SHOULD be
+    total_mined = float(user.get("total_mined", 0) or 0)
+    
+    # Get legitimate redemptions
+    total_redeemed = 0
+    
+    # Subscriptions
+    subs = await db.subscriptions.find({"user_id": uid}).to_list(100)
+    sub_total = sum([float(s.get("prc_amount", 0) or 0) for s in subs])
+    
+    # Orders
+    orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
+    order_total = sum([float(o.get("prc_amount", 0) or 0) for o in orders])
+    
+    # Withdrawals completed
+    withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
+    withdrawal_total = sum([float(w.get("prc_amount", 0) or 0) for w in withdrawals])
+    
+    total_redeemed = sub_total + order_total + withdrawal_total
+    correct_balance = max(0, total_mined - total_redeemed)
+    
+    return {
+        "user": {
+            "uid": uid,
+            "name": user.get("name"),
+            "current_balance": round(float(user.get("prc_balance", 0) or 0), 2),
+            "total_mined": round(total_mined, 2),
+            "old_balance_before_fix_field": round(float(old_balance_field or 0), 2)
+        },
+        "balance_correction_entry": correction,
+        "balance_restores": restores,
+        "redemptions": {
+            "subscriptions": round(sub_total, 2),
+            "orders": round(order_total, 2),
+            "withdrawals": round(withdrawal_total, 2),
+            "total": round(total_redeemed, 2)
+        },
+        "calculated_correct_balance": round(correct_balance, 2),
+        "difference": round(correct_balance - float(user.get("prc_balance", 0) or 0), 2)
+    }
+
+
+@api_router.get("/admin/prc-balance/proper-restore")
+async def proper_restore_all(dry_run: bool = True, skip: int = 0, limit: int = 100):
+    """
+    🚨 PROPER RESTORE: Restore balance from balance_corrections collection.
+    
+    For each user in balance_corrections:
+    1. Get their old_balance from correction entry
+    2. Set their prc_balance = old_balance
+    3. Then add 20% compensation
+    
+    This is the CORRECT way - uses the saved original balances.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get corrections with pagination
+        corrections = await db.balance_corrections.find({}).skip(skip).limit(limit).to_list(limit)
+        
+        if not corrections:
+            return {
+                "success": True,
+                "message": "No more corrections to process",
+                "processed": 0,
+                "skip": skip,
+                "done": True
+            }
+        
+        results = {
+            "processed": 0,
+            "restored": 0,
+            "already_ok": 0,
+            "errors": [],
+            "restores": []
+        }
+        
+        for correction in corrections:
+            uid = correction.get("user_id")
+            original_balance = float(correction.get("old_balance", 0) or 0)
+            
+            # Get current user
+            user = await db.users.find_one({"uid": uid})
+            if not user:
+                results["errors"].append({"uid": uid, "error": "User not found"})
+                continue
+            
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            already_properly_restored = user.get("properly_restored_march2026", False)
+            
+            # Skip if already properly restored
+            if already_properly_restored:
+                results["already_ok"] += 1
+                continue
+            
+            results["processed"] += 1
+            
+            # Calculate 20% compensation on ORIGINAL balance
+            compensation_20pct = round(original_balance * 0.20, 2)
+            final_balance = round(original_balance + compensation_20pct, 2)
+            
+            restore_record = {
+                "uid": uid,
+                "name": user.get("name", "Unknown"),
+                "current_balance": round(current_balance, 2),
+                "original_balance": round(original_balance, 2),
+                "compensation_20pct": compensation_20pct,
+                "final_balance": final_balance
+            }
+            
+            if not dry_run:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": final_balance,
+                            "properly_restored_march2026": True,
+                            "proper_restore_date": now.isoformat(),
+                            "original_balance_restored": original_balance,
+                            "compensation_20pct_applied": compensation_20pct
+                        }
+                    }
+                )
+                
+                # Log transaction
+                credit_amount = final_balance - current_balance
+                if credit_amount > 0:
+                    await db.prc_transactions.insert_one({
+                        "user_id": uid,
+                        "type": "proper_restore",
+                        "amount": credit_amount,
+                        "description": f"Proper balance restore ({original_balance:,.0f}) + 20% compensation ({compensation_20pct:,.0f})",
+                        "created_at": now.isoformat(),
+                        "balance_after": final_balance
+                    })
+                
+                restore_record["status"] = "restored"
+                results["restored"] += 1
+            else:
+                restore_record["status"] = "would_restore"
+                results["restored"] += 1
+            
+            results["restores"].append(restore_record)
+        
+        has_more = len(corrections) == limit
+        
+        return {
+            "success": True,
+            "message": "DRY RUN" if dry_run else f"Restored {results['restored']} users",
+            "summary": {
+                "processed": results["processed"],
+                "restored": results["restored"],
+                "already_ok": results["already_ok"],
+                "errors": len(results["errors"])
+            },
+            "pagination": {
+                "skip": skip,
+                "next_skip": skip + limit if has_more else None,
+                "has_more": has_more
+            },
+            "restores": results["restores"][:30],
+            "errors": results["errors"][:10] if results["errors"] else None
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/mega-compensation")
 async def mega_compensation(dry_run: bool = True, skip: int = 0, limit: int = 200):
     """
