@@ -41487,16 +41487,19 @@ async def startup_db():
             replace_existing=True
         )
         
-        # Captured payments sync - runs every 2 minutes
-        # This catches payments where webhook failed or user closed modal
-        scheduler.add_job(
-            auto_sync_captured_from_razorpay,
-            'interval',
-            minutes=2,
-            id='auto_sync_captured',
-            name='Sync captured payments from Razorpay API',
-            replace_existing=True
-        )
+        # DISABLED: Captured payments sync - CAUSING DOUBLE ACTIVATION BUG
+        # This was running in parallel with auto_sync_razorpay_payments
+        # and causing users to get double subscription days (28 → 55 days)
+        # Keeping auto_sync_razorpay_payments only - it already handles captured payments
+        # 
+        # scheduler.add_job(
+        #     auto_sync_captured_from_razorpay,
+        #     'interval',
+        #     minutes=2,
+        #     id='auto_sync_captured',
+        #     name='Sync captured payments from Razorpay API',
+        #     replace_existing=True
+        # )
         
         # Eko transaction status update every 5 minutes
         scheduler.add_job(
