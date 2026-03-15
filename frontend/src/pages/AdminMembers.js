@@ -194,7 +194,7 @@ const AdminMembers = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-950 p-4 md:p-6" data-testid="admin-members-page">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -560,10 +560,11 @@ const AdminMembers = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Member</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-member">Member</th>
                   <th 
                     className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
                     onClick={() => handleSort('prc_balance')}
+                    data-testid="header-prc-balance"
                   >
                     <div className="flex items-center gap-1">
                       PRC Balance <SortIcon field="prc_balance" />
@@ -572,6 +573,7 @@ const AdminMembers = () => {
                   <th 
                     className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
                     onClick={() => handleSort('redeem_limit')}
+                    data-testid="header-redeem-limit"
                   >
                     <div className="flex items-center gap-1">
                       Redeem Limit <SortIcon field="redeem_limit" />
@@ -580,6 +582,7 @@ const AdminMembers = () => {
                   <th 
                     className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
                     onClick={() => handleSort('used_limit')}
+                    data-testid="header-used-limit"
                   >
                     <div className="flex items-center gap-1">
                       Used <SortIcon field="used_limit" />
@@ -588,6 +591,7 @@ const AdminMembers = () => {
                   <th 
                     className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
                     onClick={() => handleSort('available_limit')}
+                    data-testid="header-available-limit"
                   >
                     <div className="flex items-center gap-1">
                       Available <SortIcon field="available_limit" />
@@ -596,12 +600,13 @@ const AdminMembers = () => {
                   <th 
                     className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
                     onClick={() => handleSort('created_at')}
+                    data-testid="header-joined-date"
                   >
                     <div className="flex items-center gap-1">
                       Joined <SortIcon field="created_at" />
                     </div>
                   </th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Status</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-status">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -629,6 +634,7 @@ const AdminMembers = () => {
                       <tr 
                         key={member.uid} 
                         className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                        data-testid={`member-row-${member.uid}`}
                       >
                         <td className="py-3 px-4">
                           <div 
@@ -640,22 +646,22 @@ const AdminMembers = () => {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-green-400 font-medium">
+                          <span className="text-green-400 font-medium" data-testid={`prc-balance-${member.uid}`}>
                             {(member.prc_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-white font-medium">
+                          <span className="text-white font-medium" data-testid={`redeem-limit-${member.uid}`}>
                             {totalLimit.toLocaleString()}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-yellow-400 font-medium">
+                          <span className="text-yellow-400 font-medium" data-testid={`used-limit-${member.uid}`}>
                             {usedLimit.toLocaleString()}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`font-medium ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <span className={`font-medium ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`} data-testid={`available-limit-${member.uid}`}>
                             {availableLimit.toLocaleString()}
                           </span>
                         </td>

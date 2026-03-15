@@ -14,83 +14,47 @@ User's main objectives are to build a complete fintech rewards and cashback plat
 
 ## What's Been Implemented
 
-### March 14, 2026 - Futuristic Mining Dashboard (NEW!)
+### March 15, 2026 - P0 Bug Fix: Admin Members Page
 
-#### ✅ New Mining UI Complete
-- **FuturisticMiningDashboard.js** - Complete gamified mining interface with:
-  - **Speedometer Gauge:** SVG-based animated gauge showing mining rate (PRC/hr)
-  - **Circular Timer:** Large, tappable central element showing:
-    - Session PRC earned (real-time animated counter)
-    - Time remaining (HH:MM:SS format)
-    - Tap-to-collect functionality for paid users
-    - Free user upgrade prompt
-  - **Odometer Counter:** Digital display showing lifetime total PRC mined
-  - **Current Balance Card:** Shows available PRC balance
-  - **Speed Breakdown Section:** Level-wise referral bonus breakdown (L1, L2, L3)
-  
-- **Design Theme:**
-  - Dark slate background with cyan/blue glow effects
-  - Animated grid pattern overlay
-  - Mobile-first responsive design
-  - Framer Motion animations throughout
-  
-- **Test Results:** 25/25 tests passed (14 backend + 11 frontend)
-- **Test File:** `/app/test_reports/iteration_122.json`
+#### ✅ Sorting Bug Fixed
+- **Problem:** Frontend was sending `sort_field`/`sort_direction` but backend expected `sort_by`/`sort_order`
+- **Fix:** Updated `AdminMembers.js` to send correct parameter names
+- **Verified:** Elite user (39950 limit) now appears first when sorting by redeem_limit DESC
+
+#### ✅ Redeem Limit Formula Working
+- **Formula:** `Plan Price × 5 × 10 × months_active × (1 + 0.20 × active_referrals)`
+- **Elite:** 799 × 5 × 10 = 39,950 PRC base/month
+- **Growth:** 499 × 5 × 10 = 24,950 PRC base/month
+- **Explorer:** 0 PRC (no redeem allowed)
+- **+20% bonus** per active direct referral
+
+#### ✅ Test Results
+- **24/24 tests passed** (13 backend + 11 frontend)
+- **Test File:** `/app/test_reports/iteration_123.json`
+
+#### ✅ Data-testid Added
+- Added proper data-testid attributes to AdminMembers.js for E2E testing
+
+### March 14, 2026 - Dynamic PRC Rate System
+
+#### ✅ Dynamic Rate Complete
+- PRC-to-INR rate now auto-calculated from `prc_economy.py` model
+- Applied across all redeem flows (BBPS, Bank Transfer, Subscription)
+
+#### ✅ PRC Subscription Option
+- "Pay with PRC" option for subscriptions
+- Uses dynamic rate and respects redeem limits
 
 ### March 14, 2026 - Manual Bank Transfer System
 
 #### ✅ Backend APIs Complete
 - `GET /api/bank-transfer/config` - Returns PRC rate, fees, limits
-- `GET /api/bank-transfer/calculate-fees` - Fee calculation for any amount
-- `POST /api/bank-transfer/verify-ifsc` - IFSC verification with Eko API + fallback
 - `POST /api/bank-transfer/request` - Create new bank transfer request
-- `GET /api/bank-transfer/my-requests/{user_id}` - User's request history
-- `GET /api/bank-transfer/admin/requests` - Admin view with pagination, search, filters
-- `POST /api/bank-transfer/admin/mark-paid` - Mark request as paid with UTR
-- `POST /api/bank-transfer/admin/mark-failed` - Mark failed with PRC refund
-- `GET /api/bank-transfer/admin/stats` - Dashboard statistics
+- `GET /api/bank-transfer/admin/requests` - Admin view with pagination
 
 #### ✅ Frontend Pages Complete
-- **BankRedeemPage.js** - User page with:
-  - Amount input with validation (₹200-₹10,000)
-  - Fee breakdown display
-  - IFSC verification with auto bank name
-  - Account number validation (match confirmation)
-  - Policy agreement modal
-  - Request history tab
-  - **Global Redeem Limit Display** (Total/Used/Remaining PRC)
-  
-- **AdminBankTransfers.js** - Admin panel with:
-  - Stats cards (Pending/Paid/Failed counts and amounts)
-  - Search by name, phone, account
-  - Filter by status
-  - Date range filter
-  - Sort order (Oldest/Newest first)
-  - Pagination
-  - Mark Paid (with UTR) / Mark Failed (with refund) actions
-
-#### ✅ Routing & Navigation
-- User route: `/prc-to-bank` or `/bank-redeem`
-- Admin route: `/admin/bank-transfers`
-- Sidebar menu items added for both user and admin
-
-#### ✅ Fee Structure
-- 1 INR = 10 PRC
-- Transaction Fee: ₹10 flat
-- Admin Fee: 20% of withdrawal amount
-- Min: ₹200, Max: ₹10,000
-
-#### ✅ Double Subscription Fix
-- Added atomic locking in Razorpay verify-payment and webhook handlers
-- Prevents race condition between verify-payment and webhook
-- Uses `find_one_and_update` with claim mechanism
-
-### Previous Sessions
-- DMT V1/V3 removed completely
-- Old admin pages (bill-payments, unified-payments) removed
-- Production PRC deduction bug fixed with wallet_service_v2
-- Global redeem limit system implemented
-- PRC expiry disabled
+- **BankRedeemPage.js** - User bank transfer page
+- **AdminBankTransfers.js** - Admin panel
 
 ---
 
@@ -100,56 +64,33 @@ User's main objectives are to build a complete fintech rewards and cashback plat
 /app
 ├── backend/
 │   ├── routes/
-│   │   ├── manual_bank_transfer.py  # Manual bank redeem system
+│   │   ├── manual_bank_transfer.py  # Bank redeem system
 │   │   ├── unified_redeem_v2.py     # BBPS instant payments
-│   │   ├── bbps_services.py         # Eko BBPS API
-│   │   ├── razorpay_payments.py     # Subscription with double-fix
-│   │   ├── admin_ledger_view.py     # Ledger view + diagnostic APIs
-│   │   └── wallet.py                # Wallet routes
-│   ├── app/services/
-│   │   └── wallet_service_v2.py     # PRC debit/credit service
-│   └── server.py
+│   │   └── bbps_services.py         # Eko BBPS API
+│   ├── prc_economy.py               # Dynamic PRC rate model
+│   └── server.py                    # /api/admin/members with sorting fix
 └── frontend/
     └── src/
         ├── pages/
-        │   ├── Mining.js                 # Wrapper for FuturisticMiningDashboard
-        │   ├── BankRedeemPage.js         # User bank transfer page
-        │   ├── Admin/AdminBankTransfers.js # Admin bank transfers
-        │   ├── RedeemPageV2.js           # BBPS instant payments
-        │   └── AdminRazorpaySubscriptions.js
+        │   ├── AdminMembers.js      # Fixed: sorting + data-testid
+        │   ├── BankRedeemPage.js    # Bank transfer page
+        │   ├── Mining.js            # Mining dashboard
+        │   └── SubscriptionPlans.js # With PRC payment option
         └── components/
-            ├── mining/
-            │   └── FuturisticMiningDashboard.js  # NEW: Gamified mining UI
-            ├── Sidebar.js                # User menu
-            └── layouts/AdminLayout.js    # Admin menu
 ```
 
 ---
 
 ## Key Database Collections
 
-### bank_transfer_requests (NEW)
+### users
 ```javascript
 {
-  request_id: "BTR-20260314...",
-  user_id: "...",
-  user_name: "...",
-  user_phone: "...",
-  withdrawal_amount: 500,    // INR
-  admin_fee: 100,            // INR
-  transaction_fee: 10,       // INR
-  total_inr: 610,            // INR
-  prc_deducted: 6100,        // PRC
-  account_holder_name: "...",
-  account_number: "...",
-  ifsc_code: "...",
-  bank_name: "...",
-  status: "pending|paid|failed",
-  utr_number: "...",         // For paid
-  admin_remark: "...",
-  prc_refunded: false,
-  created_at: "...",
-  processed_at: "..."
+  uid: "...",
+  subscription_plan: "elite|growth|startup|explorer",
+  created_at: "...",           // For redeem limit calculation
+  referral_code: "...",        // To find referrals
+  prc_balance: 12345.67
 }
 ```
 
@@ -157,37 +98,32 @@ User's main objectives are to build a complete fintech rewards and cashback plat
 
 ## Pending Issues
 
-### P1: Production Deployment Crashes
-- App sometimes crashes after frontend deployment
-- Needs investigation of build process
+### P1: Minor Issues
+- `created_at` sorting has minor inconsistency due to date format variations in DB
 
-### P2: 145 Failed BBPS Transactions (No Eko TID)
-- Root cause unknown
-- Likely fixed by code updates but unconfirmed
+### P2: Production Issues
+- Production deployment sometimes crashes after frontend changes
+- 145 failed BBPS transactions root cause unknown
 
-### P3: PRC Double Issue
-- User reported PRC doubled for user `166c67d6-99c4-4cb0-9ca3-38cd8b0c5fa2`
-- Diagnostic API created: `/api/admin/ledger/diagnose-prc-double/{user_id}`
-- Needs production investigation
+### P3: Enhancements
+- Admin UI to manually override PRC rate
+- Firebase/Email notifications for bank transfer status
 
 ---
 
 ## Upcoming Tasks
 
 ### P1
-- [ ] Test Manual Bank Transfer on production after deploy
-- [ ] Investigate PRC double issue on production
-- [ ] Add Firebase/Email notifications for bank transfer status
+- [ ] Add admin UI to override PRC rate manually
+- [ ] Test Manual Bank Transfer on production
 
 ### P2
-- [ ] Admin analytics dashboard for bank transfers
-- [ ] Rate limiting on new APIs
-- [ ] Receipt generation for bank transfers
+- [ ] Investigate production deployment crashes
+- [ ] Add notifications for bank transfers
 
 ### P3
-- [ ] MongoDB to PostgreSQL migration (user requested)
-- [ ] Email/Mobile OTP verification
-- [ ] Large component refactoring
+- [ ] MongoDB to PostgreSQL migration
+- [ ] Receipt generation for transactions
 
 ---
 
@@ -199,30 +135,23 @@ User's main objectives are to build a complete fintech rewards and cashback plat
 
 ## API Endpoints Summary
 
-### Bank Transfer
+### Admin Members
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /api/bank-transfer/config | Get config (rates, limits) |
-| GET | /api/bank-transfer/calculate-fees | Calculate fees |
-| POST | /api/bank-transfer/verify-ifsc | Verify IFSC code |
-| POST | /api/bank-transfer/request | Create request |
-| GET | /api/bank-transfer/my-requests/{uid} | User history |
-| GET | /api/bank-transfer/admin/requests | Admin list |
-| GET | /api/bank-transfer/admin/stats | Admin stats |
-| POST | /api/bank-transfer/admin/mark-paid | Mark as paid |
-| POST | /api/bank-transfer/admin/mark-failed | Mark as failed |
+| GET | /api/admin/members/list | Get paginated members with sorting |
+| GET | /api/admin/members/dashboard | Dashboard stats |
+
+### Query Parameters for /api/admin/members/list
+- `sort_by`: prc_balance, redeem_limit, used_limit, available_limit, created_at
+- `sort_order`: asc, desc
+- `page`, `limit`: Pagination
+- `search`: Search by name, email, mobile
 
 ### Redeem Limit
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /api/user/{uid}/redeem-limit | Get user's limit info |
 
-### Diagnostic
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | /api/admin/ledger/diagnose-prc-double/{uid} | PRC double diagnosis |
-| POST | /api/admin/ledger/fix-prc-double/{uid} | Fix PRC double |
-
 ---
 
-Last Updated: March 14, 2026 (Futuristic Mining Dashboard Added)
+Last Updated: March 15, 2026 (P0 Admin Members Bug Fix)
