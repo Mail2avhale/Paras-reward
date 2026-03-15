@@ -3671,41 +3671,20 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         if not user_data:
             return False, "user_not_found"
     
-    # ========== UPDATED: Active = Elite subscription + Mining Active ==========
+    # ========== UPDATED: Active = Elite + Mining Active Flag (ignore session end) ==========
     subscription_plan = (user_data.get("subscription_plan") or "").lower()
     is_elite = subscription_plan == "elite"
     
-    # Check mining status
+    # Check mining_active flag only (ignore session end time)
     mining_active = user_data.get("mining_active")
-    session_end = user_data.get("mining_session_end")
-    is_mining = False
+    is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
     
-    if mining_active is True or mining_active == "true":
-        if session_end:
-            try:
-                if isinstance(session_end, str):
-                    session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                elif isinstance(session_end, datetime):
-                    session_end_dt = session_end
-                else:
-                    session_end_dt = None
-                
-                if session_end_dt:
-                    if session_end_dt.tzinfo is None:
-                        session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                    if session_end_dt > now:
-                        is_mining = True
-            except:
-                is_mining = True
-        else:
-            is_mining = True
-    
-    # Active only if BOTH elite AND mining
-    if is_elite and is_mining:
-        return True, "elite_and_mining_active"
+    # Active only if Elite AND mining_active flag is True
+    if is_elite and is_mining_flag:
+        return True, "elite_and_mining_flag_true"
     elif is_elite:
-        return False, "elite_but_not_mining"
-    elif is_mining:
+        return False, "elite_but_mining_flag_false"
+    elif is_mining_flag:
         return False, "mining_but_not_elite"
     
     return False, "not_elite_not_mining"
@@ -5071,10 +5050,40 @@ async def get_dynamic_prc_rate():
     Get dynamic PRC rate from Token Economy system.
     Auto-calculates based on 5 factors: Supply, Redeem, Burn, User, Utility
     Falls back to database setting or default 10 if economy calculation fails.
+    
+    PRIORITY:
+    1. Manual override (if set and not expired)
+    2. Dynamic economy calculation
+    3. Database setting
+    4. Default 10
+    
     Returns: int (final rate value, e.g., 11 means 11 PRC = ₹1)
     """
     try:
-        # Import economy module
+        # PRIORITY 1: Check for manual override
+        override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
+        if override and override.get("enabled"):
+            override_rate = override.get("rate")
+            expires_at = override.get("expires_at")
+            
+            # Check if override is still valid
+            if expires_at:
+                try:
+                    expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    if expiry > datetime.now(timezone.utc):
+                        logging.info(f"[PRC RATE] Using manual override: {override_rate}")
+                        return int(override_rate)
+                except:
+                    pass
+            else:
+                # No expiry = permanent override
+                logging.info(f"[PRC RATE] Using manual override (no expiry): {override_rate}")
+                return int(override_rate)
+    except Exception as e:
+        logging.warning(f"[PRC RATE] Override check failed: {e}")
+    
+    try:
+        # PRIORITY 2: Import economy module
         from routes.prc_economy import calculate_dynamic_prc_rate
         
         # Get auto-calculated rate from economy system
@@ -5090,7 +5099,7 @@ async def get_dynamic_prc_rate():
     except Exception as e:
         logging.warning(f"[PRC RATE] Economy rate calculation failed, using fallback: {e}")
     
-    # Fallback: Check database settings
+    # PRIORITY 3: Check database settings
     try:
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
@@ -10895,6 +10904,112 @@ async def update_prc_rate(request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/prc-rate/manual-override")
+async def set_manual_prc_rate_override(request: Request):
+    """
+    Admin: Set manual PRC rate override.
+    This overrides the dynamic economy calculation.
+    
+    Body:
+    - rate: The PRC rate to set (e.g., 10 means 10 PRC = ₹1)
+    - enabled: true/false to enable/disable override
+    - expires_hours: Optional - hours until override expires (null = permanent)
+    """
+    try:
+        data = await request.json()
+        rate = data.get("rate")
+        enabled = data.get("enabled", True)
+        expires_hours = data.get("expires_hours")  # null = permanent
+        
+        if enabled and (not rate or rate <= 0):
+            raise HTTPException(status_code=400, detail="Invalid rate. Must be a positive number")
+        
+        now = datetime.now(timezone.utc)
+        expires_at = None
+        if expires_hours:
+            expires_at = (now + timedelta(hours=int(expires_hours))).isoformat()
+        
+        await db.app_settings.update_one(
+            {"key": "prc_rate_manual_override"},
+            {"$set": {
+                "key": "prc_rate_manual_override",
+                "enabled": enabled,
+                "rate": int(rate) if rate else None,
+                "expires_at": expires_at,
+                "set_at": now.isoformat(),
+                "set_by": "admin"
+            }},
+            upsert=True
+        )
+        
+        # Clear cache
+        await cache.delete("public_settings")
+        
+        if enabled:
+            return {
+                "success": True,
+                "message": f"Manual PRC rate override set to {rate}",
+                "rate": rate,
+                "expires_at": expires_at,
+                "note": "Permanent override" if not expires_at else f"Expires in {expires_hours} hours"
+            }
+        else:
+            return {
+                "success": True,
+                "message": "Manual PRC rate override disabled. Using dynamic economy rate.",
+                "enabled": False
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/prc-rate/current")
+async def get_current_rate_info():
+    """Get current PRC rate with details about source (override/dynamic/fallback)"""
+    try:
+        current_rate = await get_dynamic_prc_rate()
+        
+        # Check override status
+        override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
+        override_active = False
+        override_info = None
+        
+        if override and override.get("enabled"):
+            expires_at = override.get("expires_at")
+            if expires_at:
+                try:
+                    expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    if expiry > datetime.now(timezone.utc):
+                        override_active = True
+                        override_info = {
+                            "rate": override.get("rate"),
+                            "expires_at": expires_at,
+                            "set_at": override.get("set_at")
+                        }
+                except:
+                    pass
+            else:
+                override_active = True
+                override_info = {
+                    "rate": override.get("rate"),
+                    "expires_at": None,
+                    "set_at": override.get("set_at"),
+                    "permanent": True
+                }
+        
+        return {
+            "success": True,
+            "current_rate": current_rate,
+            "source": "manual_override" if override_active else "dynamic_economy",
+            "override": override_info,
+            "note": f"Currently {current_rate} PRC = ₹1"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @api_router.get("/prc-economy/current-rate")
@@ -30690,6 +30805,14 @@ async def bulk_reject_all_pending_requests(request: Request):
             request_id = bill.get("request_id")
             user_id = bill.get("user_id")
             total_prc = bill.get("total_prc_deducted", 0)
+            amount_inr = bill.get("amount_inr", bill.get("bill_amount", 0))
+            
+            # SAFETY CHECK: Validate refund amount is reasonable
+            max_reasonable_prc = float(amount_inr) * 200 if amount_inr else total_prc
+            if total_prc > max_reasonable_prc and amount_inr > 0:
+                print(f"⚠️ WARNING: Bill {request_id} has suspicious refund! PRC={total_prc}, INR={amount_inr}")
+                results["bill_payments"]["errors"].append(f"Suspicious refund for {request_id}: PRC={total_prc} too high for INR={amount_inr}")
+                continue
             
             if not user_id or total_prc <= 0:
                 results["bill_payments"]["errors"].append(f"Invalid data for {request_id}")
@@ -30768,6 +30891,16 @@ async def bulk_reject_all_pending_requests(request: Request):
             request_id = bank_req.get("request_id")
             user_id = bank_req.get("user_id")
             total_prc = bank_req.get("total_prc_deducted", 0)
+            amount_inr = bank_req.get("amount_inr", 0)
+            
+            # SAFETY CHECK: Validate refund amount is reasonable
+            # total_prc should be roughly amount_inr * 100 (assuming 1 PRC = 0.01 INR rate)
+            # If total_prc is more than amount_inr * 200, something is wrong
+            max_reasonable_prc = float(amount_inr) * 200 if amount_inr else total_prc
+            if total_prc > max_reasonable_prc and amount_inr > 0:
+                print(f"⚠️ WARNING: Request {request_id} has suspicious refund amount! PRC={total_prc}, INR={amount_inr}")
+                results["bank_transfers"]["errors"].append(f"Suspicious refund for {request_id}: PRC={total_prc} seems too high for INR={amount_inr}")
+                continue
             
             if not user_id or total_prc <= 0:
                 results["bank_transfers"]["errors"].append(f"Invalid data for {request_id}")
@@ -33552,15 +33685,12 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
         is_elite = subscription_plan == "elite"
         is_mining = False
         
-        if ref.get("mining_active") and ref.get("mining_session_end"):
-            try:
-                session_end = datetime.fromisoformat(ref["mining_session_end"].replace('Z', '+00:00'))
-                is_mining = session_end > now
-            except:
-                is_mining = True
+        # Check mining_active flag (ignore session end time)
+        mining_active = ref.get("mining_active")
+        is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
         
-        # Active only if BOTH elite AND mining
-        is_active = is_elite and is_mining
+        # Active only if Elite AND mining_active flag is True
+        is_active = is_elite and is_mining_flag
         
         result.append({
             "uid": ref["uid"],
@@ -34363,13 +34493,14 @@ async def get_referral_levels(user_id: str, force_refresh: bool = False):
                 else:
                     is_mining = True
             
-            # Active only if BOTH elite AND mining
-            if is_elite and is_mining:
+            # Active only if Elite AND mining_active flag is True
+            # (Session end time ignored - just check the flag)
+            if is_elite and (mining_active is True or mining_active == "true"):
                 is_active = True
-                active_reason = "elite_and_mining_active"
+                active_reason = "elite_and_mining_flag_true"
             elif is_elite:
-                active_reason = "elite_but_not_mining"
-            elif is_mining:
+                active_reason = "elite_but_mining_flag_false"
+            elif mining_active:
                 active_reason = "mining_but_not_elite"
             
             if is_active:
