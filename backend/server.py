@@ -28136,6 +28136,145 @@ async def upgrade_pro_growth_to_elite(dry_run: bool = True):
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.get("/admin/prc-balance/fix-all-missing")
+async def fix_all_missing_balance(dry_run: bool = True, skip: int = 0, limit: int = 100):
+    """
+    🚨 FIX ALL MISSING: Find ALL users where balance < total_mined and restore.
+    
+    This does NOT depend on balance_corrections collection.
+    Uses total_mined as the source of truth.
+    
+    Formula: correct_balance = total_mined - legitimate_redemptions + 20% bonus
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find users where balance seems too low compared to mined
+        # We'll check all users and calculate what they SHOULD have
+        all_users = await db.users.find({
+            "total_mined": {"$gt": 10000}
+        }).skip(skip).limit(limit).to_list(limit)
+        
+        results = {
+            "processed": 0,
+            "fixed": 0,
+            "already_ok": 0,
+            "errors": [],
+            "fixes": []
+        }
+        
+        for user in all_users:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            total_mined = float(user.get("total_mined", 0) or 0)
+            already_fixed = user.get("all_missing_fixed_march2026", False)
+            
+            if already_fixed:
+                results["already_ok"] += 1
+                continue
+            
+            results["processed"] += 1
+            
+            # Calculate legitimate redemptions
+            total_redeemed = 0
+            
+            # Subscriptions (active ones)
+            subs = await db.subscriptions.find({"user_id": uid, "status": "active"}).to_list(100)
+            sub_total = sum([float(s.get("prc_amount", 0) or 0) for s in subs])
+            
+            # Product orders (completed/processing)
+            orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
+            order_total = sum([float(o.get("prc_amount", 0) or 0) for o in orders])
+            
+            # Bank withdrawals (completed only)
+            withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
+            withdrawal_total = sum([float(w.get("prc_amount", 0) or 0) for w in withdrawals])
+            
+            total_redeemed = sub_total + order_total + withdrawal_total
+            
+            # Correct balance = mined - redeemed
+            correct_balance = max(0, total_mined - total_redeemed)
+            
+            # Add 20% compensation
+            compensation = round(correct_balance * 0.20, 2)
+            final_balance = round(correct_balance + compensation, 2)
+            
+            # Only fix if current balance is significantly less than it should be
+            # (more than 10% difference)
+            if current_balance >= final_balance * 0.9:
+                results["already_ok"] += 1
+                continue
+            
+            fix_record = {
+                "uid": uid,
+                "name": name,
+                "current_balance": round(current_balance, 2),
+                "total_mined": round(total_mined, 2),
+                "total_redeemed": round(total_redeemed, 2),
+                "correct_balance": round(correct_balance, 2),
+                "compensation_20pct": compensation,
+                "final_balance": final_balance,
+                "increase": round(final_balance - current_balance, 2)
+            }
+            
+            if not dry_run:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": final_balance,
+                            "all_missing_fixed_march2026": True,
+                            "fix_date": now.isoformat(),
+                            "balance_before_fix": current_balance
+                        }
+                    }
+                )
+                
+                # Log transaction
+                credit = final_balance - current_balance
+                if credit > 0:
+                    await db.prc_transactions.insert_one({
+                        "user_id": uid,
+                        "type": "missing_balance_fix",
+                        "amount": credit,
+                        "description": f"Fix missing balance: mined={total_mined:,.0f}, redeemed={total_redeemed:,.0f}, +20% bonus",
+                        "created_at": now.isoformat(),
+                        "balance_after": final_balance
+                    })
+                
+                fix_record["status"] = "fixed"
+                results["fixed"] += 1
+            else:
+                fix_record["status"] = "would_fix"
+                results["fixed"] += 1
+            
+            results["fixes"].append(fix_record)
+        
+        has_more = len(all_users) == limit
+        
+        return {
+            "success": True,
+            "message": "DRY RUN" if dry_run else f"Fixed {results['fixed']} users",
+            "summary": {
+                "processed": results["processed"],
+                "fixed": results["fixed"],
+                "already_ok": results["already_ok"],
+                "errors": len(results["errors"])
+            },
+            "pagination": {
+                "skip": skip,
+                "next_skip": skip + limit if has_more else None,
+                "has_more": has_more
+            },
+            "fixes": results["fixes"][:30]
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/check-user/{uid}")
 async def check_user_balance_data(uid: str):
     """Check all balance data for a specific user from all sources"""
