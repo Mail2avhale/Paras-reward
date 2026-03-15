@@ -170,13 +170,14 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
             await db.kyc.insert_one(kyc_doc)
         
         # Update user's KYC status
+        # Use None instead of empty string to avoid duplicate key errors on sparse indexes
         await db.users.update_one(
             {"uid": uid},
             {"$set": {
                 "kyc_status": "pending",
                 "kyc_submitted_at": now,
-                "aadhaar_number": kyc_data.aadhaar_number,
-                "pan_number": kyc_data.pan_number
+                "aadhaar_number": kyc_data.aadhaar_number if kyc_data.aadhaar_number else None,
+                "pan_number": kyc_data.pan_number if kyc_data.pan_number else None
             }}
         )
         
@@ -193,8 +194,70 @@ async def submit_kyc(uid: str, kyc_data: KYCSubmit):
     except HTTPException:
         raise
     except Exception as e:
+        error_str = str(e)
         print(f"KYC Submit Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to submit KYC: {str(e)}")
+        
+        # Handle MongoDB duplicate key errors with user-friendly messages
+        if "E11000" in error_str or "duplicate key" in error_str.lower():
+            # Parse which field caused the duplicate
+            if "pan_number" in error_str:
+                if "pan_number: \"\"" in error_str or "pan_number: ''" in error_str or "{ pan_number: \"\" }" in error_str:
+                    # Empty pan_number duplicate - database index issue
+                    raise HTTPException(
+                        status_code=400,
+                        detail="PAN number is required. Please enter your PAN number."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This PAN number is already registered with another account. Please use the correct PAN."
+                    )
+            elif "aadhaar_number" in error_str:
+                if "aadhaar_number: \"\"" in error_str or "{ aadhaar_number: \"\" }" in error_str:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Aadhaar number is required. Please enter your Aadhaar number."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This Aadhaar number is already registered with another account. Please use the correct Aadhaar."
+                    )
+            elif "mobile" in error_str:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This mobile number is already registered with another account."
+                )
+            elif "email" in error_str:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This email is already registered with another account."
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="A document with these details already exists. Please check your information."
+                )
+        
+        # Handle timeout errors
+        if "timeout" in error_str.lower():
+            raise HTTPException(
+                status_code=504,
+                detail="Server is busy. Please try again in a few seconds."
+            )
+        
+        # Handle connection errors
+        if "connection" in error_str.lower() or "network" in error_str.lower():
+            raise HTTPException(
+                status_code=503,
+                detail="Network error. Please check your internet connection and try again."
+            )
+        
+        # Generic error with cleaner message
+        raise HTTPException(
+            status_code=500, 
+            detail="KYC submission failed. Please try again. If the problem persists, contact support."
+        )
 
 @router.get("/status/{uid}")
 async def get_kyc_status(uid: str):
