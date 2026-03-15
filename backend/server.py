@@ -17563,6 +17563,241 @@ async def fix_double_subscriptions_preview():
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
+@api_router.get("/admin/today-double-subscriptions")
+async def find_today_double_subscriptions():
+    """
+    Find users who got double subscription TODAY by checking duplicate transactions.
+    """
+    try:
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        now = datetime.now(timezone.utc)
+        
+        # Method 1: Check transactions for duplicates
+        recent_txns = await db.transactions.find({
+            "type": "subscription_payment",
+            "timestamp": {"$gte": today}
+        }).sort("timestamp", -1).to_list(500)
+        
+        # Group by payment_id
+        payment_groups = {}
+        for txn in recent_txns:
+            pid = txn.get("payment_id")
+            if pid:
+                if pid not in payment_groups:
+                    payment_groups[pid] = []
+                payment_groups[pid].append(txn)
+        
+        duplicates_from_txns = []
+        for pid, txns in payment_groups.items():
+            if len(txns) > 1:
+                user_id = txns[0].get("user_id")
+                total_extra = sum([t.get("total_days", 28) for t in txns[1:]])  # Extra days from duplicates
+                duplicates_from_txns.append({
+                    "user_id": user_id,
+                    "payment_id": pid,
+                    "duplicate_count": len(txns),
+                    "extra_days": total_extra,
+                    "transactions": [{"via": t.get("activated_via"), "days": t.get("total_days", 28)} for t in txns]
+                })
+        
+        # Method 2: Check vip_payments for duplicates
+        recent_vip = await db.vip_payments.find({
+            "payment_method": "razorpay",
+            "$or": [
+                {"created_at": {"$gte": today.isoformat()}},
+                {"approved_at": {"$gte": today.isoformat()}}
+            ]
+        }).sort("created_at", -1).to_list(500)
+        
+        vip_groups = {}
+        for vip in recent_vip:
+            pid = vip.get("payment_id")
+            if pid:
+                if pid not in vip_groups:
+                    vip_groups[pid] = []
+                vip_groups[pid].append(vip)
+        
+        duplicates_from_vip = []
+        for pid, vips in vip_groups.items():
+            if len(vips) > 1:
+                user_id = vips[0].get("user_id")
+                total_extra = sum([v.get("duration_days", 28) for v in vips[1:]])
+                duplicates_from_vip.append({
+                    "user_id": user_id,
+                    "payment_id": pid,
+                    "duplicate_count": len(vips),
+                    "extra_days": total_extra,
+                    "vip_records": [{"source": v.get("activation_source"), "days": v.get("duration_days")} for v in vips]
+                })
+        
+        # Method 3: Check users with suspiciously high days (paid today but >35 days remaining)
+        users_paid_today = await db.users.find({
+            "last_payment_date": {"$gte": today.isoformat()}
+        }, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "email": 1, "subscription_plan": 1, 
+            "subscription_expires": 1, "subscription_expiry": 1, "last_payment_id": 1, 
+            "last_payment_date": 1, "previous_remaining_days_added": 1}).to_list(100)
+        
+        suspicious_users = []
+        for u in users_paid_today:
+            expiry = u.get("subscription_expires") or u.get("subscription_expiry")
+            if expiry:
+                try:
+                    if isinstance(expiry, str):
+                        exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                    else:
+                        exp_date = expiry
+                    if exp_date.tzinfo is None:
+                        exp_date = exp_date.replace(tzinfo=timezone.utc)
+                    
+                    days_remaining = (exp_date - now).days
+                    prev_days = u.get("previous_remaining_days_added", 0)
+                    
+                    # If days > 28 + previous + 3 days buffer, suspicious
+                    expected_max = 28 + prev_days + 3
+                    if days_remaining > expected_max:
+                        extra = days_remaining - 28 - prev_days
+                        suspicious_users.append({
+                            "user_id": u.get("uid"),
+                            "name": u.get("name"),
+                            "mobile": u.get("mobile"),
+                            "email": u.get("email"),
+                            "plan": u.get("subscription_plan"),
+                            "days_remaining": days_remaining,
+                            "previous_days_added": prev_days,
+                            "expected_max": expected_max,
+                            "extra_days": extra,
+                            "current_expiry": exp_date.isoformat(),
+                            "payment_id": u.get("last_payment_id")
+                        })
+                except:
+                    pass
+        
+        return {
+            "success": True,
+            "timestamp": now.isoformat(),
+            "duplicates_from_transactions": duplicates_from_txns,
+            "duplicates_from_vip_payments": duplicates_from_vip,
+            "suspicious_users": suspicious_users,
+            "total_affected": len(set(
+                [d["user_id"] for d in duplicates_from_txns] + 
+                [d["user_id"] for d in duplicates_from_vip] + 
+                [s["user_id"] for s in suspicious_users]
+            ))
+        }
+    except Exception as e:
+        logging.error(f"Error finding today's double subscriptions: {e}")
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.post("/admin/fix-user-subscription-days")
+async def fix_user_subscription_days(request: Request):
+    """
+    Fix a specific user's subscription by removing extra days.
+    
+    Body:
+    - user_id or mobile: User identifier
+    - days_to_remove: Number of extra days to remove
+    - reason: Reason for the fix
+    - admin_id: Admin performing the fix
+    """
+    try:
+        data = await request.json()
+        user_id = data.get("user_id")
+        mobile = data.get("mobile")
+        days_to_remove = data.get("days_to_remove", 0)
+        reason = data.get("reason", "Double subscription fix")
+        admin_id = data.get("admin_id", "system")
+        
+        if not user_id and not mobile:
+            raise HTTPException(status_code=400, detail="Please provide user_id or mobile")
+        
+        if days_to_remove <= 0:
+            raise HTTPException(status_code=400, detail="days_to_remove must be positive")
+        
+        # Find user
+        if user_id:
+            user = await db.users.find_one({"uid": user_id})
+        else:
+            user = await db.users.find_one({"mobile": mobile})
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        user_id = user.get("uid")
+        now = datetime.now(timezone.utc)
+        
+        # Get current expiry
+        current_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+        if not current_expiry:
+            raise HTTPException(status_code=400, detail="User has no active subscription")
+        
+        if isinstance(current_expiry, str):
+            current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+        if current_expiry.tzinfo is None:
+            current_expiry = current_expiry.replace(tzinfo=timezone.utc)
+        
+        # Calculate new expiry
+        new_expiry = current_expiry - timedelta(days=days_to_remove)
+        
+        # Don't allow expiry before today
+        if new_expiry < now:
+            new_expiry = now + timedelta(days=1)
+        
+        # Update user
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "subscription_expires": new_expiry,
+                    "subscription_expiry": new_expiry.isoformat(),
+                    "vip_expiry": new_expiry.isoformat(),
+                    "double_subscription_fixed": True,
+                    "days_removed": days_to_remove,
+                    "fixed_at": now.isoformat(),
+                    "fixed_by": admin_id,
+                    "fix_reason": reason,
+                    "original_wrong_expiry": current_expiry.isoformat()
+                }
+            }
+        )
+        
+        # Log the fix
+        await db.subscription_fixes.insert_one({
+            "fix_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "user_name": user.get("name"),
+            "user_mobile": user.get("mobile"),
+            "original_expiry": current_expiry.isoformat(),
+            "new_expiry": new_expiry.isoformat(),
+            "days_removed": days_to_remove,
+            "reason": reason,
+            "admin_id": admin_id,
+            "fixed_at": now.isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Fixed subscription for {user.get('name')}",
+            "user": {
+                "uid": user_id,
+                "name": user.get("name"),
+                "mobile": user.get("mobile")
+            },
+            "fix_details": {
+                "original_expiry": current_expiry.isoformat(),
+                "new_expiry": new_expiry.isoformat(),
+                "days_removed": days_to_remove,
+                "days_remaining_now": (new_expiry - now).days
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fixing user subscription: {e}")
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
 @api_router.post("/admin/fix-double-subscriptions")
 async def fix_double_subscriptions_execute(request: Request):
     """
