@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   FileText, Upload, CheckCircle, Clock, XCircle, ArrowLeft, 
-  CreditCard, User, Shield, Camera, AlertCircle
+  CreditCard, User, Shield, Camera, AlertCircle, Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AdvancedDocumentUpload from '@/components/AdvancedDocumentUpload';
+import AutoKYCVerification from '@/components/AutoKYCVerification';
 import { formatAadhaar, formatPAN, validateAadhaar, validatePAN } from '@/utils/indianValidation';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -51,6 +52,7 @@ const KYCVerification = ({ user }) => {
   const [error, setError] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [verificationMode, setVerificationMode] = useState('auto'); // 'auto' or 'manual'
 
   useEffect(() => {
     fetchData();
@@ -414,6 +416,59 @@ const KYCVerification = ({ user }) => {
       {/* KYC Form - Show if not verified and not pending review (or if orphaned after reset) */}
       {!isVerified && !isPendingReview && !isOrphaned && (
         <>
+          {/* Verification Mode Selection */}
+          <div className="px-5 mb-6">
+            <h2 className="text-white font-bold text-lg mb-4">Choose Verification Method</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setVerificationMode('auto')}
+                className={`p-4 rounded-2xl border-2 transition-all ${
+                  verificationMode === 'auto'
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-gray-800 bg-gray-900/50'
+                }`}
+                data-testid="auto-kyc-mode-btn"
+              >
+                <Zap className={`w-8 h-8 mb-2 mx-auto ${verificationMode === 'auto' ? 'text-emerald-500' : 'text-gray-500'}`} />
+                <p className={`font-medium ${verificationMode === 'auto' ? 'text-white' : 'text-gray-400'}`}>
+                  Instant KYC
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Auto verify (Recommended)</p>
+              </button>
+              <button
+                onClick={() => setVerificationMode('manual')}
+                className={`p-4 rounded-2xl border-2 transition-all ${
+                  verificationMode === 'manual'
+                    ? 'border-amber-500 bg-amber-500/10'
+                    : 'border-gray-800 bg-gray-900/50'
+                }`}
+                data-testid="manual-kyc-mode-btn"
+              >
+                <Upload className={`w-8 h-8 mb-2 mx-auto ${verificationMode === 'manual' ? 'text-amber-500' : 'text-gray-500'}`} />
+                <p className={`font-medium ${verificationMode === 'manual' ? 'text-white' : 'text-gray-400'}`}>
+                  Upload Docs
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Manual review (24-48 hrs)</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Auto KYC Section */}
+          {verificationMode === 'auto' && (
+            <div className="px-5 mb-6">
+              <AutoKYCVerification 
+                user={user} 
+                onVerified={(type) => {
+                  toast.success(`${type.toUpperCase()} verified successfully!`);
+                  fetchData();
+                }}
+              />
+            </div>
+          )}
+
+          {/* Manual KYC Section */}
+          {verificationMode === 'manual' && (
+            <>
           {/* Document Type Selection */}
           <div className="px-5 mb-6">
             <h2 className="text-white font-bold text-lg mb-4">{t.selectDoc}</h2>
@@ -617,6 +672,8 @@ const KYCVerification = ({ user }) => {
               )}
             </Button>
           </div>
+            </>
+          )}
         </>
       )}
 

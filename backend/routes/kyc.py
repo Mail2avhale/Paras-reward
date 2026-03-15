@@ -493,3 +493,266 @@ async def debug_kyc():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ==================== AUTO KYC VERIFICATION (EKO API) ====================
+from services.eko_kyc_service import verify_pan_lite, send_aadhaar_otp, verify_aadhaar_otp
+
+class PANVerifyRequest(BaseModel):
+    pan_number: str = Field(..., description="10-character PAN number")
+    name: str = Field(..., description="Name as per PAN")
+    dob: str = Field(..., description="Date of birth (YYYY-MM-DD)")
+
+class AadhaarOTPRequest(BaseModel):
+    aadhaar_number: str = Field(..., description="12-digit Aadhaar number")
+
+class AadhaarVerifyRequest(BaseModel):
+    aadhaar_number: str = Field(..., description="12-digit Aadhaar number")
+    otp: str = Field(..., description="6-digit OTP")
+    client_ref_id: str = Field(..., description="Reference ID from OTP request")
+
+
+@router.post("/auto-verify/pan/{uid}")
+async def auto_verify_pan(uid: str, data: PANVerifyRequest):
+    """
+    Auto-verify PAN using Eko PAN Lite API
+    - No OTP required
+    - Instant verification
+    - Checks: PAN validity, name match, DOB match, Aadhaar linking
+    """
+    # Check if user exists
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify PAN
+    result = await verify_pan_lite(
+        pan_number=data.pan_number,
+        name=data.name,
+        dob=data.dob,
+        client_ref_id=f"PAN_{uid}_{int(datetime.now().timestamp())}"
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    # If verified, update user's KYC status
+    if result["verified"]:
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Update user
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {
+                    "pan_number": data.pan_number.upper(),
+                    "pan_verified": True,
+                    "pan_verified_at": now,
+                    "pan_name_match": result["name_match"],
+                    "pan_dob_match": result["dob_match"],
+                    "pan_aadhaar_linked": result["aadhaar_linked"],
+                    "kyc_status": "pan_verified" if not user.get("aadhaar_verified") else "verified"
+                }
+            }
+        )
+        
+        # Log verification
+        await db.kyc_verifications.insert_one({
+            "uid": uid,
+            "type": "pan",
+            "pan_number": data.pan_number.upper(),
+            "name": data.name,
+            "dob": data.dob,
+            "verified": True,
+            "pan_status": result["pan_status"],
+            "name_match": result["name_match"],
+            "dob_match": result["dob_match"],
+            "verified_at": now,
+            "method": "eko_pan_lite"
+        })
+        
+        return {
+            "success": True,
+            "verified": True,
+            "message": "PAN verified successfully!",
+            "details": {
+                "pan_valid": result["pan_valid"],
+                "pan_status": result["pan_status_desc"],
+                "name_match": result["name_match"],
+                "dob_match": result["dob_match"],
+                "aadhaar_linked": result["aadhaar_linked"]
+            }
+        }
+    else:
+        return {
+            "success": True,
+            "verified": False,
+            "message": result["message"],
+            "details": {
+                "pan_status": result.get("pan_status_desc", "Unknown"),
+                "reason": result.get("pan_status", "Verification failed")
+            }
+        }
+
+
+@router.post("/auto-verify/aadhaar/send-otp/{uid}")
+async def auto_verify_aadhaar_send_otp(uid: str, data: AadhaarOTPRequest):
+    """
+    Step 1: Send OTP to Aadhaar-linked mobile number
+    """
+    # Check if user exists
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    client_ref_id = f"AADHAAR_{uid}_{int(datetime.now().timestamp())}"
+    
+    result = await send_aadhaar_otp(
+        aadhaar_number=data.aadhaar_number,
+        client_ref_id=client_ref_id
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    # Store client_ref_id for verification step
+    await db.aadhaar_otp_sessions.update_one(
+        {"uid": uid},
+        {
+            "$set": {
+                "uid": uid,
+                "aadhaar_number": data.aadhaar_number,
+                "client_ref_id": client_ref_id,
+                "otp_sent_at": datetime.now(timezone.utc).isoformat(),
+                "verified": False
+            }
+        },
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "otp_sent": True,
+        "message": "OTP sent to your Aadhaar-linked mobile number",
+        "client_ref_id": client_ref_id
+    }
+
+
+@router.post("/auto-verify/aadhaar/verify-otp/{uid}")
+async def auto_verify_aadhaar_verify_otp(uid: str, data: AadhaarVerifyRequest):
+    """
+    Step 2: Verify OTP and complete Aadhaar verification
+    """
+    # Check if user exists
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get OTP session
+    session = await db.aadhaar_otp_sessions.find_one({"uid": uid, "client_ref_id": data.client_ref_id})
+    if not session:
+        raise HTTPException(status_code=400, detail="OTP session not found. Please request OTP again.")
+    
+    result = await verify_aadhaar_otp(
+        aadhaar_number=data.aadhaar_number,
+        otp=data.otp,
+        client_ref_id=data.client_ref_id
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    if result["verified"]:
+        now = datetime.now(timezone.utc).isoformat()
+        aadhaar_data = result.get("aadhaar_data", {})
+        
+        # Update user
+        update_data = {
+            "aadhaar_number": data.aadhaar_number[-4:].rjust(12, 'X'),  # Masked
+            "aadhaar_verified": True,
+            "aadhaar_verified_at": now,
+            "aadhaar_name": aadhaar_data.get("name"),
+            "aadhaar_dob": aadhaar_data.get("dob"),
+            "aadhaar_gender": aadhaar_data.get("gender"),
+            "aadhaar_address": aadhaar_data.get("address"),
+            "aadhaar_state": aadhaar_data.get("state"),
+            "aadhaar_pincode": aadhaar_data.get("pincode"),
+            "kyc_status": "verified" if user.get("pan_verified") else "aadhaar_verified"
+        }
+        
+        await db.users.update_one({"uid": uid}, {"$set": update_data})
+        
+        # Mark session as verified
+        await db.aadhaar_otp_sessions.update_one(
+            {"uid": uid, "client_ref_id": data.client_ref_id},
+            {"$set": {"verified": True, "verified_at": now}}
+        )
+        
+        # Log verification
+        await db.kyc_verifications.insert_one({
+            "uid": uid,
+            "type": "aadhaar",
+            "masked_aadhaar": data.aadhaar_number[-4:].rjust(12, 'X'),
+            "verified": True,
+            "verified_at": now,
+            "method": "eko_aadhaar_otp",
+            "aadhaar_name": aadhaar_data.get("name"),
+            "aadhaar_state": aadhaar_data.get("state")
+        })
+        
+        return {
+            "success": True,
+            "verified": True,
+            "message": "Aadhaar verified successfully!",
+            "details": {
+                "name": aadhaar_data.get("name"),
+                "dob": aadhaar_data.get("dob"),
+                "gender": aadhaar_data.get("gender"),
+                "state": aadhaar_data.get("state"),
+                "pincode": aadhaar_data.get("pincode")
+            }
+        }
+    else:
+        return {
+            "success": True,
+            "verified": False,
+            "message": result["message"]
+        }
+
+
+@router.get("/verification-status/{uid}")
+async def get_verification_status(uid: str):
+    """
+    Get user's KYC verification status
+    """
+    user = await db.users.find_one({"uid": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    pan_verified = user.get("pan_verified", False)
+    aadhaar_verified = user.get("aadhaar_verified", False)
+    kyc_status = user.get("kyc_status", "not_submitted")
+    
+    return {
+        "success": True,
+        "uid": uid,
+        "kyc_status": kyc_status,
+        "pan": {
+            "verified": pan_verified,
+            "verified_at": user.get("pan_verified_at"),
+            "name_match": user.get("pan_name_match"),
+            "number": user.get("pan_number")
+        },
+        "aadhaar": {
+            "verified": aadhaar_verified,
+            "verified_at": user.get("aadhaar_verified_at"),
+            "name": user.get("aadhaar_name"),
+            "masked_number": user.get("aadhaar_number")
+        },
+        "fully_verified": pan_verified or aadhaar_verified,
+        "options": {
+            "can_verify_pan": not pan_verified,
+            "can_verify_aadhaar": not aadhaar_verified
+        }
+    }
