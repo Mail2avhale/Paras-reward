@@ -27411,6 +27411,202 @@ async def get_subscription_corrections_log(limit: int = 100):
 # ==================== END SUBSCRIPTION CORRECTION API ====================
 
 
+# ==================== PRC BALANCE AUDIT & FIX API ====================
+
+@api_router.get("/admin/prc-balance/audit")
+async def audit_prc_balance(uid: str = None, limit: int = 100):
+    """
+    🔍 AUDIT: Check PRC balance vs actual transactions for users.
+    
+    This API calculates expected balance from all transactions and compares
+    with stored prc_balance field.
+    
+    Query Params:
+    - uid: Specific user UID to audit (optional)
+    - limit: Max users to check if no UID specified
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        if uid:
+            users = [await db.users.find_one({"uid": uid})]
+            if not users[0]:
+                return {"success": False, "error": "User not found"}
+        else:
+            # Get users with highest balances
+            users = await db.users.find(
+                {"prc_balance": {"$gt": 1000}}
+            ).sort("prc_balance", -1).limit(limit).to_list(limit)
+        
+        audit_results = []
+        
+        for user in users:
+            if not user:
+                continue
+                
+            user_id = user.get("uid")
+            stored_balance = float(user.get("prc_balance", 0) or 0)
+            stored_total_mined = float(user.get("total_mined", 0) or 0)
+            
+            # Calculate from transactions
+            total_credits = 0
+            total_debits = 0
+            mining_total = 0
+            referral_total = 0
+            level_bonus_total = 0
+            rain_total = 0
+            other_credits = 0
+            
+            # 1. PRC Transactions/Ledger
+            prc_txns = await db.prc_transactions.find({"user_id": user_id}).to_list(10000)
+            for txn in prc_txns:
+                amt = float(txn.get("amount", 0) or 0)
+                desc = str(txn.get("description", "") or "").lower()
+                typ = txn.get("type", "")
+                
+                if typ == "credit" or (typ not in ["debit"] and amt > 0):
+                    total_credits += abs(amt)
+                    if "mining" in desc or "mined" in desc:
+                        mining_total += abs(amt)
+                    elif "level" in desc and "bonus" in desc:
+                        level_bonus_total += abs(amt)
+                    elif "referral" in desc:
+                        referral_total += abs(amt)
+                    elif "rain" in desc:
+                        rain_total += abs(amt)
+                    else:
+                        other_credits += abs(amt)
+                elif typ == "debit" or amt < 0:
+                    total_debits += abs(amt)
+            
+            # 2. Mining history (if separate collection)
+            mining_records = await db.mining_history.find({"user_id": user_id}).to_list(10000)
+            for m in mining_records:
+                earned = float(m.get("prc_earned", 0) or m.get("amount", 0) or 0)
+                if earned > 0:
+                    mining_total += earned
+                    total_credits += earned
+            
+            # 3. Bill payments (debits)
+            bill_payments = await db.bill_payment_requests.find({
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved"]}
+            }).to_list(5000)
+            for bp in bill_payments:
+                prc = float(bp.get("total_prc_deducted", 0) or bp.get("prc_amount", 0) or 0)
+                total_debits += prc
+            
+            # 4. Bank withdrawals (debits)
+            bank_withdrawals = await db.bank_withdrawal_requests.find({
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved"]}
+            }).to_list(5000)
+            for bw in bank_withdrawals:
+                prc = float(bw.get("total_prc_deducted", 0) or bw.get("prc_amount", 0) or 0)
+                total_debits += prc
+            
+            # 5. Bank transfers (debits)
+            bank_transfers = await db.bank_transfer_requests.find({
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved", "paid"]}
+            }).to_list(5000)
+            for bt in bank_transfers:
+                prc = float(bt.get("prc_deducted", 0) or bt.get("total_prc_deducted", 0) or 0)
+                total_debits += prc
+            
+            # Calculate expected balance
+            expected_balance = total_credits - total_debits
+            difference = stored_balance - expected_balance
+            
+            # Calculate expected total_mined (only mining, not referral/bonus)
+            expected_total_mined = mining_total
+            mined_difference = stored_total_mined - expected_total_mined
+            
+            audit_results.append({
+                "uid": user_id,
+                "name": user.get("name", "Unknown"),
+                "stored_balance": round(stored_balance, 2),
+                "expected_balance": round(expected_balance, 2),
+                "balance_difference": round(difference, 2),
+                "stored_total_mined": round(stored_total_mined, 2),
+                "expected_total_mined": round(expected_total_mined, 2),
+                "mined_difference": round(mined_difference, 2),
+                "breakdown": {
+                    "total_credits": round(total_credits, 2),
+                    "mining": round(mining_total, 2),
+                    "level_bonus": round(level_bonus_total, 2),
+                    "referral_bonus": round(referral_total, 2),
+                    "rain": round(rain_total, 2),
+                    "other_credits": round(other_credits, 2),
+                    "total_debits": round(total_debits, 2)
+                },
+                "needs_balance_fix": abs(difference) > 100,
+                "needs_mined_fix": abs(mined_difference) > 100
+            })
+        
+        # Summary
+        needs_fix = [r for r in audit_results if r["needs_balance_fix"]]
+        
+        return {
+            "success": True,
+            "audit_time": now.isoformat(),
+            "total_audited": len(audit_results),
+            "needs_fix": len(needs_fix),
+            "results": audit_results
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC AUDIT] Error: {e}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
+@api_router.get("/admin/prc-balance/user-breakdown")
+async def get_user_prc_breakdown(uid: str):
+    """
+    📊 Get detailed PRC breakdown for a specific user.
+    Shows all sources of credits and debits.
+    """
+    try:
+        user = await db.users.find_one({"uid": uid})
+        if not user:
+            return {"success": False, "error": "User not found"}
+        
+        # Get all transactions
+        prc_txns = await db.prc_transactions.find({"user_id": uid}).sort("created_at", -1).to_list(1000)
+        mining_records = await db.mining_history.find({"user_id": uid}).sort("timestamp", -1).to_list(500)
+        bill_payments = await db.bill_payment_requests.find({"user_id": uid}).to_list(500)
+        bank_withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid}).to_list(500)
+        bank_transfers = await db.bank_transfer_requests.find({"user_id": uid}).to_list(500)
+        
+        # Remove _id from all
+        for txn in prc_txns + mining_records + bill_payments + bank_withdrawals + bank_transfers:
+            txn.pop("_id", None)
+        
+        return {
+            "success": True,
+            "user": {
+                "uid": uid,
+                "name": user.get("name"),
+                "prc_balance": user.get("prc_balance"),
+                "total_mined": user.get("total_mined")
+            },
+            "transactions": {
+                "prc_ledger": prc_txns[:200],
+                "mining_history": mining_records[:100],
+                "bill_payments": len(bill_payments),
+                "bank_withdrawals": len(bank_withdrawals),
+                "bank_transfers": len(bank_transfers)
+            }
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== END PRC BALANCE AUDIT ====================
+
+
 # ==================== END WEBHOOK AUTO-BURN ====================
 
 @api_router.post("/admin/clear-free-users-prc")
