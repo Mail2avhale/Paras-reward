@@ -307,11 +307,12 @@ async def create_redeem_request(request: RedeemRequest):
     
     Process:
     1. Validate bank details (IFSC)
-    2. Check global redeem limit
-    3. Check PRC balance
-    4. Calculate fees
-    5. Deduct PRC
-    6. Create pending request
+    2. Check 24-hour cooldown
+    3. Check global redeem limit
+    4. Check PRC balance
+    5. Calculate fees
+    6. Deduct PRC
+    7. Create pending request
     """
     from app.services.wallet_service_v2 import WalletServiceV2
     
@@ -330,6 +331,40 @@ async def create_redeem_request(request: RedeemRequest):
         user = await db.users.find_one({"uid": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+        
+        # 2.5. CHECK 24-HOUR COOLDOWN
+        cooldown_hours = 24
+        now = datetime.now(timezone.utc)
+        cutoff_time = now - timedelta(hours=cooldown_hours)
+        
+        last_request = await db.bank_withdrawal_requests.find_one(
+            {
+                "user_id": user_id,
+                "status": {"$nin": ["rejected", "failed", "cancelled"]}
+            },
+            sort=[("created_at", -1)]
+        )
+        
+        if last_request:
+            last_time = last_request.get("created_at")
+            if isinstance(last_time, str):
+                try:
+                    last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+                except:
+                    last_time = None
+            
+            if last_time:
+                if last_time.tzinfo is None:
+                    last_time = last_time.replace(tzinfo=timezone.utc)
+                
+                if last_time > cutoff_time:
+                    time_passed = now - last_time
+                    remaining = timedelta(hours=cooldown_hours) - time_passed
+                    remaining_hours = remaining.total_seconds() / 3600
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
+                    )
         
         # 3. Check KYC
         if user.get("kyc_status") != "verified":

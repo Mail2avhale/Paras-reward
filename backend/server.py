@@ -719,6 +719,89 @@ def get_user_plan(user: dict) -> str:
     """Get user's subscription plan, defaulting to 'explorer'"""
     return user.get("subscription_plan", "explorer")
 
+
+# ========== SERVICE COOLDOWN SYSTEM ==========
+COOLDOWN_HOURS = {
+    "subscription": 15 * 24,  # 15 days = 360 hours
+    "bank_transfer": 24,      # 24 hours
+    "bill_payment": 24,       # 24 hours
+    "gift_voucher": 24,       # 24 hours
+    "product_order": 24,      # 24 hours
+}
+
+async def check_service_cooldown(user_id: str, service_type: str) -> dict:
+    """
+    Check if user is in cooldown period for a service.
+    Returns: {"allowed": True/False, "wait_hours": remaining_hours, "last_request": datetime}
+    """
+    cooldown_hours = COOLDOWN_HOURS.get(service_type, 24)
+    cooldown_delta = timedelta(hours=cooldown_hours)
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - cooldown_delta
+    
+    # Collection mapping for each service
+    collection_map = {
+        "subscription": "subscriptions",
+        "bank_transfer": "bank_withdrawal_requests",
+        "bill_payment": "bill_payment_requests",
+        "gift_voucher": "gift_voucher_requests",
+        "product_order": "product_orders",
+    }
+    
+    collection_name = collection_map.get(service_type)
+    if not collection_name:
+        return {"allowed": True, "wait_hours": 0, "last_request": None}
+    
+    # Find last successful/pending request within cooldown period
+    collection = db[collection_name]
+    
+    # Query for recent requests (not rejected/failed)
+    query = {
+        "user_id": user_id,
+        "status": {"$nin": ["rejected", "failed", "cancelled"]},
+    }
+    
+    # Find the most recent request
+    last_request = await collection.find_one(
+        query,
+        sort=[("created_at", -1)]
+    )
+    
+    if not last_request:
+        return {"allowed": True, "wait_hours": 0, "last_request": None}
+    
+    # Parse last request time
+    last_time = last_request.get("created_at")
+    if isinstance(last_time, str):
+        try:
+            last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+        except:
+            return {"allowed": True, "wait_hours": 0, "last_request": None}
+    
+    if not last_time:
+        return {"allowed": True, "wait_hours": 0, "last_request": None}
+    
+    # Ensure timezone aware
+    if last_time.tzinfo is None:
+        last_time = last_time.replace(tzinfo=timezone.utc)
+    
+    # Check if within cooldown period
+    if last_time > cutoff_time:
+        time_passed = now - last_time
+        remaining = cooldown_delta - time_passed
+        remaining_hours = remaining.total_seconds() / 3600
+        
+        return {
+            "allowed": False,
+            "wait_hours": round(remaining_hours, 1),
+            "wait_days": round(remaining_hours / 24, 1) if remaining_hours > 24 else None,
+            "last_request": last_time.isoformat(),
+            "cooldown_hours": cooldown_hours
+        }
+    
+    return {"allowed": True, "wait_hours": 0, "last_request": last_time.isoformat()}
+
+
 def check_region_access(user: dict, target_region: str = None) -> bool:
     """Check if user has access to target region (for sub_admin)"""
     if user.get("role") == "admin":
@@ -834,6 +917,43 @@ async def api_health_check():
         "service": "paras-reward-api",
         "version": "2.0"
     }
+
+
+# ========== SERVICE COOLDOWN CHECK API ==========
+@api_router.get("/service/cooldown/{user_id}/{service_type}")
+async def check_cooldown_status(user_id: str, service_type: str):
+    """
+    Check if user can use a service or is in cooldown period.
+    
+    service_type: subscription, bank_transfer, bill_payment, gift_voucher, product_order
+    
+    Returns: {"allowed": true/false, "wait_hours": X, "message": "..."}
+    """
+    valid_services = ["subscription", "bank_transfer", "bill_payment", "gift_voucher", "product_order"]
+    if service_type not in valid_services:
+        return {"allowed": True, "wait_hours": 0, "message": "Unknown service"}
+    
+    cooldown = await check_service_cooldown(user_id, service_type)
+    
+    if cooldown["allowed"]:
+        return {
+            "allowed": True,
+            "wait_hours": 0,
+            "message": "You can proceed with this service"
+        }
+    else:
+        wait_time = cooldown.get("wait_days") or f"{cooldown['wait_hours']:.1f} hours"
+        if isinstance(wait_time, float):
+            wait_time = f"{wait_time:.0f} days"
+        
+        return {
+            "allowed": False,
+            "wait_hours": cooldown["wait_hours"],
+            "wait_days": cooldown.get("wait_days"),
+            "last_request": cooldown.get("last_request"),
+            "message": f"Please wait {wait_time} before using this service again"
+        }
+
 
 @api_router.get("/health/db")
 async def db_health_check():
@@ -11275,6 +11395,7 @@ async def subscription_pay_with_prc(request: Request):
     """
     Pay for subscription using PRC from Available Redeem Limit.
     Formula: INR Price × 2 × Dynamic PRC Rate
+    Cooldown: 15 days between subscriptions
     """
     data = await request.json()
     user_id = data.get("user_id")
@@ -11284,6 +11405,15 @@ async def subscription_pay_with_prc(request: Request):
     
     if not user_id or not plan_name or not prc_amount:
         raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # CHECK COOLDOWN: 15 days between subscriptions
+    cooldown = await check_service_cooldown(user_id, "subscription")
+    if not cooldown["allowed"]:
+        wait_days = cooldown.get("wait_days", cooldown["wait_hours"] / 24)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {wait_days:.0f} days before purchasing another subscription."
+        )
     
     # Get dynamic PRC rate (same as used in frontend)
     prc_rate = await get_dynamic_prc_rate()
@@ -30739,6 +30869,14 @@ async def create_gift_voucher_request(request: Request):
     data = await request.json()
     user_id = data.get("user_id")
     denomination = int(data.get("denomination"))
+    
+    # ===== CHECK COOLDOWN: 24 hours between gift voucher requests =====
+    cooldown = await check_service_cooldown(user_id, "gift_voucher")
+    if not cooldown["allowed"]:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {cooldown['wait_hours']:.0f} hours before requesting another gift voucher."
+        )
     
     # ===== CHECK IF SERVICE IS ENABLED =====
     service_enabled = await check_service_enabled("gift_voucher")

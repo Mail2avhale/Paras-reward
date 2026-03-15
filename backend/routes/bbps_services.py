@@ -31,8 +31,64 @@ import time
 import logging
 import re
 import os
+from datetime import datetime, timezone, timedelta
 
 # Eko error handler was removed - define necessary constants/functions inline
+
+# Database reference (set by main server)
+db = None
+
+def set_db(database):
+    global db
+    db = database
+
+# Cooldown check for BBPS services (24 hours)
+async def check_bbps_cooldown(user_id: str) -> dict:
+    """Check if user can make a BBPS bill payment request (24 hour cooldown)"""
+    if not db or not user_id:
+        return {"allowed": True, "wait_hours": 0}
+    
+    cooldown_hours = 24
+    cooldown_delta = timedelta(hours=cooldown_hours)
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - cooldown_delta
+    
+    # Find last successful/pending request
+    last_request = await db.bill_payment_requests.find_one(
+        {
+            "user_id": user_id,
+            "status": {"$nin": ["rejected", "failed", "cancelled"]}
+        },
+        sort=[("created_at", -1)]
+    )
+    
+    if not last_request:
+        return {"allowed": True, "wait_hours": 0}
+    
+    last_time = last_request.get("created_at")
+    if isinstance(last_time, str):
+        try:
+            last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+        except:
+            return {"allowed": True, "wait_hours": 0}
+    
+    if not last_time:
+        return {"allowed": True, "wait_hours": 0}
+    
+    if last_time.tzinfo is None:
+        last_time = last_time.replace(tzinfo=timezone.utc)
+    
+    if last_time > cutoff_time:
+        time_passed = now - last_time
+        remaining = cooldown_delta - time_passed
+        remaining_hours = remaining.total_seconds() / 3600
+        return {
+            "allowed": False,
+            "wait_hours": round(remaining_hours, 1),
+            "last_request": last_time.isoformat()
+        }
+    
+    return {"allowed": True, "wait_hours": 0}
 EKO_ERROR_MESSAGES = {
     403: "Authentication failed",
     404: "Service not found",
@@ -282,6 +338,7 @@ class PayBillRequest(BaseModel):
     account: str
     amount: str
     mobile: str
+    user_id: Optional[str] = None  # For cooldown check
     sender_name: Optional[str] = "Customer"
     bill_fetch_response: Optional[str] = None  # Required when fetchBill=1
     payment_amount_breakup: Optional[str] = None  # For Credit Card BBPS - JSON string with billid and amount
@@ -922,6 +979,17 @@ async def pay_bill(data: PayBillRequest):
     
     Works for: Electricity, DTH, FASTag, EMI, Water, Mobile, etc.
     """
+    # ===== CHECK COOLDOWN: 24 hours between bill payments =====
+    if data.user_id:
+        cooldown = await check_bbps_cooldown(data.user_id)
+        if not cooldown["allowed"]:
+            return {
+                "success": False,
+                "status": 429,
+                "message": f"Please wait {cooldown['wait_hours']:.0f} hours before making another bill payment.",
+                "data": None
+            }
+    
     if not validate_bbps_config():
         return create_error_response(500, "Service configuration error", "Service temporarily unavailable.")
     
