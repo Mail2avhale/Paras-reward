@@ -539,7 +539,7 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         }
     except Exception as e:
         logging.error(f"P&L error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ========== EXPENSES ==========

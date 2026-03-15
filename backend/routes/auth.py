@@ -434,7 +434,7 @@ async def set_new_pin(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ========== LOGIN ==========
@@ -843,7 +843,7 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=f"Failed to send OTP: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
     
     return {"success": True, "message": "OTP sent successfully", "mobile": mobile[-4:]}
 
@@ -880,7 +880,7 @@ async def forgot_pin_verify_otp(request: VerifyOTPRequest):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=f"MSG91 API error: {str(e)}")
+        raise HTTPException(status_code=500, detail="SMS service error. Please try again.")
     
     user = await db.users.find_one({
         "$or": [
@@ -1287,7 +1287,7 @@ async def register_biometric_credential(user_id: str, device_name: str, credenti
         
     except Exception as e:
         logging.error(f"Biometric registration error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Failed to register biometric: {str(e)}")
+        raise HTTPException(status_code=400, detail="Biometric registration failed. Please try again.")
 
 
 @router.post("/biometric/login-options")

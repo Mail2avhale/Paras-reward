@@ -107,6 +107,54 @@ login_attempt_storage = defaultdict(lambda: {"count": 0, "reset_time": time.time
 # Security bearer
 security = HTTPBearer(auto_error=False)
 
+# ========== USER-FRIENDLY ERROR HANDLER ==========
+def get_user_friendly_error(error: Exception) -> str:
+    """Convert technical errors to user-friendly messages"""
+    error_str = str(error).lower()
+    
+    # Database errors
+    if "e11000" in error_str or "duplicate key" in error_str:
+        if "pan_number" in error_str:
+            return "This PAN number is already registered with another account."
+        if "aadhaar" in error_str:
+            return "This Aadhaar number is already registered with another account."
+        if "mobile" in error_str:
+            return "This mobile number is already registered."
+        if "email" in error_str:
+            return "This email is already registered."
+        return "This information is already registered with another account."
+    
+    if "timeout" in error_str or "timed out" in error_str:
+        return "Server is busy. Please try again in a few seconds."
+    
+    if "connection" in error_str or "network" in error_str:
+        return "Connection error. Please check your internet and try again."
+    
+    if "not found" in error_str:
+        return "The requested information was not found."
+    
+    if "insufficient" in error_str:
+        return "Insufficient balance. Please check your available balance."
+    
+    if "unauthorized" in error_str or "authentication" in error_str:
+        return "Session expired. Please login again."
+    
+    if "invalid" in error_str:
+        return "Invalid input. Please check your information and try again."
+    
+    if "rate limit" in error_str or "too many" in error_str:
+        return "Too many requests. Please wait a moment and try again."
+    
+    # Default message (hide technical details)
+    return "Something went wrong. Please try again. If the problem persists, contact support."
+
+def raise_friendly_error(status_code: int, error: Exception, context: str = ""):
+    """Raise HTTPException with user-friendly message"""
+    message = get_user_friendly_error(error)
+    if context:
+        logging.error(f"[{context}] {str(error)}")
+    raise HTTPException(status_code=status_code, detail=message)
+
 # ========== JWT UTILITIES ==========
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     """Create JWT access token"""
@@ -1192,7 +1240,7 @@ async def create_all_indexes():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database setup error. Please try again.")
 
 
 async def get_index_status():
@@ -1222,7 +1270,7 @@ async def get_index_status():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # Browser-friendly GET versions of admin APIs
@@ -1253,7 +1301,7 @@ async def admin_create_indexes():
         }
     except Exception as e:
         print(f"❌ Index creation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error creating indexes: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database setup error. Please try again.")
 
 @api_router.get("/admin/index-status")
 async def admin_index_status():
@@ -1266,7 +1314,7 @@ async def admin_index_status():
             "index_stats": stats
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def force_fix_get(identifier: str):
     """GET version of force-fix-user for easy browser access"""
@@ -1315,7 +1363,7 @@ async def clear_all_login_lockouts():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 async def diagnose_user_login(identifier: str):
@@ -1600,7 +1648,7 @@ async def clear_admin_cache():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/clear-public-settings-cache")
@@ -1617,7 +1665,7 @@ async def clear_public_settings_cache():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 async def get_admin_stats_live():
@@ -1701,7 +1749,7 @@ async def get_admin_stats_live():
             "sample_users": sample_users
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @app.get("/")
@@ -6115,7 +6163,7 @@ async def set_new_pin(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def login(
     request: Request,
@@ -6539,7 +6587,7 @@ async def forgot_pin_check_mobile(request: ForgotPinRequest):
                 raise HTTPException(status_code=400, detail=result.get("message", "Failed to send OTP"))
                 
     except httpx.RequestError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send OTP: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
     
     return {
         "success": True,
@@ -7244,7 +7292,7 @@ async def register_biometric_credential(
         
     except Exception as e:
         print(f"Biometric registration error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Failed to register biometric: {str(e)}")
+        raise HTTPException(status_code=400, detail="Biometric registration failed. Please try again.")
 
 async def get_biometric_login_options(email: str):
     """Get WebAuthn authentication options for biometric login"""
@@ -7531,7 +7579,7 @@ async def update_profile(uid: str, request: Request):
     except Exception as e:
         if "duplicate key" in str(e).lower():
             raise HTTPException(status_code=400, detail="This mobile number is already registered with another account")
-        raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
+        raise HTTPException(status_code=500, detail="Profile update failed. Please try again.")
     
     # Clear user cache
     await cache.delete(f"user_data:{uid}")
@@ -8417,7 +8465,7 @@ async def get_user_weekly_limits(uid: str):
         raise
     except Exception as e:
         logging.error(f"Error getting weekly limits: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/user/{uid}/redemption-stats")
@@ -8659,7 +8707,7 @@ async def get_user_redemption_stats(uid: str):
         raise
     except Exception as e:
         print(f"Error getting redemption stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== REFERRAL ROUTES (MOVED TO routes/referral.py) ==========
@@ -9105,7 +9153,7 @@ async def cleanup_fraudulent_razorpay_subscriptions(request: Request):
         raise
     except Exception as e:
         logging.error(f"Fraud cleanup error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay-delete-pending")
@@ -9151,7 +9199,7 @@ async def delete_pending_razorpay_orders(request: Request):
         raise
     except Exception as e:
         logging.error(f"Delete pending error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay/sync-pending")
@@ -9431,7 +9479,7 @@ async def search_razorpay_payment(request: Request):
         
     except Exception as e:
         logging.error(f"[SEARCH-PAYMENT] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay/manual-activate")
@@ -9611,7 +9659,7 @@ async def manual_activate_subscription(request: Request):
         raise
     except Exception as e:
         logging.error(f"[MANUAL-ACTIVATE] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay/bulk-sync-captured")
@@ -9814,7 +9862,7 @@ async def bulk_sync_captured_payments(request: Request):
         
     except Exception as e:
         logging.error(f"[BULK-SYNC] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay/sync-single")
@@ -9999,7 +10047,7 @@ async def sync_single_razorpay_order(request: Request):
         raise
     except Exception as e:
         logging.error(f"[SINGLE-SYNC] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/razorpay-delete-all")
@@ -10049,7 +10097,7 @@ async def delete_all_razorpay_orders(request: Request):
         raise
     except Exception as e:
         logging.error(f"Delete all error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/audit-logs/fraud-cleanup")
@@ -10176,7 +10224,7 @@ async def restore_users_from_vip_payments(request: Request):
         raise
     except Exception as e:
         logging.error(f"Restore error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/users-needing-restore")
@@ -10311,7 +10359,7 @@ async def recalculate_prc_balance(request: Request):
         raise
     except Exception as e:
         logging.error(f"PRC recalculation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/razorpay-fraud-preview")
@@ -10890,7 +10938,7 @@ async def get_subscription_analytics(period: str = "month"):
         }
     except Exception as e:
         print(f"Error in subscription analytics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def get_admin_subscription_pricing():
     """Admin: Get current subscription pricing"""
@@ -10975,7 +11023,7 @@ async def cleanup_database(request: Request):
         
     except Exception as e:
         logging.error(f"Database cleanup error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def get_database_stats():
     """Get database statistics"""
@@ -11089,7 +11137,7 @@ async def toggle_manual_subscription(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/update-prc-rate")
@@ -11131,7 +11179,7 @@ async def update_prc_rate(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-rate/manual-override")
@@ -11192,7 +11240,7 @@ async def set_manual_prc_rate_override(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-rate/current")
@@ -12206,7 +12254,7 @@ async def get_admin_vip_payments(status: str = None, page: int = 1, limit: int =
         
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/subscription/fraud-check/{user_id}")
@@ -12304,7 +12352,7 @@ async def check_subscription_fraud(user_id: str, days: int = 10):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 async def approve_vip_payment(payment_id: str, request: Request):
@@ -12588,7 +12636,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== VIP STATUS HELPER & MIGRATION ==========
@@ -12687,7 +12735,7 @@ async def migrate_vip_users_to_subscription(request: Request):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 async def get_vip_migration_status():
@@ -12839,7 +12887,7 @@ async def reject_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def delete_vip_payment(payment_id: str, request: Request):
     """Delete VIP payment (for mistakenly approved payments)"""
@@ -12911,7 +12959,7 @@ async def delete_vip_payment(payment_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== MARKETPLACE ROUTES - REMOVED ==========
@@ -16273,7 +16321,7 @@ async def get_all_service_toggles():
         
         return {"services": result, "updated_at": settings.get("service_toggles_updated_at") if settings else None}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/service-toggles/{service_key}")
 async def toggle_service(service_key: str, request: Request):
@@ -16328,7 +16376,7 @@ async def toggle_service(service_key: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/services/status")
 async def get_public_service_status():
@@ -16447,7 +16495,7 @@ async def update_dmt_limits(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error updating DMT limits: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/user/{user_id}/dmt-usage")
 async def get_user_dmt_usage(user_id: str):
@@ -16537,7 +16585,7 @@ async def get_user_dmt_usage(user_id: str):
         }
     except Exception as e:
         logging.error(f"Error getting user DMT usage: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def check_dmt_limits(user_id: str, amount: int) -> dict:
     """
@@ -16684,7 +16732,7 @@ async def update_redeem_settings(
         
     except Exception as e:
         logging.error(f"Error updating global redeem settings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
@@ -17074,7 +17122,7 @@ async def get_user_redeem_limit(user_id: str):
         }
     except Exception as e:
         logging.error(f"Error getting redeem limit: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 
@@ -17353,7 +17401,7 @@ async def get_prc_statement(
         
     except Exception as e:
         logging.error(f"Error getting PRC statement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/user/prc-statement/{user_id}/download")
@@ -17416,7 +17464,7 @@ async def download_prc_statement(
         
     except Exception as e:
         logging.error(f"Error downloading PRC statement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 
@@ -17512,7 +17560,7 @@ async def fix_double_subscriptions_preview():
         
     except Exception as e:
         logging.error(f"Error in fix_double_subscriptions_preview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/fix-double-subscriptions")
@@ -17593,7 +17641,7 @@ async def fix_double_subscriptions_execute(request: Request):
         
     except Exception as e:
         logging.error(f"Error in fix_double_subscriptions_execute: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== SECURITY ALERTS API ==========
 
@@ -23309,7 +23357,7 @@ async def get_admin_performance_report(date_from: Optional[str] = None, date_to:
         
     except Exception as e:
         logging.error(f"Error generating admin performance report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 async def get_analytics_overview():
@@ -24325,7 +24373,7 @@ async def get_manager_dashboard(uid: str):
             "recent_activities": activities
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/manager/users")
 async def get_manager_users(
@@ -24377,7 +24425,7 @@ async def get_manager_users(
             "limit": limit
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/kyc/approve")
 async def approve_kyc(uid: str, user_id: str):
@@ -24418,7 +24466,7 @@ async def approve_kyc(uid: str, user_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/kyc/reject")
 async def reject_kyc(request: Request, uid: str, user_id: str):
@@ -24463,7 +24511,7 @@ async def reject_kyc(request: Request, uid: str, user_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # Manager Orders routes - REMOVED (Marketplace removed)
 
@@ -24529,7 +24577,7 @@ async def get_sales_report(
             "daily_sales": daily_sales_list
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/manager/reports/users")
 async def get_users_report(
@@ -24601,7 +24649,7 @@ async def get_users_report(
             "daily_growth": daily_growth_list
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== PHASE 2: FINANCIAL MANAGEMENT ==========
 
@@ -24659,7 +24707,7 @@ async def get_manager_withdrawals(
             "total": len(all_withdrawals)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/withdrawals/{withdrawal_id}/approve")
 async def approve_withdrawal(withdrawal_id: str, request: Request, uid: str):
@@ -24712,7 +24760,7 @@ async def approve_withdrawal(withdrawal_id: str, request: Request, uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/withdrawals/{withdrawal_id}/reject")
 async def reject_withdrawal(withdrawal_id: str, request: Request, uid: str):
@@ -24779,7 +24827,7 @@ async def reject_withdrawal(withdrawal_id: str, request: Request, uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/manager/transactions")
 async def get_manager_transactions(
@@ -24812,7 +24860,7 @@ async def get_manager_transactions(
             "total": total
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== PHASE 2: COMMUNICATION TOOLS ==========
 
@@ -24887,7 +24935,7 @@ async def create_announcement(request: Request, uid: str):
             "recipients": len(notifications)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/manager/announcements")
 async def get_announcements(uid: str, skip: int = 0, limit: int = 50):
@@ -24907,7 +24955,7 @@ async def get_announcements(uid: str, skip: int = 0, limit: int = 50):
             "total": total
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== PHASE 3: SUPPORT TICKETS ==========
 
@@ -24946,7 +24994,7 @@ async def get_manager_tickets(
             "total": total
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/tickets/{ticket_id}")
 async def update_ticket(ticket_id: str, request: Request, uid: str):
@@ -25001,7 +25049,7 @@ async def update_ticket(ticket_id: str, request: Request, uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== VIP MEMBERSHIP APPROVAL ==========
 
@@ -25038,7 +25086,7 @@ async def get_vip_requests(
             "total": total
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/vip-requests/{payment_id}/approve")
 async def approve_vip_payment(payment_id: str, uid: str):
@@ -25102,7 +25150,7 @@ async def approve_vip_payment(payment_id: str, uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/manager/vip-requests/{payment_id}/reject")
 async def reject_vip_payment(payment_id: str, request: Request, uid: str):
@@ -25157,7 +25205,7 @@ async def reject_vip_payment(payment_id: str, request: Request, uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== END MANAGER DASHBOARD ENDPOINTS ==========
 
@@ -25199,7 +25247,7 @@ async def get_social_media_settings():
             "whatsapp": settings.get("whatsapp", "")
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/social-media-settings")
 async def update_social_media_settings(settings: SocialMediaSettings):
@@ -25229,7 +25277,7 @@ async def update_social_media_settings(settings: SocialMediaSettings):
             "settings": settings.model_dump()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== END ADMIN SETTINGS ENDPOINTS ==========
 
@@ -25332,7 +25380,7 @@ async def get_prc_analytics():
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/prc-analytics/detailed")
 async def get_detailed_prc_analytics(period: str = "month"):
@@ -25563,7 +25611,7 @@ async def get_detailed_prc_analytics(period: str = "month"):
         
     except Exception as e:
         logging.error(f"Error in detailed PRC analytics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== END ADMIN PRC ANALYTICS ENDPOINTS ==========
 
@@ -25644,7 +25692,7 @@ async def get_comprehensive_audit_logs(
             "suspicious_activities": suspicious
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/audit/log-action")
 async def log_admin_action_endpoint(request: Request):
@@ -25686,7 +25734,7 @@ async def log_admin_action_endpoint(request: Request):
         
         return {"success": True, "log_id": log_entry["log_id"]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/audit/user-timeline/{user_id}")
 async def get_user_audit_timeline(user_id: str, limit: int = 100):
@@ -25749,7 +25797,7 @@ async def get_user_audit_timeline(user_id: str, limit: int = 100):
             "total_activities": len(timeline)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/audit/change-history/{entity_type}/{entity_id}")
 async def get_entity_change_history(entity_type: str, entity_id: str):
@@ -25771,7 +25819,7 @@ async def get_entity_change_history(entity_type: str, entity_id: str):
             "total_changes": len(changes)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/audit/alerts")
 async def get_audit_alerts(unread_only: bool = True):
@@ -25786,7 +25834,7 @@ async def get_audit_alerts(unread_only: bool = True):
             "unread_count": unread_count
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/audit/alerts/{alert_id}/read")
 async def mark_alert_read(alert_id: str):
@@ -25798,7 +25846,7 @@ async def mark_alert_read(alert_id: str):
         )
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== 2. PROFIT & LOSS + EXPENSE MANAGEMENT ====================
 
@@ -26012,7 +26060,7 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         }
     except Exception as e:
         logging.error(f"Error in P&L statement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def add_expense(request: Request):
     """Add a new expense entry"""
@@ -26051,7 +26099,7 @@ async def add_expense(request: Request):
         
         return {"success": True, "expense_id": expense["expense_id"]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def get_expenses(
     page: int = 1,
@@ -26092,7 +26140,7 @@ async def get_expenses(
             "category_summary": [{"category": c["_id"], "total": c["total"], "count": c["count"]} for c in category_summary]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def update_expense(expense_id: str, request: Request):
     """Update an expense entry"""
@@ -26125,7 +26173,7 @@ async def update_expense(expense_id: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def delete_expense(expense_id: str, admin_id: str = None):
     """Delete an expense entry"""
@@ -26147,7 +26195,7 @@ async def delete_expense(expense_id: str, admin_id: str = None):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/finance/other-income")
 async def add_other_income(request: Request):
@@ -26168,7 +26216,7 @@ async def add_other_income(request: Request):
         await db.other_income.insert_one(income)
         return {"success": True, "income_id": income["income_id"]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== COMPANY MASTER WALLETS ====================
 
@@ -26214,7 +26262,7 @@ async def get_company_wallets():
             "total_balance": sum(w.get("balance", 0) for w in wallets)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def transfer_company_wallet(request: Request):
     """Transfer amount between company wallets"""
@@ -26264,7 +26312,7 @@ async def transfer_company_wallet(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def adjust_company_wallet(request: Request):
     """Manual credit/debit to company wallet"""
@@ -26309,7 +26357,7 @@ async def adjust_company_wallet(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== ADS INCOME MODULE ====================
 
@@ -26342,7 +26390,7 @@ async def get_ads_income(page: int = 1, limit: int = 20):
             "summary": summary
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def add_ads_income(request: Request):
     """Add ads income entry (manual)"""
@@ -26376,7 +26424,7 @@ async def add_ads_income(request: Request):
         
         return {"success": True, "entry_id": entry["entry_id"]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def delete_ads_income(entry_id: str):
     """Delete ads income entry"""
@@ -26396,7 +26444,7 @@ async def delete_ads_income(entry_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== FIXED EXPENSES MODULE ====================
 
@@ -26430,7 +26478,7 @@ async def get_fixed_expenses(page: int = 1, limit: int = 20, month: str = None):
             "monthly_summary": monthly_summary
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def add_fixed_expense(request: Request):
     """Add fixed expense entry"""
@@ -26455,7 +26503,7 @@ async def add_fixed_expense(request: Request):
         await db.fixed_expenses.insert_one(expense)
         return {"success": True, "expense_id": expense["expense_id"]}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def update_fixed_expense(expense_id: str, request: Request):
     """Update fixed expense"""
@@ -26478,7 +26526,7 @@ async def update_fixed_expense(expense_id: str, request: Request):
         )
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== FRAUD DETECTION & RISK CONTROL ====================
 
@@ -26511,7 +26559,7 @@ async def get_fraud_alerts(page: int = 1, limit: int = 20, status: str = None):
             "stats": stats
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/fraud/detect")
 async def run_fraud_detection():
@@ -26620,7 +26668,7 @@ async def run_fraud_detection():
             "alert_ids": alerts_created
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/fraud/alert/{alert_id}")
 async def update_fraud_alert(alert_id: str, request: Request):
@@ -26658,7 +26706,7 @@ async def update_fraud_alert(alert_id: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/fraud/freeze-wallet/{uid}")
 async def freeze_user_wallet(uid: str, request: Request):
@@ -26692,7 +26740,7 @@ async def freeze_user_wallet(uid: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/fraud/unfreeze-wallet/{uid}")
 async def unfreeze_user_wallet(uid: str, request: Request):
@@ -26720,7 +26768,7 @@ async def unfreeze_user_wallet(uid: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== EXPORT & REPORTING ====================
 
@@ -26784,7 +26832,7 @@ async def export_profit_loss(year: int = None, month: int = None, format: str = 
             headers={"Content-Disposition": f"attachment; filename=PL_{target_year}_{target_month:02d}.csv"}
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def export_user_ledger(uid: str, format: str = "csv"):
     """Export user transaction ledger as CSV"""
@@ -26818,7 +26866,7 @@ async def export_user_ledger(uid: str, format: str = "csv"):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def export_company_wallets(format: str = "csv"):
     """Export company wallet statements as CSV"""
@@ -26855,7 +26903,7 @@ async def export_company_wallets(format: str = "csv"):
             headers={"Content-Disposition": "attachment; filename=company_wallets.csv"}
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== MONTHLY P&L SNAPSHOT ====================
 
@@ -26934,7 +26982,7 @@ async def create_monthly_pl_snapshot():
         
         return {"success": True, "snapshot": snapshot}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def get_pl_snapshots(limit: int = 12):
     """Get historical P&L snapshots"""
@@ -26945,7 +26993,7 @@ async def get_pl_snapshots(limit: int = 12):
         
         return {"snapshots": snapshots}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== 3. LIQUIDITY MANAGEMENT ====================
 
@@ -27207,7 +27255,7 @@ async def get_liquidity_dashboard():
         }
     except Exception as e:
         logging.error(f"Error in liquidity dashboard: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/liquidity/update-reserves")
 async def update_liquidity_reserves(request: Request):
@@ -27248,7 +27296,7 @@ async def update_liquidity_reserves(request: Request):
         
         return {"success": True, "reserves": reserves}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/liquidity/alerts")
 async def get_liquidity_alerts():
@@ -27261,7 +27309,7 @@ async def get_liquidity_alerts():
         
         return {"alerts": alerts}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/liquidity/alert/resolve/{alert_id}")
 async def resolve_liquidity_alert(alert_id: str, request: Request):
@@ -27281,7 +27329,7 @@ async def resolve_liquidity_alert(alert_id: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ========== END ADVANCED ADMIN SYSTEMS ==========
 
@@ -29562,7 +29610,7 @@ async def clear_all_free_users_prc():
         
     except Exception as e:
         logging.error(f"Error clearing free users PRC: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/burn-statistics")
 async def get_burn_statistics():
@@ -36802,7 +36850,7 @@ async def get_activity_stats():
             "most_active_users": active_users
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========================================
@@ -36875,7 +36923,7 @@ async def get_capital_entries(
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/capital/entries")
 async def create_capital_entry(entry: CapitalEntryRequest):
@@ -36902,7 +36950,7 @@ async def create_capital_entry(entry: CapitalEntryRequest):
         
         return {"success": True, "entry_id": entry_doc["entry_id"], "message": "Entry created successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/capital/entries/{entry_id}")
 async def update_capital_entry(entry_id: str, entry: CapitalEntryRequest):
@@ -36931,7 +36979,7 @@ async def update_capital_entry(entry_id: str, entry: CapitalEntryRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.delete("/admin/capital/entries/{entry_id}")
 async def delete_capital_entry(entry_id: str):
@@ -36945,7 +36993,7 @@ async def delete_capital_entry(entry_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/capital/repayment")
 async def record_repayment(repayment: RepaymentRequest):
@@ -36992,7 +37040,7 @@ async def record_repayment(repayment: RepaymentRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/capital/summary")
 async def get_capital_summary():
@@ -37042,7 +37090,7 @@ async def get_capital_summary():
             "pending_by_source": sorted(pending_by_source, key=lambda x: x["remaining"], reverse=True)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ==================== FINTECH ACCOUNTING SYSTEM ====================
@@ -37098,7 +37146,7 @@ async def get_prc_mint_ledger(
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== PRC BURN LEDGER (All PRC Outflows) ==========
@@ -37152,7 +37200,7 @@ async def get_prc_burn_ledger(
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== LIABILITY LEDGER (INR Redemption Tracking) ==========
@@ -37236,7 +37284,7 @@ async def get_liability_ledger(page: int = 1, limit: int = 50):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== CONVERSION RATE MANAGEMENT ==========
@@ -37257,7 +37305,7 @@ async def get_conversion_rate():
             "history": history
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/accounting/conversion-rate")
@@ -37307,7 +37355,7 @@ async def update_conversion_rate(request: Request):
             "new_rate": new_rate
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== RESERVE FUND MANAGEMENT ==========
@@ -37361,7 +37409,7 @@ async def get_reserve_fund():
             "history": history
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/accounting/reserve-fund/add")
@@ -37394,7 +37442,7 @@ async def add_to_reserve_fund(request: Request):
         
         return {"success": True, "message": f"₹{amount} added to reserve fund"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/accounting/reserve-fund/settings")
@@ -37415,7 +37463,7 @@ async def update_reserve_fund_settings(request: Request):
         
         return {"success": True, "message": f"Reserve fund percentage set to {percentage}%"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== DAILY SYSTEM SUMMARY (Auto-calculated) ==========
@@ -37578,7 +37626,7 @@ async def get_daily_summaries(days: int = 30):
             "latest": summaries[0] if summaries else None
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/accounting/daily-summary/generate")
@@ -37591,7 +37639,7 @@ async def trigger_daily_summary(request: Request):
         summary = await generate_daily_summary(target_date)
         return {"success": True, "summary": summary}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== USER COST ANALYSIS (Loss-making Users) ==========
@@ -37680,7 +37728,7 @@ async def get_user_cost_analysis(page: int = 1, limit: int = 50, filter_type: st
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== 180-DAY PRC EXPIRY FOR INACTIVE USERS ==========
@@ -37752,7 +37800,7 @@ async def trigger_inactive_prc_burn():
         result = await burn_inactive_user_prc()
         return {"success": True, "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== ACCOUNT HARD DELETE SCHEDULED TASK ==========
@@ -37827,7 +37875,7 @@ async def trigger_hard_delete_expired():
         result = await hard_delete_expired_accounts()
         return {"success": True, "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/accounts/pending-deletions")
@@ -37844,7 +37892,7 @@ async def get_pending_deletions():
             "accounts": pending
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== MASTER ACCOUNTING DASHBOARD ==========
@@ -37972,7 +38020,7 @@ async def get_master_accounting_dashboard():
             "latest_summary": latest_summary
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== ACCOUNTING SETTINGS ==========
@@ -37997,7 +38045,7 @@ async def get_accounting_settings():
             return {**default_settings, **settings["accounting_settings"]}
         return default_settings
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/accounting/settings")
@@ -38019,7 +38067,7 @@ async def update_accounting_settings(request: Request):
         
         return {"success": True, "message": "Accounting settings updated"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
@@ -38110,7 +38158,7 @@ async def get_user_permissions(uid: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/user/{uid}/permissions")
 async def update_user_permissions(uid: str, request: Request):
@@ -38139,7 +38187,7 @@ async def update_user_permissions(uid: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== VIDEO ADS ENDPOINTS ==========
@@ -38195,7 +38243,7 @@ async def create_video_ad(request: VideoAdRequest):
             "message": "Video ad created successfully"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/video-ads")
 async def get_all_video_ads(
@@ -38218,7 +38266,7 @@ async def get_all_video_ads(
             "total": len(video_ads)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/video-ads/active")
 async def get_active_video_ads(
@@ -38250,7 +38298,7 @@ async def get_active_video_ads(
             "video_ads": video_ads
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/video-ads/{video_ad_id}")
 async def update_video_ad(video_ad_id: str, request: VideoAdRequest):
@@ -38274,7 +38322,7 @@ async def update_video_ad(video_ad_id: str, request: VideoAdRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.delete("/admin/video-ads/{video_ad_id}")
 async def delete_video_ad(video_ad_id: str):
@@ -38292,7 +38340,7 @@ async def delete_video_ad(video_ad_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/video-ads/{video_ad_id}/track")
 async def track_video_ad_event(
@@ -38327,7 +38375,7 @@ async def track_video_ad_event(
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ============================================
@@ -38372,7 +38420,7 @@ async def update_policies(data: dict):
         )
         return {"message": "Policies updated successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/policies/{policy_type}")
 async def get_public_policy(policy_type: str):
@@ -38389,7 +38437,7 @@ async def get_public_policy(policy_type: str):
             "policy_type": policy_type
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ============================================
@@ -39167,7 +39215,7 @@ async def get_user_security_info(uid: str):
         raise
     except Exception as e:
         logging.error(f"Error fetching security info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.put("/user/settings/{uid}")
@@ -39208,7 +39256,7 @@ async def update_user_settings(uid: str, request: Request):
         raise
     except Exception as e:
         logging.error(f"Error updating user settings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/user/statement/{uid}")
@@ -39303,7 +39351,7 @@ async def get_user_statement(uid: str, format: str = "csv", period: str = "month
         raise
     except Exception as e:
         logging.error(f"Error generating statement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== PRC ECONOMY EMERGENCY CONTROLS ==========
@@ -39346,7 +39394,7 @@ async def get_prc_economy_status():
         }
     except Exception as e:
         logging.error(f"Error fetching PRC economy status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/emergency-stop")
@@ -39409,7 +39457,7 @@ async def emergency_stop_mining(request: Request):
         }
     except Exception as e:
         logging.error(f"Error in emergency stop: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/resume-mining")
@@ -39457,7 +39505,7 @@ async def resume_mining(request: Request):
         }
     except Exception as e:
         logging.error(f"Error resuming mining: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/burn-preview")
@@ -39533,7 +39581,7 @@ async def preview_prc_burn(request: Request):
         }
     except Exception as e:
         logging.error(f"Error in burn preview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/execute-burn")
@@ -39646,7 +39694,7 @@ async def execute_prc_burn(request: Request):
         }
     except Exception as e:
         logging.error(f"Error executing burn: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/circuit-breaker-settings")
@@ -39673,7 +39721,7 @@ async def update_circuit_breaker_settings(request: Request):
         return {"success": True, "message": "Circuit breaker settings updated"}
     except Exception as e:
         logging.error(f"Error updating circuit breaker settings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== USER DASHBOARD CARD PREFERENCES ==========
@@ -39724,7 +39772,7 @@ async def update_user_dashboard_layout(uid: str, request: Request):
         return {"success": True, "message": "Dashboard layout saved"}
     except Exception as e:
         logging.error(f"Error updating dashboard layout: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # =====================================================
@@ -39800,7 +39848,7 @@ async def get_cash_book(page: int = 1, limit: int = 50):
         }
     except Exception as e:
         logging.error(f"Error getting cash book: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/accounting/bank-book")
 async def get_bank_book(page: int = 1, limit: int = 50):
@@ -39858,7 +39906,7 @@ async def get_bank_book(page: int = 1, limit: int = 50):
         }
     except Exception as e:
         logging.error(f"Error getting bank book: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/cash-book/entry")
 async def add_cash_entry(entry: CashBankEntry, admin_id: str = ""):
@@ -39896,7 +39944,7 @@ async def add_cash_entry(entry: CashBankEntry, admin_id: str = ""):
         return {"success": True, "message": "Cash entry added", "entry_id": cash_entry["entry_id"]}
     except Exception as e:
         logging.error(f"Error adding cash entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/bank-book/entry")
 async def add_bank_entry(entry: CashBankEntry, admin_id: str = ""):
@@ -39934,7 +39982,7 @@ async def add_bank_entry(entry: CashBankEntry, admin_id: str = ""):
         return {"success": True, "message": "Bank entry added", "entry_id": bank_entry["entry_id"]}
     except Exception as e:
         logging.error(f"Error adding bank entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/transfer")
 async def transfer_between_accounts(transfer: TransferEntry, admin_id: str = ""):
@@ -40000,7 +40048,7 @@ async def transfer_between_accounts(transfer: TransferEntry, admin_id: str = "")
         raise
     except Exception as e:
         logging.error(f"Error in transfer: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/set-opening-balance")
 async def set_opening_balance(account_type: str, amount: float, bank_name: str = "", account_number: str = ""):
@@ -40025,7 +40073,7 @@ async def set_opening_balance(account_type: str, amount: float, bank_name: str =
         return {"success": True, "message": f"{account_type.title()} opening balance set to ₹{amount}"}
     except Exception as e:
         logging.error(f"Error setting opening balance: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def get_accounting_summary():
     """Get summary of all accounts"""
@@ -40076,7 +40124,7 @@ async def get_accounting_summary():
         }
     except Exception as e:
         logging.error(f"Error getting accounting summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== CHART OF ACCOUNTS ====================
 # Standard accounting structure for the platform
@@ -40214,7 +40262,7 @@ async def get_chart_of_accounts():
         }
     except Exception as e:
         logging.error(f"Error getting chart of accounts: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== CAPITAL & OWNER'S EQUITY MANAGEMENT ====================
 
@@ -40263,7 +40311,7 @@ async def get_capital_summary():
         }
     except Exception as e:
         logging.error(f"Error getting capital summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/capital/entry")
 async def add_capital_entry(
@@ -40352,7 +40400,7 @@ async def add_capital_entry(
         raise
     except Exception as e:
         logging.error(f"Error adding capital entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== TRIAL BALANCE ====================
 
@@ -40493,7 +40541,7 @@ async def get_trial_balance(as_of_date: str = None):
         }
     except Exception as e:
         logging.error(f"Error generating trial balance: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== JOURNAL ENTRIES (Double Entry) ====================
 
@@ -40532,7 +40580,7 @@ async def get_journal_entries(page: int = 1, limit: int = 50):
         }
     except Exception as e:
         logging.error(f"Error getting journal entries: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/journal-entry")
 async def add_journal_entry(
@@ -40579,7 +40627,7 @@ async def add_journal_entry(
         raise
     except Exception as e:
         logging.error(f"Error adding journal entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PRC LEDGER SYSTEM ====================
 # PRC Rate - DYNAMIC from economy system
@@ -40684,7 +40732,7 @@ async def get_prc_ledger(page: int = 1, limit: int = 50, filter_type: str = "all
         }
     except Exception as e:
         logging.error(f"Error getting PRC ledger: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/sync-prc-to-books")
 async def sync_prc_to_cash_book(admin_id: str = ""):
@@ -40775,7 +40823,7 @@ async def sync_prc_to_cash_book(admin_id: str = ""):
         }
     except Exception as e:
         logging.error(f"Error syncing PRC to books: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== MONTHLY FINANCIAL REPORTS ====================
 
@@ -40862,7 +40910,7 @@ async def get_profit_loss_statement(month: int = None, year: int = None):
         }
     except Exception as e:
         logging.error(f"Error generating P&L statement: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/reports/balance-sheet")
 async def get_balance_sheet():
@@ -40940,7 +40988,7 @@ async def get_balance_sheet():
         }
     except Exception as e:
         logging.error(f"Error generating balance sheet: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/reports/prc-flow")
 async def get_prc_flow_report(month: int = None, year: int = None):
@@ -41059,7 +41107,7 @@ async def get_prc_flow_report(month: int = None, year: int = None):
         }
     except Exception as e:
         logging.error(f"Error generating PRC flow report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== AUTO EXPENSE CATEGORIZATION ====================
 
@@ -41158,7 +41206,7 @@ async def auto_categorize_entry(description: str, amount: float = 0):
         }
     except Exception as e:
         logging.error(f"Error auto-categorizing: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.get("/admin/accounting/category-suggestions")
 async def get_category_suggestions():
@@ -41236,7 +41284,7 @@ async def get_accounts_receivable(status: str = "all", page: int = 1, limit: int
         }
     except Exception as e:
         logging.error(f"Error getting accounts receivable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/receivables")
 async def create_receivable(
@@ -41281,7 +41329,7 @@ async def create_receivable(
         raise
     except Exception as e:
         logging.error(f"Error creating receivable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/accounting/receivables/{invoice_id}/status")
 async def update_receivable_status(invoice_id: str, status: str, admin_id: str = ""):
@@ -41325,7 +41373,7 @@ async def update_receivable_status(invoice_id: str, status: str, admin_id: str =
         raise
     except Exception as e:
         logging.error(f"Error updating receivable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: ACCOUNTS PAYABLE (AP) ====================
 
@@ -41388,7 +41436,7 @@ async def get_accounts_payable(status: str = "all", page: int = 1, limit: int = 
         }
     except Exception as e:
         logging.error(f"Error getting accounts payable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/payables")
 async def create_payable(
@@ -41433,7 +41481,7 @@ async def create_payable(
         raise
     except Exception as e:
         logging.error(f"Error creating payable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.put("/admin/accounting/payables/{bill_id}/status")
 async def update_payable_status(bill_id: str, status: str, payment_method: str = "cash", admin_id: str = ""):
@@ -41480,7 +41528,7 @@ async def update_payable_status(bill_id: str, status: str, payment_method: str =
         raise
     except Exception as e:
         logging.error(f"Error updating payable: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: BANK RECONCILIATION ====================
 
@@ -41550,7 +41598,7 @@ async def get_bank_reconciliation(month: int = None, year: int = None):
         }
     except Exception as e:
         logging.error(f"Error getting bank reconciliation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/bank-reconciliation/reconcile")
 async def reconcile_entry(entry_id: str, bank_ref: str = "", admin_id: str = ""):
@@ -41569,7 +41617,7 @@ async def reconcile_entry(entry_id: str, bank_ref: str = "", admin_id: str = "")
         raise
     except Exception as e:
         logging.error(f"Error reconciling entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: GST/TAX TRACKING ====================
 
@@ -41640,7 +41688,7 @@ async def get_gst_summary(month: int = None, year: int = None):
         }
     except Exception as e:
         logging.error(f"Error getting GST summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/gst-entry")
 async def add_gst_entry(
@@ -41691,7 +41739,7 @@ async def add_gst_entry(
         raise
     except Exception as e:
         logging.error(f"Error adding GST entry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: BUDGET VS ACTUAL ====================
 
@@ -41780,7 +41828,7 @@ async def get_budget_vs_actual(month: int = None, year: int = None):
         }
     except Exception as e:
         logging.error(f"Error getting budget vs actual: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 @api_router.post("/admin/accounting/budget")
 async def set_budget(
@@ -41810,7 +41858,7 @@ async def set_budget(
         }
     except Exception as e:
         logging.error(f"Error setting budget: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: FINANCIAL RATIOS ====================
 
@@ -41925,7 +41973,7 @@ async def get_financial_ratios():
         }
     except Exception as e:
         logging.error(f"Error calculating financial ratios: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 # ==================== PHASE 2: AUDIT TRAIL ====================
 
@@ -41965,7 +42013,7 @@ async def get_audit_trail(page: int = 1, limit: int = 50, action_type: str = "al
         }
     except Exception as e:
         logging.error(f"Error getting audit trail: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 async def log_audit_event(
     user_id: str,
@@ -42094,7 +42142,7 @@ async def export_data_backup(
         
     except Exception as e:
         logging.error(f"Error exporting backup: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/backup/stats")
@@ -42141,7 +42189,7 @@ async def get_backup_stats():
         
     except Exception as e:
         logging.error(f"Error getting backup stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/archive/execute")
@@ -42223,7 +42271,7 @@ async def execute_data_archive(months_old: int = 6):
         
     except Exception as e:
         logging.error(f"Error executing archive: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/archive/history")
@@ -42237,7 +42285,7 @@ async def get_archive_history():
         }
     except Exception as e:
         logging.error(f"Error getting archive history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/archive/view/{collection}")
@@ -42267,7 +42315,7 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
         
     except Exception as e:
         logging.error(f"Error viewing archived data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 
@@ -42296,7 +42344,7 @@ async def get_prc_burn_control_settings():
         }
     except Exception as e:
         logging.error(f"Error getting PRC burn control settings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-burn-control/settings")
@@ -42341,7 +42389,7 @@ async def save_prc_burn_control_settings(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error saving PRC burn control settings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-burn-control/stats")
@@ -42392,7 +42440,7 @@ async def get_prc_burn_control_stats():
         }
     except Exception as e:
         logging.error(f"Error getting PRC burn control stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-burn-control/execute")
@@ -42511,7 +42559,7 @@ async def execute_prc_burn_control(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error executing PRC burn control: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/smart-burn")
@@ -42692,7 +42740,7 @@ async def get_burn_history(
         
     except Exception as e:
         logging.error(f"[BURN HISTORY] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-burn-control/retry")
@@ -42734,7 +42782,7 @@ async def retry_failed_burn(request: Request):
         
     except Exception as e:
         logging.error(f"[BURN RETRY] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # ========== SCHEDULER HEALTH CHECK ==========
@@ -42810,7 +42858,7 @@ async def get_prc_economy_dashboard():
         return {"error": "PRC Economy module not found", "success": False}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Dashboard error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-economy/rate")
@@ -42832,7 +42880,7 @@ async def get_admin_prc_economy_rate():
         return {"error": "PRC Economy module not found", "final_rate": 10}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Rate calculation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-economy/redeem-pressure")
@@ -42852,7 +42900,7 @@ async def get_prc_redeem_pressure():
         return {"error": "PRC Economy module not found", "status": "unknown"}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Redeem pressure error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-economy/stability")
@@ -42880,7 +42928,7 @@ async def get_prc_stability_index():
         return {"error": "PRC Economy module not found", "stability_score": 50}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Stability index error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-economy/emergency-check")
@@ -42902,7 +42950,7 @@ async def check_prc_emergency():
         return {"error": "PRC Economy module not found", "is_emergency": False}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Emergency check error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.get("/admin/prc-economy/whale-wallets")
@@ -42926,7 +42974,7 @@ async def get_prc_whale_wallets():
         return {"error": "PRC Economy module not found", "whales": []}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Whale wallets error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 
@@ -42944,7 +42992,7 @@ async def get_emergency_pause_status_api():
         return {"error": "PRC Economy module not found", "is_paused": False}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Pause status error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/pause")
@@ -42964,7 +43012,7 @@ async def activate_emergency_pause_api(reason: str = "Manual admin pause"):
         return {"error": "PRC Economy module not found", "success": False}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Manual pause error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/resume")
@@ -42981,7 +43029,7 @@ async def deactivate_emergency_pause_api():
         return {"error": "PRC Economy module not found", "success": False}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Manual resume error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 @api_router.post("/admin/prc-economy/check-and-pause")
@@ -42998,7 +43046,7 @@ async def trigger_emergency_check_api():
         return {"error": "PRC Economy module not found", "action": "error"}
     except Exception as e:
         logging.error(f"[PRC ECONOMY] Manual check error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 
@@ -43109,7 +43157,7 @@ async def revert_payment_request_status(request: Request):
         raise
     except Exception as e:
         logging.error(f"Error reverting payment request status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
 
 # Include all API routes (must be after all route definitions)

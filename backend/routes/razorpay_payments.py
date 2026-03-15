@@ -117,7 +117,7 @@ async def toggle_razorpay_gateway(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 @router.post("/create-order")
@@ -174,7 +174,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
         
     except Exception as e:
         logging.error(f"Razorpay order creation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create payment order. Please try again.")
 
 
 @router.post("/verify-payment")
@@ -472,7 +472,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         raise
     except Exception as e:
         logging.error(f"[RAZORPAY] Payment verification failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Payment verification failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Payment verification failed. Please contact support if amount was deducted.")
 
 
 @router.post("/webhook")
@@ -862,7 +862,7 @@ async def update_order_status(request: Request):
         raise
     except Exception as e:
         logging.error(f"Update order status error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 
@@ -1093,7 +1093,7 @@ async def sync_payments_from_razorpay(request: Request):
         raise
     except Exception as e:
         logging.error(f"Sync error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 
@@ -1318,7 +1318,7 @@ async def fix_user_subscription(request: Request):
         raise
     except Exception as e:
         logging.error(f"[FIX] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 
@@ -1437,7 +1437,7 @@ async def manual_activate_by_email(request: Request):
         raise
     except Exception as e:
         logging.error(f"[MANUAL] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 
@@ -1517,7 +1517,7 @@ async def find_unfixed_subscriptions(request: Request):
         raise
     except Exception as e:
         logging.error(f"[FIND-UNFIXED] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 @router.post("/admin/batch-fix-users")
@@ -1634,7 +1634,7 @@ async def batch_fix_users(request: Request):
         raise
     except Exception as e:
         logging.error(f"[BATCH-FIX] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== FIX DOUBLE-ACTIVATED SUBSCRIPTIONS ====================
@@ -1812,7 +1812,7 @@ async def fix_double_activation_subscriptions(request: Request):
         raise
     except Exception as e:
         logging.error(f"[FIX-DOUBLE] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 @router.post("/admin/fix-specific-user")
@@ -1933,4 +1933,4 @@ async def fix_specific_user_subscription(request: Request):
         raise
     except Exception as e:
         logging.error(f"[FIX-USER] Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")

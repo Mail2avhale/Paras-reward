@@ -58,7 +58,7 @@ async def get_subscription_income_ledger(page: int = 1, limit: int = 50, start_d
             "pages": (total + limit - 1) // limit
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/subscription-income")
 async def add_subscription_income(request: Request):
@@ -78,7 +78,7 @@ async def add_subscription_income(request: Request):
         await db.subscription_income_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/commission-income")
 async def get_commission_income_ledger(page: int = 1, limit: int = 50, source_type: str = None):
@@ -106,7 +106,7 @@ async def get_commission_income_ledger(page: int = 1, limit: int = 50, source_ty
             "pages": (total + limit - 1) // limit
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/commission-income")
 async def add_commission_income(request: Request):
@@ -129,7 +129,7 @@ async def add_commission_income(request: Request):
         await db.commission_income_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/penalty-income")
 async def get_penalty_income_ledger(page: int = 1, limit: int = 50):
@@ -146,7 +146,7 @@ async def get_penalty_income_ledger(page: int = 1, limit: int = 50):
         
         return {"entries": entries, "total": total, "totals": totals, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/penalty-income")
 async def add_penalty_income(request: Request):
@@ -169,7 +169,7 @@ async def add_penalty_income(request: Request):
         await db.penalty_income_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/interest-income")
 async def get_interest_income_ledger(page: int = 1, limit: int = 50):
@@ -186,7 +186,7 @@ async def get_interest_income_ledger(page: int = 1, limit: int = 50):
         
         return {"entries": entries, "total": total, "total_interest": total_interest, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/interest-income")
 async def add_interest_income(request: Request):
@@ -206,7 +206,7 @@ async def add_interest_income(request: Request):
         await db.interest_income_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/ad-revenue")
 async def get_ad_revenue_ledger(page: int = 1, limit: int = 50, platform: str = None):
@@ -228,7 +228,7 @@ async def get_ad_revenue_ledger(page: int = 1, limit: int = 50, platform: str = 
         
         return {"entries": entries, "total": total, "totals": totals, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/ad-revenue")
 async def add_ad_revenue(request: Request):
@@ -249,7 +249,7 @@ async def add_ad_revenue(request: Request):
         await db.ad_revenue_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== EXPENSE LEDGERS (₹ OUTFLOW) ====================
@@ -273,7 +273,7 @@ async def get_redeem_payout_ledger(page: int = 1, limit: int = 50, status: str =
         
         return {"entries": entries, "total": total, "totals_by_status": totals_result, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/redeem-payout")
 async def add_redeem_payout(request: Request):
@@ -294,7 +294,7 @@ async def add_redeem_payout(request: Request):
         await db.redeem_payout_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.put("/redeem-payout/{entry_id}")
 async def update_redeem_payout_status(entry_id: str, request: Request):
@@ -307,7 +307,7 @@ async def update_redeem_payout_status(entry_id: str, request: Request):
         )
         return {"success": result.modified_count > 0}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/expenses")
 async def get_expense_ledger(page: int = 1, limit: int = 50, expense_type: str = None):
@@ -328,7 +328,7 @@ async def get_expense_ledger(page: int = 1, limit: int = 50, expense_type: str =
         
         return {"entries": entries, "total": total, "totals_by_type": totals_result, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/expenses")
 async def add_expense(request: Request):
@@ -349,7 +349,7 @@ async def add_expense(request: Request):
         await db.expense_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== CASH & BANK LEDGERS ====================
@@ -373,7 +373,7 @@ async def get_cash_ledger(page: int = 1, limit: int = 50, start_date: str = None
         
         return {"entries": entries, "total": total, "current_balance": current_balance, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/cash")
 async def add_cash_entry(request: Request):
@@ -402,7 +402,7 @@ async def add_cash_entry(request: Request):
         await db.cash_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/bank")
 async def get_bank_ledger(page: int = 1, limit: int = 50, bank_name: str = None):
@@ -421,7 +421,7 @@ async def get_bank_ledger(page: int = 1, limit: int = 50, bank_name: str = None)
         
         return {"entries": entries, "total": total, "current_balance": current_balance, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/bank")
 async def add_bank_entry(request: Request):
@@ -456,7 +456,7 @@ async def add_bank_entry(request: Request):
         await db.bank_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== DEPOSIT & STOCKIST LEDGERS ====================
@@ -479,7 +479,7 @@ async def get_deposit_ledger(page: int = 1, limit: int = 50, status: str = None)
         
         return {"entries": entries, "total": total, "totals_by_status": totals_result, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/deposits")
 async def add_deposit(request: Request):
@@ -499,7 +499,7 @@ async def add_deposit(request: Request):
         await db.deposit_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/deposits/{deposit_id}/refund")
 async def refund_deposit(deposit_id: str, request: Request):
@@ -528,7 +528,7 @@ async def refund_deposit(deposit_id: str, request: Request):
         
         return {"success": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/renewal-fees")
 async def get_renewal_fees_ledger(page: int = 1, limit: int = 50):
@@ -545,7 +545,7 @@ async def get_renewal_fees_ledger(page: int = 1, limit: int = 50):
         
         return {"entries": entries, "total": total, "total_amount": total_amount, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/renewal-fees")
 async def add_renewal_fee(request: Request):
@@ -564,7 +564,7 @@ async def add_renewal_fee(request: Request):
         await db.renewal_fees_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== UTILITY TRANSACTION LEDGERS ====================
@@ -583,7 +583,7 @@ async def get_mobile_recharge_ledger(page: int = 1, limit: int = 50, status: str
         
         return {"entries": entries, "total": total, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/product-purchase")
 async def get_product_purchase_ledger(page: int = 1, limit: int = 50):
@@ -600,7 +600,7 @@ async def get_product_purchase_ledger(page: int = 1, limit: int = 50):
         
         return {"entries": entries, "total": total, "total_profit": total_profit, "page": page}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/product-purchase")
 async def add_product_purchase(request: Request):
@@ -627,7 +627,7 @@ async def add_product_purchase(request: Request):
         await db.product_purchase_ledger.insert_one(entry)
         return {"success": True, "entry": entry}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
 # ==================== SUMMARY & RECONCILIATION ====================
@@ -645,7 +645,7 @@ async def get_daily_cash_bank_summary(start_date: str = None, end_date: str = No
         summaries = await db.daily_cash_bank_summary.find(query, {"_id": 0}).sort("date", -1).limit(30).to_list(30)
         return {"summaries": summaries}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/daily-cash-bank-summary/generate")
 async def generate_daily_cash_bank_summary(request: Request):
@@ -700,7 +700,7 @@ async def generate_daily_cash_bank_summary(request: Request):
         
         return {"success": True, "summary": summary}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/profit-loss-summary")
 async def get_profit_loss_summary(start_date: str = None, end_date: str = None):
@@ -715,7 +715,7 @@ async def get_profit_loss_summary(start_date: str = None, end_date: str = None):
         summaries = await db.daily_profit_loss_summary.find(query, {"_id": 0}).sort("date", -1).limit(30).to_list(30)
         return {"summaries": summaries}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.post("/profit-loss-summary/generate")
 async def generate_profit_loss_summary(request: Request):
@@ -795,7 +795,7 @@ async def generate_profit_loss_summary(request: Request):
         
         return {"success": True, "summary": summary}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/balance-sheet")
 async def get_balance_sheet():
@@ -870,7 +870,7 @@ async def get_balance_sheet():
         
         return balance_sheet
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 @router.get("/master-summary")
 async def get_master_ledger_summary():
@@ -927,4 +927,4 @@ async def get_master_ledger_summary():
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
