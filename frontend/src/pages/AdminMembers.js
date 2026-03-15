@@ -45,6 +45,10 @@ const AdminMembers = () => {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Fetch dashboard data
   const fetchDashboard = useCallback(async () => {
@@ -68,7 +72,12 @@ const AdminMembers = () => {
   const fetchMembers = useCallback(async () => {
     try {
       setMembersLoading(true);
-      const params = { page, limit: 20 };
+      const params = { 
+        page, 
+        limit: 20,
+        sort_field: sortField,
+        sort_direction: sortDirection
+      };
       if (search) params.search = search;
       if (subscriptionFilter) params.subscription = subscriptionFilter;
       if (kycFilter) params.kyc_status = kycFilter;
@@ -83,7 +92,25 @@ const AdminMembers = () => {
     } finally {
       setMembersLoading(false);
     }
-  }, [page, search, subscriptionFilter, kycFilter, activeFilter]);
+  }, [page, search, subscriptionFilter, kycFilter, activeFilter, sortField, sortDirection]);
+  
+  // Handle column sort
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+  
+  // Sort icon component
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return <ChevronDown className="w-3 h-3 opacity-30" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUpRight className="w-3 h-3 text-blue-400" />
+      : <ArrowDownRight className="w-3 h-3 text-blue-400" />;
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -534,11 +561,46 @@ const AdminMembers = () => {
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Member</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">PRC Balance</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Redeem Limit</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Used</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Available</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Joined</th>
+                  <th 
+                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
+                    onClick={() => handleSort('prc_balance')}
+                  >
+                    <div className="flex items-center gap-1">
+                      PRC Balance <SortIcon field="prc_balance" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
+                    onClick={() => handleSort('redeem_limit')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Redeem Limit <SortIcon field="redeem_limit" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
+                    onClick={() => handleSort('used_limit')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Used <SortIcon field="used_limit" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
+                    onClick={() => handleSort('available_limit')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Available <SortIcon field="available_limit" />
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 text-gray-400 font-medium text-sm cursor-pointer hover:text-white"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Joined <SortIcon field="created_at" />
+                    </div>
+                  </th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Status</th>
                 </tr>
               </thead>

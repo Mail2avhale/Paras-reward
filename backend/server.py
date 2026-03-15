@@ -16143,41 +16143,62 @@ async def update_redeem_settings(
 
 async def calculate_user_redeem_limit(user_id: str) -> dict:
     """
-    Calculate total redeem limit for a user with CARRY FORWARD from USER JOIN DATE.
+    Calculate total redeem limit for a user based on:
     
-    NEW Formula (Updated): 
-    - Monthly Base Limit = Configurable (default 39,950 PRC)
-    - 1 Active Direct Referral = Configurable % increase in limit
-    - Monthly Limit = Base × (1 + (Active Referrals × Increase%))
-    - Total Limit = Months × Monthly Limit (with referral bonus)
-    - Unused limit automatically carries forward
+    FORMULA: Plan × 5 × 10 + 20% increase per active direct referral
+    
+    From JOINING DATE, limit accumulates monthly:
+    - Elite (799): 799 × 5 × 10 = 39,950 PRC base/month
+    - Growth (499): 499 × 5 × 10 = 24,950 PRC base/month  
+    - Startup (299): 299 × 5 × 10 = 14,950 PRC base/month
+    - Explorer (free): 0 PRC (no redeem allowed)
+    
+    + 20% bonus per active direct referral
     
     Example:
-    - User has 2 active referrals = 40% increase
-    - Monthly Limit = 39,950 × 1.4 = 55,930 PRC
-    - 3 months active = 55,930 × 3 = 1,67,790 PRC total limit
-    
-    Active referral = referred user has active subscription
+    - Elite user, 3 months active, 2 active referrals
+    - Base monthly = 39,950
+    - With referrals = 39,950 × (1 + 0.4) = 55,930
+    - Total = 55,930 × 3 = 1,67,790 PRC
     """
     try:
-        # Get configurable settings from database
-        global_settings = await get_global_redeem_settings()
-        monthly_base_limit = global_settings.get("base_limit", BASE_REDEEM_LIMIT)
-        referral_increase = global_settings.get("referral_increase_percent", REFERRAL_LIMIT_INCREASE_PER_ACTIVE)
-        carry_forward = global_settings.get("carry_forward_enabled", True)
+        # Plan prices for formula: Plan × 5 × 10
+        PLAN_PRICES = {
+            "elite": 799,
+            "growth": 499,
+            "startup": 299,
+            "explorer": 0,
+            "free": 0,
+            "": 0
+        }
+        MULTIPLIER = 5
+        PRC_FACTOR = 10
+        REFERRAL_BONUS_PERCENT = 20  # 20% per active referral
         
         # Get user's data
         user = await db.users.find_one({"uid": user_id})
         if not user:
             return {
-                "base_limit": monthly_base_limit,
-                "monthly_limit": monthly_base_limit,
+                "plan": "explorer",
+                "plan_price": 0,
+                "base_limit": 0,
+                "monthly_limit": 0,
                 "months_active": 1,
                 "active_referrals": 0,
                 "referral_percentage_increase": 0,
-                "total_limit": monthly_base_limit,
+                "total_limit": 0,
                 "carry_forward_enabled": True
             }
+        
+        # Get user's subscription plan
+        plan = (user.get("subscription_plan") or "explorer").lower()
+        if plan not in PLAN_PRICES:
+            plan = "explorer"
+        
+        plan_price = PLAN_PRICES.get(plan, 0)
+        
+        # Calculate base monthly limit: Plan × 5 × 10
+        base_monthly_limit = plan_price * MULTIPLIER * PRC_FACTOR
         
         # Calculate months since USER JOINED
         user_created = user.get("created_at") or user.get("registered_at") or user.get("createdAt")
@@ -16194,10 +16215,8 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
         else:
             user_created = now.replace(day=1)
         
-        start_date = user_created
-        
         # Calculate months difference (at least 1 month)
-        months_diff = (now.year - start_date.year) * 12 + (now.month - start_date.month)
+        months_diff = (now.year - user_created.year) * 12 + (now.month - user_created.month)
         months_active = max(1, months_diff + 1)
         
         referral_code = user.get("referral_code", "")
@@ -16229,33 +16248,36 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
                     except:
                         pass
                 
-                # Also check is_premium or is_active_subscription flag
-                if referred_user.get("is_premium") or referred_user.get("is_active_subscription") or referred_user.get("membership_type") == "vip":
+                # Also check plan or membership flags
+                ref_plan = (referred_user.get("subscription_plan") or "").lower()
+                if ref_plan in ["elite", "growth", "startup"]:
+                    is_active = True
+                if referred_user.get("is_premium") or referred_user.get("membership_type") == "vip":
                     is_active = True
                 
                 if is_active:
                     active_referral_count += 1
         
-        # NEW FORMULA: 1 Active Referral = 20% increase
-        # Percentage increase = Active Referrals × 20%
-        referral_percentage_increase = active_referral_count * REFERRAL_LIMIT_INCREASE_PER_ACTIVE
+        # Calculate referral bonus: 20% per active referral
+        referral_percentage_increase = active_referral_count * REFERRAL_BONUS_PERCENT
         
         # Monthly limit with referral bonus
-        # Monthly Limit = Base × (1 + percentage/100)
-        monthly_limit_with_bonus = monthly_base_limit * (1 + referral_percentage_increase / 100)
+        monthly_limit_with_bonus = base_monthly_limit * (1 + referral_percentage_increase / 100)
         
-        # Total limit = Months × Monthly Limit (carry forward)
+        # Total limit = Months × Monthly Limit (carry forward from joining)
         total_limit = months_active * monthly_limit_with_bonus
         
         return {
-            "base_limit": round(months_active * monthly_base_limit, 2),  # Without referral bonus
-            "monthly_limit": monthly_base_limit,
-            "monthly_limit_with_bonus": round(monthly_limit_with_bonus, 2),
+            "plan": plan,
+            "plan_price": plan_price,
+            "base_limit": base_monthly_limit,
+            "monthly_limit": round(monthly_limit_with_bonus, 2),
             "months_active": months_active,
             "active_referrals": active_referral_count,
             "referral_percentage_increase": referral_percentage_increase,
             "total_limit": round(total_limit, 2),
-            "carry_forward_enabled": True
+            "carry_forward_enabled": True,
+            "formula": f"{plan_price} × 5 × 10 = {base_monthly_limit} + {referral_percentage_increase}% referral bonus"
         }
     except Exception as e:
         logging.error(f"Error calculating redeem limit: {e}")
@@ -16360,6 +16382,9 @@ async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dic
         remaining = max(0, total_limit - total_redeemed)
         
         return {
+            "plan": limit_info.get("plan", "explorer"),
+            "months_active": limit_info.get("months_active", 1),
+            "active_referrals": limit_info.get("active_referrals", 0),
             "total_limit": round(total_limit, 2),
             "total_redeemed": round(total_redeemed, 2),
             "remaining_limit": round(remaining, 2)
@@ -16367,6 +16392,9 @@ async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dic
     except Exception as e:
         logging.error(f"Error getting redeem limit for {user_id}: {e}")
         return {
+            "plan": "explorer",
+            "months_active": 1,
+            "active_referrals": 0,
             "total_limit": 0,
             "total_redeemed": 0,
             "remaining_limit": 0
@@ -18914,9 +18942,18 @@ async def get_members_list(
         if date_to:
             query["created_at"]["$lte"] = date_to
     
-    # Sorting
+    # Sorting - Map frontend field names to DB field names
+    db_sort_field = sort_by
+    if sort_by == "redeem_limit":
+        db_sort_field = "created_at"  # Will sort in Python after fetching
+    elif sort_by == "used_limit":
+        db_sort_field = "created_at"  # Will sort in Python after fetching
+    elif sort_by == "available_limit":
+        db_sort_field = "created_at"  # Will sort in Python after fetching
+    elif sort_by not in ["created_at", "prc_balance", "name", "subscription_plan"]:
+        db_sort_field = "created_at"
+    
     sort_direction = -1 if sort_order == "desc" else 1
-    sort_field = sort_by if sort_by in ["created_at", "prc_balance", "name", "subscription_plan"] else "created_at"
     
     skip = (page - 1) * limit
     
@@ -18931,7 +18968,7 @@ async def get_members_list(
             "reset_token": 0,
             "biometric_credentials": 0
         }
-    ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+    ).sort(db_sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
     
     # Add redeem limit data for each member
     members = []
@@ -18947,6 +18984,16 @@ async def get_members_list(
                 "remaining_limit": 0
             }
         members.append(member)
+    
+    # Python-side sorting for redeem limit fields
+    if sort_by in ["redeem_limit", "used_limit", "available_limit"]:
+        reverse = sort_order == "desc"
+        if sort_by == "redeem_limit":
+            members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_limit", 0), reverse=reverse)
+        elif sort_by == "used_limit":
+            members.sort(key=lambda x: x.get("redeem_limit", {}).get("total_redeemed", 0), reverse=reverse)
+        elif sort_by == "available_limit":
+            members.sort(key=lambda x: x.get("redeem_limit", {}).get("remaining_limit", 0), reverse=reverse)
     
     return {
         "members": members,
