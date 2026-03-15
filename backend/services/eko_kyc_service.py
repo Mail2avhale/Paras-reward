@@ -59,17 +59,20 @@ def generate_secret_key() -> tuple:
 
 def generate_aadhaar_auth_headers() -> dict:
     """
-    Generate authentication headers for Aadhaar API (different from PAN/BBPS)
-    Based on user-provided Eko Aadhaar API code
+    Generate authentication headers for Aadhaar API
+    Based on user-provided Eko API code
     
-    Auth: base64(developer_key + timestamp), secret-key passed directly
+    Secret Key = SHA256(developer_key + initiator_id + timestamp + authenticator_key)
     """
     timestamp = str(int(time.time()))
     
-    # For Aadhaar API, auth is different - no HMAC needed
+    # Concatenate all credentials and hash with SHA256
+    message = EKO_DEVELOPER_KEY + EKO_INITIATOR_ID + timestamp + EKO_AUTHENTICATOR_KEY
+    secret_key = hashlib.sha256(message.encode()).hexdigest()
+    
     headers = {
         "developer_key": EKO_DEVELOPER_KEY,
-        "secret-key": EKO_AUTHENTICATOR_KEY,  # Pass authenticator key directly
+        "secret-key": secret_key,
         "secret-key-timestamp": timestamp,
         "Content-Type": "application/json"
     }
