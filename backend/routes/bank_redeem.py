@@ -571,6 +571,42 @@ async def create_withdrawal_request(user_id: str, request: Request):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # ===== CRITICAL: CHECK SUBSCRIPTION FIRST =====
+    subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+    
+    # Free/Explorer users cannot redeem
+    if subscription_plan in ["explorer", "free", "", None]:
+        raise HTTPException(
+            status_code=403,
+            detail="Paid subscription required for bank withdrawal. Please upgrade to Startup, Growth or Elite plan."
+        )
+    
+    # Check if subscription is expired
+    expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+    if expiry:
+        try:
+            if isinstance(expiry, str):
+                expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            else:
+                expiry_dt = expiry
+            
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            
+            if expiry_dt < now:
+                days_expired = (now - expiry_dt).days
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Your subscription expired {days_expired} days ago. Please renew to use bank withdrawal."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.warning(f"[BANK-REDEEM] Expiry parse error for {user_id}: {e}")
+    # ================================================
+    
     data = await request.json()
     amount_inr = data.get("amount_inr")
     

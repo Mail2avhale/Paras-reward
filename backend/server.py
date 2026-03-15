@@ -4704,30 +4704,39 @@ async def check_vip_service_access(uid: str, service_name: str = "service") -> D
             "is_expired": False
         }
     
-    # Check VIP expiry
-    vip_expiry_str = user.get("vip_expiry")
-    if not vip_expiry_str:
-        # VIP without expiry date - allow (legacy users)
+    # Check ALL expiry fields (vip_expiry, subscription_expiry, subscription_expires)
+    expiry_str = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+    
+    if not expiry_str:
+        # No expiry date - allow (legacy users)
         return {"allowed": True, "reason": ""}
     
     try:
-        vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+        if isinstance(expiry_str, str):
+            expiry_dt = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
+        else:
+            expiry_dt = expiry_str
+        
+        if expiry_dt.tzinfo is None:
+            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+        
         now = datetime.now(timezone.utc)
         
-        if vip_expiry < now:
-            # VIP expired - block service
-            days_expired = (now - vip_expiry).days
+        if expiry_dt < now:
+            # Subscription expired - block service
+            days_expired = (now - expiry_dt).days
             return {
                 "allowed": False,
-                "reason": f"Your VIP membership expired {days_expired} days ago. Please renew to access {service_name}.",
+                "reason": f"Your subscription expired {days_expired} days ago. Please renew to access {service_name}.",
                 "days_expired": days_expired,
                 "requires_renewal": True,
                 "is_expired": True,
-                "expiry_date": vip_expiry_str
+                "expiry_date": expiry_dt.isoformat()
             }
         
         return {"allowed": True, "reason": ""}
-    except:
+    except Exception as e:
+        logging.warning(f"[VIP-CHECK] Expiry parse error for {uid}: {e}")
         return {"allowed": True, "reason": ""}
 
 

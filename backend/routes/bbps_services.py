@@ -48,6 +48,58 @@ async def check_bbps_cooldown(user_id: str) -> dict:
     if not db or not user_id:
         return {"allowed": True, "wait_hours": 0}
     
+
+# ==================== SUBSCRIPTION CHECK FOR REDEEM SERVICES ====================
+async def check_subscription_for_redeem(user_id: str, service_name: str = "bill payment") -> dict:
+    """
+    CRITICAL: Check if user has active paid subscription before allowing redeem.
+    Only users with active startup/growth/elite can use redeem services.
+    """
+    if not db or not user_id:
+        return {"allowed": False, "reason": "Invalid user"}
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        return {"allowed": False, "reason": "User not found"}
+    
+    # Check subscription plan
+    subscription_plan = (user.get("subscription_plan") or "explorer").lower()
+    
+    # Free/Explorer users cannot redeem
+    if subscription_plan in ["explorer", "free", "", None]:
+        return {
+            "allowed": False,
+            "reason": f"Paid subscription required for {service_name}. Please upgrade to Startup, Growth or Elite plan.",
+            "requires_subscription": True
+        }
+    
+    # Check if subscription is expired
+    expiry = user.get("subscription_expiry") or user.get("subscription_expires") or user.get("vip_expiry")
+    if expiry:
+        try:
+            if isinstance(expiry, str):
+                expiry_dt = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            else:
+                expiry_dt = expiry
+            
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            
+            now = datetime.now(timezone.utc)
+            
+            if expiry_dt < now:
+                days_expired = (now - expiry_dt).days
+                return {
+                    "allowed": False,
+                    "reason": f"Your subscription expired {days_expired} days ago. Please renew to use {service_name}.",
+                    "is_expired": True,
+                    "days_expired": days_expired
+                }
+        except Exception as e:
+            logging.warning(f"[SUBSCRIPTION-CHECK] Expiry parse error for {user_id}: {e}")
+    
+    return {"allowed": True, "subscription_plan": subscription_plan}
+    
     cooldown_hours = 24
     cooldown_delta = timedelta(hours=cooldown_hours)
     now = datetime.now(timezone.utc)
@@ -979,6 +1031,19 @@ async def pay_bill(data: PayBillRequest):
     
     Works for: Electricity, DTH, FASTag, EMI, Water, Mobile, etc.
     """
+    # ===== CRITICAL: CHECK SUBSCRIPTION FIRST =====
+    if data.user_id:
+        sub_check = await check_subscription_for_redeem(data.user_id, "bill payment")
+        if not sub_check["allowed"]:
+            return {
+                "success": False,
+                "status": 403,
+                "message": sub_check["reason"],
+                "data": None,
+                "requires_subscription": sub_check.get("requires_subscription", False),
+                "is_expired": sub_check.get("is_expired", False)
+            }
+    
     # ===== CHECK COOLDOWN: 24 hours between bill payments =====
     if data.user_id:
         cooldown = await check_bbps_cooldown(data.user_id)
