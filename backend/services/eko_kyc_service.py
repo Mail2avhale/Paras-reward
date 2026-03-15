@@ -14,11 +14,11 @@ from datetime import datetime, timezone
 from typing import Optional, Dict
 
 # Eko API Configuration
-# Production: https://api.eko.in:25002/ekoicici | Staging: https://staging.eko.in
-# KYC API path: /ekoapi/v3
-# Using staging for testing (port 443 works, port 25004 blocked)
-EKO_KYC_BASE = os.environ.get("EKO_KYC_BASE_URL", "https://staging.eko.in")
-EKO_KYC_URL = f"{EKO_KYC_BASE}/ekoapi/v3"
+# Production: https://api.eko.in:25002/ekoicici | Staging: https://staging.eko.in:25004/ekoapi
+# KYC API path: /v3/tools/kyc/
+# Using production URL on port 25002 (confirmed working)
+EKO_KYC_BASE = os.environ.get("EKO_KYC_BASE_URL", "https://api.eko.in:25002/ekoicici")
+EKO_KYC_URL = f"{EKO_KYC_BASE}/v3"
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
@@ -105,17 +105,13 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
     if not client_ref_id:
         client_ref_id = f"PAN{int(time.time() * 1000)}"
     
-    url = f"{EKO_KYC_URL}/tools/kyc/pan-lite"
+    url = f"{EKO_KYC_URL}/tools/kyc/touras/pan-verification"
     
-    # Request body as JSON
+    # Request body as JSON - simplified for touras endpoint
     payload = {
         "initiator_id": EKO_INITIATOR_ID,
         "user_code": EKO_USER_CODE,
-        "pan_number": pan_number.upper(),
-        "name": name.upper(),
-        "dob": dob,
-        "source": "API",
-        "client_ref_id": client_ref_id
+        "pan_number": pan_number.upper()
     }
     
     headers = get_auth_headers()
@@ -150,41 +146,42 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
                 }
             
             if response.status_code == 200:
-                # Check if API returned success
-                if data.get("status") != 0 and data.get("response_status_id") != 0:
+                # Check if API returned success (status=0 means success)
+                if data.get("status") != 0:
+                    error_msg = data.get("data", {}).get("message", "PAN verification failed")
                     return {
                         "success": False,
                         "verified": False,
-                        "message": data.get("message", "PAN verification failed"),
+                        "message": error_msg,
                         "raw_response": data
                     }
                 
                 pan_data = data.get("data", {})
                 
-                pan_status = pan_data.get("pan_status", "")
-                status = pan_data.get("status", "INVALID")
-                name_match = pan_data.get("name_match") == "Y"
-                dob_match = pan_data.get("dob_match") == "Y"
-                aadhaar_linked = pan_data.get("aadhaar_seeding_status") == "Y"
+                # For touras endpoint, response has: fullname, status, category, pan_no
+                pan_status = pan_data.get("status", "INVALID")
+                fullname = pan_data.get("fullname", "")
+                category = pan_data.get("category", "")
                 
-                # PAN is valid if status is VALID or pan_status starts with E
-                pan_valid = status == "VALID" or (pan_status and pan_status.startswith("E"))
+                # PAN is valid if status is "VALID" or similar success indicators
+                pan_valid = pan_status.upper() in ["VALID", "E", "EXISTING AND VALID"]
                 
                 # Verification successful if PAN is valid
                 verified = pan_valid
                 
-                message = "PAN verified successfully" if verified else f"PAN verification failed: {get_pan_status_description(pan_status)}"
+                message = "PAN verified successfully" if verified else f"PAN verification failed: {pan_status}"
                 
                 return {
                     "success": True,
                     "verified": verified,
                     "pan_valid": pan_valid,
-                    "name_match": name_match,
-                    "dob_match": dob_match,
+                    "pan_holder_name": fullname,
+                    "pan_category": category,
                     "pan_status": pan_status,
-                    "pan_status_desc": get_pan_status_description(pan_status),
-                    "aadhaar_linked": aadhaar_linked,
-                    "aadhaar_status_desc": pan_data.get("aadhaar_seeding_status_desc", ""),
+                    "pan_status_desc": pan_status,
+                    "name_match": False,  # Not available in touras endpoint
+                    "dob_match": False,   # Not available in touras endpoint  
+                    "aadhaar_linked": False,  # Not available in touras endpoint
                     "message": message,
                     "raw_response": data
                 }

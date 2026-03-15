@@ -516,10 +516,10 @@ class AadhaarVerifyRequest(BaseModel):
 @router.post("/auto-verify/pan/{uid}")
 async def auto_verify_pan(uid: str, data: PANVerifyRequest):
     """
-    Auto-verify PAN using Eko PAN Lite API
+    Auto-verify PAN using Eko PAN Verification API
     - No OTP required
     - Instant verification
-    - Checks: PAN validity, name match, DOB match, Aadhaar linking
+    - Checks: PAN validity and holder name
     """
     # Check if user exists
     user = await db.users.find_one({"uid": uid})
@@ -541,6 +541,9 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
     if result["verified"]:
         now = datetime.now(timezone.utc).isoformat()
         
+        # Get holder name from response
+        pan_holder_name = result.get("pan_holder_name", "")
+        
         # Update user
         await db.users.update_one(
             {"uid": uid},
@@ -549,9 +552,8 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
                     "pan_number": data.pan_number.upper(),
                     "pan_verified": True,
                     "pan_verified_at": now,
-                    "pan_name_match": result["name_match"],
-                    "pan_dob_match": result["dob_match"],
-                    "pan_aadhaar_linked": result["aadhaar_linked"],
+                    "pan_holder_name": pan_holder_name,
+                    "pan_category": result.get("pan_category", ""),
                     "kyc_status": "pan_verified" if not user.get("aadhaar_verified") else "verified"
                 }
             }
@@ -563,13 +565,11 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
             "type": "pan",
             "pan_number": data.pan_number.upper(),
             "name": data.name,
-            "dob": data.dob,
             "verified": True,
             "pan_status": result["pan_status"],
-            "name_match": result["name_match"],
-            "dob_match": result["dob_match"],
+            "pan_holder_name": pan_holder_name,
             "verified_at": now,
-            "method": "eko_pan_lite"
+            "method": "eko_pan_touras"
         })
         
         return {
@@ -578,10 +578,9 @@ async def auto_verify_pan(uid: str, data: PANVerifyRequest):
             "message": "PAN verified successfully!",
             "details": {
                 "pan_valid": result["pan_valid"],
+                "pan_holder_name": pan_holder_name,
                 "pan_status": result["pan_status_desc"],
-                "name_match": result["name_match"],
-                "dob_match": result["dob_match"],
-                "aadhaar_linked": result["aadhaar_linked"]
+                "pan_category": result.get("pan_category", "")
             }
         }
     else:
