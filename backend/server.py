@@ -27083,6 +27083,334 @@ async def set_webhook_secret(secret: str):
         return {"success": False, "error": str(e)}
 
 
+# ==================== SUBSCRIPTION EXPIRY CORRECTION API ====================
+# This API fixes the double activation bug where users got ~55 days instead of 28
+
+@api_router.get("/admin/subscription/audit")
+async def audit_subscription_expiry(days: int = 30, dry_run: bool = True):
+    """
+    🔍 AUDIT: Check all subscriptions from last N days for incorrect expiry.
+    
+    This finds users who got more subscription days than they should have
+    due to the double activation bug (two sync jobs running in parallel).
+    
+    Query Params:
+    - days: How many days back to check (default: 30)
+    - dry_run: If True, only preview - don't make changes (default: True)
+    
+    Expected behavior:
+    - Monthly plan: 28 days from activation
+    - Quarterly: 84 days
+    - Half yearly: 168 days
+    - Yearly: 336 days
+    
+    If actual_days > expected_days + 3 (buffer), user needs correction.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        check_from = now - timedelta(days=days)
+        
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Find users who got subscription in last N days
+        users_to_check = await db.users.find({
+            "$or": [
+                {"subscription_start": {"$gte": check_from}},
+                {"last_payment_date": {"$gte": check_from.isoformat()}},
+                {"vip_activated_at": {"$gte": check_from.isoformat()}}
+            ],
+            "subscription_plan": {"$in": ["startup", "growth", "elite", "vip", "pro"]}
+        }).to_list(5000)
+        
+        audit_results = {
+            "total_checked": len(users_to_check),
+            "needs_correction": 0,
+            "already_correct": 0,
+            "users_to_fix": [],
+            "check_period": f"Last {days} days",
+            "dry_run": dry_run
+        }
+        
+        for user in users_to_check:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            plan = user.get("subscription_plan", "").lower()
+            plan_type = user.get("subscription_type", "monthly").lower()
+            
+            # Get subscription start date
+            sub_start = user.get("subscription_start") or user.get("last_payment_date") or user.get("vip_activated_at")
+            if not sub_start:
+                continue
+            
+            # Parse start date
+            try:
+                if isinstance(sub_start, str):
+                    start_date = datetime.fromisoformat(sub_start.replace('Z', '+00:00'))
+                else:
+                    start_date = sub_start
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
+            except:
+                continue
+            
+            # Get actual expiry
+            actual_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            if not actual_expiry:
+                continue
+            
+            try:
+                if isinstance(actual_expiry, str):
+                    exp_date = datetime.fromisoformat(actual_expiry.replace('Z', '+00:00'))
+                else:
+                    exp_date = actual_expiry
+                if exp_date.tzinfo is None:
+                    exp_date = exp_date.replace(tzinfo=timezone.utc)
+            except:
+                continue
+            
+            # Calculate expected duration
+            expected_days = PLAN_DURATIONS.get(plan_type, 28)
+            expected_expiry = start_date + timedelta(days=expected_days)
+            
+            # Calculate actual days
+            actual_days = (exp_date - start_date).days
+            
+            # Check if needs correction (allow 3 days buffer for edge cases)
+            if actual_days > expected_days + 3:
+                extra_days = actual_days - expected_days
+                
+                user_fix = {
+                    "uid": uid,
+                    "name": name,
+                    "plan": plan,
+                    "plan_type": plan_type,
+                    "subscription_start": start_date.isoformat(),
+                    "current_expiry": exp_date.isoformat(),
+                    "expected_expiry": expected_expiry.isoformat(),
+                    "expected_days": expected_days,
+                    "actual_days": actual_days,
+                    "extra_days": extra_days,
+                    "status": "needs_correction"
+                }
+                
+                audit_results["needs_correction"] += 1
+                audit_results["users_to_fix"].append(user_fix)
+            else:
+                audit_results["already_correct"] += 1
+        
+        return {
+            "success": True,
+            "audit_time": now.isoformat(),
+            "results": audit_results,
+            "next_step": f"If satisfied, call POST /api/admin/subscription/fix-expiry?days={days}&dry_run=false to apply corrections"
+        }
+        
+    except Exception as e:
+        logging.error(f"[SUBSCRIPTION AUDIT] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.post("/admin/subscription/fix-expiry")
+async def fix_subscription_expiry(days: int = 30, dry_run: bool = True):
+    """
+    🔧 FIX: Automatically correct subscription expiry for users with extra days.
+    
+    This API:
+    1. Finds users who got more days than their plan allows
+    2. Recalculates correct expiry based on subscription_start + plan_days
+    3. Updates their expiry date
+    4. Logs all corrections for audit
+    
+    Query Params:
+    - days: How many days back to check (default: 30)
+    - dry_run: If True, only preview - don't make changes (default: True)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY APPLY FIXES
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        check_from = now - timedelta(days=days)
+        
+        PLAN_DURATIONS = {
+            "monthly": 28,
+            "quarterly": 84,
+            "half_yearly": 168,
+            "yearly": 336
+        }
+        
+        # Find users who got subscription in last N days
+        users_to_check = await db.users.find({
+            "$or": [
+                {"subscription_start": {"$gte": check_from}},
+                {"last_payment_date": {"$gte": check_from.isoformat()}},
+                {"vip_activated_at": {"$gte": check_from.isoformat()}}
+            ],
+            "subscription_plan": {"$in": ["startup", "growth", "elite", "vip", "pro"]}
+        }).to_list(5000)
+        
+        fix_results = {
+            "total_checked": len(users_to_check),
+            "fixed": 0,
+            "skipped": 0,
+            "errors": 0,
+            "dry_run": dry_run,
+            "fixed_users": [],
+            "skipped_users": []
+        }
+        
+        for user in users_to_check:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            email = user.get("email", "")
+            plan = user.get("subscription_plan", "").lower()
+            plan_type = user.get("subscription_type", "monthly").lower()
+            
+            # Get subscription start date
+            sub_start = user.get("subscription_start") or user.get("last_payment_date") or user.get("vip_activated_at")
+            if not sub_start:
+                continue
+            
+            # Parse start date
+            try:
+                if isinstance(sub_start, str):
+                    start_date = datetime.fromisoformat(sub_start.replace('Z', '+00:00'))
+                else:
+                    start_date = sub_start
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
+            except:
+                continue
+            
+            # Get actual expiry
+            actual_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+            if not actual_expiry:
+                continue
+            
+            try:
+                if isinstance(actual_expiry, str):
+                    exp_date = datetime.fromisoformat(actual_expiry.replace('Z', '+00:00'))
+                else:
+                    exp_date = actual_expiry
+                if exp_date.tzinfo is None:
+                    exp_date = exp_date.replace(tzinfo=timezone.utc)
+            except:
+                continue
+            
+            # Calculate expected duration
+            expected_days = PLAN_DURATIONS.get(plan_type, 28)
+            correct_expiry = start_date + timedelta(days=expected_days)
+            
+            # Calculate actual days
+            actual_days = (exp_date - start_date).days
+            
+            # Check if needs correction (allow 3 days buffer)
+            if actual_days > expected_days + 3:
+                extra_days = actual_days - expected_days
+                
+                fix_record = {
+                    "uid": uid,
+                    "name": name,
+                    "email": email,
+                    "plan": plan,
+                    "plan_type": plan_type,
+                    "old_expiry": exp_date.isoformat(),
+                    "new_expiry": correct_expiry.isoformat(),
+                    "days_removed": extra_days,
+                    "subscription_start": start_date.isoformat()
+                }
+                
+                if not dry_run:
+                    try:
+                        # Apply the fix
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {
+                                "$set": {
+                                    "subscription_expires": correct_expiry,
+                                    "subscription_expiry": correct_expiry.isoformat(),
+                                    "vip_expiry": correct_expiry.isoformat(),
+                                    "expiry_corrected_at": now.isoformat(),
+                                    "expiry_correction_reason": "Double activation bug fix"
+                                }
+                            }
+                        )
+                        
+                        # Log the correction
+                        await db.subscription_corrections.insert_one({
+                            "user_id": uid,
+                            "user_name": name,
+                            "user_email": email,
+                            "subscription_plan": plan,
+                            "plan_type": plan_type,
+                            "old_expiry": exp_date.isoformat(),
+                            "new_expiry": correct_expiry.isoformat(),
+                            "days_removed": extra_days,
+                            "subscription_start": start_date.isoformat(),
+                            "corrected_at": now.isoformat(),
+                            "reason": "Auto-fix: Double activation bug correction"
+                        })
+                        
+                        fix_record["status"] = "fixed"
+                        fix_results["fixed"] += 1
+                        fix_results["fixed_users"].append(fix_record)
+                        
+                    except Exception as e:
+                        fix_record["status"] = "error"
+                        fix_record["error"] = str(e)
+                        fix_results["errors"] += 1
+                else:
+                    fix_record["status"] = "would_fix"
+                    fix_results["fixed"] += 1
+                    fix_results["fixed_users"].append(fix_record)
+            else:
+                fix_results["skipped"] += 1
+                if actual_days != expected_days:
+                    fix_results["skipped_users"].append({
+                        "uid": uid,
+                        "name": name,
+                        "reason": f"Within buffer ({actual_days} vs {expected_days} expected)"
+                    })
+        
+        return {
+            "success": True,
+            "fix_time": now.isoformat(),
+            "dry_run": dry_run,
+            "results": fix_results,
+            "message": "DRY RUN - No changes made. Set dry_run=false to apply fixes." if dry_run else f"Fixed {fix_results['fixed']} users."
+        }
+        
+    except Exception as e:
+        logging.error(f"[SUBSCRIPTION FIX] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.get("/admin/subscription/corrections-log")
+async def get_subscription_corrections_log(limit: int = 100):
+    """Get log of all subscription expiry corrections made"""
+    try:
+        corrections = await db.subscription_corrections.find({}).sort("corrected_at", -1).to_list(limit)
+        
+        # Remove _id
+        for c in corrections:
+            c.pop("_id", None)
+        
+        return {
+            "success": True,
+            "total": len(corrections),
+            "corrections": corrections
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== END SUBSCRIPTION CORRECTION API ====================
+
+
 # ==================== END WEBHOOK AUTO-BURN ====================
 
 @api_router.post("/admin/clear-free-users-prc")
