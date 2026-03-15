@@ -9,12 +9,16 @@ import hmac
 import time
 import logging
 import httpx
+import base64
 from datetime import datetime, timezone
 from typing import Optional, Dict
 
 # Eko API Configuration
-EKO_BASE_URL = os.environ.get("EKO_BASE_URL", "https://api.eko.in:25002/ekoicici")
-EKO_KYC_URL = "https://api.eko.in:25004/ekoapi/v3"  # KYC endpoints use different base
+# Production: https://api.eko.in:25002/ekoicici | Staging: https://staging.eko.in
+# KYC API path: /ekoapi/v3
+# Using staging for testing (port 443 works, port 25004 blocked)
+EKO_KYC_BASE = os.environ.get("EKO_KYC_BASE_URL", "https://staging.eko.in")
+EKO_KYC_URL = f"{EKO_KYC_BASE}/ekoapi/v3"
 EKO_DEVELOPER_KEY = os.environ.get("EKO_DEVELOPER_KEY", "")
 EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
@@ -22,19 +26,32 @@ EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
 
 
 def generate_secret_key() -> tuple:
-    """Generate secret key and timestamp for Eko API authentication"""
-    timestamp = str(int(time.time() * 1000))
+    """
+    Generate secret key and timestamp for Eko API authentication
+    Based on Eko documentation: https://developers.eko.in/docs/auth
     
-    # HMAC-SHA256 of timestamp with authenticator key
+    Steps:
+    1. Base64 encode the authenticator/access key
+    2. Use the encoded key (as bytes) to create HMAC-SHA256 of timestamp
+    3. Base64 encode the resulting signature
+    """
+    # Step 1: Get timestamp in milliseconds
+    timestamp = str(int(round(time.time() * 1000)))
+    
+    # Step 2: Base64 encode the authenticator key
+    encoded_key = base64.b64encode(EKO_AUTHENTICATOR_KEY.encode('utf-8'))
+    
+    # Step 3: Create HMAC-SHA256 signature using encoded_key as the key
     signature = hmac.new(
-        EKO_AUTHENTICATOR_KEY.encode('utf-8'),
-        timestamp.encode('utf-8'),
+        encoded_key,  # Use base64-encoded key as HMAC key (as bytes)
+        timestamp.encode('utf-8'),  # Message is the timestamp
         hashlib.sha256
     ).digest()
     
-    # Base64 encode
-    import base64
+    # Step 4: Base64 encode the signature
     secret_key = base64.b64encode(signature).decode('utf-8')
+    
+    logging.debug(f"[EKO-AUTH] Generated secret_key for timestamp: {timestamp}")
     
     return secret_key, timestamp
 
@@ -75,7 +92,8 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
         }
     """
     if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
-        return {"success": False, "message": "Eko API not configured", "verified": False}
+        logging.error("[EKO-PAN] Missing API credentials")
+        return {"success": False, "message": "KYC service not configured. Please contact support.", "verified": False}
     
     # Validate PAN format
     import re
@@ -85,15 +103,16 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
     
     # Generate reference ID if not provided
     if not client_ref_id:
-        client_ref_id = f"PAN_{int(time.time() * 1000)}"
+        client_ref_id = f"PAN{int(time.time() * 1000)}"
     
     url = f"{EKO_KYC_URL}/tools/kyc/pan-lite"
     
+    # Request body as JSON
     payload = {
         "initiator_id": EKO_INITIATOR_ID,
         "user_code": EKO_USER_CODE,
         "pan_number": pan_number.upper(),
-        "name": name,
+        "name": name.upper(),
         "dob": dob,
         "source": "API",
         "client_ref_id": client_ref_id
@@ -101,14 +120,45 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
     
     headers = get_auth_headers()
     
+    logging.info(f"[EKO-PAN] Calling {url} with PAN: {pan_number[:5]}*****")
+    
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-PAN] Response status: {response.status_code}")
+            logging.info(f"[EKO-PAN] Response text: {response.text[:500] if response.text else 'EMPTY'}")
+            
+            # Handle empty response
+            if not response.text or not response.text.strip():
+                logging.error(f"[EKO-PAN] Empty response from Eko API")
+                return {
+                    "success": False,
+                    "verified": False,
+                    "message": "KYC service temporarily unavailable. Please try again later."
+                }
+            
+            # Try to parse JSON
+            try:
+                data = response.json()
+            except Exception as json_err:
+                logging.error(f"[EKO-PAN] JSON parse error: {json_err}, Response: {response.text[:200]}")
+                return {
+                    "success": False,
+                    "verified": False,
+                    "message": "KYC service returned invalid response. Please try again."
+                }
             
             if response.status_code == 200:
-                data = response.json()
+                # Check if API returned success
+                if data.get("status") != 0 and data.get("response_status_id") != 0:
+                    return {
+                        "success": False,
+                        "verified": False,
+                        "message": data.get("message", "PAN verification failed"),
+                        "raw_response": data
+                    }
+                
                 pan_data = data.get("data", {})
                 
                 pan_status = pan_data.get("pan_status", "")
@@ -117,13 +167,13 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
                 dob_match = pan_data.get("dob_match") == "Y"
                 aadhaar_linked = pan_data.get("aadhaar_seeding_status") == "Y"
                 
-                # PAN is valid if status is E, EC, EA, etc. (starts with E)
+                # PAN is valid if status is VALID or pan_status starts with E
                 pan_valid = status == "VALID" or (pan_status and pan_status.startswith("E"))
                 
                 # Verification successful if PAN is valid
                 verified = pan_valid
                 
-                message = "PAN verified successfully" if verified else f"PAN verification failed: {pan_status}"
+                message = "PAN verified successfully" if verified else f"PAN verification failed: {get_pan_status_description(pan_status)}"
                 
                 return {
                     "success": True,
@@ -138,20 +188,34 @@ async def verify_pan_lite(pan_number: str, name: str, dob: str, client_ref_id: O
                     "message": message,
                     "raw_response": data
                 }
+            elif response.status_code == 400:
+                error_data = response.json() if response.content else {}
+                return {
+                    "success": False,
+                    "verified": False,
+                    "message": error_data.get("message", "Invalid PAN details provided"),
+                    "raw_response": error_data
+                }
+            elif response.status_code == 401:
+                return {
+                    "success": False,
+                    "verified": False,
+                    "message": "KYC service authentication failed. Please contact support."
+                }
             else:
                 error_data = response.json() if response.content else {}
                 return {
                     "success": False,
                     "verified": False,
-                    "message": f"API error: {response.status_code}",
+                    "message": f"Verification service error. Please try again.",
                     "raw_response": error_data
                 }
                 
     except httpx.TimeoutException:
-        return {"success": False, "verified": False, "message": "Request timed out. Please try again."}
+        return {"success": False, "verified": False, "message": "Service is busy. Please try again in a few seconds."}
     except Exception as e:
         logging.error(f"[EKO-PAN] Error: {e}")
-        return {"success": False, "verified": False, "message": f"Verification failed: {str(e)}"}
+        return {"success": False, "verified": False, "message": "Verification failed. Please try again."}
 
 
 def get_pan_status_description(status: str) -> str:
@@ -194,7 +258,8 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
         }
     """
     if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
-        return {"success": False, "otp_sent": False, "message": "Eko API not configured"}
+        logging.error("[EKO-AADHAAR] Missing API credentials")
+        return {"success": False, "otp_sent": False, "message": "KYC service not configured. Please contact support."}
     
     # Validate Aadhaar format (12 digits)
     aadhaar_clean = aadhaar_number.replace(" ", "").replace("-", "")
@@ -202,9 +267,10 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
         return {"success": False, "otp_sent": False, "message": "Invalid Aadhaar. Must be 12 digits."}
     
     if not client_ref_id:
-        client_ref_id = f"AADHAR_{int(time.time() * 1000)}"
+        client_ref_id = f"AADHAR{int(time.time() * 1000)}"
     
-    url = f"{EKO_KYC_URL}/tools/kyc/aadhaar/otp"
+    # Eko Aadhaar OTP endpoint
+    url = f"{EKO_KYC_URL}/aadhaar/otp"
     
     payload = {
         "initiator_id": EKO_INITIATOR_ID,
@@ -216,44 +282,57 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
     
     headers = get_auth_headers()
     
+    logging.info(f"[EKO-AADHAAR-OTP] Calling {url} with Aadhaar: XXXX-XXXX-{aadhaar_clean[-4:]}")
+    
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-OTP] Response status: {response.status_code}")
+            logging.info(f"[EKO-AADHAAR-OTP] Response: {response.text[:500]}")
             
             if response.status_code == 200:
                 data = response.json()
                 
                 if data.get("status") == 0 or data.get("response_status_id") == 0:
+                    otp_ref_id = data.get("data", {}).get("otp_ref_id", client_ref_id)
                     return {
                         "success": True,
                         "otp_sent": True,
                         "message": "OTP sent to your Aadhaar-linked mobile number",
                         "client_ref_id": client_ref_id,
+                        "otp_ref_id": otp_ref_id,
                         "raw_response": data
                     }
                 else:
                     return {
                         "success": False,
                         "otp_sent": False,
-                        "message": data.get("message", "Failed to send OTP"),
+                        "message": data.get("message", "Failed to send OTP. Please check your Aadhaar number."),
                         "raw_response": data
                     }
+            elif response.status_code == 400:
+                error_data = response.json() if response.content else {}
+                return {
+                    "success": False,
+                    "otp_sent": False,
+                    "message": error_data.get("message", "Invalid Aadhaar number. Please check and try again."),
+                    "raw_response": error_data
+                }
             else:
                 error_data = response.json() if response.content else {}
                 return {
                     "success": False,
                     "otp_sent": False,
-                    "message": f"API error: {response.status_code}",
+                    "message": "Unable to send OTP. Please try again.",
                     "raw_response": error_data
                 }
                 
     except httpx.TimeoutException:
-        return {"success": False, "otp_sent": False, "message": "Request timed out. Please try again."}
+        return {"success": False, "otp_sent": False, "message": "Service is busy. Please try again in a few seconds."}
     except Exception as e:
         logging.error(f"[EKO-AADHAAR-OTP] Error: {e}")
-        return {"success": False, "otp_sent": False, "message": f"Failed to send OTP: {str(e)}"}
+        return {"success": False, "otp_sent": False, "message": "Failed to send OTP. Please try again."}
 
 
 async def verify_aadhaar_otp(aadhaar_number: str, otp: str, client_ref_id: str) -> Dict:
@@ -274,7 +353,8 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, client_ref_id: str) 
         }
     """
     if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
-        return {"success": False, "verified": False, "message": "Eko API not configured"}
+        logging.error("[EKO-AADHAAR-VERIFY] Missing API credentials")
+        return {"success": False, "verified": False, "message": "KYC service not configured. Please contact support."}
     
     aadhaar_clean = aadhaar_number.replace(" ", "").replace("-", "")
     
@@ -282,24 +362,29 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, client_ref_id: str) 
     if not otp.isdigit() or len(otp) != 6:
         return {"success": False, "verified": False, "message": "Invalid OTP. Must be 6 digits."}
     
-    url = f"{EKO_KYC_URL}/tools/kyc/aadhaar/verify"
+    # Eko Aadhaar verify endpoint
+    url = f"{EKO_KYC_URL}/aadhaar/verify"
     
     payload = {
         "initiator_id": EKO_INITIATOR_ID,
         "user_code": EKO_USER_CODE,
         "aadhaar_number": aadhaar_clean,
         "otp": otp,
+        "otp_ref_id": client_ref_id,
         "source": "API",
         "client_ref_id": client_ref_id
     }
     
     headers = get_auth_headers()
     
+    logging.info(f"[EKO-AADHAAR-VERIFY] Calling {url}")
+    
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
             response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-VERIFY] Response status: {response.status_code}")
+            logging.info(f"[EKO-AADHAAR-VERIFY] Response: {response.text[:500]}")
             
             if response.status_code == 200:
                 data = response.json()
@@ -319,7 +404,7 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, client_ref_id: str) 
                             "district": aadhaar_data.get("district"),
                             "state": aadhaar_data.get("state"),
                             "pincode": aadhaar_data.get("pincode"),
-                            "photo_base64": aadhaar_data.get("photo"),  # Base64 photo
+                            "photo_base64": aadhaar_data.get("photo"),
                             "masked_aadhaar": aadhaar_data.get("masked_aadhaar")
                         },
                         "raw_response": data
@@ -328,20 +413,32 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, client_ref_id: str) 
                     return {
                         "success": False,
                         "verified": False,
-                        "message": data.get("message", "OTP verification failed"),
+                        "message": data.get("message", "OTP verification failed. Please try again."),
                         "raw_response": data
                     }
+            elif response.status_code == 400:
+                error_data = response.json() if response.content else {}
+                msg = error_data.get("message", "Invalid OTP. Please check and try again.")
+                # Check for expired OTP
+                if "expired" in msg.lower():
+                    msg = "OTP expired. Please request a new OTP."
+                return {
+                    "success": False,
+                    "verified": False,
+                    "message": msg,
+                    "raw_response": error_data
+                }
             else:
                 error_data = response.json() if response.content else {}
                 return {
                     "success": False,
                     "verified": False,
-                    "message": f"API error: {response.status_code}",
+                    "message": "Verification failed. Please try again.",
                     "raw_response": error_data
                 }
                 
     except httpx.TimeoutException:
-        return {"success": False, "verified": False, "message": "Request timed out. Please try again."}
+        return {"success": False, "verified": False, "message": "Service is busy. Please try again in a few seconds."}
     except Exception as e:
         logging.error(f"[EKO-AADHAAR-VERIFY] Error: {e}")
-        return {"success": False, "verified": False, "message": f"Verification failed: {str(e)}"}
+        return {"success": False, "verified": False, "message": "Verification failed. Please try again."}

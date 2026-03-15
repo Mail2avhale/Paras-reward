@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://subscription-hotfix.preview.emergentagent.com';
+const BASE_URL = 'https://paras-hotfix.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

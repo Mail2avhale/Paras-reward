@@ -14,7 +14,7 @@ from datetime import datetime
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://subscription-hotfix.preview.emergentagent.com'
+    BASE_URL = 'https://paras-hotfix.preview.emergentagent.com'
 
 
 class TestPRCRateCurrent:

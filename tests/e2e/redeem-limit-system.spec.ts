@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://subscription-hotfix.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://paras-hotfix.preview.emergentagent.com';
 
 // Test credentials
 const USER_MOBILE = '9421331342';
