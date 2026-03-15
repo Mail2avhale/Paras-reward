@@ -11505,165 +11505,200 @@ async def subscription_pay_with_prc(request: Request):
     Formula: INR Price × 2 × Dynamic PRC Rate
     Cooldown: 15 days between subscriptions
     """
-    data = await request.json()
-    user_id = data.get("user_id")
-    plan_name = data.get("plan_name")
-    plan_type = data.get("plan_type", "monthly")  # monthly/quarterly/yearly
-    prc_amount = data.get("prc_amount")
-    
-    if not user_id or not plan_name or not prc_amount:
-        raise HTTPException(status_code=400, detail="Missing required fields")
-    
-    # CHECK COOLDOWN: 15 days between subscriptions
-    cooldown = await check_service_cooldown(user_id, "subscription")
-    if not cooldown["allowed"]:
-        wait_days = cooldown.get("wait_days", cooldown["wait_hours"] / 24)
-        raise HTTPException(
-            status_code=429,
-            detail=f"Please wait {wait_days:.0f} days before purchasing another subscription."
-        )
-    
-    # Get dynamic PRC rate (same as used in frontend)
-    prc_rate = await get_dynamic_prc_rate()
-    
-    # Get plan price and verify PRC amount
-    plan_prices = {"startup": 299, "growth": 499, "elite": 799}
-    plan_price = plan_prices.get(plan_name, 799)
-    expected_prc = plan_price * 2 * prc_rate
-    
-    # Allow 5% variance for rounding and rate fluctuation
-    variance_allowed = expected_prc * 0.05
-    if abs(prc_amount - expected_prc) > variance_allowed:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid PRC amount. Please try again or refresh the page."
-        )
-    
-    # Validate plan
-    valid_plans = ["startup", "growth", "elite"]
-    if plan_name not in valid_plans:
-        raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
-    
-    # Get user
-    user = await db.users.find_one({"uid": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check redeem limit (use remaining_limit not remaining)
-    redeem_limit_data = await calculate_user_redeem_limit(user_id)
-    total_limit = redeem_limit_data.get("total_limit", 0)
-    total_redeemed = await get_user_total_redeemed(user_id)
-    available = max(0, total_limit - total_redeemed)
-    
-    if available < prc_amount:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Insufficient Redeem Limit. Available: {available:.2f} PRC, Required: {prc_amount:.2f} PRC"
-        )
-    
-    # Calculate subscription duration - Always 28 days for Elite via PRC
-    duration_days = 28
-    now = datetime.now(timezone.utc)
-    
-    # Check current subscription expiry
-    current_expiry = user.get("subscription_expiry")
-    if current_expiry:
-        try:
-            expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
-            if expiry_dt.tzinfo is None:
-                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
-            # If still active, extend from current expiry
-            if expiry_dt > now:
-                new_expiry = (expiry_dt + timedelta(days=duration_days)).isoformat()
-            else:
-                new_expiry = (now + timedelta(days=duration_days)).isoformat()
-        except:
-            new_expiry = (now + timedelta(days=duration_days)).isoformat()
-    else:
-        new_expiry = (now + timedelta(days=duration_days)).isoformat()
-    
-    # Deduct PRC from balance using wallet service
     try:
-        from app.services.wallet_service_v2 import WalletServiceV2
-        wallet_service = WalletServiceV2(db)
+        data = await request.json()
+        user_id = data.get("user_id")
+        plan_name = data.get("plan_name")
+        plan_type = data.get("plan_type", "monthly")  # monthly/quarterly/yearly
+        prc_amount = data.get("prc_amount")
         
-        debit_result = await wallet_service.debit(
-            user_id=user_id,
-            amount=prc_amount,
-            transaction_type="subscription_prc",
-            description=f"Subscription payment: {plan_name.capitalize()} ({plan_type})",
-            reference_id=f"sub_prc_{user_id}_{int(now.timestamp())}",
-            metadata={
-                "plan_name": plan_name,
-                "plan_type": plan_type,
-                "prc_amount": prc_amount
-            }
-        )
+        if not user_id or not plan_name or not prc_amount:
+            raise HTTPException(status_code=400, detail="Missing required fields: user_id, plan_name, or prc_amount")
         
-        if not debit_result.get("success"):
-            raise HTTPException(status_code=400, detail=debit_result.get("error", "Failed to deduct PRC"))
-            
-    except ImportError:
-        # Fallback: Direct balance deduction
-        current_balance = user.get("prc_balance", 0)
+        # CHECK COOLDOWN: 15 days between subscriptions
+        try:
+            cooldown = await check_service_cooldown(user_id, "subscription")
+            if not cooldown["allowed"]:
+                wait_days = cooldown.get("wait_days", cooldown.get("wait_hours", 0) / 24)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Please wait {wait_days:.0f} days before purchasing another subscription."
+                )
+        except HTTPException:
+            raise
+        except Exception as cooldown_err:
+            # Log but don't block - cooldown check failure shouldn't prevent purchase
+            logging.warning(f"[PRC-SUB] Cooldown check error for {user_id}: {cooldown_err}")
+        
+        # Get dynamic PRC rate (same as used in frontend)
+        prc_rate = await get_dynamic_prc_rate()
+        
+        # Get plan price and verify PRC amount
+        plan_prices = {"startup": 299, "growth": 499, "elite": 799}
+        plan_price = plan_prices.get(plan_name, 799)
+        expected_prc = plan_price * 2 * prc_rate
+        
+        # Allow 10% variance for rounding and rate fluctuation (increased from 5%)
+        variance_allowed = expected_prc * 0.10
+        if abs(prc_amount - expected_prc) > variance_allowed:
+            logging.warning(f"[PRC-SUB] Amount mismatch for {user_id}: expected {expected_prc}, got {prc_amount}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"PRC amount mismatch. Expected ~{expected_prc:.0f} PRC. Please refresh the page and try again."
+            )
+        
+        # Validate plan
+        valid_plans = ["startup", "growth", "elite"]
+        if plan_name not in valid_plans:
+            raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {', '.join(valid_plans)}")
+        
+        # Get user
+        user = await db.users.find_one({"uid": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check redeem limit
+        try:
+            redeem_limit_data = await calculate_user_redeem_limit(user_id)
+            total_limit = redeem_limit_data.get("total_limit", 0)
+            total_redeemed = await get_user_total_redeemed(user_id)
+            available = max(0, total_limit - total_redeemed)
+        except Exception as limit_err:
+            logging.error(f"[PRC-SUB] Redeem limit calc error for {user_id}: {limit_err}")
+            raise HTTPException(status_code=500, detail=f"Error calculating redeem limit: {str(limit_err)}")
+        
+        if available < prc_amount:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Insufficient Redeem Limit. Available: {available:.0f} PRC, Required: {prc_amount:.0f} PRC"
+            )
+        
+        # Calculate subscription duration - Always 28 days for Elite via PRC
+        duration_days = 28
+        now = datetime.now(timezone.utc)
+        
+        # Check current subscription expiry
+        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        if current_expiry:
+            try:
+                if isinstance(current_expiry, str):
+                    expiry_dt = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = current_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                # If still active, extend from current expiry
+                if expiry_dt > now:
+                    new_expiry = (expiry_dt + timedelta(days=duration_days)).isoformat()
+                else:
+                    new_expiry = (now + timedelta(days=duration_days)).isoformat()
+            except Exception as exp_err:
+                logging.warning(f"[PRC-SUB] Expiry parsing error: {exp_err}")
+                new_expiry = (now + timedelta(days=duration_days)).isoformat()
+        else:
+            new_expiry = (now + timedelta(days=duration_days)).isoformat()
+        
+        # Deduct PRC from balance - Use direct deduction (simpler and more reliable)
+        current_balance = float(user.get("prc_balance", 0) or 0)
         if current_balance < prc_amount:
-            raise HTTPException(status_code=400, detail="Insufficient PRC balance")
+            raise HTTPException(status_code=400, detail=f"Insufficient PRC balance. Have: {current_balance:.0f}, Need: {prc_amount:.0f}")
         
+        # Deduct balance
         await db.users.update_one(
             {"uid": user_id},
             {"$inc": {"prc_balance": -prc_amount}}
         )
-    
-    # Update subscription
-    await db.users.update_one(
-        {"uid": user_id},
-        {
-            "$set": {
-                "subscription_plan": plan_name,
-                "subscription_expiry": new_expiry,
-                "subscription_start": now.isoformat(),
-                "membership_type": "vip"
+        
+        # Update subscription
+        await db.users.update_one(
+            {"uid": user_id},
+            {
+                "$set": {
+                    "subscription_plan": plan_name,
+                    "subscription_expiry": new_expiry,
+                    "subscription_expires": datetime.fromisoformat(new_expiry.replace('Z', '+00:00')),
+                    "subscription_start": now.isoformat(),
+                    "membership_type": "vip",
+                    "subscription_status": "active"
+                }
+            }
+        )
+        
+        # Record payment
+        payment_record = {
+            "user_id": user_id,
+            "plan_name": plan_name,
+            "plan_type": plan_type,
+            "payment_method": "prc",
+            "prc_amount": prc_amount,
+            "prc_rate_used": prc_rate,
+            "status": "paid",
+            "created_at": now.isoformat(),
+            "subscription_expiry": new_expiry
+        }
+        await db.subscription_payments.insert_one(payment_record)
+        
+        # Log to transactions for redeem tracking
+        await db.transactions.insert_one({
+            "user_id": user_id,
+            "type": "subscription_prc",
+            "prc_amount": prc_amount,
+            "inr_value": plan_price,
+            "description": f"Subscription: {plan_name} via PRC",
+            "timestamp": now,
+            "status": "completed"
+        })
+        
+        # Record service usage for cooldown
+        try:
+            await record_service_usage(user_id, "subscription", {
+                "plan_name": plan_name,
+                "prc_amount": prc_amount
+            })
+        except Exception as usage_err:
+            logging.warning(f"[PRC-SUB] Usage record error: {usage_err}")
+        
+        # Log activity
+        try:
+            await log_activity(
+                user_id=user_id,
+                action_type="subscription_prc_payment",
+                description=f"Paid {prc_amount:.0f} PRC for {plan_name} subscription ({plan_type})",
+                metadata=payment_record
+            )
+        except:
+            pass
+        
+        # Create notification
+        try:
+            await create_notification(
+                user_id=user_id,
+                title="Subscription Activated!",
+                message=f"Your {plan_name.capitalize()} subscription is now active until {new_expiry[:10]}. Paid {prc_amount:.0f} PRC.",
+                notification_type="subscription"
+            )
+        except:
+            pass
+        
+        logging.info(f"[PRC-SUB] SUCCESS: User {user_id} bought {plan_name} for {prc_amount:.0f} PRC")
+        
+        return {
+            "success": True,
+            "message": f"{plan_name.capitalize()} subscription activated!",
+            "subscription": {
+                "plan": plan_name,
+                "expiry": new_expiry,
+                "prc_paid": prc_amount
             }
         }
-    )
-    
-    # Record payment
-    payment_record = {
-        "user_id": user_id,
-        "plan_name": plan_name,
-        "plan_type": plan_type,
-        "payment_method": "prc",
-        "prc_amount": prc_amount,
-        "status": "paid",
-        "created_at": now.isoformat(),
-        "subscription_expiry": new_expiry
-    }
-    await db.subscription_payments.insert_one(payment_record)
-    
-    # Log activity
-    await log_activity(
-        user_id=user_id,
-        action_type="subscription_prc_payment",
-        description=f"Paid {prc_amount} PRC for {plan_name} subscription ({plan_type})",
-        metadata=payment_record
-    )
-    
-    # Create notification
-    await create_notification(
-        user_id=user_id,
-        title="Subscription Activated!",
-        message=f"Your {plan_name.capitalize()} subscription is now active until {new_expiry[:10]}. Paid {prc_amount:.0f} PRC.",
-        notification_type="subscription"
-    )
-    
-    return {
-        "success": True,
-        "plan_name": plan_name,
-        "plan_type": plan_type,
-        "prc_deducted": prc_amount,
-        "subscription_expiry": new_expiry,
-        "message": f"Subscription activated! {plan_name.capitalize()} valid until {new_expiry[:10]}"
-    }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[PRC-SUB] Unexpected error: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Payment processing error: {str(e)}")
 
 @api_router.post("/subscription/downgrade/{uid}")
 async def downgrade_subscription(uid: str, request: Request):
@@ -43301,10 +43336,7 @@ api_router.include_router(mining_router)
 # Social and Support routers removed - routes/social.py and routes/support.py deleted
 # Social and support routes exist in server.py with complete implementations
 
-# Include all API routes (must be after all route definitions and sub-routers)
-app.include_router(api_router)
-
-
+# ==================== ADMIN USER LOOKUP - MUST BE BEFORE include_router ====================
 @api_router.get("/admin/user-lookup/{identifier}")
 async def admin_user_lookup(identifier: str):
     """
@@ -43484,99 +43516,42 @@ async def admin_user_lookup(identifier: str):
             "expected_balance": round(expected_balance, 2),
             "current_balance": round(current_balance, 2),
             "difference": round(balance_difference, 2),
-            "balance_status": "✅ OK" if abs(balance_difference) < 100 else "⚠️ Mismatch"
+            "balance_status": "OK" if abs(balance_difference) < 100 else "Mismatch"
         }
         
-        # ============ COMMON USER QUESTIONS (AUTO ANSWERED) ============
-        faq_answers = []
+        # ============ FAQ ANSWERS ============
+        faq_answers = {}
         
-        # Q1: Why is my mining speed low?
+        # Why balance less?
+        if total_mined > current_balance:
+            faq_answers["why_balance_less"] = f"Total mined: {total_mined:,.0f}, Redeemed: {total_redeemed:,.0f}, Current: {current_balance:,.0f}"
+        
+        # Why mining slow?
         if final_rate <= base_rate:
-            faq_answers.append({
-                "question": "माझा mining speed कमी का आहे?",
-                "answer": f"तुमचा base rate {base_rate} PRC/hr आहे. Referral bonus {total_referral_bonus} PRC/hr आहे कारण तुमचे {l1_active} L1 आणि {l2_active} L2 active referrals आहेत. Mining speed वाढवण्यासाठी Elite referrals वाढवा.",
-                "suggestion": "L1 वर active Elite referrals वाढवा (प्रत्येकी +10% bonus)"
-            })
+            faq_answers["why_mining_slow"] = f"Base rate: {base_rate}, No referral bonus (need Elite+active referrals)"
         
-        # Q2: Why are my referrals showing inactive?
-        inactive_refs = l1_total - l1_active
-        if inactive_refs > 0:
-            faq_answers.append({
-                "question": "माझे referrals inactive का दिसत आहेत?",
-                "answer": f"Active होण्यासाठी referral ला Elite subscription + Mining Active असणे आवश्यक आहे. तुमच्या {l1_total} L1 referrals पैकी फक्त {l1_active} active आहेत.",
-                "suggestion": "Referrals ला Elite plan घ्यायला सांगा आणि mining चालू ठेवायला सांगा"
-            })
-        
-        # Q3: Balance mismatch?
-        if abs(balance_difference) > 100:
-            faq_answers.append({
-                "question": "माझे balance चुकीचे वाटते",
-                "answer": f"Expected balance: {expected_balance:,.0f} PRC, Actual: {current_balance:,.0f} PRC, Difference: {balance_difference:,.0f} PRC",
-                "suggestion": "Admin ने /api/admin/prc-balance/check-user/{uid} API वापरून तपासावे"
-            })
-        
-        # Q4: Mining not working?
-        mining_active = user.get("mining_active")
-        session_end = user.get("mining_session_end")
-        if mining_active and session_end:
-            try:
-                session_end_dt = datetime.fromisoformat(str(session_end).replace('Z', '+00:00'))
-                if session_end_dt < now:
-                    faq_answers.append({
-                        "question": "Mining का चालत नाही?",
-                        "answer": f"Mining session संपली आहे ({session_end}). नवीन session start करा.",
-                        "suggestion": "App मध्ये 'Start Mining' button वर click करा"
-                    })
-            except:
-                pass
-        
-        # Q5: Subscription expired?
-        sub_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
-        if sub_expiry and subscription_plan != "explorer":
-            try:
-                expiry_dt = datetime.fromisoformat(str(sub_expiry).replace('Z', '+00:00'))
-                if expiry_dt < now:
-                    faq_answers.append({
-                        "question": "Subscription expire झाली का?",
-                        "answer": f"हो, {subscription_plan} subscription {sub_expiry} ला expire झाली.",
-                        "suggestion": "Subscription renew करा"
-                    })
-                else:
-                    days_left = (expiry_dt - now).days
-                    if days_left <= 7:
-                        faq_answers.append({
-                            "question": "Subscription कधी expire होईल?",
-                            "answer": f"{days_left} दिवस बाकी आहेत. Expiry: {sub_expiry}",
-                            "suggestion": "वेळेवर renew करा"
-                        })
-            except:
-                pass
-        
-        # Q6: Pending withdrawals
-        if pending_total > 0:
-            faq_answers.append({
-                "question": "Withdrawal pending आहे का?",
-                "answer": f"हो, {len(pending_withdrawals)} withdrawals pending आहेत. Total: {pending_total:,.0f} PRC",
-                "suggestion": "Admin approval लागेल, 24-48 तास लागू शकतात"
-            })
+        # Why referrals inactive?
+        if l1_total - l1_active > 0:
+            faq_answers["why_referral_inactive"] = f"{l1_total - l1_active} of {l1_total} L1 referrals inactive (need Elite + mining_active)"
         
         return {
             "success": True,
-            "user": basic_info,
-            "mining": mining_details,
-            "referrals": referral_breakdown,
-            "balance": balance_analysis,
-            "faq_answers": faq_answers,
-            "quick_actions": {
-                "check_balance": f"/api/admin/prc-balance/check-user/{uid}",
-                "view_transactions": f"/api/user/{uid}/transactions",
-                "view_referrals": f"/api/referrals/{uid}/levels?force_refresh=true"
-            }
+            "basic_info": basic_info,
+            "mining_details": mining_details,
+            "referral_breakdown": referral_breakdown,
+            "balance_analysis": balance_analysis,
+            "faq_answers": faq_answers
         }
         
     except Exception as e:
         import traceback
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
+# Include all API routes (must be after all route definitions and sub-routers)
+app.include_router(api_router)
+
+# Note: User lookup route is now defined BEFORE include_router (line ~43305)
 
 # Note: Health check endpoint is defined earlier in the file at line ~408
 # The /health and /api/health endpoints now return 200 even during DB warmup
