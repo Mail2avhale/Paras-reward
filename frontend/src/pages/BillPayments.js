@@ -30,6 +30,7 @@ const BillPayments = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(user);
+  const [prcRate, setPrcRate] = useState(10); // Dynamic PRC rate
   
   // Get service type from URL query param or default to mobile_recharge
   const initialType = searchParams.get('type') || 'mobile_recharge';
@@ -341,13 +342,27 @@ const BillPayments = ({ user, onLogout }) => {
   const totalChargesINR = platformFeeINR + adminChargeINR;
   const totalINR = amountINR + totalChargesINR;
   
-  // Convert to PRC (10 PRC = ₹1)
-  const prcRate = 10;
+  // Convert to PRC (Dynamic rate from API)
   const amountPRC = amountINR * prcRate;
   const platformFeePRC = platformFeeINR * prcRate;
   const adminChargePRC = adminChargeINR * prcRate;
   const totalChargesPRC = totalChargesINR * prcRate;
   const totalPRC = totalINR * prcRate;
+  
+  // Fetch dynamic PRC rate on mount
+  useEffect(() => {
+    const fetchPrcRate = async () => {
+      try {
+        const res = await axios.get(`${API}/config/public`);
+        if (res.data?.prc_to_inr_rate) {
+          setPrcRate(res.data.prc_to_inr_rate);
+        }
+      } catch (err) {
+        console.error('Failed to fetch PRC rate:', err);
+      }
+    };
+    fetchPrcRate();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -61,16 +61,49 @@ EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "")
 
 # Dynamic PRC Rate helper
 async def get_dynamic_prc_rate():
-    """Get PRC rate from database, default 10"""
+    """Get PRC rate from dynamic economy system, fallback to database"""
     try:
+        # Try to import from main server's dynamic rate function
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        # First try dynamic economy calculation
+        try:
+            from routes.prc_economy import calculate_dynamic_prc_rate
+            rate_data = await calculate_dynamic_prc_rate(db)
+            if rate_data:
+                if isinstance(rate_data, dict):
+                    return int(rate_data.get("final_rate", 10))
+                return int(rate_data)
+        except:
+            pass
+        
+        # Check for manual override
+        override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
+        if override and override.get("enabled"):
+            override_rate = override.get("rate")
+            expires_at = override.get("expires_at")
+            if expires_at:
+                from datetime import datetime, timezone
+                try:
+                    expiry = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    if expiry > datetime.now(timezone.utc):
+                        return int(override_rate)
+                except:
+                    pass
+            else:
+                return int(override_rate)
+        
+        # Fallback to database settings
         rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
         if rate_setting and rate_setting.get("value"):
-            return rate_setting.get("value")
+            return int(rate_setting.get("value"))
         settings = await db.settings.find_one({})
         if settings and settings.get("prc_to_inr_rate"):
-            return settings.get("prc_to_inr_rate")
-    except:
-        pass
+            return int(settings.get("prc_to_inr_rate"))
+    except Exception as e:
+        logging.error(f"[BANK_TRANSFER] Error getting PRC rate: {e}")
     return 10  # Default fallback
 
 # ==================== MODELS ====================

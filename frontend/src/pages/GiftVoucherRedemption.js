@@ -23,6 +23,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all'); // NEW: Status filter
   const [expandedRequest, setExpandedRequest] = useState(null); // For timeline expansion
+  const [prcRate, setPrcRate] = useState(10); // Dynamic PRC rate
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -84,12 +85,26 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   const adminChargeINR = voucherAmountINR * (adminChargePercent / 100);
   const totalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
   
-  // Convert to PRC (10 PRC = ₹1)
-  const prcRate = 10;
+  // Convert to PRC (Dynamic rate from API)
   const voucherAmountPRC = voucherAmountINR * prcRate;
   const processingFeePRC = processingFeeINR * prcRate;
   const adminChargePRC = adminChargeINR * prcRate;
   const totalPRC = totalINR * prcRate;
+  
+  // Fetch dynamic PRC rate on mount
+  useEffect(() => {
+    const fetchPrcRate = async () => {
+      try {
+        const res = await axios.get(`${API}/config/public`);
+        if (res.data?.prc_to_inr_rate) {
+          setPrcRate(res.data.prc_to_inr_rate);
+        }
+      } catch (err) {
+        console.error('Failed to fetch PRC rate:', err);
+      }
+    };
+    fetchPrcRate();
+  }, []);
 
   const handleRedeem = async () => {
     if (!selectedDenomination) {
