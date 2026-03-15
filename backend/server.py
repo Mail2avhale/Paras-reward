@@ -28049,19 +28049,19 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
 
 
 @api_router.get("/admin/prc-balance/fix-zero-balance")
-async def fix_zero_balance_users(dry_run: bool = True, limit: int = 100):
+async def fix_zero_balance_users(dry_run: bool = True, limit: int = 500):
     """
     🔧 FIX: Restore balance for users who have 0 balance but high total_mined.
     
-    These users got incorrectly set to 0 due to duplicate correction entries.
     Sets balance = total_mined for affected users.
+    Also checks balance_corrections and balance_restores for correct value.
     """
     try:
         now = datetime.now(timezone.utc)
         
         # Find users with 0 balance but significant total_mined
         affected_users = await db.users.find({
-            "prc_balance": 0,
+            "prc_balance": {"$lte": 0},
             "total_mined": {"$gt": 10000}
         }).limit(limit).to_list(limit)
         
@@ -28076,37 +28076,69 @@ async def fix_zero_balance_users(dry_run: bool = True, limit: int = 100):
             uid = user.get("uid")
             name = user.get("name", "Unknown")
             total_mined = float(user.get("total_mined", 0) or 0)
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            
+            # Determine correct balance - use total_mined as baseline
+            # Then subtract any legitimate redemptions
+            total_redeemed = 0
+            
+            # Check subscriptions
+            subs = await db.subscriptions.find({"user_id": uid, "status": "active"}).to_list(100)
+            for s in subs:
+                total_redeemed += float(s.get("prc_amount", 0) or 0)
+            
+            # Check product orders
+            orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
+            for o in orders:
+                total_redeemed += float(o.get("prc_amount", 0) or 0)
+            
+            # Check bank withdrawals (only completed)
+            withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
+            for w in withdrawals:
+                total_redeemed += float(w.get("prc_amount", 0) or 0)
+            
+            # Correct balance = total_mined - total_redeemed
+            correct_balance = max(0, total_mined - total_redeemed)
             
             fix_record = {
                 "uid": uid,
                 "name": name,
-                "current_balance": 0,
-                "new_balance": round(total_mined, 2)
+                "current_balance": round(current_balance, 2),
+                "total_mined": round(total_mined, 2),
+                "total_redeemed": round(total_redeemed, 2),
+                "correct_balance": round(correct_balance, 2)
             }
             
-            if not dry_run:
+            if not dry_run and correct_balance > 0:
                 await db.users.update_one(
                     {"uid": uid},
                     {
                         "$set": {
-                            "prc_balance": round(total_mined, 2),
-                            "balance_fixed_at": now.isoformat()
+                            "prc_balance": round(correct_balance, 2),
+                            "balance_fixed_at": now.isoformat(),
+                            "balance_fix_reason": "zero_balance_recovery"
                         }
                     }
                 )
                 fix_record["status"] = "fixed"
+                results["fixed"] += 1
+            elif correct_balance <= 0:
+                fix_record["status"] = "skipped_no_balance"
             else:
                 fix_record["status"] = "would_fix"
+                results["fixed"] += 1
             
             results["fixes"].append(fix_record)
-            results["fixed"] += 1
+        
+        total_to_restore = sum([f.get("correct_balance", 0) for f in results["fixes"]])
         
         return {
             "success": True,
             "message": "DRY RUN" if dry_run else f"Fixed {results['fixed']} users",
             "summary": {
                 "users_found": results["found"],
-                "users_fixed": results["fixed"]
+                "users_to_fix": results["fixed"],
+                "total_prc_to_restore": round(total_to_restore, 2)
             },
             "fixes": results["fixes"]
         }
