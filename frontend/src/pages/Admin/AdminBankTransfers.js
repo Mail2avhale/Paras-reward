@@ -390,7 +390,7 @@ const AdminBankTransfers = () => {
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">User</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Amount</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Bank Details</th>
-                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Date</th>
+                      <th className="text-left p-4 text-slate-400 font-medium text-sm">Created / Processed</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Status</th>
                       <th className="text-left p-4 text-slate-400 font-medium text-sm">Actions</th>
                     </tr>
@@ -472,12 +472,30 @@ const AdminBankTransfers = () => {
                           </div>
                         </td>
                         <td className="p-4">
-                          <p className="text-slate-300 text-sm">
-                            {new Date(req.created_at).toLocaleDateString('en-IN')}
-                          </p>
-                          <p className="text-slate-500 text-xs">
-                            {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <div className="space-y-1">
+                            <div>
+                              <p className="text-slate-500 text-xs">Created:</p>
+                              <p className="text-slate-300 text-sm">
+                                {new Date(req.created_at).toLocaleDateString('en-IN')}
+                              </p>
+                              <p className="text-slate-500 text-xs">
+                                {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            {req.processed_at && (
+                              <div className="mt-2 pt-2 border-t border-slate-700">
+                                <p className={`text-xs ${req.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
+                                  {req.status === 'paid' ? 'Paid:' : 'Failed:'}
+                                </p>
+                                <p className="text-slate-300 text-sm">
+                                  {new Date(req.processed_at).toLocaleDateString('en-IN')}
+                                </p>
+                                <p className="text-slate-500 text-xs">
+                                  {new Date(req.processed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4">
                           <StatusBadge status={req.status} />
@@ -747,6 +765,42 @@ const AdminBankTransfers = () => {
                 {/* Bank Name */}
                 <div className="text-center pt-2">
                   <p className="text-slate-400 text-sm">{selectedRequest.bank_name}</p>
+                </div>
+                
+                {/* Timestamps */}
+                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700">
+                  <div className="bg-slate-800 px-3 py-2 rounded">
+                    <p className="text-slate-500 text-xs flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Created
+                    </p>
+                    <p className="text-white text-sm">
+                      {new Date(selectedRequest.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                    <p className="text-slate-400 text-xs">
+                      {new Date(selectedRequest.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </p>
+                  </div>
+                  {selectedRequest.processed_at ? (
+                    <div className={`px-3 py-2 rounded ${selectedRequest.status === 'paid' ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
+                      <p className={`text-xs flex items-center gap-1 ${selectedRequest.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
+                        <Calendar className="w-3 h-3" /> {selectedRequest.status === 'paid' ? 'Paid' : 'Failed'}
+                      </p>
+                      <p className="text-white text-sm">
+                        {new Date(selectedRequest.processed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <p className="text-slate-400 text-xs">
+                        {new Date(selectedRequest.processed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-900/30 px-3 py-2 rounded">
+                      <p className="text-yellow-500 text-xs flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Status
+                      </p>
+                      <p className="text-yellow-400 text-sm font-medium">Pending</p>
+                      <p className="text-slate-400 text-xs">Awaiting action</p>
+                    </div>
+                  )}
                 </div>
               </div>
               
