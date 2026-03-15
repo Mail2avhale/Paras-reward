@@ -27654,7 +27654,139 @@ async def get_user_prc_breakdown(uid: str):
 
 # ==================== PRC BALANCE FIX API ====================
 
-@api_router.post("/admin/prc-balance/fix-excess-balance")
+@api_router.post("/admin/prc-balance/fix-100x-refund-bug")
+async def fix_100x_refund_bug(dry_run: bool = True, limit: int = 500):
+    """
+    🔧 FIX: Correct the 100x refund bug.
+    
+    Bug: When bank withdrawals were rejected, refund was INR × 100 instead of INR × ~12 (with fees).
+    Example: ₹9,500 rejection gave 9,50,000 PRC instead of ~1,14,000 PRC.
+    
+    This API:
+    1. Finds all users with refund transactions
+    2. Calculates excess = refunded - expected (INR × 12)
+    3. Deducts excess from prc_balance
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max users to process (default: 500)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY APPLY FIXES
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        import re
+        
+        # Find users with prc_transactions containing refunds
+        users_with_refunds = await db.users.find({
+            "prc_transactions.type": "refund"
+        }).limit(limit).to_list(limit)
+        
+        results = {
+            "total_checked": len(users_with_refunds),
+            "fixed": 0,
+            "skipped": 0,
+            "total_excess_removed": 0,
+            "dry_run": dry_run,
+            "fixes": []
+        }
+        
+        for user in users_with_refunds:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            
+            prc_txns = user.get("prc_transactions", [])
+            total_excess = 0
+            refund_details = []
+            
+            for txn in prc_txns:
+                if txn.get("type") == "refund":
+                    amount = float(txn.get("amount", 0) or 0)
+                    desc = txn.get("description", "")
+                    
+                    # Extract INR from description "...rejected - ₹9500"
+                    match = re.search(r'₹(\d+)', desc)
+                    if match:
+                        inr_amount = float(match.group(1))
+                        
+                        # Expected PRC: INR × 12 (rate ~10 + 20% fee)
+                        expected_prc = inr_amount * 12
+                        
+                        # If refunded > 5x expected, it's the 100x bug
+                        if amount > expected_prc * 5:
+                            excess = amount - expected_prc
+                            total_excess += excess
+                            refund_details.append({
+                                "inr": inr_amount,
+                                "refunded": amount,
+                                "expected": expected_prc,
+                                "excess": excess
+                            })
+            
+            if total_excess > 1000:  # More than 1k excess
+                new_balance = max(0, current_balance - total_excess)
+                
+                fix_record = {
+                    "uid": uid,
+                    "name": name,
+                    "current_balance": round(current_balance, 2),
+                    "excess_refund": round(total_excess, 2),
+                    "new_balance": round(new_balance, 2),
+                    "refunds_fixed": len(refund_details)
+                }
+                
+                if not dry_run:
+                    # Apply fix
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "prc_balance": round(new_balance, 2),
+                                "refund_bug_fixed_at": now.isoformat(),
+                                "refund_excess_removed": round(total_excess, 2)
+                            }
+                        }
+                    )
+                    
+                    # Log correction
+                    await db.balance_corrections.insert_one({
+                        "user_id": uid,
+                        "user_name": name,
+                        "correction_type": "100x_refund_bug",
+                        "old_balance": current_balance,
+                        "new_balance": new_balance,
+                        "excess_removed": total_excess,
+                        "refund_details": refund_details,
+                        "corrected_at": now.isoformat()
+                    })
+                    
+                    fix_record["status"] = "fixed"
+                else:
+                    fix_record["status"] = "would_fix"
+                
+                results["fixes"].append(fix_record)
+                results["fixed"] += 1
+                results["total_excess_removed"] += total_excess
+            else:
+                results["skipped"] += 1
+        
+        return {
+            "success": True,
+            "message": "DRY RUN - No changes made" if dry_run else f"Fixed {results['fixed']} users",
+            "summary": {
+                "users_checked": results["total_checked"],
+                "users_fixed": results["fixed"],
+                "users_skipped": results["skipped"],
+                "total_excess_removed": round(results["total_excess_removed"], 2)
+            },
+            "fixes": results["fixes"][:100]
+        }
+        
+    except Exception as e:
+        logging.error(f"[100x REFUND FIX] Error: {e}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 async def fix_excess_balance(dry_run: bool = True, threshold: float = 50000, limit: int = 500):
     """
     🔧 FIX: Correct PRC balances where balance > total_mined + threshold.
