@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://prc-wallet-system.preview.emergentagent.com/setup
+   https://subscription-hotfix.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

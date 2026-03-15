@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  * - Navigation
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-wallet-system.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://subscription-hotfix.preview.emergentagent.com';
 
 // Test credentials
 const TEST_USER = {

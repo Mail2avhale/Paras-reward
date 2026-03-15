@@ -1781,26 +1781,46 @@ async def auto_sync_razorpay_payments():
                         payment_id = captured_payment.get("id")
                         amount = captured_payment.get("amount", 0) / 100
                         
-                        # CRITICAL: Check if this payment was already used for activation
+                        # CRITICAL CHECK 1: Check if this payment was already used in vip_payments
                         existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
                         if existing_vip:
-                            print(f"[AUTO-SYNC] ⚠️ Payment {payment_id} already used, skipping")
+                            print(f"[AUTO-SYNC] ⚠️ Payment {payment_id} already in vip_payments, skipping")
+                            # Mark order as paid anyway to prevent future attempts
+                            await db.razorpay_orders.update_one(
+                                {"order_id": order_id},
+                                {"$set": {"status": "paid", "skipped_reason": "already_in_vip_payments"}}
+                            )
                             continue
                         
-                        # Update order status
-                        await db.razorpay_orders.update_one(
-                            {"order_id": order_id},
+                        # CRITICAL CHECK 2: Check if user already has this payment_id
+                        user_with_payment = await db.users.find_one({"last_payment_id": payment_id})
+                        if user_with_payment:
+                            print(f"[AUTO-SYNC] ⚠️ Payment {payment_id} already activated for user {user_with_payment.get('uid')}, skipping")
+                            await db.razorpay_orders.update_one(
+                                {"order_id": order_id},
+                                {"$set": {"status": "paid", "skipped_reason": "user_has_payment"}}
+                            )
+                            continue
+                        
+                        # ATOMIC CLAIM: Mark order as processing to prevent race condition
+                        claim_result = await db.razorpay_orders.find_one_and_update(
+                            {
+                                "order_id": order_id,
+                                "status": {"$nin": ["paid", "processing"]}
+                            },
                             {
                                 "$set": {
-                                    "status": "paid",
+                                    "status": "processing",
                                     "payment_id": payment_id,
-                                    "payment_captured": True,
-                                    "verified_amount": amount,
-                                    "synced_at": datetime.now(timezone.utc).isoformat(),
-                                    "synced_via": "auto_sync"
+                                    "processing_by": "auto_sync",
+                                    "processing_at": datetime.now(timezone.utc).isoformat()
                                 }
                             }
                         )
+                        
+                        if not claim_result:
+                            print(f"[AUTO-SYNC] Order {order_id} already being processed, skipping")
+                            continue
                         
                         # ACTIVATE SUBSCRIPTION
                         plan_type = order.get("plan_type", "monthly")
@@ -1809,27 +1829,40 @@ async def auto_sync_razorpay_payments():
                         
                         now = datetime.now(timezone.utc)
                         
-                        # Check for existing subscription and add remaining days
-                        user = await db.users.find_one({"uid": user_id})
-                        remaining_days = 0
-                        old_plan = None
+                        # Atomic claim on user to prevent double activation
+                        user = await db.users.find_one_and_update(
+                            {
+                                "uid": user_id,
+                                "last_payment_id": {"$ne": payment_id}
+                            },
+                            {"$set": {"_auto_sync_claiming": payment_id}}
+                        )
                         
-                        if user:
-                            old_plan = user.get("subscription_plan")
-                            # Check BOTH field names
-                            existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                        if not user:
+                            print(f"[AUTO-SYNC] User {user_id} already has payment {payment_id}, skipping")
+                            await db.razorpay_orders.update_one(
+                                {"order_id": order_id},
+                                {"$set": {"status": "paid", "skipped_reason": "user_claim_failed"}}
+                            )
+                            continue
+                        
+                        remaining_days = 0
+                        old_plan = user.get("subscription_plan")
+                        
+                        # Check BOTH field names
+                        existing_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                        if existing_expiry:
+                            if isinstance(existing_expiry, str):
+                                try:
+                                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                                except:
+                                    existing_expiry = None
+                            
                             if existing_expiry:
-                                if isinstance(existing_expiry, str):
-                                    try:
-                                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                                    except:
-                                        existing_expiry = None
-                                
-                                if existing_expiry:
-                                    if existing_expiry.tzinfo is None:
-                                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
-                                    if existing_expiry > now:
-                                        remaining_days = (existing_expiry - now).days
+                                if existing_expiry.tzinfo is None:
+                                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                                if existing_expiry > now:
+                                    remaining_days = (existing_expiry - now).days
                         
                         total_days = duration_days + remaining_days
                         expiry_date = now + timedelta(days=total_days)
@@ -1850,45 +1883,70 @@ async def auto_sync_razorpay_payments():
                                     "previous_plan": old_plan,
                                     "previous_remaining_days_added": remaining_days,
                                     "activated_via": "auto_sync"
+                                },
+                                "$unset": {"_auto_sync_claiming": ""}
+                            }
+                        )
+                        
+                        # Update order status to paid
+                        await db.razorpay_orders.update_one(
+                            {"order_id": order_id},
+                            {
+                                "$set": {
+                                    "status": "paid",
+                                    "payment_captured": True,
+                                    "verified_amount": amount,
+                                    "synced_at": datetime.now(timezone.utc).isoformat(),
+                                    "synced_via": "auto_sync"
                                 }
                             }
                         )
                         
-                        # Log transaction
-                        await db.transactions.insert_one({
-                            "user_id": user_id,
-                            "type": "subscription_payment",
-                            "amount": amount,
+                        # Check if transaction already exists
+                        existing_txn = await db.transactions.find_one({
                             "payment_id": payment_id,
-                            "order_id": order_id,
-                            "plan_name": plan_name,
-                            "plan_type": plan_type,
-                            "duration_days": duration_days,
-                            "remaining_days_added": remaining_days,
-                            "total_days": total_days,
-                            "activated_via": "auto_sync",
-                            "timestamp": now
+                            "type": "subscription_payment"
                         })
                         
-                        # CRITICAL: Also log to vip_payments to prevent double activation
-                        await db.vip_payments.insert_one({
-                            "user_id": user_id,
-                            "order_id": order_id,
-                            "payment_id": payment_id,
-                            "amount": amount,
-                            "subscription_plan": plan_name.lower(),
-                            "plan_type": plan_type,
-                            "status": "approved",
-                            "payment_method": "razorpay",
-                            "payment_captured": True,
-                            "new_expiry": expiry_date.isoformat(),
-                            "duration_days": total_days,
-                            "remaining_days_added": remaining_days,
-                            "approved_at": now.isoformat(),
-                            "created_at": now.isoformat(),
-                            "auto_activated": True,
-                            "activation_source": "auto_sync"
-                        })
+                        if not existing_txn:
+                            # Log transaction
+                            await db.transactions.insert_one({
+                                "user_id": user_id,
+                                "type": "subscription_payment",
+                                "amount": amount,
+                                "payment_id": payment_id,
+                                "order_id": order_id,
+                                "plan_name": plan_name,
+                                "plan_type": plan_type,
+                                "duration_days": duration_days,
+                                "remaining_days_added": remaining_days,
+                                "total_days": total_days,
+                                "activated_via": "auto_sync",
+                                "timestamp": now
+                            })
+                        
+                        # Check if vip_payment already exists
+                        existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
+                        if not existing_vip:
+                            # CRITICAL: Also log to vip_payments to prevent double activation
+                            await db.vip_payments.insert_one({
+                                "user_id": user_id,
+                                "order_id": order_id,
+                                "payment_id": payment_id,
+                                "amount": amount,
+                                "subscription_plan": plan_name.lower(),
+                                "plan_type": plan_type,
+                                "status": "approved",
+                                "payment_method": "razorpay",
+                                "payment_captured": True,
+                                "new_expiry": expiry_date.isoformat(),
+                                "duration_days": total_days,
+                                "remaining_days_added": remaining_days,
+                                "approved_at": now.isoformat(),
+                                "created_at": now.isoformat(),
+                                "auto_activated": True,
+                                "activation_source": "auto_sync"
+                            })
                         
                         synced_count += 1
                         print(f"[AUTO-SYNC] ✅ Activated subscription for user {user_id}, plan: {plan_name}")
@@ -1966,15 +2024,28 @@ async def auto_sync_captured_from_razorpay():
                 if not order:
                     continue
                 
-                # CRITICAL FIX: If order is already paid, skip completely
-                # This prevents double activation when both auto_sync functions run
-                if order.get("status") == "paid" and order.get("payment_captured"):
+                # CRITICAL CHECK 1: If order is already paid/processing, skip completely
+                if order.get("status") in ["paid", "processing"]:
                     continue  # Already processed - skip to prevent double activation
                 
-                # Also check if this specific payment was already used
+                # CRITICAL CHECK 2: Check if this specific payment was already used in vip_payments
                 existing_vip = await db.vip_payments.find_one({"payment_id": payment_id})
                 if existing_vip:
+                    # Mark order as paid to prevent future attempts
+                    await db.razorpay_orders.update_one(
+                        {"order_id": order_id},
+                        {"$set": {"status": "paid", "skipped_reason": "already_in_vip_payments"}}
+                    )
                     continue  # This payment already activated a subscription
+                
+                # CRITICAL CHECK 3: Check if any user already has this payment_id
+                user_with_payment = await db.users.find_one({"last_payment_id": payment_id})
+                if user_with_payment:
+                    await db.razorpay_orders.update_one(
+                        {"order_id": order_id},
+                        {"$set": {"status": "paid", "skipped_reason": "user_has_payment"}}
+                    )
+                    continue
                 
                 # Need to activate!
                 user_id = order.get("user_id")
@@ -1984,35 +2055,67 @@ async def auto_sync_captured_from_razorpay():
                 
                 now = datetime.now(timezone.utc)
                 
-                user = await db.users.find_one({"uid": user_id})
-                remaining_days = 0
-                user_name = "Unknown"
+                # ATOMIC CLAIM ORDER: Mark as processing to prevent race condition
+                claim_order = await db.razorpay_orders.find_one_and_update(
+                    {
+                        "order_id": order_id,
+                        "status": {"$nin": ["paid", "processing"]}
+                    },
+                    {
+                        "$set": {
+                            "status": "processing",
+                            "payment_id": payment_id,
+                            "processing_by": "captured_sync"
+                        }
+                    }
+                )
                 
-                if user:
-                    user_name = user.get("name", "Unknown")
-                    expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
-                    if expiry:
-                        try:
-                            if isinstance(expiry, str):
-                                exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
-                            else:
-                                exp_date = expiry
-                            if exp_date.tzinfo is None:
-                                exp_date = exp_date.replace(tzinfo=timezone.utc)
-                            if exp_date > now:
-                                remaining_days = (exp_date - now).days
-                        except:
-                            pass
+                if not claim_order:
+                    print(f"[RAZORPAY-CAPTURED-SYNC] Order {order_id} already being processed, skipping")
+                    continue
+                
+                # ATOMIC CLAIM USER: Try to claim this payment for user
+                user = await db.users.find_one_and_update(
+                    {
+                        "uid": user_id,
+                        "last_payment_id": {"$ne": payment_id}
+                    },
+                    {"$set": {"_captured_sync_claiming": payment_id}}
+                )
+                
+                if not user:
+                    print(f"[RAZORPAY-CAPTURED-SYNC] User {user_id} already has payment {payment_id}, skipping")
+                    await db.razorpay_orders.update_one(
+                        {"order_id": order_id},
+                        {"$set": {"status": "paid", "skipped_reason": "user_claim_failed"}}
+                    )
+                    continue
+                
+                remaining_days = 0
+                user_name = user.get("name", "Unknown")
+                
+                expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                if expiry:
+                    try:
+                        if isinstance(expiry, str):
+                            exp_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+                        else:
+                            exp_date = expiry
+                        if exp_date.tzinfo is None:
+                            exp_date = exp_date.replace(tzinfo=timezone.utc)
+                        if exp_date > now:
+                            remaining_days = (exp_date - now).days
+                    except:
+                        pass
                 
                 total_days = duration_days + remaining_days
                 new_expiry = now + timedelta(days=total_days)
                 
-                # Update order
+                # Update order to paid
                 await db.razorpay_orders.update_one(
                     {"order_id": order_id},
                     {"$set": {
                         "status": "paid",
-                        "payment_id": payment_id,
                         "payment_captured": True,
                         "verified_amount": amount,
                         "synced_at": now.isoformat(),
@@ -2023,41 +2126,46 @@ async def auto_sync_captured_from_razorpay():
                 # Update user
                 await db.users.update_one(
                     {"uid": user_id},
-                    {"$set": {
-                        "subscription_plan": plan_name.lower(),
-                        "subscription_type": plan_type,
-                        "subscription_status": "active",
-                        "subscription_start": now.isoformat(),
-                        "subscription_expires": new_expiry,
-                        "subscription_expiry": new_expiry.isoformat(),
-                        "vip_expiry": new_expiry.isoformat(),
-                        "membership_type": "vip",
-                        "last_payment_id": payment_id,
-                        "last_payment_amount": amount,
-                        "last_payment_date": now.isoformat(),
-                        "activated_via": "captured_sync"
-                    }}
+                    {
+                        "$set": {
+                            "subscription_plan": plan_name.lower(),
+                            "subscription_type": plan_type,
+                            "subscription_status": "active",
+                            "subscription_start": now.isoformat(),
+                            "subscription_expires": new_expiry,
+                            "subscription_expiry": new_expiry.isoformat(),
+                            "vip_expiry": new_expiry.isoformat(),
+                            "membership_type": "vip",
+                            "last_payment_id": payment_id,
+                            "last_payment_amount": amount,
+                            "last_payment_date": now.isoformat(),
+                            "activated_via": "captured_sync"
+                        },
+                        "$unset": {"_captured_sync_claiming": ""}
+                    }
                 )
                 
-                # Log to vip_payments
-                await db.vip_payments.insert_one({
-                    "user_id": user_id,
-                    "order_id": order_id,
-                    "payment_id": payment_id,
-                    "amount": amount,
-                    "subscription_plan": plan_name.lower(),
-                    "plan_type": plan_type,
-                    "status": "approved",
-                    "payment_method": "razorpay",
-                    "payment_captured": True,
-                    "new_expiry": new_expiry.isoformat(),
-                    "duration_days": total_days,
-                    "remaining_days_added": remaining_days,
-                    "approved_at": now.isoformat(),
-                    "created_at": now.isoformat(),
-                    "auto_activated": True,
-                    "activation_source": "captured_sync"
-                })
+                # Check if vip_payment already exists
+                existing_vip_check = await db.vip_payments.find_one({"payment_id": payment_id})
+                if not existing_vip_check:
+                    await db.vip_payments.insert_one({
+                        "user_id": user_id,
+                        "order_id": order_id,
+                        "payment_id": payment_id,
+                        "amount": amount,
+                        "subscription_plan": plan_name.lower(),
+                        "plan_type": plan_type,
+                        "status": "approved",
+                        "payment_method": "razorpay",
+                        "payment_captured": True,
+                        "new_expiry": new_expiry.isoformat(),
+                        "duration_days": total_days,
+                        "remaining_days_added": remaining_days,
+                        "approved_at": now.isoformat(),
+                        "created_at": now.isoformat(),
+                        "auto_activated": True,
+                        "activation_source": "captured_sync"
+                    })
                 
                 activated_count += 1
                 print(f"[RAZORPAY-CAPTURED-SYNC] ✅ Activated: {user_name}, Plan: {plan_name}")

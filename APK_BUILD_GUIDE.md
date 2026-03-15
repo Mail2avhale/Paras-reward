@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://prc-wallet-system.preview.emergentagent.com",
+    "url": "https://subscription-hotfix.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
