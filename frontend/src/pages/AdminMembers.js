@@ -534,12 +534,12 @@ const AdminMembers = () => {
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Member</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Plan</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">KYC</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">PRC Balance</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Redeem Limit</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Used</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Available</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Joined</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm">Status</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium text-sm">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -558,10 +558,10 @@ const AdminMembers = () => {
                   </tr>
                 ) : (
                   members.map((member) => {
-                    const plan = member.subscription_plan || 'explorer';
-                    const colors = planColors[plan] || planColors.explorer;
-                    const kycStatus = member.kyc_status || 'pending';
-                    const kycColor = kycColors[kycStatus] || kycColors.pending;
+                    const redeemLimit = member.redeem_limit || {};
+                    const totalLimit = redeemLimit.total_limit || 0;
+                    const usedLimit = redeemLimit.total_redeemed || 0;
+                    const availableLimit = redeemLimit.remaining_limit || (totalLimit - usedLimit);
                     
                     return (
                       <tr 
@@ -569,24 +569,32 @@ const AdminMembers = () => {
                         className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
                       >
                         <td className="py-3 px-4">
-                          <div>
-                            <p className="text-white font-medium">{member.name || 'Unknown'}</p>
+                          <div 
+                            className="cursor-pointer hover:text-blue-400 transition-colors"
+                            onClick={() => navigate(`/admin/user-360?uid=${member.uid}`)}
+                          >
+                            <p className="text-white font-medium hover:text-blue-400">{member.name || 'Unknown'}</p>
                             <p className="text-gray-500 text-sm">{member.email}</p>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
-                            {plan.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${kycColor.bg} ${kycColor.text}`}>
-                            {kycStatus.charAt(0).toUpperCase() + kycStatus.slice(1)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
                           <span className="text-green-400 font-medium">
-                            {(member.prc_balance || 0).toFixed(2)}
+                            {(member.prc_balance || 0).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-white font-medium">
+                            {totalLimit.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-yellow-400 font-medium">
+                            {usedLimit.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`font-medium ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {availableLimit.toLocaleString()}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-gray-400 text-sm">
@@ -600,15 +608,6 @@ const AdminMembers = () => {
                           }`}>
                             {member.is_active !== false ? 'Active' : 'Inactive'}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => navigate(`/admin/user-360?uid=${member.uid}`)}
-                            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4 text-gray-400" />
-                          </button>
                         </td>
                       </tr>
                     );

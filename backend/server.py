@@ -16348,6 +16348,31 @@ async def get_user_total_redeemed(user_id: str) -> float:
         return 0
 
 
+async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dict:
+    """
+    Internal helper to get user's redeem limit data.
+    Used by admin members list and other internal functions.
+    """
+    try:
+        limit_info = await calculate_user_redeem_limit(user_id)
+        total_limit = limit_info.get("total_limit", 0)
+        total_redeemed = await get_user_total_redeemed(user_id)
+        remaining = max(0, total_limit - total_redeemed)
+        
+        return {
+            "total_limit": round(total_limit, 2),
+            "total_redeemed": round(total_redeemed, 2),
+            "remaining_limit": round(remaining, 2)
+        }
+    except Exception as e:
+        logging.error(f"Error getting redeem limit for {user_id}: {e}")
+        return {
+            "total_limit": 0,
+            "total_redeemed": 0,
+            "remaining_limit": 0
+        }
+
+
 async def check_redeem_limit(user_id: str, amount: float) -> dict:
     """
     Check if user can redeem the specified amount.
@@ -18897,7 +18922,7 @@ async def get_members_list(
     
     # Get total and members
     total = await db.users.count_documents(query)
-    members = await db.users.find(
+    members_cursor = await db.users.find(
         query,
         {
             "_id": 0,
@@ -18907,6 +18932,21 @@ async def get_members_list(
             "biometric_credentials": 0
         }
     ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+    
+    # Add redeem limit data for each member
+    members = []
+    for member in members_cursor:
+        try:
+            # Get redeem limit for this user
+            redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
+            member["redeem_limit"] = redeem_limit_data
+        except:
+            member["redeem_limit"] = {
+                "total_limit": 0,
+                "total_redeemed": 0,
+                "remaining_limit": 0
+            }
+        members.append(member)
     
     return {
         "members": members,
