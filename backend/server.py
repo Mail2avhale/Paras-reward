@@ -741,7 +741,7 @@ async def check_service_cooldown(user_id: str, service_type: str) -> dict:
     
     # Collection mapping for each service
     collection_map = {
-        "subscription": "subscriptions",
+        "subscription": "subscription_payments",  # FIXED: was "subscriptions"
         "bank_transfer": "bank_withdrawal_requests",
         "bill_payment": "bill_payment_requests",
         "gift_voucher": "gift_voucher_requests",

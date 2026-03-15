@@ -1,83 +1,125 @@
-# Paras Reward System - PRD
+# PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-PRC Wallet System with mining, referrals, subscriptions, and redemption features.
+वापरकर्त्याची मूळ विनंती मायनिंग सेशन UI ला भविष्यवेधी डिझाइनमध्ये पुन्हा तयार करणे आणि मॅन्युअल फिनटेक रिडीम सिस्टम पूर्ण करणे ही होती.
+
+## Application Overview
+Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform आहे जिथे:
+- वापरकर्ते mining करून PRC कमवू शकतात
+- PRC वापरून subscriptions, bill payments, gift vouchers घेऊ शकतात
+- Bank transfers द्वारे INR मध्ये redeem करू शकतात
+- Referral system द्वारे bonus मिळवू शकतात
+
+## Core Features
+1. **Mining System** - Time-based PRC mining with referral bonuses
+2. **Subscription Plans** - Explorer (free), Startup, Growth, Elite
+3. **Redemption Services** - BBPS Bill Payments, Gift Vouchers, Bank Transfers
+4. **Payment Integration** - Razorpay (online) + Manual UPI/Bank
+5. **Admin Panel** - Complete management dashboard
+
+## Tech Stack
+- **Frontend**: React.js with Tailwind CSS, Shadcn/UI
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB
+- **Payments**: Razorpay, Eko (BBPS)
+
+---
 
 ## What's Been Implemented (March 2026)
 
-### Session: March 15, 2026
+### Session Fixes
+1. **Razorpay Double Subscription Prevention**
+   - Atomic claim mechanism with `processing` status
+   - `last_payment_id` check on user
+   - Idempotency in webhook handler
+   - Check `vip_payments` and `transactions` before activation
 
-#### Critical Fixes Applied:
-1. **PRC Balance Restoration** - All ~1,221 users with missing balance restored
-   - Formula: `total_mined - legitimate_redemptions + 20% compensation`
-   - API: `/api/admin/prc-balance/fix-all-missing`
+2. **Admin PRC Rate Control UI** (`/admin/prc-rate-control`)
+   - Manual override set/disable
+   - Duration-based expiry (hours or permanent)
+   - Current rate display with source info
 
-2. **Pro/Growth → Elite Upgrade** - 24 Growth users upgraded to Elite
-   - API: `/api/admin/upgrade-to-elite`
+3. **Admin User Lookup UI**
+   - Search by UID, mobile, email, or name
+   - Mining details, referral breakdown
+   - Balance analysis, FAQ answers
+   - **BUG FIX**: Route moved before `include_router`
 
-3. **Active User Condition Updated**
-   - New Logic: `Active = Elite subscription + Mining session active`
-   - Both conditions must be true
-   - Updated in: server.py, referral.py
+4. **PRC Subscription Payment Fix**
+   - Removed WalletService dependency (direct deduction)
+   - Increased variance from 5% to 10%
+   - Better error messages
+   - **BUG FIX**: Cooldown collection changed from `subscriptions` to `subscription_payments`
 
-4. **Diagnostic APIs Created**
-   - `/api/admin/prc-balance/check-user/{uid}` - Check any user's balance data
-   - `/api/admin/prc-balance/proper-restore` - Restore from balance_corrections
-   - `/api/admin/prc-balance/fix-all-missing` - Fix all users with missing balance
+5. **Service Cooldown System**
+   - Subscription: 15 days
+   - Other services: 24 hours
 
-### Previous Session Fixes:
-- 100x PRC refund bug data correction (~5.94 crore removed from 491 users)
-- Admin page sorting timeout optimization
-- "Used" limit and "Active Referrals" calculation fix
-- Razorpay subscription double activation fix
-- Webhook-based auto-burn system
+6. **Dynamic PRC Rate**
+   - All services use same dynamic rate
+   - Admin override available
 
-## Pending Issues
+---
 
-### P1 (High Priority):
-- **100x Refund Bug Root Cause** - The bulk reject operation bug not yet fixed at source
+## Known Issues (P0-P2)
 
-### P2 (Medium Priority):
-- PRC Rate manual override UI for admin
-- Manual bank transfer notifications
-- Production deployment crash issues
+### P1 - Pending
+- **145 Failed BBPS Transactions**: Root cause unknown, needs production logs
+- **User Rakhi Ghehlod Refund**: 14,260 PRC refund pending
 
-### P3 (Low Priority):
-- 145 failed BBPS transactions root cause
+### P2 - Lower Priority
+- Production deployment crashes (intermittent)
 - "Redeem to Bank" page routing issue
 
-## Key APIs
+---
 
-### Balance Management:
-- `GET /api/admin/prc-balance/check-user/{uid}` - Diagnose user balance
-- `GET /api/admin/prc-balance/fix-all-missing?dry_run=false` - Fix missing balances
-- `POST /api/admin/upgrade-to-elite?dry_run=false` - Upgrade Pro/Growth to Elite
+## Upcoming Tasks
 
-### Referrals:
-- `GET /api/referrals/{user_id}/levels?force_refresh=true` - Get referral tree (bypass cache)
+### P1
+1. BBPS transaction failure root cause analysis
+2. User refund automation
 
-## Test Credentials
-- **User Login:** `id: 9421331342`, `pin: 942133`
-- **Admin Login:** `email: Admin@paras.com`, `pin: 153759`
+### P2
+1. Manual bank transfer notifications (Firebase/Email)
+2. Mining session UI redesign (futuristic)
 
-## Architecture
-```
-/app
-├── backend/
-│   ├── server.py          # Main API logic
-│   ├── routes/
-│   │   └── referral.py    # Referral APIs
-│   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── pages/
-        └── components/
-```
+### Future
+1. Database migration to PostgreSQL
+2. Email/Mobile OTP verification
+3. Receipt generation for transactions
 
-## Active User Logic (Updated March 15, 2026)
-```python
-# User is ACTIVE only if:
-# 1. subscription_plan == "elite" AND
-# 2. mining_active == True AND mining_session_end > now
-is_active = is_elite AND is_mining
-```
+---
+
+## Key API Endpoints
+
+### Admin
+- `POST /api/admin/prc-rate/manual-override` - Set/disable rate override
+- `GET /api/admin/prc-rate/current` - Get current rate with source
+- `GET /api/admin/user-lookup/{identifier}` - User details lookup
+- `POST /api/admin/prc-balance/fix-all-missing` - Balance restoration
+
+### Subscription
+- `POST /api/subscription/pay-with-prc` - PRC subscription payment
+- `POST /api/subscription/razorpay/create-order` - Create Razorpay order
+- `POST /api/subscription/razorpay/verify-payment` - Verify and activate
+- `POST /api/subscription/razorpay/webhook` - Razorpay webhook (disabled by user)
+
+### Services
+- `POST /api/bbps/bill-payment` - BBPS bill payment
+- `POST /api/gift-voucher/redeem` - Gift voucher redemption
+- `GET /api/service/cooldown/{user_id}/{service_type}` - Check cooldown
+
+---
+
+## Credentials (Testing)
+- **User**: `9421331342` / PIN: `942133`
+- **Admin**: `Admin@paras.com` / PIN: `153759`
+
+---
+
+## Notes for Next Agent
+1. User's primary language is **Marathi**
+2. Razorpay webhook is **disabled** by user
+3. `server.py` is very large (~44K lines) - needs refactoring
+4. Always use `testing_agent` for critical changes
+5. User has lost trust due to previous agent mistakes - verify before claiming success
