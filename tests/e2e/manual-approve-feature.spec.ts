@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://dynamic-rate-system-1.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-wallet-system.preview.emergentagent.com';
 const ADMIN_UID = '1000001';
 const ADMIN_PIN = '123456';
 

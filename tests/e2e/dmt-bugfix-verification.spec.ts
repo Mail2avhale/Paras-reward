@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://dynamic-rate-system-1.preview.emergentagent.com';
+const BASE_URL = 'https://prc-wallet-system.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

@@ -27942,6 +27942,208 @@ async def fix_excess_balance(dry_run: bool = True, threshold: float = 50000, lim
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.get("/admin/prc-balance/restore-original")
+async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
+    """
+    🚨 EMERGENCY RESTORE: Restore original PRC balances from backup data.
+    
+    This uses:
+    1. balance_corrections collection (has old_balance logged)
+    2. users.old_balance_before_fix field (backup of original balance)
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max users to process (default: 1000)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY RESTORE
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        results = {
+            "total_found": 0,
+            "restored": 0,
+            "errors": [],
+            "dry_run": dry_run,
+            "restores": []
+        }
+        
+        # METHOD 1: Find users with old_balance_before_fix field
+        users_with_backup = await db.users.find({
+            "old_balance_before_fix": {"$exists": True, "$gt": 0}
+        }).limit(limit).to_list(limit)
+        
+        results["total_found"] = len(users_with_backup)
+        
+        for user in users_with_backup:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            original_balance = float(user.get("old_balance_before_fix", 0) or 0)
+            total_mined = float(user.get("total_mined", 0) or 0)
+            
+            restore_record = {
+                "uid": uid,
+                "name": name,
+                "current_balance": round(current_balance, 2),
+                "original_balance": round(original_balance, 2),
+                "total_mined": round(total_mined, 2)
+            }
+            
+            if not dry_run:
+                # Restore original balance
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": original_balance,
+                            "balance_restored_at": now.isoformat(),
+                            "balance_restore_reason": "Emergency restore after incorrect deduction"
+                        },
+                        "$unset": {
+                            "old_balance_before_fix": "",
+                            "balance_corrected_at": "",
+                            "balance_correction_reason": ""
+                        }
+                    }
+                )
+                
+                # Log restore action
+                await db.balance_restores.insert_one({
+                    "user_id": uid,
+                    "user_name": name,
+                    "current_balance": current_balance,
+                    "restored_balance": original_balance,
+                    "restored_at": now.isoformat(),
+                    "reason": "Emergency restore - incorrect fix applied"
+                })
+                
+                restore_record["status"] = "restored"
+                results["restored"] += 1
+            else:
+                restore_record["status"] = "would_restore"
+                results["restored"] += 1
+            
+            results["restores"].append(restore_record)
+        
+        # METHOD 2: Also check balance_corrections collection
+        corrections = await db.balance_corrections.find({}).to_list(1000)
+        results["corrections_found"] = len(corrections)
+        
+        return {
+            "success": True,
+            "message": "DRY RUN - No changes made" if dry_run else f"Restored {results['restored']} users",
+            "summary": {
+                "users_with_backup_field": results["total_found"],
+                "corrections_logged": results["corrections_found"],
+                "users_restored": results["restored"]
+            },
+            "restores": results["restores"][:100],
+            "note": f"Showing first 100 of {len(results['restores'])} restores" if len(results['restores']) > 100 else None
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC RESTORE] Error: {e}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
+@api_router.get("/admin/prc-balance/restore-from-corrections")
+async def restore_from_corrections_collection(dry_run: bool = True):
+    """
+    🚨 EMERGENCY RESTORE: Restore PRC balances from balance_corrections collection.
+    
+    This is a backup method if old_balance_before_fix field is not available.
+    
+    ⚠️ SET dry_run=false TO ACTUALLY RESTORE
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Get all corrections
+        corrections = await db.balance_corrections.find({}).to_list(2000)
+        
+        results = {
+            "total_corrections": len(corrections),
+            "restored": 0,
+            "errors": [],
+            "dry_run": dry_run,
+            "restores": []
+        }
+        
+        for correction in corrections:
+            uid = correction.get("user_id")
+            old_balance = float(correction.get("old_balance", 0) or 0)
+            
+            # Get current user
+            user = await db.users.find_one({"uid": uid})
+            if not user:
+                results["errors"].append({"uid": uid, "error": "User not found"})
+                continue
+            
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            
+            restore_record = {
+                "uid": uid,
+                "name": user.get("name", "Unknown"),
+                "current_balance": round(current_balance, 2),
+                "original_balance": round(old_balance, 2),
+                "correction_date": correction.get("corrected_at")
+            }
+            
+            if not dry_run:
+                # Restore original balance
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": old_balance,
+                            "balance_restored_at": now.isoformat(),
+                            "balance_restore_reason": "Emergency restore from corrections log"
+                        }
+                    }
+                )
+                
+                # Log restore
+                await db.balance_restores.insert_one({
+                    "user_id": uid,
+                    "user_name": user.get("name"),
+                    "current_balance": current_balance,
+                    "restored_balance": old_balance,
+                    "restored_at": now.isoformat(),
+                    "source": "balance_corrections collection"
+                })
+                
+                restore_record["status"] = "restored"
+            else:
+                restore_record["status"] = "would_restore"
+            
+            results["restores"].append(restore_record)
+            results["restored"] += 1
+        
+        total_old = sum([r.get("original_balance", 0) for r in results["restores"]])
+        total_current = sum([r.get("current_balance", 0) for r in results["restores"]])
+        
+        return {
+            "success": True,
+            "message": "DRY RUN - No changes made" if dry_run else f"Restored {results['restored']} users",
+            "summary": {
+                "corrections_found": results["total_corrections"],
+                "users_restored": results["restored"],
+                "total_original_balance": round(total_old, 2),
+                "total_current_balance": round(total_current, 2),
+                "balance_difference": round(total_old - total_current, 2)
+            },
+            "restores": results["restores"][:100],
+            "errors": results["errors"][:20] if results["errors"] else None
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC RESTORE CORRECTIONS] Error: {e}")
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/refund-audit")
 async def audit_refund_transactions(limit: int = 50):
     """

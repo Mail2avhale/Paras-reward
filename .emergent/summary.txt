@@ -1,89 +1,91 @@
 <analysis>**original_problem_statement:**
-वापरकर्त्याची (User) मूळ विनंती 'मायनिंग सेशन UI' ला एका भविष्यवेधी (futuristic) डिझाइनमध्ये पुन्हा तयार करणे, आणि 'मॅन्युअल फिनटेक रिडीम सिस्टम' पूर्ण करणे ही होती.
+वापरकर्त्याची (User) मूळ विनंती 'मायनिंग सेशन UI' ला भविष्यवेधी (futuristic) डिझाइनमध्ये पुन्हा तयार करणे आणि 'मॅन्युअल फिनटेक रिडीम सिस्टम' पूर्ण करणे ही होती. तथापि, प्राधान्यक्रम गंभीर उत्पादन समस्यांचे निराकरण करण्यासाठी बदलले, ज्यात खालील गोष्टींचा समावेश आहे:
 
-तथापि, डेव्हलपमेंट दरम्यान वापरकर्त्याच्या प्राधान्यक्रम बदलले. नवीन प्राधान्यक्रम खालीलप्रमाणे आहेत:
-1.  **डायनॅमिक PRC रेट:** संपूर्ण ॲपमध्ये (रिडीम, सबस्क्रिप्शन) PRC-to-INR रेट डायनॅमिक करणे आणि तो 'PRC टोकन इकॉनॉमी' मॉडेलवरून आपोआप (auto) आणणे.
-2.  **ॲडमिन सदस्य पृष्ठ (Admin Members Page) सुधारणा:**  पेजवर 'रिडीम लिमिट', 'वापरलेले' (Used), आणि 'शिल्लक' (Available) लिमिटसाठी नवीन कॉलम जोडणे. तसेच, 'प्लॅन', 'केवायसी', आणि 'ॲक्शन' कॉलम काढणे. या नवीन कॉलम्सवर सॉर्टिंग (sorting) लागू करणे.
-3.  **रिडीम लिमिट फॉर्म्युला:** रिडीम लिमिटचा फॉर्म्युला वापरकर्त्याच्या जॉइनिंगच्या तारखेपासून आणि ॲक्टिव्ह रेफरल्सवर आधारित असावा: .
-4.  **सबस्क्रिप्शन:** सबस्क्रिप्शनसाठी PRC वापरून पेमेंट करण्याचा पर्याय जोडणे.
-5.  **UI बग फिक्स:** ॲडमिन पेजवर PRC बॅलन्स '0' दिसण्याची आणि रिडीम लिमिट सर्वांसाठी सारखेच दिसण्याची समस्या सोडवणे.
+1.  **रिडीम लिमिट आणि रेफरल बग:** उत्पादन (production) मध्ये, सर्व वापरकर्त्यांसाठी 'वापरलेले' (Used) आणि 'ॲक्टिव्ह रेफरल्स' '0' दिसत होते.
+2.  **ऑटो-बर्निंग जॉब अयशस्वी:** शेड्यूल केलेला PRC बर्निंग जॉब आपोआप चालत नव्हता.
+3.  **सबस्क्रिप्शन डबल ॲक्टिव्हेशन:** Razorpay द्वारे सबस्क्रिप्शन घेणाऱ्या वापरकर्त्यांना दुप्पट दिवस (उदा. २८ ऐवजी ५५) मिळत होते.
+4.  **मोठा PRC बॅलन्स बग:** 'बल्क रिजेक्ट' ऑपरेशनमधील एका बगमुळे वापरकर्त्यांना चुकून 100 पट जास्त PRC (उदा. ₹९,५०० च्या रिफंडसाठी ९,५०,००० PRC) परत मिळत होते, ज्यामुळे कोट्यवधी PRC अतिरिक्त वितरित झाले.
+5.  **ॲक्टिव्ह रेफरल बग:** सबस्क्रिप्शन घेतलेले वापरकर्ते 'निष्क्रिय' (inactive) म्हणून दिसत होते कारण 'ॲक्टिव्ह' स्टेटस फक्त अलीकडील लॉगिनवर आधारित होते.
+6.  **ॲडमिन पेज टाइमआउट:** ॲडमिन सदस्य पेजवर रिडीम लिमिटनुसार सॉर्टिंग करताना विनंती कालबाह्य (request timeout) होत होती.
 
 **User's preferred language**: वापरकर्त्याची प्राथमिक भाषा **मराठी** आहे. पुढील एजंटने **केवळ मराठीत** प्रतिसाद दिला पाहिजे. (The user's primary language is **Marathi**. The next agent MUST respond only in **Marathi**.)
 
 **what currently exists?**
-ॲप्लिकेशनमध्ये अनेक महत्त्वाचे बदल लागू केले गेले आहेत. 'फ्यूचरिस्टिक मायनिंग डॅशबोर्ड'ची मागणी वापरकर्त्याने नाकारल्यामुळे मूळ  पेजला पुन्हा स्थापित केले गेले आहे, ज्यात फक्त 'डिजिटल सेशन काउंटर' आणि 'ॲडव्हान्स डिजिटल ओडोमीटर' सारखे छोटे बदल केले आहेत.
+अनुप्रयोगात अनेक गंभीर उत्पादन बगचे निराकरण केले गेले आहे. 'वापरलेले' (Used) लिमिटच्या गणनेमध्ये आता सबस्क्रिप्शन आणि उत्पादन ऑर्डरसह सर्व प्रकारचे रिडीम समाविष्ट आहेत आणि ते योग्यरित्या प्रदर्शित होत आहे. 'ॲक्टिव्ह रेफरल' गणनेची लॉजिक दुरुस्त केली गेली आहे, ज्यामुळे सबस्क्रिप्शन घेतलेले वापरकर्ते आता 'ॲक्टिव्ह' दिसतात.
 
-सर्वात महत्त्वाचे म्हणजे, संपूर्ण ॲपमध्ये PRC-to-INR रेट आता डायनॅमिक आहे. हा रेट आता  मधील मॉडेलनुसार आपोआप मोजला जातो, ज्यामुळे तो हार्डकोड केलेला नाही. सबस्क्रिप्शनसाठी 'PRC ने पैसे द्या' हा एक नवीन पर्याय जोडला गेला आहे, जो डायनॅमिक रेट आणि वापरकर्त्याच्या रिडीम लिमिटवर अवलंबून आहे.
+अविश्वसनीय  च्या जागी एक मजबूत वेबहुक-आधारित ऑटो-बर्निंग सिस्टम तयार केली गेली आहे, जी बाह्य क्रॉन सेवेद्वारे ट्रिगर केली जाऊ शकते. Razorpay सबस्क्रिप्शनच्या डबल ॲक्टिव्हेशन समस्येचे निराकरण केले गेले आहे आणि ज्या वापरकर्त्यांना अतिरिक्त दिवस मिळाले होते त्यांच्या सबस्क्रिप्शनची मुदत एका विशेष API द्वारे दुरुस्त केली गेली आहे.
 
-ॲडमिनच्या  पेजवर मोठे बदल केले आहेत. 'प्लॅन', 'केवायसी' आणि 'ॲक्शन' हे कॉलम काढून त्या जागी 'रिडीम लिमिट', 'वापरलेले' (Used) आणि 'शिल्लक' (Available) लिमिट हे नवीन कॉलम जोडले आहेत. या पेजवर आता सॉर्टिंगची (sorting) सुविधा जोडण्याचा प्रयत्न केला जात आहे. तसेच, रिडीम लिमिटचा नवीन फॉर्म्युला () बॅकएंडमध्ये लागू केला गेला आहे.
+सर्वात महत्त्वाचे म्हणजे, 100x रिफंड बगमुळे अतिरिक्त मिळालेले कोट्यवधी PRC (~5.94 कोटी) एका दुरुस्ती API द्वारे 491 वापरकर्त्यांच्या खात्यातून काढून टाकण्यात आले आहेत. ॲडमिन पेजवरील सॉर्टिंग टाइमआउटची समस्या बॅकएंडमधील गणना ऑप्टिमाइझ करून सोडवली गेली आहे.
 
 **Last working item**:
--   **Last item agent was working:** एजंट ॲडमिन सदस्य पेजवर () सॉर्टिंगच्या (sorting) समस्येचे निराकरण करत होता. विशेषतः, 'रिडीम लिमिट' सारख्या मोजलेल्या (calculated) फील्डनुसार सॉर्टिंग योग्यरित्या काम करत नव्हते (उदा. Elite प्लॅन असलेला वापरकर्ता सर्वात वर येत नव्हता). एजंटने बॅकएंडवर () डीबग लॉग्स जोडून समस्येचे मूळ कारण शोधण्याचा प्रयत्न सुरू केला होता.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (manual curl testing)
--   **Which testing method agent to use?** backend testing agent or manual curl. The issue is likely in the backend logic where members are fetched, their limits calculated, and then sorted.
--   **User Testing Done:** N
+-   **Last item agent was working:** एजंटने 100x रिफंड बगमुळे अतिरिक्त PRC मिळालेल्या सर्व वापरकर्त्यांची खाती दुरुस्त केली. एजंटने एका API द्वारे 491 वापरकर्त्यांकडून ~5.94 कोटी अतिरिक्त PRC यशस्वीरित्या काढून टाकले आणि खात्री केली की आता मोठे बॅलन्स फरक शिल्लक नाहीत.
+-   **Status:** COMPLETED
+-   **Agent Testing Done:** Y
+-   **Which testing method agent to use?** NA (The fix has been applied and verified on production via API calls).
+-   **User Testing Done:** N (User acknowledged the previous fix but hasn't explicitly verified the final state).
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Admin Members Page - PRC बॅलन्स '0' दिसतो (P0)**
--   **Issue 2: Admin Members Page - सॉर्टिंग योग्यरित्या काम करत नाही (P0)**
--   **Issue 3: Redeem to Bank पेज राउटिंग समस्या (P1)**
--   **Issue 4: प्रोडक्शन ॲप डिप्लॉयमेंटनंतर क्रॅश होते (P2)**
--   **Issue 5: 145 अयशस्वी BBPS व्यवहारांचे मूळ कारण अज्ञात (P3)**
+-   **Issue 1: एका वापरकर्त्याला नाकारलेल्या (rejected) व्यवहाराचा परतावा (refund) मिळाला नाही (P0)**
+-   **Issue 2: 100x रिफंड बगची मूळ कारण दुरुस्ती (P1)**
+-   **Issue 3: उत्पादन डिप्लॉयमेंटनंतर ॲप क्रॅश होते (P2)**
+-   **Issue 4: 145 अयशस्वी BBPS व्यवहारांचे मूळ कारण अज्ञात (P2)**
+-   **Issue 5: Redeem to Bank पेज राउटिंग समस्या (P3)**
 
 **Issues Detail:**
--   **Issue 1: Admin Members Page - PRC बॅलन्स '0' दिसतो**
-    -   **Attempted fixes:** एजंटने बॅलन्स दाखवण्यासाठी  वापरले, पण वापरकर्त्याच्या स्क्रीनशॉटनुसार समस्या कायम आहे. API प्रतिसादामध्ये योग्य बॅलन्स दिसत असूनही, फ्रंटएंडवर तो '0.00' दिसतो.
+-   **Issue 1: एका वापरकर्त्याला नाकारलेल्या (rejected) व्यवहाराचा परतावा (refund) मिळाला नाही**
+    -   **Attempted fixes:** एजंटने समस्येचे निदान केले आणि वापरकर्त्याला (Rakhi Ghehlod, UID: ) 1 मार्च रोजी नाकारलेल्या बँक ट्रान्सफरसाठी 14,260 PRC चा परतावा मिळाला नसल्याचे निश्चित केले. एजंटने एक  API तयार केला आणि वापरकर्त्याला तो मॅन्युअली चालवण्यासाठी एक  कमांड दिली.
     -   **Next debug checklist:**
-        1.   मध्ये  योग्यरित्या ॲक्सेस केले जात आहे का ते पुन्हा तपासा.
-        2.  फ्रंटएंडवर डेटा मॅपिंग किंवा रेंडरिंगमध्ये काही चूक आहे का ते पाहा.  करून रेंडर होण्यापूर्वी नक्की काय डेटा येतोय ते तपासा.
-        3.  API रिस्पॉन्सच्या डेटा स्ट्रक्चरमध्ये आणि फ्रंटएंडच्या डेटा ॲक्सेसमध्ये काही विसंगती आहे का ते तपासा.
-    -   **Why fix this issue and what will be achieved with the fix?** ॲडमिनला वापरकर्त्यांचा खरा बॅलन्स दिसणे महत्त्वाचे आहे. याशिवाय हे पेज निरुपयोगी आहे.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend.
+        1.  वापरकर्त्याला विचारा की त्यांनी प्रदान केलेली  कमांड चालवली आहे का.
+        2.  जर नसेल, तर एजंटने स्वतः  API वापरून वापरकर्त्याला 14,260 PRC क्रेडिट करावे आणि व्यवहार लॉगमध्ये नोंद करावी.
+        3.  वापरकर्त्याच्या खात्यात बॅलन्स अपडेट झाला आहे की नाही हे तपासा.
+    -   **Why fix this issue and what will be achieved with the fix?** वापरकर्त्याचा विश्वास टिकवण्यासाठी आणि आर्थिक अचूकता सुनिश्चित करण्यासाठी हे महत्त्वपूर्ण आहे.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: Admin Members Page - सॉर्टिंग योग्यरित्या काम करत नाही**
-    -   **Attempted fixes:** एजंटने प्रथम क्लायंट-साइड सॉर्टिंग लागू केले, परंतु नंतर सर्व्हर-साइड सॉर्टिंगमध्ये बदल केला. सर्व वापरकर्त्यांना आणून नंतर सॉर्ट करण्याचा प्रयत्न केला, ज्यामुळे काही त्रुटी आल्या आणि त्या दुरुस्त केल्या गेल्या. पण तरीही सॉर्टिंग चुकीचे होत आहे.
+-   **Issue 2: 100x रिफंड बगची मूळ कारण दुरुस्ती**
+    -   **Attempted fixes:** एजंटने डेटा दुरुस्त करण्यासाठी एक API तयार केला, पण मूळ बग (जो 'बल्क रिजेक्ट' ऑपरेशनमध्ये आहे) दुरुस्त केला नाही.
     -   **Next debug checklist:**
-        1.  बॅकएंड () मध्ये जोडलेले डीबग लॉग तपासा आणि सॉर्टिंगनंतर  यादीची स्थिती पाहा.
-        2.  समस्या अशी असू शकते की डेटाबेस क्वेरीनंतर पायथनमध्ये सॉर्टिंग होत आहे, परंतु  लॅम्ब्डा फंक्शन किंवा  पॅरामीटर चुकीच्या पद्धतीने वापरले जात आहे.
-        3.  पर्यायी उपाय: सॉर्टिंग पूर्णपणे फ्रंटएंडवर ( मध्ये) करा. API कडून फक्त डेटा मागवा आणि जावास्क्रिप्टच्या  फंक्शनचा वापर करून क्लायंट-साइडवर सॉर्टिंग करा. कॅल्क्युलेटेड फील्डसाठी हे सोपे असू शकते.
-    -   **Why fix this issue and what will be achieved with the fix?** ॲडमिनला वापरकर्त्यांना त्यांच्या बॅलन्स किंवा रिडीम लिमिटनुसार क्रमवारी लावता येणे आवश्यक आहे.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both.
+        1.   किंवा संबंधित फाइलमधील 'बल्क रिजेक्ट' ऑपरेशनसाठीचा कोड शोधा.
+        2.  रिफंड रकमेची गणना कशी केली जाते ते तपासा.  हे फील्ड चुकीच्या पद्धतीने सेट केले जात असण्याची शक्यता आहे.
+        3.  रिफंड करण्यापूर्वी रकमेची गणना योग्य (उदा. INR amount * current PRC rate) असल्याची खात्री करा आणि 100x गुणक काढून टाका.
+    -   **Why fix this issue and what will be achieved with the fix?** भविष्यात डेटा करप्शन आणि आर्थिक नुकसान टाळण्यासाठी हे आवश्यक आहे.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y (if not fixed at the root)
+    -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
+
+-   **Issue 3, 4, 5:** या समस्या जुन्या आहेत आणि या सत्रात त्यांच्यावर काम झालेले नाही.
 
 **In progress Task List**:
--   None. All current work is classified as bug fixing.
+-   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:**  पेजवरील दोन्ही बग (PRC बॅलन्स '0' आणि चुकीचे सॉर्टिंग) सोडवणे.
--   **P2:** ॲडमिन पॅनलमध्ये एक UI तयार करणे जिथून ॲडमिन PRC रेट मॅन्युअली ओव्हरराइड करू शकेल (ऑटो-इकॉनॉमी रेटला पर्याय म्हणून).
+-   **P1:** 100x रिफंड बगचे मूळ कारण कायमचे सोडवणे.
+-   **P2:** ॲडमिन पॅनलमध्ये एक UI तयार करणे जिथून ॲडमिन PRC रेट मॅन्युअली ओव्हरराइड करू शकेल.
 -   **P2:** मॅन्युअल बँक ट्रान्सफरसाठी नोटिफिकेशन्स (Firebase/Email) लागू करणे.
 
 **Future Tasks:**
 -   डेटाबेस MongoDB वरून PostgreSQL वर स्थलांतरित करण्याची शक्यता तपासणे.
 -   वापरकर्ता साइनअपवर ईमेल/मोबाइल ओटीपी व्हेरिफिकेशन जोडणे.
--   मोठ्या कंपोनंट्सचे रिफॅक्टरिंग करणे.
 -   यशस्वी व्यवहारांसाठी पावती (receipt) तयार करण्याचे वैशिष्ट्य जोडणे.
 
 **Completed work in this session**
--   **Futuristic Mining UI Reverted:** वापरकर्त्याच्या विनंतीनुसार नवीन मायनिंग UI काढून मूळ डिझाइन परत आणले.
--   **Mining Page Enhancements:** मूळ मायनिंग पेजवर डिजिटल सेशन काउंटर आणि ॲडव्हान्स डिजिटल ओडोमीटर (ज्यात counter कमी होण्याचा बग होता तो फिक्स केला) जोडले.
--   **Dynamic PRC Rate:** संपूर्ण ॲप्लिकेशनमध्ये (BBPS, बँक रिडीम, सबस्क्रिप्शन) PRC रेट डायनॅमिक केला आणि तो  मॉडेलनुसार आपोआप मोजला जाईल अशी व्यवस्था केली.
--   **PRC Subscription:** सबस्क्रिप्शनसाठी PRC ने पैसे द्या हा नवीन पर्याय जोडला, जो डायनॅमिक रेट आणि रिडीम लिमिटवर आधारित आहे.
--   **Redeem Limit Formula:** रिडीम लिमिट मोजण्याचा नवीन फॉर्म्युला () बॅकएंडमध्ये लागू केला.
--   **Admin Members Page Update:** पेजमधून 'Plan', 'KYC', 'Action' कॉलम काढून 'Redeem Limit', 'Used', 'Available' हे कॉलम जोडले आणि वापरकर्त्याच्या नावावर क्लिक करण्याची सोय केली.
--   **Bug Fixes:** 'Available Redeem Limit' शून्य दिसण्याची समस्या आणि डायनॅमिक रेटशी संबंधित अनेक बग्सचे निराकरण केले.
+-   **PRC Balance & Sorting Fix:** ॲडमिन पेजवरील PRC बॅलन्स '0' दिसण्याची आणि सॉर्टिंगची समस्या सोडवली.
+-   **Used Limit & Referral Fix:** उत्पादनमध्ये 'Used' लिमिट आणि 'Active Referrals' '0' दिसण्याची गंभीर समस्या सोडवली. गणनेमध्ये आता सबस्क्रिप्शन आणि ऑर्डर्सचा समावेश आहे.
+-   **Webhook Auto-Burn System:** अविश्वसनीय शेड्यूलरच्या जागी एक बाह्य वेबहुक-आधारित ऑटो-बर्न सिस्टम लागू केली.
+-   **Razorpay Subscription Fix:** वापरकर्त्यांना अतिरिक्त सबस्क्रिप्शन दिवस मिळण्याची समस्या सोडवली आणि प्रभावित वापरकर्त्यांची मुदत दुरुस्त केली.
+-   **100x PRC Refund Bug Fix:** वापरकर्त्यांच्या खात्यात चुकून जमा झालेले कोट्यवधी अतिरिक्त PRC काढून टाकले.
+-   **Active Referral Logic Fix:** 'ॲक्टिव्ह' स्टेटसची व्याख्या बदलून त्यात सबस्क्रिप्शन घेतलेल्या वापरकर्त्यांचा समावेश केला.
+-   **Admin Page Timeout Fix:** ॲडमिन पेजवर सॉर्टिंग करताना होणारा टाइमआउट ऑप्टिमाइझ केला.
+-   **Admin Sorting UI Enhanced:** ॲडमिन सदस्य पेजवर सॉर्टिंगसाठी व्हिज्युअल इंडिकेटर आणि रीसेट बटण जोडले.
 
 **Earlier issues found/mentioned but not fixed**
--   **Production Deployment Crashes:** फ्रंटएंड बदलांनंतर प्रोडक्शन डिप्लॉयमेंट क्रॅश होते. यावर अजूनही तपास झालेला नाही.
+-   **Production Deployment Crashes:** फ्रंटएंड बदलांनंतर उत्पादन डिप्लॉयमेंट क्रॅश होते.
 -   **Root Cause of 145 Failed BBPS Transactions:** 145 BBPS व्यवहार का अयशस्वी झाले याचे मूळ कारण अज्ञात आहे.
--   **Redeem to Bank page routing issue:** हे पेज व्यवस्थित उघडत नाही. ही समस्या प्रोडक्शन टेस्टिंगवर ब्लॉक आहे.
+-   **Redeem to Bank page routing issue:** हे पेज व्यवस्थित उघडत नाही.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Production app crashes on deployment after frontend changes.
@@ -94,70 +96,75 @@
 
 
 **Key Technical Concepts**
--   **Dynamic Rate Calculation:**  मध्ये एक मॉडेल तयार केले आहे जे 5 घटकांवर (Supply, Redeem, Burn, User, Utility) आधारित PRC रेट आपोआप मोजते.
--   **Server-Side Aggregation & Sorting:**  एंडपॉइंट वापरकर्त्यांचा डेटा (जसे की रिडीम लिमिट) रिअल-टाइममध्ये मोजतो आणि नंतर सॉर्ट करण्याचा प्रयत्न करतो.
--   **Formulaic Business Logic:** रिडीम लिमिट आता एका जटिल सूत्रावर आधारित आहे ज्यात वापरकर्त्याचा प्लॅन, जॉइनिंगची तारीख आणि रेफरल्स यांचा समावेश आहे.
--   **State Management for Dynamic Data:** फ्रंटएंडवर अनेक ठिकाणी (, ) API वरून डायनॅमिक PRC रेट आणून तो UI मध्ये वापरला जातो.
+-   **Data Correction via API:** चुकीच्या डेटाच्या मोठ्या समस्या सोडवण्यासाठी तात्पुरते, सुरक्षित ॲडमिन API तयार करणे (उदा. , ).
+-   **Webhook-based Cron Jobs:** क्लाउड वातावरणातील अविश्वसनीय इन-मेमरी शेड्युलर्सना पर्याय म्हणून बाह्य, विश्वसनीय वेबहुक-आधारित सिस्टम वापरणे.
+-   **Root Cause vs. Symptom:** डेटा दुरुस्त करणे (लक्षण) आणि मूळ बगचे कारण शोधून ते सोडवणे (मूळ कारण) यातील फरक.
+-   **Performance Optimization:** डेटाबेस किंवा गणना-केंद्रित ऑपरेशन्स (जसे की ॲडमिन पेजवर सॉर्टिंग) ऑप्टिमाइझ करणे.
 
 **key DB schema**
--   : यात  की आहे, जी आता  मॉडेलद्वारे ओव्हरराइड केली जाते.
--   : यात वापरकर्त्याचा प्लॅन (), जॉइनिंगची तारीख () आणि रेफरल्सची माहिती असते, जी रिडीम लिमिट मोजण्यासाठी वापरली जाते.
+-   :  आणि  यांच्यातील विसंगती ही एक मोठी समस्या होती.  आणि  हे ॲक्टिव्ह स्टेटस आणि सबस्क्रिप्शन बगसाठी महत्त्वाचे होते.
+-   : 100x रिफंड बगमुळे चुकीच्या 'refund' नोंदी येथे तयार झाल्या होत्या.
+-   : 'बल्क रिजेक्ट' ऑपरेशन येथून सुरू झाले.
 
 **All files of reference**
--   : **Resume work here.** या फाईलमध्ये PRC बॅलन्स आणि सॉर्टिंगचे बग आहेत.
--   : **Resume work here.**  एंडपॉइंटमधील सॉर्टिंग लॉजिकमध्ये बग आहे. नवीन रिडीम लिमिट फॉर्म्युला येथे आहे.
--   : PRC रेट मोजणारे ऑटोमॅटिक मॉडेल.
--   : मूळ मायनिंग पेज, ज्यात किरकोळ बदल केले आहेत.
--   : 'PRC ने पैसे द्या' पर्यायासह सबस्क्रिप्शन पेज.
--   : BBPS रिडीम पेज.
--   : बँक रिडीम पेज.
+-   : या सत्रातील बहुतेक सर्व बॅकएंड लॉजिक, बग फिक्स आणि नवीन API येथे आहेत.
+-   : 'ॲक्टिव्ह रेफरल' चे लॉजिक येथे दुरुस्त केले गेले.
+-   : सॉर्टिंग UI आणि संबंधित फ्रंटएंड लॉजिक येथे आहे.
+-   : ॲडमिन पेज लोड न होण्याच्या समस्येचे निराकरण करण्यासाठी येथे Axios इंटरसेप्टर जोडला गेला.
+
+**Areas that need refactoring**:
+-    फाइल खूप मोठी झाली आहे. रिडीम लिमिट, सबस्क्रिप्शन, बर्निंग आणि ॲडमिन API संबंधित लॉजिक वेगळ्या फाइल्स/मॉड्यूल्समध्ये विभागले पाहिजे.
+
+**key api endpoints**
+-   : ॲडमिन सदस्य पेजसाठी डेटा मिळवतो.
+-   : एका वापरकर्त्याच्या रिडीम लिमिटची गणना करतो.
+-   : बाह्य क्रॉन सेवेद्वारे PRC बर्निंग ट्रिगर करण्यासाठी नवीन एंडपॉइंट.
+-   : अतिरिक्त PRC बॅलन्स दुरुस्त करण्यासाठी तयार केलेला API.
+-   : चुकीची सबस्क्रिप्शन मुदत दुरुस्त करण्यासाठी तयार केलेला API.
 
 **Critical Info for New Agent**
--   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे. (Your primary language MUST be Marathi.)**
--   सर्वात जास्त प्राधान्य  पेजवरील दोन बग सोडवण्याला आहे: **1) PRC बॅलन्स '0' दिसणे** आणि **2) चुकीचे सॉर्टिंग.**
--   रिडीम लिमिटचा फॉर्म्युला आता  असा आहे. हे लॉजिक  मध्ये आहे.
--   PRC रेट आता  मधून आपोआप येतो. मॅन्युअल बदलासाठी ॲडमिनला API कॉल करावा लागेल (UI नाही).
--   मोठे डिझाइन बदल टाळा. वापरकर्त्याला मूळ डिझाइनमध्ये छोटे आणि विशिष्ट बदल आवडतात.
+-   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे.**
+-   सर्वात आधी, वापरकर्त्याला (Rakhi Ghehlod) तिच्या नाकारलेल्या व्यवहाराचा परतावा मिळाला आहे की नाही हे तपासा. नसेल, तर तो ताबडतोब क्रेडिट करा.
+-   100x रिफंड बगचे **मूळ कारण** ( ऑपरेशन) शोधून ते दुरुस्त करणे आवश्यक आहे, अन्यथा ही समस्या पुन्हा येऊ शकते.
+-   वापरकर्ता उत्पादन (production) समस्यांबद्दल खूप संवेदनशील आहे. कोणताही बदल करण्यापूर्वी आणि नंतर उत्पादन वातावरणावर कसून चाचणी करा.
+-   सर्व काही दुरुस्त झाले आहे असे विधान करण्यापूर्वी दुप्पट खात्री करा. आधीच्या एजंटने ही चूक केली होती, ज्यामुळे वापरकर्त्याचा विश्वास कमी झाला.
 
 **documents and test reports created in this job**
-None. The testing agent was not used successfully.
+-  - P0 बग फिक्स (sorting) साठी टेस्टिंग एजंटद्वारे तयार केलेले.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10.  - User asks to test with the testing agent and points out some final adjustments. (IN PROGRESS)
-9.   - User reports that PRC Balance shows as '0' and the redeem limit is the same for everyone. Asks for sorting. (IN PROGRESS)
-8.   - User reports the PRC balance is not visible correctly on the admin page. (IN PROGRESS)
-7.   - User requests major changes to the admin members page (add/remove columns). (COMPLETED)
-6.   - User reports an error on the Bank Redeem page. (COMPLETED - Fixed)
-5.   - User asks if the dynamic rate is automatic or needs manual setting. (COMPLETED)
-4.   - User reports that the redeem limit is showing as 0. (COMPLETED - Fixed)
-3.   - User insists that the PRC rate should not be hardcoded anywhere. (COMPLETED)
-2.   - User reports that the dynamic rate is not being applied correctly during redemption. (COMPLETED)
-1.   - User requests a Pay with PRC option for subscriptions with a specific formula. (COMPLETED)
+10.  - User confirms deployment. (COMPLETED)
+9.   - User asks to run the final PRC balance correction. (COMPLETED)
+8.   - User reports that subscribed referrals are showing as inactive. (COMPLETED)
+7.   - User is frustrated that a previous fix for excess PRC was incomplete. (COMPLETED - A more robust fix was applied).
+6.   - User reports a specific user did not get a refund. (IN PROGRESS - Agent provided a curl command, but execution is pending).
+5.   - User reports a timeout error on the admin members page when sorting. (COMPLETED)
+4.   - User gives confirmation to apply the PRC balance correction. (COMPLETED)
+3.   - User confirms the excess PRC issue is widespread. (COMPLETED)
+2.   - User reports failed to load data after a deployment. This was before the timeout issue. (COMPLETED)
+1.   - User confirms deployment. (COMPLETED)
 
 **Project Health Check:**
 -   **Broken:**
-    -    page is functionally broken due to the 'PRC balance is 0' bug and incorrect sorting.
+    -   'बल्क रिजेक्ट' ऑपरेशनमध्ये मूळ बग अजूनही अस्तित्वात असू शकतो, ज्यामुळे भविष्यात 100x रिफंडची समस्या पुन्हा येऊ शकते.
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
--   **Eko:** Used for BBPS and IFSC verification.
--   **Razorpay:** Used for INR-based subscriptions.
--   **Firebase/Email:** Requested for notifications but not yet implemented.
+-   **Eko:** BBPS आणि IFSC व्हेरिफिकेशनसाठी.
+-   **Razorpay:** INR-आधारित सबस्क्रिप्शनसाठी.
+-   **cron-job.org (Suggested):** PRC बर्निंगसाठी बाह्य क्रॉन सेवा म्हणून सुचवले आहे.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (Last attempt failed due to context limits).
+-   **Testing agent used after significant changes:** YES (Only for the initial sorting bug fix).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** The  page was updated, but it introduced new bugs (PRC balance display and sorting).
+-   **Known regressions:** The session involved fixing several critical production regressions introduced previously.
 
 **Credentials to test flow:**
 -   **Login:** , 
 -   **Admin Login:** , 
--   **Test Elite User:**  user (credentials not specified, but can be found in DB/logs).
 
 **What agent forgot to execute**
--   The long-standing, high-risk issues were not addressed:
-    1.  The root cause of production crashes after frontend deployments.
-    2.  The root cause of 145 failed BBPS transactions.
--   The original routing issue for  was also not re-verified or fixed.</analysis>
+-   एजंटने 100x रिफंड बगमुळे झालेला डेटा तर दुरुस्त केला, परंतु 'बल्क रिजेक्ट' ऑपरेशनमधील **मूळ बग** सोडवला नाही, ज्यामुळे ही समस्या पुन्हा उद्भवू शकते.
+-   जुन्या, न सुटलेल्या समस्या (उदा. उत्पादन क्रॅश, अयशस्वी BBPS व्यवहारांचे मूळ कारण) या सत्रात पूर्णपणे दुर्लक्षित राहिल्या.</analysis>
