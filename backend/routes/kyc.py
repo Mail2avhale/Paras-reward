@@ -358,6 +358,121 @@ async def get_kyc_details(uid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# New endpoint to match frontend path: /kyc/{kyc_id}/verify
+@router.post("/{kyc_id}/verify")
+async def verify_kyc_by_id(kyc_id: str, request: Request):
+    """Verify/Approve KYC by kyc_id (Admin) - matches frontend path"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id") or data.get("admin_uid")
+        action = data.get("action", "approve")
+        
+        # Find KYC by kyc_id
+        kyc = await db.kyc.find_one({"kyc_id": kyc_id})
+        if not kyc:
+            # Try finding by uid as fallback
+            kyc = await db.kyc.find_one({"uid": kyc_id})
+        
+        if not kyc:
+            raise HTTPException(status_code=404, detail="KYC not found")
+        
+        uid = kyc.get("uid")
+        now = datetime.now(timezone.utc).isoformat()
+        
+        if action == "approve":
+            await db.kyc.update_one(
+                {"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid},
+                {"$set": {
+                    "status": "verified",
+                    "verified_at": now,
+                    "verified_by": admin_id
+                }}
+            )
+            
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "kyc_status": "verified",
+                    "kyc_verified_at": now,
+                    "kyc_verified_by": admin_id
+                }}
+            )
+            
+            return {"message": "KYC verified successfully", "status": "verified"}
+        else:
+            reason = data.get("reason", "Documents not clear or invalid")
+            await db.kyc.update_one(
+                {"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid},
+                {"$set": {
+                    "status": "rejected",
+                    "rejection_reason": reason,
+                    "rejected_at": now,
+                    "rejected_by": admin_id
+                }}
+            )
+            
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "kyc_status": "rejected",
+                    "kyc_rejection_reason": reason,
+                    "kyc_rejected_at": now
+                }}
+            )
+            
+            return {"message": "KYC rejected", "status": "rejected"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# New endpoint: /kyc/{kyc_id}/reject  
+@router.post("/{kyc_id}/reject")
+async def reject_kyc_by_id(kyc_id: str, request: Request):
+    """Reject KYC by kyc_id (Admin) - matches frontend path"""
+    try:
+        data = await request.json()
+        admin_id = data.get("admin_id") or data.get("admin_uid")
+        reason = data.get("reason", "Documents not clear or invalid")
+        
+        # Find KYC by kyc_id
+        kyc = await db.kyc.find_one({"kyc_id": kyc_id})
+        if not kyc:
+            kyc = await db.kyc.find_one({"uid": kyc_id})
+        
+        if not kyc:
+            raise HTTPException(status_code=404, detail="KYC not found")
+        
+        uid = kyc.get("uid")
+        now = datetime.now(timezone.utc).isoformat()
+        
+        await db.kyc.update_one(
+            {"kyc_id": kyc_id} if kyc.get("kyc_id") else {"uid": uid},
+            {"$set": {
+                "status": "rejected",
+                "rejection_reason": reason,
+                "rejected_at": now,
+                "rejected_by": admin_id
+            }}
+        )
+        
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {
+                "kyc_status": "rejected",
+                "kyc_rejection_reason": reason,
+                "kyc_rejected_at": now
+            }}
+        )
+        
+        return {"message": "KYC rejected", "status": "rejected", "reason": reason}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/verify/{uid}")
 async def verify_kyc(uid: str, request: Request):
     """Verify/Approve KYC (Admin)"""
