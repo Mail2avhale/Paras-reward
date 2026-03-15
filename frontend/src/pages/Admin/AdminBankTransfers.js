@@ -7,10 +7,38 @@ import { Input } from '../../components/ui/input';
 import {
   Banknote, CheckCircle, XCircle, Clock, Search, Filter, RefreshCw,
   ChevronLeft, ChevronRight, Eye, IndianRupee, Building2, User,
-  Calendar, AlertCircle, Download, ArrowUpDown, Loader2
+  Calendar, AlertCircle, Download, ArrowUpDown, Loader2, Copy
 } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Copy to clipboard helper
+const copyToClipboard = (text, label) => {
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success(`${label} copied!`);
+  }).catch(() => {
+    toast.error('Copy failed');
+  });
+};
+
+// Copyable Field Component
+const CopyField = ({ label, value, className = "" }) => (
+  <div className={`flex items-center justify-between gap-2 ${className}`}>
+    <div className="flex-1 min-w-0">
+      <p className="text-slate-500 text-xs">{label}</p>
+      <p className="text-white font-mono text-sm truncate">{value || '-'}</p>
+    </div>
+    {value && (
+      <button
+        onClick={() => copyToClipboard(value, label)}
+        className="p-1.5 hover:bg-slate-600 rounded transition-colors"
+        title={`Copy ${label}`}
+      >
+        <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+      </button>
+    )}
+  </div>
+);
 
 // Status badge
 const StatusBadge = ({ status }) => {
@@ -343,9 +371,66 @@ const AdminBankTransfers = () => {
                           <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
                         </td>
                         <td className="p-4">
-                          <p className="text-white text-sm">{req.bank_name}</p>
-                          <p className="text-slate-400 text-xs font-mono">{req.ifsc_code}</p>
-                          <p className="text-slate-400 text-xs">****{req.account_number?.slice(-4)}</p>
+                          <div className="space-y-2 min-w-[280px]">
+                            {/* Name with Copy */}
+                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                              <div>
+                                <span className="text-slate-500 text-xs">Name: </span>
+                                <span className="text-white text-sm font-medium">{req.account_holder_name || req.user_name}</span>
+                              </div>
+                              <button
+                                onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
+                                className="p-1 hover:bg-slate-700 rounded"
+                                title="Copy Name"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                              </button>
+                            </div>
+                            {/* Account Number with Copy */}
+                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                              <div>
+                                <span className="text-slate-500 text-xs">A/C: </span>
+                                <span className="text-white text-sm font-mono">{req.account_number}</span>
+                              </div>
+                              <button
+                                onClick={() => copyToClipboard(req.account_number, 'Account Number')}
+                                className="p-1 hover:bg-slate-700 rounded"
+                                title="Copy Account Number"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                              </button>
+                            </div>
+                            {/* IFSC with Copy */}
+                            <div className="flex items-center justify-between gap-2 bg-slate-900/50 px-2 py-1 rounded">
+                              <div>
+                                <span className="text-slate-500 text-xs">IFSC: </span>
+                                <span className="text-white text-sm font-mono">{req.ifsc_code}</span>
+                              </div>
+                              <button
+                                onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
+                                className="p-1 hover:bg-slate-700 rounded"
+                                title="Copy IFSC"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-400" />
+                              </button>
+                            </div>
+                            {/* Amount with Copy */}
+                            <div className="flex items-center justify-between gap-2 bg-emerald-900/30 px-2 py-1 rounded border border-emerald-500/20">
+                              <div>
+                                <span className="text-slate-500 text-xs">Amount: </span>
+                                <span className="text-emerald-400 text-sm font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
+                              </div>
+                              <button
+                                onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
+                                className="p-1 hover:bg-emerald-800/50 rounded"
+                                title="Copy Amount"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-emerald-400 hover:text-emerald-300" />
+                              </button>
+                            </div>
+                            {/* Bank Name */}
+                            <p className="text-slate-400 text-xs">{req.bank_name}</p>
+                          </div>
                         </td>
                         <td className="p-4">
                           <p className="text-slate-300 text-sm">
@@ -410,14 +495,70 @@ const AdminBankTransfers = () => {
                       <StatusBadge status={req.status} />
                     </div>
                     
-                    <div className="flex justify-between">
+                    {/* Bank Details with Copy Buttons */}
+                    <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                      {/* Name */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-500 text-xs">Account Holder: </span>
+                          <span className="text-white text-sm">{req.account_holder_name || req.user_name}</span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(req.account_holder_name || req.user_name, 'Name')}
+                          className="p-1.5 hover:bg-slate-700 rounded"
+                        >
+                          <Copy className="w-4 h-4 text-slate-400" />
+                        </button>
+                      </div>
+                      {/* Account Number */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-500 text-xs">Account No: </span>
+                          <span className="text-white text-sm font-mono">{req.account_number}</span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(req.account_number, 'Account Number')}
+                          className="p-1.5 hover:bg-slate-700 rounded"
+                        >
+                          <Copy className="w-4 h-4 text-slate-400" />
+                        </button>
+                      </div>
+                      {/* IFSC */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-500 text-xs">IFSC: </span>
+                          <span className="text-white text-sm font-mono">{req.ifsc_code}</span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(req.ifsc_code, 'IFSC')}
+                          className="p-1.5 hover:bg-slate-700 rounded"
+                        >
+                          <Copy className="w-4 h-4 text-slate-400" />
+                        </button>
+                      </div>
+                      {/* Amount */}
+                      <div className="flex items-center justify-between bg-emerald-900/30 -mx-3 px-3 py-2 rounded-b-lg border-t border-emerald-500/20">
+                        <div>
+                          <span className="text-slate-500 text-xs">Amount: </span>
+                          <span className="text-emerald-400 font-bold">₹{req.withdrawal_amount?.toLocaleString()}</span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(req.withdrawal_amount?.toString(), 'Amount')}
+                          className="p-1.5 hover:bg-emerald-800/50 rounded"
+                        >
+                          <Copy className="w-4 h-4 text-emerald-400" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-emerald-400 font-bold text-lg">₹{req.withdrawal_amount?.toLocaleString()}</p>
-                        <p className="text-slate-500 text-xs">{req.prc_deducted?.toLocaleString()} PRC</p>
+                        <p className="text-slate-500 text-xs">Bank</p>
+                        <p className="text-white text-sm">{req.bank_name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-white text-sm">{req.bank_name}</p>
-                        <p className="text-slate-400 text-xs">****{req.account_number?.slice(-4)}</p>
+                        <p className="text-slate-500 text-xs">PRC Deducted</p>
+                        <p className="text-slate-300 text-sm">{req.prc_deducted?.toLocaleString()} PRC</p>
                       </div>
                     </div>
                     
@@ -494,33 +635,79 @@ const AdminBankTransfers = () => {
                 {actionType === 'paid' ? 'Mark as Paid' : 'Mark as Failed'}
               </h2>
               
-              {/* Request Details */}
-              <div className="bg-slate-900 rounded-lg p-4 mb-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              {/* Request Details with Copy Buttons */}
+              <div className="bg-slate-900 rounded-lg p-4 mb-4 space-y-3">
+                {/* User Info */}
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-500">User</p>
+                    <p className="text-slate-500 text-xs">User</p>
                     <p className="text-white">{selectedRequest.user_name}</p>
                   </div>
+                </div>
+                
+                {/* Account Holder Name */}
+                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
-                    <p className="text-slate-500">Amount</p>
-                    <p className="text-emerald-400 font-bold">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
+                    <p className="text-slate-500 text-xs">Account Holder Name</p>
+                    <p className="text-white font-medium">{selectedRequest.account_holder_name || selectedRequest.user_name}</p>
                   </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedRequest.account_holder_name || selectedRequest.user_name, 'Name')}
+                    className="p-2 hover:bg-slate-700 rounded"
+                    title="Copy Name"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                  </button>
+                </div>
+                
+                {/* Account Number */}
+                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
-                    <p className="text-slate-500">Bank</p>
-                    <p className="text-white">{selectedRequest.bank_name}</p>
+                    <p className="text-slate-500 text-xs">Account Number</p>
+                    <p className="text-white font-mono text-lg">{selectedRequest.account_number}</p>
                   </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedRequest.account_number, 'Account Number')}
+                    className="p-2 hover:bg-slate-700 rounded"
+                    title="Copy Account Number"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                  </button>
+                </div>
+                
+                {/* IFSC Code */}
+                <div className="flex items-center justify-between bg-slate-800 px-3 py-2 rounded">
                   <div>
-                    <p className="text-slate-500">Account</p>
-                    <p className="text-white font-mono">{selectedRequest.account_number}</p>
+                    <p className="text-slate-500 text-xs">IFSC Code</p>
+                    <p className="text-white font-mono text-lg">{selectedRequest.ifsc_code}</p>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-slate-500">IFSC</p>
-                    <p className="text-white font-mono">{selectedRequest.ifsc_code}</p>
+                  <button
+                    onClick={() => copyToClipboard(selectedRequest.ifsc_code, 'IFSC')}
+                    className="p-2 hover:bg-slate-700 rounded"
+                    title="Copy IFSC"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+                  </button>
+                </div>
+                
+                {/* Amount */}
+                <div className="flex items-center justify-between bg-emerald-900/30 px-3 py-2 rounded border border-emerald-500/30">
+                  <div>
+                    <p className="text-slate-500 text-xs">Amount to Transfer</p>
+                    <p className="text-emerald-400 font-bold text-xl">₹{selectedRequest.withdrawal_amount?.toLocaleString()}</p>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-slate-500">Account Holder</p>
-                    <p className="text-white">{selectedRequest.account_holder_name}</p>
-                  </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedRequest.withdrawal_amount?.toString(), 'Amount')}
+                    className="p-2 hover:bg-emerald-800/50 rounded"
+                    title="Copy Amount"
+                  >
+                    <Copy className="w-4 h-4 text-emerald-400 hover:text-emerald-300" />
+                  </button>
+                </div>
+                
+                {/* Bank Name */}
+                <div className="text-center pt-2">
+                  <p className="text-slate-400 text-sm">{selectedRequest.bank_name}</p>
                 </div>
               </div>
               
