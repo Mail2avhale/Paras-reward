@@ -615,13 +615,14 @@ async def auto_verify_aadhaar_send_otp(uid: str, data: AadhaarOTPRequest):
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     
-    # Store client_ref_id for verification step
+    # Store access_key for verification step (critical for Eko API)
     await db.aadhaar_otp_sessions.update_one(
         {"uid": uid},
         {
             "$set": {
                 "uid": uid,
                 "aadhaar_number": data.aadhaar_number,
+                "access_key": result.get("access_key", ""),
                 "client_ref_id": client_ref_id,
                 "otp_sent_at": datetime.now(timezone.utc).isoformat(),
                 "verified": False
@@ -648,15 +649,19 @@ async def auto_verify_aadhaar_verify_otp(uid: str, data: AadhaarVerifyRequest):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Get OTP session
+    # Get OTP session - need access_key from previous step
     session = await db.aadhaar_otp_sessions.find_one({"uid": uid, "client_ref_id": data.client_ref_id})
     if not session:
         raise HTTPException(status_code=400, detail="OTP session not found. Please request OTP again.")
     
+    access_key = session.get("access_key", "")
+    if not access_key:
+        raise HTTPException(status_code=400, detail="Session expired. Please request OTP again.")
+    
     result = await verify_aadhaar_otp(
         aadhaar_number=data.aadhaar_number,
         otp=data.otp,
-        client_ref_id=data.client_ref_id
+        access_key=access_key
     )
     
     if not result["success"]:
