@@ -16379,10 +16379,23 @@ async def get_user_total_redeemed(user_id: str) -> float:
             prc = float(sub.get("prc_amount", 0) or sub.get("total_prc_deducted", 0) or 0)
             total_redeemed += prc
         
-        # 7. Redeem transactions from transactions collection
+        # 7. Product Orders (marketplace purchases)
+        product_orders = await db.orders.find({
+            "user_id": user_id,
+            "status": {"$in": ["completed", "delivered", "paid", "pending", "processing", "out_for_delivery", "verified"]}
+        }).to_list(5000)
+        
+        for order in product_orders:
+            # Orders use total_prc or prc_amount or total_prc_price
+            prc = float(order.get("total_prc", 0) or order.get("prc_amount", 0) or order.get("total_prc_price", 0) or 0)
+            if order.get("status") in ["cancelled", "refunded"]:
+                continue
+            total_redeemed += prc
+        
+        # 8. Redeem transactions from transactions collection
         redeem_txns = await db.transactions.find({
             "user_id": user_id,
-            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc"]}
+            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc", "order"]}
         }).to_list(5000)
         
         # Don't double count - check if already counted above
@@ -16399,6 +16412,8 @@ async def get_user_total_redeemed(user_id: str) -> float:
             # Add reference to avoid double counting
             sub_ref = f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}"
             counted_refs.add(sub_ref)
+        for order in product_orders:
+            counted_refs.add(order.get("order_id", ""))
         
         for txn in redeem_txns:
             ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
