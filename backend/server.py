@@ -28048,6 +28048,74 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
         return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 
+@api_router.get("/admin/prc-balance/fix-zero-balance")
+async def fix_zero_balance_users(dry_run: bool = True, limit: int = 100):
+    """
+    🔧 FIX: Restore balance for users who have 0 balance but high total_mined.
+    
+    These users got incorrectly set to 0 due to duplicate correction entries.
+    Sets balance = total_mined for affected users.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Find users with 0 balance but significant total_mined
+        affected_users = await db.users.find({
+            "prc_balance": 0,
+            "total_mined": {"$gt": 10000}
+        }).limit(limit).to_list(limit)
+        
+        results = {
+            "found": len(affected_users),
+            "fixed": 0,
+            "dry_run": dry_run,
+            "fixes": []
+        }
+        
+        for user in affected_users:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            total_mined = float(user.get("total_mined", 0) or 0)
+            
+            fix_record = {
+                "uid": uid,
+                "name": name,
+                "current_balance": 0,
+                "new_balance": round(total_mined, 2)
+            }
+            
+            if not dry_run:
+                await db.users.update_one(
+                    {"uid": uid},
+                    {
+                        "$set": {
+                            "prc_balance": round(total_mined, 2),
+                            "balance_fixed_at": now.isoformat()
+                        }
+                    }
+                )
+                fix_record["status"] = "fixed"
+            else:
+                fix_record["status"] = "would_fix"
+            
+            results["fixes"].append(fix_record)
+            results["fixed"] += 1
+        
+        return {
+            "success": True,
+            "message": "DRY RUN" if dry_run else f"Fixed {results['fixed']} users",
+            "summary": {
+                "users_found": results["found"],
+                "users_fixed": results["fixed"]
+            },
+            "fixes": results["fixes"]
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @api_router.get("/admin/prc-balance/restore-batch")
 async def restore_batch(skip: int = 0, limit: int = 100):
     """
