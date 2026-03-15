@@ -33130,9 +33130,14 @@ async def get_direct_referrals_list(user_id: str, page: int = 1, limit: int = 20
     # Format referrals
     result = []
     for ref in direct_referrals:
-        # Check active status
+        # FIXED: Check active status - paid subscribers are ALWAYS active
         is_active = False
-        if ref.get("mining_active") and ref.get("mining_session_end"):
+        subscription_plan = (ref.get("subscription_plan") or "").lower()
+        
+        # Paid subscribers are always active
+        if subscription_plan in ["elite", "vip", "pro", "growth", "startup"]:
+            is_active = True
+        elif ref.get("mining_active") and ref.get("mining_session_end"):
             try:
                 session_end = datetime.fromisoformat(ref["mining_session_end"].replace('Z', '+00:00'))
                 is_active = session_end > datetime.now(timezone.utc)
@@ -33751,19 +33756,23 @@ async def get_referral_earnings_history(user_id: str, period: str = "all"):
 
 
 @api_router.get("/referrals/{user_id}/levels")
-async def get_referral_levels(user_id: str):
+async def get_referral_levels(user_id: str, force_refresh: bool = False):
     """
     Get referral count by level (5 levels deep) with user details.
     Uses SUPER AGGRESSIVE search - checks ALL possible referred_by formats including regex.
     user_id can be UID or email.
+    
+    Add ?force_refresh=true to bypass cache
     """
     # Check cache first for faster response
     # BUT: Don't use cache if it has 0 total (likely stale/error data)
     cache_key = f"referral_levels_{user_id}"
-    cached = await cache.get(cache_key)
-    if cached and cached.get("total", 0) > 0:
-        # Only use cache if it has actual data
-        return cached
+    
+    if not force_refresh:
+        cached = await cache.get(cache_key)
+        if cached and cached.get("total", 0) > 0:
+            # Only use cache if it has actual data
+            return cached
     
     now = datetime.now(timezone.utc)
     
@@ -33904,36 +33913,45 @@ async def get_referral_levels(user_id: str):
         
         for u in users:
             user_uid = u.get("uid")
-            # OPTIMIZED: Check active status from user data only (no extra DB calls)
-            # User is active if: mining_active=True AND session_end > now
+            # FIXED: Check active status properly
+            # User is active if:
+            # 1. Has paid subscription (elite, vip, pro, growth, startup) OR
+            # 2. Mining session is active
             is_active = False
             active_reason = "inactive"
             
-            mining_active = u.get("mining_active")
-            session_end = u.get("mining_session_end")
-            
-            if mining_active is True or mining_active == "true":
-                if session_end:
-                    try:
-                        if isinstance(session_end, str):
-                            session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
-                        elif isinstance(session_end, datetime):
-                            session_end_dt = session_end
-                        else:
-                            session_end_dt = None
-                        
-                        if session_end_dt:
-                            if session_end_dt.tzinfo is None:
-                                session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
-                            if session_end_dt > now:
-                                is_active = True
-                                active_reason = "mining_session_active"
-                    except:
+            # Check 1: Paid subscription = ALWAYS ACTIVE
+            subscription_plan = (u.get("subscription_plan") or "").lower()
+            if subscription_plan in ["elite", "vip", "pro", "growth", "startup"]:
+                is_active = True
+                active_reason = f"paid_subscriber_{subscription_plan}"
+            else:
+                # Check 2: Mining session active
+                mining_active = u.get("mining_active")
+                session_end = u.get("mining_session_end")
+                
+                if mining_active is True or mining_active == "true":
+                    if session_end:
+                        try:
+                            if isinstance(session_end, str):
+                                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+                            elif isinstance(session_end, datetime):
+                                session_end_dt = session_end
+                            else:
+                                session_end_dt = None
+                            
+                            if session_end_dt:
+                                if session_end_dt.tzinfo is None:
+                                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                                if session_end_dt > now:
+                                    is_active = True
+                                    active_reason = "mining_session_active"
+                        except:
+                            is_active = True
+                            active_reason = "mining_active_flag"
+                    else:
                         is_active = True
-                        active_reason = "mining_active_flag"
-                else:
-                    is_active = True
-                    active_reason = "mining_active_no_session"
+                        active_reason = "mining_active_no_session"
             
             if is_active:
                 active_count += 1
@@ -34377,7 +34395,10 @@ async def calculate_referral_bonus(referrer_id: str, referred_id: str, level: in
         "created_at": {"$gte": thirty_days_ago}
     })
     
-    is_active = recent_activity > 0 or referred_user.get("mining_active", False)
+    # FIXED: Paid subscribers are ALWAYS active
+    subscription_plan = (referred_user.get("subscription_plan") or "").lower()
+    is_paid_subscriber = subscription_plan in ["elite", "vip", "pro", "growth", "startup"]
+    is_active = is_paid_subscriber or recent_activity > 0 or referred_user.get("mining_active", False)
     
     # Get bonus based on level and activity
     level_config = REFERRAL_LEVEL_BONUS.get(level, {"active": 5, "inactive": 1})
