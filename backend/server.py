@@ -28049,14 +28049,16 @@ async def restore_original_balance(dry_run: bool = True, limit: int = 1000):
 
 
 @api_router.get("/admin/prc-balance/mega-compensation")
-async def mega_compensation(dry_run: bool = True, limit: int = 1000):
+async def mega_compensation(dry_run: bool = True, skip: int = 0, limit: int = 200):
     """
-    🚨 MEGA COMPENSATION API - One-time fix for all affected users
+    🚨 MEGA COMPENSATION API - One-time fix for ALL users
     
     This API does:
-    1. Zero balance users: Restore correct balance + 20% extra compensation
-    2. Burn refund: Return all PRC burned due to subscription expiry
-    3. Vault refund: Return all PRC that went to system vault (if any)
+    1. ALL USERS: Give 20% extra on current balance as compensation
+    2. Zero balance users: First restore correct balance, then +20%
+    3. Burn refund: Return all PRC burned due to subscription expiry (for paid users)
+    
+    Use skip/limit for batching to avoid timeout.
     
     ⚠️ SET dry_run=false TO ACTUALLY APPLY
     """
@@ -28064,193 +28066,207 @@ async def mega_compensation(dry_run: bool = True, limit: int = 1000):
         now = datetime.now(timezone.utc)
         
         results = {
-            "zero_balance_fixes": [],
+            "compensations": [],
             "burn_refunds": [],
             "summary": {
-                "users_fixed": 0,
-                "total_restored": 0,
-                "total_compensation_20pct": 0,
+                "users_processed": 0,
+                "users_compensated": 0,
+                "total_20pct_bonus": 0,
+                "zero_balance_restored": 0,
                 "total_burn_refunded": 0,
                 "grand_total_credited": 0
             },
-            "dry_run": dry_run
+            "dry_run": dry_run,
+            "skip": skip,
+            "limit": limit
         }
         
-        # ========== PART 1: Fix Zero Balance Users + 20% Compensation ==========
-        affected_users = await db.users.find({
-            "prc_balance": {"$lte": 0},
-            "total_mined": {"$gt": 5000}
-        }).limit(limit).to_list(limit)
+        # ========== PART 1: 20% Compensation for ALL Users ==========
+        all_users = await db.users.find({
+            "prc_balance": {"$gte": 0}
+        }).skip(skip).limit(limit).to_list(limit)
         
-        for user in affected_users:
+        for user in all_users:
             uid = user.get("uid")
             name = user.get("name", "Unknown")
-            total_mined = float(user.get("total_mined", 0) or 0)
             current_balance = float(user.get("prc_balance", 0) or 0)
+            total_mined = float(user.get("total_mined", 0) or 0)
+            already_compensated = user.get("compensation_applied_march2026", False)
             
-            # Calculate legitimate redemptions
-            total_redeemed = 0
+            # Skip if already compensated
+            if already_compensated:
+                continue
             
-            # Subscriptions
-            subs = await db.subscriptions.find({"user_id": uid, "status": "active"}).to_list(100)
-            for s in subs:
-                total_redeemed += float(s.get("prc_amount", 0) or 0)
+            results["summary"]["users_processed"] += 1
             
-            # Product orders
-            orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
-            for o in orders:
-                total_redeemed += float(o.get("prc_amount", 0) or 0)
+            # For zero balance users, first calculate correct balance
+            restore_amount = 0
+            if current_balance <= 0 and total_mined > 5000:
+                # Calculate legitimate redemptions
+                total_redeemed = 0
+                
+                subs = await db.subscriptions.find({"user_id": uid, "status": "active"}).to_list(100)
+                for s in subs:
+                    total_redeemed += float(s.get("prc_amount", 0) or 0)
+                
+                orders = await db.product_orders.find({"user_id": uid, "status": {"$in": ["completed", "processing"]}}).to_list(100)
+                for o in orders:
+                    total_redeemed += float(o.get("prc_amount", 0) or 0)
+                
+                withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
+                for w in withdrawals:
+                    total_redeemed += float(w.get("prc_amount", 0) or 0)
+                
+                correct_balance = max(0, total_mined - total_redeemed)
+                restore_amount = correct_balance
+                current_balance = correct_balance  # Use restored balance for 20% calc
+                results["summary"]["zero_balance_restored"] += restore_amount
             
-            # Bank withdrawals (completed only)
-            withdrawals = await db.bank_withdrawal_requests.find({"user_id": uid, "status": "completed"}).to_list(100)
-            for w in withdrawals:
-                total_redeemed += float(w.get("prc_amount", 0) or 0)
+            # Calculate 20% bonus on current/restored balance
+            bonus_20pct = round(current_balance * 0.20, 2)
+            final_balance = round(current_balance + bonus_20pct, 2)
             
-            # Correct balance
-            correct_balance = max(0, total_mined - total_redeemed)
-            
-            # 20% compensation for affected users
-            compensation_20pct = round(correct_balance * 0.20, 2)
-            final_balance = round(correct_balance + compensation_20pct, 2)
-            
-            fix_record = {
+            comp_record = {
                 "uid": uid,
                 "name": name,
-                "current_balance": round(current_balance, 2),
-                "total_mined": round(total_mined, 2),
-                "total_redeemed": round(total_redeemed, 2),
-                "correct_balance": round(correct_balance, 2),
-                "compensation_20pct": compensation_20pct,
+                "original_balance": round(float(user.get("prc_balance", 0) or 0), 2),
+                "restored_amount": round(restore_amount, 2),
+                "base_for_bonus": round(current_balance, 2),
+                "bonus_20pct": bonus_20pct,
                 "final_balance": final_balance
             }
             
-            if not dry_run and final_balance > 0:
+            if not dry_run and (bonus_20pct > 0 or restore_amount > 0):
                 await db.users.update_one(
                     {"uid": uid},
                     {
                         "$set": {
                             "prc_balance": final_balance,
-                            "balance_fixed_at": now.isoformat(),
-                            "compensation_applied": True,
-                            "compensation_amount": compensation_20pct
+                            "compensation_applied_march2026": True,
+                            "compensation_amount": bonus_20pct,
+                            "compensation_date": now.isoformat()
                         }
                     }
                 )
                 
                 # Log transaction
-                await db.prc_transactions.insert_one({
-                    "user_id": uid,
-                    "type": "compensation",
-                    "amount": final_balance - current_balance,
-                    "description": f"Emergency balance restore + 20% compensation",
-                    "created_at": now.isoformat(),
-                    "balance_after": final_balance
-                })
-                
-                fix_record["status"] = "fixed"
-                results["summary"]["users_fixed"] += 1
-                results["summary"]["total_restored"] += correct_balance
-                results["summary"]["total_compensation_20pct"] += compensation_20pct
-            elif final_balance <= 0:
-                fix_record["status"] = "skipped_no_balance"
-            else:
-                fix_record["status"] = "would_fix"
-                results["summary"]["users_fixed"] += 1
-                results["summary"]["total_restored"] += correct_balance
-                results["summary"]["total_compensation_20pct"] += compensation_20pct
-            
-            results["zero_balance_fixes"].append(fix_record)
-        
-        # ========== PART 2: Refund Burned PRC (subscription expiry burns) ==========
-        # Find all burn transactions
-        burn_pipeline = [
-            {"$match": {"type": {"$in": ["prc_burn", "auto_burn", "burn", "expired"]}}},
-            {"$group": {
-                "_id": "$user_id",
-                "total_burned": {"$sum": {"$abs": "$amount"}},
-                "burn_count": {"$sum": 1}
-            }},
-            {"$match": {"total_burned": {"$gt": 100}}}  # Only significant burns
-        ]
-        
-        burn_aggregation = await db.prc_transactions.aggregate(burn_pipeline).to_list(2000)
-        
-        for burn_record in burn_aggregation:
-            uid = burn_record.get("_id")
-            if not uid:
-                continue
-                
-            total_burned = float(burn_record.get("total_burned", 0))
-            
-            # Get user
-            user = await db.users.find_one({"uid": uid})
-            if not user:
-                continue
-            
-            # Check if this user is a paid subscriber (should NOT have been burned)
-            subscription_plan = user.get("subscription_plan", "explorer")
-            if subscription_plan in ["vip", "elite", "pro"]:
-                # This user is paid - their burns might be incorrect
-                current_balance = float(user.get("prc_balance", 0) or 0)
-                
-                refund_record = {
-                    "uid": uid,
-                    "name": user.get("name", "Unknown"),
-                    "subscription_plan": subscription_plan,
-                    "total_burned": round(total_burned, 2),
-                    "current_balance": round(current_balance, 2)
-                }
-                
-                if not dry_run:
-                    new_balance = current_balance + total_burned
-                    await db.users.update_one(
-                        {"uid": uid},
-                        {
-                            "$set": {
-                                "prc_balance": round(new_balance, 2),
-                                "burn_refunded_at": now.isoformat()
-                            }
-                        }
-                    )
-                    
-                    # Log refund transaction
+                total_credit = restore_amount + bonus_20pct
+                if total_credit > 0:
                     await db.prc_transactions.insert_one({
                         "user_id": uid,
-                        "type": "burn_refund",
-                        "amount": total_burned,
-                        "description": f"Refund of incorrectly burned PRC",
+                        "type": "compensation",
+                        "amount": total_credit,
+                        "description": f"20% compensation bonus" + (f" + balance restore" if restore_amount > 0 else ""),
                         "created_at": now.isoformat(),
-                        "balance_after": round(new_balance, 2)
+                        "balance_after": final_balance
                     })
-                    
-                    refund_record["status"] = "refunded"
-                    refund_record["new_balance"] = round(new_balance, 2)
-                else:
-                    refund_record["status"] = "would_refund"
-                    refund_record["new_balance"] = round(current_balance + total_burned, 2)
                 
-                results["burn_refunds"].append(refund_record)
-                results["summary"]["total_burn_refunded"] += total_burned
+                comp_record["status"] = "applied"
+                results["summary"]["users_compensated"] += 1
+                results["summary"]["total_20pct_bonus"] += bonus_20pct
+            elif bonus_20pct <= 0 and restore_amount <= 0:
+                comp_record["status"] = "skipped_no_balance"
+            else:
+                comp_record["status"] = "would_apply"
+                results["summary"]["users_compensated"] += 1
+                results["summary"]["total_20pct_bonus"] += bonus_20pct
+            
+            results["compensations"].append(comp_record)
         
-        # Calculate grand total
+        # ========== PART 2: Refund Burned PRC (only in first batch) ==========
+        if skip == 0:
+            burn_pipeline = [
+                {"$match": {"type": {"$in": ["prc_burn", "auto_burn", "burn", "expired"]}}},
+                {"$group": {
+                    "_id": "$user_id",
+                    "total_burned": {"$sum": {"$abs": "$amount"}},
+                    "burn_count": {"$sum": 1}
+                }},
+                {"$match": {"total_burned": {"$gt": 100}}}
+            ]
+            
+            burn_aggregation = await db.prc_transactions.aggregate(burn_pipeline).to_list(2000)
+            
+            for burn_record in burn_aggregation:
+                uid = burn_record.get("_id")
+                if not uid:
+                    continue
+                    
+                total_burned = float(burn_record.get("total_burned", 0))
+                
+                user = await db.users.find_one({"uid": uid})
+                if not user:
+                    continue
+                
+                # Only refund burns for paid subscribers
+                subscription_plan = user.get("subscription_plan", "explorer")
+                if subscription_plan in ["vip", "elite", "pro"]:
+                    current_balance = float(user.get("prc_balance", 0) or 0)
+                    already_refunded = user.get("burn_refunded_march2026", False)
+                    
+                    if already_refunded:
+                        continue
+                    
+                    refund_record = {
+                        "uid": uid,
+                        "name": user.get("name", "Unknown"),
+                        "subscription_plan": subscription_plan,
+                        "total_burned": round(total_burned, 2),
+                        "current_balance": round(current_balance, 2)
+                    }
+                    
+                    if not dry_run:
+                        new_balance = current_balance + total_burned
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {
+                                "$set": {
+                                    "prc_balance": round(new_balance, 2),
+                                    "burn_refunded_march2026": True,
+                                    "burn_refund_amount": total_burned
+                                }
+                            }
+                        )
+                        
+                        await db.prc_transactions.insert_one({
+                            "user_id": uid,
+                            "type": "burn_refund",
+                            "amount": total_burned,
+                            "description": f"Refund of burned PRC for paid subscriber",
+                            "created_at": now.isoformat(),
+                            "balance_after": round(new_balance, 2)
+                        })
+                        
+                        refund_record["status"] = "refunded"
+                        refund_record["new_balance"] = round(new_balance, 2)
+                    else:
+                        refund_record["status"] = "would_refund"
+                        refund_record["new_balance"] = round(current_balance + total_burned, 2)
+                    
+                    results["burn_refunds"].append(refund_record)
+                    results["summary"]["total_burn_refunded"] += total_burned
+        
+        # Grand total
         results["summary"]["grand_total_credited"] = round(
-            results["summary"]["total_restored"] + 
-            results["summary"]["total_compensation_20pct"] + 
+            results["summary"]["total_20pct_bonus"] + 
+            results["summary"]["zero_balance_restored"] +
             results["summary"]["total_burn_refunded"], 2
         )
         
-        # Round all summary values
-        for key in results["summary"]:
-            if isinstance(results["summary"][key], float):
-                results["summary"][key] = round(results["summary"][key], 2)
+        # Check if more batches needed
+        has_more = len(all_users) == limit
         
         return {
             "success": True,
-            "message": "DRY RUN - No changes made" if dry_run else "MEGA COMPENSATION APPLIED",
+            "message": "DRY RUN - No changes made" if dry_run else f"Batch {skip//limit + 1} applied",
             "summary": results["summary"],
-            "zero_balance_fixes": results["zero_balance_fixes"][:50],
-            "burn_refunds": results["burn_refunds"][:50],
-            "note": f"Showing first 50 of each category. Total: {len(results['zero_balance_fixes'])} fixes, {len(results['burn_refunds'])} burn refunds"
+            "compensations": results["compensations"][:30],
+            "burn_refunds": results["burn_refunds"][:30] if skip == 0 else [],
+            "pagination": {
+                "current_skip": skip,
+                "next_skip": skip + limit if has_more else None,
+                "has_more": has_more
+            }
         }
         
     except Exception as e:
