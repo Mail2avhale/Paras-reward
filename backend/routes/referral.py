@@ -138,6 +138,7 @@ async def get_referrals(uid: str, limit: int = 50, page: int = 1):
     yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     
     # Use aggregation to add is_active field directly
+    # FIXED: User is active if they have valid subscription OR logged in last 24h
     pipeline = [
         {"$match": {"referred_by": uid}},
         {"$project": {
@@ -147,9 +148,18 @@ async def get_referrals(uid: str, limit: int = 50, page: int = 1):
             "profile_picture": 1,
             "last_login": 1,
             "subscription_plan": 1,
+            "subscription_expiry": 1,
+            "subscription_expires": 1,
             "is_active": {
                 "$cond": {
-                    "if": {"$gte": ["$last_login", yesterday]},
+                    "if": {
+                        "$or": [
+                            # Condition 1: Has paid subscription plan
+                            {"$in": [{"$toLower": {"$ifNull": ["$subscription_plan", ""]}}, ["elite", "growth", "startup", "vip", "pro"]]},
+                            # Condition 2: Logged in within last 24 hours
+                            {"$gte": ["$last_login", yesterday]}
+                        ]
+                    },
                     "then": True,
                     "else": False
                 }
@@ -196,12 +206,14 @@ async def get_referral_stats(uid: str):
     # Run all queries in PARALLEL
     total_task = db.users.count_documents({"referred_by": uid})
     
-    # Use aggregation for active count - much faster than fetching all
+    # FIXED: Active = has subscription OR logged in last 24h
     active_pipeline = [
         {"$match": {
             "referred_by": uid,
-            "is_active": {"$ne": False},
-            "last_login": {"$gte": yesterday}
+            "$or": [
+                {"subscription_plan": {"$in": ["elite", "growth", "startup", "Elite", "Growth", "Startup", "vip", "VIP", "pro", "Pro"]}},
+                {"last_login": {"$gte": yesterday}}
+            ]
         }},
         {"$count": "active"}
     ]
@@ -276,9 +288,13 @@ async def get_multi_level_referral_stats(uid: str):
         
         for user in level_users:
             last_login = user.get("last_login")
+            subscription_plan = (user.get("subscription_plan") or "").lower()
             is_active = False
             
-            if last_login:
+            # FIXED: Active if has paid subscription OR logged in last 24h
+            if subscription_plan in ["elite", "growth", "startup", "vip", "pro"]:
+                is_active = True
+            elif last_login:
                 try:
                     if isinstance(last_login, str):
                         last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))

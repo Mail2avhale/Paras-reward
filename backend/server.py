@@ -3671,6 +3671,30 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         if not user_data:
             return False, "user_not_found"
     
+    # ========== CONDITION 0: Active Subscription (MOST IMPORTANT) ==========
+    # Users with valid paid subscription are ALWAYS considered active
+    subscription_plan = (user_data.get("subscription_plan") or "").lower()
+    if subscription_plan in ["elite", "growth", "startup", "vip", "pro"]:
+        # Check if subscription is not expired
+        sub_expiry = user_data.get("subscription_expires") or user_data.get("subscription_expiry") or user_data.get("vip_expiry")
+        if sub_expiry:
+            try:
+                if isinstance(sub_expiry, str):
+                    expiry_dt = datetime.fromisoformat(sub_expiry.replace('Z', '+00:00'))
+                else:
+                    expiry_dt = sub_expiry
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                
+                if expiry_dt > now:
+                    return True, f"subscription_active_{subscription_plan}"
+            except:
+                # If parse fails, trust the plan name
+                return True, f"subscription_plan_{subscription_plan}"
+        else:
+            # Has plan but no expiry date - trust the plan
+            return True, f"subscription_plan_{subscription_plan}"
+    
     # ========== CONDITION 1: Active Mining Session ==========
     mining_active = user_data.get("mining_active")
     session_end = user_data.get("mining_session_end")
