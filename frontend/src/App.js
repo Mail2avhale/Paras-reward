@@ -57,6 +57,21 @@ axios.interceptors.response.use(
 axios.interceptors.request.use(
   config => {
     const url = config.url || '';
+    
+    // Add auth token to all API requests
+    const storedUser = localStorage.getItem("paras_user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (user.token) {
+          config.headers = config.headers || {};
+          config.headers['Authorization'] = `Bearer ${user.token}`;
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+    
     // Add cache busting for admin dashboard APIs
     if (url.includes('/admin/') && config.method === 'get') {
       config.params = config.params || {};
