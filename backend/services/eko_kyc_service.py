@@ -1,7 +1,7 @@
 """
 Eko KYC Verification Service
 - PAN Lite: Instant PAN verification (no OTP)
-- Aadhaar OTP: 3-step Aadhaar verification
+- Aadhaar OTP: 2-step Aadhaar verification
 """
 import os
 import hashlib
@@ -10,12 +10,13 @@ import time
 import logging
 import httpx
 import base64
+import random
 from datetime import datetime, timezone
 from typing import Optional, Dict
 
 # Eko API Configuration
 # Production: https://api.eko.in:25002/ekoicici | Staging: https://staging.eko.in:25004/ekoapi
-# KYC API path: /v3/tools/kyc/
+# KYC API path: /v3/tools/kyc/ for PAN, /v1/aadhaar/ for Aadhaar
 # Using production URL on port 25002 (confirmed working)
 EKO_KYC_BASE = os.environ.get("EKO_KYC_BASE_URL", "https://api.eko.in:25002/ekoicici")
 EKO_KYC_URL = f"{EKO_KYC_BASE}/v3"
@@ -27,7 +28,7 @@ EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "")
 
 def generate_secret_key() -> tuple:
     """
-    Generate secret key and timestamp for Eko API authentication
+    Generate secret key and timestamp for Eko API authentication (for PAN/BBPS APIs)
     Based on Eko documentation: https://developers.eko.in/docs/auth
     
     Steps:
@@ -54,6 +55,26 @@ def generate_secret_key() -> tuple:
     logging.debug(f"[EKO-AUTH] Generated secret_key for timestamp: {timestamp}")
     
     return secret_key, timestamp
+
+
+def generate_aadhaar_auth_headers() -> dict:
+    """
+    Generate authentication headers for Aadhaar API (different from PAN/BBPS)
+    Based on user-provided Eko Aadhaar API code
+    
+    Auth: base64(developer_key + timestamp), secret-key passed directly
+    """
+    timestamp = str(int(time.time()))
+    
+    # For Aadhaar API, auth is different - no HMAC needed
+    headers = {
+        "developer_key": EKO_DEVELOPER_KEY,
+        "secret-key": EKO_AUTHENTICATOR_KEY,  # Pass authenticator key directly
+        "secret-key-timestamp": timestamp,
+        "Content-Type": "application/json"
+    }
+    
+    return headers
 
 
 def get_auth_headers() -> Dict[str, str]:
@@ -238,64 +259,11 @@ def get_pan_status_description(status: str) -> str:
 
 # ==================== AADHAAR OTP VERIFICATION ====================
 
-async def get_aadhaar_consent(aadhaar_number: str) -> Dict:
-    """
-    Step 0: Get Aadhaar consent - Required before sending OTP
-    
-    Returns access_key needed for OTP request
-    """
-    if not EKO_DEVELOPER_KEY or not EKO_AUTHENTICATOR_KEY:
-        return {"success": False, "message": "KYC service not configured."}
-    
-    aadhaar_clean = aadhaar_number.replace(" ", "").replace("-", "")
-    if not aadhaar_clean.isdigit() or len(aadhaar_clean) != 12:
-        return {"success": False, "message": "Invalid Aadhaar. Must be 12 digits."}
-    
-    headers = get_auth_headers()
-    
-    # GET request with query params
-    url = f"{EKO_KYC_BASE}/v2/external/getAdhaarConsent"
-    params = {
-        "source": "NEWCONNECT",
-        "initiator_id": EKO_INITIATOR_ID,
-        "user_code": EKO_USER_CODE,
-        "is_consent": "Y",
-        "consent_text": aadhaar_clean,
-        "realsourceip": "127.0.0.1"
-    }
-    
-    logging.info(f"[EKO-AADHAAR-CONSENT] Getting consent for: XXXX-XXXX-{aadhaar_clean[-4:]}")
-    
-    try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.get(url, params=params, headers=headers)
-            
-            logging.info(f"[EKO-AADHAAR-CONSENT] Response: {response.text[:300]}")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == 0:
-                    return {
-                        "success": True,
-                        "access_key": data.get("data", {}).get("access_key", ""),
-                        "raw_response": data
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "message": data.get("message", "Failed to get consent"),
-                        "raw_response": data
-                    }
-            else:
-                return {"success": False, "message": "Consent request failed"}
-    except Exception as e:
-        logging.error(f"[EKO-AADHAAR-CONSENT] Error: {e}")
-        return {"success": False, "message": "Service error. Please try again."}
-
-
 async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = None) -> Dict:
     """
-    Step 1: Get consent and send OTP to Aadhaar-linked mobile number
+    Step 1: Send OTP to Aadhaar-linked mobile number
+    
+    Endpoint: POST /v1/aadhaar/otp
     
     Args:
         aadhaar_number: 12-digit Aadhaar number
@@ -305,7 +273,6 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
         {
             "success": True/False,
             "otp_sent": True/False,
-            "access_key": "..." (needed for verification),
             "message": "..."
         }
     """
@@ -318,39 +285,25 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
     if not aadhaar_clean.isdigit() or len(aadhaar_clean) != 12:
         return {"success": False, "otp_sent": False, "message": "Invalid Aadhaar. Must be 12 digits."}
     
-    # Step 0: Get consent first
-    consent_result = await get_aadhaar_consent(aadhaar_clean)
-    if not consent_result["success"]:
-        return {
-            "success": False,
-            "otp_sent": False,
-            "message": consent_result.get("message", "Failed to get Aadhaar consent")
-        }
-    
-    access_key = consent_result["access_key"]
-    
     if not client_ref_id:
         client_ref_id = f"AADHAR{int(time.time() * 1000)}"
     
-    # Step 1: Send OTP - GET request with query params
-    headers = get_auth_headers()
-    url = f"{EKO_KYC_BASE}/v2/external/getAdhaarOTP"
-    params = {
-        "source": "NEWCONNECT",
-        "initiator_id": EKO_INITIATOR_ID,
-        "user_code": EKO_USER_CODE,
-        "aadhar": aadhaar_clean,
-        "is_consent": "Y",
-        "access_key": access_key,
-        "caseId": aadhaar_clean,
-        "realsourceip": "127.0.0.1"
+    # Aadhaar OTP endpoint - POST request
+    url = f"{EKO_KYC_BASE}/v1/aadhaar/otp"
+    
+    payload = {
+        "aadhaar": aadhaar_clean,
+        "initiator_id": EKO_INITIATOR_ID
     }
     
+    headers = generate_aadhaar_auth_headers()
+    
     logging.info(f"[EKO-AADHAAR-OTP] Sending OTP for: XXXX-XXXX-{aadhaar_clean[-4:]}")
+    logging.info(f"[EKO-AADHAAR-OTP] URL: {url}")
     
     try:
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.get(url, params=params, headers=headers)
+            response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-OTP] Response status: {response.status_code}")
             logging.info(f"[EKO-AADHAAR-OTP] Response: {response.text[:500]}")
@@ -363,7 +316,6 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
                         "success": True,
                         "otp_sent": True,
                         "message": "OTP sent to your Aadhaar-linked mobile number",
-                        "access_key": data.get("data", {}).get("access_key", access_key),
                         "client_ref_id": client_ref_id,
                         "raw_response": data
                     }
@@ -375,11 +327,15 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
                         "raw_response": data
                     }
             else:
-                error_data = response.json() if response.content else {}
+                error_data = {}
+                try:
+                    error_data = response.json()
+                except:
+                    pass
                 return {
                     "success": False,
                     "otp_sent": False,
-                    "message": error_data.get("message", "Invalid Aadhaar number. Please check and try again."),
+                    "message": error_data.get("message", "Failed to send OTP. Please try again."),
                     "raw_response": error_data
                 }
                 
@@ -390,14 +346,16 @@ async def send_aadhaar_otp(aadhaar_number: str, client_ref_id: Optional[str] = N
         return {"success": False, "otp_sent": False, "message": "Failed to send OTP. Please try again."}
 
 
-async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> Dict:
+async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str = None) -> Dict:
     """
-    Step 2: Verify OTP and get Aadhaar details (Fetch Aadhaar XML/File)
+    Step 2: Verify OTP and get Aadhaar details
+    
+    Endpoint: POST /v1/aadhaar/verify
     
     Args:
         aadhaar_number: 12-digit Aadhaar number
         otp: 6-digit OTP received on mobile
-        access_key: Access key from send_aadhaar_otp response
+        access_key: Not needed for this endpoint (kept for compatibility)
     
     Returns:
         {
@@ -417,31 +375,22 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> 
     if not otp.isdigit() or len(otp) != 6:
         return {"success": False, "verified": False, "message": "Invalid OTP. Must be 6 digits."}
     
-    headers = get_auth_headers()
+    # Aadhaar Verify endpoint - POST request
+    url = f"{EKO_KYC_BASE}/v1/aadhaar/verify"
     
-    # Generate random 4-digit share_code
-    import random
-    share_code = str(random.randint(1000, 9999))
-    
-    # Eko Aadhaar File endpoint - v1 as per documentation
-    url = f"{EKO_KYC_BASE}/v1/external/getAdhaarFile"
-    params = {
-        "initiator_id": EKO_INITIATOR_ID,
-        "user_code": EKO_USER_CODE,
-        "aadhar": aadhaar_clean,
-        "is_consent": "Y",
+    payload = {
+        "aadhaar": aadhaar_clean,
         "otp": otp,
-        "share_code": share_code,
-        "access_key": access_key,
-        "caseId": aadhaar_clean,
-        "realsourceip": "127.0.0.1"
+        "initiator_id": EKO_INITIATOR_ID
     }
+    
+    headers = generate_aadhaar_auth_headers()
     
     logging.info(f"[EKO-AADHAAR-VERIFY] Verifying OTP for: XXXX-XXXX-{aadhaar_clean[-4:]}")
     
     try:
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-            response = await client.get(url, params=params, headers=headers)
+            response = await client.post(url, json=payload, headers=headers)
             
             logging.info(f"[EKO-AADHAAR-VERIFY] Response status: {response.status_code}")
             logging.info(f"[EKO-AADHAAR-VERIFY] Response: {response.text[:500]}")
@@ -465,19 +414,28 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> 
                             "state": aadhaar_data.get("state"),
                             "pincode": aadhaar_data.get("pincode"),
                             "photo_base64": aadhaar_data.get("photo"),
-                            "masked_aadhaar": aadhaar_data.get("uid", "")[-4:].rjust(12, 'X')
+                            "masked_aadhaar": f"XXXX-XXXX-{aadhaar_clean[-4:]}"
                         },
                         "raw_response": data
                     }
                 else:
+                    msg = data.get("message", "OTP verification failed. Please try again.")
+                    if "expired" in msg.lower():
+                        msg = "OTP expired. Please request a new OTP."
+                    elif "wrong" in msg.lower() or "invalid" in msg.lower():
+                        msg = "Invalid OTP. Please check and try again."
                     return {
                         "success": False,
                         "verified": False,
-                        "message": data.get("message", "OTP verification failed. Please try again."),
+                        "message": msg,
                         "raw_response": data
                     }
             elif response.status_code == 400:
-                error_data = response.json() if response.content else {}
+                error_data = {}
+                try:
+                    error_data = response.json()
+                except:
+                    pass
                 msg = error_data.get("message", "Invalid OTP. Please check and try again.")
                 if "expired" in msg.lower():
                     msg = "OTP expired. Please request a new OTP."
@@ -488,7 +446,11 @@ async def verify_aadhaar_otp(aadhaar_number: str, otp: str, access_key: str) -> 
                     "raw_response": error_data
                 }
             else:
-                error_data = response.json() if response.content else {}
+                error_data = {}
+                try:
+                    error_data = response.json()
+                except:
+                    pass
                 return {
                     "success": False,
                     "verified": False,
