@@ -1,14 +1,14 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-वापरकर्त्याची मूळ विनंती मायनिंग सेशन UI ला भविष्यवेधी डिझाइनमध्ये पुन्हा तयार करणे आणि मॅन्युअल फिनटेक रिडीम सिस्टम पूर्ण करणे ही होती.
+User's original request was to redesign the Mining Session UI with a futuristic design and complete the Manual Fintech Redeem System.
 
 ## Application Overview
-Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform आहे जिथे:
-- वापरकर्ते mining करून PRC कमवू शकतात
-- PRC वापरून subscriptions, bill payments, gift vouchers घेऊ शकतात
-- Bank transfers द्वारे INR मध्ये redeem करू शकतात
-- Referral system द्वारे bonus मिळवू शकतात
+Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
+- Users can earn PRC through mining
+- Use PRC for subscriptions, bill payments, gift vouchers
+- Redeem to INR via bank transfers
+- Earn bonuses through referral system
 
 ## Core Features
 1. **Mining System** - Time-based PRC mining with referral bonuses
@@ -27,16 +27,26 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 
 ## What's Been Implemented (March 2026)
 
-### Latest Session (16 March 2026) - PRC Rate Display & Admin Settings
+### Latest Session (16 March 2026) - Category Limit UI Simplification
 
-**PRC Rate Display Component:**
+**Category-Based Redeem Limit UI Cleanup:**
+1. Removed percentage labels (e.g., "(40%)", "(30%)") from category limit titles in `CategoryLimitsDisplay.js`
+2. Removed the main "Monthly Redeem Limit" card from all redemption pages:
+   - BankRedeemPage.js - now shows only "Bank Limit" card
+   - RedeemPageV2.js (BBPS) - now shows only "Utility Limit" card
+3. Each page displays only its relevant category limit:
+   - Bank Redeem → Bank Limit (30%)
+   - Gift Vouchers → Utility Limit (40%)
+   - BBPS Services → Utility Limit (40%)
+
+**Previous Session - PRC Rate Display Component:**
 1. Created reusable `PRCRateDisplay.js` component showing:
-   - Rate Change Alert Banner (पूर्वी vs आता)
+   - Rate Change Alert Banner (Before vs Now)
    - Breakdown Calculator (Amount × Rate + Fees + Admin Charge = Total)
    - Comparison with old rate (10 PRC = ₹1 base)
 
 2. Added to all redemption pages:
-   - BBPSServices.js - Step 4 (Confirm Payment)
+   - RedeemPageV2.js - BBPS payments
    - GiftVoucherRedemption.js - Balance Card section
    - SubscriptionPlans.js - PRC Payment section
    - BankRedeemPage.js - Before Fees Breakdown
@@ -141,7 +151,7 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 ---
 
 ## Notes for Next Agent
-1. User's primary language is **Marathi** - respond in Marathi only
+1. User's primary language is **English** - respond in English only
 2. Razorpay webhook is **disabled** by user
 3. `server.py` is very large (~44K lines) - needs refactoring
 4. Always use `testing_agent` for critical changes
@@ -149,3 +159,4 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 6. **Eko Aadhaar is BLOCKED** - don't waste time debugging, needs Eko support
 7. **Rakhi Ghehlod refund (14,260 PRC)** - PRIORITY P1, missed multiple times!
 8. `eko_kyc_service.py` has hardcoded credentials - needs environment variables
+9. Category-based redeem limits: Utility (40%), Shopping (30%), Bank (30%)
