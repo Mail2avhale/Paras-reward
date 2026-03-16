@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -202,6 +203,10 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
               <Wallet className="w-7 h-7 text-amber-500" />
             </div>
+          </div>
+          {/* Current PRC Rate Badge */}
+          <div className="mt-3 pt-3 border-t border-amber-500/20">
+            <PRCRateBadge />
           </div>
         </div>
       </div>

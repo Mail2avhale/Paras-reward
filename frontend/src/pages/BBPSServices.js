@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
 import {
   ArrowLeft, Smartphone, Tv, Zap, CreditCard, Car, Building2,
   Wallet, Shield, Droplets, Search, Loader2, CheckCircle2,
@@ -532,6 +533,20 @@ const BBPSServices = ({ user }) => {
                   data-testid="confirm-amount"
                 />
               </div>
+
+              {/* PRC Rate Display with Breakdown */}
+              {amount && parseFloat(amount) > 0 && (
+                <div className="mt-4">
+                  <PRCRateDisplay 
+                    amount={parseFloat(amount) || 0}
+                    processingFee={10}
+                    adminChargePercent={20}
+                    showBreakdown={true}
+                    showRateAlert={true}
+                    serviceType="bbps"
+                  />
+                </div>
+              )}
               
               {/* Warning for non-BBPS */}
               {!selectedOperator?.is_bbps && (

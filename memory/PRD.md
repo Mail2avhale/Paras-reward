@@ -27,26 +27,24 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 
 ## What's Been Implemented (March 2026)
 
-### Latest Session (16 March 2026) - Admin Settings Pages
-1. **Admin Settings API Route Fix**
-   - Fixed FastAPI route ordering issue: specific routes (`/settings/prc-rate`, `/settings/mining-rates`, `/settings/redeem-limit`) were being caught by generic `/{key}` route
-   - Moved specific routes BEFORE generic routes in `admin_settings.py`
-   - Removed duplicate route definitions
+### Latest Session (16 March 2026) - PRC Rate Display & Admin Settings
 
-2. **AdminSettingsHub Integration**
-   - `AdminSettingsHub.js` now correctly loads `AdminSystemSettings.js` for `system` tab
-   - Added lazy loading for `AdminSystemSettings` component
-   - Added back navigation button to `AdminSystemSettings`
+**PRC Rate Display Component:**
+1. Created reusable `PRCRateDisplay.js` component showing:
+   - Rate Change Alert Banner (पूर्वी vs आता)
+   - Breakdown Calculator (Amount × Rate + Fees + Admin Charge = Total)
+   - Comparison with old rate (10 PRC = ₹1 base)
 
-3. **Verified Working APIs:**
-   - `GET/POST /api/admin/settings/prc-rate` - PRC rate control
-   - `GET/POST /api/admin/settings/mining-rates` - Mining rates by plan
-   - `GET/POST /api/admin/settings/redeem-limit` - Monthly redeem limit formula
+2. Added to all redemption pages:
+   - BBPSServices.js - Step 4 (Confirm Payment)
+   - GiftVoucherRedemption.js - Balance Card section
+   - SubscriptionPlans.js - PRC Payment section
+   - BankRedeemPage.js - Before Fees Breakdown
 
-4. **Existing Admin Settings Pages (Already Complete):**
-   - `AdminSettings.js` - Payment, Social Media, Registration, Gateway Toggles, Redemption Charges
-   - `AdminRedeemSettings.js` - Monthly Limit Formula, Security Rules
-   - `AdminSystemSettings.js` - PRC Rate, Redeem Limit, Mining Rates (per plan)
+**Admin Settings API Fix:**
+1. Fixed FastAPI route ordering issue in `admin_settings.py`
+2. AdminSettingsHub now correctly loads AdminSystemSettings for `system` tab
+3. All settings APIs working: PRC Rate, Mining Rates, Redeem Limit
 
 ### Previous Session Fixes
 1. **Razorpay Double Subscription Prevention**

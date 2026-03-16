@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
+import PRCRateDisplay, { PRCRateBadge } from '@/components/PRCRateDisplay';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -1299,6 +1300,16 @@ const SubscriptionPlans = ({ user }) => {
                   </li>
                 </ul>
               </div>
+
+              {/* PRC Rate Display with Breakdown */}
+              <PRCRateDisplay 
+                amount={getPrice()}
+                processingFee={0}
+                adminChargePercent={100}
+                showBreakdown={true}
+                showRateAlert={true}
+                serviceType="subscription"
+              />
 
               {/* PRC Balance Info */}
               <div className="p-4 bg-gray-800/50 rounded-2xl">

@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
 import {
   ArrowLeft, Banknote, Building2, CheckCircle, Clock, XCircle, 
   AlertCircle, Info, Loader2, RefreshCw, IndianRupee, CreditCard,
@@ -430,6 +431,18 @@ const BankRedeemPage = ({ user: initialUser }) => {
                 Rate: 1 INR = {config.prc_rate} PRC | Fee: ₹{config.transaction_fee} + {config.admin_fee_percent}%
               </p>
             </Card>
+
+            {/* PRC Rate Display with Alert */}
+            {parseFloat(amount) > 0 && (
+              <PRCRateDisplay 
+                amount={parseFloat(amount) || 0}
+                processingFee={config.transaction_fee || 10}
+                adminChargePercent={config.admin_fee_percent || 20}
+                showBreakdown={true}
+                showRateAlert={true}
+                serviceType="bank"
+              />
+            )}
 
             {/* Fees Breakdown */}
             {fees && (
