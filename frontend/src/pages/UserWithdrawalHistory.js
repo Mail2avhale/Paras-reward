@@ -86,7 +86,7 @@ const UserWithdrawalHistory = ({ user }) => {
 
   const cancelSelected = async () => {
     if (selectedIds.length === 0) {
-      toast.error('कोणतेही requests select करा');
+      toast.error('Please select requests');
       return;
     }
 

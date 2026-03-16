@@ -801,7 +801,7 @@ const DailyRewards = ({ user }) => {
                       <Crown className="w-6 h-6 text-amber-400" />
                       <div>
                         <p className="text-amber-400 font-semibold text-sm">Upgrade to Collect PRC!</p>
-                        <p className="text-gray-400 text-xs">तुमचे {sessionPRC.toFixed(2)} PRC collect करण्यासाठी plan upgrade करा</p>
+                        <p className="text-gray-400 text-xs">Upgrade your plan to collect {sessionPRC.toFixed(2)} PRC</p>
                       </div>
                     </div>
                     <Button 

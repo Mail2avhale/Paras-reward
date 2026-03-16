@@ -354,7 +354,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
 
   const sendAadhaarOtp = async () => {
     if (!aadhaarNumber || aadhaarNumber.replace(/\s/g, '').length !== 12) {
-      toast.error('कृपया 12 digit Aadhaar number enter करा');
+      toast.error('Please enter 12 digit Aadhaar number');
       return;
     }
     
@@ -378,7 +378,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
         } else if (response.data.otp_sent) {
           setAadhaarOtpRefId(response.data.otp_ref_id || '');
           setCurrentStep(STEPS.AADHAAR_OTP);
-          toast.success('OTP तुमच्या Aadhaar-linked mobile वर पाठवला!');
+          toast.success('OTP sent to your Aadhaar-linked mobile!');
         }
       } else {
         setError(response.data.message || 'Failed to send OTP');
@@ -393,7 +393,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
 
   const verifyAadhaarOtp = async () => {
     if (!aadhaarOtp || aadhaarOtp.length < 4) {
-      toast.error('कृपया valid OTP enter करा');
+      toast.error('Please enter a valid OTP');
       return;
     }
     
@@ -635,9 +635,9 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
     >
       <div className="text-center pb-2">
         <Shield className="w-12 h-12 text-purple-600 mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-gray-800">Verification Method निवडा</h3>
+        <h3 className="text-lg font-bold text-gray-800">Select Verification Method</h3>
         <p className="text-gray-500 text-sm mt-1">
-          Higher limits साठी Aadhaar verification recommend
+          Aadhaar verification recommended for higher limits
         </p>
       </div>
       
@@ -732,7 +732,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
         </div>
         <h3 className="text-lg font-bold text-gray-800">Enter Aadhaar Number</h3>
         <p className="text-gray-500 text-sm mt-1">
-          OTP तुमच्या Aadhaar-linked mobile वर येईल
+          OTP will be sent to your Aadhaar-linked mobile
         </p>
       </div>
       
@@ -806,9 +806,9 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
           <Lock className="w-8 h-8 text-green-600" />
         </div>
-        <h3 className="text-lg font-bold text-gray-800">Aadhaar OTP Verify करा</h3>
+        <h3 className="text-lg font-bold text-gray-800">Verify Aadhaar OTP</h3>
         <p className="text-gray-500 text-sm">
-          OTP तुमच्या <span className="font-semibold text-purple-600">Aadhaar-linked mobile</span> वर पाठवला आहे
+          OTP has been sent to your <span className="font-semibold text-purple-600">Aadhaar-linked mobile</span>
         </p>
         <p className="text-xs text-gray-400 mt-1">
           Aadhaar: {aadhaarNumber.slice(0, 4)} XXXX XXXX

@@ -449,13 +449,13 @@ const SubscriptionPlans = ({ user }) => {
     // Validate UTR format (must be exactly 12 digits)
     const utrValidation = validateUTR(formData.utr_number);
     if (!utrValidation.isValid) {
-      toast.error(utrValidation.error || 'UTR number फक्त 12 अंकी असावा');
+      toast.error(utrValidation.error || 'UTR number must be exactly 12 digits');
       return;
     }
 
     // Check if UTR validation failed (duplicate)
     if (utrValidationResult && !utrValidationResult.valid) {
-      toast.error('⚠️ UTR ALREADY IN USE - कृपया योग्य UTR number टाका');
+      toast.error('⚠️ UTR ALREADY IN USE - Please enter a valid UTR number');
       return;
     }
 
@@ -551,7 +551,7 @@ const SubscriptionPlans = ({ user }) => {
             <div className="flex-1">
               <p className="text-red-400 font-semibold">⚠️ Payment Issue Detected!</p>
               <p className="text-red-300/80 text-sm mt-1">
-                तुमचे payment successful झाले पण subscription activate झाले नाही. कृपया support शी संपर्क करा.
+                Your payment was successful but subscription was not activated. Please contact support.
               </p>
               <button 
                 onClick={() => navigate('/support')}
@@ -1457,7 +1457,7 @@ const SubscriptionPlans = ({ user }) => {
           {/* Payment Form */}
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-2">{t('utrNumber')} * (फक्त 12 अंक)</label>
+              <label className="block text-gray-400 text-sm mb-2">{t('utrNumber')} * (12 digits only)</label>
               <div className="relative">
                 <input
                   type="text"
@@ -1497,7 +1497,7 @@ const SubscriptionPlans = ({ user }) => {
                 {formData.utr_number.length > 0 && formData.utr_number.length < 12 && (
                   <p className="text-amber-400 text-xs flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    {formData.utr_number.length}/12 अंक - {12 - formData.utr_number.length} remaining
+                    {formData.utr_number.length}/12 digits - {12 - formData.utr_number.length} remaining
                   </p>
                 )}
                 
@@ -1535,7 +1535,7 @@ const SubscriptionPlans = ({ user }) => {
               
               {/* Helper text */}
               <p className="text-gray-500 text-xs mt-2">
-                UPI/IMPS payment चा 12 अंकी UTR number टाका
+                Enter 12 digit UTR number from UPI/IMPS payment
               </p>
             </div>
             
@@ -1620,7 +1620,7 @@ const SubscriptionPlans = ({ user }) => {
               </p>
               <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/30 mb-6">
                 <p className="text-amber-400 text-sm">
-                  ⏳ तुमचे payment verification साठी pending आहे. 24 तासात activate होईल.
+                  ⏳ Your payment is pending verification. It will be activated within 24 hours.
                 </p>
               </div>
             </>

@@ -271,7 +271,7 @@ const ReferralsEnhanced = ({ user }) => {
       });
       
       if (response.data.success) {
-        toast.success(`🎁 ${childName} ला 24hr Elite subscription gift केली!`);
+        toast.success(`🎁 Gifted 24hr Elite subscription to ${childName}!`);
         triggerConfetti();
         // Refresh eligible list
         await fetchEligibleForGift();

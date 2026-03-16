@@ -126,7 +126,7 @@ const AdminAccountsReceivable = ({ user }) => {
             <ArrowDownRight className="h-7 w-7 text-green-600" />
             Accounts Receivable (AR)
           </h1>
-          <p className="text-sm text-gray-500 mt-1">येणे बाकी - Money owed TO your business</p>
+          <p className="text-sm text-gray-500 mt-1">Accounts Receivable - Money owed TO your business</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchData} size="sm" disabled={loading}>

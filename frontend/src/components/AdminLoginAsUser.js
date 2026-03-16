@@ -29,7 +29,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
 
   const searchUsers = async () => {
     if (!searchQuery || searchQuery.length < 3) {
-      toast.error('कमीत कमी 3 characters टाका');
+      toast.error('Enter at least 3 characters');
       return;
     }
 
@@ -42,7 +42,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
       if (response.data.success) {
         setSearchResults(response.data.users || []);
         if (response.data.users?.length === 0) {
-          toast.info('कोणताही user सापडला नाही');
+          toast.info('No user found');
         }
       }
     } catch (error) {
@@ -71,7 +71,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
 
       if (response.data.success) {
         setStep('success');
-        toast.success(`${selectedUser.name} म्हणून login झालात!`);
+        toast.success(`Logged in as ${selectedUser.name}!`);
         
         // Store impersonation data
         const impersonationData = {
@@ -136,7 +136,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
             Login As User
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            कोणत्याही user म्हणून login करा (Admin Support साठी)
+            Login as any user (For Admin Support)
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +145,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
           <div className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Mobile, Name किंवा Email टाका..."
+                placeholder="Enter Mobile, Name or Email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
@@ -239,8 +239,8 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
               <div className="text-sm">
                 <p className="text-yellow-400 font-medium">Warning</p>
                 <p className="text-yellow-400/80">
-                  या user म्हणून login केल्यावर सर्व actions logged होतील. 
-                  Session 1 तासात expire होईल.
+                  All actions will be logged when logged in as this user. 
+                  Session will expire in 1 hour.
                 </p>
               </div>
             </div>
@@ -250,7 +250,7 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
               <label className="text-sm text-gray-400 mb-1 block">Admin PIN (Optional)</label>
               <Input
                 type="password"
-                placeholder="तुमचा PIN टाका..."
+                placeholder="Enter your PIN..."
                 value={adminPin}
                 onChange={(e) => setAdminPin(e.target.value)}
                 className="bg-gray-800 border-gray-700 text-white"
@@ -289,10 +289,10 @@ const AdminLoginAsUser = ({ adminUser, isOpen, onClose }) => {
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">Success!</h3>
             <p className="text-gray-400">
-              नवीन window मध्ये {selectedUser?.name} म्हणून login झालात.
+              Logged in as {selectedUser?.name} in new window.
             </p>
             <p className="text-yellow-400 text-sm mt-2">
-              Session 1 तासात expire होईल.
+              Session will expire in 1 hour.
             </p>
           </div>
         )}

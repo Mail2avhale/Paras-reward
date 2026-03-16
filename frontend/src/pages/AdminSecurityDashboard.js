@@ -303,7 +303,7 @@ const AdminSecurityDashboard = ({ user }) => {
             <Shield className="w-8 h-8 text-purple-600" />
             Security Dashboard
           </h1>
-          <p className="text-gray-400 mt-1">Admin सुरक्षा व्यवस्थापन</p>
+          <p className="text-gray-400 mt-1">Admin Security Management</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Alert Badge */}

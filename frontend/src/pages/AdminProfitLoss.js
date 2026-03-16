@@ -553,7 +553,7 @@ const AdminProfitLoss = ({ user }) => {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Receipt className="h-5 w-5 text-purple-500" />
-            Manual Expenses (व्यक्तिगत खर्च)
+            Manual Expenses (Personal Expenses)
           </h3>
           <Button onClick={() => setShowAddExpense(true)} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="h-4 w-4 mr-2" /> Add Expense
@@ -611,7 +611,7 @@ const AdminProfitLoss = ({ user }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Calendar className="h-5 w-5 text-amber-500" />
-            Fixed Monthly Expenses (नियमित खर्च)
+            Fixed Monthly Expenses (Regular Expenses)
           </h3>
           <Button variant="outline" size="sm" className="border-gray-700" onClick={() => window.location.href = '/admin/fixed-expenses'}>
             Manage

@@ -129,10 +129,10 @@ const parseResponseForActions = (text) => {
 const isWithdrawalIntent = (message) => {
   const lowerMsg = message.toLowerCase();
   const withdrawalKeywords = [
-    'bank withdrawal', 'bank redeem', 'withdraw to bank', 'पैसे काढायचे',
-    'बँक withdrawal', 'बँक मध्ये पैसे', 'पैसे transfer', 'withdraw money',
-    'bank account', 'बँक अकाउंट', 'account मध्ये', 'bank transfer करायचे',
-    'redeem to bank', 'cash out', 'पैसे बँक', 'withdrawal करायचे'
+    'bank withdrawal', 'bank redeem', 'withdraw to bank', 'withdraw money',
+    'bank transfer', 'send to bank', 'money transfer', 'withdraw cash',
+    'bank account', 'my account', 'account transfer', 'bank transfer',
+    'redeem to bank', 'cash out', 'money bank', 'withdrawal request'
   ];
   return withdrawalKeywords.some(keyword => lowerMsg.includes(keyword));
 };
@@ -206,7 +206,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
       const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
       setMessages([{
         type: 'bot',
-        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras AI with **Smart Diagnosis**. Ask me about any problem - I'll analyze your account and find the exact issue!\n\n🔍 *Try: "माझी bank redeem का fail झाली?"*`,
+        text: `${greeting} ${user?.name || 'User'}! 👋\n\nI'm Paras AI with **Smart Diagnosis**. Ask me about any problem - I'll analyze your account and find the exact issue!\n\n🔍 *Try: "Why did my bank redeem fail?"*`,
         timestamp: new Date(),
         suggestions: getAISuggestions(userStats, user?.name),
         quickFAQ: [
@@ -410,10 +410,10 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
     } catch (error) {
       console.error('Chatbot error:', error);
       const errorMessage = error.response?.status === 404 
-        ? 'कृपया पुन्हा login करा आणि try करा.' 
+        ? 'Please login again and try.' 
         : error.response?.status === 500
-        ? 'Server busy आहे. कृपया थोड्या वेळाने try करा.'
-        : 'Connection issue. कृपया पुन्हा try करा.';
+        ? 'Server is busy. Please try again later.'
+        : 'Connection issue. Please try again.';
       
       setMessages(prev => [...prev, {
         type: 'bot',
@@ -846,7 +846,7 @@ const AIChatbotEnhanced = ({ user, userStats }) => {
                 // Add success message to chat
                 setMessages(prev => [...prev, {
                   type: 'bot',
-                  text: `🎉 **Withdrawal Request Submitted!**\n\nRequest ID: ${result?.request_id || 'N/A'}\nAmount: ₹${result?.details?.amount || 0}\nNet Amount: ₹${result?.details?.net_amount || 0}\n\n📌 Processing time: 5-7 working days\n\nतुम्ही request status chatbot मध्ये track करू शकता!`,
+                  text: `🎉 **Withdrawal Request Submitted!**\n\nRequest ID: ${result?.request_id || 'N/A'}\nAmount: ₹${result?.details?.amount || 0}\nNet Amount: ₹${result?.details?.net_amount || 0}\n\n📌 Processing time: 5-7 working days\n\nYou can track request status in chatbot!`,
                   timestamp: new Date()
                 }]);
                 toast.success('Withdrawal request submitted!');
