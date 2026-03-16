@@ -80,12 +80,12 @@ const PRCRateDisplay = ({
           <div className="flex items-center gap-2">
             <AlertTriangle className={`w-4 h-4 ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`} />
             <span className={`text-sm font-medium ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
-              PRC दर बदलला आहे!
+              PRC Rate Changed!
             </span>
           </div>
           <div className="mt-2 flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1">
-              <span className="text-gray-400">पूर्वी:</span>
+              <span className="text-gray-400">Before:</span>
               <span className="text-gray-300 font-mono">{BASE_RATE} PRC = ₹1</span>
             </div>
             <div className="flex items-center gap-1">
@@ -96,7 +96,7 @@ const PRCRateDisplay = ({
               )}
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-gray-400">आता:</span>
+              <span className="text-gray-400">Now:</span>
               <span className={`font-mono font-bold ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
                 {currentRate} PRC = ₹1
               </span>
@@ -113,7 +113,7 @@ const PRCRateDisplay = ({
               <Calculator className="w-4 h-4 text-purple-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-400">सध्याचा PRC दर</p>
+              <p className="text-xs text-gray-400">Current PRC Rate</p>
               <p className="text-lg font-bold text-purple-400">{currentRate} PRC = ₹1</p>
             </div>
           </div>
@@ -136,7 +136,7 @@ const PRCRateDisplay = ({
           <div className="space-y-2 text-sm">
             {/* Amount Row */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">रक्कम (₹{amount})</span>
+              <span className="text-gray-400">Amount (₹{amount})</span>
               <span className="text-gray-300 font-mono">
                 ₹{amount} × {currentRate} = <span className="text-white font-bold">{amountInPRC.toLocaleString()} PRC</span>
               </span>
@@ -167,7 +167,7 @@ const PRCRateDisplay = ({
             
             {/* Total Row */}
             <div className="flex justify-between items-center">
-              <span className="text-white font-semibold">एकूण PRC</span>
+              <span className="text-white font-semibold">Total PRC</span>
               <span className="text-xl font-bold text-green-400">{totalPRC.toLocaleString()} PRC</span>
             </div>
 
@@ -175,11 +175,11 @@ const PRCRateDisplay = ({
             {rateDifference !== 0 && (
               <div className="mt-2 pt-2 border-t border-gray-700">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500">जुन्या दरानुसार (10 PRC = ₹1)</span>
+                  <span className="text-gray-500">Old rate (10 PRC = ₹1)</span>
                   <span className="text-gray-500 font-mono">{oldTotalPRC.toLocaleString()} PRC</span>
                 </div>
                 <div className="flex justify-between items-center text-xs mt-1">
-                  <span className="text-gray-500">फरक</span>
+                  <span className="text-gray-500">Difference</span>
                   <span className={`font-mono ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
                     {isRateHigher ? '+' : ''}{(totalPRC - oldTotalPRC).toLocaleString()} PRC
                   </span>

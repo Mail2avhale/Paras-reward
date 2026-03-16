@@ -157,16 +157,36 @@ ADMIN_CHARGE_PERCENT = 20  # 20% of transaction amount
 
 # Dynamic PRC Rate helper function
 async def get_dynamic_prc_rate():
-    """Get PRC rate from database, default 10"""
+    """
+    Get dynamic PRC rate from Token Economy system.
+    Import from server.py to ensure consistency.
+    """
     try:
-        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
-        if rate_setting and rate_setting.get("value"):
-            return rate_setting.get("value")
-        settings = await db.settings.find_one({})
-        if settings and settings.get("prc_to_inr_rate"):
-            return settings.get("prc_to_inr_rate")
-    except:
-        pass
+        # Import the main function from server
+        import sys
+        sys.path.insert(0, '/app/backend')
+        from server import get_dynamic_prc_rate as main_get_rate
+        return await main_get_rate()
+    except Exception as e:
+        logging.error(f"Error importing rate function: {e}")
+        # Fallback: check database directly
+        try:
+            # Check manual override
+            override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
+            if override and override.get("enabled"):
+                rate = override.get("rate")
+                if rate and rate > 0:
+                    return int(rate)
+            
+            # Check economy rate
+            from routes.prc_economy import calculate_dynamic_prc_rate
+            rate_data = await calculate_dynamic_prc_rate(db)
+            if rate_data:
+                if isinstance(rate_data, dict):
+                    return int(rate_data.get("final_rate", 10))
+                return int(rate_data)
+        except Exception as ex:
+            logging.error(f"Fallback rate fetch failed: {ex}")
     return 10  # Default fallback
 
 # Status Flow
