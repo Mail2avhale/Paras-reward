@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
+import CategoryLimitsDisplay, { CategoryLimitBadge } from '../components/CategoryLimitsDisplay';
 import {
   ArrowLeft, Banknote, Building2, CheckCircle, Clock, XCircle, 
   AlertCircle, Info, Loader2, RefreshCw, IndianRupee, CreditCard,
@@ -350,6 +351,16 @@ const BankRedeemPage = ({ user: initialUser }) => {
                   <p>Active Referrals: {redeemLimit.active_referrals || 0} (+{redeemLimit.referral_percentage_increase || 0}% bonus)</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Category-wise Limits - Bank Category Highlighted */}
+          {user?.uid && (
+            <div className="mt-4">
+              <CategoryLimitsDisplay userId={user.uid} compact={false} showRefresh={true} />
+              <div className="mt-2 bg-orange-500/10 border border-orange-500/30 rounded-lg p-2 text-xs text-orange-400">
+                <span className="font-medium">Note:</span> Bank withdrawals use your Bank category limit (30%)
+              </div>
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import PRCRateDisplay from '../components/PRCRateDisplay';
+import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
 import {
   ArrowLeft, ArrowRight, Smartphone, Tv, Zap, Flame, Building, Banknote,
   CheckCircle, Clock, XCircle, AlertCircle, Info, ChevronRight,
@@ -2563,6 +2564,11 @@ const RedeemPageV2 = ({ user }) => {
                   </p>
                 )}
               </div>
+            )}
+
+            {/* Category-wise Limits */}
+            {user?.uid && (
+              <CategoryLimitsDisplay userId={user.uid} compact={false} showRefresh={true} />
             )}
             
             {/* Charges Info */}

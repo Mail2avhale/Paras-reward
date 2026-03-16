@@ -43642,6 +43642,10 @@ api_router.include_router(admin_popup_router)
 from routes.gift_subscription import router as gift_router
 api_router.include_router(gift_router)
 
+# Redeem Categories Router - Category-wise limit management
+from routes.redeem_categories import router as redeem_categories_router
+api_router.include_router(redeem_categories_router, prefix="/redeem-categories")
+
 # Leaderboard Router - ENABLED (only in routes/leaderboard.py)
 api_router.include_router(leaderboard_router)
 # Eko Aadhaar DMT removed
