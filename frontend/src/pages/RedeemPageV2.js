@@ -2566,9 +2566,9 @@ const RedeemPageV2 = ({ user }) => {
               </div>
             )}
 
-            {/* Category-wise Limits */}
+            {/* Category-wise Limit - UTILITY ONLY */}
             {user?.uid && (
-              <CategoryLimitsDisplay userId={user.uid} compact={false} showRefresh={true} />
+              <CategoryLimitsDisplay userId={user.uid} category="utility" />
             )}
             
             {/* Charges Info */}

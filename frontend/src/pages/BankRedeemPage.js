@@ -354,13 +354,10 @@ const BankRedeemPage = ({ user: initialUser }) => {
             </div>
           )}
 
-          {/* Category-wise Limits - Bank Category Highlighted */}
+          {/* Category-wise Limit - BANK ONLY */}
           {user?.uid && (
             <div className="mt-4">
-              <CategoryLimitsDisplay userId={user.uid} compact={false} showRefresh={true} />
-              <div className="mt-2 bg-orange-500/10 border border-orange-500/30 rounded-lg p-2 text-xs text-orange-400">
-                <span className="font-medium">Note:</span> Bank withdrawals use your Bank category limit (30%)
-              </div>
+              <CategoryLimitsDisplay userId={user.uid} category="bank" />
             </div>
           )}
         </div>

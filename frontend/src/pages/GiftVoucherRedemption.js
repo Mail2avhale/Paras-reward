@@ -11,6 +11,7 @@ import RequestTimeline from '../components/RequestTimeline';
 import { RedemptionProfilePrompt } from '../components/ProfileCompletionComponents';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import PRCRateDisplay, { PRCRateBadge } from '../components/PRCRateDisplay';
+import CategoryLimitsDisplay from '../components/CategoryLimitsDisplay';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -68,21 +69,28 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
     }
   };
 
-  const denominations = [
-    { value: 10, prc: 100, icon: '🎁', popular: false },
-    { value: 50, prc: 500, icon: '🎉', popular: false },
-    { value: 100, prc: 1000, icon: '💝', popular: true },
-    { value: 500, prc: 5000, icon: '🌟', popular: true },
-    { value: 1000, prc: 10000, icon: '💎', popular: false },
-    { value: 5000, prc: 50000, icon: '👑', popular: false }
+  // Denominations are calculated dynamically based on current PRC rate
+  const baseDenominations = [
+    { value: 10, icon: '🎁', popular: false },
+    { value: 50, icon: '🎉', popular: false },
+    { value: 100, icon: '💝', popular: true },
+    { value: 500, icon: '🌟', popular: true },
+    { value: 1000, icon: '💎', popular: false },
+    { value: 5000, icon: '👑', popular: false }
   ];
+
+  // Calculate PRC for each denomination using current rate
+  const denominations = baseDenominations.map(d => ({
+    ...d,
+    prc: Math.round(d.value * prcRate)
+  }));
 
   const selectedInfo = denominations.find(d => d.value === selectedDenomination);
   
   // New charge calculation: Voucher Amount + ₹10 Processing + 20% Admin
   const voucherAmountINR = selectedDenomination || 0;
-  const processingFeeINR = 10; // Flat ₹10
-  const adminChargePercent = 20; // 20%
+  const processingFeeINR = 10;
+  const adminChargePercent = 20;
   const adminChargeINR = voucherAmountINR * (adminChargePercent / 100);
   const totalINR = voucherAmountINR + processingFeeINR + adminChargeINR;
   
@@ -209,6 +217,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
             <PRCRateBadge />
           </div>
         </div>
+
+        {/* Utility Category Limit Card */}
+        {user?.uid && (
+          <div className="mt-4">
+            <CategoryLimitsDisplay userId={user.uid} category="utility" />
+          </div>
+        )}
       </div>
 
       {/* Denominations */}
@@ -274,7 +289,7 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
                   <span className="text-white">₹{voucherAmountINR} = {voucherAmountPRC.toFixed(0)} PRC</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Processing Fee (Flat)</span>
+                  <span className="text-gray-400">Processing Fee</span>
                   <span className="text-orange-400">+ ₹{processingFeeINR} = {processingFeePRC.toFixed(0)} PRC</span>
                 </div>
                 <div className="flex justify-between">
