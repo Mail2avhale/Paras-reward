@@ -162,19 +162,19 @@ const CategoryLimitsDisplay = ({ userId, category = 'utility' }) => {
       {/* Limit Values - Total, Used, Available */}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
-          <p className="text-gray-400 text-[10px] uppercase">Total</p>
+          <p className="text-white/80 text-[10px] uppercase font-medium">Total</p>
           <p className="text-white font-bold text-sm">{total.toLocaleString()}</p>
-          <p className="text-gray-500 text-[10px]">≈ ₹{Math.floor(total / prcRate).toLocaleString()}</p>
+          <p className="text-white/60 text-[10px]">≈ ₹{Math.floor(total / prcRate).toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-yellow-400/70 text-[10px] uppercase">Used</p>
-          <p className="text-yellow-400 font-bold text-sm">{used.toLocaleString()}</p>
-          <p className="text-yellow-400/50 text-[10px]">≈ ₹{Math.floor(used / prcRate).toLocaleString()}</p>
+          <p className="text-yellow-300 text-[10px] uppercase font-medium">Used</p>
+          <p className="text-yellow-300 font-bold text-sm">{used.toLocaleString()}</p>
+          <p className="text-yellow-300/70 text-[10px]">≈ ₹{Math.floor(used / prcRate).toLocaleString()}</p>
         </div>
         <div>
-          <p className={`${style.text}/70 text-[10px] uppercase`}>Available</p>
+          <p className="text-white/80 text-[10px] uppercase font-medium">Available</p>
           <p className={`${style.text} font-bold text-sm`}>{remaining.toLocaleString()}</p>
-          <p className={`${style.text}/50 text-[10px]`}>≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
+          <p className="text-white/60 text-[10px]">≈ ₹{Math.floor(remaining / prcRate).toLocaleString()}</p>
         </div>
       </div>
 
