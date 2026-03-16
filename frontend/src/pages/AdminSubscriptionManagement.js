@@ -274,6 +274,9 @@ const AdminSubscriptionManagement = () => {
         <StatCard icon={<Crown />} label="Elite" value={planCounts.elite || 0} color="amber" />
       </div>
 
+      {/* User Subscription Edit Section */}
+      <UserSubscriptionEditor onUpdate={fetchData} />
+
       {/* Tabs */}
       <div className="flex gap-2 mb-4">
         {['pending', 'approved', 'rejected'].map(tab => (
@@ -1034,6 +1037,262 @@ const RejectModal = ({ payment, processing, onClose, onReject }) => {
           </Button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// User Subscription Editor Component
+const UserSubscriptionEditor = ({ onUpdate }) => {
+  const [searchInput, setSearchInput] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  
+  // Edit form state
+  const [plan, setPlan] = useState('explorer');
+  const [expiryMode, setExpiryMode] = useState('days'); // 'days' or 'date'
+  const [days, setDays] = useState(30);
+  const [expiryDate, setExpiryDate] = useState('');
+  const [notes, setNotes] = useState('');
+  
+  const searchUser = async () => {
+    if (!searchInput.trim()) {
+      toast.error('Enter mobile, email or UID');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/user-lookup/${encodeURIComponent(searchInput)}`);
+      if (res.data && res.data.uid) {
+        setUser(res.data);
+        setPlan(res.data.subscription_plan || 'explorer');
+        if (res.data.subscription_expiry) {
+          const expDate = new Date(res.data.subscription_expiry);
+          setExpiryDate(expDate.toISOString().split('T')[0]);
+        }
+        setShowEditor(true);
+      } else {
+        toast.error(res.data?.error || 'User not found');
+        setUser(null);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'User not found');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const updateSubscription = async () => {
+    if (!user) return;
+    
+    setSaving(true);
+    try {
+      const payload = {
+        plan,
+        notes,
+        payment_method: 'admin_manual'
+      };
+      
+      if (expiryMode === 'days') {
+        payload.days = parseInt(days);
+      } else {
+        payload.use_manual_expiry = true;
+        payload.expiry_date = new Date(expiryDate).toISOString();
+      }
+      
+      const res = await axios.put(`${API}/admin/user/${user.uid}/subscription`, payload);
+      
+      if (res.data.success) {
+        toast.success(`Subscription updated: ${plan.toUpperCase()} until ${new Date(res.data.expiry).toLocaleDateString()}`);
+        setShowEditor(false);
+        setUser(null);
+        setSearchInput('');
+        if (onUpdate) onUpdate();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update subscription');
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-IN', { 
+      day: 'numeric', month: 'short', year: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+  };
+  
+  const isExpired = (dateStr) => {
+    if (!dateStr) return true;
+    return new Date(dateStr) < new Date();
+  };
+
+  return (
+    <div className="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-800">
+      <div className="flex items-center gap-2 mb-4">
+        <Edit className="w-5 h-5 text-purple-400" />
+        <h2 className="text-lg font-semibold text-white">Edit User Subscription</h2>
+      </div>
+      
+      {/* Search Bar */}
+      <div className="flex gap-2 mb-4">
+        <Input
+          placeholder="Search by Mobile / Email / UID"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && searchUser()}
+          className="bg-gray-800 border-gray-700 text-white flex-1"
+        />
+        <Button 
+          onClick={searchUser} 
+          disabled={loading}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+        </Button>
+      </div>
+      
+      {/* User Details & Editor */}
+      {showEditor && user && (
+        <div className="bg-gray-800 rounded-lg p-4">
+          {/* User Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-700">
+            <div>
+              <p className="text-gray-500 text-xs">Name</p>
+              <p className="text-white font-medium">{user.name || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Mobile</p>
+              <p className="text-white">{user.mobile || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Current Plan</p>
+              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                user.subscription_plan === 'elite' ? 'bg-amber-500/20 text-amber-400' :
+                user.subscription_plan === 'growth' ? 'bg-green-500/20 text-green-400' :
+                user.subscription_plan === 'startup' ? 'bg-blue-500/20 text-blue-400' :
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                {(user.subscription_plan || 'explorer').toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Expiry</p>
+              <p className={`font-medium ${isExpired(user.subscription_expiry) ? 'text-red-400' : 'text-green-400'}`}>
+                {formatDate(user.subscription_expiry)}
+              </p>
+            </div>
+          </div>
+          
+          {/* Edit Form */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Plan Selection */}
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">New Plan</label>
+              <select
+                value={plan}
+                onChange={(e) => setPlan(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white"
+              >
+                <option value="explorer">Explorer (Free)</option>
+                <option value="startup">Startup (₹299)</option>
+                <option value="growth">Growth (₹499)</option>
+                <option value="elite">Elite (₹799)</option>
+              </select>
+            </div>
+            
+            {/* Expiry Mode */}
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">Expiry Mode</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setExpiryMode('days')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${
+                    expiryMode === 'days' ? 'bg-purple-600 text-white' : 'bg-gray-900 text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  Add Days
+                </button>
+                <button
+                  onClick={() => setExpiryMode('date')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${
+                    expiryMode === 'date' ? 'bg-purple-600 text-white' : 'bg-gray-900 text-gray-400 border border-gray-700'
+                  }`}
+                >
+                  Set Date
+                </button>
+              </div>
+            </div>
+            
+            {/* Days or Date Input */}
+            {expiryMode === 'days' ? (
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Days to Add</label>
+                <Input
+                  type="number"
+                  value={days}
+                  onChange={(e) => setDays(e.target.value)}
+                  min="1"
+                  max="365"
+                  className="bg-gray-900 border-gray-700 text-white"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  New expiry: {new Date(Date.now() + days * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Expiry Date</label>
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="bg-gray-900 border-gray-700 text-white"
+                />
+              </div>
+            )}
+            
+            {/* Notes */}
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">Admin Notes</label>
+              <Input
+                placeholder="Reason for change..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="bg-gray-900 border-gray-700 text-white"
+              />
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-700">
+            <Button
+              onClick={() => { setShowEditor(false); setUser(null); }}
+              variant="outline"
+              className="border-gray-700 text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={updateSubscription}
+              disabled={saving}
+              className="bg-green-600 hover:bg-green-700 flex-1"
+            >
+              {saving ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Update Subscription
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
