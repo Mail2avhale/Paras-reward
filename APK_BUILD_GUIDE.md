@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://paras-hotfix.preview.emergentagent.com",
+    "url": "https://fintech-admin-hub.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

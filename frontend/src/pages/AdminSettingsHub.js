@@ -11,8 +11,9 @@ import {
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Lazy load AdminSettings for embedded usage
+// Lazy load components for embedded usage
 const AdminSettings = lazy(() => import('./AdminSettings'));
+const AdminSystemSettings = lazy(() => import('./AdminSystemSettings'));
 
 const settingsCategories = [
   { 
@@ -115,7 +116,10 @@ const AdminSettingsHub = ({ user, onLogout }) => {
   const activeTab = searchParams.get('tab');
 
   // Tabs that should render AdminSettings component directly
-  const embeddedTabs = ['payment', 'system', 'web', 'social', 'redemption'];
+  const adminSettingsTabs = ['payment', 'web', 'social', 'redemption'];
+  
+  // System tab renders AdminSystemSettings (PRC Rate, Mining, Redeem Limit)
+  const systemTab = 'system';
   
   // Tabs that redirect to separate pages
   const externalRoutes = {
@@ -140,8 +144,21 @@ const AdminSettingsHub = ({ user, onLogout }) => {
     );
   }
 
-  // If embedded tab is selected, render AdminSettings
-  if (activeTab && embeddedTabs.includes(activeTab)) {
+  // If system tab is selected, render AdminSystemSettings
+  if (activeTab === systemTab) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+        </div>
+      }>
+        <AdminSystemSettings />
+      </Suspense>
+    );
+  }
+
+  // If other embedded tab is selected, render AdminSettings
+  if (activeTab && adminSettingsTabs.includes(activeTab)) {
     return (
       <Suspense fallback={
         <div className="min-h-screen bg-gray-950 text-white p-6 flex items-center justify-center">

@@ -27,7 +27,28 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 
 ## What's Been Implemented (March 2026)
 
-### Session Fixes
+### Latest Session (16 March 2026) - Admin Settings Pages
+1. **Admin Settings API Route Fix**
+   - Fixed FastAPI route ordering issue: specific routes (`/settings/prc-rate`, `/settings/mining-rates`, `/settings/redeem-limit`) were being caught by generic `/{key}` route
+   - Moved specific routes BEFORE generic routes in `admin_settings.py`
+   - Removed duplicate route definitions
+
+2. **AdminSettingsHub Integration**
+   - `AdminSettingsHub.js` now correctly loads `AdminSystemSettings.js` for `system` tab
+   - Added lazy loading for `AdminSystemSettings` component
+   - Added back navigation button to `AdminSystemSettings`
+
+3. **Verified Working APIs:**
+   - `GET/POST /api/admin/settings/prc-rate` - PRC rate control
+   - `GET/POST /api/admin/settings/mining-rates` - Mining rates by plan
+   - `GET/POST /api/admin/settings/redeem-limit` - Monthly redeem limit formula
+
+4. **Existing Admin Settings Pages (Already Complete):**
+   - `AdminSettings.js` - Payment, Social Media, Registration, Gateway Toggles, Redemption Charges
+   - `AdminRedeemSettings.js` - Monthly Limit Formula, Security Rules
+   - `AdminSystemSettings.js` - PRC Rate, Redeem Limit, Mining Rates (per plan)
+
+### Previous Session Fixes
 1. **Razorpay Double Subscription Prevention**
    - Atomic claim mechanism with `processing` status
    - `last_payment_id` check on user
@@ -63,9 +84,12 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 
 ## Known Issues (P0-P2)
 
+### P0 - Blocked
+- **Eko Aadhaar Auto-KYC**: Blocked on Eko support - user needs to contact Eko account manager to activate "Aadhaar eKYC service"
+
 ### P1 - Pending
+- **User Rakhi Ghehlod Refund**: 14,260 PRC refund pending (MULTIPLE SESSIONS MISSED!)
 - **145 Failed BBPS Transactions**: Root cause unknown, needs production logs
-- **User Rakhi Ghehlod Refund**: 14,260 PRC refund pending
 
 ### P2 - Lower Priority
 - Production deployment crashes (intermittent)
@@ -76,8 +100,9 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 ## Upcoming Tasks
 
 ### P1
-1. BBPS transaction failure root cause analysis
-2. User refund automation
+1. **User Rakhi Ghehlod Refund**: 14,260 PRC refund pending (PRIORITY!)
+2. BBPS transaction failure root cause analysis
+3. User refund automation
 
 ### P2
 1. Manual bank transfer notifications (Firebase/Email)
@@ -118,8 +143,11 @@ Paras Reward एक PRC (Paras Reward Coin) mining आणि redemption platform
 ---
 
 ## Notes for Next Agent
-1. User's primary language is **Marathi**
+1. User's primary language is **Marathi** - respond in Marathi only
 2. Razorpay webhook is **disabled** by user
 3. `server.py` is very large (~44K lines) - needs refactoring
 4. Always use `testing_agent` for critical changes
 5. User has lost trust due to previous agent mistakes - verify before claiming success
+6. **Eko Aadhaar is BLOCKED** - don't waste time debugging, needs Eko support
+7. **Rakhi Ghehlod refund (14,260 PRC)** - PRIORITY P1, missed multiple times!
+8. `eko_kyc_service.py` has hardcoded credentials - needs environment variables

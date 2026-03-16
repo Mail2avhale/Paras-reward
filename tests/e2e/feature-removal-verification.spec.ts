@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://paras-hotfix.preview.emergentagent.com';
+const BASE_URL = 'https://fintech-admin-hub.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   

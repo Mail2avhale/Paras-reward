@@ -26,7 +26,138 @@ def set_helpers(helpers: dict):
     log_admin_action = helpers.get('log_admin_action')
 
 
-# ========== GENERAL SETTINGS ==========
+# ========== SPECIFIC SETTINGS ROUTES (Must be before generic /{key} route) ==========
+
+# ========== PRC RATE SETTINGS ==========
+
+@router.get("/settings/prc-rate")
+async def get_prc_rate_settings():
+    """Get PRC rate settings including manual override"""
+    override = await db.app_settings.find_one({"key": "prc_rate_manual_override"}, {"_id": 0})
+    current_rate = await db.app_settings.find_one({"key": "current_prc_rate"}, {"_id": 0})
+    
+    return {
+        "manual_override": override.get("enabled", False) if override else False,
+        "manual_rate": override.get("rate", 50) if override else 50,
+        "current_rate": current_rate.get("rate", 50) if current_rate else 50
+    }
+
+
+@router.post("/settings/prc-rate")
+async def update_prc_rate_settings(request: Request):
+    """Update PRC rate settings"""
+    data = await request.json()
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.app_settings.update_one(
+        {"key": "prc_rate_manual_override"},
+        {
+            "$set": {
+                "key": "prc_rate_manual_override",
+                "enabled": data.get("manual_override", False),
+                "rate": data.get("manual_rate", 50),
+                "updated_at": now
+            }
+        },
+        upsert=True
+    )
+    
+    logging.info(f"[ADMIN] PRC Rate updated: override={data.get('manual_override')}, rate={data.get('manual_rate')}")
+    
+    return {"success": True, "message": "PRC rate settings updated"}
+
+
+# ========== REDEEM LIMIT SETTINGS ==========
+
+@router.get("/settings/redeem-limit")
+async def get_redeem_limit_settings():
+    """Get monthly redeem limit settings"""
+    settings = await db.settings.find_one({}, {"_id": 0, "monthly_redeem_settings": 1})
+    
+    default_settings = {
+        "multiplier_1": 5,
+        "multiplier_2": 10,
+        "referral_bonus_percent": 20,
+        "enabled": True
+    }
+    
+    if settings and "monthly_redeem_settings" in settings:
+        return {**default_settings, **settings["monthly_redeem_settings"]}
+    return default_settings
+
+
+@router.post("/settings/redeem-limit")
+async def update_redeem_limit_settings(request: Request):
+    """Update monthly redeem limit settings"""
+    data = await request.json()
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.settings.update_one(
+        {},
+        {
+            "$set": {
+                "monthly_redeem_settings": {
+                    "multiplier_1": data.get("multiplier_1", 5),
+                    "multiplier_2": data.get("multiplier_2", 10),
+                    "referral_bonus_percent": data.get("referral_bonus_percent", 20),
+                    "enabled": data.get("enabled", True),
+                    "updated_at": now
+                }
+            }
+        },
+        upsert=True
+    )
+    
+    logging.info(f"[ADMIN] Redeem Limit updated: m1={data.get('multiplier_1')}, m2={data.get('multiplier_2')}, ref%={data.get('referral_bonus_percent')}")
+    
+    return {"success": True, "message": "Redeem limit settings updated"}
+
+
+# ========== MINING RATE SETTINGS ==========
+
+@router.get("/settings/mining-rates")
+async def get_mining_rate_settings():
+    """Get mining rate settings for all plans"""
+    settings = await db.app_settings.find_one({"key": "mining_rates"}, {"_id": 0})
+    
+    default_rates = {
+        "explorer": {"base_rate": 30, "tap_bonus": 5},
+        "startup": {"base_rate": 55, "tap_bonus": 10},
+        "growth": {"base_rate": 90, "tap_bonus": 15},
+        "elite": {"base_rate": 100, "tap_bonus": 20}
+    }
+    
+    if settings and "rates" in settings:
+        return {"rates": {**default_rates, **settings["rates"]}}
+    return {"rates": default_rates}
+
+
+@router.post("/settings/mining-rates")
+async def update_mining_rate_settings(request: Request):
+    """Update mining rate settings for all plans"""
+    data = await request.json()
+    now = datetime.now(timezone.utc).isoformat()
+    
+    rates = data.get("rates", {})
+    
+    await db.app_settings.update_one(
+        {"key": "mining_rates"},
+        {
+            "$set": {
+                "key": "mining_rates",
+                "rates": rates,
+                "updated_at": now
+            }
+        },
+        upsert=True
+    )
+    
+    logging.info(f"[ADMIN] Mining Rates updated: {rates}")
+    
+    return {"success": True, "message": "Mining rate settings updated"}
+
+
+# ========== GENERAL SETTINGS (Generic routes - must be AFTER specific routes) ==========
 
 @router.get("/settings")
 async def get_all_settings():
