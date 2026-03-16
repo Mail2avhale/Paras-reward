@@ -118,9 +118,14 @@ const SubscriptionPlans = ({ user }) => {
       const configRes = await axios.get(`${API}/settings/public`);
       setPaymentConfig(configRes.data);
       
-      // Get dynamic PRC rate from settings
-      if (configRes.data.prc_to_inr_rate) {
-        setPrcRate(configRes.data.prc_to_inr_rate);
+      // Get dynamic PRC rate from economy API
+      try {
+        const rateRes = await axios.get(`${API}/admin/prc-rate/current`);
+        if (rateRes.data?.success && rateRes.data?.current_rate) {
+          setPrcRate(rateRes.data.current_rate);
+        }
+      } catch (err) {
+        console.log('Using default PRC rate');
       }
       
       // Get gateway statuses from public settings

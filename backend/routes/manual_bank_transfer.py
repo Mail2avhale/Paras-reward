@@ -254,16 +254,31 @@ async def verify_ifsc_eko(ifsc: str) -> dict:
 @router.get("/config")
 async def get_config():
     """Get redeem configuration for frontend with dynamic PRC rate."""
-    # Get dynamic PRC rate from settings (default 10)
+    # Get dynamic PRC rate from economy system
     prc_rate = 10  # Default fallback
     try:
-        rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
-        if rate_setting and rate_setting.get("value"):
-            prc_rate = rate_setting.get("value", 10)
+        # Priority 1: Manual override
+        override = await db.app_settings.find_one({"key": "prc_rate_manual_override"})
+        if override and override.get("enabled"):
+            rate = override.get("rate")
+            if rate and rate > 0:
+                prc_rate = int(rate)
         else:
-            settings = await db.settings.find_one({})
-            if settings and settings.get("prc_to_inr_rate"):
-                prc_rate = settings.get("prc_to_inr_rate", 10)
+            # Priority 2: Economy calculation
+            try:
+                from routes.prc_economy import calculate_dynamic_prc_rate
+                rate_data = await calculate_dynamic_prc_rate(db)
+                if rate_data:
+                    if isinstance(rate_data, dict):
+                        prc_rate = int(rate_data.get("final_rate", 10))
+                    else:
+                        prc_rate = int(rate_data)
+            except Exception as e:
+                logging.warning(f"Economy rate calculation failed: {e}")
+                # Fallback to database
+                rate_setting = await db.app_settings.find_one({"key": "prc_to_inr_rate"})
+                if rate_setting and rate_setting.get("value"):
+                    prc_rate = rate_setting.get("value", 10)
     except Exception as e:
         logging.warning(f"Error fetching PRC rate: {e}")
     

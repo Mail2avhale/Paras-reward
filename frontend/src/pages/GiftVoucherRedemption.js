@@ -96,9 +96,9 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
   useEffect(() => {
     const fetchPrcRate = async () => {
       try {
-        const res = await axios.get(`${API}/config/public`);
-        if (res.data?.prc_to_inr_rate) {
-          setPrcRate(res.data.prc_to_inr_rate);
+        const res = await axios.get(`${API}/admin/prc-rate/current`);
+        if (res.data?.success && res.data?.current_rate) {
+          setPrcRate(res.data.current_rate);
         }
       } catch (err) {
         console.error('Failed to fetch PRC rate:', err);
