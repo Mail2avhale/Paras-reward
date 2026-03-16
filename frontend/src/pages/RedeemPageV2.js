@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import PRCRateDisplay from '../components/PRCRateDisplay';
 import {
   ArrowLeft, ArrowRight, Smartphone, Tv, Zap, Flame, Building, Banknote,
   CheckCircle, Clock, XCircle, AlertCircle, Info, ChevronRight,
@@ -2442,6 +2443,21 @@ const RedeemPageV2 = ({ user }) => {
                       <p className="text-xs text-gray-500 mt-1">Min: ₹10 • Max: ₹2,00,000 • Transfer Fee: ₹5</p>
                     </div>
                   </div>
+                )}
+                
+                {/* ============================================ */}
+                {/* ============================================ */}
+                {/* PRC RATE DISPLAY - Shows current rate & alert */}
+                {/* ============================================ */}
+                {formData.amount && parseFloat(formData.amount) > 0 && (
+                  <PRCRateDisplay 
+                    amount={parseFloat(formData.amount) || 0}
+                    processingFee={10}
+                    adminChargePercent={20}
+                    showBreakdown={false}
+                    showRateAlert={true}
+                    serviceType="redeem"
+                  />
                 )}
                 
                 {/* ============================================ */}
