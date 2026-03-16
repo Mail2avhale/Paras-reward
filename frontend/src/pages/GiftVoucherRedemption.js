@@ -243,6 +243,18 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       {/* Selected Info */}
       {selectedInfo && (
         <div className="px-5 mb-6">
+          {/* PRC Rate Alert */}
+          <div className="mb-4">
+            <PRCRateDisplay 
+              amount={selectedInfo.value}
+              processingFee={10}
+              adminChargePercent={20}
+              showBreakdown={false}
+              showRateAlert={true}
+              serviceType="gift"
+            />
+          </div>
+          
           <div className="bg-gray-900/50 rounded-2xl p-5 border border-gray-800">
             <h3 className="text-white font-bold mb-3">{t('orderSummary')}</h3>
             <div className="space-y-2 text-sm">
