@@ -685,14 +685,10 @@ async def login(
     now_iso = datetime.now(timezone.utc).isoformat()
     post_login_tasks = []
     
-    # Task 1: Reset PRC for free users (if needed)
-    if not is_paid_subscriber and not is_vip and user.get("prc_balance", 0) > 0:
-        post_login_tasks.append(
-            db.users.update_one({"uid": user["uid"]}, {"$set": {"prc_balance": 0}})
-        )
-        user["prc_balance"] = 0
+    # PRC expiry on login REMOVED - PRC now has lifetime validity for all users
+    # Old code that reset PRC for free users has been removed as per user request
     
-    # Task 2: Update last_login + login_count
+    # Task 1: Update last_login + login_count
     update_data = {"last_login": now_iso}
     if device_id:
         update_data["device_id"] = device_id
