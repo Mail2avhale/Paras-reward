@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+// REMOVED: confetti import - milestone celebration removed per user request
 import { InfoTooltip } from '@/components/InfoTooltip';
 
 // Network Tree Node Component - defined outside to avoid re-creation
@@ -132,48 +132,7 @@ const ReferralsEnhanced = ({ user }) => {
   const [applyingCode, setApplyingCode] = useState(false);
   const [showApplySection, setShowApplySection] = useState(false);
 
-  // Confetti celebration function - SIMPLIFIED for better performance
-  const triggerConfetti = useCallback(() => {
-    // Single confetti burst for smoother performance
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#f59e0b', '#fbbf24', '#d97706'],
-      zIndex: 9999,
-    });
-  }, []);
-
-  // Milestone configuration
-  const milestones = [
-    { count: 1, badge: '🌱', title: 'First Steps', subtitle: 'Welcome to the network!', color: 'emerald' },
-    { count: 5, badge: '⭐', title: 'Rising Star', subtitle: '5 friends invited', color: 'blue' },
-    { count: 10, badge: '🔥', title: 'On Fire', subtitle: '10 friends strong', color: 'orange' },
-    { count: 25, badge: '💎', title: 'Diamond', subtitle: '25 friends network', color: 'purple' },
-    { count: 50, badge: '👑', title: 'Legend', subtitle: '50 friends empire', color: 'amber' },
-    { count: 100, badge: '🏆', title: 'Champion', subtitle: '100 friends dynasty', color: 'pink' },
-  ];
-
-  // Get current milestone and next milestone
-  const getCurrentMilestone = (total) => {
-    let current = null;
-    let next = milestones[0];
-    
-    for (let i = milestones.length - 1; i >= 0; i--) {
-      if (total >= milestones[i].count) {
-        current = milestones[i];
-        next = milestones[i + 1] || null;
-        break;
-      }
-    }
-    
-    if (!current && total > 0) {
-      current = milestones[0];
-      next = milestones[1];
-    }
-    
-    return { current, next };
-  };
+  // REMOVED: Milestone celebration system - confetti, milestones array, getCurrentMilestone function removed per user request
 
   // Level configuration with hardcoded Tailwind classes (dynamic classes don't work with Tailwind purge)
   const levelConfig = {
@@ -212,8 +171,7 @@ const ReferralsEnhanced = ({ user }) => {
     }
   };
 
-  // State for milestone celebration
-  const [celebratingMilestone, setCelebratingMilestone] = useState(null);
+  // REMOVED: celebratingMilestone state - milestone celebration removed per user request
   const [liveActivity, setLiveActivity] = useState([]);
   const [expandedLevels, setExpandedLevels] = useState({});  // Track which levels are expanded
   const [showNetworkTree, setShowNetworkTree] = useState(false);
@@ -272,7 +230,7 @@ const ReferralsEnhanced = ({ user }) => {
       
       if (response.data.success) {
         toast.success(`🎁 Gifted 24hr Elite subscription to ${childName}!`);
-        triggerConfetti();
+        // REMOVED: triggerConfetti() - milestone celebration removed
         // Refresh eligible list
         await fetchEligibleForGift();
         // Update parent balance locally
@@ -297,44 +255,7 @@ const ReferralsEnhanced = ({ user }) => {
     }
   };
 
-  // Check for milestone achievements
-  const checkMilestoneAchievement = async (total) => {
-    const milestone = milestones.find(m => m.count === total);
-    if (milestone) {
-      const celebrationKey = `milestone_${user?.uid}_${milestone.count}`;
-      const hasCelebrated = localStorage.getItem(celebrationKey);
-      
-      if (!hasCelebrated) {
-        setCelebratingMilestone(milestone);
-        triggerConfetti();
-        localStorage.setItem(celebrationKey, 'true');
-        
-        // Record achievement to global live activity
-        try {
-          await axios.post(`${API}/referrals/milestone-achievement`, {
-            uid: user?.uid,
-            milestone_count: milestone.count,
-            milestone_badge: milestone.badge,
-            milestone_title: milestone.title,
-            milestone_color: milestone.color
-          });
-          toast.success(`🎉 Achievement unlocked: ${milestone.title}!`, { duration: 5000 });
-        } catch (e) {
-          console.log('Failed to record milestone achievement:', e);
-        }
-        
-        // Add to local live activity
-        const newActivity = {
-          id: Date.now(),
-          type: 'milestone',
-          user_name: userData?.name || 'You',
-          milestone: milestone,
-          timestamp: new Date().toISOString()
-        };
-        setLiveActivity(prev => [newActivity, ...prev.slice(0, 9)]);
-      }
-    }
-  };
+  // REMOVED: checkMilestoneAchievement function - milestone celebration removed per user request
 
   const fetchData = async () => {
     // Set timeout to prevent infinite loading
@@ -393,13 +314,11 @@ const ReferralsEnhanced = ({ user }) => {
           debug: responseData.debug_search_info
         });
         
-        // Check for milestone achievements (use L1 count)
-        checkMilestoneAchievement(l1Count);
+        // REMOVED: checkMilestoneAchievement call - milestone celebration removed per user request
         
         // Check for first referral celebration
         if (previousTotal !== null && previousTotal === 0 && l1Count === 1) {
           setShowCelebration(true);
-          triggerConfetti();
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
         setPreviousTotal(l1Count);
@@ -421,11 +340,10 @@ const ReferralsEnhanced = ({ user }) => {
         console.warn('Levels API failed, using fallback. Error:', levelsResult?.reason?.message);
         const userData = userResult?.status === 'fulfilled' ? userResult.value.data : user;
         const refCount = userData?.referral_count || 0;
-        checkMilestoneAchievement(refCount);
+        // REMOVED: checkMilestoneAchievement call - milestone celebration removed per user request
         
         if (previousTotal !== null && previousTotal === 0 && refCount === 1) {
           setShowCelebration(true);
-          triggerConfetti();
           toast.success('🎉 Your first friend joined! Keep inviting!', { duration: 5000 });
         }
         setPreviousTotal(refCount);
@@ -473,11 +391,11 @@ const ReferralsEnhanced = ({ user }) => {
     if (!hasSeenFirstReferralCelebration && referralStats.total === 1 && !loading) {
       // First time seeing 1 referral - celebrate!
       setShowCelebration(true);
-      triggerConfetti();
+      // REMOVED: triggerConfetti() - milestone celebration removed
       toast.success('🎉 Congratulations! Your first friend joined!', { duration: 5000 });
       localStorage.setItem(`first_referral_${user?.uid}`, 'true');
     }
-  }, [referralStats.total, loading, user?.uid, triggerConfetti]);
+  }, [referralStats.total, loading, user?.uid]);
 
   const referralCode = userData?.referral_code || user?.referral_code || 'N/A';
   const referralLink = `https://parasreward.com/register?ref=${referralCode}`;
@@ -1326,100 +1244,7 @@ Download now & start earning!`;
         )}
       </AnimatePresence>
 
-      {/* Milestone Celebration Modal */}
-      <AnimatePresence>
-        {celebratingMilestone && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            onClick={() => setCelebratingMilestone(null)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.5, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ duration: 0.4 }}
-              className={`bg-gradient-to-br from-${celebratingMilestone.color}-500 via-${celebratingMilestone.color}-600 to-${celebratingMilestone.color}-700 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl`}
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Animated badge */}
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-                className="w-28 h-28 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm border-4 border-white/30"
-              >
-                <motion.span
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: 3, duration: 0.5 }}
-                  className="text-6xl"
-                >
-                  {celebratingMilestone.badge}
-                </motion.span>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <p className="text-white/80 text-sm mb-1">New Badge Unlocked!</p>
-                <h2 className="text-3xl font-bold text-white mb-2">
-                  {celebratingMilestone.title}
-                </h2>
-                <p className="text-white/90 text-lg mb-6">
-                  {celebratingMilestone.subtitle}
-                </p>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-white/20 rounded-2xl p-4 mb-6 backdrop-blur-sm"
-              >
-                <div className="flex items-center justify-center gap-4">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white">{celebratingMilestone.count}</p>
-                    <p className="text-white/70 text-xs">Friends</p>
-                  </div>
-                  <div className="w-px h-10 bg-white/30"></div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white">{celebratingMilestone.badge}</p>
-                    <p className="text-white/70 text-xs">Badge</p>
-                  </div>
-                </div>
-              </motion.div>
-              
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="text-white/70 text-sm mb-4"
-              >
-                {(() => {
-                  const nextMilestone = milestones.find(m => m.count > celebratingMilestone.count);
-                  return nextMilestone 
-                    ? `Next milestone: ${nextMilestone.title} at ${nextMilestone.count} friends!`
-                    : "You've reached the highest level! 🏆";
-                })()}
-              </motion.p>
-              
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                onClick={() => setCelebratingMilestone(null)}
-                className="w-full py-4 bg-white text-gray-900 font-bold rounded-2xl hover:bg-white/90 transition-all shadow-lg"
-              >
-                Awesome! 🎉
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* REMOVED: Milestone Celebration Modal - removed per user request */}
 
       {/* Network Tree Modal */}
       <AnimatePresence>
