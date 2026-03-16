@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260315_140900/test-results',
+  outputDir: '/root/.emergent/automation_output/20260316_141145/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260315_140900/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260316_141145/results.json' }],
   ],
   use: {
-    baseURL: 'https://fintech-admin-hub.preview.emergentagent.com',
+    baseURL: 'https://category-cleanup-2.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

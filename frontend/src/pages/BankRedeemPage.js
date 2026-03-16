@@ -310,51 +310,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
             </div>
           </div>
           
-          {/* Redeem Limit Card - PRIMARY */}
-          {redeemLimit && (
-            <div data-testid="redeem-limit-card" className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-white/80 text-sm font-medium">Monthly Redeem Limit</p>
-                <p className="text-white/60 text-xs">{Math.round(redeemLimit.usage_percentage || 0)}% used</p>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-white/20 rounded-full h-2 mb-3">
-                <div 
-                  className="bg-emerald-400 h-2 rounded-full transition-all"
-                  style={{ width: `${Math.min(redeemLimit.usage_percentage || 0, 100)}%` }}
-                />
-              </div>
-              
-              {/* PRC Values */}
-              <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                <div>
-                  <p className="text-white/50 text-xs">Total Limit</p>
-                  <p className="text-white font-semibold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()} PRC</p>
-                  <p className="text-white/40 text-xs">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / config.prc_rate).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 text-xs">Used</p>
-                  <p className="text-yellow-400 font-semibold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()} PRC</p>
-                  <p className="text-yellow-400/60 text-xs">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / config.prc_rate).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 text-xs">Available</p>
-                  <p className="text-emerald-400 font-semibold text-sm">{(redeemLimit.remaining_limit || redeemLimit.remaining || 0).toLocaleString()} PRC</p>
-                  <p className="text-emerald-400/60 text-xs">≈ ₹{Math.floor((redeemLimit.remaining_limit || redeemLimit.remaining || 0) / config.prc_rate).toLocaleString()}</p>
-                </div>
-              </div>
-              
-              {/* Additional Info */}
-              {(redeemLimit.active_referrals > 0 || redeemLimit.referral_percentage_increase > 0) && (
-                <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/60">
-                  <p>Active Referrals: {redeemLimit.active_referrals || 0} (+{redeemLimit.referral_percentage_increase || 0}% bonus)</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Category-wise Limit - BANK ONLY */}
+          {/* Category-wise Limit - BANK - (Main limit card removed per user request) */}
           {user?.uid && (
             <div className="mt-4">
               <CategoryLimitsDisplay userId={user.uid} category="bank" />

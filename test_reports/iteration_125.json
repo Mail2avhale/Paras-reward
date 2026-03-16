@@ -1,0 +1,43 @@
+{
+  "summary": "Testing iteration 125 - Category-Based Redeem Limit UI Simplification. All 7 tests passed (5 frontend E2E + 2 backend API tests). Verified: 1) Bank Limit card on Bank Redeem page, 2) Utility Limit card on BBPS page, 3) Utility Limit card on Gift Voucher page, 4) NO percentage labels in category titles, 5) NO 'Monthly Redeem Limit' card on any page.",
+  "mode": "generate",
+  "baseline_commit": "891a47211c4e86345d836527392ca98454128bf9",
+  "head_commit": "0e33301bdbda02120a713339e66634565ac98020",
+  "specs_created": [
+    "/app/tests/e2e/category-limit-display-cleanup.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/category-limit-display-cleanup.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 1,
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/tests/e2e/category-limit-display-cleanup.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% - 2/2 API tests passed",
+    "frontend": "100% - 5/5 E2E tests passed"
+  },
+  "seed_data_creation": "None - used existing test user (9970100782)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Category Limit UI Simplification Testing Complete - Iteration 125\n\n## Features Verified:\n1. **CategoryLimitsDisplay component** - Shows category limit WITHOUT percentage in title (e.g., 'Bank Limit' not 'Bank Limit (30%)')\n2. **BankRedeemPage** - Shows ONLY 'Bank Limit' card, NO 'Monthly Redeem Limit' card\n3. **RedeemPageV2 (BBPS)** - Shows ONLY 'Utility Limit' card, NO 'Monthly Redeem Limit' card\n4. **GiftVoucherRedemption** - Shows ONLY 'Utility Limit' card, NO 'Monthly Redeem Limit' card\n\n## Test Files Created:\n- category-limit-display-cleanup.spec.ts (7 tests)\n\n## Test User:\n- Mobile: 9970100782 / PIN: 997010 (Growth subscription user: SANTOSH AVHALE)\n\n## API Endpoints Verified:\n- GET /api/redeem-categories/settings - Returns category configuration with percentages\n- GET /api/admin/prc-rate/current - Returns current PRC rate (11 PRC = ₹1)\n\n## UI Changes Verified:\n- Bank Redeem page: Shows Bank Limit (5,985 total, 0 used, 5,985 available)\n- BBPS page: Shows Utility Limit (7,980 total, 0 used, 7,980 available)\n- Gift Voucher page: Shows Utility Limit (7,980 total, 0 used, 7,980 available)\n- NO percentage labels like '(40%)' or '(30%)' appear in category titles",
+  "features_tested": {
+    "Bank Limit on BankRedeemPage": "PASSED - Shows only Bank Limit card",
+    "Utility Limit on RedeemPageV2": "PASSED - Shows only Utility Limit card",
+    "Utility Limit on GiftVoucherRedemption": "PASSED - Shows only Utility Limit card",
+    "No percentage labels in titles": "PASSED - Titles show 'Bank Limit' not 'Bank Limit (30%)'",
+    "No Monthly Redeem Limit card": "PASSED - Removed from all redemption pages",
+    "CategoryLimitsDisplay component structure": "PASSED - Shows Total, Used, Available values",
+    "Redeem Categories Settings API": "PASSED - Returns utility/shopping/bank categories",
+    "PRC Rate Current API": "PASSED - Returns current rate with source info"
+  }
+}

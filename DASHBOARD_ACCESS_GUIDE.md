@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://fintech-admin-hub.preview.emergentagent.com/setup
+   https://category-cleanup-2.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

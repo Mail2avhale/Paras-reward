@@ -2520,53 +2520,7 @@ const RedeemPageV2 = ({ user }) => {
           
           {/* Right: Redeem Limit & Recent Requests */}
           <div className="space-y-6">
-            {/* Global Redeem Limit Card - PRIMARY */}
-            {redeemLimit && (
-              <div data-testid="bbps-redeem-limit" className="bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-emerald-600/20 rounded-3xl p-6 border border-emerald-500/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-emerald-400 font-semibold text-sm flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Monthly Redeem Limit
-                  </h3>
-                  <span className="text-emerald-300/60 text-xs">{Math.round(redeemLimit.usage_percentage || 0)}% used</span>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="w-full bg-emerald-900/50 rounded-full h-2 mb-4">
-                  <div 
-                    className="bg-gradient-to-r from-emerald-400 to-teal-400 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(redeemLimit.usage_percentage || 0, 100)}%` }}
-                  />
-                </div>
-                
-                {/* Limit Values */}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-emerald-300/50 text-[10px] uppercase">Total</p>
-                    <p className="text-white font-bold text-sm">{(redeemLimit.total_limit || 0).toLocaleString()}</p>
-                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_limit || 0) / prcRate).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-yellow-300/50 text-[10px] uppercase">Used</p>
-                    <p className="text-yellow-400 font-bold text-sm">{(redeemLimit.total_redeemed || 0).toLocaleString()}</p>
-                    <p className="text-yellow-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.total_redeemed || 0) / prcRate).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-emerald-300/50 text-[10px] uppercase">Available</p>
-                    <p className="text-emerald-400 font-bold text-sm">{(redeemLimit.remaining_limit || redeemLimit.remaining || 0).toLocaleString()}</p>
-                    <p className="text-emerald-300/40 text-[10px]">≈ ₹{Math.floor((redeemLimit.remaining_limit || redeemLimit.remaining || 0) / prcRate).toLocaleString()}</p>
-                  </div>
-                </div>
-                
-                {redeemLimit.active_referrals > 0 && (
-                  <p className="text-emerald-300/50 text-[10px] mt-3 pt-2 border-t border-emerald-500/20">
-                    Referral Bonus: +{redeemLimit.referral_percentage_increase || 0}% limit
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Category-wise Limit - UTILITY ONLY */}
+            {/* Category-wise Limit - UTILITY ONLY (Main limit card removed per user request) */}
             {user?.uid && (
               <CategoryLimitsDisplay userId={user.uid} category="utility" />
             )}

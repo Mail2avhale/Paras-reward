@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  * - Navigation
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://fintech-admin-hub.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://category-cleanup-2.preview.emergentagent.com';
 
 // Test credentials
 const TEST_USER = {

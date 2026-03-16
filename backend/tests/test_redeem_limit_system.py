@@ -16,7 +16,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fintech-admin-hub.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://category-cleanup-2.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 USER_MOBILE = "9421331342"

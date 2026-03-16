@@ -139,7 +139,6 @@ const CategoryLimitsDisplay = ({ userId, category = 'utility' }) => {
           <h3 className={`${style.text} font-semibold text-sm`}>
             {getCategoryName()} Limit
           </h3>
-          <span className="text-gray-500 text-xs">({catData.percentage}%)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-gray-400 text-xs">{Math.round(usagePercent)}% used</span>
