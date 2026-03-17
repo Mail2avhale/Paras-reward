@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { TrendingUp, TrendingDown, Info, Calculator, AlertTriangle } from 'lucide-react';
+import { Info, Calculator } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Base rate for comparison (old rate)
+// Base rate for comparison (old rate) - kept for breakdown comparison only
 const BASE_RATE = 10;
 
 /**
@@ -15,7 +15,6 @@ const BASE_RATE = 10;
  * @param {number} processingFee - Processing fee in INR (default 10)
  * @param {number} adminChargePercent - Admin charge percentage (default 20)
  * @param {boolean} showBreakdown - Show detailed breakdown
- * @param {boolean} showRateAlert - Show rate change alert
  * @param {string} serviceType - Type of service (bbps, gift, subscription, bank)
  */
 const PRCRateDisplay = ({ 
@@ -23,7 +22,6 @@ const PRCRateDisplay = ({
   processingFee = 10, 
   adminChargePercent = 20,
   showBreakdown = true,
-  showRateAlert = true,
   serviceType = 'general'
 }) => {
   const [currentRate, setCurrentRate] = useState(10);
@@ -56,11 +54,9 @@ const PRCRateDisplay = ({
   const adminChargeInPRC = Math.round(adminChargeINR * currentRate);
   const totalPRC = amountInPRC + processingFeeInPRC + adminChargeInPRC;
 
-  // Old rate calculation for comparison
+  // Old rate calculation for comparison in breakdown
   const oldTotalPRC = Math.round(amount * BASE_RATE) + Math.round(processingFee * BASE_RATE) + Math.round(adminChargeINR * BASE_RATE);
-  const rateDifference = currentRate - BASE_RATE;
-  const isRateHigher = rateDifference > 0;
-  const isRateLower = rateDifference < 0;
+  const prcDifference = totalPRC - oldTotalPRC;
 
   if (loading) {
     return (
@@ -70,40 +66,7 @@ const PRCRateDisplay = ({
 
   return (
     <div className="space-y-3">
-      {/* Rate Alert Banner */}
-      {showRateAlert && rateDifference !== 0 && (
-        <div className={`rounded-xl p-3 border ${
-          isRateHigher 
-            ? 'bg-amber-500/10 border-amber-500/30' 
-            : 'bg-green-500/10 border-green-500/30'
-        }`}>
-          <div className="flex items-center gap-2">
-            <AlertTriangle className={`w-4 h-4 ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`} />
-            <span className={`text-sm font-medium ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
-              PRC Rate Changed!
-            </span>
-          </div>
-          <div className="mt-2 flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Before:</span>
-              <span className="text-gray-300 font-mono">{BASE_RATE} PRC = ₹1</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {isRateHigher ? (
-                <TrendingUp className="w-3 h-3 text-amber-400" />
-              ) : (
-                <TrendingDown className="w-3 h-3 text-green-400" />
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Now:</span>
-              <span className={`font-mono font-bold ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
-                {currentRate} PRC = ₹1
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* REMOVED: Rate Alert Banner ("PRC Rate Changed!") - per user request */}
 
       {/* Current Rate Display */}
       <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-3">
@@ -171,21 +134,7 @@ const PRCRateDisplay = ({
               <span className="text-xl font-bold text-green-400">{totalPRC.toLocaleString()} PRC</span>
             </div>
 
-            {/* Comparison with old rate */}
-            {rateDifference !== 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-700">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500">Old rate (10 PRC = ₹1)</span>
-                  <span className="text-gray-500 font-mono">{oldTotalPRC.toLocaleString()} PRC</span>
-                </div>
-                <div className="flex justify-between items-center text-xs mt-1">
-                  <span className="text-gray-500">Difference</span>
-                  <span className={`font-mono ${isRateHigher ? 'text-amber-400' : 'text-green-400'}`}>
-                    {isRateHigher ? '+' : ''}{(totalPRC - oldTotalPRC).toLocaleString()} PRC
-                  </span>
-                </div>
-              </div>
-            )}
+            {/* REMOVED: Comparison with old rate - per user request */}
           </div>
         </div>
       )}
