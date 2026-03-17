@@ -160,7 +160,7 @@ const DashboardModern = ({ user, onLogout }) => {
             axios.get(`${API}/redeem-categories/user/${user.uid}`)
           ]);
           
-          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.rate || 10) : 10;
+          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.current_rate || 10) : 10;
           const categoryLimits = limitsRes.status === 'fulfilled' ? (limitsRes.value.data?.categories || {}) : {};
           
           setStats({
@@ -195,7 +195,7 @@ const DashboardModern = ({ user, onLogout }) => {
         axios.get(`${API}/redeem-categories/user/${user.uid}`)
       ]);
       
-      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.rate || 10) : 10;
+      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.current_rate || 10) : 10;
       const categoryLimits = limitsResult.status === 'fulfilled' ? (limitsResult.value.data?.categories || {}) : {};
       
       // Process user data
