@@ -184,9 +184,35 @@ def validate_bbps_request(data):
     """Validate BBPS request"""
     return True, None
 
-def get_common_error_message(code):
-    """Get common error message"""
-    return EKO_ERROR_MESSAGES.get(code, "Unknown error")
+def get_common_error_message(msg_or_code):
+    """Get common error message with better fallback handling"""
+    # If it's a known error code
+    if isinstance(msg_or_code, int):
+        return EKO_ERROR_MESSAGES.get(msg_or_code, f"Error code: {msg_or_code}")
+    
+    # Handle specific Eko error messages
+    if isinstance(msg_or_code, str):
+        msg_lower = msg_or_code.lower()
+        
+        # "No key for Response" - operator doesn't support bill fetch
+        if "no key for response" in msg_lower:
+            return "This provider doesn't support automatic bill fetch. Please enter the amount manually."
+        
+        # Consumer validation errors
+        if "invalid consumer" in msg_lower or "consumer not found" in msg_lower:
+            return "Invalid consumer number. Please verify and try again."
+        
+        if "consumer belongs to prepaid" in msg_lower:
+            return "This number is registered as prepaid, not postpaid."
+        
+        # Service unavailable
+        if "service temporarily" in msg_lower or "try again later" in msg_lower:
+            return "Service temporarily unavailable. Please try again later."
+        
+        # Return the original message if no specific handling
+        return msg_or_code
+    
+    return "Unknown error"
 
 def log_eko_transaction(data):
     """Log Eko transaction"""
