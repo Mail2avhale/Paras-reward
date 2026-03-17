@@ -90,7 +90,9 @@ const DashboardModern = ({ user, onLogout }) => {
     referralCount: user?.referral_count || 0,
     subscriptionPlan: user?.subscription_plan || 'explorer',
     subscriptionExpiry: user?.subscription_expiry || null,
-    subscriptionStart: user?.subscription_start || user?.vip_activation_date || null
+    subscriptionStart: user?.subscription_start || user?.vip_activation_date || null,
+    prcRate: 10, // Default PRC rate
+    categoryLimits: { utility: { remaining: 0 }, shopping: { remaining: 0 }, bank: { remaining: 0 } }
   });
 
   // Helper function to get plan display name
@@ -152,6 +154,15 @@ const DashboardModern = ({ user, onLogout }) => {
             mining_start_time: miningData.session_start
           });
           
+          // Fetch PRC rate and category limits in parallel
+          const [rateRes, limitsRes] = await Promise.allSettled([
+            axios.get(`${API}/admin/prc-rate/current`),
+            axios.get(`${API}/redeem-categories/user/${user.uid}`)
+          ]);
+          
+          const prcRate = rateRes.status === 'fulfilled' ? (rateRes.value.data?.rate || 10) : 10;
+          const categoryLimits = limitsRes.status === 'fulfilled' ? (limitsRes.value.data?.categories || {}) : {};
+          
           setStats({
             prcBalance: userData.prc_balance || 0,
             totalMined: userData.total_mined || 0,
@@ -159,7 +170,9 @@ const DashboardModern = ({ user, onLogout }) => {
             referralCount: userData.referral_count || 0,
             subscriptionPlan: userData.subscription_plan || 'explorer',
             subscriptionExpiry: userData.subscription_expiry || null,
-            subscriptionStart: userData.subscription_start || null
+            subscriptionStart: userData.subscription_start || null,
+            prcRate: prcRate,
+            categoryLimits: categoryLimits
           });
           
           // Set recent activity from combined response
@@ -175,10 +188,15 @@ const DashboardModern = ({ user, onLogout }) => {
       }
       
       // Fallback to individual API calls
-      const [userResult, activityResult] = await Promise.allSettled([
+      const [userResult, activityResult, rateResult, limitsResult] = await Promise.allSettled([
         axios.get(`${API}/user/${user.uid}`),
-        axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`)
+        axios.get(`${API}/user/${user.uid}/recent-activity?limit=10`),
+        axios.get(`${API}/admin/prc-rate/current`),
+        axios.get(`${API}/redeem-categories/user/${user.uid}`)
       ]);
+      
+      const prcRate = rateResult.status === 'fulfilled' ? (rateResult.value.data?.rate || 10) : 10;
+      const categoryLimits = limitsResult.status === 'fulfilled' ? (limitsResult.value.data?.categories || {}) : {};
       
       // Process user data
       if (userResult.status === 'fulfilled') {
@@ -192,7 +210,9 @@ const DashboardModern = ({ user, onLogout }) => {
           referralCount: fetchedUserData.referral_count || 0,
           subscriptionPlan: fetchedUserData.subscription_plan || 'explorer',
           subscriptionExpiry: fetchedUserData.subscription_expiry || null,
-          subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null
+          subscriptionStart: fetchedUserData.subscription_start || fetchedUserData.vip_activation_date || null,
+          prcRate: prcRate,
+          categoryLimits: categoryLimits
         });
       } else {
         // Fallback to user prop data
@@ -204,7 +224,9 @@ const DashboardModern = ({ user, onLogout }) => {
           referralCount: user.referral_count || 0,
           subscriptionPlan: user.subscription_plan || 'explorer',
           subscriptionExpiry: user.subscription_expiry || null,
-          subscriptionStart: user.subscription_start || user.vip_activation_date || null
+          subscriptionStart: user.subscription_start || user.vip_activation_date || null,
+          prcRate: prcRate,
+          categoryLimits: categoryLimits
         });
       }
       
@@ -1029,20 +1051,19 @@ const DashboardModern = ({ user, onLogout }) => {
         const isKycPending = ['pending', 'submitted', 'under_review'].includes(kycStatus);
         const isKycRejected = ['rejected', 'failed'].includes(kycStatus);
         
-        // KYC Verified + Paid Plan = Show full PRC to Bank card
+        // KYC Verified + Paid Plan = Show PRC Balance with Category Limits
         if (isPaidPlan && isKycVerified) {
           return (
             <div className="px-5 mb-4">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                onClick={() => navigate('/prc-to-bank')}
-                className="cursor-pointer relative overflow-hidden rounded-2xl p-5"
+                className="relative overflow-hidden rounded-2xl p-5"
                 style={{
                   background: 'linear-gradient(145deg, #064e3b 0%, #047857 30%, #065f46 70%, #022c22 100%)',
                   boxShadow: '0 15px 40px -10px rgba(16, 185, 129, 0.4)'
                 }}
-                data-testid="prc-to-bank-card"
+                data-testid="prc-balance-card"
               >
                 {/* Background decorations */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-3xl"></div>
@@ -1057,8 +1078,8 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 
                 <div className="relative z-10">
-                  {/* Header */}
-                  <div className="flex items-center gap-2 mb-3">
+                  {/* Header - PRC Balance */}
+                  <div className="flex items-center gap-2 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                       <Banknote className="w-5 h-5 text-white" />
                     </div>
@@ -1068,33 +1089,52 @@ const DashboardModern = ({ user, onLogout }) => {
                     </div>
                   </div>
                   
-                  {/* PRC to Bank Info */}
+                  {/* PRC to INR Conversion - Dynamic Rate */}
                   <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-emerald-200/80 text-xs">Redeem to Bank</p>
-                        <p className="text-white text-xl font-bold">₹{Math.floor(stats.prcBalance / 10).toLocaleString()}*</p>
+                        <p className="text-emerald-200/80 text-xs">INR Value</p>
+                        <p className="text-white text-xl font-bold">≈ ₹{Math.floor(stats.prcBalance / (stats.prcRate || 10)).toLocaleString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-emerald-200/60 text-[10px]">*Approx. value</p>
-                        <p className="text-emerald-300 text-xs font-medium">Min ₹200 - Max ₹10,000</p>
+                        <p className="text-emerald-200/60 text-[10px]">Current Rate</p>
+                        <p className="text-emerald-300 text-sm font-bold">{stats.prcRate || 10} PRC = ₹1</p>
                       </div>
                     </div>
                   </div>
                   
-                  {/* CTA Button */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/prc-to-bank');
-                    }}
-                    className="w-full py-3.5 bg-white text-emerald-800 font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-50 transition-colors"
-                    data-testid="prc-to-bank-btn"
-                  >
-                    <Building2 className="w-5 h-5" />
-                    PRC to Bank
-                    <ArrowUpRight className="w-4 h-4" />
-                  </button>
+                  {/* Category Limits */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Utility Limit */}
+                    <div 
+                      onClick={() => navigate('/redeem')}
+                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                    >
+                      <p className="text-emerald-200/70 text-[10px] uppercase mb-1">Utility</p>
+                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.utility?.remaining || 0)).toLocaleString()}</p>
+                      <p className="text-emerald-300/60 text-[10px]">PRC</p>
+                    </div>
+                    
+                    {/* Shopping Limit */}
+                    <div 
+                      onClick={() => navigate('/shop')}
+                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                    >
+                      <p className="text-purple-200/70 text-[10px] uppercase mb-1">Shopping</p>
+                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.shopping?.remaining || 0)).toLocaleString()}</p>
+                      <p className="text-purple-300/60 text-[10px]">PRC</p>
+                    </div>
+                    
+                    {/* Bank Redeem */}
+                    <div 
+                      onClick={() => navigate('/prc-to-bank')}
+                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                    >
+                      <p className="text-amber-200/70 text-[10px] uppercase mb-1">Bank</p>
+                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.bank?.remaining || 0)).toLocaleString()}</p>
+                      <p className="text-amber-300/60 text-[10px]">PRC</p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </div>
