@@ -1543,7 +1543,7 @@ const RedeemPageV2 = ({ user }) => {
   
   // For electricity, gas, water - ALWAYS allow bill fetch (Eko API supports it)
   // billFetchResponse from Eko may be 0 but the API still works
-  const billFetchServices = ['electricity', 'gas', 'water', 'landline', 'broadband', 'credit_card', 'insurance', 'emi'];
+  const billFetchServices = ['electricity', 'gas', 'water', 'landline', 'broadband', 'credit_card', 'insurance', 'emi', 'mobile_postpaid'];
   const supportsBillFetch = billFetchServices.includes(selectedService) ||
                             operatorParams?.billFetchResponse === 1 ||
                             selectedOperatorData?.billFetchResponse === 1 ||
