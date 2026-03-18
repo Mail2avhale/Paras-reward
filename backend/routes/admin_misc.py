@@ -870,3 +870,134 @@ async def search_user_for_impersonation(query: str):
         "count": len(users)
     }
 
+
+
+# ========== USER COOLDOWN MANAGEMENT ==========
+
+@router.get("/user-cooldown/{phone_or_uid}")
+async def check_user_cooldown(phone_or_uid: str):
+    """
+    Check user's cooldown status and their recent requests.
+    This helps admin understand why a user might be blocked.
+    """
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"phone": phone_or_uid},
+            {"uid": phone_or_uid},
+            {"email": phone_or_uid}
+        ]
+    }, {"_id": 0, "password_hash": 0, "pin_hash": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    uid = user.get("uid")
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    
+    # Get all requests in last 7 days
+    redeem_requests = await db.redeem_requests.find({
+        "user_id": uid,
+        "created_at": {"$gte": seven_days_ago}
+    }, {"_id": 0}).sort("created_at", -1).to_list(20)
+    
+    gift_requests = await db.gift_voucher_requests.find({
+        "user_id": uid,
+        "created_at": {"$gte": seven_days_ago}
+    }, {"_id": 0}).sort("created_at", -1).to_list(10)
+    
+    bank_requests = await db.bank_transfer_requests.find({
+        "user_id": uid,
+        "created_at": {"$gte": seven_days_ago}
+    }, {"_id": 0}).sort("created_at", -1).to_list(10)
+    
+    # Check which requests would actually trigger cooldown (only completed/success)
+    blocking_bbps = [r for r in redeem_requests if r.get("status", "").lower() in ["completed", "success", "approved"]]
+    blocking_gift = [r for r in gift_requests if r.get("status", "").lower() in ["completed", "success", "approved", "delivered"]]
+    blocking_bank = [r for r in bank_requests if r.get("status", "").lower() in ["completed", "success", "approved"]]
+    
+    return {
+        "success": True,
+        "user": {
+            "uid": uid,
+            "name": user.get("name"),
+            "phone": user.get("phone"),
+            "subscription_plan": user.get("subscription_plan"),
+            "prc_balance": user.get("prc_balance")
+        },
+        "cooldown_status": {
+            "bbps_blocked": len(blocking_bbps) > 0,
+            "gift_blocked": len(blocking_gift) > 0,
+            "bank_blocked": len(blocking_bank) > 0,
+            "blocking_bbps_requests": blocking_bbps,
+            "blocking_gift_requests": blocking_gift,
+            "blocking_bank_requests": blocking_bank
+        },
+        "all_recent_requests": {
+            "redeem_requests": redeem_requests,
+            "gift_requests": gift_requests,
+            "bank_requests": bank_requests
+        },
+        "note": "Only 'completed/success/approved' status requests trigger cooldown. Failed/pending/processing requests do NOT block users."
+    }
+
+
+@router.post("/clear-user-cooldown/{phone_or_uid}")
+async def clear_user_cooldown(phone_or_uid: str, request: Request):
+    """
+    Clear a user's cooldown by marking their failed/stuck requests appropriately.
+    This allows users to retry if their transactions genuinely failed.
+    """
+    data = await request.json()
+    reason = data.get("reason", "Admin cleared cooldown")
+    
+    # Find user
+    user = await db.users.find_one({
+        "$or": [
+            {"phone": phone_or_uid},
+            {"uid": phone_or_uid}
+        ]
+    }, {"_id": 0})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    uid = user.get("uid")
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    
+    # Find requests that are blocking (not completed/success but also not already failed)
+    # These are typically stuck in pending/processing
+    blocking_statuses = ["pending", "processing", "PENDING", "PROCESSING", "initiated", "INITIATED"]
+    
+    # Update stuck requests to "cancelled_by_admin"
+    result = await db.redeem_requests.update_many(
+        {
+            "user_id": uid,
+            "created_at": {"$gte": seven_days_ago},
+            "status": {"$in": blocking_statuses}
+        },
+        {
+            "$set": {
+                "status": "cancelled_by_admin",
+                "admin_note": reason,
+                "cancelled_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Log the action
+    if log_admin_action:
+        await log_admin_action(
+            action="clear_cooldown",
+            admin_id="system",
+            target_user=uid,
+            details={"reason": reason, "requests_updated": result.modified_count}
+        )
+    
+    return {
+        "success": True,
+        "message": f"Cleared cooldown for user {user.get('name')} ({user.get('phone')})",
+        "requests_updated": result.modified_count,
+        "note": "User can now make new requests"
+    }
+
