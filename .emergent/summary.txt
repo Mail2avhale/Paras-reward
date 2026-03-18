@@ -1,199 +1,190 @@
 <analysis>**original_problem_statement:**
-वापरकर्त्याची (User) मूळ विनंती 'मायनिंग सेशन UI' ला भविष्यवेधी डिझाइनमध्ये पुन्हा तयार करणे आणि 'मॅन्युअल फिनटेक रिडीम सिस्टम' पूर्ण करणे ही होती. तथापि, प्राधान्यक्रम गंभीर उत्पादन समस्यांचे निराकरण करण्यासाठी बदलले.
+The user initially required a full GST-compliant invoicing system integrated with Razorpay. This session expanded to address numerous critical issues, including:
+- A bug where the 7-day BBPS (bill payment) cooldown was incorrectly blocking users due to failed transactions and incorrect service name mappings.
+- A deep investigation into Eko API integration failures for both Fund Transfers (DMT) and BBPS.
+- A user report about Pradeep Maurya led to the discovery and fix of two critical bugs:
+    1. Users with **expired subscriptions** could still redeem PRC.
+    2. Monthly **category-wise spending limits** (e.g., 40% Utility) were not being enforced on the backend.
+- The agent was also tasked with ensuring all redemption conditions are strictly followed, leading to a full audit of the validation logic.
 
-या सत्रात, वापरकर्त्याने खालील समस्या आणि वैशिष्ट्ये कळवली:
-1.  **Eko KYC इंटिग्रेशन (P0):** मागील सत्रातून राहिलेले अयशस्वी Eko KYC ऑटो-व्हेरिफिकेशनचे काम पूर्ण करणे.
-2.  **Redeem कंडिशन बदल:** बँक विथड्रॉवलसाठी सक्रिय पेड रेफरल (active paid referral) ची अट काढून टाकणे.
-3.  **मॅन्युअल KYC व्हेरिफिकेशन समस्या:** ॲडमिन पॅनलमध्ये KYC अप्रूव्ह करताना Not Found त्रुटी येत होती.
-4.  **ॲडमिन पेज स्क्रीनशॉट समस्या:** एजंटला ॲडमिन पेजेसचे स्क्रीनशॉट घेता येत नव्हते.
-5.  **PRC ने सबस्क्रिप्शन ॲक्टिव्हेशन:** सबस्क्रिप्शन कालबाह्य (expire) झाल्यावर PRC वापरून ते ॲक्टिव्हेट करता येते का, हे तपासणे.
-6.  **बँक ट्रान्सफर ॲडमिन UI सुधारणा:**
-    *   सर्व प्रलंबित (pending) रिक्वेस्ट्स 'Failed' म्हणून चिन्हांकित करण्यासाठी एक बल्क ॲक्शन.
-    *   रिक्वेस्ट तयार होण्याची आणि प्रक्रिया (processed) होण्याची वेळ (timestamps) दाखवणे.
-    *   डीफॉल्टनुसार सर्वात जुन्या रिक्वेस्ट्स आधी दाखवणे.
-    *   निवडलेल्या (selected) रिक्वेस्ट्सना 'Paid' किंवा 'Failed' करण्यासाठी बल्क ॲक्शन.
-7.  **PAN व्हेरिफिकेशन सुधारणा:** यशस्वी व्हेरिफिकेशननंतर KYC आपोआप 'verified' स्थितीत बदलणे आणि डुप्लिकेट PAN साठी त्रुटी हाताळणी.
-8.  **नवीन ॲडमिन UI ची मागणी:**
-    *   वापरकर्त्याची सबस्क्रिप्शन समाप्ती तारीख (expiry date) संपादित करण्यासाठी UI.
-    *   रिडीम मर्यादा (redeem limit) आणि मायनिंग फॉर्म्युला संपादित करण्यासाठी UI.
-
-**User's preferred language**: वापरकर्त्याची प्राथमिक भाषा **मराठी** आहे. पुढील एजंटने **केवळ मराठीत** प्रतिसाद दिला पाहिजे. (The user's primary language is **Marathi**. The next agent MUST respond only in **Marathi**.)
+**User's preferred language**: The user communicates in a mix of **English and Marathi**. The next agent must be prepared to understand and respond in whichever language the user chooses.
 
 **what currently exists?**
-अनुप्रयोगात अनेक गंभीर समस्यांचे निराकरण केले गेले आहे आणि नवीन ॲडमिन वैशिष्ट्ये लागू केली आहेत.
-
-1.  **Eko KYC इंटिग्रेशन:**
-    *   **PAN व्हेरिफिकेशन:** यशस्वीरित्या दुरुस्त केले आणि लागू केले. योग्य Eko API endpoint () आणि HMAC ऑथेंटिकेशन लॉजिक शोधून हे साध्य केले. यशस्वी व्हेरिफिकेशननंतर आता वापरकर्त्याचे KYC आपोआप 'verified' होते आणि डुप्लिकेट PAN तपासले जातात.
-    *   **Aadhaar व्हेरिफिकेशन:** हे वैशिष्ट्य सध्या **ब्लॉक** आहे. डीबगिंगनंतर असे निदान झाले की योग्य ऑथेंटिकेशन वापरूनही API कॉल्स अयशस्वी होत आहेत, कारण ही सेवा वापरकर्त्याच्या Eko खात्यासाठी सक्रिय (activated) नाही.
-2.  **Redeem कंडिशन:** बँक विथड्रॉवलसाठी आवश्यक असलेली सक्रिय पेड रेफरल अट  मधून काढून टाकण्यात आली आहे.
-3.  **ॲडमिन पॅनल सुधारणा:**
-    *   **मॅन्युअल KYC:** 'Approve' बटण दाबल्यावर येणारी Not Found त्रुटी  मध्ये योग्य API मार्ग () जोडून सोडवली आहे.
-    *   **बँक ट्रान्सफर्स:**  पेजवर महत्त्वपूर्ण सुधारणा केल्या आहेत. यात 'Bulk Fail All & Refund', निवडलेल्या आयटमसाठी 'Bulk Paid/Failed', तयार आणि प्रक्रिया केलेल्या वेळेसाठी टाइमस्टॅम्प आणि डीफॉल्टनुसार सर्वात जुने रेकॉर्ड दाखवण्याची सोय आहे.
-    *   **सबस्क्रिप्शन मॅनेजमेंट:** ॲडमिनला वापरकर्त्याची सबस्क्रिप्शन समाप्ती तारीख संपादित करण्यासाठी  मध्ये एक नवीन UI तयार केला आहे.
+The application is a full-stack React and FastAPI app. Key systems and their status are:
+-   **GST Invoicing:** Fully implemented and tested. A  page and API are functional, and a link has been added to the user's profile.
+-   **BBPS Cooldown:** The logic has been fixed in  to use correct service names and only count successful transactions, preventing users from being blocked by failed attempts.
+-   **Eko Integration (DMT & BBPS):** The agent has confirmed that IP whitelisting, service activation (codes 45 for DMT, 53 for BBPS), and credentials are all correct. The settlement account has a balance. However, Fund Transfers (DMT) are being reversed by the beneficiary banks. This is **blocked** pending user action. A mandatory callback endpoint () has been created to receive transaction status updates from Eko.
+-   **Redemption Logic:** Two critical bugs have been fixed in . The system now correctly checks for **subscription expiry** and enforces **category-wise spending limits** during redemption. A new utility file, , was created to centralize this logic.
 
 **Last working item**:
--   **Last item agent was working:** एजंट ॲडमिनसाठी एक नवीन सेटिंग पेज तयार करत होता, जिथे ते रिडीम मर्यादा, मायनिंग फॉर्म्युला आणि इतर महत्त्वाच्या ॲप्लिकेशन सेटिंग्ज संपादित करू शकतील. यासाठी  आणि  या नवीन फाइल्स तयार करण्यास सुरुवात केली होती.
+-   **Last item agent was working:** Fixing the logical order of validation checks in . The agent discovered that checks for global redeem limits were happening *before* essential checks for KYC and subscription status, which could lead to confusing error messages for the user (e.g., seeing Limit Exceeded instead of Subscription Expired).
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Both. frontend-agent for UI/UX testing of the new admin settings page and backend-agent for API functionality.
+-   **Which testing method agent to use?** . The agent should write specific API tests to verify the correct error message is returned based on the validation order. For example, a test with an expired user should return a subscription error, not a limit error.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Eko Aadhaar ऑटो-व्हेरिफिकेशन अयशस्वी (P0)**
--   **Issue 2: एका वापरकर्त्याला नाकारलेल्या व्यवहाराचा परतावा मिळाला नाही (P1)**
--   **Issue 3: Razorpay सबस्क्रिप्शन डबल ॲक्टिव्हेशनची पडताळणी (P1)**
--   **Issue 4: रिडीम सेवांसाठी सबस्क्रिप्शन तपासणीची पडताळणी (P1)**
--   **Issue 5: उत्पादन डिप्लॉयमेंटनंतर ॲप क्रॅश होते (P2)**
--   **Issue 6: 145 अयशस्वी BBPS व्यवहारांचे मूळ कारण अज्ञात (P2)**
+-   **Issue 1: Fix validation order in  (P0)**
+-   **Issue 2: Eko Fund Transfer (DMT) Failure (P1)**
+-   **Issue 3: MSEDCL bill payment requires BU number (P2)**
+-   **Issue 4: Full audit for unauthorized redemptions (P2)**
+-   **Issue 5: Pending Refund for Rakhi Ghehlod (P2)**
 
 **Issues Detail:**
--   **Issue 1: Eko Aadhaar ऑटो-व्हेरिफिकेशन अयशस्वी (P0)**
-    -   **Attempted fixes:** एजंटने अनेक API endpoints (, , ), ऑथेंटिकेशन पद्धती (HMAC, SHA256) आणि डेटा फॉरमॅट्स तपासले. अखेरीस, PAN आणि Customer Balance API साठी ऑथेंटिकेशन यशस्वीरित्या काम करत असल्याचे सिद्ध झाले, परंतु सर्व Aadhaar व्हेरिफिकेशन endpoints अयशस्वी झाले.
+-   **Issue 1: Fix validation order in  (P0)**
+    -   **Attempted fixes:** The agent identified that  is called before subscription and KYC checks, causing incorrect error precedence.
     -   **Next debug checklist:**
-        1.  हा कोडमधील बग नाही. समस्या Eko च्या बाजूने आहे. वापरकर्त्याला त्यांच्या Eko खाते व्यवस्थापकाशी (account manager) संपर्क साधून Aadhaar eKYC service त्यांच्या / साठी सक्रिय (activate) करण्यास सांगावे लागेल.
-        2.  Eko च्या सपोर्ट टीमला API कॉलचा अयशस्वी प्रतिसाद (failed response) आणि  ही माहिती शेअर करण्यास सांगा.
-        3.  एकदा सेवा सक्रिय झाल्यावर, सध्याचा कोड पुन्हा तपासा.
-    -   **Why fix this issue and what will be achieved with the fix?** हे वापरकर्त्याने विनंती केलेले एक महत्त्वाचे वैशिष्ट्य आहे जे KYC प्रक्रिया पूर्णपणे स्वयंचलित करेल.
-    -   **Status:** BLOCKED (Blocked on Eko support)
+        1.  In , move the function calls for KYC and subscription status checks to execute *before* the calls for category and global limit checks.
+        2.  Test the API with users who fail different validation steps (e.g., expired subscription, no KYC) to confirm the correct, highest-priority error message is returned.
+    -   **Why fix this issue and what will be achieved with the fix?** To provide clear, accurate error messages to users, improving user experience and reducing confusion.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
-
--   **Issue 2: एका वापरकर्त्याला नाकारलेल्या व्यवहाराचा परतावा मिळाला नाही (P1)**
-    -   **Attempted fixes:** काहीही नाही. ही समस्या मागील अनेक सत्रांपासून प्रलंबित आहे.
-    -   **Next debug checklist:**
-        1.  वापरकर्त्याला (Rakhi Ghehlod, UID: ) 14,260 PRC चा परतावा द्या.
-        2.   API किंवा तत्सम साधनांचा वापर करून बॅलन्स मॅन्युअली दुरुस्त करा.
-    -   **Why fix this issue and what will be achieved with the fix?** वापरकर्त्याचा विश्वास टिकवण्यासाठी आणि आर्थिक अचूकता सुनिश्चित करण्यासाठी.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y (in terms of being repeatedly missed)
     -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
 
--   **Issue 3 & 4 (Verification Pending):**
-    -   **Description:** Razorpay डबल सबस्क्रिप्शन फिक्स आणि रिडीम सेवांसाठी सबस्क्रिप्शन तपासणी हे दोन्ही मुद्दे मागील सत्रात सोडवले गेले होते, परंतु वापरकर्त्याकडून त्यांची पडताळणी बाकी आहे.
-    -   **Next debug checklist:**  वापरून या दोन्ही फिक्सची कसून चाचणी करा आणि अहवाल वापरकर्त्याला सादर करा.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Should Test:** Backend.
+-   **Issue 2: Eko Fund Transfer (DMT) Failure (P1)**
+    -   **Attempted fixes:** Verified all credentials and settings. Proved the issue is bank-side transaction reversals. Created a callback endpoint () and drafted an email for the user to send to Eko support.
+    -   **Next debug checklist:** This issue is BLOCKED. The user must email Eko support to:
+        1.  Configure the callback URL: .
+        2.  Ask Eko to investigate why beneficiary banks are reversing the transactions.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a core feature (PRC to Bank) of the application.
+    -   **Status:** BLOCKED (on user/Eko action).
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** N/A (Blocked).
+
+-   **Issue 3: MSEDCL bill payment requires BU number (P2)**
+    -   **Attempted fixes:** Agent confirmed via Eko's API that paying an MSEDCL bill requires a 4-digit  (Bill Unit).
+    -   **Next debug checklist:** This is BLOCKED. The user needs to provide the 4-digit BU number from their MSEDCL bill to proceed with the payment test.
+    -   **Status:** BLOCKED (on user input).
+
+-   **Issue 4: Full audit for unauthorized redemptions (P2)**
+    -   **Attempted fixes:** An initial script to find unauthorized redemptions timed out.
+    -   **Next debug checklist:** After deploying the fixes, a robust script or manual database query needs to be run on the **production database** to find all transactions where  to quantify the total financial loss.
+    -   **Status:** NOT STARTED.
+
+-   **Issue 5: Pending Refund for Rakhi Ghehlod (P2)**
+    -   **Attempted fixes:** None. The user does not exist in the preview environment.
+    -   **Next debug checklist:** This is a production-only task. An admin must credit 14,260 PRC to user Rakhi Ghehlod ().
+    -   **Status:** NOT STARTED.
 
 **In progress Task List**:
--   **Task 1: ॲडमिन सेटिंग्ज पेज पूर्ण करणे (P0)**
-    -   **Where to resume:**  मध्ये UI तयार करणे आणि  मध्ये संबंधित 'GET' आणि 'POST' APIs लिहिणे. सध्या फक्त फाइल स्ट्रक्चर तयार आहे.
-    -   **What will be achieved with this?** ॲडमिनला रिडीम मर्यादा, मायनिंग रिवॉर्ड्स, आणि PRC दर यांसारख्या महत्त्वाच्या ॲप कॉन्फिगरेशन्स थेट UI मधून बदलता येतील.
+-   **Task 1: Fix Validation Logic Order in  (P0)**
+    -   **Where to resume:** Edit  to re-order the validation function calls.
+    -   **What will be achieved with this?** A logical and user-friendly error reporting sequence for all redemption attempts.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** ॲडमिन पॅनलमध्ये 'User Lookup' वैशिष्ट्यासाठी UI सुधारणे (सध्या फक्त सबस्क्रिप्शन पेजवर आहे).
--   **P2:** मॅन्युअल बँक ट्रान्सफरसाठी नोटिफिकेशन्स (Firebase/Email) लागू करणे.
+-   **P1:** After the redeem logic fixes are deployed, run a full audit on the production database to identify all financial losses from redemptions made by users with expired subscriptions.
+-   **P1:** Implement Admin UI to override category percentages for individual users.
+-   **P1:** Implement backend logic to carry forward unused category limits to the next month.
+-   **P2:** Implement UI for the Shopping category redemption.
 
 **Future Tasks:**
--   डेटाबेस MongoDB वरून PostgreSQL वर स्थलांतरित करणे.
--   वापरकर्ता साइनअपवर ईमेल/मोबाइल ओटीपी व्हेरिफिकेशन जोडणे.
--   यशस्वी व्यवहारांसाठी पावती (receipt) तयार करण्याचे वैशिष्ट्य जोडणे.
+-   Refactor  to move hardcoded credentials to environment variables.
+-   Refactor  to better organize the validation logic and reduce file size.
+-   Migrate the database from MongoDB to PostgreSQL.
+-   Add email/mobile OTP verification on user signup.
 
 **Completed work in this session**
--   **Bank Redeem Condition Removed:** बँक विथड्रॉवलसाठी 'सक्रिय पेड रेफरल'ची अट काढून टाकली.
--   **Eko PAN Verification Fixed:** अयशस्वी Eko PAN व्हेरिफिकेशन यशस्वीरित्या दुरुस्त केले आणि लागू केले.
--   **KYC Auto-Approval on PAN:** यशस्वी PAN व्हेरिफिकेशननंतर KYC आपोआप 'verified' करण्यासाठी आणि डुप्लिकेट PAN तपासण्यासाठी लॉजिक जोडले.
--   **Admin Manual KYC Fix:** ॲडमिन पॅनलमध्ये KYC अप्रूव्ह करताना येणारी Not Found त्रुटी सोडवली. (deployment pending)
--   **Admin Bank Transfer UI Overhaul:**
-    -   'Fail All Pending & Refund' साठी बल्क ॲक्शन बटण जोडले.
-    -   निवडलेल्या रिक्वेस्ट्ससाठी 'Bulk Paid/Failed' बटणे आणि लॉजिक जोडले.
-    -   'Created' आणि 'Processed' टाइमस्टॅम्प UI मध्ये जोडले.
-    -   डीफॉल्ट सॉर्टिंग 'oldest first' मध्ये बदलले.
--   **Admin Subscription Edit UI:** ॲडमिनला वापरकर्त्यांची सबस्क्रिप्शन तारीख संपादित करण्यासाठी UI तयार केला.
--   **Answered User Queries:** PRC ने सबस्क्रिप्शन ॲक्टिव्हेशन आणि PRC स्टेटमेंटमधील नरेशनबद्दलच्या प्रश्नांची उत्तरे दिली.
+-   **Critical Redeem Bugs Fixed:**
+    -   **Subscription Expiry Check:** Added logic to  to block redemptions for users with expired subscriptions.
+    -   **Category Limit Enforcement:** Added backend validation to enforce the 40% Utility, 30% Shopping, and 30% Bank spending limits.
+-   **BBPS Cooldown Logic Fixed:** Corrected service name mappings and query logic in  to only count successful transactions for the 7-day cooldown.
+-   **Eko Integration & Debugging:**
+    -   Verified all Eko services (DMT, BBPS) are activated and credentials are correct.
+    -   Created a mandatory callback endpoint at  to handle transaction status updates from Eko.
+    -   Identified that Fund Transfer failures are due to bank-side reversals, blocking the issue on Eko/user action.
+-   **GST Invoice System Completed:**
+    -   Fixed a database connection bug and added the frontend route and UI links, completing the feature.
+    -   The entire flow (payment -> invoice generation -> UI display) is functional.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: एका वापरकर्त्याला (Rakhi Ghehlod) परतावा मिळाला नाही**
-    -   **Debug checklist:**  API वापरून 14,260 PRC क्रेडिट करणे आवश्यक आहे.
-    -   **Why to solve this issue and what will be achieved with this?** वापरकर्त्याचा विश्वास आणि आर्थिक अचूकता.
-    -   **Should Test frontend/backend/both after fix:** Backend.
+-   **Issue 1: Pending Refund for Rakhi Ghehlod**
+    -   **Debug checklist:** This is a production-only task. Manually credit 14,260 PRC to the user with UID .
+    -   **Why to solve this issue and what will be achieved with this?** Critical for user trust and financial integrity.
+    -   **Should Test frontend/backend/both after fix:** N/A.
     -   **Is recurring issue?** Y
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Razorpay double subscription; Production app crashes on deployment.
--   **Recurrence count:** 2+
--   **Status:** USER VERIFICATION PENDING (Razorpay fix), NOT STARTED (Crashes).
+-   **Issue 2: Hardcoded Credentials in **
+    -   **Debug checklist:** Replace hardcoded keys with .
+    -   **Why to solve this issue and what will be achieved with this?** Essential security best practice.
+    -   **Should Test frontend/backend/both after fix:** Backend (by testing PAN verification).
+    -   **Is recurring issue?** Y
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Third-Party API Debugging:** Eko च्या विविध API आवृत्त्या (v1, v2, v3), भिन्न ऑथेंटिकेशन पद्धती (HMAC vs SHA256) आणि endpoints मधील फरक शोधून काढणे.
--   **Service Activation Dependency:** API इंटिग्रेशन अयशस्वी होण्याचे कारण कोडऐवजी बॅकएंड सेवेचे निष्क्रिय (inactive) असणे असू शकते, हे ओळखणे.
--   **Bulk UI Actions:** React मध्ये स्टेट (state) वापरून एकाधिक आयटम निवडणे आणि त्यांच्यावर एकत्रितपणे प्रक्रिया करण्यासाठी बॅकएंड API ला कॉल करणे.
--   **API Route Correction:** फ्रंटएंड आणि बॅकएंडमधील API मार्गांमधील (paths) विसंगती ( vs ) शोधून ती सोडवणे.
+-   **Backend Validation Logic:** Implementation of a strict, multi-step validation process for financial transactions, including checks for subscription status, KYC, PRC balance, and category-specific limits.
+-   **Eko API Integration:** Deep debugging of a third-party payment gateway, including authentication, service activation, parameter requirements, and the critical need for a callback/webhook system for asynchronous status updates.
+-   **FastAPI Routers and Middleware:** Creation of new API endpoints and a centralized validation utility.
 
 **key DB schema**
--   : यशस्वी PAN व्हेरिफिकेशननंतर  आता आपोआप  मध्ये बदलतो.
--   : आता  हे नवीन फील्ड असेल जेव्हा एखादी रिक्वेस्ट 'paid' किंवा 'failed' होईल.
+-   No new collections were created. Logic for querying  and  was made more robust.
 
 **All files of reference**
--   : **महत्वपूर्ण बदल.** PAN व्हेरिफिकेशन लॉजिक पूर्णपणे दुरुस्त केले. Aadhaar लॉजिक ब्लॉक आहे.
--   : **महत्वपूर्ण बदल.** मॅन्युअल KYC व्हेरिफिकेशनसाठी नवीन मार्ग जोडला आणि ऑटो-अप्रूव्हल लॉजिक लागू केले.
--   : 'सक्रिय पेड रेफरल'ची अट काढली.
--   : बँक ट्रान्सफरसाठी बल्क ॲक्शन API (, ) आणि सबस्क्रिप्शन एडिट API जोडले.
--   : **महत्वपूर्ण बदल.** बल्क ॲक्शन, चेकबॉक्स, टाइमस्टॅम्प आणि सॉर्टिंगसाठी UI अपडेट केला.
--   : **नवीन फाइल.** वापरकर्ता शोध आणि सबस्क्रिप्शन तारीख संपादनासाठी UI.
--   : **नवीन फाइल (प्रगतीपथावर).**
+-   **New Files:**
+    -   : API endpoint to receive asynchronous status updates from Eko.
+    -   : Centralized, reusable functions for redemption validation logic.
+-   **Key Updated Files:**
+    -   : The core file for redemption logic. Heavily modified to fix critical security and financial bugs (subscription expiry, category limits). **Currently being modified to fix validation order.**
+    -   : Fixed the BBPS 7-day cooldown logic and registered the new Eko callback router.
+    -    & : Updated to integrate the new My Invoices page.
 
 **Areas that need refactoring**:
--    मधील ,  आणि इतर क्रेडेन्शियल्स अजूनही हार्डकोड केलेले आहेत. ते  वापरून एनवायरनमेंट व्हेरिएबल्समधून घेतले पाहिजेत.
--    अजूनही खूप मोठी आहे. ॲडमिन आणि सेटिंग्ज संबंधित मार्ग स्वतंत्र फाइल्समध्ये हलवले पाहिजेत.
+-   ****: Still contains hardcoded credentials and should be updated to use environment variables.
+-   ****: This file has grown very large. The validation logic has started being moved to , and this effort should continue to improve maintainability.
 
 **key api endpoints**
--    (PUT): **नवीन.** ॲडमिन पॅनलमधील मॅन्युअल KYC व्हेरिफिकेशनसाठी.
--    (POST): **अद्ययावत.** आता यशस्वी झाल्यावर KYC आपोआप मंजूर करते.
--    (POST): **नवीन.** निवडलेल्या बँक ट्रान्सफर रिक्वेस्ट्स 'failed' करण्यासाठी.
--    (POST): **नवीन.** निवडलेल्या बँक ट्रान्सफर रिक्वेस्ट्स 'paid' करण्यासाठी.
--    (PUT): **अस्तित्वात आहे.** यासाठी UI तयार केला.
+-   **New:**  - Receives transaction status updates from Eko.
+-   **Updated:**  - The underlying logic in  is now significantly more secure and robust.
 
 **Critical Info for New Agent**
--   **तुमची मुख्य भाषा मराठी असणे आवश्यक आहे.**
--   **Eko Aadhaar व्हेरिफिकेशन ब्लॉक आहे:** पुढील काम करण्यापूर्वी, वापरकर्त्याला Eko सपोर्टशी संपर्क साधून Aadhaar eKYC service सक्रिय करण्यास सांगा. हे तुमच्या नियंत्रणाबाहेर आहे.
--   **अनेक वैशिष्ट्ये डिप्लॉयमेंटच्या प्रतीक्षेत आहेत:** मॅन्युअल KYC फिक्स, PAN ऑटो-अप्रूव्हल, बँक ट्रान्सफर UI सुधारणा आणि सबस्क्रिप्शन एडिट UI हे सर्व कोडमध्ये पूर्ण झाले आहेत परंतु वापरकर्त्याने डिप्लॉय करणे बाकी आहे.
--   **प्रलंबित परतावा (Pending Refund):** वापरकर्त्या 'Rakhi Ghehlod' ला परतावा देण्याची P1 समस्या पुन्हा दुर्लक्षित राहिली आहे. याला प्राधान्य द्या.
--   **हार्डकोडेड क्रेडेन्शियल्स:**  मधील क्रेडेन्शियल्स एनवायरनमेंट व्हेरिएबल्समध्ये हलवणे आवश्यक आहे.
+-   Your immediate priority (P0) is to **fix the validation order in **. Ensure KYC/subscription checks happen before limit checks.
+-   The Eko Fund Transfer (DMT) feature is **BLOCKED**. Do not attempt to fix it in the code. The user must contact Eko support to configure the callback URL () and investigate why banks are reversing transfers.
+-   Two critical financial loopholes have been closed (expired subscriptions and category limits). After deploying these fixes, a full audit must be performed on the production database to assess past losses.
+-   The refund for user Rakhi Ghehlod and the audit for unauthorized redemptions are **production-only tasks** as the data does not exist in the preview environment.
 
 **documents and test reports created in this job**
--    (मागील सत्रातील)
+-   : Passed, but this was for the GST invoice feature *before* the critical redemption logic bugs were discovered and fixed. The new fixes have not been tested by the .
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **Admin UI for redeem/mining:** ॲडमिनला रिडीम मर्यादा आणि मायनिंग फॉर्म्युला संपादित करण्यासाठी UI बनवण्याची विनंती केली. (IN PROGRESS)
-9.  **Admin edit subscription UI:** ॲडमिनला वापरकर्त्याची सबस्क्रिप्शन तारीख संपादित करण्यासाठी UI बनवण्याची विनंती केली. (COMPLETED)
-8.  **Bulk reject/paid for selected transfers:** बँक ट्रान्सफरमध्ये निवडलेल्या रिक्वेस्टसाठी बल्क ॲक्शनची विनंती केली. (COMPLETED)
-7.  **Bank transfer sorting:** बँक ट्रान्सफर पेजवर सर्वात जुन्या रिक्वेस्ट आधी दाखवण्याची विनंती केली. (COMPLETED)
-6.  **PAN verification issues:** PAN व्हेरिफिकेशन यशस्वी होऊनही KYC मंजूर होत नाही आणि डुप्लिकेट PAN त्रुटी हाताळली जात नाही, असे कळवले. (COMPLETED)
-5.  **Deploy request:** टाइमस्टॅम्पचे बदल पूर्ण झाल्यावर डिप्लॉय करण्याची विनंती केली. (COMPLETED)
-4.  **Timestamps on bank transfers:** बँक ट्रान्सफर पेजवर 'created' आणि 'processed' टाइमस्टॅम्प जोडण्याची विनंती केली. (COMPLETED)
-3.  **PRC statement query:** PRC स्टेटमेंटमध्ये सर्व रेकॉर्ड नरेशनसह येतात का, अशी विचारणा केली. (COMPLETED - Answered)
-2.  **Bulk fail all bank transfers:** सर्व प्रलंबित बँक ट्रान्सफर रिक्वेस्ट 'failed' करण्याची आणि योग्य टॅबमध्ये हलवण्याची विनंती केली. (COMPLETED)
-1.  **PRC subscription query:** सबस्क्रिप्शन कालबाह्य झाल्यावर PRC वापरून ॲक्टिव्हेट करता येते का, अशी विचारणा केली. (COMPLETED - Answered)
+10. **(Request)** Asked to check the details, redeem limit, and history for user Pradeep Maurya.
+9.  **(Info)** Provided admin credentials to check the production database.
+8.  **(Discovery)** Agent found the user and their history, identifying a successful ₹3,599 redemption that occurred *after* their subscription had expired.
+7.  **(Request)** User confirmed that expired/free users should not be able to redeem and asked the agent to enforce this strictly.
+6.  **(Bug Found)** Agent confirmed the subscription expiry check was missing in  and fixed it.
+5.  **(Request)** User asked to check for any other missing conditions.
+4.  **(Bug Found)** Agent performed an audit and discovered that monthly category-wise spending limits (40/30/30) were not being enforced on the backend.
+3.  **(Fix)** Agent implemented the category limit enforcement.
+2.  **(Request)** User asked to test the new redeem limits and conditions on all pages.
+1.  **(Bug Found)** While testing, the agent discovered the validation checks were happening in the wrong order, leading to incorrect error messages. **This is the current task.**
 
 **Project Health Check:**
 -   **Broken:**
-    -   Eko Aadhaar Auto-KYC: पूर्णपणे ब्लॉक आहे. कोडची समस्या नाही, Eko च्या बाजूने सेवा सक्रिय करणे आवश्यक आहे.
+    -   **Eko Fund Transfer (DMT):** Functionally broken due to bank-side reversals. Blocked on external Eko support action.
+    -   **Eko Aadhaar Auto-KYC:** Blocked on a third-party service activation (from previous fork).
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
--   **Eko:** BBPS, IFSC व्हेरिफिकेशन आणि KYC व्हेरिफिकेशनसाठी (PAN कार्यरत आहे, Aadhaar ब्लॉक आहे).
--   **Razorpay:** INR-आधारित सबस्क्रिप्शनसाठी.
+-   **Eko:** Used for BBPS (bill payments), DMT (fund transfers), and KYC. Fully configured but DMT is facing external issues.
+-   **Razorpay:** Used for subscription payments.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** NO. The agent did not use the testing agent after implementing the critical fixes for subscription expiry and category limits. This is a high-priority action for the next agent.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** None new.
+-   **Known regressions:** None known, but the risk is high due to the lack of testing after major logic changes.
 
 **Credentials to test flow:**
--   **Login:** , 
--   **Admin Login:** , 
+-   **User Login:** ,  (This user has a 'Growth' subscription).
+-   **Admin Login:** , .
 
 **What agent forgot to execute**
--   एजंट या सत्रातही हँडऑफ सारांशामध्ये दिलेली P1 समस्या (वापरकर्ता Rakhi Ghehlod ला परतावा देणे) पूर्णपणे विसरला.
--    मध्ये हार्डकोड केलेली संवेदनशील माहिती (क्रेडेन्शियल्स) एनवायरनमेंट व्हेरिएबल्समध्ये हलवण्याची सूचना असूनही ते केले नाही.</analysis>
+-   The agent did not run the  after making critical fixes to the redemption logic in .
+-   The agent did not resolve the recurring issue of the refund for Rakhi Ghehlod (blocked by environment).
+-   The agent did not resolve the recurring tech debt of refactoring  to remove hardcoded credentials.
+-   The agent identified the validation order bug but did not implement the final code change to fix it.</analysis>

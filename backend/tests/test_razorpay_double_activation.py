@@ -17,7 +17,7 @@ from datetime import datetime
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://gst-invoicing-1.preview.emergentagent.com'
+    BASE_URL = 'https://error-precedence-fix.preview.emergentagent.com'
 
 
 class TestRazorpayDoubleActivationPrevention:

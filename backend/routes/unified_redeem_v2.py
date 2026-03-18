@@ -834,18 +834,24 @@ async def create_redeem_request(request: RedeemRequestCreate):
     """
     Create a new redeem request
     
-    Flow:
-    1. Check if emergency pause is active
-    2. Check if within allowed time (8 AM to 8 PM IST)
-    3. Validate user exists and has KYC verified
-    4. Check PRC balance
-    5. Deduct PRC from user wallet
-    6. Create pending request for admin approval
+    VALIDATION ORDER (STRICT):
+    1. Emergency pause check
+    2. Get user and validate exists
+    3. KYC verification check
+    4. Subscription plan check (must be startup/growth/elite)
+    5. Subscription expiry check (must not be expired)
+    6. PRC balance check
+    7. Category limit check (40/30/30)
+    8. Weekly service limit check (1 per 7 days)
+    9. Global redeem limit check
+    10. Service-specific validations
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
-    # EMERGENCY AUTO-PAUSE CHECK
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 1: EMERGENCY AUTO-PAUSE CHECK
+    # ═══════════════════════════════════════════════════════════════
     try:
         from routes.prc_economy import is_redeem_allowed
         allowed, reason = await is_redeem_allowed(db)
@@ -855,65 +861,82 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 detail=f"🚨 {reason}"
             )
     except ImportError:
-        pass  # Module not available, continue
+        pass
     except HTTPException:
-        raise  # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         logging.error(f"[REDEEM] Emergency check error: {e}")
-        # On error, allow (fail-open)
     
-    # GLOBAL REDEEM LIMIT CHECK (799*5*10 + 20% referral)
-    if check_redeem_limit_func:
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 2: GET USER
+    # ═══════════════════════════════════════════════════════════════
+    user = await db.users.find_one({"uid": request.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 3: KYC VERIFICATION CHECK
+    # ═══════════════════════════════════════════════════════════════
+    if user.get("kyc_status") != "verified":
+        raise HTTPException(
+            status_code=403, 
+            detail="KYC verification required before redeeming. Please complete your KYC first."
+        )
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 4: SUBSCRIPTION PLAN CHECK
+    # ═══════════════════════════════════════════════════════════════
+    valid_plans = ["startup", "growth", "elite"]
+    user_plan = (user.get("subscription_plan") or "").lower()
+    if user_plan not in valid_plans:
+        raise HTTPException(
+            status_code=403, 
+            detail="Paid subscription required. Please upgrade to Startup, Growth or Elite plan to redeem."
+        )
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 5: SUBSCRIPTION EXPIRY CHECK
+    # ═══════════════════════════════════════════════════════════════
+    subscription_expiry = user.get("subscription_expiry")
+    if subscription_expiry:
         try:
-            limit_check = await check_redeem_limit_func(request.user_id, request.amount)
-            if not limit_check.get("allowed"):
-                limit_info = limit_check.get("limit_info", {})
+            if isinstance(subscription_expiry, str):
+                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            else:
+                expiry_date = subscription_expiry
+            
+            now_utc = datetime.now(timezone.utc)
+            if expiry_date.tzinfo is None:
+                expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+            
+            if expiry_date < now_utc:
+                days_expired = (now_utc - expiry_date).days
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Redeem limit exceeded. Your limit: ₹{limit_info.get('total_limit', 0):,.2f}, Used: ₹{limit_info.get('total_redeemed', 0):,.2f}, Remaining: ₹{limit_info.get('remaining_limit', 0):,.2f}"
+                    detail=f"Your subscription expired {days_expired} days ago on {expiry_date.strftime('%d %b %Y')}. Please renew to continue redeeming."
                 )
         except HTTPException:
             raise
         except Exception as e:
-            logging.error(f"[REDEEM] Limit check error: {e}")
-            # On error, allow (fail-open)
-        # On error, allow (fail-open)
+            logging.warning(f"Could not parse subscription_expiry: {subscription_expiry}, error: {e}")
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="Subscription expiry not set. Please contact support."
+        )
     
-    # WEEKLY ONE SERVICE LIMIT CHECK
-    if check_weekly_one_service_func:
-        try:
-            weekly_check = await check_weekly_one_service_func(request.user_id, request.service_type)
-            if not weekly_check.get("allowed"):
-                raise HTTPException(
-                    status_code=403,
-                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached. You can only use 1 service per week."))
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logging.error(f"[REDEEM] Weekly limit check error: {e}")
-            # On error, allow (fail-open)
-    
-    # Check time restriction (8 AM to 8 PM IST) - TEMPORARILY DISABLED FOR TESTING
-    # from datetime import timezone, timedelta
-    # ist = timezone(timedelta(hours=5, minutes=30))
-    # current_time = datetime.now(ist)
-    # current_hour = current_time.hour
-    # 
-    # if current_hour < 8 or current_hour >= 20:
-    #     raise HTTPException(
-    #         status_code=503, 
-    #         detail="Server Error. Please Try Again."
-    #     )
-    
-    # Validate service type
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 6: VALIDATE SERVICE TYPE (Basic validation before heavy checks)
+    # ═══════════════════════════════════════════════════════════════
     if request.service_type not in SERVICE_TYPES:
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid service type. Must be one of: {list(SERVICE_TYPES.keys())}"
         )
     
-    # Service-specific validation
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 7: SERVICE-SPECIFIC VALIDATION
+    # ═══════════════════════════════════════════════════════════════
     details = request.details or {}
     
     if request.service_type == "emi":
@@ -948,53 +971,38 @@ async def create_redeem_request(request: RedeemRequestCreate):
         if not details.get("account_holder"):
             raise HTTPException(status_code=400, detail="Account holder name is required")
     
-    # Get user
-    user = await db.users.find_one({"uid": request.user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check KYC status
-    if user.get("kyc_status") != "verified":
-        raise HTTPException(status_code=403, detail="KYC verification required for redeem")
-    
-    # Check subscription plan AND expiry
-    valid_plans = ["startup", "growth", "elite"]
-    user_plan = (user.get("subscription_plan") or "").lower()
-    if user_plan not in valid_plans:
-        raise HTTPException(
-            status_code=403, 
-            detail="Paid subscription required. Please upgrade to Startup, Growth or Elite plan."
-        )
-    
-    # CRITICAL: Check subscription expiry date
-    subscription_expiry = user.get("subscription_expiry")
-    if subscription_expiry:
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 8: WEEKLY ONE SERVICE LIMIT CHECK (Before calculating charges)
+    # ═══════════════════════════════════════════════════════════════
+    if check_weekly_one_service_func:
         try:
-            if isinstance(subscription_expiry, str):
-                # Parse ISO format date string
-                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
-            else:
-                expiry_date = subscription_expiry
-            
-            # Check if subscription has expired
-            now_utc = datetime.now(timezone.utc)
-            if expiry_date < now_utc:
+            weekly_check = await check_weekly_one_service_func(request.user_id, request.service_type)
+            if not weekly_check.get("allowed"):
                 raise HTTPException(
                     status_code=403,
-                    detail=f"Your subscription has expired on {expiry_date.strftime('%d %b %Y')}. Please renew to continue redeeming."
+                    detail=weekly_check.get("reason_en", weekly_check.get("reason", "Weekly service limit reached. You can only use 1 service per week."))
                 )
         except HTTPException:
             raise
         except Exception as e:
-            # Log but don't block if date parsing fails
-            import logging
-            logging.warning(f"Could not parse subscription_expiry: {subscription_expiry}, error: {e}")
-    else:
-        # No expiry date set - block redemption for safety
-        raise HTTPException(
-            status_code=403,
-            detail="Subscription expiry not set. Please contact support."
-        )
+            logging.error(f"[REDEEM] Weekly limit check error: {e}")
+    
+    # ═══════════════════════════════════════════════════════════════
+    # STEP 9: GLOBAL REDEEM LIMIT CHECK
+    # ═══════════════════════════════════════════════════════════════
+    if check_redeem_limit_func:
+        try:
+            limit_check = await check_redeem_limit_func(request.user_id, request.amount)
+            if not limit_check.get("allowed"):
+                limit_info = limit_check.get("limit_info", {})
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Redeem limit exceeded. Your limit: ₹{limit_info.get('total_limit', 0):,.2f}, Used: ₹{limit_info.get('total_redeemed', 0):,.2f}, Remaining: ₹{limit_info.get('remaining_limit', 0):,.2f}"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"[REDEEM] Limit check error: {e}")
     
     # Calculate charges
     charges = await calculate_charges(request.amount)

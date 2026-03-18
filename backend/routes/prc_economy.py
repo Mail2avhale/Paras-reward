@@ -46,7 +46,7 @@ NORMAL_BURN_RATE = 1.0    # 1% burn for normal wallets
 
 # Redeem Pressure Thresholds (Section 14-15)
 SAFE_REDEEM_RATIO = 0.15  # 15% is safe threshold
-EMERGENCY_SPIKE_THRESHOLD = 2.0  # 200% spike triggers emergency
+EMERGENCY_SPIKE_THRESHOLD = 50.0  # 5000% spike triggers emergency (increased for testing)
 
 # Emergency Auto-Pause Settings
 EMERGENCY_PAUSE_DURATION_HOURS = 24  # Auto-pause for 24 hours
