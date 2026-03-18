@@ -708,7 +708,7 @@ async def test_fetch_bill():
         f"&sender_name=TestUser"
         f"&operator_id={test_operator}"
         f"&latlong={DEFAULT_LATLONG}"
-        f"&source_ip=103.21.58.193"
+        f"&source_ip=34.44.149.98"
     )
     
     get_url = f"{BASE_URL}/v3/customer/payment/bbps/bill?initiator_id={INITIATOR_ID}&{query_params}"
@@ -787,7 +787,7 @@ async def debug_pay_bill(
         "client_ref_id": client_ref_id,
         "sender_name": "Debug User",
         "latlong": DEFAULT_LATLONG,
-        "source_ip": "103.21.58.193"
+        "source_ip": "34.44.149.98"
     }
     
     if bill_fetch_response:
@@ -852,7 +852,7 @@ async def fetch_bill(data: FetchBillRequest):
             "confirmation_mobile_no": data.mobile,
             "sender_name": data.sender_name or "Customer",
             "operator_id": data.operator_id,
-            "source_ip": data.source_ip or "103.21.58.193",  # Required for some operators
+            "source_ip": data.source_ip or "34.44.149.98",  # Whitelisted production IP
             "latlong": DEFAULT_LATLONG
         }
         
@@ -1102,7 +1102,7 @@ async def pay_bill(data: PayBillRequest):
         
         body = {
             "initiator_id": INITIATOR_ID,  # Required in body as per Eko docs
-            "source_ip": "103.21.58.193",  # Required - agent/retailer IP for security
+            "source_ip": "34.44.149.98",  # Whitelisted production IP for Eko
             "user_code": USER_CODE,
             "amount": str(data.amount),  # String as per Eko docs
             "client_ref_id": client_ref_id,
