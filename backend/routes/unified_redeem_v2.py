@@ -1040,15 +1040,24 @@ async def create_redeem_request(request: RedeemRequestCreate):
         category = "utility"
         category_percent = 0.40
     
-    # Plan-wise monthly limits (in INR)
-    PLAN_MONTHLY_LIMITS = {
-        "startup": 7990,
-        "growth": 11990,
-        "elite": 19974
-    }
-    
-    monthly_limit = PLAN_MONTHLY_LIMITS.get(user_plan, 7990)
-    category_limit = monthly_limit * category_percent
+    # Get user's actual calculated limit (includes months active + referral bonus)
+    # Import the proper calculation function
+    try:
+        from server import calculate_user_redeem_limit
+        user_limit_info = await calculate_user_redeem_limit(request.user_id)
+        total_limit = user_limit_info.get("total_limit", 0)
+        # Category limit = total limit * category percentage
+        category_limit = total_limit * category_percent
+    except Exception as limit_err:
+        logging.warning(f"Could not get calculated limit, using fallback: {limit_err}")
+        # Fallback to static limits if calculation fails
+        PLAN_MONTHLY_LIMITS = {
+            "startup": 14950,
+            "growth": 24950,
+            "elite": 39950
+        }
+        monthly_limit = PLAN_MONTHLY_LIMITS.get(user_plan, 14950)
+        category_limit = monthly_limit * category_percent
     
     # Get current month's usage
     now_for_limit = datetime.now(timezone.utc)

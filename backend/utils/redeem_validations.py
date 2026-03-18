@@ -179,6 +179,8 @@ async def validate_category_limit(user_id: str, category: str, amount_inr: float
     """
     COMPULSORY CHECK #5: Category-wise Monthly Limit (40/30/30)
     
+    Uses the full calculated limit (months_active + referral bonus) instead of static values.
+    
     Categories:
     - utility: 40% (mobile, electricity, gas, water, DTH, broadband, etc.)
     - shopping: 30% (gift vouchers, marketplace, etc.)
@@ -187,13 +189,6 @@ async def validate_category_limit(user_id: str, category: str, amount_inr: float
     if db is None:
         return {"valid": True, "error": None, "warning": "DB not available for limit check"}
     
-    # Plan-wise monthly limits (in INR)
-    PLAN_MONTHLY_LIMITS = {
-        "startup": 7990,    # ₹7,990/month
-        "growth": 11990,    # ₹11,990/month  
-        "elite": 19974      # ₹19,974/month
-    }
-    
     # Category percentages
     CATEGORY_PERCENTAGES = {
         "utility": 0.40,    # 40%
@@ -201,13 +196,26 @@ async def validate_category_limit(user_id: str, category: str, amount_inr: float
         "bank": 0.30        # 30%
     }
     
-    # Get user's plan limit
-    plan_lower = plan.lower()
-    monthly_limit = PLAN_MONTHLY_LIMITS.get(plan_lower, 7990)
+    # Get user's actual calculated limit (includes months active + referral bonus)
+    try:
+        import sys
+        sys.path.insert(0, '/app/backend')
+        from server import calculate_user_redeem_limit
+        user_limit_info = await calculate_user_redeem_limit(user_id)
+        total_limit = user_limit_info.get("total_limit", 0)
+    except Exception as limit_err:
+        # Fallback to static limits if calculation fails
+        PLAN_MONTHLY_LIMITS = {
+            "startup": 14950,
+            "growth": 24950,
+            "elite": 39950
+        }
+        plan_lower = plan.lower()
+        total_limit = PLAN_MONTHLY_LIMITS.get(plan_lower, 14950)
     
-    # Calculate category limit
+    # Calculate category limit from total limit
     category_percent = CATEGORY_PERCENTAGES.get(category, 0.40)
-    category_limit = monthly_limit * category_percent
+    category_limit = total_limit * category_percent
     
     # Get current month's usage for this category
     now = datetime.now(timezone.utc)

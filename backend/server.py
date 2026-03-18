@@ -3817,8 +3817,9 @@ async def check_redemption_allowed(user: dict, prc_amount: float) -> dict:
     checks_passed["account_age_ok"] = True
     
     # ===== CHECK 6: Monthly Limit Calculation =====
-    limit_info = await calculate_user_monthly_redeem_limit(user)
-    monthly_limit = limit_info.get("limit", 0)
+    # Use calculate_user_redeem_limit which includes months_active + referral bonus
+    limit_info = await calculate_user_redeem_limit(user_uid)
+    monthly_limit = limit_info.get("total_limit", 0)  # This is the FULL accumulated limit
     
     if monthly_limit == 0:
         return {
