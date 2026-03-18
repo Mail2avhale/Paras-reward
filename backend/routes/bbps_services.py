@@ -420,7 +420,7 @@ class PayBillRequest(BaseModel):
     sender_name: Optional[str] = "Customer"
     bill_fetch_response: Optional[str] = None  # Required when fetchBill=1
     payment_amount_breakup: Optional[str] = None  # For Credit Card BBPS - JSON string with billid and amount
-    hc_channel: Optional[str] = "0"  # For Credit Card BBPS
+    hc_channel: Optional[str] = None  # For Credit Card BBPS only - don't send by default
     
     @validator('mobile')
     def validate_mobile(cls, v):
@@ -1105,7 +1105,6 @@ async def pay_bill(data: PayBillRequest):
         
         body = {
             "initiator_id": INITIATOR_ID,  # Required in body as per Eko docs
-            "source_ip": "127.0.0.1",
             "user_code": USER_CODE,
             "amount": str(data.amount),  # String as per Eko docs
             "client_ref_id": client_ref_id,
@@ -1115,6 +1114,8 @@ async def pay_bill(data: PayBillRequest):
             "operator_id": str(data.operator_id),
             "latlong": DEFAULT_LATLONG
         }
+        
+        # Note: source_ip is optional - removed hardcoded 127.0.0.1 which may cause issues
         
         # Add bill_fetch_response if provided (required for fetchBill=1 operators)
         if data.bill_fetch_response:
