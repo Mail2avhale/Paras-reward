@@ -27,7 +27,37 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 
 ## What's Been Implemented (March 2026)
 
-### Latest Session (16 March 2026) - Category Limit UI Simplification
+### Latest Session (18 March 2026) - GST Invoice System
+
+**GST-Compliant Invoicing System Implemented:**
+1. **Backend (`/app/backend/routes/gst_invoice.py`)**:
+   - `POST /api/invoice/generate` - Generate GST invoice with PDF
+   - `GET /api/invoice/user/{user_id}` - List user's invoices
+   - `GET /api/invoice/{invoice_id}/pdf` - Download invoice PDF
+   - `GET /api/invoice/admin/all` - Admin: All invoices with GST summary
+
+2. **Features**:
+   - Sequential invoice numbering: PRC-YYYY-XXXXX format
+   - 18% GST calculation (split into 9% CGST + 9% SGST)
+   - PDF generation using `reportlab`
+   - Company details: PARAS REWARD TECHNOLOGIES PRIVATE LIMITED
+   - GSTIN: 27AAQCP6686E1ZR
+
+3. **Frontend (`/app/frontend/src/pages/MyInvoices.js`)**:
+   - New page at `/my-invoices` route
+   - Invoice list with GST breakdown display
+   - PDF download functionality
+   - Empty state with subscription CTA
+
+4. **Integration**:
+   - `razorpay_payments.py` auto-generates invoice on payment verification
+   - ProfileAdvanced.js has "My Invoices" link for paid subscribers
+
+5. **Bug Fix**: Fixed `if not db:` → `if db is None:` (MongoDB truth value issue)
+
+**Testing**: 28 tests passed (17 backend, 11 frontend)
+
+### Previous Session (16 March 2026) - Category Limit UI Simplification
 
 **Category-Based Redeem Limit UI Cleanup:**
 1. Removed percentage labels (e.g., "(40%)", "(30%)") from category limit titles in `CategoryLimitsDisplay.js`
@@ -124,6 +154,12 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 ---
 
 ## Key API Endpoints
+
+### GST Invoice
+- `POST /api/invoice/generate` - Generate GST invoice with PDF
+- `GET /api/invoice/user/{user_id}` - List user's invoices
+- `GET /api/invoice/{invoice_id}/pdf` - Download invoice PDF
+- `GET /api/invoice/admin/all` - Admin: All invoices with GST summary
 
 ### Admin
 - `POST /api/admin/prc-rate/manual-override` - Set/disable rate override
