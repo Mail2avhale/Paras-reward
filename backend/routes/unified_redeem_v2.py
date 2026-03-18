@@ -1008,6 +1008,84 @@ async def create_redeem_request(request: RedeemRequestCreate):
             detail=f"Insufficient PRC balance. Required: {total_prc_required} PRC, Available: {current_balance} PRC"
         )
     
+    # CATEGORY LIMIT CHECK (40% Utility, 30% Shopping, 30% Bank)
+    # Determine category from service type
+    UTILITY_SERVICES = [
+        "mobile_recharge", "mobile_postpaid", "electricity", "gas", "water",
+        "broadband", "landline", "dth", "cable_tv", "emi", "credit_card",
+        "insurance", "fastag", "education", "municipal_tax", "housing_society", "lpg",
+        "recharge", "postpaid"
+    ]
+    BANK_SERVICES = ["bank_transfer", "prc_to_bank", "dmt", "bank_withdrawal"]
+    SHOPPING_SERVICES = ["gift_voucher", "shopping", "marketplace"]
+    
+    if request.service_type in UTILITY_SERVICES:
+        category = "utility"
+        category_percent = 0.40
+    elif request.service_type in BANK_SERVICES:
+        category = "bank"
+        category_percent = 0.30
+    elif request.service_type in SHOPPING_SERVICES:
+        category = "shopping"
+        category_percent = 0.30
+    else:
+        category = "utility"
+        category_percent = 0.40
+    
+    # Plan-wise monthly limits (in INR)
+    PLAN_MONTHLY_LIMITS = {
+        "startup": 7990,
+        "growth": 11990,
+        "elite": 19974
+    }
+    
+    monthly_limit = PLAN_MONTHLY_LIMITS.get(user_plan, 7990)
+    category_limit = monthly_limit * category_percent
+    
+    # Get current month's usage
+    now_for_limit = datetime.now(timezone.utc)
+    month_start = now_for_limit.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    
+    # Query for this month's completed redemptions in this category
+    if category == "utility":
+        service_filter = {"$in": UTILITY_SERVICES}
+    elif category == "bank":
+        service_filter = {"$in": BANK_SERVICES}
+    else:
+        service_filter = {"$in": SHOPPING_SERVICES}
+    
+    category_pipeline = [
+        {
+            "$match": {
+                "user_id": request.user_id,
+                "created_at": {"$gte": month_start},
+                "status": {"$in": ["completed", "approved", "success", "SUCCESS"]},
+                "service_type": service_filter
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "total_amount": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}
+            }
+        }
+    ]
+    
+    try:
+        category_result = await db.redeem_requests.aggregate(category_pipeline).to_list(length=1)
+        category_used = category_result[0]["total_amount"] if category_result else 0
+    except Exception as e:
+        logging.warning(f"Category limit query error: {e}")
+        category_used = 0
+    
+    category_remaining = category_limit - category_used
+    
+    if request.amount > category_remaining:
+        raise HTTPException(
+            status_code=403,
+            detail=f"{category.title()} category limit exceeded this month. Limit: ₹{category_limit:,.0f}, Used: ₹{category_used:,.0f}, Remaining: ₹{category_remaining:,.0f}. Your request: ₹{request.amount:,.0f}"
+        )
+    
     # Generate request ID
     request_id = generate_request_id()
     
