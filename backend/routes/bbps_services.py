@@ -708,7 +708,7 @@ async def test_fetch_bill():
         f"&sender_name=TestUser"
         f"&operator_id={test_operator}"
         f"&latlong={DEFAULT_LATLONG}"
-        f"&source_ip=127.0.0.1"
+        f"&source_ip=103.21.58.193"
     )
     
     get_url = f"{BASE_URL}/v3/customer/payment/bbps/bill?initiator_id={INITIATOR_ID}&{query_params}"
@@ -787,7 +787,7 @@ async def debug_pay_bill(
         "client_ref_id": client_ref_id,
         "sender_name": "Debug User",
         "latlong": DEFAULT_LATLONG,
-        "source_ip": "127.0.0.1"
+        "source_ip": "103.21.58.193"
     }
     
     if bill_fetch_response:
