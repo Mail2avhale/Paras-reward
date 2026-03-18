@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://category-cleanup-2.preview.emergentagent.com/setup
+   https://gst-invoicing-1.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

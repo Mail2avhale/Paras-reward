@@ -6,7 +6,7 @@ import {
   User, Lock, ArrowLeft, Eye, EyeOff, Camera, 
   Save, Phone, Mail, Crown, ChevronRight, 
   LogOut, Trash2, Settings, CreditCard, Shield, FileText, Globe, Info,
-  HelpCircle, CheckCircle
+  HelpCircle, CheckCircle, Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -848,6 +848,24 @@ const ProfileAdvanced = ({ user, onLogout }) => {
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </div>
         </button>
+
+        {/* My Invoices - For paid subscribers */}
+        {hasPaidPlan && (
+          <button 
+            onClick={() => navigate('/my-invoices')}
+            className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl p-4 flex items-center justify-between"
+            data-testid="my-invoices-link"
+          >
+            <span className="flex items-center gap-3 text-white">
+              <Receipt className="w-5 h-5 text-purple-500" />
+              My Invoices
+              <InfoTooltip>
+                <p>Download GST-compliant tax invoices for all your subscription payments</p>
+              </InfoTooltip>
+            </span>
+            <ChevronRight className="w-5 h-5 text-gray-500" />
+          </button>
+        )}
 
         {/* Security Question - Important for PIN Reset */}
         <SecurityQuestionCard user={user} />

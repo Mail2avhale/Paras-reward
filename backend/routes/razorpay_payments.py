@@ -453,6 +453,65 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             "activation_source": "razorpay_verify"
         })
         
+        # ==================== STEP 11: GENERATE GST INVOICE ====================
+        try:
+            from routes.gst_invoice import generate_invoice, calculate_gst, get_next_invoice_number, generate_invoice_pdf
+            import base64
+            
+            # Check if invoice already exists
+            existing_invoice = await db.invoices.find_one({"payment_id": request.razorpay_payment_id})
+            
+            if not existing_invoice:
+                # Get user details
+                user = await db.users.find_one({"uid": request.user_id})
+                
+                # Generate invoice number
+                invoice_number = await get_next_invoice_number()
+                invoice_id = f"INV_{now.strftime('%Y%m%d%H%M%S')}_{request.user_id[:8]}"
+                
+                # Calculate GST
+                gst_breakdown = calculate_gst(payment_amount)
+                
+                # Prepare invoice data
+                invoice_data = {
+                    "invoice_id": invoice_id,
+                    "invoice_number": invoice_number,
+                    "user_id": request.user_id,
+                    "customer_name": user.get("name", "Customer") if user else "Customer",
+                    "customer_email": user.get("email", "") if user else "",
+                    "customer_phone": user.get("phone", "") if user else "",
+                    "payment_id": request.razorpay_payment_id,
+                    "order_id": request.razorpay_order_id,
+                    "plan_name": plan_name,
+                    "plan_type": plan_type,
+                    "amount": payment_amount,
+                    "gst_breakdown": gst_breakdown,
+                    "date": now.strftime("%d-%m-%Y"),
+                    "created_at": now.isoformat(),
+                    "company": {
+                        "name": "PARAS REWARD TECHNOLOGIES PRIVATE LIMITED",
+                        "gstin": "27AAQCP6686E1ZR",
+                        "address": "Maharashtra, India"
+                    }
+                }
+                
+                # Generate PDF
+                try:
+                    pdf_bytes = generate_invoice_pdf(invoice_data)
+                    invoice_data["pdf_base64"] = base64.b64encode(pdf_bytes).decode('utf-8')
+                except Exception as pdf_error:
+                    logging.error(f"[INVOICE] PDF generation error: {pdf_error}")
+                
+                # Save invoice
+                await db.invoices.insert_one(invoice_data)
+                logging.info(f"[INVOICE] Generated invoice {invoice_number} for payment {request.razorpay_payment_id}")
+            else:
+                logging.info(f"[INVOICE] Invoice already exists for payment {request.razorpay_payment_id}")
+                
+        except Exception as invoice_error:
+            logging.error(f"[INVOICE] Invoice generation error: {invoice_error}")
+            # Don't fail payment verification if invoice generation fails
+        
         logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}, total days: {total_days}")
         
         return {

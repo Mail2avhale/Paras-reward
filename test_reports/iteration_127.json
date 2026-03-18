@@ -1,0 +1,54 @@
+{
+  "summary": "GST Invoice System Testing Complete - All Backend APIs Verified, Frontend UI Working",
+  "mode": "generate",
+  "baseline_commit": "7a6f3cb1436144594546bfe6c4fccf8f332a0088",
+  "head_commit": "544126c098847b035160c26c14b3e7e77299e576",
+  "specs_created": [
+    "/app/backend/tests/test_gst_invoice.py",
+    "/app/tests/e2e/gst-invoice.spec.ts"
+  ],
+  "specs_updated": [
+    "/app/frontend/src/pages/MyInvoices.js",
+    "/app/frontend/src/pages/ProfileAdvanced.js"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_gst_invoice.py",
+    "/app/tests/e2e/gst-invoice.spec.ts",
+    "/app/test_reports/pytest/test_gst_invoice.xml"
+  ],
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/frontend/src/pages/MyInvoices.js",
+    "/app/frontend/src/pages/ProfileAdvanced.js",
+    "/app/backend/tests/test_gst_invoice.py",
+    "/app/tests/e2e/gst-invoice.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% - 17 passed",
+    "frontend_api": "100% - 9 passed",
+    "frontend_ui": "100% - 2 passed (login flow + invoice display verified)"
+  },
+  "features_tested": {
+    "Invoice Generation API": "PASSED - POST /api/invoice/generate creates invoices with PDF",
+    "User Invoices API": "PASSED - GET /api/invoice/user/{user_id} returns user's invoices",
+    "Invoice PDF Download": "PASSED - GET /api/invoice/{invoice_id}/pdf returns valid PDF base64",
+    "Admin Invoice List": "PASSED - GET /api/invoice/admin/all returns all invoices with GST summary",
+    "GST Calculation": "PASSED - 18% GST correctly split into 9% CGST + 9% SGST",
+    "Invoice Numbering": "PASSED - Sequential format PRC-YYYY-XXXXX verified",
+    "Duplicate Payment": "PASSED - Returns existing invoice instead of creating duplicate",
+    "MyInvoices Page UI": "PASSED - Page renders with invoice list, GST breakdown, download buttons",
+    "Company GSTIN Display": "PASSED - 27AAQCP6686E1ZR shown in footer"
+  },
+  "seed_data_creation": "Test invoices created with unique payment IDs during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GST Invoice System Testing Complete - Iteration 127\n\n## Test Summary\n\n### Backend API Tests (17 passed)\n- GST calculation verification (799, 1499 amounts)\n- Invoice generation with PDF\n- Duplicate payment handling\n- User invoice list API\n- PDF download API\n- Admin invoice list with GST summary\n- Sequential invoice numbering\n- Company details verification\n- GST breakdown integrity checks\n\n### Frontend E2E Tests (11 passed)\n- API tests: User invoices, GST breakdown, PDF download, Admin list, Invoice generation\n- UI tests: Login flow, MyInvoices page rendering, Invoice cards with GST breakdown\n\n## Key Verifications\n1. Invoice format: PRC-YYYY-XXXXX (e.g., PRC-2026-00001)\n2. GST split: 9% CGST + 9% SGST = 18% total\n3. PDF generation: reportlab creates valid PDF\n4. Company GSTIN: 27AAQCP6686E1ZR\n5. Company: PARAS REWARD TECHNOLOGIES PRIVATE LIMITED\n\n## Files Modified\n- Added data-testids to MyInvoices.js\n- Added data-testid to ProfileAdvanced.js for My Invoices link\n\n## Test User\n- Mobile: 9970100782\n- PIN: 997010\n- UID: cbdf46d7-7d66-4d43-8495-e1432a2ab071\n\nAll features working as expected. No bugs found."
+}

@@ -80,6 +80,7 @@ from routes.admin_tasks import router as admin_tasks_router
 from routes.prc_statement import router as prc_statement_router, set_db as set_prc_statement_db
 from routes.mining import router as mining_router, set_db as set_mining_db, set_cache as set_mining_cache, set_helpers as set_mining_helpers
 # DMT V1, V3 and Fund Transfer routes REMOVED - Eko API not working
+from routes.gst_invoice import router as invoice_router, set_db as set_invoice_db
 
 # ========== SECURITY CONFIGURATION ==========
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -43585,6 +43586,10 @@ api_router.include_router(notifications_router)
 # Razorpay Payments Router
 set_razorpay_db(db)
 api_router.include_router(razorpay_router)
+
+# GST Invoice Router
+set_invoice_db(db)
+api_router.include_router(invoice_router)
 
 # Legacy Eko Bill Payment Router - REMOVED (DMT removed completely)
 # set_eko_db(db)

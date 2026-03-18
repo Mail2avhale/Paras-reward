@@ -171,6 +171,7 @@ const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
 // DMT and Fund Transfer REMOVED - Eko API not working
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
+const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
 
 // ============ ADMIN PAGES - Code Split into separate chunk ============
 // These pages are only loaded when admin users access them (~1% of users)
@@ -342,6 +343,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* Removed: Activity page */}
             <Route path="/vip" element={<Navigate to="/subscription" replace />} /> {/* Legacy VIP route redirects to new subscription system */}
             <Route path="/subscription" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <SubscriptionPlans user={user} onLogout={handleLogout} />) : <Navigate to="/login" />} />
+            <Route path="/my-invoices" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <MyInvoices user={user} />) : <Navigate to="/login" />} />
+            <Route path="/invoices" element={<Navigate to="/my-invoices" replace />} />
             <Route path="/kyc" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <KYCVerification user={user} />) : <Navigate to="/login" />} />
             {/* Removed: Wallet/Withdrawal functionality */}
             {/* Removed: Leaderboard page for AdMob compliance */}

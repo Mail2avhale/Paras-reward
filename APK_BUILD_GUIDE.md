@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://category-cleanup-2.preview.emergentagent.com",
+    "url": "https://gst-invoicing-1.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {
