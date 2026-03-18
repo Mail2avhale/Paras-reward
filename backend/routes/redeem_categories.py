@@ -73,12 +73,28 @@ async def get_user_category_override(uid: str):
 
 
 async def get_user_total_limit(user: dict) -> dict:
-    """Import and call the main limit calculation function"""
+    """Import and call the main limit calculation function with months + referral"""
     # Import from server to avoid circular imports
     import sys
     sys.path.insert(0, '/app/backend')
-    from server import calculate_user_monthly_redeem_limit
-    return await calculate_user_monthly_redeem_limit(user)
+    from server import calculate_user_redeem_limit
+    
+    # calculate_user_redeem_limit takes user_id, not user dict
+    user_id = user.get("uid")
+    limit_data = await calculate_user_redeem_limit(user_id)
+    
+    # Return in compatible format
+    return {
+        "limit": limit_data.get("total_limit", 0),
+        "monthly_limit": limit_data.get("monthly_limit", 0),
+        "total_limit": limit_data.get("total_limit", 0),
+        "months_active": limit_data.get("months_active", 1),
+        "active_referrals": limit_data.get("active_referrals", 0),
+        "referral_percentage_increase": limit_data.get("referral_percentage_increase", 0),
+        "base_limit": limit_data.get("base_limit", 0),
+        "carry_forward": 0,  # Carry forward is built into total_limit
+        "enabled": True
+    }
 
 
 async def get_category_usage(uid: str, category: str, start_date: datetime) -> float:
