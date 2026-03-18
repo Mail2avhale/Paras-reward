@@ -1105,6 +1105,7 @@ async def pay_bill(data: PayBillRequest):
         
         body = {
             "initiator_id": INITIATOR_ID,  # Required in body as per Eko docs
+            "source_ip": "103.21.58.193",  # Required - agent/retailer IP for security
             "user_code": USER_CODE,
             "amount": str(data.amount),  # String as per Eko docs
             "client_ref_id": client_ref_id,
@@ -1114,8 +1115,6 @@ async def pay_bill(data: PayBillRequest):
             "operator_id": str(data.operator_id),
             "latlong": DEFAULT_LATLONG
         }
-        
-        # Note: source_ip is optional - removed hardcoded 127.0.0.1 which may cause issues
         
         # Add bill_fetch_response if provided (required for fetchBill=1 operators)
         if data.bill_fetch_response:
