@@ -461,13 +461,12 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
         week_start_str = week_start.isoformat()
         
         # Check for existing RD redeem request this week - use MongoDB query with date filter
-        # NOTE: Only count successful/pending requests - failed transactions should NOT block users
-        # Include both lowercase and uppercase status values for compatibility
+        # NOTE: Only count COMPLETED/APPROVED requests - failed/pending/processing should NOT block users
         existing_rd_request = await db.bank_redeem_requests.find_one({
             "user_id": request.user_id,
             "request_type": "rd_redeem",
             "created_at": {"$gte": week_start_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
         })
         
         if existing_rd_request:
@@ -477,11 +476,11 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
             )
         
         # Check for existing bank redeem request this week (bank_withdrawal_requests collection)
-        # NOTE: Only count successful/pending requests - failed transactions should NOT block users
+        # NOTE: Only count COMPLETED/APPROVED requests - failed/pending/processing should NOT block users
         existing_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": request.user_id,
             "created_at": {"$gte": week_start_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
         })
         
         if existing_bank_request:
@@ -491,12 +490,12 @@ async def request_rd_redeem(rd_id: str, request: WithdrawRDRequest):
             )
         
         # Check for existing EMI request this week
-        # NOTE: Only count successful/pending requests - failed transactions should NOT block users
+        # NOTE: Only count COMPLETED/APPROVED requests - failed/pending/processing should NOT block users
         existing_emi_request = await db.bill_payment_requests.find_one({
             "user_id": request.user_id,
             "request_type": "loan_emi",
             "created_at": {"$gte": week_start_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
         })
         
         if existing_emi_request:

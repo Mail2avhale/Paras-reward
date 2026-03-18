@@ -224,11 +224,13 @@ async def get_last_request_date(user_id: str, collection: str, request_type: str
     - days_remaining: days until next eligible
     - can_request: True if 7 days have passed
     
-    NOTE: Only counts SUCCESSFUL requests. Failed/rejected/cancelled requests don't start cooldown.
+    NOTE: Only counts COMPLETED/APPROVED requests. Failed/pending/processing requests don't start cooldown.
     """
-    # Only count successful requests for cooldown - failed transactions should NOT block users
-    # Include both lowercase and uppercase status values for compatibility
-    query = {"user_id": user_id, "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}}
+    # Only count COMPLETED/APPROVED requests for cooldown - anything else should NOT block users
+    query = {
+        "user_id": user_id, 
+        "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
+    }
     if request_type:
         query["request_type"] = request_type
     

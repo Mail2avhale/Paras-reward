@@ -3086,18 +3086,25 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     # ========== CHECK BBPS LIMIT (if requesting BBPS service) ==========
     if is_bbps_request:
         # Find most recent BBPS request in last 7 days
-        # NOTE: Only count successful/pending requests - failed transactions should NOT block users
+        # NOTE: Only count COMPLETED/SUCCESS requests - failed/processing/pending should NOT block users
+        # This allows users to retry if their previous transaction failed or is stuck
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
-        }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]},
+            # Also check eko_status to ensure it's actually successful
+            "$or": [
+                {"eko_status": {"$in": [0, "0", "SUCCESS", "success"]}},
+                {"eko_status": {"$exists": False}},  # For older records without eko_status
+                {"request_type": "instant"}  # Instant recharges are auto-completed
+            ]
+        }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1}, sort=[("created_at", -1)])
         
         # Also check gift voucher requests
         gift_request = await db.gift_voucher_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "delivered", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find the most recent BBPS-category service
@@ -3148,19 +3155,19 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     
     # ========== CHECK BANK TRANSFER LIMIT (if requesting bank service) ==========
     if is_bank_request:
-        # Check new bank transfer requests
-        # NOTE: Only count successful/pending requests - failed transactions should NOT block users
+        # Check new bank transfer requests - only count COMPLETED/APPROVED requests
+        # NOTE: Only count COMPLETED/SUCCESS requests - failed/processing/pending should NOT block users
         bank_request = await db.bank_transfer_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Also check old bank withdrawal requests
         old_bank_request = await db.bank_withdrawal_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$nin": ["rejected", "cancelled", "failed", "error", "refunded", "REJECTED", "CANCELLED", "FAILED", "ERROR", "REFUNDED"]}
+            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
         # Find most recent bank service
