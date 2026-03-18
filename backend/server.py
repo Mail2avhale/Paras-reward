@@ -3109,6 +3109,17 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
         # Find most recent BBPS request in last 7 days
         # CRITICAL: Only count TRULY SUCCESSFUL requests - failed/refunded/processing/pending should NOT block users
         # This allows users to retry if their previous transaction failed or is stuck
+        
+        # Check bill_payment_requests collection (where mobile recharge, DTH, etc. are stored)
+        bill_payment_request = await db.bill_payment_requests.find_one({
+            "user_id": user_id,
+            "created_at": {"$gte": seven_days_ago_str},
+            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS", "approved", "APPROVED"]},
+            # CRITICAL: Exclude refunded/failed transactions
+            "prc_refunded": {"$ne": True}
+        }, {"_id": 0, "request_type": 1, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1}, sort=[("created_at", -1)])
+        
+        # Also check redeem_requests collection (for other BBPS services)
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
@@ -3129,14 +3140,29 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
             "status": {"$in": ["completed", "success", "approved", "delivered", "COMPLETED", "SUCCESS", "APPROVED", "DELIVERED"]}
         }, {"_id": 0, "created_at": 1, "request_id": 1}, sort=[("created_at", -1)])
         
-        # Find the most recent BBPS-category service
+        # Find the most recent BBPS-category service from all collections
         last_bbps = None
-        if bbps_request:
+        
+        # Check bill_payment_requests first (mobile recharge, DTH, etc.)
+        if bill_payment_request:
+            service_type = bill_payment_request.get("request_type") or bill_payment_request.get("service_type", "recharge")
             last_bbps = {
-                "service": bbps_request.get("service_type", "recharge"),
-                "date": bbps_request.get("created_at"),
-                "request_id": bbps_request.get("request_id")
+                "service": service_type,
+                "date": bill_payment_request.get("created_at"),
+                "request_id": bill_payment_request.get("request_id")
             }
+        
+        # Check redeem_requests
+        if bbps_request:
+            bbps_date = bbps_request.get("created_at", "")
+            if not last_bbps or bbps_date > last_bbps["date"]:
+                last_bbps = {
+                    "service": bbps_request.get("service_type", "recharge"),
+                    "date": bbps_date,
+                    "request_id": bbps_request.get("request_id")
+                }
+        
+        # Check gift_voucher_requests
         if gift_request:
             gift_date = gift_request.get("created_at", "")
             if not last_bbps or gift_date > last_bbps["date"]:
