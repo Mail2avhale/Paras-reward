@@ -3060,10 +3060,17 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     seven_days_ago = now - timedelta(days=7)
     seven_days_ago_str = seven_days_ago.isoformat()
     
-    # Define service categories
-    BBPS_SERVICES = ["mobile_recharge", "electricity_bill", "dth_recharge", "dish_recharge",
-                    "credit_card_payment", "loan_emi", "gift_voucher", "recharge", "postpaid"]
-    BANK_SERVICES = ["bank_transfer", "prc_to_bank", "bank_withdrawal"]
+    # Define service categories - MUST match SERVICE_TYPES from unified_redeem_v2.py
+    BBPS_SERVICES = [
+        "mobile_recharge", "mobile_postpaid",
+        "electricity", "gas", "water",
+        "broadband", "landline",
+        "dth", "cable_tv",
+        "emi", "credit_card", "insurance",
+        "fastag", "education", "municipal_tax", "housing_society", "lpg",
+        "gift_voucher", "recharge", "postpaid"
+    ]
+    BANK_SERVICES = ["bank_transfer", "prc_to_bank", "bank_withdrawal", "dmt"]
     
     # Determine which category the requested service belongs to
     is_bbps_request = requested_service in BBPS_SERVICES or requested_service not in BANK_SERVICES
@@ -3071,15 +3078,27 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     
     service_name_map = {
         "mobile_recharge": "Mobile Recharge",
-        "electricity_bill": "Electricity Bill",
-        "dth_recharge": "DTH Recharge",
-        "dish_recharge": "DTH Recharge",
-        "credit_card_payment": "Credit Card Payment",
-        "loan_emi": "Loan EMI",
+        "mobile_postpaid": "Mobile Postpaid",
+        "electricity": "Electricity Bill",
+        "gas": "Gas Bill",
+        "water": "Water Bill",
+        "broadband": "Broadband Bill",
+        "landline": "Landline Bill",
+        "dth": "DTH Recharge",
+        "cable_tv": "Cable TV",
+        "emi": "EMI Payment",
+        "credit_card": "Credit Card Bill",
+        "insurance": "Insurance Premium",
+        "fastag": "FASTag Recharge",
+        "education": "Education Fees",
+        "municipal_tax": "Municipal Tax",
+        "housing_society": "Housing Society",
+        "lpg": "LPG Cylinder",
         "gift_voucher": "Gift Voucher",
         "prc_to_bank": "PRC to Bank Transfer",
         "bank_transfer": "PRC to Bank Transfer",
         "bank_withdrawal": "Bank Withdrawal",
+        "dmt": "Bank Transfer",
         "recharge": "Recharge",
         "postpaid": "Postpaid Bill"
     }
@@ -3087,19 +3106,20 @@ async def check_weekly_one_service_limit(user_id: str, requested_service: str) -
     # ========== CHECK BBPS LIMIT (if requesting BBPS service) ==========
     if is_bbps_request:
         # Find most recent BBPS request in last 7 days
-        # NOTE: Only count COMPLETED/SUCCESS requests - failed/processing/pending should NOT block users
+        # CRITICAL: Only count TRULY SUCCESSFUL requests - failed/refunded/processing/pending should NOT block users
         # This allows users to retry if their previous transaction failed or is stuck
         bbps_request = await db.redeem_requests.find_one({
             "user_id": user_id,
             "created_at": {"$gte": seven_days_ago_str},
-            "status": {"$in": ["completed", "success", "approved", "COMPLETED", "SUCCESS", "APPROVED"]},
-            # Also check eko_status to ensure it's actually successful
+            "status": {"$in": ["completed", "success", "COMPLETED", "SUCCESS"]},
+            # CRITICAL: Exclude refunded/failed transactions
+            "prc_refunded": {"$ne": True},
+            # Only count if eko_status indicates success OR it's an approved manual transaction
             "$or": [
                 {"eko_status": {"$in": [0, "0", "SUCCESS", "success"]}},
-                {"eko_status": {"$exists": False}},  # For older records without eko_status
-                {"request_type": "instant"}  # Instant recharges are auto-completed
+                {"approved_by": {"$exists": True, "$ne": None}}  # Manually approved by admin
             ]
-        }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1}, sort=[("created_at", -1)])
+        }, {"_id": 0, "service_type": 1, "created_at": 1, "request_id": 1, "status": 1, "eko_status": 1}, sort=[("created_at", -1)])
         
         # Also check gift voucher requests
         gift_request = await db.gift_voucher_requests.find_one({
