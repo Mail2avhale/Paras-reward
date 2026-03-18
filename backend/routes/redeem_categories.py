@@ -235,14 +235,18 @@ async def calculate_user_category_limits(user: dict) -> dict:
     for cat_key, cat_config in categories.items():
         percentage = cat_config.get("percentage", 0)
         
-        # Calculate this category's monthly allocation
-        cat_monthly_limit = (monthly_limit * percentage) / 100
+        # Calculate this category's limit from TOTAL LIMIT (includes referral bonus + months active)
+        # This ensures users get their full accumulated limit across categories
+        cat_limit_from_total = (total_limit * percentage) / 100
+        
+        # Also calculate monthly base for reference
+        cat_monthly_base = (monthly_limit * percentage) / 100
         
         # Get carry forward for this category
         cat_carry_forward = await get_category_carry_forward(uid, cat_key)
         
-        # Total limit for this category = monthly allocation + carry forward
-        cat_total_limit = cat_monthly_limit + cat_carry_forward
+        # Total limit for this category = allocation from total limit + carry forward
+        cat_total_limit = cat_limit_from_total + cat_carry_forward
         
         # Get usage for this category
         cat_used = await get_category_usage(uid, cat_key, start_date)
@@ -256,7 +260,8 @@ async def calculate_user_category_limits(user: dict) -> dict:
             "icon": cat_config.get("icon"),
             "color": cat_config.get("color"),
             "percentage": percentage,
-            "monthly_limit": round(cat_monthly_limit, 2),
+            "monthly_limit": round(cat_monthly_base, 2),  # Base monthly for reference
+            "limit_from_total": round(cat_limit_from_total, 2),  # Actual limit from total
             "carry_forward": round(cat_carry_forward, 2),
             "total_limit": round(cat_total_limit, 2),
             "used": round(cat_used, 2),
