@@ -1352,6 +1352,24 @@ const RedeemPageV2 = ({ user }) => {
       details.additional_params[paramName] = formData.additional_param_2;
     }
     
+    // Add bill fetch response if available (required for some BBPS operators)
+    if (billDetails?.raw_response?.data?.billfetchresponse) {
+      details.bill_fetch_response = billDetails.raw_response.data.billfetchresponse;
+      details.billfetchresponse = billDetails.raw_response.data.billfetchresponse;
+    }
+    
+    // Add payment_amount_breakup if billDetailsList is available (for Credit Card BBPS)
+    if (billDetails?.raw_response?.data?.billDetailsList?.length > 0) {
+      const billList = billDetails.raw_response.data.billDetailsList;
+      const firstBill = billList[0];
+      if (firstBill?.billNumber) {
+        details.payment_amount_breakup = JSON.stringify([{
+          billid: firstBill.billNumber,
+          bill_payment_amount: formData.amount || firstBill.billAmount || firstBill.netBillAmount
+        }]);
+      }
+    }
+    
     // Check Available Redeem Limit (NOT prc_balance)
     if (charges && redeemLimit) {
       const availableLimit = redeemLimit.remaining_limit || redeemLimit.remaining || 0;

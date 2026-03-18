@@ -300,13 +300,21 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         # Import the working BBPS pay function
         from routes.bbps_services import pay_bill, PayBillRequest
         
-        # Create request object
+        # Get bill fetch response if available (required for some operators)
+        bill_fetch_response = details.get("bill_fetch_response") or details.get("billfetchresponse")
+        
+        # Get payment_amount_breakup if available (required for credit card BBPS)
+        payment_amount_breakup = details.get("payment_amount_breakup")
+        
+        # Create request object with all required parameters
         pay_request = PayBillRequest(
             operator_id=operator,
             account=utility_acc_no,
             amount=amount,
             mobile=user_mobile if len(user_mobile) == 10 else "9999999999",
-            sender_name=sender_name or "Customer"
+            sender_name=sender_name or "Customer",
+            bill_fetch_response=bill_fetch_response,
+            payment_amount_breakup=payment_amount_breakup
         )
         
         # Execute payment via verified BBPS API
