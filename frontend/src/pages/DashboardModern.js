@@ -1078,63 +1078,80 @@ const DashboardModern = ({ user, onLogout }) => {
                 </div>
                 
                 <div className="relative z-10">
-                  {/* Header - PRC Balance */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                      <Banknote className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white/60 text-xs uppercase tracking-wider">PRC Reward Points</p>
-                      <p className="text-white text-2xl font-bold">{stats.prcBalance.toLocaleString()} PRC</p>
-                    </div>
-                  </div>
-                  
-                  {/* PRC to INR Conversion - Dynamic Rate */}
-                  <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-emerald-200/80 text-xs">INR Value</p>
-                        <p className="text-white text-xl font-bold">≈ ₹{Math.floor(stats.prcBalance / (stats.prcRate || 10)).toLocaleString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-emerald-200/60 text-[10px]">Current Rate</p>
-                        <p className="text-emerald-300 text-sm font-bold">{stats.prcRate || 10} PRC = ₹1</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Category Limits */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Utility Limit */}
-                    <div 
-                      onClick={() => navigate('/redeem')}
-                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
-                    >
-                      <p className="text-emerald-200/70 text-[10px] uppercase mb-1">Utility</p>
-                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.utility?.remaining || 0)).toLocaleString()}</p>
-                      <p className="text-emerald-300/60 text-[10px]">PRC</p>
-                    </div>
+                  {/* Header - Available PRC to Redeem (Sum of all categories) */}
+                  {(() => {
+                    const utilityPRC = stats.categoryLimits?.utility?.remaining || 0;
+                    const shopPRC = stats.categoryLimits?.shopping?.remaining || 0;
+                    const bankPRC = stats.categoryLimits?.bank?.remaining || 0;
+                    const totalRedeemablePRC = utilityPRC + shopPRC + bankPRC;
+                    const prcRate = stats.prcRate || 10;
+                    const totalINR = Math.floor(totalRedeemablePRC / prcRate);
+                    const utilityINR = Math.floor(utilityPRC / prcRate);
+                    const shopINR = Math.floor(shopPRC / prcRate);
+                    const bankINR = Math.floor(bankPRC / prcRate);
                     
-                    {/* Shopping Limit */}
-                    <div 
-                      onClick={() => navigate('/shop')}
-                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
-                    >
-                      <p className="text-purple-200/70 text-[10px] uppercase mb-1">Shopping</p>
-                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.shopping?.remaining || 0)).toLocaleString()}</p>
-                      <p className="text-purple-300/60 text-[10px]">PRC</p>
-                    </div>
-                    
-                    {/* Bank Redeem */}
-                    <div 
-                      onClick={() => navigate('/prc-to-bank')}
-                      className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
-                    >
-                      <p className="text-amber-200/70 text-[10px] uppercase mb-1">Bank</p>
-                      <p className="text-white text-sm font-bold">{((stats.categoryLimits?.bank?.remaining || 0)).toLocaleString()}</p>
-                      <p className="text-amber-300/60 text-[10px]">PRC</p>
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                            <Banknote className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-white/60 text-xs uppercase tracking-wider">Available PRC/INR to Redeem</p>
+                            <p className="text-white text-2xl font-bold">{totalRedeemablePRC.toLocaleString()} PRC</p>
+                            <p className="text-emerald-300 text-sm font-semibold">≈ ₹{totalINR.toLocaleString()}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Current Rate Info */}
+                        <div className="bg-white/10 backdrop-blur rounded-xl p-3 mb-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-emerald-200/80 text-xs">Total (Utility + Shop + Bank)</p>
+                              <p className="text-white text-lg font-bold">{totalRedeemablePRC.toLocaleString()} PRC</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-emerald-200/60 text-[10px]">Current Rate</p>
+                              <p className="text-emerald-300 text-sm font-bold">{prcRate} PRC = ₹1</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Category Limits with PRC/INR */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Utility Limit */}
+                          <div 
+                            onClick={() => navigate('/redeem')}
+                            className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                          >
+                            <p className="text-emerald-200/70 text-[10px] uppercase mb-1">Utility</p>
+                            <p className="text-white text-sm font-bold">{utilityPRC.toLocaleString()}</p>
+                            <p className="text-emerald-300/80 text-[10px]">₹{utilityINR.toLocaleString()}</p>
+                          </div>
+                          
+                          {/* Shop Limit */}
+                          <div 
+                            onClick={() => navigate('/shop')}
+                            className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                          >
+                            <p className="text-purple-200/70 text-[10px] uppercase mb-1">Shop</p>
+                            <p className="text-white text-sm font-bold">{shopPRC.toLocaleString()}</p>
+                            <p className="text-purple-300/80 text-[10px]">₹{shopINR.toLocaleString()}</p>
+                          </div>
+                          
+                          {/* Bank Redeem */}
+                          <div 
+                            onClick={() => navigate('/prc-to-bank')}
+                            className="bg-white/10 backdrop-blur rounded-xl p-2.5 cursor-pointer hover:bg-white/20 transition-colors"
+                          >
+                            <p className="text-amber-200/70 text-[10px] uppercase mb-1">Bank</p>
+                            <p className="text-white text-sm font-bold">{bankPRC.toLocaleString()}</p>
+                            <p className="text-amber-300/80 text-[10px]">₹{bankINR.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </motion.div>
             </div>
