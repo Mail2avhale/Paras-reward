@@ -852,12 +852,9 @@ async def fetch_bill(data: FetchBillRequest):
             "confirmation_mobile_no": data.mobile,
             "sender_name": data.sender_name or "Customer",
             "operator_id": data.operator_id,
+            "source_ip": data.source_ip or "103.21.58.193",  # Required for some operators
             "latlong": DEFAULT_LATLONG
         }
-        
-        # Add source_ip if provided
-        if data.source_ip and data.source_ip != "127.0.0.1":
-            request_body["source_ip"] = data.source_ip
         
         # Add operator-specific parameters if provided
         if data.postalcode:
