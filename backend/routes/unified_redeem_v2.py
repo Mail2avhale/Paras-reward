@@ -957,13 +957,43 @@ async def create_redeem_request(request: RedeemRequestCreate):
     if user.get("kyc_status") != "verified":
         raise HTTPException(status_code=403, detail="KYC verification required for redeem")
     
-    # Check subscription plan
+    # Check subscription plan AND expiry
     valid_plans = ["startup", "growth", "elite"]
     user_plan = (user.get("subscription_plan") or "").lower()
     if user_plan not in valid_plans:
         raise HTTPException(
             status_code=403, 
             detail="Paid subscription required. Please upgrade to Startup, Growth or Elite plan."
+        )
+    
+    # CRITICAL: Check subscription expiry date
+    subscription_expiry = user.get("subscription_expiry")
+    if subscription_expiry:
+        try:
+            if isinstance(subscription_expiry, str):
+                # Parse ISO format date string
+                expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            else:
+                expiry_date = subscription_expiry
+            
+            # Check if subscription has expired
+            now_utc = datetime.now(timezone.utc)
+            if expiry_date < now_utc:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Your subscription has expired on {expiry_date.strftime('%d %b %Y')}. Please renew to continue redeeming."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            # Log but don't block if date parsing fails
+            import logging
+            logging.warning(f"Could not parse subscription_expiry: {subscription_expiry}, error: {e}")
+    else:
+        # No expiry date set - block redemption for safety
+        raise HTTPException(
+            status_code=403,
+            detail="Subscription expiry not set. Please contact support."
         )
     
     # Calculate charges
