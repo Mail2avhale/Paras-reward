@@ -3488,81 +3488,23 @@ async def get_subscription_monthly_price(plan: str) -> float:
 
 async def calculate_user_monthly_redeem_limit(user: dict) -> dict:
     """
-    Calculate user's monthly redemption limit with CARRY FORWARD
+    DEPRECATED: Use calculate_user_redeem_limit(user_id) instead!
     
-    Formula: (Base Limit × Referral Multiplier) + Carry Forward from Previous Months
+    This function calculates ONLY monthly limit without months_active accumulation.
+    The newer calculate_user_redeem_limit() includes:
+    - months_active accumulation
+    - referral bonus
+    - carry forward
     
-    Base Limit = Plan Price × 5 × 10
-    Referral Multiplier = 1 + (Paid Referrals × 20%)
-    Carry Forward = Sum of unused limits from all previous months
-    
-    Example:
-    - Elite plan: 799 × 5 × 10 = 39,950 PRC base limit
-    - With 5 paid referrals: 39,950 × 2.0 = 79,900 PRC monthly limit
-    - If last month used only 20,000: Carry forward = 59,900 PRC
-    - This month total available = 79,900 + 59,900 = 139,800 PRC
+    Keeping for backward compatibility but marked deprecated.
     """
-    redeem_settings = await get_monthly_redeem_limit_settings()
+    # Redirect to the main function
+    user_id = user.get("uid")
+    if user_id:
+        return await calculate_user_redeem_limit(user_id)
     
-    if not redeem_settings.get("enabled", True):
-        return {"limit": float('inf'), "enabled": False}
-    
-    # Get user's subscription info
-    sub_info = await get_user_subscription_info(user)
-    plan = sub_info.get("plan", "explorer")
-    
-    # Get plan monthly price
-    plan_price = await get_subscription_monthly_price(plan)
-    
-    # Get direct referral count - ONLY PAID USERS COUNT!
-    # Anti-fraud: Free/Explorer users don't contribute to referral bonus
-    FREE_PLANS = ['explorer', 'free', '', None]
-    direct_referrals = await db.users.count_documents({
-        "referred_by": user.get("uid"),
-        "subscription_plan": {"$nin": FREE_PLANS, "$ne": None, "$exists": True}
-    })
-    
-    # Also count total referrals (including free) for display
-    total_referrals = await db.users.count_documents({"referred_by": user.get("uid")})
-    free_referrals = total_referrals - direct_referrals
-    
-    # Calculate base limit
-    m1 = redeem_settings.get("multiplier_1", 5)
-    m2 = redeem_settings.get("multiplier_2", 10)
-    referral_bonus_percent = redeem_settings.get("referral_bonus_percent", 20)  # 20% per referral
-    
-    base_limit = plan_price * m1 * m2
-    
-    # Calculate referral multiplier: 1 + (referrals × bonus_percent / 100)
-    # Example: 5 referrals × 20% = 100% extra = 2.0× multiplier
-    # ONLY PAID REFERRALS COUNT
-    referral_multiplier = 1 + (direct_referrals * referral_bonus_percent / 100)
-    
-    # Monthly limit (before carry forward)
-    monthly_limit = base_limit * referral_multiplier
-    
-    # Calculate carry forward from previous months
-    carry_forward_data = await calculate_carry_forward_limit(user, monthly_limit)
-    carry_forward = carry_forward_data.get("carry_forward", 0)
-    
-    # Final limit = Monthly limit + Carry forward
-    total_limit = monthly_limit + carry_forward
-    
-    return {
-        "limit": total_limit,
-        "monthly_limit": monthly_limit,  # This month's base limit
-        "carry_forward": carry_forward,   # Accumulated from previous months
-        "carry_forward_months": carry_forward_data.get("months_calculated", 0),
-        "base_limit": base_limit,
-        "referral_multiplier": referral_multiplier,
-        "referral_bonus_percent": referral_bonus_percent,
-        "direct_referrals": direct_referrals,  # Only paid count
-        "total_referrals": total_referrals,     # Total including free
-        "free_referrals": free_referrals,       # Free users (don't count)
-        "plan": plan,
-        "plan_price": plan_price,
-        "enabled": True
-    }
+    # Fallback for missing uid
+    return {"limit": 0, "enabled": False, "error": "No user ID"}
 
 async def get_user_monthly_redemption_usage(user_id: str, subscription_start: str = None) -> float:
     """
@@ -6004,145 +5946,8 @@ async def check_user_birthday(uid: str):
 # - /auth/change-password
 # - /auth/user/{uid}
 # 
-# Original routes below are disabled by renaming decorator path to avoid conflicts
-
-async def register_user(request: Request):
-    """Enhanced user registration with fraud detection"""
-    # Check if registration is enabled
-    settings = await db.settings.find_one({}, {"_id": 0, "registration_enabled": 1, "registration_message": 1})
-    if settings and not settings.get("registration_enabled", True):
-        message = settings.get("registration_message", "New user registrations are currently closed. Please check back later.")
-        raise HTTPException(status_code=403, detail=message)
-    
-    data = await request.json()
-    
-    # Get client IP and device fingerprint for fraud detection
-    client_ip = get_client_ip(request)
-    device_fingerprint = data.get('device_fingerprint')
-    
-    # ========== FRAUD DETECTION ==========
-    fraud_check = await fraud_detector.assess_registration_risk(
-        ip_address=client_ip,
-        device_fingerprint=device_fingerprint,
-        aadhaar=data.get('aadhaar_number'),
-        pan=data.get('pan_number'),
-        mobile=data.get('mobile'),
-        referral_code=data.get('referred_by') or data.get('referral_code')
-    )
-    
-    # Log the registration attempt
-    await fraud_detector.log_registration_attempt(
-        ip=client_ip,
-        device=device_fingerprint,
-        success=fraud_check["allowed"],
-        reason=fraud_check.get("block_reason")
-    )
-    
-    # Block if fraud detected
-    if not fraud_check["allowed"]:
-        raise HTTPException(
-            status_code=403,
-            detail=fraud_check["block_reason"]
-        )
-    
-    # Construct full name from first, middle, last name if provided
-    if data.get('first_name') or data.get('last_name'):
-        name_parts = []
-        if data.get('first_name'):
-            name_parts.append(data['first_name'])
-        if data.get('middle_name'):
-            name_parts.append(data['middle_name'])
-        if data.get('last_name'):
-            name_parts.append(data['last_name'])
-        data['name'] = ' '.join(name_parts)
-    
-    # Legacy duplicate check (fraud detector also checks, but keep for backwards compat)
-    for field in ["email"]:
-        if data.get(field):
-            if not await check_unique_fields(field, data[field]):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"{field.replace('_', ' ').title()} already registered"
-                )
-    
-    # Hash password if provided
-    if data.get('password'):
-        data['password_hash'] = hash_password(data['password'])
-        del data['password']
-    
-    # Store fraud detection data
-    data['registration_ip'] = client_ip
-    data['device_fingerprint'] = device_fingerprint
-    data['fraud_risk_score'] = fraud_check.get('risk_score', 0)
-    data['fraud_risk_level'] = fraud_check.get('risk_level', 'low')
-    
-    # Create user
-    user = User(**data)
-    user_dict = user.model_dump()
-    
-    # Convert datetime fields
-    for field in ["created_at", "updated_at", "last_login"]:
-        if user_dict.get(field):
-            user_dict[field] = user_dict[field].isoformat()
-    
-    await db.users.insert_one(user_dict)
-    
-    # ========== SEND WELCOME NOTIFICATION TO NEW USER ==========
-    try:
-        welcome_notification = {
-            "notification_id": str(uuid.uuid4()),
-            "user_id": user.uid,
-            "user_uid": user.uid,
-            "title": "🎉 Welcome to Paras Reward!",
-            "message": f"Hi {user_dict.get('name', 'there')}! Welcome to Paras Reward. Start your journey by completing your profile and exploring amazing rewards!",
-            "type": "welcome",
-            "icon": "🎉",
-            "action_url": "/dashboard",
-            "read": False,
-            "is_read": False,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.notifications.insert_one(welcome_notification)
-    except Exception as e:
-        logging.error(f"Failed to send welcome notification: {e}")
-    
-    # ========== NOTIFY REFERRER ABOUT NEW REFERRAL ==========
-    if user_dict.get("referred_by"):
-        referrer_uid = user_dict["referred_by"]
-        referrer = await db.users.find_one({"uid": referrer_uid}, {"_id": 0, "name": 1})
-        new_user_name = user_dict.get("name", "Someone")
-        
-        # Create notification for the referrer (old system)
-        await create_social_notification(
-            user_uid=referrer_uid,
-            notification_type="new_referral",
-            title="New Referral Joined!",
-            message=f"{new_user_name} just joined using your referral link! Help them get started.",
-            from_uid=user.uid,
-            from_name=new_user_name,
-            icon="👋",
-            action_url=f"/messages/{user.uid}"
-        )
-        
-        # Create in-app notification (new bell system)
-        await notify_referral_joined(
-            user_id=referrer_uid,
-            referral_name=new_user_name
-        )
-        
-        # Log to activity
-        await log_activity(
-            user_id=referrer_uid,
-            action_type="new_referral_joined",
-            description=f"New referral: {new_user_name} joined your network",
-            metadata={"new_user_uid": user.uid, "new_user_name": new_user_name}
-        )
-    
-    return {
-        "message": "Registration successful", 
-        "uid": user.uid,
-        "risk_level": fraud_check.get('risk_level', 'low')
-    }
+# Original routes below are disabled - moved to routes/auth.py
+# (register_user function removed - use auth.py version)
 
 async def check_auth_type(identifier: str):
     """Check if user should use PIN or Password login - PIN ONLY MODE (password disabled)"""
@@ -32440,16 +32245,14 @@ async def upload_qr_code(file: UploadFile = File(...)):
 
 @api_router.get("/admin/referral-bonus-settings")
 async def get_referral_bonus_settings():
-    """Get referral bonus settings for all 5 levels (Admin only)"""
+    """Get referral bonus settings for 3 levels (Admin only)"""
     settings = await db.settings.find_one({}, {"_id": 0, "referral_bonus_settings": 1})
     
-    # Default settings
+    # Default settings - 3 levels only (matching mining_economy.py)
     default_settings = {
-        "level_1": 10,    # 10%
-        "level_2": 5,     # 5%
-        "level_3": 2.5,   # 2.5%
-        "level_4": 1.5,   # 1.5%
-        "level_5": 1      # 1%
+        "level_1": 10,    # 10% per active L1 user
+        "level_2": 5,     # 5% per active L2 user
+        "level_3": 3      # 3% per active L3 user
     }
     
     if settings and "referral_bonus_settings" in settings:
@@ -32459,11 +32262,11 @@ async def get_referral_bonus_settings():
 
 @api_router.post("/admin/referral-bonus-settings")
 async def update_referral_bonus_settings(request: Request):
-    """Update referral bonus settings for all 5 levels (Admin only)"""
+    """Update referral bonus settings for 3 levels (Admin only)"""
     data = await request.json()
     
-    # Validate all levels are provided
-    required_levels = ["level_1", "level_2", "level_3", "level_4", "level_5"]
+    # Validate all 3 levels are provided
+    required_levels = ["level_1", "level_2", "level_3"]
     for level in required_levels:
         if level not in data:
             raise HTTPException(status_code=400, detail=f"Missing required field: {level}")
@@ -32474,8 +32277,6 @@ async def update_referral_bonus_settings(request: Request):
         "level_1": float(data["level_1"]),
         "level_2": float(data["level_2"]),
         "level_3": float(data["level_3"]),
-        "level_4": float(data["level_4"]),
-        "level_5": float(data["level_5"]),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -43484,7 +43285,9 @@ set_auth_helpers({
     'create_social_notification': create_social_notification,
     'parse_user_agent': parse_user_agent,
     'User': User,
-    'JWT_ACCESS_TOKEN_EXPIRE_MINUTES': JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+    'JWT_ACCESS_TOKEN_EXPIRE_MINUTES': JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
+    'is_paid_subscriber': is_paid_subscriber,
+    'PAID_PLANS': PAID_PLANS
 })
 set_auth_verify_token(verify_token)
 api_router.include_router(auth_router)

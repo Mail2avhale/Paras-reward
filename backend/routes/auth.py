@@ -76,6 +76,7 @@ def set_helpers(helpers: dict):
     global check_ip_whitelist, log_admin_action, log_activity
     global create_social_notification, parse_user_agent, User
     global JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+    global is_paid_subscriber_func, PAID_PLANS
     
     hash_password = helpers.get('hash_password')
     verify_password = helpers.get('verify_password')
@@ -97,6 +98,8 @@ def set_helpers(helpers: dict):
     parse_user_agent = helpers.get('parse_user_agent')
     User = helpers.get('User')
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES = helpers.get('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', 60)
+    is_paid_subscriber_func = helpers.get('is_paid_subscriber')
+    PAID_PLANS = helpers.get('PAID_PLANS', ["startup", "growth", "elite", "vip", "pro"])
 
 
 # ========== PYDANTIC MODELS ==========
@@ -665,10 +668,8 @@ async def login(
                 pass
     
     # Enforce PRC = 0 ONLY for truly free users (no paid subscription and no VIP)
-    # Paid plans: elite, growth, startup - these users should KEEP their PRC
-    user_plan = (user.get("subscription_plan") or "").lower()
-    is_paid_subscriber = user_plan in ["elite", "growth", "startup"]
-    is_vip = user.get("membership_type") == "vip"
+    # Use centralized is_paid_subscriber function from helpers
+    is_paid = is_paid_subscriber_func(user) if is_paid_subscriber_func else False
     
     # Generate JWT tokens for all users (sync operation - fast)
     token_id = str(uuid.uuid4())

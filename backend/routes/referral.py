@@ -263,11 +263,12 @@ async def get_multi_level_referral_stats(uid: str):
     # Get multi-level referrals (3 levels only now)
     referrals_by_level = await get_multi_level_referrals(uid, max_levels=3)
     
-    # NEW: Fixed bonus percentages for 3 levels (Updated March 2026)
+    # Fixed bonus percentages for 3 levels (Matching mining_economy.py)
+    # L1: +10%, L2: +5%, L3: +3% per active user
     bonus_percentages = {
-        'level_1': 5,    # +5%
-        'level_2': 3,    # +3%
-        'level_3': 2,    # +2%
+        'level_1': 10,   # +10% per active L1 user
+        'level_2': 5,    # +5% per active L2 user
+        'level_3': 3,    # +3% per active L3 user
     }
     
     # Get base rate for calculating mining speed bonus
