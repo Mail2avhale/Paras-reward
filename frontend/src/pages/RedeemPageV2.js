@@ -231,18 +231,23 @@ const SERVICE_CONFIG = {
 };
 
 // Static operator data (will be replaced with Eko API data)
+// CORRECT EKO OPERATOR IDs (as of March 2026):
+// Mobile Prepaid: Airtel=1, BSNL=5, Jio=90, MTNL Delhi=91, MTNL Mumbai=508, Vi=400
+// Mobile Postpaid: Airtel=2, BSNL=6, Jio=501, Vi=401
 const OPERATORS = {
   mobile_recharge: [
-    { id: 'JIO', name: 'Jio' },
-    { id: 'AIRTEL', name: 'Airtel' },
-    { id: 'VI', name: 'Vi (Vodafone Idea)' },
-    { id: 'BSNL', name: 'BSNL' }
+    { id: '90', name: 'Jio' },
+    { id: '1', name: 'Airtel' },
+    { id: '400', name: 'Vi (Vodafone Idea)' },
+    { id: '5', name: 'BSNL' },
+    { id: '91', name: 'MTNL Delhi' },
+    { id: '508', name: 'MTNL Mumbai' }
   ],
   mobile_postpaid: [
-    { id: 'JIO', name: 'Jio Postpaid' },
-    { id: 'AIRTEL', name: 'Airtel Postpaid' },
-    { id: 'VI', name: 'Vi Postpaid' },
-    { id: 'BSNL', name: 'BSNL Postpaid' }
+    { id: '501', name: 'Jio Postpaid' },
+    { id: '2', name: 'Airtel Postpaid' },
+    { id: '401', name: 'Vi Postpaid' },
+    { id: '6', name: 'BSNL Postpaid' }
   ],
   dth: [],
   electricity: [],
