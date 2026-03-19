@@ -34,12 +34,13 @@ const GiftVoucherRedemption = ({ user, onLogout }) => {
       return;
     }
     
-    // Check subscription plan for gift voucher access
-    const isVipOrPaidSubscription = 
-      ['startup', 'growth', 'elite'].includes(user.subscription_plan?.toLowerCase());
+    // Check subscription plan for gift voucher access (Elite or legacy paid plans)
+    const isPaidSubscription = 
+      ['startup', 'growth', 'elite', 'vip', 'pro'].includes(user.subscription_plan?.toLowerCase()) ||
+      user.membership_type === 'vip';
     
-    if (!isVipOrPaidSubscription) {
-      toast.error(t('paidSubscriptionRequiredGiftVouchers'), {
+    if (!isPaidSubscription) {
+      toast.error('Elite subscription required for Gift Vouchers. Upgrade now!', {
         duration: 4000,
         style: { fontSize: '16px', fontWeight: '500' }
       });

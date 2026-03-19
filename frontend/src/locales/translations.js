@@ -884,6 +884,128 @@ const translations = {
     mr: "Default वर Reset करा",
     hi: "Default पर Reset करें",
     en: "Reset to Default"
+  },
+  
+  // ==================== GIFT VOUCHERS PAGE ====================
+  giftVouchersTitle: {
+    mr: "गिफ्ट व्हाउचर्स",
+    hi: "गिफ्ट वाउचर्स",
+    en: "Gift Vouchers"
+  },
+  redeemPRCForVouchers: {
+    mr: "PRC ने व्हाउचर घ्या",
+    hi: "PRC से वाउचर लें",
+    en: "Redeem PRC for Vouchers"
+  },
+  availablePrcBalance: {
+    mr: "उपलब्ध PRC शिल्लक",
+    hi: "उपलब्ध PRC बैलेंस",
+    en: "Available PRC Balance"
+  },
+  selectVoucherAmount: {
+    mr: "व्हाउचर रक्कम निवडा",
+    hi: "वाउचर राशि चुनें",
+    en: "Select Voucher Amount"
+  },
+  popular: {
+    mr: "लोकप्रिय",
+    hi: "लोकप्रिय",
+    en: "Popular"
+  },
+  orderSummary: {
+    mr: "ऑर्डर सारांश",
+    hi: "ऑर्डर सारांश",
+    en: "Order Summary"
+  },
+  voucherValue: {
+    mr: "व्हाउचर मूल्य",
+    hi: "वाउचर मूल्य",
+    en: "Voucher Value"
+  },
+  prcRequired: {
+    mr: "आवश्यक PRC",
+    hi: "आवश्यक PRC",
+    en: "PRC Required"
+  },
+  processing: {
+    mr: "प्रक्रिया सुरू...",
+    hi: "प्रोसेसिंग...",
+    en: "Processing..."
+  },
+  whyPhonePeVouchers: {
+    mr: "PhonePe व्हाउचर का?",
+    hi: "PhonePe वाउचर क्यों?",
+    en: "Why PhonePe Vouchers?"
+  },
+  useAnywhere: {
+    mr: "कुठेही वापरा",
+    hi: "कहीं भी उपयोग करें",
+    en: "Use Anywhere"
+  },
+  multipleAmounts: {
+    mr: "विविध रक्कम",
+    hi: "विभिन्न राशि",
+    en: "Multiple Amounts"
+  },
+  fastProcessing: {
+    mr: "जलद प्रक्रिया",
+    hi: "तेज़ प्रोसेसिंग",
+    en: "Fast Processing"
+  },
+  perfectForGifts: {
+    mr: "गिफ्टसाठी उत्तम",
+    hi: "गिफ्ट के लिए बढ़िया",
+    en: "Perfect for Gifts"
+  },
+  voucherHistory: {
+    mr: "व्हाउचर इतिहास",
+    hi: "वाउचर इतिहास",
+    en: "Voucher History"
+  },
+  processingTime: {
+    mr: "प्रक्रिया वेळ: 24-48 तास",
+    hi: "प्रोसेसिंग समय: 24-48 घंटे",
+    en: "Processing Time: 24-48 hours"
+  },
+  all: {
+    mr: "सर्व",
+    hi: "सभी",
+    en: "All"
+  },
+  approved: {
+    mr: "मंजूर",
+    hi: "स्वीकृत",
+    en: "Approved"
+  },
+  completed: {
+    mr: "पूर्ण",
+    hi: "पूर्ण",
+    en: "Completed"
+  },
+  rejected: {
+    mr: "नाकारले",
+    hi: "अस्वीकृत",
+    en: "Rejected"
+  },
+  noVoucherRequests: {
+    mr: "अद्याप कोणत्याही व्हाउचर विनंत्या नाहीत",
+    hi: "अभी तक कोई वाउचर अनुरोध नहीं",
+    en: "No voucher requests yet"
+  },
+  requestVoucher: {
+    mr: "व्हाउचर विनंती करा",
+    hi: "वाउचर अनुरोध करें",
+    en: "Request Voucher"
+  },
+  insufficientPrc: {
+    mr: "अपुरे PRC शिल्लक",
+    hi: "अपर्याप्त PRC बैलेंस",
+    en: "Insufficient PRC Balance"
+  },
+  voucherRequestSuccess: {
+    mr: "व्हाउचर विनंती यशस्वी!",
+    hi: "वाउचर अनुरोध सफल!",
+    en: "Voucher request submitted successfully!"
   }
 };
 

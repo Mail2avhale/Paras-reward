@@ -154,6 +154,13 @@ const DailyRewards = ({ user }) => {
   const navigate = useNavigate();
   const { language } = useLanguage();
   
+  // Early return if no user (safety check)
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+  
   const [loading, setLoading] = useState(true);
   // Initialize userData with user prop to prevent subscription flickering
   const [userData, setUserData] = useState(user);
@@ -598,6 +605,18 @@ const DailyRewards = ({ user }) => {
   };
   
   const canCollect = sessionPRC >= 0.01;
+
+  // Safety check - if no user, show loading or redirect
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-24">
