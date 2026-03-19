@@ -249,22 +249,51 @@ const OPERATORS = {
     { id: '401', name: 'Vi Postpaid' },
     { id: '6', name: 'BSNL Postpaid' }
   ],
-  dth: [],
+  dth: [
+    { id: '20', name: 'Tata Play (Tata Sky)' },
+    { id: '21', name: 'Airtel DTH' },
+    { id: '16', name: 'Dish TV' },
+    { id: '95', name: 'Videocon D2H' },
+    { id: '17', name: 'BIG TV DTH' }
+  ],
   electricity: [],
   gas: [],
   water: [],
   lpg: [
-    { id: 'INDANE', name: 'Indane Gas' },
-    { id: 'HP_GAS', name: 'HP Gas' },
-    { id: 'BHARAT_GAS', name: 'Bharat Gas' }
+    { id: '438', name: 'Indane Gas (Indian Oil)' },
+    { id: '270', name: 'HP Gas (HPCL)' },
+    { id: '275', name: 'Bharat Gas (BPCL)' }
   ],
-  broadband: [],
+  broadband: [
+    { id: '220', name: 'Airtel Broadband' },
+    { id: '159', name: 'ACT Fibernet' },
+    { id: '201', name: 'Asianet Broadband' },
+    { id: '99', name: 'Connect Broadband' },
+    { id: '308', name: 'Alliance Broadband' },
+    { id: '558', name: 'AirJaldi Broadband' }
+  ],
   landline: [],
   cable_tv: [],
   emi: [],
   credit_card: [],
   insurance: [],
-  fastag: [],
+  fastag: [
+    { id: '596', name: 'ICICI Bank Fastag' },
+    { id: '326', name: 'Axis Bank Fastag' },
+    { id: '472', name: 'Kotak Mahindra Bank Fastag' },
+    { id: '337', name: 'Bank of Baroda Fastag' },
+    { id: '433', name: 'IDFC FIRST Bank FasTag' },
+    { id: '431', name: 'IDBI Bank Fastag' },
+    { id: '537', name: 'Paytm Payments Bank FASTag' },
+    { id: '267', name: 'IndusInd Bank FASTag' },
+    { id: '590', name: 'Federal Bank FASTag' },
+    { id: '448', name: 'IOB Fastag' },
+    { id: '601', name: 'UCO Bank Fastag' },
+    { id: '455', name: 'J&K Bank FASTag' },
+    { id: '5670', name: 'PNB FASTag' },
+    { id: '268', name: 'IHMCL FASTag' },
+    { id: '379', name: 'Equitas FASTag' }
+  ],
   education: [],
   municipal_tax: [],
   housing_society: [],
