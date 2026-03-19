@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PARAS REWARD - Whitepaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            color: #e0e0e0;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+        }
+        
+        .logo {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffd700, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            font-size: 20px;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 20px;
+        }
+        
+        .version {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            color: white;
+        }
+        
+        /* Sections */
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .section h2 {
+            color: #ffd700;
+            font-size: 28px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section h3 {
+            color: #a78bfa;
+            font-size: 20px;
+            margin: 25px 0 15px 0;
+        }
+        
+        .section p {
+            color: #b0b0b0;
+            margin-bottom: 15px;
+        }
+        
+        /* Plan Cards */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .plan-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .plan-card.explorer {
+            border-color: #6b7280;
+        }
+        
+        .plan-card.elite {
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.1));
+        }
+        
+        .plan-card h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .plan-card.explorer h3 { color: #9ca3af; }
+        .plan-card.elite h3 { color: #fbbf24; }
+        
+        .plan-price {
+            font-size: 36px;
+            font-weight: 800;
+            margin: 15px 0;
+        }
+        
+        .plan-card.explorer .plan-price { color: #6b7280; }
+        .plan-card.elite .plan-price { color: #fbbf24; }
+        
+        .plan-features {
+            list-style: none;
+            text-align: left;
+            margin-top: 20px;
+        }
+        
+        .plan-features li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .plan-features li:last-child {
+            border-bottom: none;
+        }
+        
+        .check { color: #22c55e; }
+        .cross { color: #ef4444; }
+        
+        /* Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .comparison-table th {
+            background: rgba(102, 126, 234, 0.3);
+            color: #ffd700;
+            font-weight: 600;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.03);
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #000;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+        
+        /* Warning Box */
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 40px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .logo { font-size: 32px; }
+            .tagline { font-size: 16px; }
+            .section { padding: 20px; }
+            .section h2 { font-size: 22px; }
+        }
+        
+        /* Language Toggle */
+        .lang-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .lang-btn {
+            padding: 10px 25px;
+            border: 2px solid #667eea;
+            background: transparent;
+            color: #667eea;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .lang-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+        
+        .marathi { display: none; }
+        .english { display: block; }
+        
+        body.lang-mr .marathi { display: block; }
+        body.lang-mr .english { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">PARAS REWARD</div>
+            <p class="tagline">Mine. Collect. Redeem. Earn Real Rewards!</p>
+            <span class="version">Whitepaper v2.0 | March 2026</span>
+        </div>
+        
+        <!-- Language Toggle -->
+        <div class="lang-toggle">
+            <button class="lang-btn active" onclick="setLang('en')">English</button>
+            <button class="lang-btn" onclick="setLang('mr')">मराठी</button>
+        </div>
+
+        <!-- ENGLISH VERSION -->
+        <div class="english">
+            <!-- Introduction -->
+            <div class="section">
+                <h2>📖 Introduction</h2>
+                <p>
+                    <strong>PARAS REWARD</strong> is a revolutionary rewards platform where users can earn PRC (Paras Reward Coins) 
+                    through daily mining activities. These coins can be redeemed for real-world benefits including mobile recharges, 
+                    bill payments, gift vouchers, and direct bank transfers.
+                </p>
+                <p>
+                    Our mission is to make earning rewards simple, transparent, and accessible to everyone.
+                </p>
+            </div>
+
+            <!-- What is PRC -->
+            <div class="section">
+                <h2>💰 What is PRC?</h2>
+                <p>
+                    <strong>PRC (Paras Reward Coin)</strong> is the native currency of the Paras Reward ecosystem.
+                </p>
+                
+                <div class="highlight-box">
+                    <strong>💱 Exchange Rate: 10 PRC = ₹1 INR</strong>
+                </div>
+                
+                <h3>How to Earn PRC:</h3>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>⛏️ <strong>Mining</strong> - Start daily mining sessions to earn PRC automatically</li>
+                    <li>👥 <strong>Referrals</strong> - Invite friends and earn bonus PRC from their mining</li>
+                    <li>🎁 <strong>Bonuses</strong> - Complete tasks and earn special rewards</li>
+                </ul>
+            </div>
+
+            <!-- Subscription Plans -->
+            <div class="section">
+                <h2>📋 Subscription Plans</h2>
+                <p>
+                    PARAS REWARD offers a simple two-plan system designed to give everyone access to mining while 
+                    providing premium benefits for serious earners.
+                </p>
+                
+                <div class="plans-grid">
+                    <!-- Explorer Plan -->
+                    <div class="plan-card explorer">
+                        <h3>🔍 EXPLORER</h3>
+                        <p style="color: #9ca3af;">Free Plan</p>
+                        <div class="plan-price">₹0</div>
+                        <p style="color: #6b7280; font-size: 14px;">Forever Free</p>
+                        <ul class="plan-features">
+                            <li><span class="check">✓</span> Mining Access</li>
+                            <li><span class="check">✓</span> View Mined PRC</li>
+                            <li><span class="cross">✗</span> Cannot Collect PRC</li>
+                            <li><span class="cross">✗</span> Cannot Redeem</li>
+                            <li><span class="cross">✗</span> No Referral Bonus</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Elite Plan -->
+                    <div class="plan-card elite">
+                        <h3>👑 ELITE</h3>
+                        <p style="color: #fbbf24;">Premium Plan</p>
+                        <div class="plan-price">₹799<span style="font-size: 16px; color: #9ca3af;">/month</span></div>
+                        <p style="color: #22c55e; font-size: 14px;">60% OFF - Was ₹2000</p>
+                        <ul class="plan-features">
+                            <li><span class="check">✓</span> Mining Access</li>
+                            <li><span class="check">✓</span> Collect Mined PRC</li>
+                            <li><span class="check">✓</span> Redeem to Bank</li>
+                            <li><span class="check">✓</span> Bill Payments</li>
+                            <li><span class="check">✓</span> Gift Vouchers</li>
+                            <li><span class="check">✓</span> Referral Bonuses</li>
+                            <li><span class="check">✓</span> Priority Support</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>💡 Key Difference:</strong> Both Explorer and Elite users can mine at the SAME speed. 
+                    The difference is that Explorer users cannot collect or redeem their mined PRC. 
+                    Upgrade to Elite to unlock your earnings!
+                </div>
+            </div>
+
+            <!-- How Mining Works -->
+            <div class="section">
+                <h2>⛏️ How Mining Works</h2>
+                
+                <h3>Step 1: Start Mining Session</h3>
+                <p>Open the Mining page and tap "Start Mining" to begin a 24-hour mining session.</p>
+                
+                <h3>Step 2: Earn PRC Automatically</h3>
+                <p>Once started, PRC accumulates automatically based on your mining rate. No need to keep the app open!</p>
+                
+                <h3>Step 3: Collect Your PRC (Elite Only)</h3>
+                <p>Elite users can collect their mined PRC anytime. The PRC is added to your wallet balance.</p>
+                
+                <h3>Step 4: Redeem for Rewards</h3>
+                <p>Use your PRC for mobile recharges, bill payments, gift vouchers, or transfer directly to your bank account.</p>
+                
+                <table class="comparison-table">
+                    <tr>
+                        <th>Mining Stats</th>
+                        <th>Explorer</th>
+                        <th>Elite</th>
+                    </tr>
+                    <tr>
+                        <td>Mining Speed</td>
+                        <td>Same</td>
+                        <td>Same</td>
+                    </tr>
+                    <tr>
+                        <td>Daily Session</td>
+                        <td>24 Hours</td>
+                        <td>24 Hours</td>
+                    </tr>
+                    <tr>
+                        <td>Can Collect PRC</td>
+                        <td style="color: #ef4444;">No</td>
+                        <td style="color: #22c55e;">Yes</td>
+                    </tr>
+                    <tr>
+                        <td>Referral Bonus</td>
+                        <td style="color: #ef4444;">No</td>
+                        <td style="color: #22c55e;">Yes</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Redemption Options -->
+            <div class="section">
+                <h2>🎁 Redemption Options</h2>
+                <p>Elite users can redeem their PRC for various rewards:</p>
+                
+                <h3>📱 Mobile Recharge</h3>
+                <p>Recharge any prepaid mobile number instantly using your PRC balance.</p>
+                
+                <h3>💡 Bill Payments (BBPS)</h3>
+                <p>Pay electricity, gas, DTH, broadband, and other utility bills directly.</p>
+                
+                <h3>🎫 Gift Vouchers</h3>
+                <p>Get vouchers for popular brands like Amazon, Flipkart, Swiggy, and more.</p>
+                
+                <h3>🏦 Bank Transfer</h3>
+                <p>Transfer your earnings directly to your bank account. Minimum: 5000 PRC (₹500)</p>
+                
+                <div class="warning-box">
+                    <strong>⚠️ Category Limits:</strong> Redemption is divided into categories:
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li>Utility (Bills/Recharge): 40% of your limit</li>
+                        <li>Shopping (Vouchers): 30% of your limit</li>
+                        <li>Bank Transfer: 30% of your limit</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Referral System -->
+            <div class="section">
+                <h2>👥 Referral System</h2>
+                <p>
+                    Invite friends to PARAS REWARD and earn bonus PRC when they mine! 
+                    The more active referrals you have, the higher your mining rate.
+                </p>
+                
+                <h3>How it Works:</h3>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>Share your unique referral code with friends</li>
+                    <li>When they sign up and start mining, you earn bonus PRC</li>
+                    <li>Earn up to 5 levels deep in your referral network</li>
+                    <li>Active referrals boost your mining rate!</li>
+                </ul>
+                
+                <div class="info-box">
+                    <strong>Note:</strong> Referral bonuses are only available for Elite users. 
+                    Explorer referrals do not count towards your bonus.
+                </div>
+            </div>
+
+            <!-- KYC Requirements -->
+            <div class="section">
+                <h2>🔐 KYC & Security</h2>
+                <p>
+                    To ensure platform security and comply with regulations, KYC verification is required 
+                    for certain features.
+                </p>
+                
+                <h3>KYC Required For:</h3>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>Bank transfers above ₹500</li>
+                    <li>High-value gift vouchers</li>
+                    <li>Bill payments</li>
+                </ul>
+                
+                <h3>Documents Accepted:</h3>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>Aadhaar Card</li>
+                    <li>PAN Card</li>
+                    <li>Bank Account Details</li>
+                </ul>
+            </div>
+
+            <!-- FAQ -->
+            <div class="section">
+                <h2>❓ Frequently Asked Questions</h2>
+                
+                <h3>Q: Is PARAS REWARD free to use?</h3>
+                <p>Yes! Explorer plan is completely free. You can mine PRC without paying anything. 
+                   To collect and redeem your earnings, upgrade to Elite (₹799/month).</p>
+                
+                <h3>Q: How much can I earn?</h3>
+                <p>Earnings depend on your mining activity and referral network. 
+                   Elite users can earn and redeem their full mining potential.</p>
+                
+                <h3>Q: Is my data safe?</h3>
+                <p>Yes! We use industry-standard encryption and security measures. 
+                   Your personal and financial data is protected.</p>
+                
+                <h3>Q: How long does bank transfer take?</h3>
+                <p>Bank transfers are processed within 3-7 business days after verification.</p>
+                
+                <h3>Q: Can I cancel my Elite subscription?</h3>
+                <p>Yes, you can cancel anytime. Your benefits continue until the end of your billing period.</p>
+            </div>
+
+            <!-- Contact -->
+            <div class="section">
+                <h2>📞 Contact & Support</h2>
+                <p>Need help? Our support team is here for you!</p>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>📧 Email: support@parasreward.com</li>
+                    <li>🌐 Website: www.parasreward.com</li>
+                    <li>💬 In-App Support: Available 24/7</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- MARATHI VERSION -->
+        <div class="marathi">
+            <!-- Introduction -->
+            <div class="section">
+                <h2>📖 परिचय</h2>
+                <p>
+                    <strong>PARAS REWARD</strong> हे एक क्रांतिकारी रिवॉर्ड्स प्लॅटफॉर्म आहे जिथे वापरकर्ते दैनंदिन 
+                    मायनिंग क्रियाकलापांद्वारे PRC (पारस रिवॉर्ड कॉइन्स) कमवू शकतात. हे कॉइन्स मोबाइल रिचार्ज, 
+                    बिल पेमेंट, गिफ्ट व्हाउचर आणि थेट बँक ट्रान्सफरसाठी रिडीम करता येतात.
+                </p>
+            </div>
+
+            <!-- What is PRC -->
+            <div class="section">
+                <h2>💰 PRC म्हणजे काय?</h2>
+                <p>
+                    <strong>PRC (पारस रिवॉर्ड कॉइन)</strong> हे पारस रिवॉर्ड इकोसिस्टमचे मूळ चलन आहे.
+                </p>
+                
+                <div class="highlight-box">
+                    <strong>💱 एक्सचेंज रेट: 10 PRC = ₹1 रुपये</strong>
+                </div>
+                
+                <h3>PRC कसे कमवायचे:</h3>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>⛏️ <strong>मायनिंग</strong> - दररोज मायनिंग सेशन सुरू करा आणि आपोआप PRC कमवा</li>
+                    <li>👥 <strong>रेफरल</strong> - मित्रांना आमंत्रित करा आणि त्यांच्या मायनिंगमधून बोनस PRC कमवा</li>
+                    <li>🎁 <strong>बोनस</strong> - टास्क पूर्ण करा आणि विशेष रिवॉर्ड्स कमवा</li>
+                </ul>
+            </div>
+
+            <!-- Subscription Plans -->
+            <div class="section">
+                <h2>📋 सबस्क्रिप्शन प्लॅन्स</h2>
+                <p>
+                    PARAS REWARD एक साधी दोन-प्लॅन प्रणाली देते.
+                </p>
+                
+                <div class="plans-grid">
+                    <!-- Explorer Plan -->
+                    <div class="plan-card explorer">
+                        <h3>🔍 EXPLORER</h3>
+                        <p style="color: #9ca3af;">फ्री प्लॅन</p>
+                        <div class="plan-price">₹0</div>
+                        <p style="color: #6b7280; font-size: 14px;">कायमचे फ्री</p>
+                        <ul class="plan-features">
+                            <li><span class="check">✓</span> मायनिंग ऍक्सेस</li>
+                            <li><span class="check">✓</span> मायन केलेले PRC बघा</li>
+                            <li><span class="cross">✗</span> PRC Collect करता येत नाही</li>
+                            <li><span class="cross">✗</span> Redeem करता येत नाही</li>
+                            <li><span class="cross">✗</span> रेफरल बोनस नाही</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Elite Plan -->
+                    <div class="plan-card elite">
+                        <h3>👑 ELITE</h3>
+                        <p style="color: #fbbf24;">प्रीमियम प्लॅन</p>
+                        <div class="plan-price">₹799<span style="font-size: 16px; color: #9ca3af;">/महिना</span></div>
+                        <p style="color: #22c55e; font-size: 14px;">60% OFF - आधी ₹2000</p>
+                        <ul class="plan-features">
+                            <li><span class="check">✓</span> मायनिंग ऍक्सेस</li>
+                            <li><span class="check">✓</span> PRC Collect करा</li>
+                            <li><span class="check">✓</span> बँकेत Redeem करा</li>
+                            <li><span class="check">✓</span> बिल पेमेंट</li>
+                            <li><span class="check">✓</span> गिफ्ट व्हाउचर</li>
+                            <li><span class="check">✓</span> रेफरल बोनस</li>
+                            <li><span class="check">✓</span> प्राधान्य सपोर्ट</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>💡 मुख्य फरक:</strong> Explorer आणि Elite दोन्ही युजर्स सारख्याच स्पीडने माइन करतात. 
+                    फरक हा आहे की Explorer युजर्स त्यांचे माइन केलेले PRC collect किंवा redeem करू शकत नाहीत. 
+                    तुमची कमाई अनलॉक करण्यासाठी Elite ला अपग्रेड करा!
+                </div>
+            </div>
+
+            <!-- How Mining Works -->
+            <div class="section">
+                <h2>⛏️ मायनिंग कसे काम करते</h2>
+                
+                <h3>स्टेप 1: मायनिंग सेशन सुरू करा</h3>
+                <p>Mining पेज उघडा आणि 24-तासांचे मायनिंग सेशन सुरू करण्यासाठी "Start Mining" वर टॅप करा.</p>
+                
+                <h3>स्टेप 2: आपोआप PRC कमवा</h3>
+                <p>एकदा सुरू झाल्यावर, तुमच्या मायनिंग रेटवर आधारित PRC आपोआप जमा होतात. अ‍ॅप उघडे ठेवण्याची गरज नाही!</p>
+                
+                <h3>स्टेप 3: तुमचे PRC Collect करा (फक्त Elite)</h3>
+                <p>Elite युजर्स त्यांचे माइन केलेले PRC कधीही collect करू शकतात.</p>
+                
+                <h3>स्टेप 4: रिवॉर्ड्ससाठी Redeem करा</h3>
+                <p>तुमचे PRC मोबाइल रिचार्ज, बिल पेमेंट, गिफ्ट व्हाउचर किंवा थेट बँक ट्रान्सफरसाठी वापरा.</p>
+                
+                <table class="comparison-table">
+                    <tr>
+                        <th>मायनिंग स्टॅट्स</th>
+                        <th>Explorer</th>
+                        <th>Elite</th>
+                    </tr>
+                    <tr>
+                        <td>मायनिंग स्पीड</td>
+                        <td>सारखेच</td>
+                        <td>सारखेच</td>
+                    </tr>
+                    <tr>
+                        <td>दैनिक सेशन</td>
+                        <td>24 तास</td>
+                        <td>24 तास</td>
+                    </tr>
+                    <tr>
+                        <td>PRC Collect</td>
+                        <td style="color: #ef4444;">नाही</td>
+                        <td style="color: #22c55e;">हो</td>
+                    </tr>
+                    <tr>
+                        <td>रेफरल बोनस</td>
+                        <td style="color: #ef4444;">नाही</td>
+                        <td style="color: #22c55e;">हो</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Redemption Options -->
+            <div class="section">
+                <h2>🎁 Redemption पर्याय</h2>
+                <p>Elite युजर्स त्यांचे PRC विविध रिवॉर्ड्ससाठी redeem करू शकतात:</p>
+                
+                <h3>📱 मोबाइल रिचार्ज</h3>
+                <p>तुमच्या PRC बॅलन्सचा वापर करून कोणताही प्रीपेड मोबाइल नंबर इन्स्टंट रिचार्ज करा.</p>
+                
+                <h3>💡 बिल पेमेंट (BBPS)</h3>
+                <p>वीज, गॅस, DTH, ब्रॉडबँड आणि इतर युटिलिटी बिले थेट भरा.</p>
+                
+                <h3>🎫 गिफ्ट व्हाउचर</h3>
+                <p>Amazon, Flipkart, Swiggy आणि इतर लोकप्रिय ब्रँड्सचे व्हाउचर मिळवा.</p>
+                
+                <h3>🏦 बँक ट्रान्सफर</h3>
+                <p>तुमची कमाई थेट तुमच्या बँक खात्यात ट्रान्सफर करा. किमान: 5000 PRC (₹500)</p>
+                
+                <div class="warning-box">
+                    <strong>⚠️ कॅटेगरी लिमिट्स:</strong>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li>युटिलिटी (बिल/रिचार्ज): तुमच्या लिमिटच्या 40%</li>
+                        <li>शॉपिंग (व्हाउचर): तुमच्या लिमिटच्या 30%</li>
+                        <li>बँक ट्रान्सफर: तुमच्या लिमिटच्या 30%</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="section">
+                <h2>📞 संपर्क आणि सपोर्ट</h2>
+                <p>मदत हवी आहे? आमची सपोर्ट टीम तुमच्यासाठी आहे!</p>
+                <ul style="margin-left: 20px; color: #b0b0b0;">
+                    <li>📧 ईमेल: support@parasreward.com</li>
+                    <li>🌐 वेबसाइट: www.parasreward.com</li>
+                    <li>💬 इन-अ‍ॅप सपोर्ट: 24/7 उपलब्ध</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© 2026 PARAS REWARD. All Rights Reserved.</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+                This document is for informational purposes only. Terms and conditions may change.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            document.body.className = lang === 'mr' ? 'lang-mr' : '';
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
