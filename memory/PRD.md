@@ -34,17 +34,35 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 
 ## Subscription System (FINALIZED - March 2026)
 
-### ONLY TWO PLANS:
-| Plan | Price | Mining | Redemption | PRC Expiry |
-|------|-------|--------|------------|------------|
-| **Explorer** | FREE | Basic (1x) | ❌ Not Allowed | 2 days |
-| **Elite** | ₹799/month | Full (3x) | ✅ Allowed | Never |
+### ONLY TWO PLANS - SAME MINING SPEED:
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║  Feature          │  EXPLORER (Free)   │  ELITE (₹799/month)      ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Mining Speed     │  SAME              │  SAME                    ║
+║  PRC दिसेल         │  ✅ Yes            │  ✅ Yes                  ║
+║  PRC Collect      │  ❌ NO             │  ✅ Yes                  ║
+║  Redeem           │  ❌ NO             │  ✅ Yes                  ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+**Key Difference:** Explorer users can MINE but CANNOT COLLECT or REDEEM PRC!
 
 ### Code Implementation:
 ```python
-# In server.py
-PAID_PLANS = ["elite"]  # ONLY Elite is paid
-LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]  # Treated as Elite
+# In server.py - SUBSCRIPTION_PLANS
+"explorer": {
+    "mining_rate": 90,      # SAME as Elite
+    "prc_per_tap": 2.0,     # SAME as Elite
+    "can_collect": False,   # ❌ Cannot collect
+    "can_redeem": False     # ❌ Cannot redeem
+}
+"elite": {
+    "mining_rate": 90,
+    "prc_per_tap": 2.0,
+    "can_collect": True,    # ✅ Can collect
+    "can_redeem": True      # ✅ Can redeem
+}
 
 # Use this function to check paid status:
 is_paid_subscriber(user)  # Returns True for Elite + Legacy plans

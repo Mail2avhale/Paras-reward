@@ -273,12 +273,12 @@ async def claim_mining(uid: str):
     # Use helper function - subscription_plan is source of truth
     is_elite = _is_paid_subscriber(user) if _is_paid_subscriber else False
     
-    # IMPORTANT: Free/Explorer users CANNOT collect PRC
+    # IMPORTANT: Explorer (Free) users CANNOT collect PRC
     if not is_elite:
         subscription_plan = user.get("subscription_plan", "explorer")
         raise HTTPException(
             status_code=403, 
-            detail=f"Free/Explorer users cannot collect PRC. Please upgrade to Elite to claim your mined coins. Current plan: {subscription_plan}"
+            detail="Explorer users cannot collect PRC. Upgrade to Elite (₹799/month) to collect your mined coins!"
         )
     
     # Derive subscription_status from is_elite check
@@ -491,7 +491,7 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_status = "elite" if is_elite else "free"
     
-    # Free users cannot collect PRC
+    # Explorer (Free) users CANNOT collect PRC
     if not is_elite:
         await db.users.update_one(
             {"uid": uid},
@@ -502,15 +502,15 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
             await _log_activity(
                 user_id=uid,
                 action_type="mining_collect_blocked",
-                description="Free user attempted to collect PRC - blocked",
+                description="Explorer user attempted to collect PRC - blocked",
                 metadata={"subscription_plan": subscription_plan}
             )
         
         return {
             "success": False,
             "blocked": True,
-            "message": "तुम्ही Free user आहात. PRC collect करण्यासाठी Startup किंवा Elite plan घ्या! 🚀",
-            "message_en": "You are a Free user. Upgrade to Startup or Elite plan to collect PRC!",
+            "message": "तुम्ही Explorer आहात. PRC collect करण्यासाठी Elite plan घ्या! 🚀",
+            "message_en": "You are on Explorer plan. Upgrade to Elite (₹799/month) to collect your mined PRC!",
             "prc_collected": 0,
             "new_balance": user.get("prc_balance", 0),
             "subscription_status": subscription_status,

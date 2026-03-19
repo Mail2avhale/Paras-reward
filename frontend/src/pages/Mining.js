@@ -794,22 +794,22 @@ const DailyRewards = ({ user }) => {
                   </div>
                 </div>
                 
-                {/* FREE USER - Show upgrade prompt instead of collect button */}
+                {/* EXPLORER USER - Show upgrade prompt instead of collect button */}
                 {isFreeUser ? (
                   <div className="mt-6 bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-4 border border-amber-500/30">
                     <div className="flex items-center gap-3 mb-3">
                       <Crown className="w-6 h-6 text-amber-400" />
                       <div>
-                        <p className="text-amber-400 font-semibold text-sm">Upgrade to Collect PRC!</p>
-                        <p className="text-gray-400 text-xs">Upgrade your plan to collect {sessionPRC.toFixed(2)} PRC</p>
+                        <p className="text-amber-400 font-semibold text-sm">Explorer → Elite Upgrade!</p>
+                        <p className="text-gray-400 text-xs">तुम्ही {sessionPRC.toFixed(2)} PRC mine केले! Collect करण्यासाठी Elite घ्या</p>
                       </div>
                     </div>
                     <Button 
-                      onClick={() => navigate('/subscription')}
+                      onClick={() => navigate('/pricing')}
                       className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold py-3 rounded-xl"
                     >
                       <Crown className="w-4 h-4 mr-2" />
-                      Upgrade Now
+                      Elite घ्या - ₹799/month
                     </Button>
                   </div>
                 ) : (

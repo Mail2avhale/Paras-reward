@@ -2849,29 +2849,35 @@ class GiftVoucherProcess(BaseModel):
 # ╚════════════════════════════════════════════════════════════════╝
 SUBSCRIPTION_PLANS = {
     # ===== ACTIVE PLANS (for new users) =====
+    # ╔════════════════════════════════════════════════════════════════╗
+    # ║  Explorer vs Elite: SAME MINING SPEED                          ║
+    # ║  Difference: Explorer CANNOT collect/redeem PRC                ║
+    # ╚════════════════════════════════════════════════════════════════╝
     "explorer": {
         "name": "Explorer",
-        "description": "Free plan with basic mining",
-        "mining_rate": 100,  # Base mining rate
-        "multiplier": 1.0,
-        "referral_weight": 0,  # FREE users don't count for referral bonus
+        "description": "Free plan - mine but cannot collect",
+        "mining_rate": 90,       # SAME as Elite
+        "multiplier": 1.0,       # SAME as Elite (display only)
+        "referral_weight": 0,    # FREE users don't count for referral bonus
         "tap_limit": 100,
-        "prc_per_tap": 0.1,
-        "daily_max_prc": 10,
-        "can_redeem": False,  # Cannot redeem PRC
+        "prc_per_tap": 2.0,      # SAME as Elite
+        "daily_max_prc": 200,    # SAME as Elite
+        "can_collect": False,    # ❌ CANNOT collect mined PRC
+        "can_redeem": False,     # ❌ CANNOT redeem PRC
         "is_free": True,
         "default_price": 0
     },
     "elite": {
         "name": "Elite",
-        "description": "Premium plan with full features - ₹799/month",
+        "description": "Premium plan - collect & redeem PRC - ₹799/month",
         "mining_rate": 90,
-        "multiplier": 3.0,
+        "multiplier": 1.0,
         "referral_weight": 1.0,  # Full referral bonus
         "tap_limit": 100,
         "prc_per_tap": 2.0,
         "daily_max_prc": 200,
-        "can_redeem": True,  # Full redeem access
+        "can_collect": True,     # ✅ CAN collect mined PRC
+        "can_redeem": True,      # ✅ CAN redeem PRC
         "is_free": False,
         "default_price": 799
     },
@@ -2879,9 +2885,10 @@ SUBSCRIPTION_PLANS = {
     # Existing users on these plans are treated as Elite
     "_legacy_startup": {
         "name": "Startup (Legacy - DO NOT USE)",
-        "mining_rate": 90,  # Same as Elite
-        "multiplier": 3.0,
+        "mining_rate": 90,
+        "multiplier": 1.0,
         "referral_weight": 1.0,
+        "can_collect": True,
         "can_redeem": True,
         "is_free": False,
         "default_price": 299,
@@ -2890,9 +2897,10 @@ SUBSCRIPTION_PLANS = {
     },
     "_legacy_growth": {
         "name": "Growth (Legacy - DO NOT USE)",
-        "mining_rate": 90,  # Same as Elite
-        "multiplier": 3.0,
+        "mining_rate": 90,
+        "multiplier": 1.0,
         "referral_weight": 1.0,
+        "can_collect": True,
         "can_redeem": True,
         "is_free": False,
         "default_price": 549,
