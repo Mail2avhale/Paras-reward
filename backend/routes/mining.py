@@ -271,19 +271,19 @@ async def claim_mining(uid: str):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Use helper function - subscription_plan is source of truth
-    is_vip = _is_paid_subscriber(user) if _is_paid_subscriber else False
+    is_elite = _is_paid_subscriber(user) if _is_paid_subscriber else False
     
     # IMPORTANT: Free/Explorer users CANNOT collect PRC
-    if not is_vip:
+    if not is_elite:
         subscription_plan = user.get("subscription_plan", "explorer")
         raise HTTPException(
             status_code=403, 
-            detail=f"Free/Explorer users cannot collect PRC. Please upgrade to VIP to claim your mined coins. Current plan: {subscription_plan}"
+            detail=f"Free/Explorer users cannot collect PRC. Please upgrade to Elite to claim your mined coins. Current plan: {subscription_plan}"
         )
     
-    # Derive membership_type for backward compatibility
+    # Derive subscription_status from is_elite check
     subscription_plan = user.get("subscription_plan", "explorer")
-    membership_type = "vip" if is_vip else "free"
+    subscription_status = "elite" if is_elite else "free"
     
     # Check if mining session exists
     mining_active = user.get("mining_active")
@@ -339,8 +339,8 @@ async def claim_mining(uid: str):
         current_total_mined = 0
     new_total_mined = current_total_mined + mined_amount
     
-    # Calculate expiry date (never for VIP)
-    expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
+    # Calculate expiry date (never for Elite)
+    expiry_date = None if is_elite else (now + timedelta(days=2)).isoformat()
     
     # Mining history entry
     mining_entry = {
@@ -350,7 +350,7 @@ async def claim_mining(uid: str):
         "timestamp": now.isoformat(),
         "burned": False,
         "expires_at": expiry_date,
-        "membership_type": membership_type
+        "subscription_status": subscription_status
     }
     
     # Calculate referral bonus portion
@@ -418,8 +418,8 @@ async def claim_mining(uid: str):
         "expired": False,
         "balance_after": new_balance,
         "metadata": {
-            "membership_type": membership_type,
-            "validity": "2 days" if not is_vip else "lifetime"
+            "subscription_status": subscription_status,
+            "validity": "2 days" if not is_elite else "lifetime"
         }
     }))
     
@@ -438,7 +438,7 @@ async def claim_mining(uid: str):
     
     # Notification
     if _create_notification:
-        validity_msg = " (Valid for 2 days - Upgrade to VIP for lifetime validity)" if not is_vip else " (Lifetime validity)"
+        validity_msg = " (Valid for 2 days - Upgrade to Elite for lifetime validity)" if not is_elite else " (Lifetime validity)"
         parallel_tasks.append(_create_notification(
             user_id=uid,
             title="Mining Rewards Claimed! ⛏️",
@@ -465,8 +465,8 @@ async def claim_mining(uid: str):
         "total_mined_this_session": round(mined_amount, 4),
         "new_balance": round(new_balance, 4),
         "total_mined": round(new_total_mined, 4),
-        "membership_type": membership_type,
-        "validity": "2 days" if not is_vip else "lifetime",
+        "subscription_status": subscription_status,
+        "validity": "2 days" if not is_elite else "lifetime",
         "expires_at": expiry_date,
         "message": f"Successfully claimed {round(user_receives, 2)} PRC!",
         "session_reset": True,
@@ -486,13 +486,13 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         raise HTTPException(status_code=404, detail="User not found")
     
     now = datetime.now(timezone.utc)
-    is_vip = _is_paid_subscriber(user) if _is_paid_subscriber else False
+    is_elite = _is_paid_subscriber(user) if _is_paid_subscriber else False
     
     subscription_plan = user.get("subscription_plan", "explorer")
-    membership_type = "vip" if is_vip else "free"
+    subscription_status = "elite" if is_elite else "free"
     
     # Free users cannot collect PRC
-    if not is_vip:
+    if not is_elite:
         await db.users.update_one(
             {"uid": uid},
             {"$set": {"mining_start_time": now.isoformat()}}
@@ -513,7 +513,7 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
             "message_en": "You are a Free user. Upgrade to Startup or Elite plan to collect PRC!",
             "prc_collected": 0,
             "new_balance": user.get("prc_balance", 0),
-            "membership_type": membership_type,
+            "subscription_status": subscription_status,
             "upgrade_required": True,
             "session_restarted": True
         }
@@ -563,14 +563,14 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         current_total_mined = 0
     new_total_mined = current_total_mined + prc_to_collect
     
-    expiry_date = None if is_vip else (now + timedelta(days=2)).isoformat()
+    expiry_date = None if is_elite else (now + timedelta(days=2)).isoformat()
     
     mining_entry = {
         "amount": prc_to_collect,
         "timestamp": now.isoformat(),
         "burned": False,
         "expires_at": expiry_date,
-        "membership_type": membership_type
+        "subscription_status": subscription_status
     }
     
     # Update user (prc_balance already updated by WalletService)
@@ -617,7 +617,7 @@ async def collect_mining_rewards(uid: str, request: MiningCollectRequest = None)
         "prc_collected": round(prc_to_collect, 4),
         "new_balance": round(new_balance, 4),
         "total_mined": round(new_total_mined, 4),
-        "membership_type": membership_type,
-        "validity": "lifetime" if is_vip else "2 days",
+        "subscription_status": subscription_status,
+        "validity": "lifetime" if is_elite else "2 days",
         "expires_at": expiry_date
     }

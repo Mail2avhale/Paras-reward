@@ -33,7 +33,7 @@ const SupportTickets = () => {
     'Mining',
     'Marketplace',
     'Wallet',
-    'KYC/VIP',
+    'KYC/Subscription',
     'Orders',
     'Technical',
     'Other'
@@ -63,11 +63,11 @@ const SupportTickets = () => {
       'Cashback not received',
       'Transaction failed but amount deducted'
     ],
-    'KYC/VIP': [
+    'KYC/Subscription': [
       'KYC verification pending for long time',
       'KYC document rejected - need help',
-      'VIP subscription not activated',
-      'VIP benefits not working'
+      'Elite subscription not activated',
+      'Elite benefits not working'
     ],
     'Orders': [
       'Bill payment failed',

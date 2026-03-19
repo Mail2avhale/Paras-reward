@@ -544,11 +544,11 @@ function App() {
         const freshRole = freshData.role;
         
         // DEBUG: Log role comparison
-        // console.log('[REFRESH] Role comparison:', {
+        /* console.log('[REFRESH] Role comparison:', {
           storedRole,
           freshRole,
           storedUserKeys: Object.keys(storedUser).length
-        });
+        }); */
         
         // Priority: Keep admin roles from login, don't let refresh override them
         let finalRole = 'user';
@@ -613,11 +613,11 @@ function App() {
 
   const handleLogin = async (userData) => {
     // DEBUG: Log login data for troubleshooting admin redirect
-    // console.log('[LOGIN] User data received:', {
+    /* console.log('[LOGIN] User data received:', {
       uid: userData.uid,
       role: userData.role,
       name: userData.name
-    });
+    }); */
     
     // Save session token for single-session enforcement
     if (userData.session_token) {

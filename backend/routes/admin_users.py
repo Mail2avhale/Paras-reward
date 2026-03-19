@@ -99,12 +99,8 @@ async def get_admin_users(
         query["is_active"] = False
     
     if membership:
-        query["$or"] = [
-            {"membership_type": membership},
-            {"subscription_plan": membership}
-        ] if "$or" not in query else query.get("$or")
-        if "$or" in query and search:
-            query["subscription_plan"] = membership
+        # Use subscription_plan for filtering (supports both legacy and new plans)
+        query["subscription_plan"] = membership
     
     if kyc_status:
         query["kyc_status"] = kyc_status
@@ -199,7 +195,7 @@ async def get_admin_user_stats():
     try:
         total_users = await db.users.count_documents({})
         active_users = await db.users.count_documents({"is_active": True, "is_banned": {"$ne": True}})
-        vip_users = await db.users.count_documents({"membership_type": "vip"})
+        elite_users = await db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}})
         banned_users = await db.users.count_documents({"is_banned": True})
         
         # Today's stats
@@ -219,7 +215,7 @@ async def get_admin_user_stats():
         return {
             "total_users": total_users,
             "active_users": active_users,
-            "vip_users": vip_users,
+            "elite_users": elite_users,
             "banned_users": banned_users,
             "new_today": new_today,
             "kyc": {
@@ -278,7 +274,7 @@ async def update_admin_user(uid: str, request: Request):
     
     # Fields that admin can update
     allowed_fields = [
-        "name", "email", "mobile", "role", "membership_type", "subscription_plan",
+        "name", "email", "mobile", "role", "subscription_plan",
         "subscription_expiry", "prc_balance", "is_active", "is_banned",
         "kyc_status", "notes"
     ]

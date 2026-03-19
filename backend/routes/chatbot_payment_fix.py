@@ -228,7 +228,6 @@ async def activate_subscription(uid: str, order_doc: dict, payment_info: dict) -
                 "subscription_status": "active",
                 "subscription_expiry_date": new_expiry.isoformat(),
                 "subscription_expires": new_expiry.isoformat(),
-                "membership_type": "vip" if plan_type.lower() != "explorer" else "free",
                 "updated_at": now.isoformat()
             }
         }

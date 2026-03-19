@@ -1,6 +1,6 @@
 """
 Razorpay Payment Gateway Integration
-- Create orders for VIP subscriptions
+- Create orders for Elite subscriptions
 - Verify payments with DOUBLE VERIFICATION
 - Handle webhooks
 VERSION: 2.0 - With payment status verification from Razorpay API
@@ -404,7 +404,6 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     "subscription_start": now,
                     "subscription_expires": expiry_date,
                     "subscription_expiry": expiry_date.isoformat(),  # Also set this field
-                    "membership_type": "vip",
                     "subscription_status": "active",
                     "last_payment_id": request.razorpay_payment_id,
                     "last_payment_date": now,
@@ -682,8 +681,6 @@ async def razorpay_webhook(request: Request):
                             "subscription_start": now,
                             "subscription_expires": expiry_date,
                             "subscription_expiry": expiry_date.isoformat(),
-                            "vip_expiry": expiry_date.isoformat(),
-                            "membership_type": "vip",
                             "subscription_status": "active",
                             "last_payment_id": payment_id,
                             "last_payment_date": now,
@@ -1043,8 +1040,6 @@ async def sync_payments_from_razorpay(request: Request):
                                     "subscription_start": now,
                                     "subscription_expires": expiry_date,
                                     "subscription_expiry": expiry_date.isoformat(),
-                                    "vip_expiry": expiry_date.isoformat(),
-                                    "membership_type": "vip",
                                     "subscription_status": "active",
                                     "last_payment_id": payment_id,
                                     "last_payment_date": now,
@@ -1257,7 +1252,6 @@ async def fix_user_subscription(request: Request):
                                             "subscription_start": now,
                                             "subscription_expires": expiry_date,
                                             "subscription_expiry": expiry_date.isoformat(),
-                                            "membership_type": "vip",
                                             "subscription_status": "active",
                                             "last_payment_id": payment_id,
                                             "fixed_by_admin": True,
@@ -1335,8 +1329,6 @@ async def fix_user_subscription(request: Request):
                 "subscription_start": now,
                 "subscription_expires": expiry_date,
                 "subscription_expiry": expiry_date.isoformat(),
-                "vip_expiry": expiry_date.isoformat(),
-                "membership_type": "vip",
                 "subscription_status": "active",
                 "last_payment_id": payment_id,
                 "previous_remaining_days_added": remaining_days,
@@ -1449,8 +1441,6 @@ async def manual_activate_by_email(request: Request):
                 "subscription_start": now,
                 "subscription_expires": expiry_date,
                 "subscription_expiry": expiry_date.isoformat(),
-                "vip_expiry": expiry_date.isoformat(),
-                "membership_type": "vip",
                 "subscription_status": "active",
                 "manual_activated": True,
                 "manual_activation_reason": reason,

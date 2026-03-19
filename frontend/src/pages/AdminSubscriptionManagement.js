@@ -258,7 +258,7 @@ const AdminSubscriptionManagement = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Subscriptions</h1>
-          <p className="text-gray-400 text-sm">Manage VIP subscriptions</p>
+          <p className="text-gray-400 text-sm">Manage Elite subscriptions</p>
         </div>
         <Button onClick={fetchData} variant="outline" size="sm" className="border-gray-700">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

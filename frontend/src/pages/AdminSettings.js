@@ -250,7 +250,7 @@ const AdminSettings = ({ user }) => {
     setSavingPayment(true);
     try {
       await axios.post(`${API}/admin/payment-config`, paymentConfig);
-      toast.success('VIP Payment settings saved successfully!');
+      toast.success('Elite Payment settings saved successfully!');
     } catch (error) {
       console.error('Error saving payment config:', error);
       toast.error('Failed to save payment settings');
@@ -718,10 +718,10 @@ const AdminSettings = ({ user }) => {
           </div>
         </Card>
 
-        {/* VIP Payment Settings */}
+        {/* Elite Payment Settings */}
         <Card className="p-6 shadow-xl mt-6 bg-gray-900/50 border-gray-800">
-          <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 VIP Payment Settings</h2>
-          <p className="text-gray-400 mb-8">Configure payment details for VIP membership purchases. Users will see these details when purchasing VIP.</p>
+          <h2 className="text-2xl font-bold mb-6 text-gray-100">💳 Elite Payment Settings</h2>
+          <p className="text-gray-400 mb-8">Configure payment details for Elite membership purchases. Users will see these details when purchasing Elite.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* UPI Settings */}

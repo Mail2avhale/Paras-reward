@@ -306,13 +306,13 @@ const ReferralsEnhanced = ({ user }) => {
         }, 0);
         
         // DEBUG: Log response for troubleshooting
-        // console.log('Referral Levels Response:', {
+        /* console.log('Referral Levels Response:', {
           l1: l1Count,
           yourCircle: yourCircleCount,
           active: activeCount,
           levels: levels.map(l => ({ level: l.level, count: l.count, active: l.active_count })),
           debug: responseData.debug_search_info
-        });
+        }); */
         
         // REMOVED: checkMilestoneAchievement call - milestone celebration removed per user request
         

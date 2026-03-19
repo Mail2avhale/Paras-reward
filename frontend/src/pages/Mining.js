@@ -259,10 +259,10 @@ const DailyRewards = ({ user }) => {
           setSessionPRC(miningData.mined_this_session || 0);
         }
         
-        // console.log('Session restored from API:', {
+        /* console.log('Session restored from API:', {
           remaining: miningData.remaining_hours,
           mined: miningData.mined_this_session
-        });
+        }); */
       } else if (miningData.session_active === false) {
         // API explicitly says no active session
         setIsMining(false);

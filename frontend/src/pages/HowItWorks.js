@@ -131,13 +131,13 @@ const HowItWorks = () => {
             </div>
           </div>
 
-          {/* VIP Benefits */}
+          {/* Elite Benefits */}
           <Card className="p-10 bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-2xl mb-12">
             <div className="text-center mb-8">
               <Crown className="h-16 w-16 text-yellow-300 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Unlock VIP Benefits</h2>
+              <h2 className="text-3xl font-bold mb-4">Unlock Elite Benefits</h2>
               <p className="text-xl text-purple-100">
-                Upgrade to VIP for just ₹1000/year and unlock unlimited potential
+                Upgrade to Elite for just ₹799/month and unlock unlimited potential
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -156,9 +156,9 @@ const HowItWorks = () => {
               ))}
             </div>
             <div className="text-center mt-8">
-              <Link to="/vip">
+              <Link to="/pricing">
                 <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg rounded-xl shadow-xl">
-                  Upgrade to VIP Now
+                  Upgrade to Elite Now
                 </Button>
               </Link>
             </div>

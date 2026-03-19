@@ -38,13 +38,13 @@ async def get_live_stats():
     
     try:
         total_users = await db.users.count_documents({})
-        vip_users = await db.users.count_documents({"membership_type": "vip"})
+        elite_users = await db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}})
         pending_payments = await db.vip_payments.count_documents({"status": "pending"})
         pending_orders = await db.orders.count_documents({"status": "pending"})
         
         result = {
             "total_users": total_users,
-            "vip_users": vip_users,
+            "elite_users": elite_users,
             "pending_payments": pending_payments,
             "pending_orders": pending_orders,
             "timestamp": datetime.now(timezone.utc).isoformat()
@@ -83,7 +83,7 @@ async def get_admin_stats():
             db.users.count_documents({"created_at": {"$gte": today_start}}),  # 1: new_today
             db.users.count_documents({"created_at": {"$gte": week_start}}),  # 2: new_week
             db.users.count_documents({"created_at": {"$gte": month_start}}),  # 3: new_month
-            db.users.count_documents({"membership_type": "vip"}),  # 4: vip_users
+            db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}}),  # 4: elite_users
             
             # Revenue
             db.vip_payments.aggregate([
@@ -140,7 +140,7 @@ async def get_admin_stats():
                 "new_today": new_today,
                 "new_week": new_week,
                 "new_month": new_month,
-                "vip": vip_users
+                "elite": vip_users
             },
             "subscription_stats": {
                 "explorer": explorer_count,
@@ -192,7 +192,7 @@ async def get_dashboard_all():
         # Run ALL queries in PARALLEL
         results = await asyncio.gather(
             db.users.count_documents({}),  # total_users
-            db.users.count_documents({"membership_type": "vip"}),  # vip_users
+            db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}}),  # elite_users
             db.vip_payments.count_documents({"status": "pending"}),  # pending_payments
             db.orders.count_documents({"status": "pending"}),  # pending_orders
             db.users.count_documents({"created_at": {"$gte": today_start}}),  # new_today

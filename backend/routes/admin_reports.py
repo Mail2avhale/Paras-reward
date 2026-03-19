@@ -262,13 +262,13 @@ async def get_user_report(start_date: str = None, end_date: str = None):
         # User stats
         total = await db.users.count_documents({})
         period_new = await db.users.count_documents({"created_at": {"$gte": start_date, "$lte": end_date}})
-        vip = await db.users.count_documents({"membership_type": "vip"})
+        elite = await db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}})
         
         return {
             "period": {"start": start_date, "end": end_date},
             "total_users": total,
             "new_in_period": period_new,
-            "vip_users": vip,
+            "elite_users": elite,
             "daily_registrations": registrations,
             "generated_at": now.isoformat()
         }
@@ -404,14 +404,14 @@ async def get_retention_analytics():
 
 @router.get("/analytics/conversion")
 async def get_conversion_analytics():
-    """Get VIP conversion analytics"""
+    """Get Elite conversion analytics"""
     try:
         total_users = await db.users.count_documents({})
-        vip_users = await db.users.count_documents({"membership_type": "vip"})
+        elite_users = await db.users.count_documents({"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}})
         
         # Conversion by source
         conversion_pipeline = [
-            {"$match": {"membership_type": "vip"}},
+            {"$match": {"subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]}}},
             {"$group": {
                 "_id": "$subscription_plan",
                 "count": {"$sum": 1}
@@ -421,8 +421,8 @@ async def get_conversion_analytics():
         
         return {
             "total_users": total_users,
-            "vip_users": vip_users,
-            "conversion_rate": round((vip_users / total_users * 100), 2) if total_users > 0 else 0,
+            "elite_users": elite_users,
+            "conversion_rate": round((elite_users / total_users * 100), 2) if total_users > 0 else 0,
             "by_plan": {p["_id"] or "unknown": p["count"] for p in by_plan},
             "generated_at": datetime.now(timezone.utc).isoformat()
         }

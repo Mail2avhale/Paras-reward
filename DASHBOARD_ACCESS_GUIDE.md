@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://error-precedence-fix.preview.emergentagent.com/setup
+   https://two-plan-rebuild.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

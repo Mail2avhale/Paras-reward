@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260318_131238/test-results',
+  outputDir: '/root/.emergent/automation_output/20260319_054448/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260318_131238/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260319_054448/results.json' }],
   ],
   use: {
-    baseURL: 'https://error-precedence-fix.preview.emergentagent.com',
+    baseURL: 'https://two-plan-rebuild.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

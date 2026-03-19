@@ -99,7 +99,7 @@ def set_helpers(helpers: dict):
     User = helpers.get('User')
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES = helpers.get('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', 60)
     is_paid_subscriber_func = helpers.get('is_paid_subscriber')
-    PAID_PLANS = helpers.get('PAID_PLANS', ["startup", "growth", "elite", "vip", "pro"])
+    PAID_PLANS = helpers.get('PAID_PLANS', ["elite"])
 
 
 # ========== PYDANTIC MODELS ==========
@@ -650,26 +650,24 @@ async def login(
         return_exceptions=True
     )
     
-    # VIP expiry check
-    vip_expiry_message = None
-    if user.get("membership_type") == "vip":
-        vip_expiry_str = user.get("vip_expiry")
-        if vip_expiry_str:
+    # Subscription expiry check (unified for all paid plans)
+    subscription_expiry_message = None
+    is_paid = is_paid_subscriber_func(user) if is_paid_subscriber_func else False
+    if is_paid:
+        # Check subscription_expiry or subscription_expires
+        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires")
+        if expiry_str:
             try:
-                vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+                expiry_date = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
-                if vip_expiry < now:
-                    days_expired = (now - vip_expiry).days
-                    vip_expiry_message = f"⚠️ Your VIP membership expired {days_expired} days ago! Please renew."
-                    user["vip_expired"] = True
-                    user["vip_days_expired"] = days_expired
-                    user["vip_expiry_message"] = vip_expiry_message
+                if expiry_date < now:
+                    days_expired = (now - expiry_date).days
+                    subscription_expiry_message = f"⚠️ Your Elite subscription expired {days_expired} days ago! Please renew."
+                    user["subscription_expired"] = True
+                    user["subscription_days_expired"] = days_expired
+                    user["subscription_expiry_message"] = subscription_expiry_message
             except Exception:
                 pass
-    
-    # Enforce PRC = 0 ONLY for truly free users (no paid subscription and no VIP)
-    # Use centralized is_paid_subscriber function from helpers
-    is_paid = is_paid_subscriber_func(user) if is_paid_subscriber_func else False
     
     # Generate JWT tokens for all users (sync operation - fast)
     token_id = str(uuid.uuid4())

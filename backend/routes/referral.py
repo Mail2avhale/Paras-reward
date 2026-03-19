@@ -213,22 +213,22 @@ async def get_referral_stats(uid: str):
         {"$match": {
             "referred_by": uid,
             "$or": [
-                {"subscription_plan": {"$in": ["elite", "growth", "startup", "Elite", "Growth", "Startup", "vip", "VIP", "pro", "Pro"]}},
+                {"subscription_plan": {"$in": ["elite", "startup", "growth"]}},
                 {"last_login": {"$gte": yesterday}}
             ]
         }},
         {"$count": "active"}
     ]
     
-    vip_task = db.users.count_documents({
+    elite_task = db.users.count_documents({
         "referred_by": uid,
-        "membership_type": "vip"
+        "subscription_plan": {"$in": ["elite", "startup", "growth"]}
     })
     
     active_task = db.users.aggregate(active_pipeline).to_list(1)
     
-    total_referrals, active_result, vip_count = await asyncio.gather(
-        total_task, active_task, vip_task
+    total_referrals, active_result, elite_count = await asyncio.gather(
+        total_task, active_task, elite_task
     )
     
     active_count = active_result[0]["active"] if active_result else 0
@@ -236,7 +236,7 @@ async def get_referral_stats(uid: str):
     result = {
         "total_referrals": total_referrals,
         "active_referrals": active_count,
-        "vip_referrals": vip_count
+        "elite_referrals": elite_count
     }
     
     # Cache for 2 minutes

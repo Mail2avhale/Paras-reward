@@ -51,7 +51,7 @@ async def create_first_admin(request: Request):
         "name": data.get("name", "Admin"),
         "role": "admin",
         "is_active": True,
-        "membership_type": "vip",
+        "subscription_plan": "elite",
         "prc_balance": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -208,7 +208,6 @@ async def update_user_subscription(uid: str, request: Request):
     await db.users.update_one(
         {"uid": uid},
         {"$set": {
-            "membership_type": "vip",
             "subscription_plan": plan,
             "subscription_expiry": new_expiry,
             "subscription_updated_at": now.isoformat(),
@@ -244,8 +243,7 @@ async def get_user_subscription_history(uid: str):
     return {
         "current": {
             "plan": user.get("subscription_plan"),
-            "expiry": user.get("subscription_expiry"),
-            "membership_type": user.get("membership_type")
+            "expiry": user.get("subscription_expiry")
         },
         "payment_history": payments
     }
@@ -410,15 +408,15 @@ async def get_burn_settings():
         },
         "validity": {
             "explorer": "4 hours",
-            "vip": "Lifetime (max 2 days inactivity)",
-            "expired_vip": "2 days"
+            "elite": "Lifetime (max 2 days inactivity)",
+            "expired_elite": "2 days"
         }
     }
 
 
 @router.post("/send-renewal-notifications")
 async def send_renewal_notifications(request: Request):
-    """Send renewal notifications to expiring VIP users"""
+    """Send renewal notifications to expiring Elite users"""
     data = await request.json()
     admin_id = data.get("admin_id")
     days_before = int(data.get("days_before", 7))
@@ -426,9 +424,9 @@ async def send_renewal_notifications(request: Request):
     now = datetime.now(timezone.utc)
     expiry_threshold = (now + timedelta(days=days_before)).isoformat()
     
-    # Find users with expiring subscriptions
+    # Find users with expiring subscriptions (Elite plan or legacy paid plans)
     expiring_users = await db.users.find({
-        "membership_type": "vip",
+        "subscription_plan": {"$in": ["elite", "startup", "growth", "vip", "pro"]},
         "subscription_expiry": {"$lte": expiry_threshold, "$gte": now.isoformat()}
     }, {"_id": 0, "uid": 1, "email": 1, "name": 1, "subscription_expiry": 1}).to_list(1000)
     
@@ -440,7 +438,7 @@ async def send_renewal_notifications(request: Request):
             "user_id": user["uid"],
             "type": "renewal_reminder",
             "title": "Subscription Expiring Soon",
-            "message": f"Your VIP subscription will expire soon. Renew now to continue enjoying benefits!",
+            "message": f"Your Elite subscription will expire soon. Renew now to continue enjoying benefits!",
             "is_read": False,
             "created_at": now.isoformat()
         })

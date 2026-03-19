@@ -78,14 +78,14 @@ By accessing or using PARAS REWARD, you agree to be bound by these Terms and Con
 - PRC can be earned through mining, referrals, and games
 - PRC can be redeemed for products, bill payments, and vouchers
 
-## 4. VIP Membership
-- VIP membership unlocks premium features
+## 4. Elite Membership
+- Elite membership unlocks premium features
 - Processing time: Minimum 3 to 7 days
 - Membership fees are non-refundable after activation
 
 ## 5. Daily Rewards
 - Free users: PRC expires after 2 days
-- VIP users: PRC never expires
+- Elite users: PRC never expires
 - Reward rates are subject to change
 
 ## 6. Prohibited Activities

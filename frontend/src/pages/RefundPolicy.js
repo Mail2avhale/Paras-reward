@@ -19,25 +19,25 @@ const RefundPolicy = () => {
           type: 'warning'
         },
         { text: 'Earned PRC: Points earned through platform activities cannot be refunded or exchanged for money.' },
-        { text: 'Expiry Policy: Free users\' PRC may expire as per platform terms. VIP users\' PRC does not expire.' },
+        { text: 'Expiry Policy: Free users\' PRC may expire as per platform terms. Elite users\' PRC does not expire.' },
         { text: 'No Cash Value: PRC points have no monetary value outside the platform.' },
         { text: 'Account Termination: If your account is terminated due to violation of terms, all accumulated PRC will be forfeited.' }
       ]
     },
     {
       id: 2,
-      title: 'VIP Membership Fees',
+      title: 'Elite Membership Fees',
       icon: Crown,
       color: 'purple',
       policies: [
         {
           title: 'No Refund After Activation',
-          description: 'VIP membership fees are non-refundable once the membership is activated and benefits are accessible.',
+          description: 'Elite membership fees are non-refundable once the membership is activated and benefits are accessible.',
           type: 'warning'
         },
-        { text: 'Refund Window: Refunds may be considered within 24 hours of purchase if no VIP benefits have been used.' },
+        { text: 'Refund Window: Refunds may be considered within 24 hours of purchase if no Elite benefits have been used.' },
         { text: 'Partial Refunds: No partial refunds for unused membership duration.' },
-        { text: 'Technical Issues: If unable to activate VIP due to platform issues, a full refund will be processed.' }
+        { text: 'Technical Issues: If unable to activate Elite due to platform issues, a full refund will be processed.' }
       ]
     },
     {

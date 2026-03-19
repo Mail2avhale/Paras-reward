@@ -285,7 +285,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
     deleteAccount: language === 'mr' ? 'खाते हटवा' : language === 'hi' ? 'खाता हटाएं' : 'Delete Account',
     logout: language === 'mr' ? 'बाहेर पडा' : language === 'hi' ? 'लॉग आउट' : 'Logout',
     kycVerification: language === 'mr' ? 'KYC सत्यापन' : language === 'hi' ? 'KYC सत्यापन' : 'KYC Verification',
-    vipMembership: language === 'mr' ? 'VIP सदस्यत्व' : language === 'hi' ? 'VIP सदस्यता' : 'VIP Membership',
+    eliteMembership: language === 'mr' ? 'Elite सदस्यत्व' : language === 'hi' ? 'Elite सदस्यता' : 'Elite Membership',
     security: language === 'mr' ? 'सुरक्षा' : language === 'hi' ? 'सुरक्षा' : 'Security',
   };
 

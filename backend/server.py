@@ -6263,20 +6263,20 @@ async def login(
         }
     )
     
-    # Check VIP membership expiry and add renewal message
-    vip_expiry_message = None
-    if user.get("membership_type") == "vip":
-        vip_expiry_str = user.get("vip_expiry")
-        if vip_expiry_str:
+    # Check subscription expiry and add renewal message
+    subscription_expiry_message = None
+    if is_paid_subscriber(user):
+        expiry_str = user.get("subscription_expiry") or user.get("subscription_expires")
+        if expiry_str:
             try:
-                vip_expiry = datetime.fromisoformat(vip_expiry_str.replace('Z', '+00:00'))
+                expiry_date = datetime.fromisoformat(expiry_str.replace('Z', '+00:00'))
                 now = datetime.now(timezone.utc)
-                if vip_expiry < now:
-                    days_expired = (now - vip_expiry).days
-                    vip_expiry_message = f"⚠️ Your VIP membership expired {days_expired} days ago! Please renew to continue using marketplace, gift vouchers, and bill payment services. PRC mined after expiry will be burned after 5 days."
-                    user["vip_expired"] = True
-                    user["vip_days_expired"] = days_expired
-                    user["vip_expiry_message"] = vip_expiry_message
+                if expiry_date < now:
+                    days_expired = (now - expiry_date).days
+                    subscription_expiry_message = f"⚠️ Your Elite subscription expired {days_expired} days ago! Please renew to continue using marketplace, gift vouchers, and bill payment services. PRC mined after expiry will be burned after 5 days."
+                    user["subscription_expired"] = True
+                    user["subscription_days_expired"] = days_expired
+                    user["subscription_expiry_message"] = subscription_expiry_message
             except:
                 pass
     
@@ -6287,11 +6287,6 @@ async def login(
     
     # DEBUG LOG
     print(f"[LOGIN PRC CHECK] User: {user.get('email')}, plan: {user_plan}, is_free: {user_is_free}, prc_balance: {user.get('prc_balance', 0)}")
-    
-    # Auto-sync membership_type for backward compatibility (will be removed in future)
-    if is_paid_subscriber(user) and user.get("membership_type") == "free":
-        print(f"[LOGIN AUTO-SYNC] Syncing membership_type for: {user.get('email')}")
-        await db.users.update_one({"uid": user["uid"]}, {"$set": {"membership_type": "vip"}})
     
     # ========== PRC RESET DISABLED ==========
     # CRITICAL FIX: DO NOT reset PRC on login anymore
