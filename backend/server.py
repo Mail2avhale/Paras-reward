@@ -44,7 +44,7 @@ from routes.auth import router as auth_router, set_db as set_auth_db, set_helper
 from routes.users import router as users_router, set_db as set_users_db, set_cache as set_users_cache, set_helpers as set_users_helpers
 from routes.wallet import router as wallet_router, set_db as set_wallet_db
 from routes.admin import router as admin_router, set_db as set_admin_db, set_cache as set_admin_cache, set_helpers as set_admin_helpers
-from routes.admin_vip import router as admin_vip_router, set_db as set_admin_vip_db, set_cache as set_admin_vip_cache, set_helpers as set_admin_vip_helpers
+# DEPRECATED: from routes.admin_vip import router as admin_vip_router, set_db as set_admin_vip_db, set_cache as set_admin_vip_cache, set_helpers as set_admin_vip_helpers
 from routes.admin_delivery import router as admin_delivery_router, set_db as set_admin_delivery_db
 from routes.admin_system import router as admin_system_router, set_db as set_admin_system_db, set_cache as set_admin_system_cache, set_helpers as set_admin_system_helpers
 from routes.admin_finance import router as admin_finance_router, set_db as set_admin_finance_db, set_cache as set_admin_finance_cache
@@ -673,26 +673,38 @@ async def verify_management(uid: str):
 # ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
 # Use this function EVERYWHERE instead of checking membership_type
 # CRITICAL: "growth" included for backward compatibility with existing growth users
-PAID_PLANS = ["startup", "growth", "elite", "vip", "pro"]  # Growth discontinued but existing users protected
+# NEW SYSTEM: Only 2 plans - Explorer (free) and Elite (paid)
+# All legacy plans (startup, growth, vip) are treated as Elite for backward compatibility
+PAID_PLANS = ["elite"]  # Only Elite is the paid plan now
+LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]  # Treated as Elite for existing users
 
 def is_paid_subscriber(user: dict) -> bool:
     """
     Check if user has a paid subscription.
-    THIS IS THE SINGLE SOURCE OF TRUTH - use this instead of membership_type checks.
+    THIS IS THE SINGLE SOURCE OF TRUTH.
     
-    Returns True if user has: startup, growth, elite, vip, or pro plan
-    Returns True if user has legacy membership_type: vip
-    Returns False if user has: explorer, free, or no plan
+    NEW SYSTEM (2 plans only):
+    - Explorer (free) → Returns False
+    - Elite (paid) → Returns True
+    
+    BACKWARD COMPATIBILITY:
+    - Legacy plans (startup, growth, vip, pro) → Treated as Elite → Returns True
+    - membership_type='vip' → Treated as Elite → Returns True
     """
     if not user:
         return False
     
-    # Check new subscription plan system first (preferred)
     plan = user.get("subscription_plan", "").lower()
-    if plan in PAID_PLANS:
+    
+    # New system: Elite is the only paid plan
+    if plan == "elite":
         return True
     
-    # Fallback to legacy VIP system
+    # Backward compatibility: Legacy paid plans treated as Elite
+    if plan in LEGACY_PAID_PLANS:
+        return True
+    
+    # Backward compatibility: Legacy VIP membership
     if user.get("membership_type") == "vip":
         return True
     
@@ -2493,18 +2505,20 @@ class User(BaseModel):
     pan_number: Optional[str] = None
     upi_id: Optional[str] = None
     
-    # Membership - NEW SUBSCRIPTION SYSTEM
-    membership_type: str = "free"  # free, vip (legacy) OR explorer, startup, growth, elite (new)
-    subscription_plan: str = "explorer"  # explorer, startup, growth, elite
+    # Membership - SIMPLIFIED TO 2 PLANS: Explorer (free) and Elite (paid)
+    # Legacy fields kept for backward compatibility (will be migrated)
+    membership_type: str = "free"  # DEPRECATED - use subscription_plan instead
+    subscription_plan: str = "explorer"  # ACTIVE: 'explorer' (free) or 'elite' (paid)
     subscription_expiry: Optional[str] = None  # Subscription expiry date as ISO string
     subscription_expired: Optional[bool] = None  # True if subscription is expired
     subscription_days_expired: Optional[int] = None  # Days since subscription expired
     subscription_expiry_message: Optional[str] = None  # Renewal message
-    membership_expiry: Optional[datetime] = None  # Legacy field
-    vip_expiry: Optional[str] = None  # Legacy - VIP expiry date as ISO string
-    vip_expired: Optional[bool] = None  # Legacy - True if VIP membership is expired
-    vip_days_expired: Optional[int] = None  # Legacy - Days since VIP expired
-    vip_expiry_message: Optional[str] = None  # Legacy - Renewal message for expired VIP
+    # DEPRECATED LEGACY FIELDS - kept for migration only
+    membership_expiry: Optional[datetime] = None  # DEPRECATED
+    vip_expiry: Optional[str] = None  # DEPRECATED
+    vip_expired: Optional[bool] = None  # DEPRECATED
+    vip_days_expired: Optional[int] = None  # DEPRECATED
+    vip_expiry_message: Optional[str] = None  # DEPRECATED
     
     # Wallets - CASHBACK WALLET REMOVED
     prc_balance: float = 0.0
@@ -2826,78 +2840,102 @@ class GiftVoucherProcess(BaseModel):
 
 # ========== SUBSCRIPTION PLAN CONFIGURATION ==========
 # New 4-tier subscription system
+# NEW SYSTEM: Only 2 subscription plans
+# Explorer = Free, Elite = Paid
+# Legacy plans (startup, growth) kept for backward compatibility only
 SUBSCRIPTION_PLANS = {
     "explorer": {
         "name": "Explorer",
-        "mining_rate": 100,  # Fixed 100 PRC/hr
+        "description": "Free plan with basic mining",
+        "mining_rate": 100,  # Base mining rate
         "multiplier": 1.0,
-        "referral_weight": 0,  # FREE users give NO referral bonus
+        "referral_weight": 0,  # FREE users don't count for referral bonus
         "tap_limit": 100,
         "prc_per_tap": 0.1,
         "daily_max_prc": 10,
-        "can_redeem": False,
+        "can_redeem": False,  # Cannot redeem PRC
         "is_free": True,
         "default_price": 0
     },
-    # Startup plan discontinued - kept for backward compatibility of existing users
-    "startup": {
-        "name": "Startup (Discontinued)",
-        "mining_rate": 30,  # Fixed 30 PRC/hr
-        "multiplier": 1.5,
-        "referral_weight": 0.50,
-        "tap_limit": 100,
-        "prc_per_tap": 0.5,
-        "daily_max_prc": 50,
-        "can_redeem": True,
-        "is_free": False,
-        "default_price": 299,
-        "discontinued": True
-    },
-    # Growth plan discontinued - kept for backward compatibility of existing users
-    "growth": {
-        "name": "Growth (Discontinued)",
-        "mining_rate": 55,  # Fixed 55 PRC/hr
-        "multiplier": 2.0,
-        "referral_weight": 0.55,
-        "tap_limit": 100,
-        "prc_per_tap": 1.0,
-        "daily_max_prc": 100,
-        "can_redeem": True,
-        "is_free": False,
-        "default_price": 549,
-        "discontinued": True
-    },
     "elite": {
         "name": "Elite",
-        "mining_rate": 90,  # Fixed 90 PRC/hr
+        "description": "Premium plan with full features",
+        "mining_rate": 90,
         "multiplier": 3.0,
-        "referral_weight": 1.0,
+        "referral_weight": 1.0,  # Full referral bonus
         "tap_limit": 100,
         "prc_per_tap": 2.0,
         "daily_max_prc": 200,
-        "can_redeem": True,
+        "can_redeem": True,  # Full redeem access
         "is_free": False,
         "default_price": 799
+    },
+    # LEGACY PLANS - Kept for backward compatibility of existing users
+    # These users are treated as Elite until their subscription expires
+    "_legacy_startup": {
+        "name": "Startup (Legacy)",
+        "mining_rate": 90,  # Same as Elite
+        "multiplier": 3.0,
+        "referral_weight": 1.0,
+        "can_redeem": True,
+        "is_free": False,
+        "default_price": 299,
+        "is_legacy": True,
+        "treat_as": "elite"
+    },
+    "_legacy_growth": {
+        "name": "Growth (Legacy)",
+        "mining_rate": 90,  # Same as Elite
+        "multiplier": 3.0,
+        "referral_weight": 1.0,
+        "can_redeem": True,
+        "is_free": False,
+        "default_price": 549,
+        "is_legacy": True,
+        "treat_as": "elite"
     }
 }
+
+# Active plans for new subscriptions (shown in UI)
+ACTIVE_SUBSCRIPTION_PLANS = ["explorer", "elite"]
 
 SUBSCRIPTION_DURATIONS = {
     "monthly": 28
 }
 
 async def get_subscription_pricing():
-    """Get subscription pricing from database or return defaults"""
+    """Get subscription pricing - only Elite available for new subscriptions"""
     settings = await db.settings.find_one({}, {"_id": 0, "subscription_pricing": 1})
     
+    # Only Elite pricing for new subscriptions
     default_pricing = {
-        "startup": {"monthly": 299},
-        # "growth": {"monthly": 549},  # Discontinued
         "elite": {"monthly": 799}
     }
     
     if settings and "subscription_pricing" in settings:
         return settings["subscription_pricing"]
     return default_pricing
+
+def get_effective_plan(user: dict) -> str:
+    """
+    Get the effective plan for a user.
+    Legacy plans (startup, growth, vip) are treated as Elite.
+    """
+    plan = user.get("subscription_plan", "explorer").lower()
+    
+    # Legacy plans → Elite
+    if plan in ["startup", "growth", "vip", "pro"]:
+        return "elite"
+    
+    # Legacy membership_type → Elite
+    if user.get("membership_type") == "vip":
+        return "elite"
+    
+    # Default to explorer if unknown
+    if plan not in ["explorer", "elite"]:
+        return "explorer"
+    
+    return plan
 
 async def get_user_subscription_info(user: dict) -> dict:
     """Get user's current subscription status and benefits"""
@@ -43320,14 +43358,15 @@ set_admin_helpers({
 api_router.include_router(admin_router)
 
 # Include admin VIP router (refactored)
-set_admin_vip_db(db)
-set_admin_vip_cache(cache)
-set_admin_vip_helpers({
-    'log_admin_action': log_admin_action,
-    'check_and_grant_referral_reward': check_and_grant_referral_reward,
-    'create_notification': create_notification
-})
-api_router.include_router(admin_vip_router)
+# DEPRECATED: VIP system removed - using subscription system only
+# set_admin_vip_db(db)
+# set_admin_vip_cache(cache)
+# set_admin_vip_helpers({
+#     'log_admin_action': log_admin_action,
+#     'check_and_grant_referral_reward': check_and_grant_referral_reward,
+#     'create_notification': create_notification
+# })
+# api_router.include_router(admin_vip_router)
 
 # Include admin delivery router (refactored)
 set_admin_delivery_db(db)
