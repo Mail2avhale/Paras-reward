@@ -54,9 +54,9 @@ async def get_top_miners(period: str = "all_time", limit: int = 100):
         month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         time_filter = {"created_at": {"$gte": month_ago}}
     
-    # Aggregate mining totals
+    # Aggregate mining totals (tap_game removed - feature deprecated)
     pipeline = [
-        {"$match": {**{"type": {"$in": ["mining", "tap_game"]}}, **time_filter}},
+        {"$match": {**{"type": {"$in": ["mining"]}}, **time_filter}},
         {"$group": {
             "_id": "$user_id",
             "total_mined": {"$sum": "$amount"}

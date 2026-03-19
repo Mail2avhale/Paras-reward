@@ -127,8 +127,7 @@ class MiningCollectRequest(BaseModel):
     amount: Optional[float] = None
 
 
-class TapGamePlay(BaseModel):
-    taps: int
+# TapGamePlay removed - feature deprecated (March 2026)
 
 
 # ==================== REFERRAL MODELS ====================

@@ -412,9 +412,9 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
         }, {"_id": 0, "amount": 1}).to_list(50000)
         expenses["cashback_referral"] = round(sum(abs(t.get("amount", 0)) for t in referral_txns) * 0.10, 2)  # PRC value
         
-        # 5. Auto: PRC Mining rewards (liability at ₹0.10 per PRC)
+        # 5. Auto: PRC Mining rewards (liability at ₹0.10 per PRC) - tap_game, prc_rain_gain removed
         mining_txns = await db.transactions.find({
-            "transaction_type": {"$in": ["mining", "tap_game", "prc_rain_gain"]},
+            "transaction_type": {"$in": ["mining"]},
             "$or": [
                 {"timestamp": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
@@ -1239,9 +1239,9 @@ async def get_prc_liability():
         total_burned_30d = sum(abs(t.get("amount", 0)) for t in burn_txns)
         daily_burn_rate = total_burned_30d / 30
         
-        # Mining stats (last 30 days)
+        # Mining stats (last 30 days) - tap_game removed
         mining_txns = await db.transactions.find({
-            "type": {"$in": ["mining", "tap_game"]},
+            "type": {"$in": ["mining"]},
             "timestamp": {"$gte": thirty_days_ago}
         }, {"_id": 0, "amount": 1}).to_list(50000)
         total_mined_30d = sum(abs(t.get("amount", 0)) for t in mining_txns)

@@ -172,11 +172,11 @@ const AdminLayout = ({ children, user, onLogout }) => {
     'subscriptions': pendingCounts.subscriptions,
     'bill-payments': pendingCounts.bills,
     'gift-vouchers': pendingCounts.gifts,
-    'bank-withdrawals': pendingCounts.bankWithdrawals,
-    'recurring-deposits': pendingCounts.rdRedeem
+    'bank-withdrawals': pendingCounts.bankWithdrawals
+    // recurring-deposits REMOVED - feature deprecated
   };
   
-  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.bankWithdrawals + pendingCounts.rdRedeem;
+  const totalPendingApprovals = pendingCounts.kyc + pendingCounts.subscriptions + pendingCounts.bills + pendingCounts.gifts + pendingCounts.bankWithdrawals;
 
   const menuGroups = {
     requestApprovals: {
@@ -195,7 +195,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'eko-services', label: 'Eko Direct Services', icon: Zap, path: '/admin/eko-services', highlight: true },
         // bill-payments removed - all pending rejected + refunded
         { id: 'gift-vouchers', label: 'Gift Vouchers', icon: Gift, path: '/admin/gift-vouchers', pendingCount: pendingCounts.gifts },
-        { id: 'recurring-deposits', label: 'PRC Savings Vault', icon: Building2, path: '/admin/recurring-deposits', pendingCount: pendingCounts.rdRedeem },
+        // recurring-deposits REMOVED - feature deprecated
       ]
     },
     finance: {

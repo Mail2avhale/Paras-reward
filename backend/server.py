@@ -59,7 +59,7 @@ from routes.admin_dashboard import router as admin_dashboard_router, set_db as s
 from routes.admin_products import router as admin_products_router, set_db as set_admin_products_db
 from routes.admin_misc import router as admin_misc_router, set_db as set_admin_misc_db, set_helpers as set_admin_misc_helpers
 from routes.bank_redeem import router as bank_redeem_router, set_db as set_bank_redeem_db, set_cache as set_bank_redeem_cache, set_helpers as set_bank_redeem_helpers
-from routes.recurring_deposit import router as rd_router, set_db as set_rd_db, set_cache as set_rd_cache
+# recurring_deposit REMOVED - feature deprecated (March 2026)
 from routes.user_logs import router as user_logs_router, set_db as set_user_logs_db, set_cache as set_user_logs_cache
 from routes.hdfc_bulk_export import router as hdfc_export_router, set_db as set_hdfc_export_db
 from routes.notifications import router as notifications_router, set_db as set_notifications_db, create_notification, notify_payment_status, notify_referral_joined, notify_prc_credited
@@ -2560,8 +2560,7 @@ class MiningStatus(BaseModel):
     active_referrals: int
     total_mined: float
 
-class TapGamePlay(BaseModel):
-    taps: int
+# TapGamePlay removed - feature deprecated (March 2026)
 
 class ReferralInfo(BaseModel):
     referrer_uid: str
@@ -43449,10 +43448,7 @@ set_bank_redeem_cache(cache)
 set_bank_redeem_helpers({'log_transaction': log_transaction, 'create_notification': create_notification})
 api_router.include_router(bank_redeem_router)
 
-# Include Recurring Deposit router (NEW - RD System replacing Luxury Life)
-set_rd_db(db)
-set_rd_cache(cache)
-api_router.include_router(rd_router)
+# Recurring Deposit router REMOVED - feature deprecated (March 2026)
 
 # User Logs Router - Comprehensive logging system
 set_user_logs_db(db)

@@ -103,6 +103,19 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 - Test File: `/app/backend/tests/test_subscription_refactoring.py`
 - E2E Test: `/app/tests/e2e/subscription-refactoring.spec.ts`
 
+### Deprecated Features Removed (19 March 2026)
+**Completely removed from codebase:**
+| Feature | Files Deleted | DB Collections Dropped |
+|---------|---------------|------------------------|
+| Tap Game | - | tap_games, tap_game_sessions |
+| Rain Drop / PRC Rain | - | prc_rain, prc_rain_drops, rain_drops |
+| Luxury Life | - | luxury_life, luxury_claims, luxury_savings |
+| PRC Savings Vault | ParasRecurringDeposit.js, AdminRecurringDeposits.js, recurring_deposit.py | recurring_deposits, rd_deposits, rd_transactions, prc_vault, prc_savings_vault |
+
+**Routes Removed:**
+- `/recurring-deposit`, `/rd` → Redirect to `/dashboard`
+- `/admin/recurring-deposits`, `/admin/rd` → Redirect to `/admin`
+
 ---
 
 ## Known Issues (P0-P2)

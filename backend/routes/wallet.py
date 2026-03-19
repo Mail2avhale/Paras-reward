@@ -76,7 +76,7 @@ async def get_wallet_transactions(uid: str, wallet_type: str = None, page: int =
         {"_id": 0}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "tap_game", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
+    total_credit = sum(t["amount"] for t in transactions if t["type"] in ["mining", "referral", "cashback", "withdrawal_rejected", "admin_credit", "profit_share"])
     total_debit = sum(t["amount"] for t in transactions if t["type"] in ["order", "withdrawal", "admin_debit", "delivery_charge"])
     
     return {
@@ -124,8 +124,7 @@ async def get_user_transactions_simple(uid: str, page: int = 1, limit: int = 5):
                 description = txn.get("description", "Gift voucher request submitted")
             elif txn_type in ["referral_bonus", "referral"]:
                 description = "Referral bonus earned"
-            elif txn_type == "tap_game":
-                description = "Tap game rewards"
+            # tap_game REMOVED - feature deprecated
             elif txn_type == "delivery_commission":
                 description = "Delivery commission earned"
             elif txn_type == "delivery_charge":
@@ -203,7 +202,7 @@ async def get_detailed_transaction_history(
     # Calculate summaries
     total_credit = 0
     total_debit = 0
-    credit_types = ["mining", "tap_game", "referral", "referral_bonus", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "bonus"]
+    credit_types = ["mining", "referral", "referral_bonus", "cashback", "withdrawal_rejected", "admin_credit", "profit_share", "bonus"]
     debit_types = ["order", "withdrawal", "admin_debit", "delivery_charge", "bill_payment", "gift_voucher", "prc_burn"]
     
     for txn in transactions:

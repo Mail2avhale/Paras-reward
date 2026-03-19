@@ -165,7 +165,7 @@ const Messages = lazy(() => import("@/pages/Messages"));
 const FollowersList = lazy(() => import("@/pages/FollowersList"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
 // ParasLuxuryLife - REMOVED (deprecated feature)
-const ParasRecurringDeposit = lazy(() => import("@/pages/ParasRecurringDeposit"));
+// ParasRecurringDeposit - REMOVED (deprecated feature)
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
 const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
@@ -236,7 +236,7 @@ const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* web
 // AdminDeliveryPartners removed - feature deprecated
 // AdminLuxuryClaims - REMOVED (deprecated feature)
 const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
-const AdminRecurringDeposits = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRecurringDeposits"));
+// AdminRecurringDeposits - REMOVED (deprecated feature)
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 // AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
 const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
@@ -363,8 +363,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
             <Route path="/following/:uid" element={<FollowersList user={user} type="following" />} />
             <Route path="/notifications" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <Notifications user={user} />) : <Navigate to="/login" />} />
             {/* /luxury-life route REMOVED - deprecated feature */}
-            <Route path="/recurring-deposit" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
-            <Route path="/rd" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <ParasRecurringDeposit user={user} />) : <Navigate to="/login" />} />
+            {/* /recurring-deposit route REMOVED - deprecated feature */}
+            <Route path="/recurring-deposit" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/rd" element={<Navigate to="/dashboard" replace />} />
             <Route path="/network-tree" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <NetworkTreeAdvanced user={user} />) : <Navigate to="/login" />} />
             <Route path="/bank-redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
             <Route path="/prc-to-bank" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <BankRedeemPage user={user} />) : <Navigate to="/login" />} />
@@ -429,8 +430,9 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/bank-withdrawals" element={<Navigate to="/admin/unified-payments" replace />} />
                 <Route path="/admin/gift-vouchers" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminGiftVouchers user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* /admin/luxury-claims route REMOVED - deprecated feature */}
-                <Route path="/admin/recurring-deposits" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRecurringDeposits user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/rd" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRecurringDeposits user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* /admin/recurring-deposits route REMOVED - deprecated feature */}
+                <Route path="/admin/recurring-deposits" element={<Navigate to="/admin" replace />} />
+                <Route path="/admin/rd" element={<Navigate to="/admin" replace />} />
                 {/* AdminUnifiedPayments - REMOVED, redirect to admin */}
                 <Route path="/admin/unified-payments" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
