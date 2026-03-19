@@ -671,25 +671,25 @@ async def verify_management(uid: str):
 # verify_stockist removed - stockist system deprecated
 
 # ========== SUBSCRIPTION HELPER - SINGLE SOURCE OF TRUTH ==========
-# Use this function EVERYWHERE instead of checking membership_type
-# CRITICAL: "growth" included for backward compatibility with existing growth users
-# NEW SYSTEM: Only 2 plans - Explorer (free) and Elite (paid)
-# All legacy plans (startup, growth, vip) are treated as Elite for backward compatibility
-PAID_PLANS = ["elite"]  # Only Elite is the paid plan now
-LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]  # Treated as Elite for existing users
+# ╔════════════════════════════════════════════════════════════════╗
+# ║  ⚠️  TWO-PLAN SYSTEM: Explorer (Free) & Elite (Paid)  ⚠️       ║
+# ║  Use is_paid_subscriber(user) to check if user has paid plan   ║
+# ╚════════════════════════════════════════════════════════════════╝
+PAID_PLANS = ["elite"]  # ✅ Only Elite is the paid plan
+LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]  # ⚠️ Treated as Elite (backward compat)
 
 def is_paid_subscriber(user: dict) -> bool:
     """
-    Check if user has a paid subscription.
-    THIS IS THE SINGLE SOURCE OF TRUTH.
-    
-    NEW SYSTEM (2 plans only):
-    - Explorer (free) → Returns False
-    - Elite (paid) → Returns True
-    
-    BACKWARD COMPATIBILITY:
-    - Legacy plans (startup, growth, vip, pro) → Treated as Elite → Returns True
-    - membership_type='vip' → Treated as Elite → Returns True
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  SINGLE SOURCE OF TRUTH for checking paid subscription       ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║  ACTIVE PLANS:                                               ║
+    ║    • Explorer (free) → Returns False                         ║
+    ║    • Elite (paid)    → Returns True                          ║
+    ║                                                              ║
+    ║  LEGACY (backward compat - treated as Elite):                ║
+    ║    • startup, growth, vip, pro → Returns True                ║
+    ╚══════════════════════════════════════════════════════════════╝
     """
     if not user:
         return False
@@ -2839,11 +2839,17 @@ class GiftVoucherProcess(BaseModel):
     admin_notes: Optional[str] = None
 
 # ========== SUBSCRIPTION PLAN CONFIGURATION ==========
-# New 4-tier subscription system
-# NEW SYSTEM: Only 2 subscription plans
-# Explorer = Free, Elite = Paid
-# Legacy plans (startup, growth) kept for backward compatibility only
+# ╔════════════════════════════════════════════════════════════════╗
+# ║  ⚠️  IMPORTANT: ONLY 2 PLANS ACTIVE (March 2026)  ⚠️           ║
+# ║                                                                 ║
+# ║  ✅ EXPLORER (Free) - Basic mining, no redemption              ║
+# ║  ✅ ELITE (₹799/month) - Full features, unlimited redemption   ║
+# ║                                                                 ║
+# ║  ❌ NO NEW SIGNUPS for: VIP, Startup, Growth, Pro              ║
+# ║  ℹ️  Legacy users are treated as Elite automatically           ║
+# ╚════════════════════════════════════════════════════════════════╝
 SUBSCRIPTION_PLANS = {
+    # ===== ACTIVE PLANS (for new users) =====
     "explorer": {
         "name": "Explorer",
         "description": "Free plan with basic mining",
@@ -2859,7 +2865,7 @@ SUBSCRIPTION_PLANS = {
     },
     "elite": {
         "name": "Elite",
-        "description": "Premium plan with full features",
+        "description": "Premium plan with full features - ₹799/month",
         "mining_rate": 90,
         "multiplier": 3.0,
         "referral_weight": 1.0,  # Full referral bonus
@@ -2870,10 +2876,10 @@ SUBSCRIPTION_PLANS = {
         "is_free": False,
         "default_price": 799
     },
-    # LEGACY PLANS - Kept for backward compatibility of existing users
-    # These users are treated as Elite until their subscription expires
+    # ===== LEGACY PLANS (DO NOT USE FOR NEW SIGNUPS) =====
+    # Existing users on these plans are treated as Elite
     "_legacy_startup": {
-        "name": "Startup (Legacy)",
+        "name": "Startup (Legacy - DO NOT USE)",
         "mining_rate": 90,  # Same as Elite
         "multiplier": 3.0,
         "referral_weight": 1.0,
@@ -2884,7 +2890,7 @@ SUBSCRIPTION_PLANS = {
         "treat_as": "elite"
     },
     "_legacy_growth": {
-        "name": "Growth (Legacy)",
+        "name": "Growth (Legacy - DO NOT USE)",
         "mining_rate": 90,  # Same as Elite
         "multiplier": 3.0,
         "referral_weight": 1.0,
@@ -2896,7 +2902,7 @@ SUBSCRIPTION_PLANS = {
     }
 }
 
-# Active plans for new subscriptions (shown in UI)
+# ⚠️ ONLY THESE 2 PLANS FOR NEW SUBSCRIPTIONS
 ACTIVE_SUBSCRIPTION_PLANS = ["explorer", "elite"]
 
 SUBSCRIPTION_DURATIONS = {

@@ -1,5 +1,20 @@
 # PARAS REWARD - Product Requirements Document
 
+## ⚠️ IMPORTANT: TWO-PLAN SYSTEM ONLY ⚠️
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ACTIVE PLANS (March 2026 onwards):                            ║
+║  ┌─────────────┬─────────────┐                                 ║
+║  │  EXPLORER   │    ELITE    │                                 ║
+║  │   (FREE)    │   (PAID)    │                                 ║
+║  │  ₹0/month   │  ₹799/month │                                 ║
+║  └─────────────┴─────────────┘                                 ║
+║                                                                 ║
+║  ❌ NO MORE: VIP, Startup, Growth, Pro                         ║
+║  ✅ Legacy users (Startup/Growth/VIP) → Treated as Elite       ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
 ## Original Problem Statement
 User's original request was to redesign the Mining Session UI with a futuristic design and complete the Manual Fintech Redeem System. Later expanded to include a major refactoring to simplify the subscription system from multi-plan (VIP, Startup, Growth) to a two-plan model (Explorer/Elite).
 
@@ -12,16 +27,33 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 
 ## Core Features
 1. **Mining System** - Time-based PRC mining with referral bonuses
-2. **Subscription Plans** - **Explorer (free)** and **Elite (paid)** - Simplified two-plan model
+2. **Subscription Plans** - **Explorer (FREE)** and **Elite (PAID)** ONLY
 3. **Redemption Services** - BBPS Bill Payments, Gift Vouchers, Bank Transfers
 4. **Payment Integration** - Razorpay (online) + Manual UPI/Bank
 5. **Admin Panel** - Complete management dashboard
 
-## Subscription System (NEW - March 2026)
-- **Explorer** (Free): Basic mining, PRC may expire after 2 days
-- **Elite** (Paid): Full features, PRC never expires, unlimited redemptions
-- **Legacy Plans**: Startup, Growth, VIP users are treated as Elite for backward compatibility
-- **Helper Function**: `is_paid_subscriber()` is the single source of truth for checking paid status
+## Subscription System (FINALIZED - March 2026)
+
+### ONLY TWO PLANS:
+| Plan | Price | Mining | Redemption | PRC Expiry |
+|------|-------|--------|------------|------------|
+| **Explorer** | FREE | Basic (1x) | ❌ Not Allowed | 2 days |
+| **Elite** | ₹799/month | Full (3x) | ✅ Allowed | Never |
+
+### Code Implementation:
+```python
+# In server.py
+PAID_PLANS = ["elite"]  # ONLY Elite is paid
+LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]  # Treated as Elite
+
+# Use this function to check paid status:
+is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
+```
+
+### Legacy Plan Handling:
+- Existing Startup/Growth/VIP users → Automatically treated as Elite
+- Their features work exactly like Elite
+- No new signups for legacy plans
 
 ## Tech Stack
 - **Frontend**: React.js with Tailwind CSS, Shadcn/UI
