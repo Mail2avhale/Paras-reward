@@ -79,7 +79,7 @@ const KYCVerification = ({ user }) => {
           setKycStatusInfo(kycStatusResponse.data);
         }
       } catch (kycError) {
-        console.log('KYC status check failed (non-critical):', kycError);
+        // console.log('KYC status check failed (non-critical):', kycError);
         // Don't block page load if KYC status check fails
       }
       

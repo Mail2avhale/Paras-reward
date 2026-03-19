@@ -681,10 +681,22 @@ def is_paid_subscriber(user: dict) -> bool:
     THIS IS THE SINGLE SOURCE OF TRUTH - use this instead of membership_type checks.
     
     Returns True if user has: startup, growth, elite, vip, or pro plan
+    Returns True if user has legacy membership_type: vip
     Returns False if user has: explorer, free, or no plan
     """
-    plan = user.get("subscription_plan", "explorer")
-    return plan in PAID_PLANS
+    if not user:
+        return False
+    
+    # Check new subscription plan system first (preferred)
+    plan = user.get("subscription_plan", "").lower()
+    if plan in PAID_PLANS:
+        return True
+    
+    # Fallback to legacy VIP system
+    if user.get("membership_type") == "vip":
+        return True
+    
+    return False
 
 def is_free_user(user: dict) -> bool:
     """
@@ -12707,26 +12719,7 @@ async def approve_vip_payment(payment_id: str, request: Request):
 
 
 # ========== VIP STATUS HELPER & MIGRATION ==========
-
-def is_paid_subscriber(user: dict) -> bool:
-    """
-    Unified helper to check if user has paid subscription.
-    Supports both legacy (membership_type: vip) and new (subscription_plan) systems.
-    Use this instead of checking membership_type directly.
-    """
-    if not user:
-        return False
-    
-    # Check new subscription plan system first (preferred)
-    subscription_plan = user.get("subscription_plan", "").lower()
-    if subscription_plan in ["startup", "growth", "elite"]:
-        return True
-    
-    # Fallback to legacy VIP system
-    if user.get("membership_type") == "vip":
-        return True
-    
-    return False
+# Note: is_paid_subscriber() is defined at line ~678 - use that version
 
 
 async def migrate_vip_users_to_subscription(request: Request):

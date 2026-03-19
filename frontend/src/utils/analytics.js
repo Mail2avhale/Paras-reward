@@ -25,7 +25,7 @@ export const initGA = (measurementId) => {
     send_page_view: false, // We'll send manually
   });
 
-  console.log('Google Analytics initialized:', measurementId);
+  // console.log('Google Analytics initialized:', measurementId);
 };
 
 // Track page view
@@ -38,7 +38,7 @@ export const trackPageView = (path, title) => {
     page_location: window.location.href,
   });
 
-  console.log('Page view tracked:', path);
+  // console.log('Page view tracked:', path);
 };
 
 // Track custom event
@@ -47,7 +47,7 @@ export const trackEvent = (eventName, parameters = {}) => {
 
   window.gtag('event', eventName, parameters);
 
-  console.log('Event tracked:', eventName, parameters);
+  // console.log('Event tracked:', eventName, parameters);
 };
 
 // Track user login

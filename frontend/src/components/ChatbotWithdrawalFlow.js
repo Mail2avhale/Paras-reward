@@ -150,7 +150,7 @@ const ChatbotWithdrawalFlow = ({ user, onComplete, onCancel }) => {
             setAadhaarKycName(aadhaarStatus.data.kyc_name || '');
           }
         } catch (e) {
-          console.log('Aadhaar status check failed, using default limit');
+          // console.log('Aadhaar status check failed, using default limit');
         }
         
         // Go to verification choice step

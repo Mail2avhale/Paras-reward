@@ -112,7 +112,7 @@ const AdminSubscriptionManagement = () => {
             }
           }
         } catch (fraudErr) {
-          console.log('Fraud check failed, proceeding with approval:', fraudErr);
+          // console.log('Fraud check failed, proceeding with approval:', fraudErr);
         }
       }
       

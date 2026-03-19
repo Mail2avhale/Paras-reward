@@ -184,7 +184,7 @@ const DashboardModern = ({ user, onLogout }) => {
           return; // Success - exit early
         }
       } catch (combinedError) {
-        console.log('Combined API failed, trying fallback');
+        // console.log('Combined API failed, trying fallback');
       }
       
       // Fallback to individual API calls
@@ -257,7 +257,7 @@ const DashboardModern = ({ user, onLogout }) => {
           setBirthdayGreeting(birthdayResponse.data);
         }
       } catch (bdError) {
-        console.log('Birthday check failed');
+        // console.log('Birthday check failed');
       }
       
     } catch (error) {

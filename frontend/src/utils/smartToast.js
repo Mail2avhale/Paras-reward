@@ -32,7 +32,7 @@ const shouldShowToast = (message, type) => {
   
   // Rate limit check
   if (toastCountThisMinute >= MAX_TOASTS_PER_MINUTE) {
-    console.log('[SmartToast] Rate limit reached, suppressing toast');
+    // console.log('[SmartToast] Rate limit reached, suppressing toast');
     return false;
   }
   
@@ -42,7 +42,7 @@ const shouldShowToast = (message, type) => {
   const now = Date.now();
   
   if (lastShown && (now - lastShown) < DUPLICATE_THRESHOLD) {
-    console.log('[SmartToast] Duplicate toast suppressed:', message);
+    // console.log('[SmartToast] Duplicate toast suppressed:', message);
     return false;
   }
   

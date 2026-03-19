@@ -306,7 +306,7 @@ const ReferralsEnhanced = ({ user }) => {
         }, 0);
         
         // DEBUG: Log response for troubleshooting
-        console.log('Referral Levels Response:', {
+        // console.log('Referral Levels Response:', {
           l1: l1Count,
           yourCircle: yourCircleCount,
           active: activeCount,
@@ -329,7 +329,7 @@ const ReferralsEnhanced = ({ user }) => {
         const storedRefCount = responseData.debug_search_info?.stored_referral_count || 0;
         if (yourCircleCount === 0 && storedRefCount > 0 && !window._referralRetried) {
           window._referralRetried = true;
-          console.log('[Referrals] Got 0 but stored count is', storedRefCount, '- retrying in 2s');
+          // console.log('[Referrals] Got 0 but stored count is', storedRefCount, '- retrying in 2s');
           setTimeout(() => {
             fetchReferralData();
             window._referralRetried = false;
@@ -409,7 +409,7 @@ const ReferralsEnhanced = ({ user }) => {
         return true;
       }
     } catch (error) {
-      console.log('Clipboard API failed, using fallback');
+      // console.log('Clipboard API failed, using fallback');
     }
     
     // Fallback: Create temporary textarea
@@ -429,7 +429,7 @@ const ReferralsEnhanced = ({ user }) => {
         return true;
       }
     } catch (err) {
-      console.log('Fallback copy failed');
+      // console.log('Fallback copy failed');
     }
     
     toast.error('Copy failed. Please copy manually.');

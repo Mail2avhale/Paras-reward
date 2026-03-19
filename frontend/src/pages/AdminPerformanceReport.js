@@ -39,11 +39,11 @@ const AdminPerformanceReport = ({ user }) => {
       }
 
       const url = `${API}/admin/performance-report${params.toString() ? '?' + params.toString() : ''}`;
-      console.log('Fetching:', url);
+      // console.log('Fetching:', url);
       
       const response = await fetch(url);
       const data = await response.json();
-      console.log('Report data:', data);
+      // console.log('Report data:', data);
       
       if (data && (data.success || data.admins)) {
         setReport(data);

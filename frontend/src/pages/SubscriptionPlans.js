@@ -125,7 +125,7 @@ const SubscriptionPlans = ({ user }) => {
           setPrcRate(rateRes.data.current_rate);
         }
       } catch (err) {
-        console.log('Using default PRC rate');
+        // console.log('Using default PRC rate');
       }
       
       // Get gateway statuses from public settings
@@ -146,7 +146,7 @@ const SubscriptionPlans = ({ user }) => {
         const historyRes = await axios.get(`${API}/subscription/history/${user.uid}`);
         setSubscriptionHistory(historyRes.data.history || []);
       } catch (err) {
-        console.log('No subscription history');
+        // console.log('No subscription history');
       }
       
       // Fetch ALL payment attempts (including failed/pending)
@@ -161,7 +161,7 @@ const SubscriptionPlans = ({ user }) => {
           setHasUnactivatedPayment(true);
         }
       } catch (err) {
-        console.log('No payment history');
+        // console.log('No payment history');
       }
       
       // Fetch redeem limit for PRC payment option
@@ -171,7 +171,7 @@ const SubscriptionPlans = ({ user }) => {
           setRedeemLimit(limitRes.data.limit);
         }
       } catch (err) {
-        console.log('Could not fetch redeem limit');
+        // console.log('Could not fetch redeem limit');
       }
       
     } catch (error) {
@@ -292,7 +292,7 @@ const SubscriptionPlans = ({ user }) => {
                 payment_id: response.razorpay_payment_id || ''
               });
             } catch (e) {
-              console.log('Could not update order status');
+              // console.log('Could not update order status');
             }
           }
         },
@@ -316,7 +316,7 @@ const SubscriptionPlans = ({ user }) => {
                 reason: 'User closed payment modal'
               });
             } catch (e) {
-              console.log('Could not update order status');
+              // console.log('Could not update order status');
             }
           }
         }
@@ -342,7 +342,7 @@ const SubscriptionPlans = ({ user }) => {
             payment_id: response.error.metadata?.payment_id || ''
           });
         } catch (e) {
-          console.log('Could not update order status');
+          // console.log('Could not update order status');
         }
       });
       

@@ -54,7 +54,7 @@ const VideoPlayer = ({
   useEffect(() => {
     if (autoplay && videoRef.current && videoType === 'direct') {
       videoRef.current.play().catch(err => {
-        console.log('Autoplay prevented:', err);
+        // console.log('Autoplay prevented:', err);
         setIsPlaying(false);
       });
     }

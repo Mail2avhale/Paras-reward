@@ -235,7 +235,7 @@ const DailyRewards = ({ user }) => {
       // FIXED: Use proper fallback chain for mining rate
       const rate = miningData.mining_rate_per_hour || miningData.mining_rate || 20.83;
       setMiningRate(rate);
-      console.log('Mining rate loaded:', rate); // DEBUG
+      // console.log('Mining rate loaded:', rate); // DEBUG
       
       setReferralBreakdown(miningData.referral_breakdown || null);
       setBaseRate(miningData.base_rate || 20.83);
@@ -259,7 +259,7 @@ const DailyRewards = ({ user }) => {
           setSessionPRC(miningData.mined_this_session || 0);
         }
         
-        console.log('Session restored from API:', {
+        // console.log('Session restored from API:', {
           remaining: miningData.remaining_hours,
           mined: miningData.mined_this_session
         });
@@ -296,7 +296,7 @@ const DailyRewards = ({ user }) => {
       
       // RETRY LOGIC: If first attempt fails, retry up to 2 times
       if (retryCount < 2) {
-        console.log(`Retrying mining data fetch (attempt ${retryCount + 2})...`);
+        // console.log(`Retrying mining data fetch (attempt ${retryCount + 2})...`);
         setTimeout(() => fetchUserData(isInitialLoad, retryCount + 1), 1000);
         return;
       }

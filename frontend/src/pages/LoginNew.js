@@ -68,7 +68,7 @@ const LoginNew = ({ onLogin }) => {
         const data = await response.json();
         setLoginData(prev => ({ ...prev, ip_address: data.ip }));
       } catch (error) {
-        console.log('Could not fetch IP');
+        // console.log('Could not fetch IP');
       }
     };
     fetchIP();

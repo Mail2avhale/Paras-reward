@@ -23,7 +23,7 @@ async function clearOldCaches() {
     const cacheNames = await caches.keys();
     const oldCaches = cacheNames.filter(name => !name.includes(CURRENT_CACHE_VERSION));
     await Promise.all(oldCaches.map(name => {
-      console.log('Clearing old cache:', name);
+      // console.log('Clearing old cache:', name);
       return caches.delete(name);
     }));
   }
@@ -41,7 +41,7 @@ async function forceUpdateServiceWorker() {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map(name => caches.delete(name)));
     }
-    console.log('Force cleared all service workers and caches');
+    // console.log('Force cleared all service workers and caches');
   }
 }
 
@@ -54,7 +54,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('SW registered:', window.location.href);
+        // console.log('SW registered:', window.location.href);
         
         // Force update check on mobile (TWA/PWA)
         if (registration.waiting) {
@@ -69,7 +69,7 @@ if ('serviceWorker' in navigator) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // New service worker available - activate it immediately for better UX
-              console.log('New service worker available');
+              // console.log('New service worker available');
               newWorker.postMessage({ type: 'SKIP_WAITING' });
               
               // Only show update prompt once per session
@@ -81,7 +81,7 @@ if ('serviceWorker' in navigator) {
                 sessionStorage.setItem('sw_update_prompt_time', now.toString());
                 
                 // Show non-blocking notification instead of confirm
-                console.log('New version available - will update on next reload');
+                // console.log('New version available - will update on next reload');
               }
             }
           });
@@ -89,7 +89,7 @@ if ('serviceWorker' in navigator) {
         
         // Listen for controlling service worker changes
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('Service worker controller changed');
+          // console.log('Service worker controller changed');
         });
         
         // Check for updates every 5 minutes (for mobile users who keep app open)
@@ -98,7 +98,7 @@ if ('serviceWorker' in navigator) {
         }, 5 * 60 * 1000);
       })
       .catch((registrationError) => {
-        console.log('SW registration failed:', registrationError);
+        // console.log('SW registration failed:', registrationError);
       });
   });
 }

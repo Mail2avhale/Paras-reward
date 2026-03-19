@@ -688,11 +688,11 @@ const RedeemPageV2 = ({ user }) => {
     }
     
     if (!category) {
-      console.log(`[BBPS] No category mapping for service: ${serviceType}`);
+      // console.log(`[BBPS] No category mapping for service: ${serviceType}`);
       return;
     }
     
-    console.log(`[BBPS] Fetching operators for ${serviceType} -> category: ${category}`);
+    // console.log(`[BBPS] Fetching operators for ${serviceType} -> category: ${category}`);
     
     setLoadingOperators(true);
     setOperatorsError(null); // Clear previous error
@@ -707,25 +707,25 @@ const RedeemPageV2 = ({ user }) => {
         const response = await axios.get(`${API}/bbps/operators/${category}`, {
           timeout: 15000 // 15 second timeout
         });
-        console.log(`[BBPS] API Response for ${category} (attempt ${attempt}):`, response.data);
+        // console.log(`[BBPS] API Response for ${category} (attempt ${attempt}):`, response.data);
         
         if (response.data.operators && response.data.operators.length > 0) {
           // For mobile, store with recharge type key
           const storeKey = serviceType === 'mobile_recharge' ? `mobile_${rechargeType}` : serviceType;
-          console.log(`[BBPS] Storing ${response.data.operators.length} operators in key: ${storeKey}`);
+          // console.log(`[BBPS] Storing ${response.data.operators.length} operators in key: ${storeKey}`);
           
           setOperators(prev => {
             const updated = {
               ...prev,
               [storeKey]: response.data.operators
             };
-            console.log('[BBPS] Updated operators state:', Object.keys(updated));
+            // console.log('[BBPS] Updated operators state:', Object.keys(updated));
             return updated;
           });
           setLoadingOperators(false);
           return; // Success, exit retry loop
         } else {
-          console.log(`[BBPS] No operators returned for ${category}, attempt ${attempt}`);
+          // console.log(`[BBPS] No operators returned for ${category}, attempt ${attempt}`);
           lastError = new Error('No operators returned');
         }
       } catch (error) {
@@ -894,16 +894,16 @@ const RedeemPageV2 = ({ user }) => {
         // Fetch existing recipients
         try {
           const recipientsRes = await axios.get(`${API}/eko/dmt/recipients/${senderMobile}?user_id=${user?.uid || 'guest'}`);
-          console.log('[DMT] Recipients response:', recipientsRes.data);
+          // console.log('[DMT] Recipients response:', recipientsRes.data);
           if (recipientsRes.data.success && recipientsRes.data.data?.recipients?.length > 0) {
             setExistingRecipients(recipientsRes.data.data.recipients);
-            console.log('[DMT] Loaded recipients:', recipientsRes.data.data.recipients);
+            // console.log('[DMT] Loaded recipients:', recipientsRes.data.data.recipients);
           } else {
-            console.log('[DMT] No recipients in response:', recipientsRes.data);
+            // console.log('[DMT] No recipients in response:', recipientsRes.data);
             setExistingRecipients([]);
           }
         } catch (e) {
-          console.log('[DMT] Recipients fetch error:', e.response?.data || e.message);
+          // console.log('[DMT] Recipients fetch error:', e.response?.data || e.message);
           setExistingRecipients([]);
         }
       } else if (response.data.success && !response.data.data?.customer_exists) {
@@ -1203,7 +1203,7 @@ const RedeemPageV2 = ({ user }) => {
         fetchRequest[paramName] = formData.additional_param_2;
       }
       
-      console.log('[BBPS FETCH] Request:', fetchRequest);
+      // console.log('[BBPS FETCH] Request:', fetchRequest);
       
       const response = await axios.post(`${API}/bbps/fetch`, fetchRequest);
       
@@ -1262,7 +1262,7 @@ const RedeemPageV2 = ({ user }) => {
         const response = await axios.get(`${API}/bbps/operator-params/${formData.operator}`);
         if (response.data.success && response.data.parameters) {
           setOperatorParams(response.data);
-          console.log('[BBPS] Operator params:', response.data);
+          // console.log('[BBPS] Operator params:', response.data);
         }
       } catch (error) {
         console.error('Failed to fetch operator params:', error);
@@ -1550,7 +1550,7 @@ const RedeemPageV2 = ({ user }) => {
     } else {
       ops = operators[selectedService] || OPERATORS[selectedService] || [];
     }
-    console.log(`[BBPS] currentOperators for ${selectedService}:`, ops.length, 'operators available');
+    // console.log(`[BBPS] currentOperators for ${selectedService}:`, ops.length, 'operators available');
     return ops;
   })();
   

@@ -273,10 +273,10 @@ const AdminLayout = ({ children, user, onLogout }) => {
     // If this route requires a permission, check it
     if (requiredPermission) {
       const hasAccess = userPermissions.includes(requiredPermission);
-      console.log(`Route ${currentPath} requires ${requiredPermission}, user has: ${hasAccess}`);
+      // console.log(`Route ${currentPath} requires ${requiredPermission}, user has: ${hasAccess}`);
       
       if (!hasAccess) {
-        console.log(`Access denied to ${currentPath}, redirecting to /admin`);
+        // console.log(`Access denied to ${currentPath}, redirecting to /admin`);
         navigate('/admin');
       }
     }
