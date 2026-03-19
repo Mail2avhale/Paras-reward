@@ -1,5 +1,7 @@
 # PARAS REWARD - Product Requirements Document
 
+## ✅ DEPLOYED - 19 March 2026
+
 ## ⚠️ IMPORTANT: TWO-PLAN SYSTEM ONLY ⚠️
 ```
 ╔════════════════════════════════════════════════════════════════╗
