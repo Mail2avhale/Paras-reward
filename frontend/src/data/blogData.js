@@ -3,27 +3,27 @@ export const blogArticles = [
     id: 1,
     slug: "what-is-paras-reward-complete-guide",
     title: "What Is Paras Reward? A Complete Guide for New Users",
-    excerpt: "Are you looking for a platform where you can earn digital coins just by logging in daily and staying active? Discover India's first reward-based platform.",
+    excerpt: "Are you looking for a platform where you can collect digital coins just by logging in daily and staying active? Discover India's first reward-based platform.",
     author: "PARAS REWARD Team",
     date: "November 2, 2024",
     readTime: "5 min read",
     category: "Getting Started",
     image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Are you looking for a platform where you can earn digital coins just by logging in daily and staying active? Paras Reward is India's first reward-based engagement platform, where you earn PRC (Paras Reward Coins) without any investment — just your time and engagement!</p>
+      <p class="lead">Are you looking for a platform where you can collect digital coins just by logging in daily and staying active? Paras Reward is India's first reward-based engagement platform, where you get PRC (Paras Reward Coins) without any investment — just your time and engagement!</p>
 
       <h2>✅ What Is Paras Reward?</h2>
       <p>Paras Reward is a mobile app and online platform where users can:</p>
       <ul>
-        <li>Earn reward points every hour</li>
-        <li>Increase earnings with referrals</li>
-        <li>Redeem coins for cash or vouchers (VIP users only)</li>
+        <li>Collect reward points every hour</li>
+        <li>Boost rewards with referrals</li>
+        <li>Redeem coins for cash or vouchers (Elite users only)</li>
         <li>Get daily bonuses for activity</li>
       </ul>
-      <p>It's a risk-free earning model based on user time and engagement — not cryptocurrency trading or investment.</p>
+      <p>It's a reward model based on user time and engagement — not cryptocurrency trading or investment.</p>
 
       <h2>✅ How Does the Rewards System Work?</h2>
-      <p>Earning rewards is the heart of Paras Reward. Once you start your reward session in the app, PRC coins start accumulating automatically every hour. You can boost your earning rate by:</p>
+      <p>Collecting rewards is the heart of Paras Reward. Once you start your reward session in the app, PRC coins start accumulating automatically every hour. You can boost your reward rate by:</p>
       <ul>
         <li>Logging in daily</li>
         <li>Keeping reward sessions active</li>
@@ -31,18 +31,18 @@ export const blogArticles = [
       </ul>
 
       <h2>✅ What Are PRC Coins?</h2>
-      <p>PRC (Paras Reward Coin) is the in-app virtual currency you earn for free. You can use PRC to get:</p>
+      <p>PRC (Paras Reward Coin) is the in-app virtual currency you collect for free. You can use PRC to get:</p>
       <ul>
-        <li>Instant UPI cash transfer (VIP only)</li>
+        <li>Instant UPI cash transfer (Elite only)</li>
         <li>Shopping vouchers</li>
         <li>Special offers & marketplace access</li>
       </ul>
 
       <h2>✅ Is Paras Reward Free?</h2>
-      <p>Yes — joining and earning is 100% free. VIP Membership is optional and required only for redemption to rewards.</p>
+      <p>Yes — joining and collecting rewards is 100% free. Elite Membership is optional and required only for redemption.</p>
 
       <h2>✅ Is It Legal and Safe?</h2>
-      <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins earned in the app reflect your activity and can be redeemed legally through supported channels.</p>
+      <p>Yes. Paras Reward is a compliant, India-based rewards platform, not a crypto trading or investment app. Coins collected in the app reflect your activity and can be redeemed legally through supported channels.</p>
     `
   },
   {
@@ -53,10 +53,10 @@ export const blogArticles = [
     author: "PARAS REWARD Team",
     date: "November 2, 2024",
     readTime: "4 min read",
-    category: "Earning",
+    category: "Rewards",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
     content: `
-      <p class="lead">Earning rewards in Paras Reward is a simple, time-based process designed for everyday users. You don't need any investment, trading knowledge, or hardware.</p>
+      <p class="lead">Collecting rewards in Paras Reward is a simple, time-based process designed for everyday users. You don't need any investment, trading knowledge, or hardware.</p>
 
       <h2>🕒 Step-by-Step Rewards Guide:</h2>
       <ol>

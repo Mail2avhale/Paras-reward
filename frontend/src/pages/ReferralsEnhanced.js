@@ -458,13 +458,13 @@ const ReferralsEnhanced = ({ user }) => {
 ✨ Use my invite code: ${referralCode}
 🔗 ${referralLink}
 
-💰 Earn PRC Daily
+💰 Collect PRC Daily
 🛒 Shop & Save  
 💳 Pay Bills
 🎁 Redeem Gift Vouchers
 👥 Boost Mining with Friends
 
-Download now & start earning!`;
+Download now & start collecting!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -474,13 +474,13 @@ Download now & start earning!`;
 ✨ Use my invite code: ${referralCode}
 🔗 ${referralLink}
 
-💰 Earn PRC Daily
+💰 Collect PRC Daily
 🛒 Shop & Save  
 💳 Pay Bills
 🎁 Redeem Gift Vouchers
 👥 Boost Mining with Friends
 
-Download now & start earning!`;
+Download now & start collecting!`;
     
     const shareData = {
       title: 'Join PARAS REWARD',
@@ -840,7 +840,7 @@ Download now & start earning!`;
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-bold flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-400" />
-              Earning Levels
+              Reward Levels
             </h3>
             <span className="text-xs text-gray-500">Tap to see users</span>
           </div>
@@ -970,7 +970,7 @@ Download now & start earning!`;
           
           {/* Total Potential */}
           <div className="mt-4 pt-4 border-t border-gray-700/50 flex items-center justify-between">
-            <span className="text-gray-400 text-sm">Maximum Earning Potential</span>
+            <span className="text-gray-400 text-sm">Maximum Bonus Potential</span>
             <span className="text-amber-400 font-bold">Up to +18% bonus</span>
           </div>
         </div>
@@ -1051,7 +1051,7 @@ Download now & start earning!`;
             </div>
             <h3 className="text-white font-bold text-lg mb-2">Start Building Your Network</h3>
             <p className="text-gray-400 text-sm mb-4">
-              Share your invite code with friends and earn bonus PRC when they start earning!
+              Share your invite code with friends and get bonus PRC when they join!
             </p>
             <button
               onClick={shareNative}
@@ -1198,7 +1198,7 @@ Download now & start earning!`;
                 className="text-white/90 text-lg mb-6"
               >
                 Your first friend just joined!<br />
-                You&apos;re now earning <strong>+10% bonus</strong> from their rewards!
+                You&apos;re now getting <strong>+10% bonus</strong> from their rewards!
               </motion.p>
               
               <motion.div

@@ -26,17 +26,17 @@ const FAQ = () => {
         },
         {
           question: "Is there any joining fee?",
-          answer: "No! Joining PARAS REWARD is completely free. You can start earning promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
+          answer: "No! Joining PARAS REWARD is completely free. You can start collecting promotional reward points immediately after registration. Note: Reward points are promotional in nature and have no guaranteed monetary value."
         }
       ]
     },
     {
-      category: 'Earning PRC',
+      category: 'Collecting PRC',
       icon: Coins,
       questions: [
         {
-          question: "How do I earn PRC points?",
-          answer: "You can earn PRC points through: Daily engagement (virtual mining feature), Inviting Friends (boost mining when friends join and stay active), and Daily login activities."
+          question: "How do I collect PRC points?",
+          answer: "You can collect PRC points through: Daily engagement (virtual mining feature), Inviting Friends (boost mining when friends join and stay active), and Daily login activities."
         },
         {
           question: "How to increase reward rate?",
@@ -50,7 +50,7 @@ const FAQ = () => {
       questions: [
         {
           question: "What subscription plans are available?",
-          answer: "We offer 2 plans: Explorer (Free) and Elite (₹799/month). Elite plan includes 3x reward rates, more daily taps, and redemption access."
+          answer: "We offer 2 plans: Explorer (Free) and Elite (₹799/month). Elite plan includes full reward collection, redemption access, and referral bonuses."
         },
         {
           question: "Do free users' PRC points expire?",
@@ -58,7 +58,7 @@ const FAQ = () => {
         },
         {
           question: "Can free users redeem rewards?",
-          answer: "No, only paid plan members (Startup/Growth/Elite) can redeem rewards. Free users can earn PRC but must upgrade to access redemption features."
+          answer: "No, only Elite plan members can redeem rewards. Explorer users can mine PRC but must upgrade to collect and redeem."
         }
       ]
     },

@@ -47,7 +47,7 @@ const Blog = () => {
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">PARAS REWARD Blog</h1>
             <p className="text-xl text-gray-600">
-              Guides, tips, and insights to maximize your earnings
+              Guides, tips, and insights to maximize your rewards
             </p>
           </div>
 

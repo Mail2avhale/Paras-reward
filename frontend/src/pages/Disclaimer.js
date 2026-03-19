@@ -136,7 +136,7 @@ const Disclaimer = () => {
             <div className="text-gray-300 space-y-4 leading-relaxed">
               <p>We do NOT guarantee:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Any specific amount of rewards or earnings</li>
+                <li>Any specific amount of rewards or collections</li>
                 <li>Availability of redemption options at any time</li>
                 <li>Uninterrupted access to the Platform</li>
                 <li>That the Platform will meet your requirements</li>

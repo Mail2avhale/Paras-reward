@@ -817,7 +817,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
               <Crown className="w-5 h-5" />
               Upgrade Your Plan
               <InfoTooltip>
-                <p>Upgrade to earn faster! Get up to 3x mining speed, higher redemption limits, and exclusive features</p>
+                <p>Upgrade to collect PRC! Get full access to redemption, higher limits, and exclusive features</p>
               </InfoTooltip>
             </span>
             <ChevronRight className="w-5 h-5 text-black" />

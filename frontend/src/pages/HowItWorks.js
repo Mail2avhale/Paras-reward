@@ -9,7 +9,7 @@ const HowItWorks = () => {
     <>
       <SEO 
         title="How It Works"
-        description="Learn how to earn PRC reward points on PARAS REWARD - from daily mining to referrals and VIP benefits."
+        description="Learn how to collect PRC reward points on PARAS REWARD - from daily mining to referrals and Elite benefits."
         url="https://www.parasreward.com/how-it-works"
       />
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -43,7 +43,7 @@ const HowItWorks = () => {
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">How PARAS REWARD Works</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              A simple 3-step process to start earning rewards daily
+              A simple 3-step process to start collecting rewards daily
             </p>
           </div>
 
@@ -65,9 +65,9 @@ const HowItWorks = () => {
                 2
               </div>
               <Zap className="h-12 w-12 text-pink-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Earn PRC Points</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Collect PRC Points</h3>
               <p className="text-gray-600 leading-relaxed">
-                Complete daily activities, play games, and refer friends to earn PRC reward points every day.
+                Complete daily activities and refer friends to collect PRC reward points every day.
               </p>
             </Card>
 
@@ -83,9 +83,9 @@ const HowItWorks = () => {
             </Card>
           </div>
 
-          {/* Earning Methods */}
+          {/* Reward Methods */}
           <div className="mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Ways to Earn PRC Points</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Ways to Collect PRC Points</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-6 bg-white shadow-lg hover:shadow-xl transition-all">
                 <div className="flex items-start gap-4">
@@ -95,7 +95,7 @@ const HowItWorks = () => {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Rewards</h3>
                     <p className="text-gray-600">
-                      Start a 24-hour reward session and earn PRC points automatically based on your activity level and referrals.
+                      Start a 24-hour reward session and collect PRC points automatically based on your activity level and referrals.
                     </p>
                   </div>
                 </div>
@@ -123,7 +123,7 @@ const HowItWorks = () => {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Daily Tasks</h3>
                     <p className="text-gray-600">
-                      Complete simple daily tasks and challenges to earn bonus PRC points and special rewards.
+                      Complete simple daily tasks and challenges to get bonus PRC points and special rewards.
                     </p>
                   </div>
                 </div>
@@ -137,14 +137,14 @@ const HowItWorks = () => {
               <Crown className="h-16 w-16 text-yellow-300 mx-auto mb-4" />
               <h2 className="text-3xl font-bold mb-4">Unlock Elite Benefits</h2>
               <p className="text-xl text-purple-100">
-                Upgrade to Elite for just ₹799/month and unlock unlimited potential
+                Upgrade to Elite for just ₹799/month and unlock full features
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 'Unlimited PRC validity - Never expire',
                 'Instant UPI Redemptions',
-                'Higher earning rates',
+                'Faster reward collection',
                 'Priority customer support',
                 'Exclusive product access',
                 'No Redemption limits'
@@ -166,8 +166,8 @@ const HowItWorks = () => {
 
           {/* CTA */}
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Start Earning?</h3>
-            <p className="text-gray-600 mb-6">Join 10,000+ users already earning daily rewards</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Get Started?</h3>
+            <p className="text-gray-600 mb-6">Join 10,000+ users already collecting daily rewards</p>
             <Link to="/register">
               <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg rounded-xl shadow-xl">
                 Create Free Account

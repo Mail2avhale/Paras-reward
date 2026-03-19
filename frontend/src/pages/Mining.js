@@ -439,7 +439,7 @@ const DailyRewards = ({ user }) => {
         
         // Success haptic
         triggerHaptic('success');
-        smartToast.success('Session started! Earning PRC...');
+        smartToast.success('Session started! Collecting PRC...');
         
         // Reset notification flag
         sessionEndNotifiedRef.current = false;
@@ -891,7 +891,7 @@ const DailyRewards = ({ user }) => {
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <p className="text-zinc-500 text-xs">{globalT('rewardRate')}</p>
                   <InfoTooltip>
-                    <p>PRC earned per hour. Rate increases with your subscription plan and referral bonuses</p>
+                    <p>PRC collected per hour. Rate increases with your subscription plan and referral bonuses</p>
                   </InfoTooltip>
                 </div>
                 <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">{miningRate.toFixed(1)}</p>

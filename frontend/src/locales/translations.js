@@ -26,9 +26,9 @@ const translations = {
   
   // ==================== TODAY STATS ====================
   todayEarned: {
-    mr: "आज कमावले",
-    hi: "आज कमाया",
-    en: "Today Earned"
+    mr: "आज मिळाले",
+    hi: "आज मिला",
+    en: "Today Collected"
   },
   todaySpent: {
     mr: "आज खर्च केले",
@@ -36,9 +36,9 @@ const translations = {
     en: "Today Spent"
   },
   earning: {
-    mr: "कमाई",
-    hi: "कमाई",
-    en: "Earning"
+    mr: "रिवॉर्ड्स",
+    hi: "रिवॉर्ड्स",
+    en: "Rewards"
   },
   spending: {
     mr: "खर्च",
@@ -53,9 +53,9 @@ const translations = {
     en: "Live Platform Stats"
   },
   platformEarned: {
-    mr: "आज PRC कमावले",
-    hi: "आज PRC कमाया",
-    en: "Today PRC Earned"
+    mr: "आज PRC मिळाले",
+    hi: "आज PRC मिला",
+    en: "Today PRC Collected"
   },
   platformBurned: {
     mr: "आज PRC वापरले",
@@ -184,9 +184,9 @@ const translations = {
     en: "Next Goal"
   },
   earnMore: {
-    mr: "अजून कमवा",
-    hi: "और कमाएं",
-    en: "Earn more"
+    mr: "अजून मिळवा",
+    hi: "और पाएं",
+    en: "Get more"
   },
   complete: {
     mr: "पूर्ण",
@@ -427,9 +427,9 @@ const translations = {
     en: "10 PRC = ₹1"
   },
   earnPrc: {
-    mr: "PRC कमवा",
-    hi: "PRC कमाएं",
-    en: "Earn PRC"
+    mr: "PRC मिळवा",
+    hi: "PRC पाएं",
+    en: "Get PRC"
   },
   usePrc: {
     mr: "PRC वापरा",
@@ -449,9 +449,9 @@ const translations = {
     en: "Your Rank"
   },
   topEarners: {
-    mr: "टॉप कमावणारे",
-    hi: "टॉप कमाने वाले",
-    en: "Top Earners"
+    mr: "टॉप मायनर्स",
+    hi: "टॉप माइनर्स",
+    en: "Top Miners"
   },
 
   // ==================== SCRATCH CARD ====================
@@ -481,7 +481,7 @@ const translations = {
   tutorialWelcomeDesc: {
     mr: "बक्षिसे गोळा करा, Refer करा, आणि exciting rewards मिळवा!",
     hi: "पुरस्कार इकट्ठा करें, Refer करें, और exciting rewards पाएं!",
-    en: "Collect rewards, Refer, and earn exciting prizes!"
+    en: "Collect rewards, Refer, and get exciting prizes!"
   },
   tutorialWelcomeTip1: {
     mr: "दररोज बक्षिसे गोळा करा",
@@ -494,9 +494,9 @@ const translations = {
     en: "Invite your friends"
   },
   tutorialWelcomeTip3: {
-    mr: "VIP बना आणि जास्त कमवा",
-    hi: "VIP बनें और ज्यादा कमाएं",
-    en: "Become VIP and earn more"
+    mr: "Elite बना आणि redeem करा",
+    hi: "Elite बनें और redeem करें",
+    en: "Become Elite and redeem"
   },
   mascotWelcome: {
     mr: "नमस्कार! मी Paras Buddy!",
@@ -548,9 +548,9 @@ const translations = {
     en: "5-Level Referral System 👥"
   },
   tutorialReferralSubtitle: {
-    mr: "Team बनवा, जास्त कमवा",
-    hi: "Team बनाएं, ज्यादा कमाएं",
-    en: "Build Team, Earn More"
+    mr: "Team बनवा, जास्त bonus मिळवा",
+    hi: "Team बनाएं, ज्यादा bonus पाएं",
+    en: "Build Team, Get More Bonus"
   },
   tutorialReferralDesc: {
     mr: "तुमचा referral code share करा. तुमच्या 5 levels पर्यंतच्या team वर bonus मिळतो!",
@@ -659,9 +659,9 @@ const translations = {
     en: "Play Games 🎮"
   },
   tutorialGamesSubtitle: {
-    mr: "मजा करा, PRC कमवा",
-    hi: "मज़े करें, PRC कमाएं",
-    en: "Have fun, earn PRC"
+    mr: "मजा करा, PRC मिळवा",
+    hi: "मज़े करें, PRC पाएं",
+    en: "Have fun, get PRC"
   },
   tutorialGamesDesc: {
     mr: "Tap Challenge आणि Scratch Cards खेळा आणि bonus PRC जिंका!",
@@ -822,9 +822,9 @@ const translations = {
     en: "Daily login bonus"
   },
   tutorialReadyTip2: {
-    mr: "Refer & earn",
-    hi: "Refer & earn",
-    en: "Refer & earn"
+    mr: "Refer & bonus मिळवा",
+    hi: "Refer & bonus पाएं",
+    en: "Refer & get bonus"
   },
   tutorialReadyTip3: {
     mr: "Support: Help section मध्ये",

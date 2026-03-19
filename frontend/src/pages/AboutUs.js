@@ -99,7 +99,7 @@ const AboutUs = () => {
               <span className="text-amber-400 font-semibold">PARAS REWARD</span> is a digital engagement and rewards platform where users earn virtual reward points through daily activities, games, and platform interactions.
             </p>
             <p>
-              Our platform offers a fun and engaging way to earn promotional rewards. The term "mining" refers to our virtual reward generation system based on user engagement - <span className="text-red-400">not cryptocurrency or real money mining</span>.
+              Our platform offers a fun and engaging way to collect promotional rewards. The term "mining" refers to our virtual reward generation system based on user engagement - <span className="text-red-400">not cryptocurrency or real money mining</span>.
             </p>
             <p>
               Reward points are promotional in nature and can be redeemed through authorized partners for services like mobile recharges, bill payments, and in-app shopping, subject to availability.

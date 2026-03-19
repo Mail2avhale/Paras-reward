@@ -18,7 +18,7 @@ const RefundPolicy = () => {
           description: 'PRC (PARAS Reward Coins) earned through mining, tap games, or other activities are non-refundable and non-transferable.',
           type: 'warning'
         },
-        { text: 'Earned PRC: Points earned through platform activities cannot be refunded or exchanged for money.' },
+        { text: 'Collected PRC: Points collected through platform activities cannot be refunded or exchanged for money.' },
         { text: 'Expiry Policy: Free users\' PRC may expire as per platform terms. Elite users\' PRC does not expire.' },
         { text: 'No Cash Value: PRC points have no monetary value outside the platform.' },
         { text: 'Account Termination: If your account is terminated due to violation of terms, all accumulated PRC will be forfeited.' }
