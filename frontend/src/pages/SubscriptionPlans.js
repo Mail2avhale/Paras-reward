@@ -911,12 +911,25 @@ const SubscriptionPlans = ({ user }) => {
                       
                       {/* Features */}
                       <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-amber-500" /> {plan.multiplier}x Rewards
-                        </span>
-                        <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-blue-500" /> {plan.tap_limit} Taps/Day
-                        </span>
+                        {plan.is_free ? (
+                          <>
+                            <span className="px-2 py-1 bg-gray-800/80 rounded-lg text-xs text-gray-300 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-gray-500" /> Mine PRC
+                            </span>
+                            <span className="px-2 py-1 bg-red-900/50 rounded-lg text-xs text-red-400 flex items-center gap-1">
+                              ❌ Cannot Collect
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="px-2 py-1 bg-amber-900/50 rounded-lg text-xs text-amber-300 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-amber-500" /> Mine + Collect
+                            </span>
+                            <span className="px-2 py-1 bg-emerald-900/50 rounded-lg text-xs text-emerald-300 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> Redeem to Bank
+                            </span>
+                          </>
+                        )}
                       </div>
                       
                       {/* Price Section */}

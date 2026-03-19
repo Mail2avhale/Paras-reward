@@ -8662,27 +8662,35 @@ async def get_subscription_plans():
     
     pricing = await get_subscription_pricing()
     
-    # Special Offer Prices (Limited Time)
+    # Special Offer Price for Elite
     special_offers = {
-        "startup": {"original": 500, "offer": 299, "discount": 40},
-        # "growth": {"original": 1000, "offer": 549, "discount": 45},  # Discontinued
         "elite": {"original": 2000, "offer": 799, "discount": 60}
     }
     
     plans = []
     for plan_id, config in SUBSCRIPTION_PLANS.items():
+        # Skip legacy/internal plans (start with underscore)
+        if plan_id.startswith("_"):
+            continue
+            
         # Skip discontinued plans
         if config.get("discontinued"):
+            continue
+        
+        # Only show active plans: explorer and elite
+        if plan_id not in ACTIVE_SUBSCRIPTION_PLANS:
             continue
             
         if config["is_free"]:
             plans.append({
                 "id": plan_id,
                 "name": config["name"],
+                "description": config.get("description", ""),
                 "multiplier": config["multiplier"],
                 "referral_weight": config["referral_weight"],
-                "tap_limit": config["tap_limit"],
-                "can_redeem": config["can_redeem"],
+                "tap_limit": config.get("tap_limit", 100),
+                "can_collect": config.get("can_collect", False),
+                "can_redeem": config.get("can_redeem", False),
                 "is_free": True,
                 "pricing": None,
                 "offer": None
@@ -8697,16 +8705,15 @@ async def get_subscription_plans():
             plans.append({
                 "id": plan_id,
                 "name": config["name"],
+                "description": config.get("description", ""),
                 "multiplier": config["multiplier"],
                 "referral_weight": config["referral_weight"],
-                "tap_limit": config["tap_limit"],
-                "can_redeem": config["can_redeem"],
+                "tap_limit": config.get("tap_limit", 100),
+                "can_collect": config.get("can_collect", True),
+                "can_redeem": config.get("can_redeem", True),
                 "is_free": False,
                 "pricing": {
-                    "monthly": monthly_price,
-                    "quarterly": int(monthly_price * 2.7),  # 10% off
-                    "half_yearly": int(monthly_price * 5.1),  # 15% off
-                    "yearly": int(monthly_price * 9)  # 25% off
+                    "monthly": monthly_price
                 },
                 "offer": offer
             })
@@ -8715,7 +8722,7 @@ async def get_subscription_plans():
         "plans": plans, 
         "durations": SUBSCRIPTION_DURATIONS,
         "has_active_offer": True,
-        "offer_name": "Limited Time Offer - Up to 60% OFF!"
+        "offer_name": "Limited Time Offer - 60% OFF on Elite!"
     }
     
     # Cache for 10 minutes (plans don't change frequently)
