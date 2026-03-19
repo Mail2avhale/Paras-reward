@@ -1,7 +1,7 @@
 # PARAS REWARD - Product Requirements Document
 
 ## Original Problem Statement
-User's original request was to redesign the Mining Session UI with a futuristic design and complete the Manual Fintech Redeem System.
+User's original request was to redesign the Mining Session UI with a futuristic design and complete the Manual Fintech Redeem System. Later expanded to include a major refactoring to simplify the subscription system from multi-plan (VIP, Startup, Growth) to a two-plan model (Explorer/Elite).
 
 ## Application Overview
 Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
@@ -12,10 +12,16 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 
 ## Core Features
 1. **Mining System** - Time-based PRC mining with referral bonuses
-2. **Subscription Plans** - Explorer (free), Startup, Growth, Elite
+2. **Subscription Plans** - **Explorer (free)** and **Elite (paid)** - Simplified two-plan model
 3. **Redemption Services** - BBPS Bill Payments, Gift Vouchers, Bank Transfers
 4. **Payment Integration** - Razorpay (online) + Manual UPI/Bank
 5. **Admin Panel** - Complete management dashboard
+
+## Subscription System (NEW - March 2026)
+- **Explorer** (Free): Basic mining, PRC may expire after 2 days
+- **Elite** (Paid): Full features, PRC never expires, unlimited redemptions
+- **Legacy Plans**: Startup, Growth, VIP users are treated as Elite for backward compatibility
+- **Helper Function**: `is_paid_subscriber()` is the single source of truth for checking paid status
 
 ## Tech Stack
 - **Frontend**: React.js with Tailwind CSS, Shadcn/UI
@@ -27,48 +33,43 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 
 ## What's Been Implemented (March 2026)
 
-### Latest Session (18 March 2026) - Validation Order Verification
+### Latest Session (19 March 2026) - VIP/Membership to Elite Refactoring
 
-**Redemption Validation Order Verified & Tested:**
-1. **Validation Order in `unified_redeem_v2.py`** is correctly implemented:
-   - Emergency pause check
-   - User exists check
-   - KYC verification (line 879)
-   - Subscription plan check (line 888)
-   - Subscription expiry check (line 899)
-   - Service type validation
-   - Service-specific validation
-   - Weekly service limit check
-   - Global redeem limit check
-   - PRC balance check
-   - Category limit check (40/30/30)
+**COMPLETED: Two-Plan System Refactoring**
+- Simplified from 4 plans (VIP, Startup, Growth, Elite) to 2 plans (Explorer, Elite)
+- Legacy plans treated as Elite for backward compatibility
+- Removed deprecated `membership_type` field usage from new code
+- Updated all backend routes to use `subscription_plan` instead of `membership_type`
+- Updated frontend UI text from "VIP" to "Elite"
 
-2. **Test Results**: 18 tests passed, 1 skipped
-   - KYC check happens BEFORE subscription check ✅
-   - Subscription expiry check happens BEFORE limit checks ✅
-   - Expired subscription returns "subscription error" NOT "limit error" ✅
-   - Category-wise limits enforced (40/30/30) ✅
-   - GST invoice generation working ✅
+**Key Changes:**
+1. **Backend Constants Updated** (`server.py`):
+   - `PAID_PLANS = ["elite"]`
+   - `LEGACY_PAID_PLANS = ["startup", "growth", "vip", "pro"]`
+   - `SUBSCRIPTION_PLANS` dictionary with explorer and elite configs
 
-3. **Key Test File**: `/app/backend/tests/test_redemption_validation_order.py`
+2. **Helper Function**: `is_paid_subscriber(user)` - centralized check for paid status
 
-### Previous Session (18 March 2026) - Critical Bug Fixes
+3. **Routes Updated**:
+   - `auth.py`: Subscription expiry check instead of VIP expiry
+   - `razorpay_payments.py`: Removed `membership_type: "vip"` from all user updates
+   - `admin_dashboard.py`: Uses `subscription_plan` for elite_users count
+   - `admin_users.py`: Filters by `subscription_plan` instead of `membership_type`
+   - `admin_misc.py`: Updated renewal notifications to query by plan
+   - `admin_reports.py`: Updated conversion analytics
 
-**Two Critical Bugs Fixed:**
-1. **Subscription Expiry Check**: Added logic to block redemptions for users with expired subscriptions
-2. **Category Limit Enforcement**: Added backend validation to enforce 40% Utility, 30% Shopping, 30% Bank spending limits
+4. **Frontend Updated**:
+   - HowItWorks.js: "Unlock Elite Benefits"
+   - SupportTickets.js: "KYC/Subscription" category
+   - AdminSettings.js: "Elite Payment Settings"
+   - RefundPolicy.js: "Elite Membership Fees"
+   - AdminPolicies.js: "Elite Membership" policy
 
-**BBPS Cooldown Logic Fixed:**
-- Corrected service name mappings in `server.py`
-- Only counts successful transactions for 7-day cooldown
+5. **Migration Script Created**: `/app/backend/migrations/migrate_to_two_plans.py`
 
-**Eko Callback Endpoint Created:**
-- `POST /api/eko/callback` for receiving transaction status updates from Eko
-
-**GST Invoice System Completed:**
-- Fixed database connection bug (`if db is None:` instead of `if not db:`)
-- Frontend route and UI links working
-- Full flow (payment -> invoice generation -> UI display) functional
+**Test Results**: 19 tests passed (13 backend + 6 frontend)
+- Test File: `/app/backend/tests/test_subscription_refactoring.py`
+- E2E Test: `/app/tests/e2e/subscription-refactoring.spec.ts`
 
 ---
 
@@ -79,10 +80,12 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
   1. Configure callback URL: `https://www.parasreward.com/api/eko/callback`
   2. Ask Eko to investigate why beneficiary banks are reversing transfers
 - **Eko Aadhaar Auto-KYC**: Blocked on Eko support - user needs to contact Eko account manager
+- **Gift Vouchers White Screen**: Blocked - needs browser console error from user's production environment
 
 ### P1 - Pending
 - **User Rakhi Ghehlod Refund**: 14,260 PRC refund pending (PRODUCTION ONLY - cannot test in preview)
 - **Full audit for unauthorized redemptions**: Need to run on production database
+- **Run Migration Script**: `/app/backend/migrations/migrate_to_two_plans.py` on production DB
 
 ### P2 - Lower Priority
 - **MSEDCL bill payment**: Requires 4-digit "BU" number from user's bill
@@ -93,14 +96,17 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 ## Upcoming Tasks
 
 ### P1
-1. Admin UI to override category percentages for individual users
-2. Backend logic to carry forward unused category limits to next month
-3. UI for "Shopping" category redemption
+1. Run migration script on production to convert legacy users to Elite
+2. Update frontend pricing pages to only show Explorer/Elite
+3. Admin UI to override category percentages for individual users
+4. Backend logic to carry forward unused category limits to next month
+5. UI for "Shopping" category redemption
 
 ### P2
 1. Refactor `eko_kyc_service.py` to remove hardcoded credentials
 2. Refactor `unified_redeem_v2.py` to reduce file size
 3. Manual bank transfer notifications (Firebase/Email)
+4. Refactor `server.py` (44K lines) into smaller modules
 
 ### Future
 1. Database migration to PostgreSQL
@@ -128,7 +134,7 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 ---
 
 ## Credentials (Testing)
-- **User Login**: `9970100782` / PIN: `997010`
+- **User Login**: `9970100782` / PIN: `997010` (Growth plan - treated as Elite)
 - **Admin Login**: `Admin@paras.com` / PIN: `153759`
 - **Test User UID (KYC verified, Growth plan)**: `6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21`
 
@@ -143,3 +149,5 @@ Paras Reward is a PRC (Paras Reward Coin) mining and redemption platform where:
 6. **Rakhi Ghehlod refund (14,260 PRC)** - PRODUCTION ONLY task
 7. Category-based redeem limits: Utility (40%), Shopping (30%), Bank (30%)
 8. Validation order is correct - KYC -> Subscription -> Expiry -> Limits
+9. **Two-Plan System**: Explorer (free) and Elite (paid). Legacy plans (startup/growth/vip) treated as Elite
+10. Use `is_paid_subscriber(user)` to check if user has paid subscription
