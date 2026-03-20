@@ -19183,7 +19183,6 @@ async def get_members_list(
                     "remaining_limit": 0
                 }
             members.append(member)
-            members.append(member)
     
     return {
         "members": members,
@@ -19192,7 +19191,8 @@ async def get_members_list(
             "limit": limit,
             "total": total,
             "total_pages": (total + limit - 1) // limit if total > 0 else 0
-        }
+        },
+        "api_version": "v2.1_used_fix"
     }
 
 
