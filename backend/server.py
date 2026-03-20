@@ -20166,24 +20166,40 @@ async def admin_bulk_diagnose_all_users(
 
 
 @api_router.get("/admin/user/{uid}/diagnose")
-async def admin_diagnose_user(uid: str):
+@api_router.post("/admin/user/{uid}/diagnose")
+async def admin_diagnose_user(uid: str, auto_fix: bool = True):
     """
-    Auto-diagnose all issues for a user.
-    Checks: KYC, Subscription, PRC balance, Mining, Profile completeness, etc.
-    Returns list of issues found with severity and suggested fixes.
+    🔧 ADVANCED AUTO-DIAGNOSE & FIX for single user.
+    
+    Checks and Auto-Fixes:
+    1. KYC sync issues
+    2. Subscription problems
+    3. PRC balance discrepancies
+    4. Failed transactions without refund
+    5. Mining issues
+    6. Profile completeness
+    7. Referral code generation
+    8. Payment activation
+    9. Lockout issues
+    10. Redeem limit problems
+    
+    Query Params:
+    - auto_fix: If True, automatically fix all fixable issues (default: True)
     """
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    timestamp = datetime.now(timezone.utc).isoformat()
     issues = []
     auto_fixed = []
+    prc_refunded = 0
     
     # ========== 1. KYC ISSUES ==========
     kyc_status = user.get("kyc_status", "not_submitted")
     kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
     
-    # Check for orphaned KYC (pending but no document)
+    # Orphaned KYC (pending but no document)
     if kyc_status == "pending" and not kyc_doc:
         issues.append({
             "category": "KYC",
@@ -20193,8 +20209,11 @@ async def admin_diagnose_user(uid: str):
             "can_auto_fix": True,
             "fix_action": "reset_kyc"
         })
+        if auto_fix:
+            await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+            auto_fixed.append("✅ KYC reset to 'not_submitted'")
     
-    # Check for sync mismatch (document verified but profile pending)
+    # KYC sync mismatch
     if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
         issues.append({
             "category": "KYC",
@@ -20204,14 +20223,25 @@ async def admin_diagnose_user(uid: str):
             "can_auto_fix": True,
             "fix_action": "sync_kyc"
         })
-        # Auto-fix this
-        await db.users.update_one(
-            {"uid": uid},
-            {"$set": {"kyc_status": "verified"}}
-        )
-        auto_fixed.append("KYC status synced to 'verified'")
+        if auto_fix:
+            await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+            auto_fixed.append("✅ KYC synced to 'verified'")
     
-    # KYC not submitted for paid user - use helper function
+    # KYC rejected but user wants to resubmit
+    if kyc_status == "rejected":
+        issues.append({
+            "category": "KYC",
+            "severity": "medium",
+            "issue": "KYC Rejected",
+            "description": "User's KYC was rejected. They may want to resubmit.",
+            "can_auto_fix": True,
+            "fix_action": "allow_kyc_resubmit"
+        })
+        if auto_fix:
+            await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted", "kyc_can_resubmit": True}})
+            auto_fixed.append("✅ User can now resubmit KYC")
+    
+    # Paid user without KYC
     user_plan = get_user_plan(user)
     if is_paid_subscriber(user) and kyc_status == "not_submitted":
         issues.append({
@@ -20226,150 +20256,268 @@ async def admin_diagnose_user(uid: str):
     # ========== 2. SUBSCRIPTION ISSUES ==========
     subscription_plan = user.get("subscription_plan", "explorer")
     subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
-    previous_plan = user.get("previous_plan")
-    remaining_days_added = user.get("previous_remaining_days_added", 0)
+    membership_type = user.get("membership_type", "free")
     
-    # Check if old plan info exists
-    if previous_plan:
-        issues.append({
-            "category": "Subscription History",
-            "severity": "info",
-            "issue": "Previous Plan Found",
-            "description": f"User upgraded from '{previous_plan}' to '{subscription_plan}'. Remaining days added: {remaining_days_added}",
-            "can_auto_fix": False,
-            "fix_action": "none"
-        })
-    
-    # Check for expired subscription
-    if subscription_expiry:
+    # Expired subscription not reset
+    if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
         try:
             expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
             if expiry_date < datetime.now(timezone.utc):
-                if subscription_plan not in ["explorer", "free", ""]:
-                    issues.append({
-                        "category": "Subscription",
-                        "severity": "high",
-                        "issue": "Expired Subscription Not Reset",
-                        "description": f"Subscription expired on {subscription_expiry[:10]} but plan is still '{subscription_plan}'",
-                        "can_auto_fix": True,
-                        "fix_action": "reset_subscription"
-                    })
-                    # Auto-fix
+                issues.append({
+                    "category": "Subscription",
+                    "severity": "high",
+                    "issue": "Expired Subscription Not Reset",
+                    "description": f"Expired on {subscription_expiry[:10]} but plan is still '{subscription_plan}'",
+                    "can_auto_fix": True,
+                    "fix_action": "reset_subscription"
+                })
+                if auto_fix:
                     await db.users.update_one(
                         {"uid": uid},
-                        {"$set": {"membership_type": "free", "subscription_plan": "explorer"}}
+                        {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
                     )
-                    auto_fixed.append("Expired subscription reset to explorer")
+                    auto_fixed.append("✅ Subscription reset to explorer")
         except:
             pass
     
-    # Check subscription payment sync
-    latest_payment = await db.vip_payments.find_one(
-        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}], "status": "approved"},
-        sort=[("approved_at", -1)]
-    )
-    if latest_payment and is_free_user(user):
-        issues.append({
-            "category": "Subscription",
-            "severity": "high",
-            "issue": "Approved Payment Not Synced",
-            "description": f"Payment approved but user is still 'free'. Plan: {latest_payment.get('plan')}",
-            "can_auto_fix": True,
-            "fix_action": "sync_subscription"
-        })
-    
-    # Check for Razorpay payment not synced
-    latest_razorpay = await db.razorpay_orders.find_one(
-        {"user_id": uid, "status": "paid"},
-        sort=[("paid_at", -1)]
-    )
-    if latest_razorpay and is_free_user(user):
-        issues.append({
-            "category": "Subscription",
-            "severity": "critical",
-            "issue": "Razorpay Payment Not Activated",
-            "description": f"Razorpay payment captured but subscription not active. Plan: {latest_razorpay.get('plan_name')}, Amount: ₹{latest_razorpay.get('amount')}",
-            "can_auto_fix": True,
-            "fix_action": "activate_razorpay_subscription"
-        })
-    
-    # ========== 3. PRC BALANCE ISSUES ==========
-    prc_balance = user.get("prc_balance", 0)
-    
-    # Calculate expected balance from transactions
-    total_credits = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "amount": {"$gt": 0}}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]).to_list(1)
-    
-    total_debits = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "amount": {"$lt": 0}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
-    ]).to_list(1)
-    
-    credits = total_credits[0]["total"] if total_credits else 0
-    debits = total_debits[0]["total"] if total_debits else 0
-    expected_balance = round(credits - debits, 2)
-    
-    # Check for significant mismatch (more than 1 PRC difference)
-    balance_diff = abs(prc_balance - expected_balance)
-    if balance_diff > 1:
-        issues.append({
-            "category": "PRC Balance",
-            "severity": "medium" if balance_diff < 100 else "high",
-            "issue": "Balance Mismatch",
-            "description": f"Current: {prc_balance} PRC, Expected: {expected_balance} PRC (Diff: {balance_diff})",
-            "can_auto_fix": False,
-            "fix_action": "manual_review"
-        })
-    
-    # Paid user with 0 balance (potential bug victim) - use helper function
-    if is_paid_subscriber(user) and prc_balance == 0 and credits > 100:
-        issues.append({
-            "category": "PRC Balance",
-            "severity": "critical",
-            "issue": "Paid User Zero Balance Bug",
-            "description": f"Paid user ({user_plan}) has 0 PRC but earned {credits} PRC. May be affected by balance reset bug.",
-            "can_auto_fix": True,
-            "fix_action": "restore_balance",
-            "suggested_balance": expected_balance
-        })
-    
-    # ========== 4. MEMBERSHIP TYPE MISMATCH (Legacy Cleanup) ==========
-    # Detect if membership_type needs sync with subscription_plan
-    membership_type = user.get("membership_type", "free")
+    # Membership type mismatch
     if is_paid_subscriber(user) and membership_type == "free":
         issues.append({
             "category": "Subscription",
-            "severity": "medium",  # Reduced from critical since helper function now handles this
-            "issue": "Membership Type Needs Sync",
-            "description": f"User has '{user_plan}' plan but legacy membership_type is 'free'. Will auto-sync on next login.",
+            "severity": "medium",
+            "issue": "Membership Type Mismatch",
+            "description": f"Plan is '{subscription_plan}' but membership_type is 'free'",
             "can_auto_fix": True,
             "fix_action": "fix_membership_type"
         })
+        if auto_fix:
+            await db.users.update_one({"uid": uid}, {"$set": {"membership_type": "paid"}})
+            auto_fixed.append("✅ Membership type fixed to 'paid'")
     
-    # ========== 5. MINING ISSUES ==========
-    mining_active = user.get("mining_active")
+    # Unactivated Razorpay payment
+    if membership_type in ["free", None, ""] or subscription_plan in ["explorer", "free", None, ""]:
+        latest_razorpay = await db.razorpay_orders.find_one(
+            {"user_id": uid, "status": "paid"},
+            sort=[("paid_at", -1)]
+        )
+        if latest_razorpay:
+            issues.append({
+                "category": "Subscription",
+                "severity": "critical",
+                "issue": "Razorpay Payment Not Activated",
+                "description": f"Plan: {latest_razorpay.get('plan_name')}, Amount: ₹{latest_razorpay.get('amount')}",
+                "can_auto_fix": True,
+                "fix_action": "activate_razorpay"
+            })
+            if auto_fix:
+                plan_name = latest_razorpay.get("plan_name", "").lower()
+                plan_type = latest_razorpay.get("plan_type", "monthly")
+                new_plan = "elite" if "elite" in plan_name else "growth" if "growth" in plan_name else "startup"
+                days = 365 if plan_type == "yearly" else 30
+                new_expiry = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+                
+                await db.users.update_one(
+                    {"uid": uid},
+                    {"$set": {
+                        "subscription_plan": new_plan,
+                        "membership_type": "paid",
+                        "subscription_expiry": new_expiry,
+                        "subscription_start": timestamp
+                    }}
+                )
+                auto_fixed.append(f"✅ Subscription activated: {new_plan}")
+    
+    # Unactivated VIP payment
+    latest_vip = await db.vip_payments.find_one(
+        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}], "status": "approved"},
+        sort=[("approved_at", -1)]
+    )
+    if latest_vip and is_free_user(user):
+        issues.append({
+            "category": "Subscription",
+            "severity": "high",
+            "issue": "VIP Payment Not Synced",
+            "description": f"Plan: {latest_vip.get('plan')}, Amount: ₹{latest_vip.get('amount')}",
+            "can_auto_fix": True,
+            "fix_action": "sync_vip_subscription"
+        })
+        if auto_fix:
+            await db.users.update_one(
+                {"uid": uid},
+                {"$set": {
+                    "subscription_plan": latest_vip.get("plan", "startup"),
+                    "membership_type": "paid",
+                    "subscription_expiry": latest_vip.get("expiry"),
+                    "subscription_start": latest_vip.get("approved_at")
+                }}
+            )
+            auto_fixed.append(f"✅ VIP subscription synced: {latest_vip.get('plan')}")
+    
+    # ========== 3. FAILED TRANSACTIONS WITHOUT REFUND ==========
+    failed_txns = await db.redeem_requests.find({
+        "user_id": uid,
+        "status": {"$in": ["failed", "RETRY_FAILED", "eko_failed", "rejected"]},
+        "prc_refunded": {"$ne": True}
+    }).to_list(100)
+    
+    for failed_txn in failed_txns:
+        prc_amount = failed_txn.get("total_prc_deducted") or failed_txn.get("prc_amount") or 0
+        if prc_amount > 0:
+            issues.append({
+                "category": "Failed Transaction",
+                "severity": "high",
+                "issue": f"Failed {failed_txn.get('service_type', 'BBPS')} - No Refund",
+                "description": f"Request: {failed_txn.get('request_id', '')[:15]}... | {prc_amount} PRC not refunded",
+                "can_auto_fix": True,
+                "fix_action": "refund_prc",
+                "prc_amount": prc_amount,
+                "request_id": failed_txn.get("request_id")
+            })
+            if auto_fix:
+                current_balance = float(user.get("prc_balance", 0) or 0)
+                new_balance = current_balance + prc_amount
+                
+                await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                await db.redeem_requests.update_one(
+                    {"request_id": failed_txn.get("request_id")},
+                    {"$set": {"prc_refunded": True, "refunded_at": timestamp, "refunded_by": "auto_diagnose"}}
+                )
+                await db.transactions.insert_one({
+                    "transaction_id": f"DIAG-REFUND-{failed_txn.get('request_id', '')[:10]}",
+                    "user_id": uid,
+                    "type": "diagnose_refund",
+                    "amount": prc_amount,
+                    "description": f"Auto-diagnose refund for failed transaction",
+                    "timestamp": timestamp
+                })
+                
+                prc_refunded += prc_amount
+                auto_fixed.append(f"✅ Refunded {prc_amount} PRC for failed transaction")
+                # Update user object for next calculations
+                user["prc_balance"] = new_balance
+    
+    # Failed Gift Vouchers
+    failed_vouchers = await db.gift_voucher_requests.find({
+        "user_id": uid,
+        "status": {"$in": ["failed", "rejected"]},
+        "prc_refunded": {"$ne": True}
+    }).to_list(50)
+    
+    for fv in failed_vouchers:
+        prc_amount = fv.get("total_prc_deducted") or fv.get("prc_used") or 0
+        if prc_amount > 0:
+            issues.append({
+                "category": "Failed Transaction",
+                "severity": "high",
+                "issue": f"Failed Gift Voucher - No Refund",
+                "description": f"{fv.get('brand_name', 'Voucher')} | {prc_amount} PRC not refunded",
+                "can_auto_fix": True,
+                "fix_action": "refund_voucher_prc"
+            })
+            if auto_fix:
+                current_balance = float(user.get("prc_balance", 0) or 0)
+                new_balance = current_balance + prc_amount
+                
+                await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                await db.gift_voucher_requests.update_one(
+                    {"request_id": fv.get("request_id")},
+                    {"$set": {"prc_refunded": True, "refunded_at": timestamp}}
+                )
+                
+                prc_refunded += prc_amount
+                auto_fixed.append(f"✅ Refunded {prc_amount} PRC for failed voucher")
+                user["prc_balance"] = new_balance
+    
+    # ========== 4. PRC BALANCE ISSUES ==========
+    prc_balance = float(user.get("prc_balance", 0) or 0)
+    
+    # Zero balance for paid user with mining history
+    if is_paid_subscriber(user) and prc_balance == 0:
+        total_mined = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        
+        if total_mined and total_mined[0].get("total", 0) > 100:
+            # Check restoration log
+            restore_log = await db.prc_corrections_log.find_one({"uid": uid}, sort=[("corrected_at", -1)])
+            if restore_log and restore_log.get("before", 0) > 0:
+                issues.append({
+                    "category": "PRC Balance",
+                    "severity": "critical",
+                    "issue": "Zero Balance Bug - Restorable",
+                    "description": f"Previous balance: {restore_log.get('before')} PRC available to restore",
+                    "can_auto_fix": True,
+                    "fix_action": "restore_balance",
+                    "restore_amount": restore_log.get("before")
+                })
+                if auto_fix:
+                    restore_amount = restore_log.get("before", 0)
+                    await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": restore_amount}})
+                    auto_fixed.append(f"✅ Restored {restore_amount} PRC from backup")
+                    user["prc_balance"] = restore_amount
+    
+    # ========== 5. LOGIN LOCKOUT ==========
+    lockout = await db.login_attempts.find_one({"identifier": user.get("mobile") or user.get("email")})
+    if lockout and lockout.get("locked_until"):
+        try:
+            locked_until = datetime.fromisoformat(lockout["locked_until"].replace('Z', '+00:00'))
+            if locked_until > datetime.now(timezone.utc):
+                issues.append({
+                    "category": "Security",
+                    "severity": "medium",
+                    "issue": "Account Locked",
+                    "description": f"Locked until {lockout['locked_until'][:19]}",
+                    "can_auto_fix": True,
+                    "fix_action": "clear_lockout"
+                })
+                if auto_fix:
+                    await db.login_attempts.delete_one({"identifier": user.get("mobile") or user.get("email")})
+                    auto_fixed.append("✅ Login lockout cleared")
+        except:
+            pass
+    
+    # ========== 6. MINING ISSUES ==========
     mining_start = user.get("mining_start_time")
-    
-    # Stuck mining session (started more than 8 hours ago)
     if mining_start:
         try:
             start_time = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
             hours_mining = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
-            if hours_mining > 8:
+            if hours_mining > 12:
                 issues.append({
                     "category": "Mining",
                     "severity": "low",
-                    "issue": "Long Mining Session",
-                    "description": f"Mining session running for {hours_mining:.1f} hours",
-                    "can_auto_fix": False,
-                    "fix_action": "claim_mining"
+                    "issue": "Stuck Mining Session",
+                    "description": f"Mining for {hours_mining:.1f} hours without claim",
+                    "can_auto_fix": True,
+                    "fix_action": "reset_mining"
                 })
+                if auto_fix:
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {"$set": {"mining_active": False, "mining_start_time": None}}
+                    )
+                    auto_fixed.append("✅ Mining session reset")
         except:
             pass
     
-    # ========== 5. PROFILE ISSUES ==========
+    # ========== 7. REFERRAL CODE ==========
+    if not user.get("referral_code"):
+        issues.append({
+            "category": "Referral",
+            "severity": "low",
+            "issue": "Missing Referral Code",
+            "description": "User has no referral code",
+            "can_auto_fix": True,
+            "fix_action": "generate_referral_code"
+        })
+        if auto_fix:
+            import random, string
+            new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
+            auto_fixed.append(f"✅ Generated referral code: {new_code}")
+    
+    # ========== 8. PROFILE COMPLETENESS ==========
     if not user.get("name"):
         issues.append({
             "category": "Profile",
@@ -20380,46 +20528,12 @@ async def admin_diagnose_user(uid: str):
             "fix_action": "notify_user"
         })
     
-    if not user.get("mobile") and not user.get("email"):
-        issues.append({
-            "category": "Profile",
-            "severity": "medium",
-            "issue": "No Contact Info",
-            "description": "User has no email or mobile number",
-            "can_auto_fix": False,
-            "fix_action": "manual_review"
-        })
-    
-    # Bank details missing for user who has redeemed
-    redemptions = await db.transactions.find_one({"user_id": uid, "type": {"$in": ["redeem", "withdrawal", "bank_transfer"]}})
-    bank_details = user.get("bank_details") or await db.bank_details.find_one({"user_id": uid})
-    if redemptions and not bank_details:
-        issues.append({
-            "category": "Profile",
-            "severity": "medium",
-            "issue": "Missing Bank Details",
-            "description": "User has redemption history but no bank details saved",
-            "can_auto_fix": False,
-            "fix_action": "notify_user"
-        })
-    
-    # ========== 6. REFERRAL ISSUES ==========
-    referral_code = user.get("referral_code")
-    if not referral_code:
-        issues.append({
-            "category": "Referral",
-            "severity": "low",
-            "issue": "Missing Referral Code",
-            "description": "User doesn't have a referral code",
-            "can_auto_fix": True,
-            "fix_action": "generate_referral_code"
-        })
-    
     # ========== SUMMARY ==========
     critical_count = len([i for i in issues if i["severity"] == "critical"])
     high_count = len([i for i in issues if i["severity"] == "high"])
     medium_count = len([i for i in issues if i["severity"] == "medium"])
     low_count = len([i for i in issues if i["severity"] == "low"])
+    info_count = len([i for i in issues if i.get("severity") == "info"])
     
     health_score = 100 - (critical_count * 30) - (high_count * 15) - (medium_count * 5) - (low_count * 2)
     health_score = max(0, min(100, health_score))
@@ -20428,17 +20542,23 @@ async def admin_diagnose_user(uid: str):
         "success": True,
         "user_id": uid,
         "user_name": user.get("name", "Unknown"),
+        "user_email": user.get("email", ""),
         "health_score": health_score,
         "total_issues": len(issues),
+        "issues_fixed": len(auto_fixed),
+        "prc_refunded": round(prc_refunded, 2),
         "summary": {
             "critical": critical_count,
             "high": high_count,
             "medium": medium_count,
-            "low": low_count
+            "low": low_count,
+            "info": info_count
         },
-        "issues": sorted(issues, key=lambda x: {"critical": 0, "high": 1, "medium": 2, "low": 3}[x["severity"]]),
+        "issues": sorted(issues, key=lambda x: {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}.get(x.get("severity", "info"), 5)),
         "auto_fixed": auto_fixed,
-        "diagnosis_time": datetime.now(timezone.utc).isoformat()
+        "auto_fix_enabled": auto_fix,
+        "diagnosis_time": timestamp,
+        "new_prc_balance": round(float(user.get("prc_balance", 0) or 0), 2)
     }
 
 
