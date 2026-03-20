@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260319_054448/results.json' }],
   ],
   use: {
-    baseURL: 'https://prc-consistency.preview.emergentagent.com',
+    baseURL: 'https://expiry-recovery.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

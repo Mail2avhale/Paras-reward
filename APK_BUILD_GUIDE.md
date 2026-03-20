@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://prc-consistency.preview.emergentagent.com",
+    "url": "https://expiry-recovery.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

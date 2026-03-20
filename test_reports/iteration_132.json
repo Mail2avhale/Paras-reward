@@ -1,0 +1,61 @@
+{
+  "iteration": 132,
+  "mode": "generate",
+  "summary": "Tested POST /api/admin/restore-zero-balance-prc endpoint. 31/32 tests passed. Found 1 bug: transaction log creation fails due to missing transaction_id field.",
+  "baseline_commit": "a33f99057e7d8f290b7b02774140a0de204bcb19",
+  "head_commit": "67ec5f549041a2ad6566a10bdeb81c292977a638",
+  "specs_created": [
+    "/app/backend/tests/test_restore_zero_balance_prc.py",
+    "/app/backend/tests/test_restore_zero_balance_prc_integration.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_restore_zero_balance_prc.py",
+    "/app/backend/tests/test_restore_zero_balance_prc_integration.py",
+    "/app/test_reports/pytest/restore_prc_full_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 32,
+    "passed": 31,
+    "failed": 1,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "BUG-001",
+      "issue_type": "bug",
+      "severity": "HIGH",
+      "description": "Transaction log creation fails when restoring PRC balance. The endpoint inserts into transactions collection without a 'transaction_id' field, but the collection has a unique index on transaction_id (not sparse), causing E11000 duplicate key error.",
+      "endpoint_or_component": "POST /api/admin/restore-zero-balance-prc",
+      "surfaces": ["backend"],
+      "reproduction": "1. Create user with prc_balance=0 and backup in prc_corrections_log\n2. Call POST /api/admin/restore-zero-balance-prc?dry_run=false\n3. The restoration record shows status='error' with 'duplicate key error' for transaction_id",
+      "affected_test": "test_restore_zero_balance_prc_integration.py::TestRestoreZeroBalancePRCWithDatabaseSetup::test_actual_restoration_creates_transaction_log",
+      "fix_suggestion": "Add 'transaction_id': str(uuid.uuid4()) to the transaction insert at line 23995 in server.py"
+    }
+  ],
+  "action_items": [
+    "Fix BUG-001: Add transaction_id field to the transaction insert in restore-zero-balance-prc endpoint (line 23995 in server.py)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_restore_zero_balance_prc.py",
+    "/app/backend/tests/test_restore_zero_balance_prc_integration.py"
+  ],
+  "test_results": {
+    "backend": "97% (31/32)",
+    "frontend": "N/A - backend-only feature"
+  },
+  "seed_data_creation": "Tests create temporary test users with TEST_ prefix and clean up after execution",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The restore-zero-balance-prc endpoint works correctly for finding users with zero balance and restoring their PRC from prc_corrections_log or user.prc_before_correction field. The user balance IS updated and prc_restorations_log IS created. However, the transaction log insert fails due to missing transaction_id. After bug fix, re-run test_actual_restoration_creates_transaction_log to verify.",
+  "features_tested": {
+    "dry_run_true_preview": "PASS - Returns preview without modifying data",
+    "dry_run_false_restore": "PARTIAL - User balance updated, restoration log created, but transaction log fails",
+    "prc_corrections_log_lookup": "PASS - Correctly finds and uses backup balance from prc_corrections_log",
+    "prc_before_correction_fallback": "PASS - Falls back to user.prc_before_correction field when no correction log",
+    "restoration_source_priority": "PASS - prc_corrections_log takes priority over user.prc_before_correction",
+    "prc_restorations_log_creation": "PASS - Creates entry in prc_restorations_log collection",
+    "transaction_log_creation": "FAIL - BUG: Missing transaction_id causes duplicate key error"
+  }
+}

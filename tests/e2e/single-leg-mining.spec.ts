@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
  */
 
 const TEST_USER_UID = '6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21';
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-consistency.preview.emergentagent.com';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://expiry-recovery.preview.emergentagent.com';
 
 test.describe('Single Leg Mining API Tests', () => {
   

@@ -23879,6 +23879,175 @@ async def prc_auto_correct(
     }
 
 
+@api_router.post("/admin/restore-zero-balance-prc")
+async def restore_zero_balance_prc(
+    dry_run: bool = True,
+    limit: int = 500
+):
+    """
+    🔄 RESTORE PRC: Restore PRC for users whose balance became 0 after subscription expiry.
+    
+    This endpoint finds users with zero balance and restores their PRC from:
+    1. `prc_corrections_log` collection (balance before auto-correction)
+    2. `prc_before_correction` field in users collection
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max users to process (default: 500)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY RESTORE
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    results = {
+        "found": 0,
+        "restored": 0,
+        "skipped": 0,
+        "errors": [],
+        "restorations": []
+    }
+    
+    try:
+        # Step 1: Find users with zero or negative balance
+        zero_balance_users = await db.users.find(
+            {"prc_balance": {"$lte": 0}},
+            {"uid": 1, "name": 1, "email": 1, "prc_balance": 1, "prc_before_correction": 1, "subscription_plan": 1}
+        ).limit(limit).to_list(limit)
+        
+        results["found"] = len(zero_balance_users)
+        
+        for user in zero_balance_users:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            email = user.get("email", "")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            
+            restoration_record = {
+                "uid": uid,
+                "name": name,
+                "email": email,
+                "current_balance": round(current_balance, 2),
+                "subscription_plan": user.get("subscription_plan")
+            }
+            
+            try:
+                # Try to find balance from prc_corrections_log (most recent)
+                correction_log = await db.prc_corrections_log.find_one(
+                    {"uid": uid},
+                    sort=[("corrected_at", -1)]  # Get most recent
+                )
+                
+                restore_balance = None
+                restore_source = None
+                
+                if correction_log:
+                    # Use the balance BEFORE correction
+                    before_balance = float(correction_log.get("before", 0) or 0)
+                    if before_balance > 0:
+                        restore_balance = before_balance
+                        restore_source = "prc_corrections_log"
+                
+                # Fallback: Check user's prc_before_correction field
+                if restore_balance is None or restore_balance <= 0:
+                    user_backup = float(user.get("prc_before_correction", 0) or 0)
+                    if user_backup > 0:
+                        restore_balance = user_backup
+                        restore_source = "user.prc_before_correction"
+                
+                # If no balance to restore, skip
+                if restore_balance is None or restore_balance <= 0:
+                    restoration_record["status"] = "skipped"
+                    restoration_record["reason"] = "No previous balance found to restore"
+                    results["skipped"] += 1
+                    results["restorations"].append(restoration_record)
+                    continue
+                
+                restoration_record["restore_balance"] = round(restore_balance, 2)
+                restoration_record["restore_source"] = restore_source
+                
+                if not dry_run:
+                    # Apply restoration
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "prc_balance": restore_balance,
+                                "prc_restored_at": timestamp,
+                                "prc_restore_source": restore_source,
+                                "prc_balance_before_restore": current_balance
+                            }
+                        }
+                    )
+                    
+                    # Log restoration
+                    await db.prc_restorations_log.insert_one({
+                        "uid": uid,
+                        "name": name,
+                        "email": email,
+                        "balance_before": current_balance,
+                        "balance_after": restore_balance,
+                        "restore_source": restore_source,
+                        "restored_at": timestamp,
+                        "reason": "Restore after subscription expiry zero-out"
+                    })
+                    
+                    # Also log as transaction
+                    await db.transactions.insert_one({
+                        "user_id": uid,
+                        "type": "admin_restore",
+                        "amount": restore_balance - current_balance,
+                        "balance_before": current_balance,
+                        "balance_after": restore_balance,
+                        "description": f"PRC restored from {restore_source} - subscription expiry fix",
+                        "created_at": timestamp
+                    })
+                    
+                    restoration_record["status"] = "restored"
+                else:
+                    restoration_record["status"] = "would_restore"
+                
+                results["restored"] += 1
+                results["restorations"].append(restoration_record)
+                
+            except Exception as e:
+                restoration_record["status"] = "error"
+                restoration_record["error"] = str(e)
+                results["errors"].append({"uid": uid, "error": str(e)})
+                results["restorations"].append(restoration_record)
+        
+        # Calculate total PRC to be restored
+        total_to_restore = sum(
+            r.get("restore_balance", 0) - r.get("current_balance", 0) 
+            for r in results["restorations"] 
+            if r.get("status") in ["restored", "would_restore"]
+        )
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "timestamp": timestamp,
+            "summary": {
+                "users_with_zero_balance": results["found"],
+                "users_to_restore": results["restored"],
+                "users_skipped": results["skipped"],
+                "total_prc_to_restore": round(total_to_restore, 2),
+                "errors": len(results["errors"])
+            },
+            "restorations": results["restorations"][:100],
+            "errors": results["errors"][:20] if results["errors"] else [],
+            "note": "Run with dry_run=false to apply changes" if dry_run else "Changes applied successfully"
+        }
+        
+    except Exception as e:
+        logging.error(f"[PRC RESTORE ZERO] Error: {e}")
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @api_router.delete("/admin/users/{uid}/delete")
 async def delete_user_admin(uid: str, permanent: bool = False):
     """Admin deletes a user - soft delete by default, permanent if specified"""

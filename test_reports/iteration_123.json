@@ -30,7 +30,7 @@
       "description": "Sort by created_at (joined date) returns results not in strict descending order. The dates appear interleaved (e.g., 2026-03-09, 2026-03-14, 2026-03-10). This is a separate issue from the main P0 bug fix which focused on redeem_limit and prc_balance sorting.",
       "endpoint_or_component": "/api/admin/members/list?sort_by=created_at",
       "surfaces": ["backend"],
-      "reproduction": "curl 'https://prc-consistency.preview.emergentagent.com/api/admin/members/list?sort_by=created_at&sort_order=desc'",
+      "reproduction": "curl 'https://expiry-recovery.preview.emergentagent.com/api/admin/members/list?sort_by=created_at&sort_order=desc'",
       "affected_test": "test_redeem_limit_system.py::TestAdminMembersSorting::test_sort_by_joined_date"
     },
     {
