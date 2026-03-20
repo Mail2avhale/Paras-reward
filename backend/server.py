@@ -3593,7 +3593,7 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     # Sum all redemptions since cycle start
     total_redeemed = 0
     
-    # Bill Payments
+    # Bill Payments (legacy collection)
     bill_payments = await db.payment_requests.aggregate([
         {
             "$match": {
@@ -3606,6 +3606,20 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     ]).to_list(1)
     if bill_payments:
         total_redeemed += bill_payments[0].get("total", 0)
+    
+    # BBPS/Instant Bill Payments (new collection - unified_redeem_v2)
+    bbps_payments = await db.bill_payment_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+    ]).to_list(1)
+    if bbps_payments:
+        total_redeemed += bbps_payments[0].get("total", 0)
     
     # Gift Vouchers
     voucher_redemptions = await db.gift_voucher_requests.aggregate([
@@ -3648,6 +3662,34 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     ]).to_list(1)
     if loan_payments:
         total_redeemed += loan_payments[0].get("total", 0)
+    
+    # Bank Withdrawals / Redeem Requests
+    bank_withdrawals = await db.redeem_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+    ]).to_list(1)
+    if bank_withdrawals:
+        total_redeemed += bank_withdrawals[0].get("total", 0)
+    
+    # Bank Withdrawal Requests (alternative collection)
+    bank_withdrawal_requests = await db.bank_withdrawal_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved", "pending"]},
+                "created_at": {"$gte": cycle_start_str}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+    ]).to_list(1)
+    if bank_withdrawal_requests:
+        total_redeemed += bank_withdrawal_requests[0].get("total", 0)
     
     return total_redeemed
 
