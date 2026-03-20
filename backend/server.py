@@ -23993,6 +23993,7 @@ async def restore_zero_balance_prc(
                     
                     # Also log as transaction
                     await db.transactions.insert_one({
+                        "transaction_id": str(uuid.uuid4()),
                         "user_id": uid,
                         "type": "admin_restore",
                         "amount": restore_balance - current_balance,

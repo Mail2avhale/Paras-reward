@@ -1,7 +1,30 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 20 March 2026
+## 📝 LAST UPDATED - 20 March 2026 (Session 2)
+
+## ✅ NEW: PRC Restoration for Zero-Balance Users (20 March 2026)
+```
+╔════════════════════════════════════════════════════════════════╗
+║  NEW ADMIN ENDPOINT: POST /api/admin/restore-zero-balance-prc  ║
+║                                                                 ║
+║  PURPOSE: Restore PRC for users whose balance became 0 after   ║
+║           subscription expiry (auto-correction bug)             ║
+║                                                                 ║
+║  PARAMS:                                                        ║
+║  • dry_run=true  → Preview changes (default)                    ║
+║  • dry_run=false → Apply restorations                           ║
+║  • limit=500     → Max users to process                         ║
+║                                                                 ║
+║  DATA SOURCES (priority order):                                 ║
+║  1. prc_corrections_log collection (balance before correction)  ║
+║  2. user.prc_before_correction field (fallback)                 ║
+║                                                                 ║
+║  LOGS CREATED:                                                  ║
+║  • prc_restorations_log - audit trail                          ║
+║  • transactions - admin_restore type                            ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## ⚠️ IMPORTANT: TWO-PLAN SYSTEM ONLY ⚠️
 ```
