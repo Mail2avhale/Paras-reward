@@ -19174,13 +19174,15 @@ async def get_members_list(
             try:
                 redeem_limit_data = await get_user_redeem_limit_internal(member.get("uid"), member)
                 member["redeem_limit"] = redeem_limit_data
-            except:
+            except Exception as e:
+                logging.error(f"Error calculating redeem limit for {member.get('uid')}: {e}")
                 member["redeem_limit"] = {
                     "plan": "explorer",
                     "total_limit": 0,
                     "total_redeemed": 0,
                     "remaining_limit": 0
                 }
+            members.append(member)
             members.append(member)
     
     return {
