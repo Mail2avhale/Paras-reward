@@ -1983,3 +1983,194 @@ async def fix_specific_user_subscription(request: Request):
     except Exception as e:
         logging.error(f"[FIX-USER] Error: {e}")
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+
+# ==================== FIX CANCELLED ORDERS WITH ACTIVE SUBSCRIPTIONS ====================
+
+@router.post("/admin/fix-cancelled-subscriptions")
+async def fix_cancelled_order_subscriptions(request: Request):
+    """
+    CRITICAL FIX: Find and reverse subscriptions for cancelled/failed orders.
+    
+    This handles the bug where cancelled orders still activated Elite subscriptions.
+    
+    Will:
+    1. Find all cancelled/failed orders where user still has Elite subscription
+    2. Check if user has NO paid orders for current subscription period
+    3. Downgrade user to Explorer plan
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/fix-cancelled-subscriptions" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "dry_run": true}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        dry_run = data.get("dry_run", True)
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all cancelled/failed orders
+        cancelled_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["cancelled", "failed", "error", "timeout", "dismissed"]}
+        }).to_list(10000)
+        
+        logging.info(f"[FIX-CANCELLED] Found {len(cancelled_orders)} cancelled/failed orders")
+        
+        affected_users = []
+        fixed_count = 0
+        already_correct = 0
+        has_paid_order = 0
+        
+        for order in cancelled_orders:
+            user_id = order.get("user_id")
+            if not user_id:
+                continue
+            
+            # Get user
+            user = await db.users.find_one({"user_id": user_id})
+            if not user:
+                continue
+            
+            current_plan = user.get("subscription_plan", "explorer")
+            
+            # Only process if user has Elite but order is cancelled
+            if current_plan != "elite":
+                already_correct += 1
+                continue
+            
+            # Check if user has ANY paid orders that justify their Elite subscription
+            paid_order = await db.razorpay_orders.find_one({
+                "user_id": user_id,
+                "status": "paid"
+            })
+            
+            if paid_order:
+                has_paid_order += 1
+                continue  # User has a legitimate paid order
+            
+            # User has Elite but NO paid orders - this is the bug!
+            affected_users.append({
+                "user_id": user_id,
+                "user_name": user.get("name", "Unknown"),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "current_plan": current_plan,
+                "subscription_expiry": str(user.get("subscription_expiry") or user.get("subscription_expires")),
+                "cancelled_order_id": order.get("order_id"),
+                "cancelled_reason": order.get("failure_reason", "Unknown")
+            })
+            
+            if not dry_run:
+                # Downgrade to Explorer
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {
+                        "$set": {
+                            "subscription_plan": "explorer",
+                            "subscription_expires": None,
+                            "subscription_expiry": None,
+                            "subscription_start": None,
+                            "downgrade_reason": f"Cancelled order {order.get('order_id')} - no paid orders",
+                            "downgrade_date": datetime.now(timezone.utc).isoformat(),
+                            "admin_fixed": True
+                        }
+                    }
+                )
+                fixed_count += 1
+                logging.info(f"[FIX-CANCELLED] Downgraded {user_id} ({user.get('name')}) to Explorer - no paid orders")
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "summary": {
+                "total_cancelled_orders": len(cancelled_orders),
+                "already_correct_plan": already_correct,
+                "has_valid_paid_order": has_paid_order,
+                "affected_users_count": len(affected_users),
+                "fixed_count": fixed_count if not dry_run else 0
+            },
+            "affected_users": affected_users[:100],  # Limit to 100 for response
+            "message": f"{'Would fix' if dry_run else 'Fixed'} {len(affected_users)} users with cancelled orders but Elite subscription"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[FIX-CANCELLED] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+@router.post("/admin/reverse-subscription")
+async def reverse_single_subscription(request: Request):
+    """
+    Reverse subscription for a single user.
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/reverse-subscription" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "user_id": "xxx", "reason": "Cancelled order"}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        user_id = data.get("user_id")
+        reason = data.get("reason", "Admin reversed subscription")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id required")
+        
+        # Get user
+        user = await db.users.find_one({"user_id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        old_plan = user.get("subscription_plan")
+        old_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        
+        # Downgrade to Explorer
+        await db.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "subscription_plan": "explorer",
+                    "subscription_expires": None,
+                    "subscription_expiry": None,
+                    "subscription_start": None,
+                    "downgrade_reason": reason,
+                    "downgrade_date": datetime.now(timezone.utc).isoformat(),
+                    "admin_reversed": True
+                }
+            }
+        )
+        
+        logging.info(f"[REVERSE-SUB] {user_id} reversed from {old_plan} to Explorer - {reason}")
+        
+        return {
+            "success": True,
+            "message": f"Subscription reversed for {user.get('name')}",
+            "user_id": user_id,
+            "previous_plan": old_plan,
+            "previous_expiry": str(old_expiry),
+            "new_plan": "explorer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[REVERSE-SUB] Error: {e}")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
