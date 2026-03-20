@@ -123,6 +123,8 @@ const PRCStatement = ({ user }) => {
       case 'subscription': return <Receipt className="w-4 h-4" />;
       case 'refund': return <RefreshCw className="w-4 h-4" />;
       case 'subscription_payment': return <Receipt className="w-4 h-4" />;
+      case 'shop': return <ShoppingBag className="w-4 h-4" />;
+      case 'utility': return <Receipt className="w-4 h-4" />;
       default: return <Receipt className="w-4 h-4" />;
     }
   };
@@ -138,6 +140,8 @@ const PRCStatement = ({ user }) => {
       case 'subscription': return 'bg-violet-500/20 text-violet-400';
       case 'refund': return 'bg-yellow-500/20 text-yellow-400';
       case 'subscription_payment': return 'bg-violet-500/20 text-violet-400';
+      case 'shop': return 'bg-orange-500/20 text-orange-400';
+      case 'utility': return 'bg-teal-500/20 text-teal-400';
       default: return 'bg-gray-500/20 text-gray-400';
     }
   };
@@ -236,9 +240,13 @@ const PRCStatement = ({ user }) => {
               <option value="bill_payment">BBPS (Bill Payments)</option>
               <option value="dmt">Money Transfer (DMT)</option>
               <option value="bank_redeem">Bank Withdrawals</option>
+              <option value="gift_voucher">Gift Vouchers</option>
+              <option value="shop">Shopping / Orders</option>
+              <option value="utility">Utility / Recharge</option>
               <option value="mining">Mining Rewards</option>
               <option value="referral">Referral Bonus</option>
               <option value="subscription">Subscription</option>
+              <option value="refund">Refunds Only</option>
             </select>
           </div>
         </div>

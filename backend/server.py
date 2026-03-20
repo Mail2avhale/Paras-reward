@@ -16621,6 +16621,139 @@ async def get_prc_statement(
                     "reference": entry.get("entry_id", "")
                 })
         
+        # 8. Get Gift Voucher requests
+        if service_type in ["all", "gift_voucher"]:
+            voucher_query = {"user_id": user_id}
+            if date_filter:
+                voucher_query["created_at"] = date_filter
+            
+            voucher_requests = await db.gift_voucher_requests.find(voucher_query).sort("created_at", -1).limit(200).to_list(200)
+            for vr in voucher_requests:
+                prc_amount = vr.get("prc_used", 0) or vr.get("prc_amount", 0) or vr.get("total_prc_deducted", 0) or 0
+                status = vr.get("status", "pending")
+                brand = vr.get("brand_name", "") or vr.get("voucher_type", "Gift Voucher")
+                
+                all_transactions.append({
+                    "id": str(vr.get("_id", "")),
+                    "type": "debit",
+                    "category": "gift_voucher",
+                    "amount": abs(float(prc_amount)),
+                    "description": f"Gift Voucher - {brand} (₹{vr.get('amount_inr', vr.get('amount', 0))})",
+                    "service": "gift_voucher",
+                    "status": status,
+                    "date": vr.get("created_at", ""),
+                    "reference": vr.get("request_id", "") or vr.get("voucher_code", "")[:8] if vr.get("voucher_code") else ""
+                })
+                
+                # If rejected/refunded, add refund entry
+                if status in ["rejected", "refunded", "failed"] and prc_amount > 0:
+                    all_transactions.append({
+                        "id": f"{vr.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(prc_amount)),
+                        "description": f"Refund - Gift Voucher ({vr.get('rejection_reason', 'Rejected')})",
+                        "service": "refund",
+                        "status": "success",
+                        "date": vr.get("rejected_at", vr.get("refunded_at", vr.get("updated_at", ""))),
+                        "reference": vr.get("request_id", "")
+                    })
+        
+        # 9. Get Shop/Marketplace Orders
+        if service_type in ["all", "shop", "shopping"]:
+            shop_query = {"user_id": user_id}
+            if date_filter:
+                shop_query["created_at"] = date_filter
+            
+            shop_orders = await db.orders.find(shop_query).sort("created_at", -1).limit(200).to_list(200)
+            for order in shop_orders:
+                prc_amount = order.get("total_prc", 0) or order.get("prc_used", 0) or order.get("prc_amount", 0) or 0
+                status = order.get("status", "pending")
+                product = order.get("product_name", "") or order.get("product_title", "Shop Order")
+                qty = order.get("quantity", 1)
+                
+                all_transactions.append({
+                    "id": str(order.get("_id", "")),
+                    "type": "debit",
+                    "category": "shop",
+                    "amount": abs(float(prc_amount)),
+                    "description": f"Shop - {product}" + (f" x{qty}" if qty > 1 else ""),
+                    "service": "shop",
+                    "status": status,
+                    "date": order.get("created_at", ""),
+                    "reference": order.get("order_id", "")
+                })
+                
+                # If cancelled/refunded
+                if status in ["cancelled", "refunded", "rejected"] and prc_amount > 0:
+                    all_transactions.append({
+                        "id": f"{order.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(prc_amount)),
+                        "description": f"Refund - Shop Order ({status})",
+                        "service": "refund",
+                        "status": "success",
+                        "date": order.get("cancelled_at", order.get("refunded_at", order.get("updated_at", ""))),
+                        "reference": order.get("order_id", "")
+                    })
+        
+        # 10. Get utility/recharge transactions (separate collection if exists)
+        if service_type in ["all", "utility", "recharge"]:
+            utility_query = {"user_id": user_id}
+            if date_filter:
+                utility_query["created_at"] = date_filter
+            
+            utility_txns = await db.recharge_requests.find(utility_query).sort("created_at", -1).limit(200).to_list(200)
+            for ut in utility_txns:
+                prc_amount = ut.get("prc_amount", 0) or ut.get("total_prc_deducted", 0) or 0
+                status = ut.get("status", "pending")
+                
+                all_transactions.append({
+                    "id": str(ut.get("_id", "")),
+                    "type": "debit",
+                    "category": "utility",
+                    "amount": abs(float(prc_amount)),
+                    "description": f"Recharge - {ut.get('operator', '')} ({ut.get('mobile', '')})",
+                    "service": "utility",
+                    "status": status,
+                    "date": ut.get("created_at", ""),
+                    "reference": ut.get("eko_tid", "") or ut.get("request_id", "")
+                })
+                
+                if status in ["failed", "refunded", "rejected"] and prc_amount > 0:
+                    all_transactions.append({
+                        "id": f"{ut.get('_id', '')}_refund",
+                        "type": "credit",
+                        "category": "refund",
+                        "amount": abs(float(prc_amount)),
+                        "description": f"Refund - Recharge ({status})",
+                        "service": "refund",
+                        "status": "success",
+                        "date": ut.get("refunded_at", ut.get("updated_at", "")),
+                        "reference": ut.get("request_id", "")
+                    })
+        
+        # 11. Get all refund entries from prc_ledger
+        if service_type in ["all", "refund"]:
+            refund_ledger_query = {"user_id": user_id, "type": {"$regex": "refund", "$options": "i"}}
+            if date_filter:
+                refund_ledger_query["timestamp"] = date_filter
+            
+            refund_entries = await db.prc_ledger.find(refund_ledger_query).sort("timestamp", -1).limit(200).to_list(200)
+            for entry in refund_entries:
+                all_transactions.append({
+                    "id": str(entry.get("_id", "")),
+                    "type": "credit",
+                    "category": "refund",
+                    "amount": abs(float(entry.get("amount", 0) or entry.get("credit", 0))),
+                    "description": entry.get("description", "PRC Refund"),
+                    "service": "refund",
+                    "status": "success",
+                    "date": entry.get("timestamp", ""),
+                    "reference": entry.get("reference_id", "") or entry.get("entry_id", "")
+                })
+        
         # Filter by type
         if filter_type == "redeemed":
             all_transactions = [t for t in all_transactions if t["type"] == "debit"]
