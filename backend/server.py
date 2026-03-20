@@ -16970,36 +16970,54 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
 
 
 async def get_user_total_redeemed(user_id: str) -> float:
-    """Get total PRC redeemed by user across all services"""
+    """
+    Get total PRC redeemed by user across all services.
+    
+    IMPORTANT: Different collections use different field names:
+    - bill_payment_requests: prc_used (primary), total_prc_deducted
+    - redeem_requests: total_prc_deducted (primary)
+    - bank_withdrawal_requests: prc_deducted, total_prc_deducted
+    - orders: total_prc
+    """
     try:
         total_redeemed = 0
         
-        # 1. Bill payments - check all valid statuses and field names
-        # Database has: completed, processing, rejected, success, approved, pending
-        # Field names: prc_used (primary), total_prc_deducted, prc_amount, amount
+        # Helper to get PRC with fallback fields
+        def get_prc(doc, *fields):
+            for f in fields:
+                val = doc.get(f)
+                if val is not None and val != 0:
+                    try:
+                        return float(val)
+                    except:
+                        continue
+            return 0
+        
+        # Valid statuses
+        valid = ["approved", "success", "completed", "pending", "processing", "paid"]
+        skip = ["refunded", "rejected", "failed", "cancelled"]
+        
+        # 1. Bill payments - uses prc_used primarily
         bill_payments = await db.bill_payment_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["approved", "success", "completed", "pending", "processing"]}
+            "status": {"$in": valid}
         }).to_list(5000)
         
         for bp in bill_payments:
-            # Try multiple field names - bill_payment_requests uses prc_used
-            prc = float(bp.get("prc_used", 0) or bp.get("total_prc_deducted", 0) or bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
-            if bp.get("status") in ["refunded", "rejected", "failed"]:
+            if bp.get("status") in skip:
                 continue
-            total_redeemed += prc
+            total_redeemed += get_prc(bp, "prc_used", "total_prc_deducted", "prc_amount", "amount")
         
-        # 2. Bank withdrawals - check multiple field names
+        # 2. Bank withdrawals
         bank_withdrawals = await db.bank_withdrawal_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["approved", "success", "completed", "pending", "processing"]}
+            "status": {"$in": valid}
         }).to_list(5000)
         
         for bw in bank_withdrawals:
-            prc = float(bw.get("total_prc_deducted", 0) or bw.get("prc_deducted", 0) or bw.get("prc_amount", 0) or bw.get("amount", 0) or 0)
-            if bw.get("status") in ["refunded", "rejected", "failed"]:
+            if bw.get("status") in skip:
                 continue
-            total_redeemed += prc
+            total_redeemed += get_prc(bw, "total_prc_deducted", "prc_deducted", "prc_amount", "amount")
         
         # 3. Bank transfer requests (manual bank transfers)
         bank_transfers = await db.bank_transfer_requests.find({
