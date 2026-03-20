@@ -120,7 +120,7 @@ const SERVICE_CONFIG = {
     icon: CreditCard, 
     color: 'amber',
     gradient: 'from-amber-500 to-yellow-500',
-    fields: ['card_number', 'operator'],
+    fields: ['registered_mobile', 'card_number', 'operator'],
     category: 'finance'
   },
   insurance: { 
@@ -495,7 +495,9 @@ const RedeemPageV2 = ({ user }) => {
     additional_param_1: '',
     additional_param_2: '',
     // Plan selection for operators that require it (e.g., Jio Prepaid)
-    recharge_plan_id: ''
+    recharge_plan_id: '',
+    // Credit Card BBPS - registered mobile number
+    registered_mobile: ''
   });
   
   // Charges calculation
@@ -1357,7 +1359,10 @@ const RedeemPageV2 = ({ user }) => {
       }
     } else if (selectedService === 'credit_card') {
       details.card_number = formData.card_number;
-      details.consumer_number = formData.card_number;
+      details.consumer_number = formData.card_number; // Last 4 digits of card
+      // Credit Card BBPS requires registered mobile number as PRIMARY param
+      details.registered_mobile_number = formData.registered_mobile;
+      details.mobile_number = formData.registered_mobile;
     } else if (selectedService === 'insurance') {
       details.policy_number = formData.policy_number;
       details.consumer_number = formData.policy_number;
@@ -1543,7 +1548,8 @@ const RedeemPageV2 = ({ user }) => {
         policy_number: '',
         vehicle_number: '',
         student_id: '',
-        lpg_id: ''
+        lpg_id: '',
+        registered_mobile: ''
       });
       setCharges(null);
       setBillDetails(null);
@@ -2245,8 +2251,30 @@ const RedeemPageV2 = ({ user }) => {
                     {/* Step 2: Account/Consumer Number */}
                     {formData.operator && (
                       <div className="animate-fadeIn">
+                        {/* Special field for Credit Card - Registered Mobile Number (required first) */}
+                        {selectedService === 'credit_card' && (
+                          <div className="mb-4">
+                            <Label className="text-gray-300 text-sm mb-2 block">
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                              Registered Mobile Number *
+                            </Label>
+                            <Input
+                              type="tel"
+                              value={formData.registered_mobile}
+                              onChange={(e) => {
+                                const mobile = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                setFormData({ ...formData, registered_mobile: mobile });
+                              }}
+                              placeholder="Enter mobile number registered with card"
+                              className="h-12 bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
+                              data-testid="registered-mobile-input"
+                            />
+                            <p className="text-xs text-cyan-400 mt-1">Mobile number linked to your credit card account</p>
+                          </div>
+                        )}
+                        
                         <Label className="text-gray-300 text-sm mb-2 block">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">2</span>
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">{selectedService === 'credit_card' ? '3' : '2'}</span>
                           {selectedService === 'mobile_postpaid' ? 'Mobile Number' :
                            selectedService === 'credit_card' ? 'Card Number (Last 4 digits)' :
                            selectedService === 'insurance' ? 'Policy Number' :

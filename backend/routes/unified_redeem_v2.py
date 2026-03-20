@@ -17,7 +17,7 @@ Features:
 - Error monitoring & payment event logging
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
@@ -309,8 +309,21 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         # Get recharge_plan_id if available (required for Jio Prepaid - operator 90)
         recharge_plan_id = details.get("recharge_plan_id") or details.get("plan_id")
         
+        # Get cycle_number if available (required for MSEDCL - operator 62, BU number)
+        cycle_number = details.get("cycle_number") or details.get("bu_number") or details.get("additional_params", {}).get("cycle_number")
+        
+        # Get registered_mobile_number for Credit Card BBPS
+        # This is the mobile number registered with the credit card, different from confirmation_mobile_no
+        registered_mobile_number = details.get("registered_mobile_number") or details.get("card_mobile_number") or details.get("mobile_number")
+        
         # Get any extra operator-specific params
         extra_params = details.get("extra_params", {})
+        # Also check additional_params for legacy support
+        additional_params = details.get("additional_params", {})
+        if additional_params:
+            for key, value in additional_params.items():
+                if key not in extra_params and value:
+                    extra_params[key] = value
         
         # Create request object with all required parameters
         pay_request = PayBillRequest(
@@ -322,6 +335,8 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             bill_fetch_response=bill_fetch_response,
             payment_amount_breakup=payment_amount_breakup,
             recharge_plan_id=recharge_plan_id,
+            cycle_number=cycle_number,
+            registered_mobile_number=registered_mobile_number,
             extra_params=extra_params
         )
         
@@ -2758,6 +2773,146 @@ async def bulk_reject_refund(
         
     except Exception as e:
         logging.error(f"Bulk reject refund error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class FailRequestBody(BaseModel):
+    """Body for failing a single request"""
+    request_id: str
+    reason: str = "Admin marked as failed"
+
+
+@router.post("/admin/fail-request")
+async def fail_single_request(body: FailRequestBody, request: Request):
+    """
+    Admin: Mark a single pending request as FAILED and refund PRC.
+    
+    This allows admins to manually fail stuck/pending requests
+    and automatically refund the PRC to the user.
+    
+    Args:
+        request_id: The request ID to fail
+        reason: Reason for failure (shown to user)
+    """
+    from datetime import datetime, timezone
+    from app.services.wallet_service_v2 import WalletServiceV2
+    
+    try:
+        request_id = body.request_id
+        reason = body.reason
+        
+        # Search in multiple collections
+        collections_to_check = [
+            ("bill_payment_requests", "prc_amount", "total_prc_deducted"),
+            ("redeem_requests", "prc_amount", "prc_required"),
+            ("bank_withdrawal_requests", "total_prc", "prc_amount"),
+        ]
+        
+        request_doc = None
+        collection_used = None
+        prc_field_used = None
+        
+        for coll_name, prc_field1, prc_field2 in collections_to_check:
+            coll = db[coll_name]
+            # Try both request_id field and _id
+            doc = await coll.find_one({"request_id": request_id})
+            if not doc:
+                try:
+                    from bson import ObjectId
+                    doc = await coll.find_one({"_id": ObjectId(request_id)})
+                except:
+                    pass
+            
+            if doc:
+                request_doc = doc
+                collection_used = coll_name
+                prc_field_used = prc_field1 if doc.get(prc_field1) else prc_field2
+                break
+        
+        if not request_doc:
+            raise HTTPException(status_code=404, detail=f"Request {request_id} not found in any collection")
+        
+        # Check current status
+        current_status = request_doc.get("status", "unknown")
+        if current_status in ["completed", "success", "rejected"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot fail request with status: {current_status}. Only pending/processing requests can be failed."
+            )
+        
+        # Check if already refunded
+        if request_doc.get("prc_refunded"):
+            raise HTTPException(status_code=400, detail="PRC already refunded for this request")
+        
+        # Get user and PRC amount
+        user_id = request_doc.get("user_id")
+        prc_to_refund = request_doc.get(prc_field_used) or request_doc.get("prc_amount") or request_doc.get("total_prc") or request_doc.get("total_prc_deducted") or 0
+        amount_inr = request_doc.get("amount_inr") or request_doc.get("amount") or 0
+        
+        # If no PRC stored, calculate from amount
+        if not prc_to_refund and amount_inr:
+            prc_to_refund = int(amount_inr * 100)  # 100 PRC = ₹1
+        
+        if not prc_to_refund or prc_to_refund <= 0:
+            raise HTTPException(status_code=400, detail="No PRC amount found to refund")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="No user_id found in request")
+        
+        # Refund PRC
+        credit_result = WalletServiceV2.credit(
+            user_id=user_id,
+            amount=prc_to_refund,
+            txn_type="refund",
+            description=f"Request failed: {reason} - ₹{amount_inr}",
+            reference=request_id,
+            service_type=request_doc.get("service_type", collection_used)
+        )
+        
+        if not credit_result.get("success"):
+            raise HTTPException(status_code=500, detail=f"PRC refund failed: {credit_result.get('error')}")
+        
+        # Update request status
+        coll = db[collection_used]
+        await coll.update_one(
+            {"_id": request_doc["_id"]},
+            {
+                "$set": {
+                    "status": "failed",
+                    "failed_at": datetime.now(timezone.utc).isoformat(),
+                    "failure_reason": reason,
+                    "admin_failed": True,
+                    "prc_refunded": True,
+                    "prc_refund_amount": prc_to_refund,
+                    "refund_txn_id": credit_result.get("txn_id"),
+                    "refund_balance_after": credit_result.get("balance_after")
+                }
+            }
+        )
+        
+        logging.info(f"[ADMIN FAIL] Request {request_id} failed by admin | User: {user_id} | PRC Refunded: {prc_to_refund}")
+        
+        return {
+            "success": True,
+            "message": f"Request marked as FAILED. {prc_to_refund:,} PRC refunded.",
+            "details": {
+                "request_id": request_id,
+                "collection": collection_used,
+                "user_id": user_id,
+                "user_name": request_doc.get("user_name") or request_doc.get("name"),
+                "prc_refunded": prc_to_refund,
+                "new_balance": credit_result.get("balance_after"),
+                "refund_txn_id": credit_result.get("txn_id"),
+                "reason": reason
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[ADMIN FAIL] Error: {str(e)}")
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

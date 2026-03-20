@@ -451,6 +451,8 @@ class PayBillRequest(BaseModel):
     hc_channel: Optional[str] = None  # For Credit Card BBPS only - don't send by default
     # Operator-specific parameters
     recharge_plan_id: Optional[str] = None  # Required for Jio Prepaid (operator_id=90)
+    cycle_number: Optional[str] = None  # Required for MSEDCL (operator_id=62) - BU number
+    registered_mobile_number: Optional[str] = None  # Required for Credit Card BBPS operators
     extra_params: Optional[Dict[str, str]] = None  # For any other operator-specific params
     
     @validator('mobile')
@@ -1164,6 +1166,15 @@ async def pay_bill(data: PayBillRequest):
         # Add Jio Prepaid specific field (operator_id=90 requires recharge_plan_id)
         if data.recharge_plan_id:
             body["recharge_plan_id"] = data.recharge_plan_id
+        
+        # Add MSEDCL (operator_id=62) specific field - BU number
+        if data.cycle_number:
+            body["cycle_number"] = data.cycle_number
+        
+        # Add Credit Card BBPS specific field - Registered mobile number
+        # This is DIFFERENT from confirmation_mobile_no
+        if data.registered_mobile_number:
+            body["mobile_number"] = data.registered_mobile_number
         
         # Add any extra operator-specific params
         if data.extra_params:
