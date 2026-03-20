@@ -23821,6 +23821,157 @@ async def fix_negative_balances():
     }
 
 
+@api_router.get("/admin/cleanup-retry-failed")
+@api_router.post("/admin/cleanup-retry-failed")
+async def cleanup_retry_failed_requests(
+    dry_run: bool = True,
+    limit: int = 500
+):
+    """
+    🧹 CLEANUP: Delete RETRY_FAILED requests and refund PRC to users.
+    
+    This endpoint:
+    1. Finds all requests with status 'RETRY_FAILED' or 'retry_failed'
+    2. Refunds the PRC to each user
+    3. Deletes the request record (or marks as 'deleted_refunded')
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max records to process (default: 500)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY DELETE AND REFUND
+    """
+    from datetime import datetime, timezone
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    results = {
+        "found": 0,
+        "refunded": 0,
+        "deleted": 0,
+        "total_prc_refunded": 0,
+        "errors": [],
+        "details": []
+    }
+    
+    try:
+        # Find all RETRY_FAILED requests
+        retry_failed_requests = await db.redeem_requests.find({
+            "status": {"$in": ["RETRY_FAILED", "retry_failed", "eko_failed"]}
+        }).limit(limit).to_list(limit)
+        
+        results["found"] = len(retry_failed_requests)
+        
+        if results["found"] == 0:
+            return {
+                "success": True,
+                "dry_run": dry_run,
+                "message": "No RETRY_FAILED requests found",
+                "results": results
+            }
+        
+        for req in retry_failed_requests:
+            request_id = req.get("request_id", str(req.get("_id", "")))
+            user_id = req.get("user_id")
+            
+            # Get PRC amount to refund
+            prc_to_refund = (
+                req.get("total_prc_deducted") or 
+                req.get("prc_amount") or 
+                req.get("prc_used") or 0
+            )
+            
+            # Skip if already refunded
+            if req.get("prc_refunded"):
+                results["details"].append({
+                    "request_id": request_id,
+                    "status": "skipped",
+                    "reason": "Already refunded"
+                })
+                continue
+            
+            detail = {
+                "request_id": request_id,
+                "user_id": user_id,
+                "user_name": req.get("user_name", ""),
+                "service_type": req.get("service_type", ""),
+                "amount_inr": req.get("amount") or req.get("amount_inr") or 0,
+                "prc_to_refund": prc_to_refund,
+                "original_status": req.get("status")
+            }
+            
+            if not dry_run:
+                try:
+                    # 1. Refund PRC to user
+                    if prc_to_refund > 0 and user_id:
+                        user = await db.users.find_one({"uid": user_id})
+                        if user:
+                            current_balance = float(user.get("prc_balance", 0) or 0)
+                            new_balance = current_balance + prc_to_refund
+                            
+                            await db.users.update_one(
+                                {"uid": user_id},
+                                {"$set": {"prc_balance": new_balance}}
+                            )
+                            
+                            # Log the refund in transactions
+                            await db.transactions.insert_one({
+                                "transaction_id": f"CLEANUP-{request_id}",
+                                "user_id": user_id,
+                                "type": "cleanup_refund",
+                                "amount": prc_to_refund,
+                                "balance_before": current_balance,
+                                "balance_after": new_balance,
+                                "description": f"Cleanup refund for RETRY_FAILED request",
+                                "reference": request_id,
+                                "timestamp": timestamp
+                            })
+                            
+                            detail["refunded"] = True
+                            detail["new_balance"] = new_balance
+                            results["refunded"] += 1
+                            results["total_prc_refunded"] += prc_to_refund
+                    
+                    # 2. Delete the request record
+                    await db.redeem_requests.delete_one({"_id": req.get("_id")})
+                    detail["deleted"] = True
+                    results["deleted"] += 1
+                    detail["status"] = "refunded_and_deleted"
+                    
+                except Exception as e:
+                    detail["status"] = "error"
+                    detail["error"] = str(e)
+                    results["errors"].append({"request_id": request_id, "error": str(e)})
+            else:
+                detail["status"] = "would_refund_and_delete"
+            
+            results["details"].append(detail)
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "timestamp": timestamp,
+            "summary": {
+                "total_retry_failed_found": results["found"],
+                "records_refunded": results["refunded"],
+                "records_deleted": results["deleted"],
+                "total_prc_refunded": round(results["total_prc_refunded"], 2),
+                "errors": len(results["errors"])
+            },
+            "details": results["details"][:100],
+            "errors": results["errors"][:20] if results["errors"] else [],
+            "note": "Run with dry_run=false to apply changes" if dry_run else "Cleanup completed successfully"
+        }
+        
+    except Exception as e:
+        logging.error(f"[CLEANUP RETRY_FAILED] Error: {e}")
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 
 @api_router.post("/admin/prc-auto-correct")
 async def prc_auto_correct(
