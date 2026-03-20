@@ -34,6 +34,27 @@ const AdminDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLoginAsUser, setShowLoginAsUser] = useState(false);
+  const [bulkFixing, setBulkFixing] = useState(false);
+  const [bulkFixResult, setBulkFixResult] = useState(null);
+
+  // Bulk Fix All Users function
+  const runBulkFix = async (dryRun = true) => {
+    setBulkFixing(true);
+    try {
+      const response = await axios.post(`${API}/admin/bulk-diagnose-all?dry_run=${dryRun}&limit=1000`);
+      setBulkFixResult(response.data);
+      if (dryRun) {
+        toast.info(`Found ${response.data.summary?.total_issues_found || 0} issues in ${response.data.summary?.users_with_issues || 0} users`);
+      } else {
+        toast.success(`Fixed ${response.data.summary?.total_issues_fixed || 0} issues!`);
+        fetchDashboardData(true); // Refresh stats
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Bulk fix failed');
+    } finally {
+      setBulkFixing(false);
+    }
+  };
 
   const fetchDashboardData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -134,6 +155,28 @@ const AdminDashboard = ({ user }) => {
           <p className="text-gray-500 text-sm">Welcome back, {user?.name || 'Admin'}</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Bulk Fix All Users Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              if (bulkFixResult && !bulkFixResult.dry_run) {
+                setBulkFixResult(null);
+                runBulkFix(true);
+              } else if (bulkFixResult) {
+                if (confirm(`Apply fixes to ${bulkFixResult.summary?.users_with_issues || 0} users?\n\nThis will fix ${bulkFixResult.summary?.total_issues_found || 0} issues including:\n- KYC sync issues\n- Expired subscriptions\n- Failed transaction refunds\n- Unactivated payments`)) {
+                  runBulkFix(false);
+                }
+              } else {
+                runBulkFix(true);
+              }
+            }}
+            disabled={bulkFixing}
+            className={`${bulkFixResult && bulkFixResult.dry_run ? 'text-green-400 border-green-500/50 hover:bg-green-500/10' : 'text-purple-400 border-purple-500/50 hover:bg-purple-500/10'}`}
+          >
+            <Zap className={`w-4 h-4 mr-2 ${bulkFixing ? 'animate-pulse' : ''}`} />
+            {bulkFixing ? 'Scanning...' : bulkFixResult && bulkFixResult.dry_run ? `Fix ${bulkFixResult.summary?.total_issues_found || 0} Issues` : '🔧 Auto Fix All'}
+          </Button>
           {/* Login As User Button */}
           <Button 
             variant="outline" 
@@ -181,6 +224,60 @@ const AdminDashboard = ({ user }) => {
                 )}
               </div>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Bulk Fix Results Panel */}
+      {bulkFixResult && (
+        <Card className={`p-4 ${bulkFixResult.dry_run ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30'}`}>
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <Zap className={`w-5 h-5 ${bulkFixResult.dry_run ? 'text-purple-400' : 'text-green-400'}`} />
+              <div>
+                <h3 className={`text-sm font-bold mb-2 ${bulkFixResult.dry_run ? 'text-purple-400' : 'text-green-400'}`}>
+                  {bulkFixResult.dry_run ? '🔍 Issues Found (Preview)' : '✅ Issues Fixed'}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-400">Users Scanned</p>
+                    <p className="text-white font-bold">{bulkFixResult.summary?.total_users_scanned || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Users with Issues</p>
+                    <p className="text-white font-bold">{bulkFixResult.summary?.users_with_issues || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Total Issues</p>
+                    <p className="text-white font-bold">{bulkFixResult.summary?.total_issues_found || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">PRC Refunded</p>
+                    <p className="text-green-400 font-bold">{bulkFixResult.summary?.total_prc_refunded || 0} PRC</p>
+                  </div>
+                </div>
+                {bulkFixResult.affected_users?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-gray-400 text-xs mb-2">Affected Users:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {bulkFixResult.affected_users.slice(0, 5).map((u, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">
+                          {u.name || u.email?.split('@')[0]}
+                        </span>
+                      ))}
+                      {bulkFixResult.affected_users.length > 5 && (
+                        <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-400">
+                          +{bulkFixResult.affected_users.length - 5} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setBulkFixResult(null)} className="text-gray-500 hover:text-white">
+              <XCircle className="w-5 h-5" />
+            </button>
           </div>
         </Card>
       )}

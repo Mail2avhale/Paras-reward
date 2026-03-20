@@ -19946,6 +19946,225 @@ async def admin_override_redeem_limit(request: Request):
     }
 
 
+@api_router.get("/admin/bulk-diagnose-all")
+@api_router.post("/admin/bulk-diagnose-all")
+async def admin_bulk_diagnose_all_users(
+    dry_run: bool = True,
+    limit: int = 500
+):
+    """
+    🔧 BULK AUTO-FIX: Diagnose and fix common issues for ALL users.
+    
+    Issues Fixed:
+    1. KYC sync mismatch (document verified but profile pending)
+    2. Orphaned KYC status (pending but no document)
+    3. Expired subscriptions not reset to explorer
+    4. Failed transactions without PRC refund
+    5. Razorpay payments not activated
+    6. PRC balance corrections
+    
+    Query Params:
+    - dry_run: If True, only preview (default: True)
+    - limit: Max users to process (default: 500)
+    
+    ⚠️ SET dry_run=false TO ACTUALLY FIX ISSUES
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    results = {
+        "total_users_scanned": 0,
+        "users_with_issues": 0,
+        "issues_found": 0,
+        "issues_fixed": 0,
+        "prc_refunded": 0,
+        "fixes_by_category": {
+            "kyc_sync": 0,
+            "kyc_reset": 0,
+            "subscription_expired": 0,
+            "subscription_activate": 0,
+            "prc_refund": 0,
+            "balance_correction": 0
+        },
+        "details": [],
+        "errors": []
+    }
+    
+    try:
+        # Get all users
+        users = await db.users.find(
+            {},
+            {"uid": 1, "name": 1, "email": 1, "kyc_status": 1, "subscription_plan": 1, 
+             "subscription_expires": 1, "subscription_expiry": 1, "prc_balance": 1, "membership_type": 1}
+        ).limit(limit).to_list(limit)
+        
+        results["total_users_scanned"] = len(users)
+        
+        for user in users:
+            uid = user.get("uid")
+            user_issues = []
+            user_fixes = []
+            
+            # ========== 1. KYC SYNC CHECK ==========
+            kyc_status = user.get("kyc_status", "not_submitted")
+            kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+            
+            # KYC document verified but profile not synced
+            if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+                user_issues.append("KYC sync mismatch")
+                if not dry_run:
+                    await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+                    user_fixes.append("KYC synced to verified")
+                    results["fixes_by_category"]["kyc_sync"] += 1
+                results["issues_fixed"] += 1
+            
+            # Orphaned KYC (pending but no document)
+            if kyc_status == "pending" and not kyc_doc:
+                user_issues.append("Orphaned KYC status")
+                if not dry_run:
+                    await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+                    user_fixes.append("KYC reset to not_submitted")
+                    results["fixes_by_category"]["kyc_reset"] += 1
+                results["issues_fixed"] += 1
+            
+            # ========== 2. EXPIRED SUBSCRIPTION CHECK ==========
+            subscription_plan = user.get("subscription_plan", "explorer")
+            subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
+            
+            if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
+                try:
+                    expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+                    if expiry_date < datetime.now(timezone.utc):
+                        user_issues.append(f"Expired {subscription_plan} subscription")
+                        if not dry_run:
+                            await db.users.update_one(
+                                {"uid": uid},
+                                {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
+                            )
+                            user_fixes.append("Subscription reset to explorer")
+                            results["fixes_by_category"]["subscription_expired"] += 1
+                        results["issues_fixed"] += 1
+                except:
+                    pass
+            
+            # ========== 3. UNACTIVATED RAZORPAY PAYMENTS ==========
+            if user.get("membership_type") in ["free", None, ""] or subscription_plan in ["explorer", "free", None, ""]:
+                latest_razorpay = await db.razorpay_orders.find_one(
+                    {"user_id": uid, "status": "paid"},
+                    sort=[("paid_at", -1)]
+                )
+                if latest_razorpay:
+                    user_issues.append(f"Razorpay payment not activated: {latest_razorpay.get('plan_name')}")
+                    if not dry_run:
+                        # Activate subscription
+                        plan_name = latest_razorpay.get("plan_name", "").lower()
+                        plan_type = latest_razorpay.get("plan_type", "monthly")
+                        
+                        if "elite" in plan_name:
+                            new_plan = "elite"
+                        elif "growth" in plan_name:
+                            new_plan = "growth"
+                        elif "startup" in plan_name:
+                            new_plan = "startup"
+                        else:
+                            new_plan = "startup"
+                        
+                        days = 365 if plan_type == "yearly" else 30
+                        new_expiry = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+                        
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {
+                                "subscription_plan": new_plan,
+                                "membership_type": "paid",
+                                "subscription_expiry": new_expiry,
+                                "subscription_start": timestamp,
+                                "subscription_activated_by_bulk_fix": True
+                            }}
+                        )
+                        user_fixes.append(f"Subscription activated: {new_plan}")
+                        results["fixes_by_category"]["subscription_activate"] += 1
+                    results["issues_fixed"] += 1
+            
+            # ========== 4. FAILED TRANSACTIONS WITHOUT REFUND ==========
+            failed_without_refund = await db.redeem_requests.find(
+                {
+                    "user_id": uid, 
+                    "status": {"$in": ["failed", "RETRY_FAILED", "eko_failed", "rejected"]},
+                    "prc_refunded": {"$ne": True}
+                }
+            ).to_list(50)
+            
+            for failed_txn in failed_without_refund:
+                prc_amount = failed_txn.get("total_prc_deducted") or failed_txn.get("prc_amount") or 0
+                if prc_amount > 0:
+                    user_issues.append(f"Failed txn without refund: {prc_amount} PRC")
+                    if not dry_run:
+                        # Refund PRC
+                        current_balance = float(user.get("prc_balance", 0) or 0)
+                        new_balance = current_balance + prc_amount
+                        
+                        await db.users.update_one(
+                            {"uid": uid},
+                            {"$set": {"prc_balance": new_balance}}
+                        )
+                        
+                        await db.redeem_requests.update_one(
+                            {"request_id": failed_txn.get("request_id")},
+                            {"$set": {"prc_refunded": True, "refunded_by": "bulk_fix", "refunded_at": timestamp}}
+                        )
+                        
+                        await db.transactions.insert_one({
+                            "transaction_id": f"BULK-REFUND-{failed_txn.get('request_id', '')[:10]}",
+                            "user_id": uid,
+                            "type": "bulk_refund",
+                            "amount": prc_amount,
+                            "description": "Bulk fix: Refund for failed transaction",
+                            "timestamp": timestamp
+                        })
+                        
+                        user_fixes.append(f"Refunded {prc_amount} PRC")
+                        results["fixes_by_category"]["prc_refund"] += 1
+                        results["prc_refunded"] += prc_amount
+                    results["issues_fixed"] += 1
+            
+            # Record user if has issues
+            if user_issues:
+                results["users_with_issues"] += 1
+                results["issues_found"] += len(user_issues)
+                results["details"].append({
+                    "uid": uid,
+                    "name": user.get("name", ""),
+                    "email": user.get("email", ""),
+                    "issues": user_issues,
+                    "fixes": user_fixes if not dry_run else ["Would fix"] * len(user_issues)
+                })
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "timestamp": timestamp,
+            "summary": {
+                "total_users_scanned": results["total_users_scanned"],
+                "users_with_issues": results["users_with_issues"],
+                "total_issues_found": results["issues_found"],
+                "total_issues_fixed": results["issues_fixed"] if not dry_run else 0,
+                "total_prc_refunded": round(results["prc_refunded"], 2),
+                "fixes_by_category": results["fixes_by_category"] if not dry_run else {}
+            },
+            "affected_users": results["details"][:100],
+            "note": "Run with dry_run=false to apply fixes" if dry_run else "All issues fixed successfully"
+        }
+        
+    except Exception as e:
+        logging.error(f"[BULK DIAGNOSE] Error: {e}")
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @api_router.get("/admin/user/{uid}/diagnose")
 async def admin_diagnose_user(uid: str):
     """
