@@ -41,10 +41,8 @@ const STATUS_CONFIG = {
   completed: { color: 'green', icon: CheckCircle, label: 'Completed' },
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   rejected: { color: 'gray', icon: AlertCircle, label: 'Rejected' },
-  retry_failed: { color: 'red', icon: XCircle, label: 'Retry Failed' },
-  RETRY_FAILED: { color: 'red', icon: XCircle, label: 'Retry Failed' },
-  eko_failed: { color: 'red', icon: XCircle, label: 'Eko Failed' },
-  refunded: { color: 'orange', icon: RefreshCw, label: 'Refunded' }
+  refunded: { color: 'orange', icon: RefreshCw, label: 'Refunded' },
+  eko_failed: { color: 'red', icon: XCircle, label: 'Failed' }
 };
 
 const AdminBBPSDashboard = () => {

@@ -59,8 +59,7 @@ import json
 # Using V2 with dual ledger support (ledger + prc_ledger)
 from app.services.wallet_service_v2 import WalletServiceV2 as WalletService
 
-# Import TaskQueue for auto-retry functionality (Phase 4 Architecture)
-from app.services import TaskQueue
+# TaskQueue import removed - retry functionality disabled
 
 router = APIRouter(prefix="/redeem", tags=["Unified Redeem v2"])
 
@@ -79,19 +78,9 @@ EKO_INITIATOR_ID = os.environ.get("EKO_INITIATOR_ID", "9936606966")
 EKO_AUTHENTICATOR_KEY = os.environ.get("EKO_AUTHENTICATOR_KEY", "")
 EKO_USER_CODE = os.environ.get("EKO_USER_CODE", "20810200")
 
-# ==================== AUTO-RETRY CONFIGURATION ====================
-
-# Enable/disable auto-retry for failed transactions
-BBPS_AUTO_RETRY_ENABLED = os.environ.get("BBPS_AUTO_RETRY_ENABLED", "true").lower() == "true"
-
-# Maximum retry attempts before giving up
-BBPS_MAX_RETRIES = int(os.environ.get("BBPS_MAX_RETRIES", "3"))
-
-# Delay before first retry (in seconds)
-BBPS_RETRY_DELAY = int(os.environ.get("BBPS_RETRY_DELAY", "60"))
-
-# Service types eligible for auto-retry (empty = all)
-BBPS_RETRY_ELIGIBLE_SERVICES = ["electricity", "mobile_postpaid", "dth", "fastag", "broadband"]
+# ==================== AUTO-RETRY DISABLED ====================
+# Retry functionality has been removed. Failed transactions are refunded immediately.
+# BBPS_AUTO_RETRY_ENABLED = False (removed)
 
 def generate_eko_secret_key(timestamp: str) -> str:
     """Generate secret key for Eko API authentication"""
@@ -1340,37 +1329,8 @@ async def create_redeem_request(request: RedeemRequestCreate):
                     category="payment"
                 )
                 
-                # === AUTO-RETRY ENQUEUE (Phase 4) ===
-                # Check if this service type is eligible for auto-retry
-                if BBPS_AUTO_RETRY_ENABLED and request.service_type in BBPS_RETRY_ELIGIBLE_SERVICES:
-                    try:
-                        # Check if error is retryable (not user input errors)
-                        error_msg = (eko_result.get("message") or "").lower()
-                        is_retryable = not any(x in error_msg for x in ["invalid", "incorrect", "wrong", "not found", "not registered"])
-                        
-                        if is_retryable:
-                            task_id = await TaskQueue.enqueue(
-                                task_name="retry_failed_transfer",
-                                payload={
-                                    "request_id": request_id,
-                                    "retry_attempt": 1,
-                                    "service_type": request.service_type,
-                                    "user_id": request.user_id,
-                                    "amount": request.amount
-                                },
-                                max_retries=BBPS_MAX_RETRIES,
-                                delay_seconds=BBPS_RETRY_DELAY,
-                                priority=3  # High priority for payment retries
-                            )
-                            logging.info(f"[BBPS] Auto-retry scheduled: {request_id} -> Task: {task_id}")
-                            
-                            # Update request with retry task info
-                            await db.redeem_requests.update_one(
-                                {"request_id": request_id},
-                                {"$set": {"retry_task_id": task_id, "auto_retry_enabled": True}}
-                            )
-                    except Exception as retry_err:
-                        logging.error(f"[BBPS] Failed to schedule auto-retry: {str(retry_err)}")
+                # === INSTANT REFUND ON FAILURE (Retry removed) ===
+                # PRC already refunded above - no retry scheduling
                 
                 return {
                     "success": False,
