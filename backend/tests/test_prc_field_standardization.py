@@ -291,6 +291,72 @@ class TestRedeemLimitWithDifferentUsers:
                 assert total_limit == 0, f"Explorer should have 0 limit, got {total_limit}"
 
 
+class TestBugFix_CollectionsAndFields:
+    """
+    Verify bug fix for 'Used column showing 0' issue.
+    
+    The bug was that get_user_total_redeemed was not checking:
+    1. amount_prc field (used in transactions)
+    2. gift_voucher_requests collection
+    3. bank_redeem_requests collection
+    4. redeem_requests collection
+    5. transactions collection query using uid (not just user_id)
+    """
+    
+    def test_debug_endpoint_shows_collections_checked(self, api_session):
+        """Debug endpoint should show which collections have data"""
+        response = api_session.get(f"{BASE_URL}/api/admin/debug/user-redemptions/{TEST_USER_UID}")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify the debug endpoint shows collections
+        assert "bill_payment_requests" in data, "Should check bill_payment_requests"
+        assert "bank_withdrawal_requests" in data, "Should check bank_withdrawal_requests"
+        assert "redeem_requests" in data, "Should check redeem_requests"
+        
+        # The calculated total should be non-zero for this user
+        calculated = data.get("calculated_total_redeemed", 0)
+        print(f"Debug endpoint calculated total: {calculated}")
+        assert calculated > 0, f"Test user should have redemption history, got {calculated}"
+    
+    def test_user_redeem_limit_matches_debug_calculation(self, api_session):
+        """User redeem limit API should match debug endpoint calculation"""
+        # Get debug calculation
+        debug_response = api_session.get(f"{BASE_URL}/api/admin/debug/user-redemptions/{TEST_USER_UID}")
+        assert debug_response.status_code == 200
+        debug_data = debug_response.json()
+        debug_total = debug_data.get("calculated_total_redeemed", 0)
+        
+        # Get redeem limit API value
+        limit_response = api_session.get(f"{BASE_URL}/api/user/{TEST_USER_UID}/redeem-limit")
+        assert limit_response.status_code == 200
+        limit_data = limit_response.json()
+        api_total = limit_data["limit"]["total_redeemed"]
+        
+        print(f"Debug calculation: {debug_total}")
+        print(f"API total_redeemed: {api_total}")
+        
+        # They should match (or be very close)
+        assert abs(debug_total - api_total) < 1, \
+            f"Debug ({debug_total}) and API ({api_total}) totals should match"
+    
+    def test_total_redeemed_non_zero_for_test_user(self, api_session):
+        """Critical test: Test user should have non-zero total_redeemed (was the bug)"""
+        response = api_session.get(f"{BASE_URL}/api/user/{TEST_USER_UID}/redeem-limit")
+        assert response.status_code == 200
+        data = response.json()
+        
+        total_redeemed = data["limit"]["total_redeemed"]
+        
+        # This is the main bug fix verification - should NOT be 0
+        assert total_redeemed > 0, \
+            f"BUG REGRESSION: Test user total_redeemed is {total_redeemed}, should be > 0. " \
+            "Check if get_user_total_redeemed is reading all collections and field variations."
+        
+        # Expected value is around 700 based on agent note
+        print(f"Test user total_redeemed: {total_redeemed} PRC")
+
+
 class TestEdgeCases:
     """Test edge cases for PRC field handling"""
     

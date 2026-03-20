@@ -35,8 +35,10 @@ LEGACY_PRC_FIELDS = [
     "prc_used",            # Legacy bill_payment_requests
     "prc_deducted",        # Legacy bank transfers, chatbot DMT
     "prc_amount",          # Generic legacy field
+    "amount_prc",          # Used in transactions collection
     "total_prc",           # Orders
     "prc_required",        # Some redeem requests
+    "amount",              # DMT transactions - raw amount field
 ]
 
 
@@ -49,9 +51,10 @@ def get_prc_amount(doc: dict) -> float:
     2. prc_used (legacy)
     3. prc_deducted
     4. prc_amount
-    5. total_prc
-    6. prc_required
-    7. amount * 100 (if amount is INR) - LAST RESORT
+    5. amount_prc (transactions collection)
+    6. total_prc
+    7. prc_required
+    8. amount (DMT transactions)
     
     Args:
         doc: Document from any redemption collection
@@ -70,15 +73,6 @@ def get_prc_amount(doc: dict) -> float:
                 return float(value)
             except (ValueError, TypeError):
                 continue
-    
-    # Fallback: calculate from INR amount (100 PRC = ₹1)
-    # Only use this as last resort
-    amount_inr = doc.get("amount_inr") or doc.get("amount")
-    if amount_inr:
-        try:
-            return float(amount_inr) * 100
-        except (ValueError, TypeError):
-            pass
     
     return 0.0
 
@@ -120,10 +114,13 @@ PRC_AGGREGATION_FIELD = {
                 {"$ifNull": [
                     "$prc_amount",
                     {"$ifNull": [
-                        "$total_prc",
+                        "$amount_prc",
                         {"$ifNull": [
-                            "$prc_required",
-                            0
+                            "$total_prc",
+                            {"$ifNull": [
+                                "$prc_required",
+                                {"$ifNull": ["$amount", 0]}
+                            ]}
                         ]}
                     ]}
                 ]}

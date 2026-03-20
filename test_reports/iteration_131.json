@@ -1,0 +1,47 @@
+{
+  "iteration": 131,
+  "mode": "update",
+  "summary": "Bug fix verification: get_user_total_redeemed function now correctly calculates total_redeemed by checking all collection names and field variations. Test user shows 700.0 PRC used (was showing 0).",
+  "baseline_commit": "f73afda615b78ce67b24e3c90ad42d7cc6567060",
+  "head_commit": "a33f99057e7d8f290b7b02774140a0de204bcb19",
+  "specs_created": [],
+  "specs_updated": [
+    "/app/backend/tests/test_prc_field_standardization.py"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_prc_field_standardization.py",
+    "/app/test_reports/pytest/prc_bugfix_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 19,
+    "passed": 19,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_prc_field_standardization.py"
+  ],
+  "test_results": {
+    "backend": "100%",
+    "frontend": "N/A - backend-only bug fix"
+  },
+  "seed_data_creation": "None - used existing test user 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bug fix verified successfully. The get_user_total_redeemed function now correctly reads PRC amounts from all relevant collections (bill_payment_requests, bank_redeem_requests, redeem_requests, gift_voucher_requests, transactions) and handles all field variations (amount_prc, total_prc_deducted, prc_used, prc_deducted, prc_amount). Test user 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 now shows total_redeemed=700.0 (previously was 0). The transactions collection query now correctly uses $or: [{user_id}, {uid}] to match both field names.",
+  "bug_fix_verified": {
+    "original_issue": "Used column in admin members page showing 0 for all users",
+    "root_cause": [
+      "Missing amount_prc field check (used in transactions)",
+      "Missing gift_voucher_requests collection",
+      "Missing bank_redeem_requests collection",
+      "Missing redeem_requests collection",
+      "transactions query was using user_id instead of uid"
+    ],
+    "fix_applied": "Added all missing collections and field variations to get_user_total_redeemed function",
+    "verification_result": "Test user now shows total_redeemed=700.0 (was 0)"
+  }
+}

@@ -16102,6 +16102,16 @@ async def get_user_total_redeemed(user_id: str) -> float:
             if bt.get("status") not in skip:
                 total_redeemed += get_prc_amount(bt)
         
+        # 3b. Bank redeem requests (another collection name used in production)
+        bank_redeems = await db.bank_redeem_requests.find({
+            "user_id": user_id,
+            "status": {"$in": valid}
+        }).to_list(5000)
+        
+        for br in bank_redeems:
+            if br.get("status") not in skip:
+                total_redeemed += get_prc_amount(br)
+        
         # 4. DMT transactions
         dmt_txns = await db.dmt_transactions.find({
             "user_id": user_id,
@@ -16111,14 +16121,33 @@ async def get_user_total_redeemed(user_id: str) -> float:
         for dmt in dmt_txns:
             total_redeemed += get_prc_amount(dmt)
         
-        # 5. Gift vouchers
+        # 5. Gift vouchers (check both collection names)
         gift_vouchers = await db.gift_voucher_orders.find({
             "user_id": user_id,
-            "status": {"$in": ["success", "completed", "pending", "processing"]}
+            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
+        }).to_list(5000)
+        
+        # Also check gift_voucher_requests collection (legacy name)
+        gift_voucher_reqs = await db.gift_voucher_requests.find({
+            "user_id": user_id,
+            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
         }).to_list(5000)
         
         for gv in gift_vouchers:
             total_redeemed += get_prc_amount(gv)
+        
+        for gv in gift_voucher_reqs:
+            total_redeemed += get_prc_amount(gv)
+        
+        # 5c. Generic redeem_requests collection
+        redeem_requests = await db.redeem_requests.find({
+            "user_id": user_id,
+            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
+        }).to_list(5000)
+        
+        for rr in redeem_requests:
+            if rr.get("status") not in skip:
+                total_redeemed += get_prc_amount(rr)
         
         # 6. PRC Subscription Payments
         prc_subscriptions = await db.subscription_payments.find({
@@ -16141,8 +16170,9 @@ async def get_user_total_redeemed(user_id: str) -> float:
                 total_redeemed += get_prc_amount(order)
         
         # 8. Redeem transactions from transactions collection (avoid double counting)
+        # Note: transactions collection uses "uid" not "user_id"
         redeem_txns = await db.transactions.find({
-            "user_id": user_id,
+            "$or": [{"user_id": user_id}, {"uid": user_id}],
             "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc", "order"]}
         }).to_list(5000)
         
@@ -16160,11 +16190,13 @@ async def get_user_total_redeemed(user_id: str) -> float:
             counted_refs.add(f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}")
         for order in product_orders:
             counted_refs.add(order.get("order_id", ""))
+        for gv in gift_vouchers:
+            counted_refs.add(gv.get("request_id", "") or gv.get("order_id", ""))
         
         for txn in redeem_txns:
             ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
             if ref and ref not in counted_refs:
-                prc = float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
+                prc = float(txn.get("amount_prc", 0) or txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
                 total_redeemed += abs(prc)
         
         return round(total_redeemed, 2)
