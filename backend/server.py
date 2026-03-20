@@ -23879,6 +23879,7 @@ async def prc_auto_correct(
     }
 
 
+@api_router.get("/admin/restore-zero-balance-prc")
 @api_router.post("/admin/restore-zero-balance-prc")
 async def restore_zero_balance_prc(
     dry_run: bool = True,
