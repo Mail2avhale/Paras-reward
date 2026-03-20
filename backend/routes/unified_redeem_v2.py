@@ -306,6 +306,12 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         # Get payment_amount_breakup if available (required for credit card BBPS)
         payment_amount_breakup = details.get("payment_amount_breakup")
         
+        # Get recharge_plan_id if available (required for Jio Prepaid - operator 90)
+        recharge_plan_id = details.get("recharge_plan_id") or details.get("plan_id")
+        
+        # Get any extra operator-specific params
+        extra_params = details.get("extra_params", {})
+        
         # Create request object with all required parameters
         pay_request = PayBillRequest(
             operator_id=operator,
@@ -314,7 +320,9 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             mobile=user_mobile if len(user_mobile) == 10 else "9999999999",
             sender_name=sender_name or "Customer",
             bill_fetch_response=bill_fetch_response,
-            payment_amount_breakup=payment_amount_breakup
+            payment_amount_breakup=payment_amount_breakup,
+            recharge_plan_id=recharge_plan_id,
+            extra_params=extra_params
         )
         
         # Execute payment via verified BBPS API

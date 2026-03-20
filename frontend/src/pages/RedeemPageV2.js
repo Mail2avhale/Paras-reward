@@ -493,7 +493,9 @@ const RedeemPageV2 = ({ user }) => {
     challan_number: '',    // Traffic Challan/Transport
     // Additional operator params (like BU for MSEDCL)
     additional_param_1: '',
-    additional_param_2: ''
+    additional_param_2: '',
+    // Plan selection for operators that require it (e.g., Jio Prepaid)
+    recharge_plan_id: ''
   });
   
   // Charges calculation
@@ -1347,6 +1349,11 @@ const RedeemPageV2 = ({ user }) => {
       if (selectedService === 'mobile_recharge') {
         details.circle = formData.circle;
         details.recharge_type = formData.recharge_type;
+        // Include recharge_plan_id if selected (required for Jio Prepaid - operator 90)
+        if (formData.recharge_plan_id) {
+          details.recharge_plan_id = formData.recharge_plan_id;
+          details.plan_id = formData.recharge_plan_id;
+        }
       }
     } else if (selectedService === 'credit_card') {
       details.card_number = formData.card_number;
@@ -2039,7 +2046,7 @@ const RedeemPageV2 = ({ user }) => {
                           value={formData.mobile_number}
                           onChange={(e) => {
                             const mobile = e.target.value.replace(/\D/g, '').slice(0, 10);
-                            setFormData({ ...formData, mobile_number: mobile, amount: '' });
+                            setFormData({ ...formData, mobile_number: mobile, amount: '', recharge_plan_id: '' });
                             setBillDetails(null);
                             // Auto-detect when 10 digits entered
                             if (mobile.length === 10) {
@@ -2102,7 +2109,7 @@ const RedeemPageV2 = ({ user }) => {
                         <select
                           value={formData.operator}
                           onChange={(e) => {
-                            setFormData({ ...formData, operator: e.target.value, amount: '' });
+                            setFormData({ ...formData, operator: e.target.value, amount: '', recharge_plan_id: '' });
                             setBillDetails(null);
                           }}
                           className="w-full h-12 px-4 bg-gray-800/50 border border-gray-700/50 text-white rounded-xl"
@@ -2113,6 +2120,12 @@ const RedeemPageV2 = ({ user }) => {
                             <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
                           ))}
                         </select>
+                        {/* Warning for Jio Prepaid - requires special handling */}
+                        {formData.operator === '90' && (
+                          <p className="text-yellow-400 text-xs mt-2 bg-yellow-500/10 p-2 rounded-lg">
+                            ⚠️ Jio Prepaid: कृपया Jio app किंवा website वरून recharge करा. BBPS द्वारे Jio recharge temporarily unavailable आहे.
+                          </p>
+                        )}
                       </div>
                     )}
                     
@@ -2149,7 +2162,11 @@ const RedeemPageV2 = ({ user }) => {
                             <button
                               key={plan.id || idx}
                               type="button"
-                              onClick={() => setFormData({ ...formData, amount: plan.amount.toString() })}
+                              onClick={() => setFormData({ 
+                                ...formData, 
+                                amount: plan.amount.toString(),
+                                recharge_plan_id: plan.id || plan.plan_id || plan.recharge_plan_id || ''
+                              })}
                               className={`p-3 rounded-xl border text-left transition-all ${
                                 formData.amount === plan.amount.toString()
                                   ? 'bg-amber-500/20 border-amber-500/50'
