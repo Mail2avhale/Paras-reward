@@ -270,6 +270,22 @@ async def claim_mining(uid: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # ==================== SECURITY: Rate Limiting ====================
+    # Prevent rapid claim attempts
+    last_claim = user.get("last_mining_claim")
+    if last_claim:
+        if isinstance(last_claim, str):
+            last_claim = datetime.fromisoformat(last_claim)
+        if last_claim.tzinfo is None:
+            last_claim = last_claim.replace(tzinfo=timezone.utc)
+        
+        time_since_claim = (datetime.now(timezone.utc) - last_claim).total_seconds()
+        if time_since_claim < 60:  # 1 minute cooldown
+            raise HTTPException(
+                status_code=429, 
+                detail=f"Please wait {int(60 - time_since_claim)} seconds before claiming again"
+            )
+    
     # Use helper function - subscription_plan is source of truth
     is_elite = _is_paid_subscriber(user) if _is_paid_subscriber else False
     
@@ -365,7 +381,8 @@ async def claim_mining(uid: str):
         "$set": {
             "total_mined": new_total_mined,
             "mining_start_time": now.isoformat(),
-            "mining_active": True
+            "mining_active": True,
+            "last_mining_claim": now.isoformat()  # Rate limiting tracker
         },
         "$push": {"mining_history": mining_entry}
     }

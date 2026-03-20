@@ -309,6 +309,25 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         
         logging.info(f"[BBPS-INSTANT] Executing {service_type}: account={utility_acc_no[-4:] if utility_acc_no else 'NA'}, operator={operator}, amount={amount}")
         
+        # ==================== SECURITY: Check Eko Balance Before Payment ====================
+        # Prevent stuck transactions when Eko balance is low
+        try:
+            from routes.bbps_services import get_eko_wallet_balance
+            eko_balance_result = await get_eko_wallet_balance()
+            if eko_balance_result.get("success"):
+                available_balance = eko_balance_result.get("balance", 0)
+                amount_needed = float(amount) * 1.05  # Add 5% buffer for fees
+                if available_balance < amount_needed:
+                    logging.warning(f"[BBPS-INSTANT] Insufficient Eko balance: {available_balance} < {amount_needed}")
+                    return {
+                        "success": False,
+                        "status": "FAILED",
+                        "message": "Service temporarily unavailable. Please try again later.",
+                        "user_message": "पेमेंट सेवा तात्पुरती अनुपलब्ध आहे. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा."
+                    }
+        except Exception as balance_error:
+            logging.warning(f"[BBPS-INSTANT] Could not check Eko balance: {balance_error}")
+        
         # Import the working BBPS pay function
         from routes.bbps_services import pay_bill, PayBillRequest
         

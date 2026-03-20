@@ -85,35 +85,39 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 ## What's Been Implemented (March 2026)
 
-### Session (20 March 2026) - BBPS Fixes & Admin Tools
+### Session (20 March 2026) - Security Audit & BBPS Fixes
 
-**COMPLETED: BBPS Parameter Fixes**
-- MSEDCL Electricity: Fixed `cycle_number` (BU) extraction from additional_params
-- Credit Card BBPS: Added `registered_mobile_number` field to frontend and backend
-- Sender name sanitization working (removes numbers/special chars)
-- Jio Prepaid working with `recharge_plan_id` = amount
+**CRITICAL SECURITY FIXES:**
 
-**COMPLETED: Admin Pending Requests Manager**
-- New page: `/admin/pending-requests`
-- "FAIL ALL & REFUND" button for bulk processing
-- Individual fail buttons per request
-- Search and filter functionality
+1. **Webhook Signature Enforcement**
+   - Fixed: Invalid Razorpay webhook signatures now rejected (was being skipped!)
+   - File: `routes/razorpay_payments.py` line 555-558
 
-**COMPLETED: Eko Wallet Balance Display**
-- Shows on `/redeem` page for admin/manager users
-- Balance, Locked, Available display
-- Auto-refreshes every 30 seconds
-- "Manage Pending" quick link
+2. **Rate Limiting Added:**
+   - `/verify-payment`: Max 5 attempts per order per 5 minutes
+   - `/mining/claim`: 60-second cooldown between claims
 
-**API Endpoints Added:**
-- `GET /api/bbps/wallet-balance` - Eko balance
-- `POST /api/redeem/admin/fail-request` - Fail single request with PRC refund
+3. **Eko Balance Pre-Check:**
+   - BBPS payments now check Eko wallet balance before initiating
+   - Prevents stuck transactions when balance is insufficient
 
-**Files Created/Modified:**
-- `frontend/src/pages/AdminPendingRequests.js` (NEW)
-- `frontend/src/pages/RedeemPageV2.js` - Balance display + Credit Card mobile field
-- `backend/routes/bbps_services.py` - Wallet balance, params
-- `backend/routes/unified_redeem_v2.py` - Fail endpoint, param extraction
+4. **Admin Audit Endpoints:**
+   - `POST /api/razorpay/admin/audit-cancelled-elite` - Find suspicious users
+   - `POST /api/razorpay/admin/bulk-reverse-subscriptions` - Mass downgrade
+   - `POST /api/razorpay/admin/reverse-subscription` - Single user downgrade
+   - `POST /api/razorpay/admin/fix-cancelled-subscriptions` - Auto-fix
+
+**SECURITY AUDIT REPORT:** `/app/backend/SECURITY_AUDIT.md`
+
+**BBPS FIXES:**
+- MSEDCL Electricity: Fixed `cycle_number` (BU) extraction
+- Credit Card: Added `registered_mobile_number` field
+- Sender name sanitization working
+- Jio Prepaid working with `recharge_plan_id`
+
+**Admin Tools:**
+- `/admin/pending-requests` - Manage stuck requests with bulk fail
+- Eko wallet balance display on redeem page
 
 ### Previous Session (19 March 2026) - VIP/Membership to Elite Refactoring
 

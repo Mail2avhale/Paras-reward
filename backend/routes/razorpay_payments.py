@@ -184,6 +184,25 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         raise HTTPException(status_code=500, detail="Razorpay not configured")
     
     try:
+        # ==================== SECURITY: Rate Limiting ====================
+        # Check if this order_id has been verified too many times (prevent replay attacks)
+        if db is not None:
+            verify_attempts = await db.razorpay_verify_attempts.count_documents({
+                "order_id": request.razorpay_order_id,
+                "timestamp": {"$gte": datetime.now(timezone.utc) - timedelta(minutes=5)}
+            })
+            if verify_attempts >= 5:
+                logging.warning(f"[RAZORPAY] Rate limit exceeded for order {request.razorpay_order_id}")
+                raise HTTPException(status_code=429, detail="Too many verification attempts. Please wait.")
+            
+            # Log this attempt
+            await db.razorpay_verify_attempts.insert_one({
+                "order_id": request.razorpay_order_id,
+                "payment_id": request.razorpay_payment_id,
+                "user_id": request.user_id,
+                "timestamp": datetime.now(timezone.utc)
+            })
+        
         # ==================== STEP 1: SIGNATURE VERIFICATION ====================
         # Generate signature to verify
         message = f"{request.razorpay_order_id}|{request.razorpay_payment_id}"
@@ -554,9 +573,11 @@ async def razorpay_webhook(request: Request):
             
             if signature != expected_signature:
                 logging.warning(f"[WEBHOOK] Invalid signature. Expected: {expected_signature[:20]}..., Got: {signature[:20]}...")
-                # Don't reject - try to process anyway for now (signature mismatch could be config issue)
+                # SECURITY FIX: Reject invalid signatures to prevent fake webhook attacks
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
         else:
-            logging.info("[WEBHOOK] No signature verification (webhook secret not set or signature not provided)")
+            logging.warning("[WEBHOOK] No signature verification - WEBHOOK SECRET not configured!")
+            # Allow processing but log warning - admin should configure webhook secret
         
         payload = await request.json()
         event = payload.get("event")
