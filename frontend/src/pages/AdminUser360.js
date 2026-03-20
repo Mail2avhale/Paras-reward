@@ -1114,6 +1114,79 @@ const AdminUser360 = ({ user: adminUser }) => {
                 </div>
               </div>
 
+              {/* Redeem Limits Section */}
+              {userData.redeem_limit && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-cyan-400" />
+                    Monthly Redeem Limits
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                      <p className="text-cyan-400 text-xs mb-1">Total Limit</p>
+                      <p className="text-xl font-bold text-white">{formatNumber(userData.redeem_limit.total_limit || 0)}</p>
+                    </div>
+                    <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                      <p className="text-orange-400 text-xs mb-1">Used</p>
+                      <p className="text-xl font-bold text-white">{formatNumber(userData.redeem_limit.total_redeemed || 0)}</p>
+                    </div>
+                    <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+                      <p className="text-emerald-400 text-xs mb-1">Available</p>
+                      <p className="text-xl font-bold text-white">{formatNumber(userData.redeem_limit.remaining_limit || 0)}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Usage</span>
+                      <span>{((userData.redeem_limit.total_redeemed || 0) / (userData.redeem_limit.total_limit || 1) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, ((userData.redeem_limit.total_redeemed || 0) / (userData.redeem_limit.total_limit || 1) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Redeem Services Breakdown */}
+              {userData.redeem_breakdown && Object.keys(userData.redeem_breakdown).length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                    <PieChart className="w-4 h-4 text-purple-400" />
+                    Service-wise Redemption
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.entries(userData.redeem_breakdown).map(([service, amount]) => {
+                      const serviceIcons = {
+                        bbps: { icon: '⚡', color: 'blue', label: 'BBPS' },
+                        bill_payment: { icon: '📋', color: 'blue', label: 'Bill Payment' },
+                        gift_voucher: { icon: '🎁', color: 'purple', label: 'Gift Vouchers' },
+                        bank_transfer: { icon: '🏦', color: 'green', label: 'Bank Transfer' },
+                        bank_redeem: { icon: '🏦', color: 'green', label: 'Bank Redeem' },
+                        dmt: { icon: '💸', color: 'cyan', label: 'Money Transfer' },
+                        shop: { icon: '🛒', color: 'orange', label: 'Shopping' },
+                        utility: { icon: '🔌', color: 'yellow', label: 'Utility' },
+                        mobile_recharge: { icon: '📱', color: 'pink', label: 'Recharge' }
+                      };
+                      const config = serviceIcons[service] || { icon: '📊', color: 'gray', label: service };
+                      return (
+                        <div key={service} className={`p-2 bg-${config.color}-500/10 rounded-lg border border-${config.color}-500/20`}>
+                          <div className="flex items-center gap-1 mb-1">
+                            <span>{config.icon}</span>
+                            <span className="text-xs text-gray-400 truncate">{config.label}</span>
+                          </div>
+                          <p className="text-sm font-bold text-white">{formatNumber(amount)} PRC</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Mining Status */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="p-4 bg-gray-800 rounded-xl">

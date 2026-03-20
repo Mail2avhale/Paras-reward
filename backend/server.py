@@ -19702,6 +19702,52 @@ async def get_user_360_view(query: str):
         {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
     ).sort("timestamp", -1).limit(50).to_list(50)
     
+    # ========== REDEEM LIMIT INFO ==========
+    redeem_limit_data = await get_user_redeem_limit_internal(uid)
+    
+    # ========== REDEEM BREAKDOWN BY SERVICE ==========
+    redeem_breakdown = {}
+    
+    # BBPS/Bill Payments
+    bbps_total = await db.redeem_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "success", "paid"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]).to_list(1)
+    if bbps_total and bbps_total[0].get("total", 0) > 0:
+        redeem_breakdown["bbps"] = round(bbps_total[0]["total"], 2)
+    
+    # Gift Vouchers
+    voucher_total = await db.gift_voucher_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_used", 0]}]}}}}
+    ]).to_list(1)
+    if voucher_total and voucher_total[0].get("total", 0) > 0:
+        redeem_breakdown["gift_voucher"] = round(voucher_total[0]["total"], 2)
+    
+    # Bank Transfers/Withdrawals
+    bank_total = await db.bank_transfer_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "paid", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]).to_list(1)
+    if bank_total and bank_total[0].get("total", 0) > 0:
+        redeem_breakdown["bank_transfer"] = round(bank_total[0]["total"], 2)
+    
+    # DMT (Money Transfer)
+    dmt_total = await db.dmt_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]).to_list(1)
+    if dmt_total and dmt_total[0].get("total", 0) > 0:
+        redeem_breakdown["dmt"] = round(dmt_total[0]["total"], 2)
+    
+    # Shop/Orders
+    shop_total = await db.orders.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "shipped"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
+    ]).to_list(1)
+    if shop_total and shop_total[0].get("total", 0) > 0:
+        redeem_breakdown["shop"] = round(shop_total[0]["total"], 2)
+    
     return {
         "user": user,
         "stats": stats,
@@ -19709,7 +19755,9 @@ async def get_user_360_view(query: str):
         "transactions": transactions,
         "activity": activity[:30],
         "kyc": kyc_docs,
-        "login_history": login_history
+        "login_history": login_history,
+        "redeem_limit": redeem_limit_data,
+        "redeem_breakdown": redeem_breakdown
     }
 
 
