@@ -188,7 +188,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
         { id: 'bank-transfers', label: 'Redeem to Bank', icon: Banknote, path: '/admin/bank-transfers', highlight: true },
         { id: 'subscriptions', label: 'Subscription', icon: Crown, path: '/admin/subscriptions', pendingCount: pendingCounts.subscriptions },
         { id: 'razorpay-subs', label: 'Razorpay Payments', icon: CreditCard, path: '/admin/razorpay-subscriptions', highlight: true },
-        { id: 'redeem-v2', label: 'Redeem Requests', icon: Receipt, path: '/admin/redeem', highlight: true },
+        // redeem-v2 (AdminRedeemDashboard) REMOVED - deprecated March 2026
         { id: 'bbps-dashboard', label: 'BBPS Instant', icon: Activity, path: '/admin/bbps', highlight: true },
         // DMT Bank Transfer removed - Eko API not working
         // unified-payments removed - all pending rejected + refunded

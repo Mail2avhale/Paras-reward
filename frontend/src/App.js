@@ -227,7 +227,7 @@ const AdminServiceToggles = IS_USER_BUILD ? null : lazy(() => import(/* webpackC
 const AdminPolicies = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPolicies"));
 const AdminUserLedger = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUserLedger"));
 // AdminPRCRain removed - feature deleted
-const AdminRedeemSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRedeemSettings"));
+// AdminRedeemSettings, AdminRedeemDashboard - REMOVED (no pending requests, feature deprecated March 2026)
 const AdminPendingRequests = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPendingRequests"));
 const AdminAccountingDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminAccountingDashboard"));
 // PRCEmergencyControls replaced by AdminPRCEconomyDashboard
@@ -241,7 +241,6 @@ const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkNam
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 // AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
 const AdminEkoServices = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminEkoServices"));
-const AdminRedeemDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminRedeemDashboard"));
 const AdminBBPSDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminBBPSDashboard"));
 // AdminDMTDashboard - REMOVED (Eko API not working)
 const AdminLedgerView = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/Admin/AdminLedgerView"));
@@ -406,7 +405,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/settings/web" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=web" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/social" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=social" replace /> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/settings/redeem" element={canAccessAdmin(user) ? <Navigate to="/admin/settings-hub?tab=redeem" replace /> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/redeem-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemSettings user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminRedeemSettings - REMOVED (deprecated March 2026) */}
+                <Route path="/admin/redeem-settings" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/pending-requests" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPendingRequests user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/user-ledger" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUserLedger user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/capital" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminCapitalManagement user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
@@ -438,7 +438,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 {/* AdminUnifiedPayments - REMOVED, redirect to admin */}
                 <Route path="/admin/unified-payments" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/eko-services" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminEkoServices user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/redeem" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminRedeemDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminRedeemDashboard - REMOVED (deprecated March 2026, no pending requests) */}
+                <Route path="/admin/redeem" element={<Navigate to="/admin/bbps" replace />} />
                 <Route path="/admin/bbps" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminBBPSDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* Admin DMT routes REMOVED - Eko API not working, redirect to admin */}
                 <Route path="/admin/dmt" element={<Navigate to="/admin" replace />} />
