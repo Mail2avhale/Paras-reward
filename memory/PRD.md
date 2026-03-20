@@ -85,23 +85,29 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 ## What's Been Implemented (March 2026)
 
-### Session (20 March 2026) - BBPS Fixes
+### Session (20 March 2026) - BBPS Fixes & Testing
 
 **COMPLETED: Sender Name Sanitization (P0)**
 - Added `sanitize_sender_name()` in `backend/routes/bbps_services.py`
 - Removes numbers/special characters from sender names before Eko API call
 - Fixed: "Sender Name should contain only letters" error
 
-**IDENTIFIED: Jio Prepaid Issue**
-- Jio Prepaid (operator 90) requires `recharge_plan_id` parameter
-- Eko doesn't have browse plans API
-- Added warning in frontend + backend rejection with clear message
-- Users advised to use Jio app/website for recharge
+**COMPLETED: Jio Prepaid Support**
+- Added `recharge_plan_id` parameter support
+- Jio recharge works with `recharge_plan_id` = amount value
+- Verified working: operator_id=90, mobile=9421331342, amount=19
+
+**COMPLETED: BBPS Testing (18/18 tests passed)**
+- Test file: `/app/backend/tests/test_bbps_services_v2.py`
+- Test report: `/app/test_reports/iteration_129.json`
+- All sender_name sanitization tests passed
+- All operator APIs tests passed
+- All error handling tests passed
 
 **Files Modified:**
-- `backend/routes/bbps_services.py` - sender_name sanitization, Jio check
+- `backend/routes/bbps_services.py` - sender_name sanitization, recharge_plan_id
 - `backend/routes/unified_redeem_v2.py` - recharge_plan_id support
-- `frontend/src/pages/RedeemPageV2.js` - plan_id field, Jio warning
+- `frontend/src/pages/RedeemPageV2.js` - plan_id field support
 
 ### Previous Session (19 March 2026) - VIP/Membership to Elite Refactoring
 
