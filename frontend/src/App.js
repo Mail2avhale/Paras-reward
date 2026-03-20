@@ -168,7 +168,7 @@ const Notifications = lazy(() => import("@/pages/Notifications"));
 // ParasRecurringDeposit - REMOVED (deprecated feature)
 const NetworkTreeAdvanced = lazy(() => import("@/pages/NetworkTreeAdvanced"));
 const RedeemPageV2 = lazy(() => import("@/pages/RedeemPageV2"));
-const UserWithdrawalHistory = lazy(() => import("@/pages/UserWithdrawalHistory"));
+// UserWithdrawalHistory REMOVED - chatbot feature deprecated (March 2026)
 // DMT and Fund Transfer REMOVED - Eko API not working
 const BBPSServices = lazy(() => import("@/pages/BBPSServices"));
 const MyInvoices = lazy(() => import("@/pages/MyInvoices"));
@@ -203,7 +203,7 @@ const AdminKYC = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "
 // AdminOrders removed - Marketplace deprecated (December 2025)
 // const AdminOrders = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminOrders"));
 const AdminSupport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSupport"));
-const AdminChatbotWithdrawals = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminChatbotWithdrawals"));
+// AdminChatbotWithdrawals REMOVED - feature deprecated (March 2026)
 const AdminContactSubmissions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSubmissions"));
 const AdminContactSettings = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminContactSettings"));
 // AdminMarketplace removed - feature deprecated
@@ -458,7 +458,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/marketplace" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/delivery-partners" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/support" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminSupport user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/chatbot-withdrawals" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminChatbotWithdrawals user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminChatbotWithdrawals REMOVED - feature deprecated (March 2026) */}
+                <Route path="/admin/chatbot-withdrawals" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/contact-submissions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSubmissions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/contact-settings" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminContactSettings user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-verification" element={<Navigate to="/admin/subscriptions" replace />} />
@@ -475,8 +476,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
             {/* New Redeem V2 Route - Unified Services */}
             <Route path="/redeem" element={user ? (isAdminOrManager(user) ? <Navigate to="/admin" /> : <RedeemPageV2 user={user} />) : <Navigate to="/login" />} />
             
-            {/* User Withdrawal History - View and cancel requests */}
-            <Route path="/withdrawal-history" element={user ? <Suspense fallback={<LoadingFallback />}><UserWithdrawalHistory user={user} /></Suspense> : <Navigate to="/login" />} />
+            {/* User Withdrawal History - REMOVED - chatbot deprecated (March 2026) */}
+            <Route path="/withdrawal-history" element={<Navigate to="/redeem" replace />} />
             
             {/* Bill Payment History - View past bill payments and pay again */}
             <Route path="/bill-history" element={user ? <Suspense fallback={<LoadingFallback />}><BillPaymentHistory user={user} /></Suspense> : <Navigate to="/login" />} />

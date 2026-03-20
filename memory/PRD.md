@@ -1,6 +1,7 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
+## 📝 LAST UPDATED - 20 March 2026
 
 ## ⚠️ IMPORTANT: TWO-PLAN SYSTEM ONLY ⚠️
 ```
@@ -14,6 +15,40 @@
 ║                                                                 ║
 ║  ❌ NO MORE: VIP, Startup, Growth, Pro                         ║
 ║  ✅ Legacy users (Startup/Growth/VIP) → Treated as Elite       ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+## ⚠️ IMPORTANT: PRC FIELD STANDARDIZATION (March 2026)
+```
+╔════════════════════════════════════════════════════════════════╗
+║  STANDARD FIELD: total_prc_deducted                            ║
+║                                                                 ║
+║  LEGACY FIELDS (handled via get_prc_amount() helper):          ║
+║  • prc_used - old bill_payment_requests                        ║
+║  • prc_deducted - old bank transfers                           ║
+║  • prc_amount - generic legacy field                           ║
+║  • total_prc - orders                                          ║
+║                                                                 ║
+║  Helper: /app/backend/utils/prc_fields.py                      ║
+║  Migration: /app/backend/migrations/standardize_prc_fields.py  ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+## ⚠️ DEPRECATED FEATURES (March 2026)
+```
+╔════════════════════════════════════════════════════════════════╗
+║  CHATBOT WITHDRAWAL - COMPLETELY REMOVED                       ║
+║                                                                 ║
+║  Files Removed:                                                 ║
+║  • chatbot_withdrawal.py, chatbot_payment_fix.py               ║
+║  • AdminChatbotWithdrawals.js, UserWithdrawalHistory.js        ║
+║  • AIChatbotEnhanced.js, ChatbotWithdrawalFlow.js              ║
+║                                                                 ║
+║  Endpoints deprecated (return deprecation notice):             ║
+║  • POST /api/ai/chatbot                                        ║
+║  • GET /api/ai/chatbot/history/{uid}                           ║
+║                                                                 ║
+║  DMT (Fund Transfer) - Also removed (Eko API not working)      ║
 ╚════════════════════════════════════════════════════════════════╝
 ```
 

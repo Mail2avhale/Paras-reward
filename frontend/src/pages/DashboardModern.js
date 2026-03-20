@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import ProfileCompletionPopup from '@/components/ProfileCompletionPopup';
 import { ProfileCompletionRing, ProfileFloatingReminder } from '@/components/ProfileCompletionComponents';
-import AIChatbotEnhanced from '@/components/AIChatbotEnhanced';
+// AIChatbotEnhanced REMOVED - chatbot feature deprecated (March 2026)
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSkeleton } from '@/components/skeletons';
 
@@ -1235,11 +1235,7 @@ const DashboardModern = ({ user, onLogout }) => {
 
       {/* Share App FAB removed */}
 
-      {/* AI Chatbot */}
-      <AIChatbotEnhanced 
-        user={user}
-        isVip={hasPaidPlan}
-      />
+      {/* AI Chatbot REMOVED - feature deprecated (March 2026) */}
 
       {/* Profile Floating Reminder - Gentle prompt */}
       <ProfileFloatingReminder 

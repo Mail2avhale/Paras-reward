@@ -158,7 +158,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     // Orders removed - Marketplace deprecated (December 2025)
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
-    { id: 'chatbot-withdrawals', label: 'Chatbot Withdrawals', icon: Banknote, path: '/admin/chatbot-withdrawals' },
+    // Chatbot Withdrawals removed - feature deprecated (March 2026)
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
     { id: 'performance-report', label: 'Admin Performance', icon: Award, path: '/admin/performance-report' },
     { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon, path: '/admin/support' },

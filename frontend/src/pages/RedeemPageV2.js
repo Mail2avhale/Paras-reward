@@ -1668,15 +1668,7 @@ const RedeemPageV2 = ({ user }) => {
               <p className="text-sm font-bold text-amber-400">{(userData?.prc_balance || 0).toLocaleString()} PRC</p>
             </div>
           </div>
-          {/* My Requests Button */}
-          <button
-            onClick={() => navigate('/withdrawal-history')}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-2xl hover:border-purple-400 transition-all"
-            data-testid="my-requests-btn"
-          >
-            <Clock className="h-5 w-5 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300 hidden sm:inline">Withdrawals</span>
-          </button>
+          {/* My Requests Button - REMOVED - chatbot withdrawals deprecated */}
           {/* Bill History Button */}
           <button
             onClick={() => navigate('/bill-history')}
