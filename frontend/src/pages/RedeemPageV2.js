@@ -2120,12 +2120,6 @@ const RedeemPageV2 = ({ user }) => {
                             <option key={op.operator_id || op.id || index} value={op.operator_id || op.id}>{op.name}</option>
                           ))}
                         </select>
-                        {/* Warning for Jio Prepaid - requires special handling */}
-                        {formData.operator === '90' && (
-                          <p className="text-yellow-400 text-xs mt-2 bg-yellow-500/10 p-2 rounded-lg">
-                            ⚠️ Jio Prepaid: कृपया Jio app किंवा website वरून recharge करा. BBPS द्वारे Jio recharge temporarily unavailable आहे.
-                          </p>
-                        )}
                       </div>
                     )}
                     

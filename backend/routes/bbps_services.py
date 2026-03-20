@@ -1121,19 +1121,6 @@ async def pay_bill(data: PayBillRequest):
     if not data.operator_id or not data.account or not data.amount or not data.mobile:
         return create_error_response(400, "Missing required fields", "Please fill all required fields")
     
-    # Check for operators that require special parameters (like Jio Prepaid = operator 90)
-    # Jio Prepaid requires recharge_plan_id which we don't have plan browsing API for
-    jio_prepaid_operators = ["90"]
-    if data.operator_id in jio_prepaid_operators and not data.recharge_plan_id:
-        logging.warning(f"[BBPS PAY] Jio Prepaid (operator {data.operator_id}) requires recharge_plan_id")
-        return {
-            "success": False,
-            "status": "FAILED",
-            "error_code": 400,
-            "message": "Jio Prepaid recharge requires plan selection. Please use Jio app or website for recharge.",
-            "user_message": "Jio Prepaid recharge temporarily unavailable. कृपया Jio app किंवा website वरून recharge करा."
-        }
-    
     try:
         url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
         
