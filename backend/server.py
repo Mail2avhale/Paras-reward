@@ -3617,11 +3617,11 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     
     Collections checked:
     - payment_requests (legacy bill payments)
-    - bill_payment_requests (BBPS instant payments)
+    - bill_payment_requests (BBPS instant payments) - uses prc_used field
     - gift_voucher_requests (gift vouchers)
     - orders (marketplace)
     - loan_payments (EMI)
-    - redeem_requests (bank withdrawals)
+    - redeem_requests (bank withdrawals) - uses total_prc_deducted field
     - bank_withdrawal_requests (bank withdrawals alt)
     """
     total_redeemed = 0
@@ -3634,12 +3634,12 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "approved", "success"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
     ]).to_list(1)
     if bill_payments and bill_payments[0].get("total"):
         total_redeemed += bill_payments[0].get("total", 0)
     
-    # 2. BBPS/Instant Bill Payments
+    # 2. BBPS/Instant Bill Payments - uses prc_used field
     bbps_payments = await db.bill_payment_requests.aggregate([
         {
             "$match": {
@@ -3647,7 +3647,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "success", "approved"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_used", {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}]}}}}
     ]).to_list(1)
     if bbps_payments and bbps_payments[0].get("total"):
         total_redeemed += bbps_payments[0].get("total", 0)
@@ -3660,7 +3660,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "approved", "success"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
     ]).to_list(1)
     if voucher_redemptions and voucher_redemptions[0].get("total"):
         total_redeemed += voucher_redemptions[0].get("total", 0)
@@ -3673,7 +3673,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$nin": ["cancelled", "refunded", "failed"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$prc_amount"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
     ]).to_list(1)
     if marketplace_orders and marketplace_orders[0].get("total"):
         total_redeemed += marketplace_orders[0].get("total", 0)
@@ -3686,12 +3686,12 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "approved", "success"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$prc_used"]}}}}
     ]).to_list(1)
     if loan_payments and loan_payments[0].get("total"):
         total_redeemed += loan_payments[0].get("total", 0)
     
-    # 6. Bank Withdrawals / Redeem Requests
+    # 6. Bank Withdrawals / Redeem Requests - uses total_prc_deducted
     bank_withdrawals = await db.redeem_requests.aggregate([
         {
             "$match": {
@@ -3699,7 +3699,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "success", "approved"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$total_prc"]}]}}}}
     ]).to_list(1)
     if bank_withdrawals and bank_withdrawals[0].get("total"):
         total_redeemed += bank_withdrawals[0].get("total", 0)
@@ -3712,7 +3712,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
                 "status": {"$in": ["completed", "success", "approved"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$total_prc"]}]}}}}
     ]).to_list(1)
     if bank_withdrawal_requests and bank_withdrawal_requests[0].get("total"):
         total_redeemed += bank_withdrawal_requests[0].get("total", 0)
@@ -16976,15 +16976,15 @@ async def get_user_total_redeemed(user_id: str) -> float:
         
         # 1. Bill payments - check all valid statuses and field names
         # Database has: completed, processing, rejected, success, approved, pending
-        # Field names: total_prc_deducted, prc_amount, amount
+        # Field names: prc_used (primary), total_prc_deducted, prc_amount, amount
         bill_payments = await db.bill_payment_requests.find({
             "user_id": user_id,
             "status": {"$in": ["approved", "success", "completed", "pending", "processing"]}
         }).to_list(5000)
         
         for bp in bill_payments:
-            # Try multiple field names - production uses total_prc_deducted
-            prc = float(bp.get("total_prc_deducted", 0) or bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
+            # Try multiple field names - bill_payment_requests uses prc_used
+            prc = float(bp.get("prc_used", 0) or bp.get("total_prc_deducted", 0) or bp.get("prc_amount", 0) or bp.get("amount", 0) or 0)
             if bp.get("status") in ["refunded", "rejected", "failed"]:
                 continue
             total_redeemed += prc
@@ -17090,6 +17090,87 @@ async def get_user_total_redeemed(user_id: str) -> float:
     except Exception as e:
         logging.error(f"Error getting total redeemed: {e}")
         return 0
+
+
+
+@api_router.get("/admin/debug/user-redemptions/{user_id}")
+async def debug_user_redemptions(user_id: str):
+    """Debug endpoint to check what redemptions exist for a user"""
+    try:
+        result = {
+            "user_id": user_id,
+            "collections_checked": [],
+            "total_found": 0
+        }
+        
+        # 1. Check bill_payment_requests
+        bill_payments = await db.bill_payment_requests.find({"user_id": user_id}).to_list(100)
+        result["bill_payment_requests"] = {
+            "count": len(bill_payments),
+            "sample": [{"status": b.get("status"), "amount": b.get("prc_amount") or b.get("total_prc_deducted")} for b in bill_payments[:3]]
+        }
+        
+        # 2. Check payment_requests (legacy)
+        payment_reqs = await db.payment_requests.find({"user_id": user_id}).to_list(100)
+        result["payment_requests"] = {
+            "count": len(payment_reqs),
+            "sample": [{"status": p.get("status"), "amount": p.get("total_prc_deducted")} for p in payment_reqs[:3]]
+        }
+        
+        # 3. Check redeem_requests
+        redeem_reqs = await db.redeem_requests.find({"user_id": user_id}).to_list(100)
+        result["redeem_requests"] = {
+            "count": len(redeem_reqs),
+            "sample": [{"status": r.get("status"), "amount": r.get("prc_amount")} for r in redeem_reqs[:3]]
+        }
+        
+        # 4. Check bank_withdrawal_requests
+        bank_reqs = await db.bank_withdrawal_requests.find({"user_id": user_id}).to_list(100)
+        result["bank_withdrawal_requests"] = {
+            "count": len(bank_reqs),
+            "sample": [{"status": b.get("status"), "amount": b.get("prc_amount")} for b in bank_reqs[:3]]
+        }
+        
+        # 5. Check transactions collection
+        txns = await db.transactions.find({
+            "user_id": user_id,
+            "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher"]}
+        }).to_list(100)
+        result["transactions"] = {
+            "count": len(txns),
+            "sample": [{"type": t.get("type"), "amount": t.get("amount")} for t in txns[:3]]
+        }
+        
+        # 6. Get calculated total
+        total_redeemed = await get_user_total_redeemed(user_id)
+        result["calculated_total_redeemed"] = total_redeemed
+        
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@api_router.get("/admin/debug/redemption-fields/{user_id}")
+async def debug_redemption_fields(user_id: str):
+    """Debug - show all fields in redemption documents"""
+    try:
+        # Get one document from each collection to see field names
+        result = {}
+        
+        bill = await db.bill_payment_requests.find_one({"user_id": user_id})
+        if bill:
+            result["bill_payment_requests_fields"] = {k: type(v).__name__ for k, v in bill.items() if k != "_id"}
+            result["bill_payment_sample"] = {k: v for k, v in bill.items() if k in ["status", "amount_inr", "prc_amount", "total_prc", "total_prc_deducted", "prc_required"]}
+        
+        redeem = await db.redeem_requests.find_one({"user_id": user_id})
+        if redeem:
+            result["redeem_requests_fields"] = {k: type(v).__name__ for k, v in redeem.items() if k != "_id"}
+            result["redeem_sample"] = {k: v for k, v in redeem.items() if k in ["status", "amount_inr", "prc_amount", "total_prc", "total_prc_deducted", "prc_required"]}
+        
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
 
 
 async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dict:
