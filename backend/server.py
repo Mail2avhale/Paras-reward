@@ -23687,6 +23687,198 @@ async def fix_negative_balances():
         "fixed_users": fixed_users
     }
 
+
+
+@api_router.post("/admin/prc-auto-correct")
+async def prc_auto_correct(
+    dry_run: bool = True,
+    min_balance: float = 0,
+    limit: int = 1000
+):
+    """
+    🔧 AUTO-CORRECT: Fix all PRC balances based on actual transactions.
+    
+    Formula: Correct Balance = Mining + Referrals + Refunds - All Redemptions
+    
+    Query Params:
+    - dry_run: If True, only preview changes (default: True)
+    - min_balance: Only process users with balance > this (default: 0)
+    - limit: Max users to process (default: 1000)
+    
+    IMPORTANT: Run with dry_run=True first to preview changes!
+    """
+    from utils.prc_fields import get_prc_amount
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Get users
+    users = await db.users.find(
+        {"prc_balance": {"$gt": min_balance}},
+        {"uid": 1, "name": 1, "email": 1, "prc_balance": 1, "total_mined": 1, "total_prc_mined": 1}
+    ).sort("prc_balance", -1).limit(limit).to_list(limit)
+    
+    corrections = []
+    errors = []
+    
+    valid_statuses = ["approved", "success", "completed", "pending", "processing", "paid"]
+    skip_statuses = ["refunded", "rejected", "failed", "cancelled"]
+    
+    for user in users:
+        uid = user["uid"]
+        current_balance = float(user.get("prc_balance", 0))
+        
+        try:
+            # ============ CREDITS ============
+            credits = {}
+            
+            # 1. Mining
+            credits["mining"] = float(user.get("total_prc_mined", 0) or user.get("total_mined", 0) or 0)
+            
+            # 2. Referral rewards
+            ref_txns = await db.transactions.find({
+                "$or": [{"user_id": uid}, {"uid": uid}],
+                "type": {"$in": ["referral", "referral_bonus", "referral_reward", "referral_commission"]}
+            }).to_list(5000)
+            credits["referrals"] = sum(abs(float(t.get("amount", 0) or t.get("prc_amount", 0) or t.get("amount_prc", 0) or 0)) for t in ref_txns)
+            
+            # 3. Signup bonus
+            signup_txns = await db.transactions.find({
+                "$or": [{"user_id": uid}, {"uid": uid}],
+                "type": {"$in": ["signup", "signup_bonus", "welcome_bonus"]}
+            }).to_list(100)
+            credits["signup"] = sum(abs(float(t.get("amount", 0) or t.get("prc_amount", 0) or 0)) for t in signup_txns)
+            
+            # 4. Admin credits
+            admin_txns = await db.transactions.find({
+                "$or": [{"user_id": uid}, {"uid": uid}],
+                "type": {"$in": ["admin_credit", "manual_credit", "credit"]}
+            }).to_list(1000)
+            credits["admin"] = sum(abs(float(t.get("amount", 0) or t.get("prc_amount", 0) or 0)) for t in admin_txns)
+            
+            # 5. Refunds
+            refund_txns = await db.transactions.find({
+                "$or": [{"user_id": uid}, {"uid": uid}],
+                "type": {"$in": ["refund", "prc_refund"]}
+            }).to_list(1000)
+            credits["refunds"] = sum(abs(float(t.get("amount", 0) or t.get("prc_amount", 0) or 0)) for t in refund_txns)
+            
+            # ============ DEBITS ============
+            debits = {}
+            
+            # 1. Bill payments
+            bills = await db.bill_payment_requests.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            debits["bills"] = sum(get_prc_amount(b) for b in bills if b.get("status") not in skip_statuses)
+            
+            # 2. Bank withdrawals
+            bank_wd = await db.bank_withdrawal_requests.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            debits["bank_wd"] = sum(get_prc_amount(b) for b in bank_wd if b.get("status") not in skip_statuses)
+            
+            # 3. Bank transfers
+            bank_tr = await db.bank_transfer_requests.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            debits["bank_tr"] = sum(get_prc_amount(b) for b in bank_tr if b.get("status") not in skip_statuses)
+            
+            # 4. Bank redeems
+            bank_rd = await db.bank_redeem_requests.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            debits["bank_rd"] = sum(get_prc_amount(b) for b in bank_rd if b.get("status") not in skip_statuses)
+            
+            # 5. Gift vouchers
+            gv = await db.gift_voucher_orders.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            gv_req = await db.gift_voucher_requests.find({
+                "user_id": uid, "status": {"$in": valid_statuses}
+            }).to_list(5000)
+            debits["gift_vouchers"] = sum(get_prc_amount(g) for g in gv) + sum(get_prc_amount(g) for g in gv_req)
+            
+            # 6. Orders
+            orders = await db.orders.find({
+                "user_id": uid, "status": {"$in": ["completed", "delivered", "paid"]}
+            }).to_list(5000)
+            debits["orders"] = sum(get_prc_amount(o) for o in orders if o.get("status") not in ["cancelled", "refunded"])
+            
+            # 7. PRC Subscriptions
+            subs = await db.subscription_payments.find({
+                "user_id": uid, "payment_method": "prc", "status": {"$in": ["paid", "success", "completed"]}
+            }).to_list(1000)
+            debits["subscriptions"] = sum(get_prc_amount(s) for s in subs)
+            
+            # ============ CALCULATE ============
+            total_credits = sum(credits.values())
+            total_debits = sum(debits.values())
+            correct_balance = round(total_credits - total_debits, 2)
+            adjustment = round(correct_balance - current_balance, 2)
+            
+            # Only record if adjustment needed (more than 1 PRC difference)
+            if abs(adjustment) > 1:
+                correction_record = {
+                    "uid": uid,
+                    "name": user.get("name"),
+                    "email": user.get("email"),
+                    "current": current_balance,
+                    "correct": correct_balance,
+                    "adjustment": adjustment,
+                    "credits": credits,
+                    "debits": debits
+                }
+                corrections.append(correction_record)
+                
+                if not dry_run:
+                    # Apply correction
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "prc_balance": max(0, correct_balance),
+                                "prc_corrected_at": timestamp,
+                                "prc_before_correction": current_balance
+                            }
+                        }
+                    )
+                    
+                    # Log correction
+                    await db.prc_corrections_log.insert_one({
+                        "uid": uid,
+                        "name": user.get("name"),
+                        "email": user.get("email"),
+                        "before": current_balance,
+                        "after": max(0, correct_balance),
+                        "adjustment": adjustment,
+                        "credits": credits,
+                        "debits": debits,
+                        "corrected_at": timestamp
+                    })
+        
+        except Exception as e:
+            errors.append({"uid": uid, "error": str(e)})
+    
+    # Sort by adjustment amount
+    corrections.sort(key=lambda x: abs(x["adjustment"]), reverse=True)
+    
+    total_adjustment = sum(c["adjustment"] for c in corrections)
+    
+    return {
+        "success": True,
+        "dry_run": dry_run,
+        "timestamp": timestamp,
+        "summary": {
+            "users_processed": len(users),
+            "users_needing_correction": len(corrections),
+            "total_adjustment": round(total_adjustment, 2),
+            "errors": len(errors)
+        },
+        "corrections": corrections[:100],
+        "errors": errors[:20] if errors else []
+    }
+
+
 @api_router.delete("/admin/users/{uid}/delete")
 async def delete_user_admin(uid: str, permanent: bool = False):
     """Admin deletes a user - soft delete by default, permanent if specified"""
