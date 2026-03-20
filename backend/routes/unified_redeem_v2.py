@@ -201,12 +201,13 @@ STATUS_REJECTED = "rejected"
 # ==================== EKO API FUNCTIONS ====================
 
 async def get_eko_balance() -> dict:
-    """Get Eko wallet balance"""
+    """Get Eko wallet balance - uses v2 customers balance endpoint"""
     try:
         timestamp = str(int(datetime.now().timestamp() * 1000))
         secret_key = generate_eko_secret_key(timestamp)
         
-        url = f"{EKO_BASE_URL}/v1/user/balance"
+        # Correct endpoint: /v2/customers/mobile_number:{initiator_id}/balance
+        url = f"{EKO_BASE_URL}/v2/customers/mobile_number:{EKO_INITIATOR_ID}/balance"
         params = {
             "initiator_id": EKO_INITIATOR_ID,
             "user_code": EKO_USER_CODE
@@ -221,13 +222,24 @@ async def get_eko_balance() -> dict:
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, params=params, headers=headers)
+            logging.info(f"[EKO BALANCE] Response status: {response.status_code}")
+            logging.info(f"[EKO BALANCE] Response: {response.text[:500] if response.text else 'empty'}")
+            
             data = response.json()
             
             if data.get("status") == 0 or data.get("response_status_id") == 0:
+                balance_str = data.get("data", {}).get("balance", "0")
+                try:
+                    balance = float(balance_str)
+                except (ValueError, TypeError):
+                    balance = 0
+                
                 return {
                     "success": True,
-                    "balance": data.get("data", {}).get("balance", 0),
-                    "locked_amount": data.get("data", {}).get("locked_amount", 0)
+                    "balance": balance,
+                    "locked": data.get("data", {}).get("locked_amount", 0),
+                    "currency": data.get("data", {}).get("currency", "INR"),
+                    "message": data.get("message")
                 }
             else:
                 return {
@@ -752,29 +764,12 @@ async def calculate_charges_api(amount: float = Query(..., gt=0)):
 
 @router.get("/admin/eko-balance")
 async def get_admin_eko_balance():
-    """Get Eko wallet balance for admin dashboard - uses existing Eko balance endpoint"""
+    """Get Eko wallet balance for admin dashboard"""
     try:
-        # Use existing make_eko_request from eko_payments
-        from routes.eko_payments import make_eko_request
-        
-        result = await make_eko_request(
-            f"/v1/customers/mobile_number:{EKO_INITIATOR_ID}/balance",
-            method="GET"
-        )
-        
-        balance_str = result.get("data", {}).get("balance", "0")
-        try:
-            balance = float(balance_str)
-        except (ValueError, TypeError):
-            balance = 0
-            
-        return {
-            "success": True,
-            "balance": balance,
-            "currency": result.get("data", {}).get("currency", "INR"),
-            "locked_amount": 0,
-            "message": result.get("message")
-        }
+        # Use the BBPS services endpoint which has working Eko integration
+        from routes.bbps_services import get_eko_wallet_balance
+        result = await get_eko_wallet_balance()
+        return result
     except Exception as e:
         logging.error(f"Eko balance error: {str(e)}")
         return {"success": False, "balance": 0, "error": str(e)}

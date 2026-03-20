@@ -634,6 +634,82 @@ async def activate_bbps_service(service_code: str = "53"):
 
 # ==================== GET OPERATOR PARAMETERS API (NEW) ====================
 
+@router.get("/wallet-balance")
+async def get_eko_wallet_balance():
+    """
+    Get Eko wallet/settlement account balance.
+    Used by admin dashboard to monitor available funds for BBPS payments.
+    
+    Reference: https://developers.eko.in/reference/wallet-balance-inquiry
+    """
+    if not validate_bbps_config():
+        return {"success": False, "balance": 0, "error": "Service configuration error"}
+    
+    try:
+        timestamp = str(round(time.time() * 1000))
+        
+        # Generate secret key
+        encoded_key = base64.b64encode(AUTH_KEY.encode())
+        secret_key = base64.b64encode(
+            hmac.new(encoded_key, timestamp.encode(), hashlib.sha256).digest()
+        ).decode()
+        
+        # Correct endpoint: /v2/customers/mobile_number:{initiator_id}/balance
+        url = f"{BASE_URL}/v2/customers/mobile_number:{INITIATOR_ID}/balance"
+        
+        headers = {
+            "developer_key": DEVELOPER_KEY,
+            "secret-key": secret_key,
+            "secret-key-timestamp": timestamp
+        }
+        
+        params = {
+            "initiator_id": INITIATOR_ID,
+            "user_code": USER_CODE
+        }
+        
+        logging.info(f"[EKO BALANCE] Checking wallet balance")
+        
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+            response = await client.get(url, headers=headers, params=params)
+        
+        logging.info(f"[EKO BALANCE] HTTP Status: {response.status_code}")
+        logging.info(f"[EKO BALANCE] Response: {response.text[:500] if response.text else 'empty'}")
+        
+        if response.status_code != 200:
+            return {"success": False, "balance": 0, "error": f"HTTP {response.status_code}"}
+        
+        result = response.json()
+        
+        # Check for success (status 0 or response_status_id 0)
+        if result.get("status") == 0 or result.get("response_status_id") == 0:
+            balance_str = result.get("data", {}).get("balance", "0")
+            try:
+                balance = float(balance_str)
+            except (ValueError, TypeError):
+                balance = 0
+            
+            return {
+                "success": True,
+                "balance": balance,
+                "locked": result.get("data", {}).get("locked_amount", 0),
+                "currency": result.get("data", {}).get("currency", "INR"),
+                "last_used_okekey": result.get("data", {}).get("last_used_okekey"),
+                "message": result.get("message")
+            }
+        else:
+            return {
+                "success": False,
+                "balance": 0,
+                "error": result.get("message", "Failed to get balance"),
+                "raw": result
+            }
+            
+    except Exception as e:
+        logging.error(f"[EKO BALANCE] Error: {str(e)}")
+        return {"success": False, "balance": 0, "error": str(e)}
+
+
 @router.get("/operator-params/{operator_id}")
 async def get_operator_parameters(operator_id: str):
     """

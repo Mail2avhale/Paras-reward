@@ -509,6 +509,9 @@ const RedeemPageV2 = ({ user }) => {
   // PRC Rate for INR conversion (fetched from settings)
   const [prcRate, setPrcRate] = useState(10);
   
+  // Eko Wallet Balance (for admin visibility)
+  const [ekoBalance, setEkoBalance] = useState(null);
+  
   // Fetch PRC Rate from public settings
   useEffect(() => {
     const fetchPrcRate = async () => {
@@ -523,6 +526,25 @@ const RedeemPageV2 = ({ user }) => {
     };
     fetchPrcRate();
   }, []);
+  
+  // Fetch Eko Wallet Balance (for admins/managers)
+  useEffect(() => {
+    const fetchEkoBalance = async () => {
+      if (!user?.role || !['admin', 'manager'].includes(user.role)) return;
+      try {
+        const res = await axios.get(`${API}/api/redeem/admin/eko-balance`);
+        if (res.data?.success) {
+          setEkoBalance(res.data);
+        }
+      } catch (error) {
+        console.error('Error fetching Eko balance:', error);
+      }
+    };
+    fetchEkoBalance();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchEkoBalance, 30000);
+    return () => clearInterval(interval);
+  }, [user?.role]);
   
   // Fetch Global Redeem Limit
   useEffect(() => {
@@ -1665,6 +1687,40 @@ const RedeemPageV2 = ({ user }) => {
             <span className="text-sm font-medium text-emerald-300 hidden sm:inline">Bill History</span>
           </button>
         </div>
+        
+        {/* Eko Wallet Balance - Admin/Manager Only */}
+        {ekoBalance && user?.role && ['admin', 'manager'].includes(user.role) && (
+          <div className="mb-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/20 rounded-xl">
+                  <Wallet className="h-5 w-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Eko Wallet Balance</p>
+                  <p className="text-xl font-bold text-green-400">₹{ekoBalance.balance?.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 text-sm">
+                <div className="text-right">
+                  <p className="text-gray-400 text-xs">Locked</p>
+                  <p className="text-yellow-400 font-medium">₹{ekoBalance.locked?.toLocaleString() || 0}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-gray-400 text-xs">Available</p>
+                  <p className="text-green-400 font-medium">₹{((ekoBalance.balance || 0) - (ekoBalance.locked || 0)).toLocaleString()}</p>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/pending-requests')}
+                  className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 rounded-lg text-amber-400 text-xs font-medium transition-all"
+                  data-testid="manage-pending-btn"
+                >
+                  Manage Pending
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* KYC Warning */}
         {userData && userData.kyc_status !== 'verified' && (

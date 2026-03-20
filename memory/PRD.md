@@ -87,33 +87,33 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 ### Session (20 March 2026) - BBPS Fixes & Admin Tools
 
-**COMPLETED: Sender Name Sanitization (P0)**
-- Added `sanitize_sender_name()` in `backend/routes/bbps_services.py`
+**COMPLETED: BBPS Parameter Fixes**
+- MSEDCL Electricity: Fixed `cycle_number` (BU) extraction from additional_params
+- Credit Card BBPS: Added `registered_mobile_number` field to frontend and backend
+- Sender name sanitization working (removes numbers/special chars)
+- Jio Prepaid working with `recharge_plan_id` = amount
 
-**COMPLETED: Jio Prepaid Support**
-- Added `recharge_plan_id` parameter support
+**COMPLETED: Admin Pending Requests Manager**
+- New page: `/admin/pending-requests`
+- "FAIL ALL & REFUND" button for bulk processing
+- Individual fail buttons per request
+- Search and filter functionality
 
-**COMPLETED: MSEDCL Electricity (BU Number)**
-- Fixed extraction of `cycle_number` from `additional_params`
-- Error "Please enter bill unit for this operator" now resolved
+**COMPLETED: Eko Wallet Balance Display**
+- Shows on `/redeem` page for admin/manager users
+- Balance, Locked, Available display
+- Auto-refreshes every 30 seconds
+- "Manage Pending" quick link
 
-**COMPLETED: Credit Card BBPS (Registered Mobile)**
-- Added `registered_mobile_number` parameter to backend
-- Added "Registered Mobile Number" field to frontend form
-- Error "missing parameter - Registered Mobile Number" now resolved
+**API Endpoints Added:**
+- `GET /api/bbps/wallet-balance` - Eko balance
+- `POST /api/redeem/admin/fail-request` - Fail single request with PRC refund
 
-**COMPLETED: Admin Fail Request Endpoint**
-- New endpoint: POST /api/redeem/admin/fail-request
-- Marks pending requests as FAILED and refunds PRC automatically
-- Body: {"request_id": "xxx", "reason": "..."}
-
-**COMPLETED: BBPS Testing (18/18 tests passed)**
-- Test file: `/app/backend/tests/test_bbps_services_v2.py`
-
-**Files Modified:**
-- `backend/routes/bbps_services.py` - params + sanitization
-- `backend/routes/unified_redeem_v2.py` - fail endpoint + param extraction  
-- `frontend/src/pages/RedeemPageV2.js` - credit card form
+**Files Created/Modified:**
+- `frontend/src/pages/AdminPendingRequests.js` (NEW)
+- `frontend/src/pages/RedeemPageV2.js` - Balance display + Credit Card mobile field
+- `backend/routes/bbps_services.py` - Wallet balance, params
+- `backend/routes/unified_redeem_v2.py` - Fail endpoint, param extraction
 
 ### Previous Session (19 March 2026) - VIP/Membership to Elite Refactoring
 
