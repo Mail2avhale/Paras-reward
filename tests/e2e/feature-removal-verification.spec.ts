@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. API endpoints working correctly
  */
 
-const BASE_URL = 'https://two-plan-rebuild.preview.emergentagent.com';
+const BASE_URL = 'https://elite-explorer-app.preview.emergentagent.com';
 
 test.describe('Feature Removal - Route Redirects', () => {
   

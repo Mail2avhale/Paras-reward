@@ -165,7 +165,7 @@ Edit `/app/frontend/capacitor.config.json`:
   "appName": "PARAS REWARD",
   "webDir": "build",
   "server": {
-    "url": "https://two-plan-rebuild.preview.emergentagent.com",
+    "url": "https://elite-explorer-app.preview.emergentagent.com",
     "cleartext": true
   },
   "android": {

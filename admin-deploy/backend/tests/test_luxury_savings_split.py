@@ -9,7 +9,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://two-plan-rebuild.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://elite-explorer-app.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials
 TEST_USER_UID = "73b95483-f36b-4637-a5ee-d447300c6835"

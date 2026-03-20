@@ -184,6 +184,34 @@ def validate_bbps_request(data):
     """Validate BBPS request"""
     return True, None
 
+def sanitize_sender_name(name: str) -> str:
+    """
+    Sanitize sender name for Eko BBPS API.
+    
+    Eko BBPS requirement: "Sender Name should contain only letters"
+    - Remove all numbers and special characters
+    - Keep only alphabets and spaces
+    - Trim extra whitespace
+    - Return "Customer" as fallback if empty
+    
+    Reference: https://developers.eko.in/v1/docs/bbps-faqs
+    """
+    if not name:
+        return "Customer"
+    
+    # Remove everything except letters (a-z, A-Z) and spaces
+    sanitized = re.sub(r'[^a-zA-Z\s]', '', name)
+    
+    # Collapse multiple spaces into single space and trim
+    sanitized = ' '.join(sanitized.split())
+    
+    # If result is empty after sanitization, return default
+    if not sanitized or len(sanitized.strip()) == 0:
+        return "Customer"
+    
+    return sanitized
+
+
 def get_common_error_message(msg_or_code):
     """Get common error message with better fallback handling"""
     # If it's a known error code
@@ -845,12 +873,15 @@ async def fetch_bill(data: FetchBillRequest):
     try:
         # Build request body for POST v2 endpoint
         # Reference: Testing showed POST v2 returns HTTP 200 while GET v3 returns 500
+        # CRITICAL: Sanitize sender_name - Eko requires "only letters" (no numbers/special chars)
+        clean_sender_name = sanitize_sender_name(data.sender_name)
+        
         request_body = {
             "user_code": USER_CODE,
             "client_ref_id": client_ref_id,
             "utility_acc_no": data.account,
             "confirmation_mobile_no": data.mobile,
-            "sender_name": data.sender_name or "Customer",
+            "sender_name": clean_sender_name,
             "operator_id": data.operator_id,
             "source_ip": data.source_ip or "34.44.149.98",  # Whitelisted production IP
             "latlong": DEFAULT_LATLONG
@@ -1100,6 +1131,10 @@ async def pay_bill(data: PayBillRequest):
         request_hash = generate_request_hash(timestamp, data.account, data.amount)
         headers["request_hash"] = request_hash
         
+        # CRITICAL: Sanitize sender_name - Eko requires "only letters" (no numbers/special chars)
+        # Reference: https://developers.eko.in/v1/docs/bbps-faqs
+        clean_sender_name = sanitize_sender_name(data.sender_name)
+        
         body = {
             "initiator_id": INITIATOR_ID,  # Required in body as per Eko docs
             "source_ip": "34.44.149.98",  # Whitelisted production IP for Eko
@@ -1108,7 +1143,7 @@ async def pay_bill(data: PayBillRequest):
             "client_ref_id": client_ref_id,
             "utility_acc_no": str(data.account),
             "confirmation_mobile_no": str(data.mobile),
-            "sender_name": data.sender_name or "Customer",
+            "sender_name": clean_sender_name,
             "operator_id": str(data.operator_id),
             "latlong": DEFAULT_LATLONG
         }

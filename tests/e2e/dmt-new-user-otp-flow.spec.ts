@@ -9,7 +9,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://two-plan-rebuild.preview.emergentagent.com';
+const BASE_URL = 'https://elite-explorer-app.preview.emergentagent.com';
 
 const TEST_CREDENTIALS = {
   email: 'mail2avhale@gmail.com',

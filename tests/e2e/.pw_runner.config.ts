@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260319_054448/results.json' }],
   ],
   use: {
-    baseURL: 'https://two-plan-rebuild.preview.emergentagent.com',
+    baseURL: 'https://elite-explorer-app.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

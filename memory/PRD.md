@@ -85,7 +85,15 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 
 ## What's Been Implemented (March 2026)
 
-### Latest Session (19 March 2026) - VIP/Membership to Elite Refactoring
+### Latest Session (20 March 2026) - BBPS Sender Name Fix
+
+**COMPLETED: P0 Bug Fix - BBPS Sender Name Validation**
+- Added `sanitize_sender_name()` function to remove numbers/special characters
+- Applied sanitization in `/api/bbps/fetch` and `/api/bbps/pay` endpoints
+- Names like "Ankush@123" now sanitized to "Ankush" before Eko API call
+- Fix in `backend/routes/bbps_services.py`
+
+### Previous Session (19 March 2026) - VIP/Membership to Elite Refactoring
 
 **COMPLETED: Two-Plan System Refactoring**
 - Simplified from 4 plans (VIP, Startup, Growth, Elite) to 2 plans (Explorer, Elite)

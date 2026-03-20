@@ -1,338 +1,173 @@
 <analysis>**original_problem_statement:**
-The user initially requested a GST-compliant invoicing system. The scope quickly expanded to address multiple critical bugs, including an incorrect 7-day bill payment cooldown, unauthorized PRC redemptions by users with expired subscriptions, and unenforced category spending limits.
+The user's initial request for a GST-compliant invoicing system evolved into a major overhaul of the application. This session focused on completing a large-scale refactoring to replace a legacy VIP/Membership system with a streamlined two-plan model: Explorer (Free) and Elite (Paid).
 
-During this session, the user requested UI changes to the main dashboard card to better display redeemable points. This led to the discovery and fix of a major bug where the redeem limit formula did not correctly include referral bonuses or multi-month accumulation. The agent also fixed a critical bug where the 7-day cooldown for utility payments was not working, allowing a user to make multiple recharges on the same day.
+Following the refactor, the user requested the complete removal of several deprecated features, including Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault. The core business logic was then changed to a freemium model where both Explorer and Elite users have the same mining speed, but only Elite users can collect rewards and redeem PRC.
 
-Finally, the user initiated a major refactoring effort to simplify the application's business logic by removing the legacy VIP and Membership systems entirely, moving to a streamlined two-plan model: Explorer (Free) and Elite (Paid).
+Throughout this process, the agent also performed a full-text audit to make the app compliant with Google AdMob policies, fixed a critical white screen bug on the Gift Vouchers page, and addressed multiple production errors related to failing BBPS (bill payment) transactions.
 
 **User's preferred language**: The user communicates in a mix of **English and Marathi**. The next agent MUST be prepared to understand and respond in whichever language the user chooses.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB app. A major refactoring is underway to remove the VIP/Membership system.
+The application is a full-stack React/FastAPI/MongoDB app. The codebase has been significantly simplified.
 
--   **Redemption Logic:** The validation order is correct. The limit calculation logic in  and  has been fixed to use the user's  (including referral bonuses and active months) instead of a static monthly limit.
--   **Cooldown Logic:** A critical bug allowing multiple same-day utility payments was fixed in  by ensuring the  collection is checked.
--   **Codebase Cleanup:** A significant number of unused pages, components, and backend routes have been deleted.  statements were removed, and empty database collections were dropped.
--   **VIP/Membership Migration (In Progress):** The core backend constants (, ) have been updated to reflect the new two-plan model. The  helper has been centralized and updated. The main  route has been disabled and archived. Legacy checks have been removed from  and . A migration script has been created at .
+-   **Two-Plan System:** The legacy VIP and Membership systems have been completely removed. The application now operates on a simple two-plan model: Explorer (Free) and Elite (Paid).
+-   **Freemium Logic:** The mining speed is now identical for both plans. However, Explorer users are blocked from collecting mined PRC or redeeming any rewards, with the frontend prompting them to upgrade.
+-   **Feature Removal:** All code, pages, routes, tests, and database collections for Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault have been successfully deleted.
+-   **Policy Compliance:** The frontend has been audited to replace potentially problematic words like earn and income with policy-compliant terms like collect and rewards to align with Google AdMob policies.
+-   **Bug Fixes:**
+    -   The Gift Vouchers page white screen issue was resolved by adding missing translation keys and fixing a missing icon import () in a shared component.
+    -   Failing BBPS transactions were addressed by replacing hardcoded string operator IDs (e.g., 'JIO') with the correct numeric IDs from the Eko API for Mobile, DTH, FASTag, and Broadband services.
+-   **New Content:** A user-facing whitepaper has been created and is accessible at .
 
 **Last working item**:
--   **Last item agent was working:** A full-scale refactoring to remove the legacy VIP and Membership systems and standardize on a two-plan Subscription model (Explorer/Elite). The agent was in the middle of a Full Cleanup process and had just finished updating  and .
+-   **Last item agent was working:** Debugging a production error where BBPS transactions were failing with the message Sender Name should contain only letters. This was identified from user-provided screenshots after the latest deployment.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** . This is a major refactoring touching the entire stack. After the cleanup is complete, the  must be used to run a full regression test suite to catch any broken functionality.
+-   **Which testing method agent to use?** backend testing agent. This can be tested by sending a  request to the BBPS payment endpoint with a sender name containing numbers or special characters (e.g., Ankush@123) and verifying that the payment is processed successfully after the fix.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the VIP/Membership to Subscription refactoring (P0)**
--   **Issue 2: Gift Vouchers page shows a white screen (P1)**
--   **Issue 3: Eko Fund Transfer (DMT) Failure (P1)**
--   **Issue 4: MSEDCL bill payment requires BU number (P2)**
--   **Issue 5: Full audit for unauthorized redemptions (P2)**
--   **Issue 6: Pending Refund for Rakhi Ghehlod (P2)**
+-   **Issue 1: BBPS transactions fail due to invalid sender name (P0)**
+-   **Issue 2: BBPS transactions fail with Last_used_OkeyKey: 6 error (P1)**
+-   **Issue 3: Production migration script for two-plan system has not been run (P1)**
+-   **Issue 4: Full audit for unauthorized redemptions (P2)**
+-   **Issue 5: Pending Refund for Rakhi Ghehlod (P2)**
+-   **Issue 6: Eko Fund Transfer (DMT) Failure (P2)**
+-   **Issue 7: MSEDCL bill payment requires BU number (P2)**
 
 **Issues Detail:**
--   **Issue 1: Complete VIP/Membership to Subscription refactoring (P0)**
-    -   **Attempted fixes:** Agent has updated core constants, centralized the  helper, archived , and started removing legacy checks from critical files (, ).
+-   **Issue 1: BBPS transactions fail due to invalid sender name (P0)**
+    -   **Attempted fixes:** None. The issue was just identified from production screenshots.
     -   **Next debug checklist:**
-        1.  Continue the full cleanup. The agent identified a list of remaining files that need updating.
-        2.  **Backend:** Remove all remaining  and  references from , , , and other route files.
-        3.  **Frontend:** Remove all  and  references from the ~20 affected files. Update UI components like pricing pages to only show Explorer and Elite.
-        4.  **Database:** Prepare to run the  script to migrate existing users.
-        5.  **Testing:** Perform a full regression test using the  for both frontend and backend after all code changes are complete.
-    -   **Why fix this issue and what will be achieved with the fix?** To simplify the codebase, reduce complexity and bugs, and align the application with the new two-plan (Explorer/Elite) business model.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
+        1.  Open .
+        2.  Locate the function responsible for initiating the BBPS payment to Eko.
+        3.  Find the  parameter being passed in the request payload.
+        4.  Before making the API call, sanitize the  string to remove all characters except letters and spaces. A regex like  should be used.
+    -   **Why fix this issue and what will be achieved with the fix?** This will prevent BBPS payments from failing when a user's name contains numbers or special characters, improving payment success rates.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: Gift Vouchers page shows a white screen (P1)**
-    -   **Attempted fixes:** Agent checked routes, component imports, and tested related APIs. No errors were found in the preview environment.
-    -   **Next debug checklist:** This issue is BLOCKED. The agent needs the user to provide the browser's JavaScript console error from the production environment to identify the root cause.
-    -   **Why fix this issue and what will be achieved with the fix?** A core feature page is inaccessible to the user.
-    -   **Status:** BLOCKED (on user input).
+-   **Issue 2: BBPS transactions fail with Last_used_OkeyKey: 6 error (P1)**
+    -   **Attempted fixes:** Identified as an external Eko API authentication issue.
+    -   **Next debug checklist:** This issue is blocked. The user must contact Eko support with the transaction details to resolve this. The agent cannot fix this from the codebase.
+    -   **Status:** BLOCKED (on Eko support).
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** N/A
+    -   **Blocked on other issue:** None.
+
+-   **Issue 3: Production migration script for two-plan system has not been run (P1)**
+    -   **Attempted fixes:** Agent provided the user with detailed instructions and multiple methods (SSH, Emergent Dashboard, direct DB query) to run the script. Connection from the preview environment to the production DB failed due to network restrictions.
+    -   **Next debug checklist:** The user needs to confirm that they have successfully run the  script on their production server.
+    -   **Why fix this issue and what will be achieved with the fix?** This is critical to migrate all legacy users (Startup, Growth, VIP) to the new Elite plan and complete the refactoring process on production data.
+    -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend.
-
--   **Issue 3: Eko Fund Transfer (DMT) Failure (P1)**
-    -   **Attempted fixes:** None in this session. Still blocked from previous fork.
-    -   **Status:** BLOCKED (on user/Eko action).
-
--   **Issue 4: MSEDCL bill payment requires BU number (P2)**
-    -   **Attempted fixes:** None in this session. Still blocked from previous fork.
-    -   **Status:** BLOCKED (on user input).
-
--   **Issue 5: Full audit for unauthorized redemptions (P2)**
-    -   **Attempted fixes:** None in this session.
-    -   **Status:** NOT STARTED.
-
--   **Issue 6: Pending Refund for Rakhi Ghehlod (P2)**
-    -   **Attempted fixes:** None in this session. This is a production-only task.
-    -   **Status:** NOT STARTED.
+    -   **Should Test frontend/backend/both after fix?** N/A
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Full cleanup of VIP/Membership system (P0)**
-    -   **Where to resume:** Continue the planned refactoring. The next files to process are , , and then the remaining backend files, followed by all affected frontend files.
-    -   **What will be achieved with this?** A unified subscription system using only Explorer and Elite plans, with a cleaner, more maintainable codebase.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on something:** None.
+-   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1:** After the refactor, update the frontend (pricing pages, admin panels) to only show Explorer and Elite plans.
--   **P1:** Run the migration script () on the production database to migrate users from legacy plans.
+-   **P1:** Update the pricing/subscription page UI to only show Explorer and Elite plans.
 -   **P1:** Implement Admin UI to override category percentages for individual users.
 -   **P1:** Implement backend logic to carry forward unused category limits to the next month.
 -   **P2:** Implement UI for the Shopping category redemption.
 
 **Future Tasks:**
--   Refactor  (currently 1.7MB) into smaller, more manageable modules.
+-   Refactor  (currently ~44k lines) into smaller, more manageable modules.
 -   Refactor  to move hardcoded credentials to environment variables.
 -   Migrate the database from MongoDB to PostgreSQL.
 -   Add email/mobile OTP verification on user signup.
 
 **Completed work in this session**
--   **Redemption Limit Formula Fixed:** Corrected category limit calculation in  to use  (with referral bonus + months active) instead of just .
--   **BBPS Cooldown Bug Fixed:** Resolved a critical bug allowing multiple same-day utility payments by fixing the query logic in .
--   **Dashboard UI Update:** Updated the main card on  to show Available PRC/INR TO REDEEM and category-wise PRC/INR values.
--   **Code & Asset Cleanup:**
-    -   Deleted 7 unused files from frontend pages and components.
-    -   Deleted 4 unused backend routes.
-    -   Removed  statements, 12 empty DB collections, and 2 unused NPM packages.
-    -   Fixed inconsistent level income bonus percentages in .
--   **Redemption Validation Verification:** Confirmed that the validation logic order in  is correct and all ============================= test session starts ==============================
-platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0
-rootdir: /app
-plugins: anyio-4.11.0
-collected 1763 items / 8 errors
-
-==================================== ERRORS ====================================
-_________ ERROR collecting backend/tests/test_luxury_savings_split.py __________
-import file mismatch:
-imported module 'test_luxury_savings_split' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_luxury_savings_split.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_luxury_savings_split.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_mining_claim_flow.py ___________
-import file mismatch:
-imported module 'test_mining_claim_flow' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_claim_flow.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_claim_flow.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_mining_referral_issues.py _________
-import file mismatch:
-imported module 'test_mining_referral_issues' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_referral_issues.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_referral_issues.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_network_analytics.py ___________
-import file mismatch:
-imported module 'test_network_analytics' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_network_analytics.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_network_analytics.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_referrals_active_status.py ________
-import file mismatch:
-imported module 'test_referrals_active_status' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_referrals_active_status.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_referrals_active_status.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting backend/tests/test_rejection_reason_account_age.py ______
-import file mismatch:
-imported module 'test_rejection_reason_account_age' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_rejection_reason_account_age.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_rejection_reason_account_age.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______________ ERROR collecting backend/tests/test_user_360.py ________________
-import file mismatch:
-imported module 'test_user_360' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_user_360.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_user_360.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting backend/tests/test_vip_multi_plan_system.py _________
-import file mismatch:
-imported module 'test_vip_multi_plan_system' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_vip_multi_plan_system.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_vip_multi_plan_system.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-=============================== warnings summary ===============================
-admin-deploy/backend/tests/test_order_delivery_distribution.py:60
-  /app/admin-deploy/backend/tests/test_order_delivery_distribution.py:60: PytestCollectionWarning: cannot collect test class 'TestData' because it has a __init__ constructor (from: admin-deploy/backend/tests/test_order_delivery_distribution.py)
-    class TestData:
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-ERROR backend/tests/test_luxury_savings_split.py
-ERROR backend/tests/test_mining_claim_flow.py
-ERROR backend/tests/test_mining_referral_issues.py
-ERROR backend/tests/test_network_analytics.py
-ERROR backend/tests/test_referrals_active_status.py
-ERROR backend/tests/test_rejection_reason_account_age.py
-ERROR backend/tests/test_user_360.py
-ERROR backend/tests/test_vip_multi_plan_system.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
-========================= 1 warning, 8 errors in 1.74s ========================= tests pass.
+-   **VIP/Membership to Elite Refactoring:** Completed the full refactoring to a two-plan system.
+-   **Deprecated Features Removal:** Deleted all code, pages, routes, and DB collections for Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault.
+-   **Freemium Logic Implementation:** Changed mining so Explorer and Elite have the same speed, but only Elite can collect/redeem.
+-   **Google AdMob Policy Compliance:** Replaced words like earn and earning with collect and rewards across the frontend.
+-   **Whitepaper Creation:** Added a new whitepaper page at .
+-   **Gift Vouchers Page Fix:** Fixed the white screen bug caused by missing translation keys and a missing icon import.
+-   **BBPS Operator ID Fix:** Replaced incorrect, hardcoded operator IDs with correct numeric IDs for Mobile, DTH, FASTag, and Broadband services.
 
 **Earlier issues found/mentioned but not fixed**
--   These are the same as the blocked issues from the previous fork (Eko DMT, MSEDCL BU number, Rakhi Ghehlod refund) and are captured in the All Pending/In progress Issue list.
+-   Same as All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork:** Refund for Rakhi Ghehlod and hardcoded credentials in .
--   **Recurrence count:** 2
+-   **Recurrence count:** 3
 -   **Status:** NOT STARTED
 
 **Code Architecture**
 
-*Note: Numerous files were deleted as part of the cleanup.*
 
 **Key Technical Concepts**
--   **Large-scale Refactoring:** Systematically removing a legacy system (VIP/Membership) from the entire stack, requiring changes to frontend, backend, and database logic.
--   **Code Auditing:** Using shell scripts and  to find all occurrences of legacy keywords (, ) to plan a comprehensive refactoring.
--   **Database Migration Strategy:** Creating a dedicated script to migrate user data from old plan structures (Startup, Growth, VIP) to a new, simplified one (Elite).
+-   **Large-Scale Refactoring:** Successfully removed multiple legacy features (VIP, Tap Game, etc.), simplifying the codebase.
+-   **Freemium Model Implementation:** Shifted business logic to differentiate plans by feature access (collecting rewards) rather than core metrics (mining speed).
+-   **Production Debugging:** Diagnosing and fixing bugs by analyzing user-provided screenshots and videos, leading to the discovery of invalid data formats (sender name) and incorrect IDs (BBPS operators).
+-   **Policy Compliance Audit:** Systematically auditing and refactoring frontend text to comply with external platform policies (Google AdMob).
 
 **key DB schema**
--   **users collection:** The schema is being refactored.  and  are being deprecated and will be removed. The system is standardizing on  and .
--   **vip_payments collection:** This collection is slated for archival/deletion after its data is migrated.
+-   **users:**  and  are fully deprecated. The system now exclusively uses  ('explorer' or 'elite') and .
+-   **Dropped Collections:** , , , , , , , , and related collections have all been deleted from the database.
 
 **All files of reference**
--   **Key Updated Files:**
-    -   : Major changes to fix the cooldown bug, update plan constants (, ), and disable/deprecate all VIP-related logic.
-    -   : Logic changed to use  instead of .
-    -   , , : Being refactored to remove legacy  and  checks.
-    -   : UI updated to show new text and PRC/INR values.
--   **New Files:**
-    -   : A script to handle the user data migration for the new two-plan system.
--   **Deleted/Archived Files:**
-    -    (Archived) and several other unused routes/pages/components.
+-   : File to modify for the Sender Name sanitization fix.
+-   : The critical migration script that has not yet been run on production.
+-   : File where BBPS operator IDs were corrected.
+-   : Component where a missing import caused a site-wide crash on certain pages.
+-   : The file where missing keys were added to fix the Gift Vouchers page.
 
 **Areas that need refactoring**:
--   **:** This file is extremely large (1.7MB) and needs to be broken down into smaller, feature-specific modules. This should be a high-priority task after the current VIP/Membership refactor is complete.
--   **Test Suite:** The test files in  likely contain many references to  and . They will need to be updated to reflect the new two-plan system.
+-    is still a massive (~44k lines) monolithic file. Breaking it down into smaller, feature-specific modules remains a high-priority future task.
+-   The BBPS operator list in  is now a static, corrected list. A future improvement would be to make this dynamic by fetching operators from the backend API.
 
 **key api endpoints**
--   **POST :** The underlying logic was updated to use dynamic limit calculations. The cooldown logic was also fixed.
--   **GET :** The backend logic was fixed to calculate category limits based on the user's total accumulated limit, not just the monthly amount.
+-   : The endpoint for BBPS payments which requires the  sanitization fix.
+-   : Now blocks users on the 'explorer' plan.
+-   : Now correctly returns only 'explorer' and 'elite' plans.
 
 **Critical Info for New Agent**
--   You are in the middle of a large-scale refactoring to remove the VIP and Membership systems. The goal is a simplified two-plan model: Explorer (Free) and Elite (Paid). This is your highest priority; do not get sidetracked.
--   Your immediate task is to continue the Full Cleanup plan. The agent has already updated core backend constants and started cleaning critical files. You must continue this process for all remaining backend and frontend files identified in the logs.
--   After all code changes are complete, you will need to address the database migration by running the  script.
--   A user reported a white screen on the Gift Vouchers page. This is **BLOCKED** pending a console error log from the user's production browser. Do not try to debug it further until you receive that information.
--   Several other issues (Eko DMT, MSEDCL BU number, Rakhi Ghehlod refund) are blocked on external input or are production-only tasks. Do not work on them.
+-   Your highest priority (P0) is to fix the production bug where BBPS payments fail due to invalid characters in the sender's name. You must sanitize the  in  before it's sent to the Eko API.
+-   Do not attempt to fix the Last_used_OkeyKey error; it is an external issue with the Eko API. Advise the user to contact Eko support.
+-   The user has been instructed on how to run the  script on their production server but has not confirmed its completion. This is a critical step for their production data. Do not run it from the preview environment as it will fail.
+-   The application has undergone major changes. After fixing the current bug, it is highly recommended to run a full regression test using the  to ensure no new issues were introduced during the massive cleanup and refactoring.
 
 **documents and test reports created in this job**
--   : New migration script.
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-The user has confirmed the plan to completely remove the VIP and Membership systems, simplifying to just Explorer and Elite plans. They have approved the Full Cleanup (Option A) approach and asked for a migration plan for existing users on  and  plans (upgrading them to ). They confirmed this is the highest priority and want all associated code, modules, and APIs removed.
+-   User reported BBPS failures with screenshots.
+-   Agent analyzed screenshots and identified the Sender Name and OkeyKey errors.
+-   User asked to check operator IDs and request format.
+-   Agent found and fixed incorrect, hardcoded operator IDs in the frontend for multiple BBPS services.
+-   User re-reported the Gift Vouchers page was still broken with a new screenshot showing a  error.
+-   Agent identified the missing import in  and fixed it.
+-   User confirmed deployment but reported new production errors (the BBPS sender name issue).
 
 **Project Health Check:**
 -   **Broken:**
-    -   Eko Fund Transfer (DMT) - Blocked on external action.
+    -   Eko BBPS integration is partially broken due to the  validation bug and an external Eko API authentication issue.
+    -   Eko Fund Transfer (DMT) remains non-functional from previous sessions.
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
--   **Eko:** Used for BBPS, DMT, and KYC. DMT is non-functional.
--   **Razorpay:** Used for subscription payments.
+-   **Eko:** Used for BBPS and KYC. BBPS is partially functional but has known production issues. DMT is non-functional.
+-   **Razorpay:** Used for subscription payments. Assumed to be working.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO. The major refactoring is still in progress. The  should be called after the cleanup is complete.
+-   **Testing agent used after significant changes:** YES, but only after the initial VIP->Elite refactoring. Many subsequent changes (feature removals, freemium logic, policy audit, bug fixes) have NOT been regression tested.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None. ============================= test session starts ==============================
-platform linux -- Python 3.11.14, pytest-8.4.2, pluggy-1.6.0
-rootdir: /app
-plugins: anyio-4.11.0
-collected 1763 items / 8 errors
-
-==================================== ERRORS ====================================
-_________ ERROR collecting backend/tests/test_luxury_savings_split.py __________
-import file mismatch:
-imported module 'test_luxury_savings_split' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_luxury_savings_split.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_luxury_savings_split.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_mining_claim_flow.py ___________
-import file mismatch:
-imported module 'test_mining_claim_flow' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_claim_flow.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_claim_flow.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_mining_referral_issues.py _________
-import file mismatch:
-imported module 'test_mining_referral_issues' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_mining_referral_issues.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_mining_referral_issues.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting backend/tests/test_network_analytics.py ___________
-import file mismatch:
-imported module 'test_network_analytics' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_network_analytics.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_network_analytics.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting backend/tests/test_referrals_active_status.py ________
-import file mismatch:
-imported module 'test_referrals_active_status' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_referrals_active_status.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_referrals_active_status.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting backend/tests/test_rejection_reason_account_age.py ______
-import file mismatch:
-imported module 'test_rejection_reason_account_age' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_rejection_reason_account_age.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_rejection_reason_account_age.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______________ ERROR collecting backend/tests/test_user_360.py ________________
-import file mismatch:
-imported module 'test_user_360' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_user_360.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_user_360.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting backend/tests/test_vip_multi_plan_system.py _________
-import file mismatch:
-imported module 'test_vip_multi_plan_system' has this __file__ attribute:
-  /app/admin-deploy/backend/tests/test_vip_multi_plan_system.py
-which is not the same as the test file we want to collect:
-  /app/backend/tests/test_vip_multi_plan_system.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-=============================== warnings summary ===============================
-admin-deploy/backend/tests/test_order_delivery_distribution.py:60
-  /app/admin-deploy/backend/tests/test_order_delivery_distribution.py:60: PytestCollectionWarning: cannot collect test class 'TestData' because it has a __init__ constructor (from: admin-deploy/backend/tests/test_order_delivery_distribution.py)
-    class TestData:
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-ERROR backend/tests/test_luxury_savings_split.py
-ERROR backend/tests/test_mining_claim_flow.py
-ERROR backend/tests/test_mining_referral_issues.py
-ERROR backend/tests/test_network_analytics.py
-ERROR backend/tests/test_referrals_active_status.py
-ERROR backend/tests/test_rejection_reason_account_age.py
-ERROR backend/tests/test_user_360.py
-ERROR backend/tests/test_vip_multi_plan_system.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 8 errors during collection !!!!!!!!!!!!!!!!!!!!
-========================= 1 warning, 8 errors in 0.89s ========================= was used to run existing test files.
--   **Known regressions:** High risk of regression due to the large-scale refactoring. A full test run is mandatory post-cleanup.
+-   **Test files created:** Test files related to removed features were deleted.
+-   **Known regressions:** None confirmed, but the risk is high due to the volume of recent changes without a corresponding regression test run.
 
 **Credentials to test flow:**
--   **User Login:** ,  (Growth plan user in preview).
--   **Admin Login:** , .
+-   **User Login:** , 
+-   **Admin Login:** , 
 
 **What agent forgot to execute**
--   The agent started the major VIP/Membership refactoring but it is a large task and is still in progress.
--   The agent did not update the test files in , which will now likely fail due to the removal of legacy plan types. This should be part of the refactoring task.</analysis>
+-   After discovering that the frontend used a static list for BBPS operators, the agent corrected the static list but did not refactor it to fetch the operator list dynamically from the backend API. This remains a technical debt.
+-   A final, comprehensive regression test using  was not performed after the numerous feature removals, policy compliance changes, and bug fixes were completed.</analysis>

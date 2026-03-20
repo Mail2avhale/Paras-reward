@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://two-plan-rebuild.preview.emergentagent.com/setup
+   https://elite-explorer-app.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**
