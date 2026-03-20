@@ -257,6 +257,8 @@ async def add_ad_revenue(request: Request):
 @router.get("/redeem-payout")
 async def get_redeem_payout_ledger(page: int = 1, limit: int = 50, status: str = None):
     """Get redeem payout ledger - actual INR payouts"""
+    from utils.prc_fields import PRC_AGGREGATION_FIELD
+    
     try:
         query = {}
         if status:
@@ -268,7 +270,7 @@ async def get_redeem_payout_ledger(page: int = 1, limit: int = 50, status: str =
         
         totals_result = await db.redeem_payout_ledger.aggregate([
             {"$match": query},
-            {"$group": {"_id": "$status", "total_prc": {"$sum": "$prc_used"}, "total_inr": {"$sum": "$amount_inr"}}}
+            {"$group": {"_id": "$status", "total_prc": {"$sum": PRC_AGGREGATION_FIELD}, "total_inr": {"$sum": "$amount_inr"}}}
         ]).to_list(10)
         
         return {"entries": entries, "total": total, "totals_by_status": totals_result, "page": page}

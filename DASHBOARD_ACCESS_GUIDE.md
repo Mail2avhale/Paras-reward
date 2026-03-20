@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://elite-explorer-app.preview.emergentagent.com/setup
+   https://prc-consistency.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

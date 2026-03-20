@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://elite-explorer-app.preview.emergentagent.com';
+const BASE_URL = 'https://prc-consistency.preview.emergentagent.com';
 
 // Test data
 const TEST_USER_ID = 'test_playwright_user_' + Date.now();

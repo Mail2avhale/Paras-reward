@@ -362,12 +362,12 @@ async def get_profit_loss_statement(period: str = "month", year: int = None, mon
                 {"approved_at": {"$gte": start_str, "$lte": end_str}},
                 {"created_at": {"$gte": start_str, "$lte": end_str}}
             ]
-        }, {"_id": 0, "amount_inr": 1, "total_prc_deducted": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
+        }, {"_id": 0, "amount_inr": 1, "total_prc_deducted": 1, "prc_used": 1, "prc_amount": 1, "processing_fee_inr": 1, "admin_charge_inr": 1}).to_list(10000)
         
         bank_withdrawal_count = len(bank_withdrawal_data)
         # Expense = amount actually transferred to user's bank (amount_inr only)
         bank_withdrawal_payout_total = sum(bw.get("amount_inr", 0) for bw in bank_withdrawal_data)
-        bank_withdrawal_total_prc = sum(bw.get("total_prc_deducted", 0) for bw in bank_withdrawal_data)
+        bank_withdrawal_total_prc = sum(bw.get("total_prc_deducted") or bw.get("prc_used") or bw.get("prc_amount") or 0 for bw in bank_withdrawal_data)
         
         expenses["bank_withdrawal_payouts"] = round(bank_withdrawal_payout_total, 2)
         expense_details["bank_withdrawal_count"] = bank_withdrawal_count

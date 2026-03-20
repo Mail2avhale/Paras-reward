@@ -1,73 +1,59 @@
 <analysis>**original_problem_statement:**
-The user's initial request for a GST-compliant invoicing system evolved into a major overhaul of the application. This session focused on completing a large-scale refactoring to replace a legacy VIP/Membership system with a streamlined two-plan model: Explorer (Free) and Elite (Paid).
+The user's primary request is to resolve a critical data inconsistency issue where different database collections use varying field names for the amount of PRC (the app's internal currency) redeemed. Fields like , , and  are used interchangeably, leading to bugs, such as the Used limit column in the admin panel always showing zero. The user wants to standardize this to a single field name across the entire application (backend and frontend) and ensure all calculations, especially for user redemption limits, are accurate and reflect all-time usage rather than a monthly cycle.
 
-Following the refactor, the user requested the complete removal of several deprecated features, including Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault. The core business logic was then changed to a freemium model where both Explorer and Elite users have the same mining speed, but only Elite users can collect rewards and redeem PRC.
-
-Throughout this process, the agent also performed a full-text audit to make the app compliant with Google AdMob policies, fixed a critical white screen bug on the Gift Vouchers page, and addressed multiple production errors related to failing BBPS (bill payment) transactions.
+This request followed a series of critical bug fixes, including:
+1.  Fixing a bug where cancelled Razorpay orders incorrectly activated Elite subscriptions.
+2.  Resolving multiple BBPS (bill payment) failures for services like MSEDCL electricity and Credit Card payments by adding required parameters.
+3.  Implementing new admin features to manage pending requests and view the Eko payment gateway's wallet balance.
+4.  Conducting a security audit to fix several potential fraud loopholes related to payments and redemptions.
 
 **User's preferred language**: The user communicates in a mix of **English and Marathi**. The next agent MUST be prepared to understand and respond in whichever language the user chooses.
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MongoDB app. The codebase has been significantly simplified.
-
--   **Two-Plan System:** The legacy VIP and Membership systems have been completely removed. The application now operates on a simple two-plan model: Explorer (Free) and Elite (Paid).
--   **Freemium Logic:** The mining speed is now identical for both plans. However, Explorer users are blocked from collecting mined PRC or redeeming any rewards, with the frontend prompting them to upgrade.
--   **Feature Removal:** All code, pages, routes, tests, and database collections for Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault have been successfully deleted.
--   **Policy Compliance:** The frontend has been audited to replace potentially problematic words like earn and income with policy-compliant terms like collect and rewards to align with Google AdMob policies.
--   **Bug Fixes:**
-    -   The Gift Vouchers page white screen issue was resolved by adding missing translation keys and fixing a missing icon import () in a shared component.
-    -   Failing BBPS transactions were addressed by replacing hardcoded string operator IDs (e.g., 'JIO') with the correct numeric IDs from the Eko API for Mobile, DTH, FASTag, and Broadband services.
--   **New Content:** A user-facing whitepaper has been created and is accessible at .
+The application is a full-stack React/FastAPI/MongoDB app. The backend codebase suffers from data inconsistency, where different collections (, , ) use different field names for the PRC amount redeemed. The agent has implemented temporary patches in query functions (like  in ) to check for multiple possible field names (, , etc.) to fix an immediate bug with the Used column. However, the root cause—the inconsistent database schema—has not been resolved. New admin pages and security features have been added and are functional.
 
 **Last working item**:
--   **Last item agent was working:** Debugging a production error where BBPS transactions were failing with the message Sender Name should contain only letters. This was identified from user-provided screenshots after the latest deployment.
+-   **Last item agent was working:** The agent was in the process of a large-scale refactoring to standardize the inconsistent PRC amount fields across the backend. The user pointed out the confusion and requested a complete fix. The agent identified all field variations and the files using them and began patching queries as a first step.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent. This can be tested by sending a  request to the BBPS payment endpoint with a sender name containing numbers or special characters (e.g., Ankush@123) and verifying that the payment is processed successfully after the fix.
+-   **Which testing method agent to use?** backend testing agent. This is a major backend refactoring. The agent must create a comprehensive test suite that verifies user redemption limits, PRC statements, and admin dashboards to ensure calculations are correct after the field names are standardized.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: BBPS transactions fail due to invalid sender name (P0)**
--   **Issue 2: BBPS transactions fail with Last_used_OkeyKey: 6 error (P1)**
--   **Issue 3: Production migration script for two-plan system has not been run (P1)**
--   **Issue 4: Full audit for unauthorized redemptions (P2)**
--   **Issue 5: Pending Refund for Rakhi Ghehlod (P2)**
--   **Issue 6: Eko Fund Transfer (DMT) Failure (P2)**
--   **Issue 7: MSEDCL bill payment requires BU number (P2)**
+-   **Issue 1: Standardize PRC redemption amount fields across the entire application (P0)**
+-   **Issue 2: Find and reverse Omkar Masurkar's subscription (P1)**
+-   **Issue 3: Production migration script for the two-plan system has not been confirmed by the user (P2)**
+-   **Issue 4: Pending Refund for Rakhi Ghehlod (P2)**
 
 **Issues Detail:**
--   **Issue 1: BBPS transactions fail due to invalid sender name (P0)**
-    -   **Attempted fixes:** None. The issue was just identified from production screenshots.
+-   **Issue 1: Standardize PRC redemption amount fields across the entire application (P0)**
+    -   **Attempted fixes:** The  function in  was patched to check for multiple field names (, , ). This is a temporary workaround, not a solution.
     -   **Next debug checklist:**
-        1.  Open .
-        2.  Locate the function responsible for initiating the BBPS payment to Eko.
-        3.  Find the  parameter being passed in the request payload.
-        4.  Before making the API call, sanitize the  string to remove all characters except letters and spaces. A regex like  should be used.
-    -   **Why fix this issue and what will be achieved with the fix?** This will prevent BBPS payments from failing when a user's name contains numbers or special characters, improving payment success rates.
-    -   **Status:** NOT STARTED
+        1.  Create a new migration script in  to iterate through all documents in , , , and  collections.
+        2.  The script should rename all legacy fields (, , ) to a single, standard field: .
+        3.  Refactor all backend files (, , , etc.) to remove the logic that checks for multiple field variations. All database queries and code should now exclusively read from and write to .
+        4.  Audit the frontend to ensure it uses the standardized field name for any relevant displays or calculations.
+    -   **Why fix this issue and what will be achieved with the fix?** This will eliminate the root cause of multiple bugs, simplify the codebase, prevent future data-related errors, and improve data integrity.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
 
--   **Issue 2: BBPS transactions fail with Last_used_OkeyKey: 6 error (P1)**
-    -   **Attempted fixes:** Identified as an external Eko API authentication issue.
-    -   **Next debug checklist:** This issue is blocked. The user must contact Eko support with the transaction details to resolve this. The agent cannot fix this from the codebase.
-    -   **Status:** BLOCKED (on Eko support).
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** N/A
-    -   **Blocked on other issue:** None.
-
--   **Issue 3: Production migration script for two-plan system has not been run (P1)**
-    -   **Attempted fixes:** Agent provided the user with detailed instructions and multiple methods (SSH, Emergent Dashboard, direct DB query) to run the script. Connection from the preview environment to the production DB failed due to network restrictions.
-    -   **Next debug checklist:** The user needs to confirm that they have successfully run the  script on their production server.
-    -   **Why fix this issue and what will be achieved with the fix?** This is critical to migrate all legacy users (Startup, Growth, VIP) to the new Elite plan and complete the refactoring process on production data.
-    -   **Status:** USER VERIFICATION PENDING
+-   **Issue 2: Find and reverse Omkar Masurkar's subscription (P1)**
+    -   **Attempted fixes:** The agent tried to find the user via email (, ) but failed.
+    -   **Next debug checklist:** The agent must ask the user for the correct, registered email or the UID for Omkar Masurkar to locate the account and reverse the incorrect subscription.
+    -   **Status:** BLOCKED (needs user input)
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** N/A
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None.
+-   **Task 1: Complete the PRC field standardization refactor.**
+    -   **Where to resume:** Start by creating the database migration script as outlined in Issue 1. Once the data is standardized in the database, proceed with the code refactoring.
+    -   **What will be achieved with this?** A consistent and reliable data model for all PRC redemption transactions.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -77,97 +63,111 @@ The application is a full-stack React/FastAPI/MongoDB app. The codebase has been
 -   **P2:** Implement UI for the Shopping category redemption.
 
 **Future Tasks:**
--   Refactor  (currently ~44k lines) into smaller, more manageable modules.
+-   Refactor  into smaller, more manageable modules.
 -   Refactor  to move hardcoded credentials to environment variables.
 -   Migrate the database from MongoDB to PostgreSQL.
 -   Add email/mobile OTP verification on user signup.
 
 **Completed work in this session**
--   **VIP/Membership to Elite Refactoring:** Completed the full refactoring to a two-plan system.
--   **Deprecated Features Removal:** Deleted all code, pages, routes, and DB collections for Tap Game, Rain Drop, Luxury Life, and PRC Savings Vault.
--   **Freemium Logic Implementation:** Changed mining so Explorer and Elite have the same speed, but only Elite can collect/redeem.
--   **Google AdMob Policy Compliance:** Replaced words like earn and earning with collect and rewards across the frontend.
--   **Whitepaper Creation:** Added a new whitepaper page at .
--   **Gift Vouchers Page Fix:** Fixed the white screen bug caused by missing translation keys and a missing icon import.
--   **BBPS Operator ID Fix:** Replaced incorrect, hardcoded operator IDs with correct numeric IDs for Mobile, DTH, FASTag, and Broadband services.
+-   **Used Redeem Limit Column Fix:** Patched the  function in  to correctly calculate all-time used PRC by querying all relevant collections, fixing the admin dashboard display bug.
+-   **Critical Subscription Bug Fix:** Identified and created a fix for a bug where cancelled Razorpay orders activated Elite subscriptions. Successfully reversed subscriptions for two affected users.
+-   **Security Audit & Hardening:**
+    -   Created a  document.
+    -   Enforced Razorpay webhook signature verification to prevent spoofed callbacks.
+    -   Added rate limiting to payment verification and mining claim endpoints to prevent abuse.
+    -   Added a server-side check for sufficient Eko wallet balance before allowing redemptions.
+-   **BBPS Bug Fixes:**
+    -   Fixed MSEDCL electricity payments by adding the required  (BU) parameter.
+    -   Fixed Credit Card bill payments by adding the required  parameter.
+-   **New Admin Features:**
+    -   Created a new admin page () to view and bulk-fail pending requests with an automatic PRC refund.
+    -   Added a display for the live Eko wallet balance on the user-facing redeem page and in the admin area.
+-   **Testing:** Created a new Pytest suite () with 18 tests for BBPS services.
 
 **Earlier issues found/mentioned but not fixed**
 -   Same as All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Refund for Rakhi Ghehlod and hardcoded credentials in .
--   **Recurrence count:** 3
+-   **Issue recurrence in previous fork:** Refund for Rakhi Ghehlod.
+-   **Recurrence count:** 4
 -   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Large-Scale Refactoring:** Successfully removed multiple legacy features (VIP, Tap Game, etc.), simplifying the codebase.
--   **Freemium Model Implementation:** Shifted business logic to differentiate plans by feature access (collecting rewards) rather than core metrics (mining speed).
--   **Production Debugging:** Diagnosing and fixing bugs by analyzing user-provided screenshots and videos, leading to the discovery of invalid data formats (sender name) and incorrect IDs (BBPS operators).
--   **Policy Compliance Audit:** Systematically auditing and refactoring frontend text to comply with external platform policies (Google AdMob).
+-   **Data Inconsistency:** The core problem being solved is the lack of a standard field for PRC redemption amounts across multiple MongoDB collections.
+-   **Large-Scale Refactoring:** The current task involves a database migration and a sweep of the entire codebase to standardize data fields.
+-   **Security Hardening:** The agent implemented several key security measures, including webhook signature validation, rate limiting, and server-side balance checks to prevent fraud.
+-   **Production Debugging:** The agent diagnosed and fixed live production issues by analyzing user screenshots, running diagnostic  commands against the production API, and creating targeted fixes.
 
 **key DB schema**
--   **users:**  and  are fully deprecated. The system now exclusively uses  ('explorer' or 'elite') and .
--   **Dropped Collections:** , , , , , , , , and related collections have all been deleted from the database.
+-   ****: Has documents with a  field.
+-   ****, ****, and new : Have documents with , , or other variations.
+-   **Goal:** All these collections should be migrated to use a single field, , for the redeemed PRC amount.
 
 **All files of reference**
--   : File to modify for the Sender Name sanitization fix.
--   : The critical migration script that has not yet been run on production.
--   : File where BBPS operator IDs were corrected.
--   : Component where a missing import caused a site-wide crash on certain pages.
--   : The file where missing keys were added to fix the Gift Vouchers page.
+-   : Contains the  function which is central to the Used column bug and the current refactoring effort.
+-   : The main route for all redemption services; heavily modified.
+-   : The main route for handling subscriptions; contains the security fixes.
+-   : The frontend page where the Used column bug was visible.
+-   : The main user-facing page for all redemptions.
 
 **Areas that need refactoring**:
--    is still a massive (~44k lines) monolithic file. Breaking it down into smaller, feature-specific modules remains a high-priority future task.
--   The BBPS operator list in  is now a static, corrected list. A future improvement would be to make this dynamic by fetching operators from the backend API.
+-   **PRC Amount Fields:** This is the highest priority refactoring task and is currently in progress. All related database collections and code need to be standardized to use .
+-   : Remains a large monolithic file that should be broken down into smaller modules.
 
 **key api endpoints**
--   : The endpoint for BBPS payments which requires the  sanitization fix.
--   : Now blocks users on the 'explorer' plan.
--   : Now correctly returns only 'explorer' and 'elite' plans.
+-   : New endpoint to fail a single pending request.
+-   : New endpoint for the FAIL ALL button on the new admin page.
+-   : New endpoint to fetch the live Eko wallet balance.
+-   : New admin endpoint to reverse subscriptions activated by cancelled orders.
+-   : New diagnostic endpoint for subscription issues.
+-   : The endpoint feeding the Admin Members page, where the Used column bug originated.
 
 **Critical Info for New Agent**
--   Your highest priority (P0) is to fix the production bug where BBPS payments fail due to invalid characters in the sender's name. You must sanitize the  in  before it's sent to the Eko API.
--   Do not attempt to fix the Last_used_OkeyKey error; it is an external issue with the Eko API. Advise the user to contact Eko support.
--   The user has been instructed on how to run the  script on their production server but has not confirmed its completion. This is a critical step for their production data. Do not run it from the preview environment as it will fail.
--   The application has undergone major changes. After fixing the current bug, it is highly recommended to run a full regression test using the  to ensure no new issues were introduced during the massive cleanup and refactoring.
+-   Your P0 task is to complete the large-scale refactoring of PRC amount fields. This is not just a simple bug fix; it requires a database migration and sweeping code changes. Start by writing a migration script to unify the data in the database, then refactor the code to use the single standardized field.
+-   The user is highly concerned about financial loopholes and data accuracy. Prioritize correctness and security in all fixes.
+-   After completing the refactor, a full backend regression test is mandatory to ensure that redemption limits, user statements, and admin dashboards are all functioning correctly with the new standardized field.
+-   Be prepared to communicate in both English and Marathi.
 
 **documents and test reports created in this job**
 -   
 -   
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
--   User reported BBPS failures with screenshots.
--   Agent analyzed screenshots and identified the Sender Name and OkeyKey errors.
--   User asked to check operator IDs and request format.
--   Agent found and fixed incorrect, hardcoded operator IDs in the frontend for multiple BBPS services.
--   User re-reported the Gift Vouchers page was still broken with a new screenshot showing a  error.
--   Agent identified the missing import in  and fixed it.
--   User confirmed deployment but reported new production errors (the BBPS sender name issue).
+1.  **User:** Noticed the Used column in admin is always 0. (BUG)
+2.  **Agent:** Fixed the calculation to be all-time.
+3.  **User:** Still not showing on production. (BUG)
+4.  **Agent:** Found the root cause: different collections use different field names (, ).
+5.  **User:** Asked to resolve the confusing configuration. (REFACTOR REQUEST)
+6.  **Agent:** Started refactoring.
+7.  **User:** Asked to update this standardization everywhere possible in user views.
+8.  **Agent:** Continued the refactor, patching multiple backend files.
+9.  **User:** Confirmed their understanding of the problem and the need for a full fix.
+10. **Agent:** Is in the middle of the refactoring task.
 
 **Project Health Check:**
 -   **Broken:**
-    -   Eko BBPS integration is partially broken due to the  validation bug and an external Eko API authentication issue.
-    -   Eko Fund Transfer (DMT) remains non-functional from previous sessions.
--   **Mocked:**
-    -   None.
+    -   **Data Consistency:** The database schema for PRC redemption amounts is inconsistent, which is the root cause of multiple bugs. This is the main ongoing issue being fixed.
+    -   **Eko Fund Transfer (DMT):** This service remains non-functional from previous sessions.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Eko:** Used for BBPS and KYC. BBPS is partially functional but has known production issues. DMT is non-functional.
--   **Razorpay:** Used for subscription payments. Assumed to be working.
+-   **Eko:** Used for BBPS (bill payments) and KYC. Partially functional with recent bug fixes.
+-   **Razorpay:** Used for subscription payments. Assumed to be working, but had a critical bug fixed this session.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, but only after the initial VIP->Elite refactoring. Many subsequent changes (feature removals, freemium logic, policy audit, bug fixes) have NOT been regression tested.
+-   **Testing agent used after significant changes:** NO. While a new pytest suite was created for BBPS, a full regression test has not been run since the major security fixes and the ongoing PRC field refactoring. This is highly recommended.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** Test files related to removed features were deleted.
--   **Known regressions:** None confirmed, but the risk is high due to the volume of recent changes without a corresponding regression test run.
+-   **Test files created:** []
+-   **Known regressions:** None confirmed, but the risk is high due to the core data model changes.
 
 **Credentials to test flow:**
 -   **User Login:** , 
 -   **Admin Login:** , 
 
 **What agent forgot to execute**
--   After discovering that the frontend used a static list for BBPS operators, the agent corrected the static list but did not refactor it to fetch the operator list dynamically from the backend API. This remains a technical debt.
--   A final, comprehensive regression test using  was not performed after the numerous feature removals, policy compliance changes, and bug fixes were completed.</analysis>
+-   The agent started patching code to read inconsistent fields but did not create a database migration script, which is essential to permanently fix the data inconsistency. The refactoring is therefore incomplete and not robust.</analysis>

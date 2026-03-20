@@ -641,36 +641,47 @@ async def get_user_redeemed_stats(uid: str):
         if cached:
             return cached
     
+    from utils.prc_fields import PRC_AGGREGATION_FIELD
+    
     user = await db.users.find_one({"uid": uid})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Use standardized PRC aggregation field for all collections
     # Get bill payment totals
     bp_total = await db.bill_payment_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
-        {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     # Get gift voucher totals
     gv_total = await db.gift_voucher_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed"]}}},
-        {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     # Get marketplace order totals
     orders_total = await db.orders.aggregate([
         {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
-        {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
+        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
+    ]).to_list(1)
+    
+    # Get bank withdrawal totals
+    bank_total = await db.redeem_requests.aggregate([
+        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "success"]}}},
+        {"$group": {"_id": None, "total": {"$sum": PRC_AGGREGATION_FIELD}}}
     ]).to_list(1)
     
     result = {
         "bill_payments": round(bp_total[0]["total"] if bp_total else 0, 2),
         "gift_vouchers": round(gv_total[0]["total"] if gv_total else 0, 2),
         "marketplace": round(orders_total[0]["total"] if orders_total else 0, 2),
+        "bank_withdrawals": round(bank_total[0]["total"] if bank_total else 0, 2),
         "total_redeemed": round(
             (bp_total[0]["total"] if bp_total else 0) +
             (gv_total[0]["total"] if gv_total else 0) +
-            (orders_total[0]["total"] if orders_total else 0),
+            (orders_total[0]["total"] if orders_total else 0) +
+            (bank_total[0]["total"] if bank_total else 0),
             2
         )
     }

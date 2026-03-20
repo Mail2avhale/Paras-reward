@@ -9,6 +9,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
 
+# Import centralized PRC field helper
+from utils.prc_fields import get_prc_amount
+
 router = APIRouter(prefix="/user/prc-statement", tags=["PRC Statement"])
 
 # Database reference
@@ -74,7 +77,7 @@ async def get_prc_redeem_statement(
             bill_payments = await db.bill_payment_requests.find(
                 bill_query,
                 {"_id": 0, "request_id": 1, "bill_type": 1, "operator_name": 1, 
-                 "consumer_number": 1, "amount_inr": 1, "prc_used": 1, 
+                 "consumer_number": 1, "amount_inr": 1, "total_prc_deducted": 1,
                  "status": 1, "created_at": 1, "approved_at": 1, "eko_tid": 1}
             ).sort("created_at", -1).to_list(500)
             
@@ -83,13 +86,16 @@ async def get_prc_redeem_statement(
                 operator = bill.get("operator_name", "")
                 consumer = bill.get("consumer_number", "")[-4:] if bill.get("consumer_number") else ""
                 
+                # Use centralized helper for PRC field
+                prc = get_prc_amount(bill)
+                
                 entries.append({
                     "id": bill.get("request_id", ""),
                     "date": bill.get("approved_at") or bill.get("created_at", ""),
                     "type": "redeem",
                     "category": "bill_payment",
                     "narration": f"{bill_type} - {operator} (...{consumer})",
-                    "prc_amount": -abs(bill.get("prc_used", 0)),
+                    "prc_amount": -abs(prc),
                     "inr_value": bill.get("amount_inr", 0),
                     "status": bill.get("status", "completed"),
                     "reference": bill.get("eko_tid", "")
@@ -129,7 +135,7 @@ async def get_prc_redeem_statement(
                     "type": "redeem",
                     "category": "dmt",
                     "narration": " - ".join(narration_parts) if len(narration_parts) > 1 else "Money Transfer",
-                    "prc_amount": -abs(dmt.get("prc_amount", 0)),
+                    "prc_amount": -abs(get_prc_amount(dmt)),
                     "inr_value": dmt.get("amount_inr", 0),
                     "status": dmt.get("status", "completed"),
                     "reference": dmt.get("eko_tid", "") or dmt.get("transaction_id", "")
@@ -162,7 +168,7 @@ async def get_prc_redeem_statement(
                     "type": "redeem",
                     "category": "gift_voucher",
                     "narration": f"Gift Voucher - {brand}",
-                    "prc_amount": -abs(voucher.get("prc_used", 0)),
+                    "prc_amount": -abs(get_prc_amount(voucher)),
                     "inr_value": voucher.get("amount_inr", 0),
                     "status": voucher.get("status", "completed"),
                     "reference": voucher.get("voucher_code", "")[:8] + "..." if voucher.get("voucher_code") else ""
@@ -196,7 +202,7 @@ async def get_prc_redeem_statement(
                     "type": "redeem",
                     "category": "bank_transfer",
                     "narration": f"Bank Transfer - {bank} (...{acc})",
-                    "prc_amount": -abs(wd.get("prc_used", 0)),
+                    "prc_amount": -abs(get_prc_amount(wd)),
                     "inr_value": wd.get("amount_inr", 0),
                     "status": wd.get("status", "completed"),
                     "reference": wd.get("utr_number", "")
@@ -230,7 +236,7 @@ async def get_prc_redeem_statement(
                     "type": "redeem",
                     "category": "shop",
                     "narration": f"Shop - {product}" + (f" x{qty}" if qty > 1 else ""),
-                    "prc_amount": -abs(order.get("total_prc", 0) or order.get("prc_used", 0)),
+                    "prc_amount": -abs(get_prc_amount(order)),
                     "inr_value": order.get("total_amount", 0),
                     "status": order.get("status", "completed"),
                     "reference": order.get("order_id", "")
@@ -277,7 +283,7 @@ async def get_prc_redeem_statement(
                         {"refunded_at": {"$gte": start_datetime, "$lte": end_datetime}}
                     ]
                 },
-                {"_id": 0, "request_id": 1, "prc_used": 1, "bill_type": 1,
+                {"_id": 0, "request_id": 1, "total_prc_deducted": 1, "bill_type": 1,
                  "rejected_at": 1, "refunded_at": 1, "rejection_reason": 1}
             ).to_list(100)
             
@@ -288,7 +294,7 @@ async def get_prc_redeem_statement(
                     "type": "refund",
                     "category": "refund",
                     "narration": f"Refund - {bill.get('bill_type', 'Bill')} rejected ({bill.get('rejection_reason', 'N/A')})",
-                    "prc_amount": abs(bill.get("prc_used", 0)),
+                    "prc_amount": abs(get_prc_amount(bill)),
                     "inr_value": 0,
                     "status": "refunded",
                     "reference": bill.get("request_id", "")

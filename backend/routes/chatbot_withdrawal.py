@@ -56,6 +56,9 @@ import httpx  # ASYNC HTTP - replaces blocking 'requests' library
 # Import new services (Phase 2 integration)
 from app.services import WalletService, TransactionService, TransactionState
 
+# Import PRC field helper
+from utils.prc_fields import get_prc_amount
+
 # Global async HTTP client for chatbot withdrawal
 _chatbot_http_client = None
 
@@ -855,7 +858,7 @@ async def create_withdrawal_request(request: WithdrawalRequest):
                 "admin_charge": fees["admin_charge"],
                 "total_fees": fees["total_fees"],
                 "net_amount": fees["net_amount"],
-                "prc_deducted": prc_required,
+                "total_prc_deducted": prc_required,
                 "account_holder_name": request.account_holder_name,
                 "account_number": request.account_number,
                 "bank_name": request.bank_name,
@@ -927,7 +930,7 @@ async def create_withdrawal_request(request: WithdrawalRequest):
                 "admin_charge": fees["admin_charge"],
                 "total_fees": fees["total_fees"],
                 "net_amount": fees["net_amount"],
-                "prc_deducted": prc_required,
+                "total_prc_deducted": prc_required,
                 "account_holder_name": request.account_holder_name,
                 "account_number": request.account_number,
                 "bank_name": request.bank_name,
@@ -987,7 +990,7 @@ async def create_withdrawal_request(request: WithdrawalRequest):
                 "user_name": user.get("name"),
                 "user_mobile": user_mobile,
                 "amount_inr": request.amount_inr,
-                "prc_deducted": prc_required,
+                "total_prc_deducted": prc_required,
                 "prc_refunded": prc_required,
                 "account_number": request.account_number,
                 "bank_name": request.bank_name,
@@ -1116,7 +1119,7 @@ async def cancel_redeem_request(request_id: str, request: Request):
         )
     
     now = datetime.now(timezone.utc).isoformat()
-    prc_to_refund = request_doc.get("prc_deducted", 0)
+    prc_to_refund = get_prc_amount(request_doc)
     user_uid = request_doc.get("uid")
     
     # Update request status
@@ -1287,7 +1290,7 @@ async def cancel_selected_requests(request: Request):
     
     for req in pending_requests:
         request_id = req.get("request_id")
-        prc_amount = req.get("prc_deducted", 0)
+        prc_amount = get_prc_amount(req)
         
         # Update status
         await db.chatbot_withdrawal_requests.update_one(
@@ -1363,7 +1366,7 @@ async def cancel_all_pending_requests(uid: str, request: Request):
     
     for req in pending_requests:
         request_id = req.get("request_id")
-        prc_amount = req.get("prc_deducted", 0)
+        prc_amount = get_prc_amount(req)
         
         # Update status
         await db.chatbot_withdrawal_requests.update_one(

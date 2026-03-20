@@ -20,7 +20,7 @@ const TEST_USER = {
   uid: 'root_cb83'
 };
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://elite-explorer-app.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://prc-consistency.preview.emergentagent.com';
 
 test.describe('Mining Speed Calculation - API Tests', () => {
 

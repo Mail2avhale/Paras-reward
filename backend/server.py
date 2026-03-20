@@ -16971,42 +16971,30 @@ async def calculate_user_redeem_limit(user_id: str) -> dict:
 
 async def get_user_total_redeemed(user_id: str) -> float:
     """
-    Get total PRC redeemed by user across all services.
+    Get total PRC redeemed by user across ALL services (all-time).
     
-    IMPORTANT: Different collections use different field names:
-    - bill_payment_requests: prc_used (primary), total_prc_deducted
-    - redeem_requests: total_prc_deducted (primary)
-    - bank_withdrawal_requests: prc_deducted, total_prc_deducted
-    - orders: total_prc
+    Uses centralized prc_fields helper to handle legacy field variations.
+    Standard field: total_prc_deducted
+    Legacy fields: prc_used, prc_deducted, prc_amount, total_prc
     """
+    from utils.prc_fields import get_prc_amount
+    
     try:
         total_redeemed = 0
         
-        # Helper to get PRC with fallback fields
-        def get_prc(doc, *fields):
-            for f in fields:
-                val = doc.get(f)
-                if val is not None and val != 0:
-                    try:
-                        return float(val)
-                    except:
-                        continue
-            return 0
-        
-        # Valid statuses
+        # Valid statuses (count these)
         valid = ["approved", "success", "completed", "pending", "processing", "paid"]
         skip = ["refunded", "rejected", "failed", "cancelled"]
         
-        # 1. Bill payments - uses prc_used primarily
+        # 1. Bill payments (BBPS)
         bill_payments = await db.bill_payment_requests.find({
             "user_id": user_id,
             "status": {"$in": valid}
         }).to_list(5000)
         
         for bp in bill_payments:
-            if bp.get("status") in skip:
-                continue
-            total_redeemed += get_prc(bp, "prc_used", "total_prc_deducted", "prc_amount", "amount")
+            if bp.get("status") not in skip:
+                total_redeemed += get_prc_amount(bp)
         
         # 2. Bank withdrawals
         bank_withdrawals = await db.bank_withdrawal_requests.find({
@@ -17015,21 +17003,18 @@ async def get_user_total_redeemed(user_id: str) -> float:
         }).to_list(5000)
         
         for bw in bank_withdrawals:
-            if bw.get("status") in skip:
-                continue
-            total_redeemed += get_prc(bw, "total_prc_deducted", "prc_deducted", "prc_amount", "amount")
+            if bw.get("status") not in skip:
+                total_redeemed += get_prc_amount(bw)
         
         # 3. Bank transfer requests (manual bank transfers)
         bank_transfers = await db.bank_transfer_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["approved", "success", "completed", "pending", "processing", "paid"]}
+            "status": {"$in": valid}
         }).to_list(5000)
         
         for bt in bank_transfers:
-            prc = float(bt.get("prc_deducted", 0) or bt.get("total_prc_deducted", 0) or bt.get("prc_amount", 0) or 0)
-            if bt.get("status") in ["refunded", "rejected", "failed"]:
-                continue
-            total_redeemed += prc
+            if bt.get("status") not in skip:
+                total_redeemed += get_prc_amount(bt)
         
         # 4. DMT transactions
         dmt_txns = await db.dmt_transactions.find({
@@ -17038,8 +17023,7 @@ async def get_user_total_redeemed(user_id: str) -> float:
         }).to_list(5000)
         
         for dmt in dmt_txns:
-            prc = float(dmt.get("total_prc_deducted", 0) or dmt.get("prc_amount", 0) or dmt.get("amount", 0) or 0)
-            total_redeemed += prc
+            total_redeemed += get_prc_amount(dmt)
         
         # 5. Gift vouchers
         gift_vouchers = await db.gift_voucher_orders.find({
@@ -17048,10 +17032,9 @@ async def get_user_total_redeemed(user_id: str) -> float:
         }).to_list(5000)
         
         for gv in gift_vouchers:
-            prc = float(gv.get("total_prc_deducted", 0) or gv.get("prc_amount", 0) or gv.get("amount", 0) or 0)
-            total_redeemed += prc
+            total_redeemed += get_prc_amount(gv)
         
-        # 6. PRC Subscription Payments (when user pays subscription using PRC)
+        # 6. PRC Subscription Payments
         prc_subscriptions = await db.subscription_payments.find({
             "user_id": user_id,
             "payment_method": "prc",
@@ -17059,8 +17042,7 @@ async def get_user_total_redeemed(user_id: str) -> float:
         }).to_list(5000)
         
         for sub in prc_subscriptions:
-            prc = float(sub.get("prc_amount", 0) or sub.get("total_prc_deducted", 0) or 0)
-            total_redeemed += prc
+            total_redeemed += get_prc_amount(sub)
         
         # 7. Product Orders (marketplace purchases)
         product_orders = await db.orders.find({
@@ -17069,19 +17051,16 @@ async def get_user_total_redeemed(user_id: str) -> float:
         }).to_list(5000)
         
         for order in product_orders:
-            # Orders use total_prc or prc_amount or total_prc_price
-            prc = float(order.get("total_prc", 0) or order.get("prc_amount", 0) or order.get("total_prc_price", 0) or 0)
-            if order.get("status") in ["cancelled", "refunded"]:
-                continue
-            total_redeemed += prc
+            if order.get("status") not in ["cancelled", "refunded"]:
+                total_redeemed += get_prc_amount(order)
         
-        # 8. Redeem transactions from transactions collection
+        # 8. Redeem transactions from transactions collection (avoid double counting)
         redeem_txns = await db.transactions.find({
             "user_id": user_id,
             "type": {"$in": ["redeem", "bill_payment", "bank_withdraw", "dmt", "gift_voucher", "bill_payment_request", "subscription_prc", "order"]}
         }).to_list(5000)
         
-        # Don't double count - check if already counted above
+        # Build set of already-counted references
         counted_refs = set()
         for bp in bill_payments:
             counted_refs.add(bp.get("request_id", ""))
@@ -17092,21 +17071,19 @@ async def get_user_total_redeemed(user_id: str) -> float:
         for dmt in dmt_txns:
             counted_refs.add(dmt.get("txn_id", ""))
         for sub in prc_subscriptions:
-            # Add reference to avoid double counting
-            sub_ref = f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}"
-            counted_refs.add(sub_ref)
+            counted_refs.add(f"sub_prc_{sub.get('user_id')}_{sub.get('created_at', '')}")
         for order in product_orders:
             counted_refs.add(order.get("order_id", ""))
         
         for txn in redeem_txns:
             ref = txn.get("reference_id", "") or txn.get("txn_id", "") or txn.get("request_id", "")
-            if ref not in counted_refs and ref:
+            if ref and ref not in counted_refs:
                 prc = float(txn.get("amount", 0) or txn.get("prc_amount", 0) or 0)
                 total_redeemed += abs(prc)
         
         return round(total_redeemed, 2)
     except Exception as e:
-        logging.error(f"Error getting total redeemed: {e}")
+        logging.error(f"Error getting total redeemed for {user_id}: {e}")
         return 0
 
 

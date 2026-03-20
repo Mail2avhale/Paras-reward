@@ -1,0 +1,57 @@
+{
+  "iteration": 130,
+  "mode": "generate",
+  "summary": "PRC field standardization testing - verified total_redeemed calculation across all redemption collections uses centralized get_prc_amount() helper correctly",
+  "baseline_commit": "70f330ae2f2bd9127052d1fa5ee7b89616bb946c",
+  "head_commit": "f73afda615b78ce67b24e3c90ad42d7cc6567060",
+  "specs_created": [
+    "/app/backend/tests/test_prc_field_standardization.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_prc_field_standardization.py",
+    "/app/backend/tests/test_admin_members_sorting_bugfix.py",
+    "/app/test_reports/pytest/prc_standardization_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 29,
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "BUG-001",
+      "issue_type": "bug",
+      "severity": "LOW",
+      "description": "PRC statement endpoint fails with datetime comparison error - '<' not supported between instances of 'datetime.datetime' and 'str'",
+      "endpoint_or_component": "/api/user/prc-statement/{uid}",
+      "surfaces": ["backend"],
+      "reproduction": "curl https://prc-consistency.preview.emergentagent.com/api/user/prc-statement/6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+      "affected_test": "Not tested - separate issue from PRC field standardization"
+    }
+  ],
+  "action_items": [
+    "Fix PRC statement endpoint datetime comparison bug (separate from PRC field standardization)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prc_field_standardization.py"
+  ],
+  "test_results": {
+    "backend": "100%",
+    "frontend": "N/A - backend-only feature"
+  },
+  "seed_data_creation": "None - used existing test user 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "PRC field standardization is working correctly. The get_prc_amount() helper in /app/backend/utils/prc_fields.py correctly reads PRC amounts from various legacy field names (prc_used, prc_deducted, prc_amount, total_prc). The /api/user/{user_id}/redeem-limit endpoint returns accurate total_redeemed values. The /api/admin/members/list endpoint correctly shows total_redeemed in the redeem_limit object for each member. Test user 6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21 shows total_redeemed of ~20500 PRC which is calculated correctly across all redemption collections.",
+  "key_features_verified": [
+    "get_prc_amount() helper reads PRC from multiple field names in priority order",
+    "User redeem limit API returns accurate total_redeemed",
+    "Admin members list shows correct total_redeemed for each member",
+    "Sorting by used_limit (total_redeemed) works correctly",
+    "Elite/Growth/Explorer subscription plans have correct base limits",
+    "Remaining limit calculation (total_limit - total_redeemed) is accurate"
+  ]
+}
