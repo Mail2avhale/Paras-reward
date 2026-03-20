@@ -2109,6 +2109,207 @@ async def fix_cancelled_order_subscriptions(request: Request):
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
+@router.post("/admin/audit-cancelled-elite")
+async def audit_cancelled_with_elite(request: Request):
+    """
+    AUDIT: Find ALL cancelled orders where user currently has Elite subscription.
+    This shows even users who have valid paid orders - for manual review.
+    
+    Use this to understand the subscription status of users with cancelled orders.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        # Find all cancelled/failed orders
+        cancelled_orders = await db.razorpay_orders.find({
+            "status": {"$in": ["cancelled", "failed", "error", "timeout", "dismissed"]}
+        }).sort("created_at", -1).to_list(10000)
+        
+        results = []
+        
+        # Track processed users to avoid duplicates
+        processed_users = set()
+        
+        for order in cancelled_orders:
+            user_id = order.get("user_id")
+            if not user_id or user_id in processed_users:
+                continue
+            
+            processed_users.add(user_id)
+            
+            # Get user
+            user = await db.users.find_one({"user_id": user_id})
+            if not user:
+                continue
+            
+            current_plan = user.get("subscription_plan", "explorer")
+            
+            # Only show Elite users
+            if current_plan != "elite":
+                continue
+            
+            # Get all orders for this user
+            all_orders = await db.razorpay_orders.find({
+                "user_id": user_id
+            }).sort("created_at", -1).to_list(100)
+            
+            paid_orders = [o for o in all_orders if o.get("status") == "paid"]
+            cancelled_orders_user = [o for o in all_orders if o.get("status") in ["cancelled", "failed", "error", "timeout", "dismissed"]]
+            
+            results.append({
+                "user_id": user_id,
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "mobile": user.get("mobile"),
+                "current_plan": current_plan,
+                "subscription_expiry": str(user.get("subscription_expiry") or user.get("subscription_expires")),
+                "total_orders": len(all_orders),
+                "paid_orders": len(paid_orders),
+                "cancelled_orders": len(cancelled_orders_user),
+                "latest_paid_order": paid_orders[0].get("order_id") if paid_orders else None,
+                "latest_paid_date": str(paid_orders[0].get("created_at")) if paid_orders else None,
+                "latest_cancelled_order": cancelled_orders_user[0].get("order_id") if cancelled_orders_user else None,
+                "latest_cancelled_date": str(cancelled_orders_user[0].get("created_at")) if cancelled_orders_user else None,
+                "has_legitimate_subscription": len(paid_orders) > 0
+            })
+        
+        # Separate into categories
+        legitimate = [r for r in results if r["has_legitimate_subscription"]]
+        suspicious = [r for r in results if not r["has_legitimate_subscription"]]
+        
+        return {
+            "success": True,
+            "summary": {
+                "total_elite_users_with_cancelled_orders": len(results),
+                "legitimate_subscriptions": len(legitimate),
+                "suspicious_no_paid_orders": len(suspicious)
+            },
+            "suspicious_users": suspicious[:50],
+            "legitimate_users_sample": legitimate[:20],
+            "message": f"Found {len(suspicious)} users with Elite but NO paid orders - these need manual review"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[AUDIT] Error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+@router.post("/admin/bulk-reverse-subscriptions")
+async def bulk_reverse_subscriptions(request: Request):
+    """
+    BULK REVERSE: Downgrade multiple users to Explorer at once.
+    
+    Usage:
+    curl -X POST "/api/razorpay/admin/bulk-reverse-subscriptions" \
+      -H "Content-Type: application/json" \
+      -d '{"admin_pin": "123456", "emails": ["a@b.com", "c@d.com"], "reason": "Cancelled orders"}'
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    
+    try:
+        data = await request.json()
+        admin_pin = data.get("admin_pin")
+        emails = data.get("emails", [])
+        user_ids = data.get("user_ids", [])
+        reason = data.get("reason", "Bulk admin reversal")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        if not emails and not user_ids:
+            raise HTTPException(status_code=400, detail="emails or user_ids list required")
+        
+        results = []
+        success_count = 0
+        
+        # Process by email
+        for email in emails:
+            user = await db.users.find_one({"email": email})
+            if not user:
+                results.append({"email": email, "status": "not_found"})
+                continue
+            
+            old_plan = user.get("subscription_plan")
+            if old_plan != "elite":
+                results.append({"email": email, "name": user.get("name"), "status": "already_explorer"})
+                continue
+            
+            await db.users.update_one(
+                {"email": email},
+                {
+                    "$set": {
+                        "subscription_plan": "explorer",
+                        "subscription_expires": None,
+                        "subscription_expiry": None,
+                        "subscription_start": None,
+                        "downgrade_reason": reason,
+                        "downgrade_date": datetime.now(timezone.utc).isoformat(),
+                        "admin_reversed": True
+                    }
+                }
+            )
+            results.append({"email": email, "name": user.get("name"), "status": "reversed"})
+            success_count += 1
+            logging.info(f"[BULK-REVERSE] {email} ({user.get('name')}) reversed to Explorer")
+        
+        # Process by user_id
+        for uid in user_ids:
+            user = await db.users.find_one({"user_id": uid})
+            if not user:
+                results.append({"user_id": uid, "status": "not_found"})
+                continue
+            
+            old_plan = user.get("subscription_plan")
+            if old_plan != "elite":
+                results.append({"user_id": uid, "name": user.get("name"), "status": "already_explorer"})
+                continue
+            
+            await db.users.update_one(
+                {"user_id": uid},
+                {
+                    "$set": {
+                        "subscription_plan": "explorer",
+                        "subscription_expires": None,
+                        "subscription_expiry": None,
+                        "subscription_start": None,
+                        "downgrade_reason": reason,
+                        "downgrade_date": datetime.now(timezone.utc).isoformat(),
+                        "admin_reversed": True
+                    }
+                }
+            )
+            results.append({"user_id": uid, "name": user.get("name"), "status": "reversed"})
+            success_count += 1
+            logging.info(f"[BULK-REVERSE] {uid} ({user.get('name')}) reversed to Explorer")
+        
+        return {
+            "success": True,
+            "total_processed": len(results),
+            "reversed_count": success_count,
+            "results": results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[BULK-REVERSE] Error: {e}")
+        raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
+
+
+
+
 @router.post("/admin/reverse-subscription")
 async def reverse_single_subscription(request: Request):
     """
@@ -2118,6 +2319,9 @@ async def reverse_single_subscription(request: Request):
     curl -X POST "/api/razorpay/admin/reverse-subscription" \
       -H "Content-Type: application/json" \
       -d '{"admin_pin": "123456", "user_id": "xxx", "reason": "Cancelled order"}'
+    
+    Can also search by email:
+      -d '{"admin_pin": "123456", "email": "user@example.com", "reason": "Cancelled order"}'
     """
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -2126,25 +2330,28 @@ async def reverse_single_subscription(request: Request):
         data = await request.json()
         admin_pin = data.get("admin_pin")
         user_id = data.get("user_id")
+        email = data.get("email")
         reason = data.get("reason", "Admin reversed subscription")
         
         if admin_pin != "123456":
             raise HTTPException(status_code=403, detail="Invalid admin PIN")
         
-        if not user_id:
-            raise HTTPException(status_code=400, detail="user_id required")
+        if not user_id and not email:
+            raise HTTPException(status_code=400, detail="user_id or email required")
         
-        # Get user
-        user = await db.users.find_one({"user_id": user_id})
+        # Get user by user_id or email
+        query = {"user_id": user_id} if user_id else {"email": email}
+        user = await db.users.find_one(query)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail=f"User not found with {'user_id' if user_id else 'email'}: {user_id or email}")
         
+        actual_user_id = user.get("user_id")
         old_plan = user.get("subscription_plan")
         old_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
         
         # Downgrade to Explorer
         await db.users.update_one(
-            {"user_id": user_id},
+            {"user_id": actual_user_id},
             {
                 "$set": {
                     "subscription_plan": "explorer",
@@ -2158,12 +2365,14 @@ async def reverse_single_subscription(request: Request):
             }
         )
         
-        logging.info(f"[REVERSE-SUB] {user_id} reversed from {old_plan} to Explorer - {reason}")
+        logging.info(f"[REVERSE-SUB] {actual_user_id} ({user.get('name')}) reversed from {old_plan} to Explorer - {reason}")
         
         return {
             "success": True,
             "message": f"Subscription reversed for {user.get('name')}",
-            "user_id": user_id,
+            "user_id": actual_user_id,
+            "name": user.get("name"),
+            "email": user.get("email"),
             "previous_plan": old_plan,
             "previous_expiry": str(old_expiry),
             "new_plan": "explorer"
