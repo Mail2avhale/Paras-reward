@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, UserCheck, UserX, TrendingUp, Crown, Search, Filter,
   Calendar, ChevronDown, ChevronUp, Eye, ArrowUpRight, ArrowDownRight,
-  RefreshCw, Download, Shield, Clock, MapPin, Award
+  RefreshCw, Download, Shield, Clock, MapPin, Award, X, Phone, Mail,
+  SlidersHorizontal, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +28,18 @@ const kycColors = {
   rejected: { bg: 'bg-red-500/20', text: 'text-red-400' }
 };
 
+// Debounce hook for search
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  
+  return debouncedValue;
+};
+
 const AdminMembers = () => {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
@@ -46,9 +59,27 @@ const AdminMembers = () => {
   const [pagination, setPagination] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   
+  // Member list date filters
+  const [memberDateFrom, setMemberDateFrom] = useState('');
+  const [memberDateTo, setMemberDateTo] = useState('');
+  
   // Sorting state
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  
+  // Debounced search
+  const debouncedSearch = useDebounce(search, 300);
+
+  // Active filters count
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (subscriptionFilter) count++;
+    if (kycFilter) count++;
+    if (activeFilter) count++;
+    if (memberDateFrom) count++;
+    if (memberDateTo) count++;
+    return count;
+  }, [subscriptionFilter, kycFilter, activeFilter, memberDateFrom, memberDateTo]);
 
   // Fetch dashboard data
   const fetchDashboard = useCallback(async () => {
@@ -78,10 +109,12 @@ const AdminMembers = () => {
         sort_by: sortField,
         sort_order: sortDirection
       };
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (subscriptionFilter) params.subscription = subscriptionFilter;
       if (kycFilter) params.kyc_status = kycFilter;
       if (activeFilter !== '') params.is_active = activeFilter === 'active';
+      if (memberDateFrom) params.date_from = memberDateFrom;
+      if (memberDateTo) params.date_to = memberDateTo;
       
       const res = await axios.get(`${API}/api/admin/members/list`, { params });
       setMembers(res.data.members);
@@ -92,16 +125,14 @@ const AdminMembers = () => {
     } finally {
       setMembersLoading(false);
     }
-  }, [page, search, subscriptionFilter, kycFilter, activeFilter, sortField, sortDirection]);
+  }, [page, debouncedSearch, subscriptionFilter, kycFilter, activeFilter, sortField, sortDirection, memberDateFrom, memberDateTo]);
   
   // Handle column sort
   const handleSort = (field) => {
     if (sortField === field) {
-      // Cycle through: desc -> asc -> none
       if (sortDirection === 'desc') {
         setSortDirection('asc');
       } else if (sortDirection === 'asc') {
-        // Reset to default
         setSortField('created_at');
         setSortDirection('desc');
       }
@@ -109,9 +140,23 @@ const AdminMembers = () => {
       setSortField(field);
       setSortDirection('desc');
     }
+    setPage(1);
   };
   
-  // Enhanced Sort icon component with better visual feedback
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSubscriptionFilter('');
+    setKycFilter('');
+    setActiveFilter('');
+    setMemberDateFrom('');
+    setMemberDateTo('');
+    setSearch('');
+    setSortField('created_at');
+    setSortDirection('desc');
+    setPage(1);
+  };
+  
+  // Sort icon component
   const SortIcon = ({ field }) => {
     const isActive = sortField === field;
     if (!isActive) {
@@ -129,9 +174,6 @@ const AdminMembers = () => {
         ) : (
           <ArrowDownRight className="w-4 h-4 text-blue-400" />
         )}
-        <span className="text-[10px] text-blue-400 font-medium">
-          {sortDirection === 'asc' ? '↑' : '↓'}
-        </span>
       </div>
     );
   };
@@ -139,7 +181,7 @@ const AdminMembers = () => {
   // Sortable column header component
   const SortableHeader = ({ field, children, testId }) => (
     <th 
-      className={`text-left py-3 px-4 font-medium text-sm cursor-pointer transition-colors ${
+      className={`text-left py-3 px-2 md:px-4 font-medium text-xs md:text-sm cursor-pointer transition-colors whitespace-nowrap ${
         sortField === field 
           ? 'text-blue-400 bg-blue-500/5' 
           : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
@@ -147,7 +189,7 @@ const AdminMembers = () => {
       onClick={() => handleSort(field)}
       data-testid={testId}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 md:gap-2">
         {children}
         <SortIcon field={field} />
       </div>
@@ -167,22 +209,22 @@ const AdminMembers = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-5`}
+      className={`bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-4 md:p-5`}
     >
       <div className="flex items-start justify-between">
-        <div className={`p-3 rounded-xl ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-2 md:p-3 rounded-xl ${color}`}>
+          <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
         </div>
         {trend !== undefined && (
-          <div className={`flex items-center gap-1 text-sm ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {trend >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+          <div className={`flex items-center gap-1 text-xs md:text-sm ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {trend >= 0 ? <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" /> : <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />}
             {Math.abs(trend)}%
           </div>
         )}
       </div>
-      <div className="mt-4">
-        <p className="text-3xl font-bold text-white">{value?.toLocaleString() || 0}</p>
-        <p className="text-gray-400 text-sm mt-1">{title}</p>
+      <div className="mt-3 md:mt-4">
+        <p className="text-2xl md:text-3xl font-bold text-white">{value?.toLocaleString() || 0}</p>
+        <p className="text-gray-400 text-xs md:text-sm mt-1">{title}</p>
         {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
       </div>
     </motion.div>
@@ -195,36 +237,46 @@ const AdminMembers = () => {
         <button
           key={p}
           onClick={() => setPeriod(p)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
             period === p
               ? 'bg-purple-600 text-white'
               : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
           }`}
         >
           {p === 'today' ? 'Today' : 
-           p === 'week' ? 'This Week' : 
-           p === 'month' ? 'This Month' : 
-           p === 'year' ? 'This Year' : 'Custom'}
+           p === 'week' ? 'Week' : 
+           p === 'month' ? 'Month' : 
+           p === 'year' ? 'Year' : 'Custom'}
         </button>
       ))}
       {period === 'custom' && (
-        <div className="flex gap-2 ml-2">
+        <div className="flex gap-2 mt-2 md:mt-0 md:ml-2 w-full md:w-auto">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-white text-xs md:text-sm flex-1 md:flex-none"
           />
-          <span className="text-gray-400 self-center">to</span>
+          <span className="text-gray-400 self-center text-xs md:text-sm">to</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-white text-xs md:text-sm flex-1 md:flex-none"
           />
         </div>
       )}
     </div>
+  );
+
+  // Filter Chip Component
+  const FilterChip = ({ label, value, onClear }) => (
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">
+      {label}: {value}
+      <button onClick={onClear} className="hover:text-white">
+        <X className="w-3 h-3" />
+      </button>
+    </span>
   );
 
   if (loading) {
@@ -236,32 +288,32 @@ const AdminMembers = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-6" data-testid="admin-members-page">
+    <div className="min-h-screen bg-gray-950 p-3 md:p-6" data-testid="admin-members-page">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 md:mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Members Dashboard</h1>
-            <p className="text-gray-400 mt-1">Comprehensive member analytics</p>
+            <h1 className="text-xl md:text-3xl font-bold text-white">Members Dashboard</h1>
+            <p className="text-gray-400 text-sm mt-1">Comprehensive member analytics</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             <button
               onClick={fetchDashboard}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white text-sm transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              <span className="hidden md:inline">Refresh</span>
             </button>
           </div>
         </div>
 
         {/* Period Selector */}
-        <div className="mb-6">
+        <div className="mb-4 md:mb-6">
           <PeriodSelector />
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           <StatsCard
             icon={Users}
             title="Total Members"
@@ -291,178 +343,25 @@ const AdminMembers = () => {
           />
         </div>
 
-        {/* Subscription Plans Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-gray-700/50 rounded-2xl p-5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 bg-gray-600/30 text-gray-300 rounded-full text-sm font-medium">EXPLORER</span>
-            </div>
-            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.explorer?.count || 0}</p>
-            <p className="text-gray-500 text-sm mt-1">Free members</p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-blue-900/50 to-blue-950/50 border border-blue-700/50 rounded-2xl p-5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 bg-blue-600/30 text-blue-300 rounded-full text-sm font-medium">STARTUP (Discontinued)</span>
-            </div>
-            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.startup?.count || 0}</p>
-            <p className="text-blue-400/70 text-sm mt-1">Legacy users</p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-amber-900/50 to-amber-950/50 border border-amber-700/50 rounded-2xl p-5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-3 py-1 bg-amber-600/30 text-amber-300 rounded-full text-sm font-medium">ELITE</span>
-            </div>
-            <p className="text-3xl font-bold text-white">{dashboard?.subscription_breakdown?.elite?.count || 0}</p>
-            <p className="text-amber-400/70 text-sm mt-1">₹799/month</p>
-          </motion.div>
-        </div>
-
-        {/* New Joinings Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-gradient-to-br from-emerald-900/50 to-emerald-950/50 border border-emerald-800/50 rounded-2xl p-5"
-          >
-            <h3 className="text-emerald-400 font-semibold mb-3">Today's Joinings</h3>
-            <p className="text-4xl font-bold text-white">{dashboard?.new_joinings?.today || 0}</p>
-            <p className="text-emerald-400/70 text-sm mt-2">New members today</p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-blue-900/50 to-blue-950/50 border border-blue-800/50 rounded-2xl p-5"
-          >
-            <h3 className="text-blue-400 font-semibold mb-3">This Week</h3>
-            <p className="text-4xl font-bold text-white">{dashboard?.new_joinings?.this_week || 0}</p>
-            <p className="text-blue-400/70 text-sm mt-2">New members this week</p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border border-purple-800/50 rounded-2xl p-5"
-          >
-            <h3 className="text-purple-400 font-semibold mb-3">This Month</h3>
-            <p className="text-4xl font-bold text-white">{dashboard?.new_joinings?.this_month || 0}</p>
-            <div className="flex items-center gap-2 mt-2">
-              {dashboard?.new_joinings?.growth_rate >= 0 ? (
-                <ArrowUpRight className="w-4 h-4 text-green-400" />
-              ) : (
-                <ArrowDownRight className="w-4 h-4 text-red-400" />
-              )}
-              <span className={dashboard?.new_joinings?.growth_rate >= 0 ? 'text-green-400' : 'text-red-400'}>
-                {Math.abs(dashboard?.new_joinings?.growth_rate || 0)}% vs last month
-              </span>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Subscription & KYC Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Subscription Breakdown */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5"
-          >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <Crown className="w-5 h-5 text-amber-400" />
-              Subscription Plans
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(dashboard?.subscription_breakdown || {}).map(([plan, data]) => {
-                const colors = planColors[plan] || planColors.explorer;
-                const percentage = ((data.count / dashboard?.summary?.total_members) * 100 || 0).toFixed(1);
-                return (
-                  <div key={plan} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text} border ${colors.border}`}>
-                        {plan.charAt(0).toUpperCase() + plan.slice(1)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-400 text-sm">{percentage}%</span>
-                      <span className="text-white font-semibold w-16 text-right">{data.count}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* KYC Breakdown */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5"
-          >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-400" />
-              KYC Status
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(dashboard?.kyc_breakdown || {}).map(([status, count]) => {
-                const colors = kycColors[status] || kycColors.pending;
-                const percentage = ((count / dashboard?.summary?.total_members) * 100 || 0).toFixed(1);
-                return (
-                  <div key={status} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text}`}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-400 text-sm">{percentage}%</span>
-                      <span className="text-white font-semibold w-16 text-right">{count}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* State Distribution & Top Earners */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* State Distribution & Top Earners - Collapsible on Mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
           {/* State Distribution */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5"
+            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 md:p-5"
           >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-green-400" />
+            <h3 className="text-white font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+              <MapPin className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
               Top States
             </h3>
             <div className="space-y-2">
-              {dashboard?.state_distribution?.slice(0, 8).map((state, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
-                  <span className="text-gray-300">{state.state || 'Unknown'}</span>
-                  <span className="text-white font-semibold">{state.count}</span>
+              {dashboard?.state_distribution?.slice(0, 6).map((state, idx) => (
+                <div key={idx} className="flex items-center justify-between py-1.5 md:py-2 border-b border-gray-800/50 last:border-0">
+                  <span className="text-gray-300 text-sm">{state.state || 'Unknown'}</span>
+                  <span className="text-white font-semibold text-sm">{state.count}</span>
                 </div>
               ))}
-              {(!dashboard?.state_distribution || dashboard.state_distribution.length === 0) && (
-                <p className="text-gray-500 text-center py-4">No state data available</p>
-              )}
             </div>
           </motion.div>
 
@@ -471,21 +370,21 @@ const AdminMembers = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5"
+            className="bg-gray-900/50 border border-gray-800 rounded-2xl p-4 md:p-5"
           >
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-400" />
+            <h3 className="text-white font-semibold mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+              <Award className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
               Top Earners
             </h3>
             <div className="space-y-2">
               {dashboard?.top_earners?.slice(0, 8).map((user, idx) => (
                 <div 
                   key={idx} 
-                  className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0 cursor-pointer hover:bg-gray-800/30 rounded-lg px-2 -mx-2 transition-colors"
+                  className="flex items-center justify-between py-1.5 md:py-2 border-b border-gray-800/50 last:border-0 cursor-pointer hover:bg-gray-800/30 rounded-lg px-2 -mx-2 transition-colors"
                   onClick={() => navigate(`/admin/user-360?uid=${user.uid}`)}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                       idx === 0 ? 'bg-amber-500 text-black' :
                       idx === 1 ? 'bg-gray-400 text-black' :
                       idx === 2 ? 'bg-orange-600 text-white' :
@@ -494,11 +393,11 @@ const AdminMembers = () => {
                       {idx + 1}
                     </span>
                     <div>
-                      <p className="text-gray-300 text-sm">{user.name || 'Unknown'}</p>
-                      <p className="text-gray-500 text-xs">{user.email}</p>
+                      <p className="text-gray-300 text-xs md:text-sm truncate max-w-[120px] md:max-w-none">{user.name || 'Unknown'}</p>
+                      <p className="text-gray-500 text-xs hidden md:block">{user.email}</p>
                     </div>
                   </div>
-                  <span className="text-green-400 font-semibold">{(user.prc_balance || 0).toFixed(2)} PRC</span>
+                  <span className="text-green-400 font-semibold text-xs md:text-sm">{(user.prc_balance || 0).toFixed(0)} PRC</span>
                 </div>
               ))}
             </div>
@@ -509,137 +408,211 @@ const AdminMembers = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-gray-900/50 border border-gray-800 rounded-2xl p-5"
+          className="bg-gray-900/50 border border-gray-800 rounded-2xl p-3 md:p-5"
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <h3 className="text-white font-semibold text-lg">All Members</h3>
+          {/* Header & Search */}
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-semibold text-base md:text-lg">All Members</h3>
+              <span className="text-gray-500 text-xs md:text-sm">
+                {pagination?.total?.toLocaleString() || 0} members
+              </span>
+            </div>
             
-            <div className="flex flex-wrap gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search members..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm w-48 focus:outline-none focus:border-purple-500"
-                />
-              </div>
-              
-              {/* Filter Toggle */}
+            {/* Search Bar - Full Width on Mobile */}
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search by name, email, mobile..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50"
+                data-testid="member-search-input"
+              />
+              {search && (
+                <button 
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-                  showFilters ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  showFilters || activeFiltersCount > 0
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
+                data-testid="toggle-filters-btn"
               >
-                <Filter className="w-4 h-4" />
+                <SlidersHorizontal className="w-4 h-4" />
                 Filters
-                <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                {activeFiltersCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{activeFiltersCount}</span>
+                )}
               </button>
+              
+              {/* Active Filter Chips */}
+              {subscriptionFilter && (
+                <FilterChip 
+                  label="Plan" 
+                  value={subscriptionFilter} 
+                  onClear={() => setSubscriptionFilter('')} 
+                />
+              )}
+              {kycFilter && (
+                <FilterChip 
+                  label="KYC" 
+                  value={kycFilter} 
+                  onClear={() => setKycFilter('')} 
+                />
+              )}
+              {activeFilter && (
+                <FilterChip 
+                  label="Status" 
+                  value={activeFilter} 
+                  onClear={() => setActiveFilter('')} 
+                />
+              )}
+              {(memberDateFrom || memberDateTo) && (
+                <FilterChip 
+                  label="Date" 
+                  value={`${memberDateFrom || 'Start'} - ${memberDateTo || 'End'}`} 
+                  onClear={() => { setMemberDateFrom(''); setMemberDateTo(''); }} 
+                />
+              )}
+              
+              {/* Reset All Button */}
+              {(activeFiltersCount > 0 || sortField !== 'created_at' || search) && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 px-2 py-1 text-gray-400 hover:text-white text-xs"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Filters Panel */}
-          {showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="flex flex-wrap gap-3 mb-4 p-4 bg-gray-800/50 rounded-xl"
-            >
-              <select
-                value={subscriptionFilter}
-                onChange={(e) => { setSubscriptionFilter(e.target.value); setPage(1); }}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+          {/* Expanded Filters Panel */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
               >
-                <option value="">All Plans</option>
-                <option value="explorer">Explorer</option>
-                <option value="startup">Startup</option>
-                <option value="elite">Elite</option>
-              </select>
-              
-              <select
-                value={kycFilter}
-                onChange={(e) => { setKycFilter(e.target.value); setPage(1); }}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-              >
-                <option value="">All KYC Status</option>
-                <option value="pending">Pending</option>
-                <option value="submitted">Submitted</option>
-                <option value="verified">Verified</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              
-              <select
-                value={activeFilter}
-                onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3 mb-4 p-3 md:p-4 bg-gray-800/50 rounded-xl">
+                  <select
+                    value={subscriptionFilter}
+                    onChange={(e) => { setSubscriptionFilter(e.target.value); setPage(1); }}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    data-testid="filter-subscription"
+                  >
+                    <option value="">All Plans</option>
+                    <option value="explorer">Explorer</option>
+                    <option value="startup">Startup</option>
+                    <option value="growth">Growth</option>
+                    <option value="elite">Elite</option>
+                  </select>
+                  
+                  <select
+                    value={kycFilter}
+                    onChange={(e) => { setKycFilter(e.target.value); setPage(1); }}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    data-testid="filter-kyc"
+                  >
+                    <option value="">All KYC</option>
+                    <option value="pending">Pending</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="verified">Verified</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  
+                  <select
+                    value={activeFilter}
+                    onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    data-testid="filter-status"
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  
+                  <input
+                    type="date"
+                    value={memberDateFrom}
+                    onChange={(e) => { setMemberDateFrom(e.target.value); setPage(1); }}
+                    placeholder="From Date"
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    data-testid="filter-date-from"
+                  />
+                  
+                  <input
+                    type="date"
+                    value={memberDateTo}
+                    onChange={(e) => { setMemberDateTo(e.target.value); setPage(1); }}
+                    placeholder="To Date"
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                    data-testid="filter-date-to"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Sort Indicator */}
+          {sortField !== 'created_at' && (
+            <div className="mb-3 flex items-center gap-2 text-xs md:text-sm">
+              <span className="text-gray-400">Sorted by:</span>
+              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg font-medium">
+                {sortField === 'prc_balance' ? 'PRC Balance' :
+                 sortField === 'redeem_limit' ? 'Redeem Limit' :
+                 sortField === 'used_limit' ? 'Used' :
+                 sortField === 'available_limit' ? 'Available' :
+                 sortField}
+                {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+              </span>
               <button
-                onClick={() => {
-                  setSubscriptionFilter('');
-                  setKycFilter('');
-                  setActiveFilter('');
-                  setSearch('');
-                  setPage(1);
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm"
+                onClick={() => { setSortField('created_at'); setSortDirection('desc'); }}
+                className="text-gray-400 hover:text-white"
               >
-                Clear All
+                <X className="w-4 h-4" />
               </button>
-            </motion.div>
+            </div>
           )}
 
           {/* Members Table */}
-          <div className="overflow-x-auto">
-            {/* Active Sort Indicator */}
-            {sortField !== 'created_at' && (
-              <div className="mb-3 flex items-center gap-2 text-sm">
-                <span className="text-gray-400">Sorted by:</span>
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg font-medium">
-                  {sortField === 'prc_balance' ? 'PRC Balance' :
-                   sortField === 'redeem_limit' ? 'Redeem Limit' :
-                   sortField === 'used_limit' ? 'Used' :
-                   sortField === 'available_limit' ? 'Available' :
-                   sortField}
-                  {sortDirection === 'asc' ? ' ↑' : ' ↓'}
-                </span>
-                <button
-                  onClick={() => { setSortField('created_at'); setSortDirection('desc'); }}
-                  className="px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  Reset
-                </button>
-              </div>
-            )}
-            
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-3 md:mx-0">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-member">Member</th>
+                  <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-medium text-xs md:text-sm" data-testid="header-member">Member</th>
                   <SortableHeader field="prc_balance" testId="header-prc-balance">
-                    PRC Balance
+                    PRC
                   </SortableHeader>
                   <SortableHeader field="redeem_limit" testId="header-redeem-limit">
-                    Redeem Limit
+                    Limit
                   </SortableHeader>
                   <SortableHeader field="used_limit" testId="header-used-limit">
                     Used
                   </SortableHeader>
                   <SortableHeader field="available_limit" testId="header-available-limit">
-                    Available
+                    Avail
                   </SortableHeader>
                   <SortableHeader field="created_at" testId="header-joined-date">
                     Joined
                   </SortableHeader>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium text-sm" data-testid="header-status">Status</th>
+                  <th className="text-left py-3 px-2 md:px-4 text-gray-400 font-medium text-xs md:text-sm">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -653,7 +626,19 @@ const AdminMembers = () => {
                 ) : members.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="py-8 text-center text-gray-400">
-                      No members found
+                      {search || activeFiltersCount > 0 ? (
+                        <div>
+                          <p>No members found matching your filters</p>
+                          <button 
+                            onClick={clearAllFilters}
+                            className="text-purple-400 hover:text-purple-300 text-sm mt-2"
+                          >
+                            Clear all filters
+                          </button>
+                        </div>
+                      ) : (
+                        'No members found'
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -669,40 +654,43 @@ const AdminMembers = () => {
                         className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
                         data-testid={`member-row-${member.uid}`}
                       >
-                        <td className="py-3 px-4">
+                        <td className="py-2 md:py-3 px-2 md:px-4">
                           <div 
                             className="cursor-pointer hover:text-blue-400 transition-colors"
                             onClick={() => navigate(`/admin/user-360?uid=${member.uid}`)}
                           >
-                            <p className="text-white font-medium hover:text-blue-400">{member.name || 'Unknown'}</p>
-                            <p className="text-gray-500 text-sm">{member.email}</p>
+                            <p className="text-white font-medium text-sm hover:text-blue-400 truncate max-w-[140px] md:max-w-none">
+                              {member.name || 'Unknown'}
+                            </p>
+                            <p className="text-gray-500 text-xs truncate max-w-[140px] md:max-w-none">{member.email}</p>
+                            <p className="text-gray-600 text-xs md:hidden">{member.mobile}</p>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="text-green-400 font-medium" data-testid={`prc-balance-${member.uid}`}>
-                            {(member.prc_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td className="py-2 md:py-3 px-2 md:px-4">
+                          <span className="text-green-400 font-medium text-xs md:text-sm" data-testid={`prc-balance-${member.uid}`}>
+                            {(member.prc_balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="text-white font-medium" data-testid={`redeem-limit-${member.uid}`}>
+                        <td className="py-2 md:py-3 px-2 md:px-4">
+                          <span className="text-white font-medium text-xs md:text-sm" data-testid={`redeem-limit-${member.uid}`}>
                             {totalLimit.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="text-yellow-400 font-medium" data-testid={`used-limit-${member.uid}`}>
+                        <td className="py-2 md:py-3 px-2 md:px-4">
+                          <span className="text-yellow-400 font-medium text-xs md:text-sm" data-testid={`used-limit-${member.uid}`}>
                             {usedLimit.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className={`font-medium ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`} data-testid={`available-limit-${member.uid}`}>
+                        <td className="py-2 md:py-3 px-2 md:px-4">
+                          <span className={`font-medium text-xs md:text-sm ${availableLimit > 0 ? 'text-emerald-400' : 'text-red-400'}`} data-testid={`available-limit-${member.uid}`}>
                             {availableLimit.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-400 text-sm">
-                          {member.created_at ? new Date(member.created_at).toLocaleDateString() : '-'}
+                        <td className="py-2 md:py-3 px-2 md:px-4 text-gray-400 text-xs md:text-sm">
+                          {member.created_at ? new Date(member.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}
                         </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <td className="py-2 md:py-3 px-2 md:px-4">
+                          <span className={`px-2 py-0.5 md:py-1 rounded-full text-xs font-medium ${
                             member.is_active !== false 
                               ? 'bg-green-500/20 text-green-400' 
                               : 'bg-red-500/20 text-red-400'
@@ -720,27 +708,41 @@ const AdminMembers = () => {
 
           {/* Pagination */}
           {pagination && pagination.total_pages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-800">
-              <p className="text-gray-400 text-sm">
-                Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, pagination.total)} of {pagination.total}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-800">
+              <p className="text-gray-400 text-xs md:text-sm">
+                {((page - 1) * 20) + 1} - {Math.min(page * 20, pagination.total)} of {pagination.total}
               </p>
               <div className="flex gap-2">
                 <button
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                >
+                  First
+                </button>
+                <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-sm"
+                  className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
                 >
-                  Previous
+                  Prev
                 </button>
-                <span className="px-4 py-2 text-gray-400">
-                  Page {page} of {pagination.total_pages}
+                <span className="px-3 md:px-4 py-1.5 md:py-2 text-gray-400 text-xs md:text-sm">
+                  {page}/{pagination.total_pages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(pagination.total_pages, p + 1))}
                   disabled={page >= pagination.total_pages}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-sm"
+                  className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
                 >
                   Next
+                </button>
+                <button
+                  onClick={() => setPage(pagination.total_pages)}
+                  disabled={page >= pagination.total_pages}
+                  className="px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-xs md:text-sm"
+                >
+                  Last
                 </button>
               </div>
             </div>
