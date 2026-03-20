@@ -19748,6 +19748,48 @@ async def get_user_360_view(query: str):
     if shop_total and shop_total[0].get("total", 0) > 0:
         redeem_breakdown["shop"] = round(shop_total[0]["total"], 2)
     
+    # ========== FAILED/PENDING TRANSACTIONS (For Issue Resolution) ==========
+    failed_transactions = []
+    
+    # Failed BBPS/Bill Payments
+    failed_bbps = await db.redeem_requests.find(
+        {"user_id": uid, "status": {"$in": ["failed", "rejected", "RETRY_FAILED", "eko_failed", "pending"]}},
+        {"_id": 0, "request_id": 1, "service_type": 1, "amount": 1, "total_prc_deducted": 1, "prc_amount": 1, 
+         "status": 1, "created_at": 1, "error_message": 1, "prc_refunded": 1, "consumer_number": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for req in failed_bbps:
+        req["type"] = "bbps"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+        failed_transactions.append(req)
+    
+    # Failed Gift Vouchers
+    failed_vouchers = await db.gift_voucher_requests.find(
+        {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
+        {"_id": 0, "request_id": 1, "brand_name": 1, "denomination": 1, "total_prc_deducted": 1, "prc_used": 1,
+         "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for req in failed_vouchers:
+        req["type"] = "gift_voucher"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_used") or 0
+        failed_transactions.append(req)
+    
+    # Failed/Pending Bank Transfers
+    failed_bank = await db.bank_transfer_requests.find(
+        {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
+        {"_id": 0, "request_id": 1, "amount_inr": 1, "total_prc_deducted": 1, "prc_amount": 1,
+         "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1, "bank_name": 1, "account_number": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for req in failed_bank:
+        req["type"] = "bank_transfer"
+        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+        failed_transactions.append(req)
+    
+    # Sort all failed transactions by date
+    failed_transactions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
     return {
         "user": user,
         "stats": stats,
@@ -19757,7 +19799,150 @@ async def get_user_360_view(query: str):
         "kyc": kyc_docs,
         "login_history": login_history,
         "redeem_limit": redeem_limit_data,
-        "redeem_breakdown": redeem_breakdown
+        "redeem_breakdown": redeem_breakdown,
+        "failed_transactions": failed_transactions[:30]
+    }
+
+
+@api_router.post("/admin/refund-transaction")
+async def admin_refund_transaction(request: Request):
+    """
+    Manually refund PRC for a specific failed/rejected transaction.
+    Used from User 360 page to resolve user issues.
+    """
+    data = await request.json()
+    request_id = data.get("request_id")
+    user_id = data.get("user_id")
+    prc_amount = data.get("prc_amount", 0)
+    txn_type = data.get("txn_type", "bbps")  # bbps, gift_voucher, bank_transfer
+    reason = data.get("reason", "Admin manual refund")
+    admin_id = data.get("admin_id")
+    
+    if not request_id or not user_id or prc_amount <= 0:
+        raise HTTPException(status_code=400, detail="Missing required fields: request_id, user_id, prc_amount")
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Check if already refunded
+    collection_map = {
+        "bbps": "redeem_requests",
+        "gift_voucher": "gift_voucher_requests",
+        "bank_transfer": "bank_transfer_requests"
+    }
+    collection_name = collection_map.get(txn_type, "redeem_requests")
+    
+    existing = await db[collection_name].find_one({"request_id": request_id})
+    if existing and existing.get("prc_refunded"):
+        raise HTTPException(status_code=400, detail="Transaction already refunded")
+    
+    # Get user
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    current_balance = float(user.get("prc_balance", 0) or 0)
+    new_balance = current_balance + prc_amount
+    
+    # Update user balance
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": {"prc_balance": new_balance}}
+    )
+    
+    # Mark transaction as refunded
+    await db[collection_name].update_one(
+        {"request_id": request_id},
+        {"$set": {
+            "prc_refunded": True,
+            "refund_amount": prc_amount,
+            "refund_reason": reason,
+            "refunded_by": admin_id,
+            "refunded_at": timestamp
+        }}
+    )
+    
+    # Log the refund
+    await db.transactions.insert_one({
+        "transaction_id": f"REFUND-{request_id}",
+        "user_id": user_id,
+        "type": "admin_refund",
+        "amount": prc_amount,
+        "balance_before": current_balance,
+        "balance_after": new_balance,
+        "description": f"Admin refund: {reason}",
+        "reference": request_id,
+        "admin_id": admin_id,
+        "timestamp": timestamp,
+        "created_at": timestamp
+    })
+    
+    return {
+        "success": True,
+        "message": f"Refunded {prc_amount} PRC successfully",
+        "new_balance": new_balance,
+        "refund_details": {
+            "request_id": request_id,
+            "prc_refunded": prc_amount,
+            "refunded_at": timestamp
+        }
+    }
+
+
+@api_router.post("/admin/override-redeem-limit")
+async def admin_override_redeem_limit(request: Request):
+    """
+    Override redeem limit for a specific user.
+    Used when user needs temporary or permanent limit increase.
+    """
+    data = await request.json()
+    user_id = data.get("user_id")
+    new_limit = data.get("new_limit")
+    reason = data.get("reason", "Admin override")
+    admin_id = data.get("admin_id")
+    is_permanent = data.get("is_permanent", False)
+    
+    if not user_id or new_limit is None:
+        raise HTTPException(status_code=400, detail="Missing user_id or new_limit")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    old_limit = user.get("redeem_limit_override", user.get("monthly_redeem_limit", 0))
+    
+    update_fields = {
+        "redeem_limit_override": new_limit,
+        "redeem_limit_override_reason": reason,
+        "redeem_limit_override_by": admin_id,
+        "redeem_limit_override_at": timestamp
+    }
+    
+    if is_permanent:
+        update_fields["monthly_redeem_limit"] = new_limit
+    
+    await db.users.update_one(
+        {"uid": user_id},
+        {"$set": update_fields}
+    )
+    
+    # Log the override
+    await db.admin_actions.insert_one({
+        "action": "redeem_limit_override",
+        "user_id": user_id,
+        "admin_id": admin_id,
+        "old_limit": old_limit,
+        "new_limit": new_limit,
+        "reason": reason,
+        "is_permanent": is_permanent,
+        "timestamp": timestamp
+    })
+    
+    return {
+        "success": True,
+        "message": f"Redeem limit updated to {new_limit}",
+        "old_limit": old_limit,
+        "new_limit": new_limit
     }
 
 

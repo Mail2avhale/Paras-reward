@@ -1327,7 +1327,8 @@ const AdminUser360 = ({ user: adminUser }) => {
                 { id: 'vouchers', label: 'Vouchers', icon: Gift, count: userData.transactions.gift_vouchers?.length || 0 },
                 { id: 'subscriptions', label: 'Plans', icon: Crown, count: userData.transactions.subscriptions?.length || 0 },
                 { id: 'prc_ledger', label: 'PRC Ledger', icon: FileText, count: userData.transactions.prc_ledger?.length || 0 },
-                { id: 'login_history', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 }
+                { id: 'login_history', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 },
+                { id: 'failed', label: 'Failed/Pending', icon: AlertTriangle, count: userData.failed_transactions?.length || 0, highlight: (userData.failed_transactions?.length || 0) > 0 }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1335,7 +1336,9 @@ const AdminUser360 = ({ user: adminUser }) => {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                     activeTab === tab.id 
                       ? 'bg-purple-600 text-white' 
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      : tab.highlight 
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -2034,6 +2037,103 @@ const AdminUser360 = ({ user: adminUser }) => {
                   )}
                 </div>
               )}
+
+              {/* Failed/Pending Transactions Tab */}
+              {activeTab === 'failed' && (
+                <div className="space-y-3">
+                  {!userData.failed_transactions?.length ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                      <p className="text-green-400 font-medium">No Failed Transactions</p>
+                      <p className="text-gray-500 text-sm">All transactions are processed successfully</p>
+                    </div>
+                  ) : (
+                    userData.failed_transactions.map((txn, idx) => {
+                      const prcAmount = txn.prc_amount || txn.total_prc_deducted || 0;
+                      const isRefunded = txn.prc_refunded;
+                      const typeLabels = {
+                        bbps: { label: 'BBPS/Bill', icon: '⚡', color: 'blue' },
+                        gift_voucher: { label: 'Gift Voucher', icon: '🎁', color: 'purple' },
+                        bank_transfer: { label: 'Bank Transfer', icon: '🏦', color: 'green' }
+                      };
+                      const config = typeLabels[txn.type] || { label: txn.type, icon: '📋', color: 'gray' };
+                      
+                      return (
+                        <div key={idx} className={`p-4 rounded-lg border ${
+                          isRefunded ? 'bg-green-500/5 border-green-500/30' : 'bg-red-500/5 border-red-500/30'
+                        }`}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span>{config.icon}</span>
+                                <span className="text-white font-medium">{config.label}</span>
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  txn.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  txn.status === 'rejected' ? 'bg-gray-500/20 text-gray-400' :
+                                  'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {txn.status}
+                                </span>
+                                {isRefunded && (
+                                  <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">
+                                    ✓ Refunded
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-gray-400 text-sm">
+                                {txn.request_id?.slice(0, 20)}... | {formatDate(txn.created_at)}
+                              </p>
+                              {txn.consumer_number && (
+                                <p className="text-gray-500 text-xs">Consumer: {txn.consumer_number}</p>
+                              )}
+                              {txn.error_message && (
+                                <p className="text-red-400 text-xs mt-1">Error: {txn.error_message}</p>
+                              )}
+                              {txn.rejection_reason && (
+                                <p className="text-orange-400 text-xs mt-1">Reason: {txn.rejection_reason}</p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-white font-bold">{prcAmount} PRC</p>
+                              {txn.amount && <p className="text-gray-400 text-sm">₹{txn.amount}</p>}
+                              {!isRefunded && prcAmount > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (confirm(`Refund ${prcAmount} PRC for this transaction?`)) {
+                                      setProcessing(true);
+                                      try {
+                                        await axios.post(`${API}/admin/refund-transaction`, {
+                                          request_id: txn.request_id,
+                                          user_id: userData.user.uid,
+                                          prc_amount: prcAmount,
+                                          txn_type: txn.type,
+                                          reason: `Manual refund for ${txn.status} transaction`,
+                                          admin_id: adminUser?.uid
+                                        });
+                                        toast.success(`Refunded ${prcAmount} PRC`);
+                                        refreshUserData();
+                                      } catch (error) {
+                                        toast.error(error.response?.data?.detail || 'Refund failed');
+                                      } finally {
+                                        setProcessing(false);
+                                      }
+                                    }
+                                  }}
+                                  disabled={processing}
+                                  className="mt-2 bg-green-600 hover:bg-green-700 text-white text-xs"
+                                >
+                                  💰 Refund PRC
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 
@@ -2119,6 +2219,39 @@ const AdminUser360 = ({ user: adminUser }) => {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Set Daily Cap
+                </Button>
+                <Button
+                  onClick={async () => {
+                    const currentLimit = userData.redeem_limit?.total_limit || 0;
+                    const newLimit = prompt(`Enter new redeem limit (Current: ${currentLimit}):`, currentLimit);
+                    if (newLimit !== null && !isNaN(newLimit)) {
+                      const reason = prompt('Enter reason for limit change:', 'Admin override');
+                      if (reason !== null) {
+                        setProcessing(true);
+                        try {
+                          await axios.post(`${API}/admin/override-redeem-limit`, {
+                            user_id: userData.user.uid,
+                            new_limit: parseFloat(newLimit),
+                            reason: reason,
+                            admin_id: adminUser?.uid,
+                            is_permanent: confirm('Make this permanent? (OK=Yes, Cancel=Temporary)')
+                          });
+                          toast.success(`Redeem limit updated to ${newLimit}`);
+                          refreshUserData();
+                        } catch (error) {
+                          toast.error(error.response?.data?.detail || 'Failed to update limit');
+                        } finally {
+                          setProcessing(false);
+                        }
+                      }
+                    }
+                  }}
+                  disabled={processing}
+                  variant="outline"
+                  className="h-auto py-3 border-pink-500/50 text-pink-400"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Override Limit
                 </Button>
                 <Button
                   onClick={openEditModal}
