@@ -19953,15 +19953,19 @@ async def admin_bulk_diagnose_all_users(
     limit: int = 500
 ):
     """
-    🔧 BULK AUTO-FIX: Diagnose and fix common issues for ALL users.
+    🔧 ADVANCED BULK AUTO-FIX: Diagnose and fix ALL issues for ALL users.
     
-    Issues Fixed:
-    1. KYC sync mismatch (document verified but profile pending)
-    2. Orphaned KYC status (pending but no document)
-    3. Expired subscriptions not reset to explorer
-    4. Failed transactions without PRC refund
-    5. Razorpay payments not activated
-    6. PRC balance corrections
+    Same as single-user diagnose but for all users:
+    1. KYC sync/reset/resubmit
+    2. Subscription expired/activation/sync
+    3. Failed transactions PRC refund (BBPS, Vouchers, Bank)
+    4. PRC balance restoration
+    5. Login lockout clear
+    6. Mining session reset
+    7. Referral code generation
+    8. Membership type sync
+    9. Gift voucher refunds
+    10. VIP payment sync
     
     Query Params:
     - dry_run: If True, only preview (default: True)
@@ -19969,6 +19973,7 @@ async def admin_bulk_diagnose_all_users(
     
     ⚠️ SET dry_run=false TO ACTUALLY FIX ISSUES
     """
+    import random, string
     timestamp = datetime.now(timezone.utc).isoformat()
     
     results = {
@@ -19980,21 +19985,30 @@ async def admin_bulk_diagnose_all_users(
         "fixes_by_category": {
             "kyc_sync": 0,
             "kyc_reset": 0,
+            "kyc_resubmit": 0,
             "subscription_expired": 0,
             "subscription_activate": 0,
-            "prc_refund": 0,
-            "balance_correction": 0
+            "subscription_vip_sync": 0,
+            "membership_type_fix": 0,
+            "prc_refund_bbps": 0,
+            "prc_refund_voucher": 0,
+            "prc_refund_bank": 0,
+            "balance_restore": 0,
+            "lockout_clear": 0,
+            "mining_reset": 0,
+            "referral_code": 0
         },
         "details": [],
         "errors": []
     }
     
     try:
-        # Get all users
+        # Get all users with more fields
         users = await db.users.find(
             {},
-            {"uid": 1, "name": 1, "email": 1, "kyc_status": 1, "subscription_plan": 1, 
-             "subscription_expires": 1, "subscription_expiry": 1, "prc_balance": 1, "membership_type": 1}
+            {"uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1, "subscription_plan": 1, 
+             "subscription_expires": 1, "subscription_expiry": 1, "vip_expiry": 1,
+             "prc_balance": 1, "membership_type": 1, "mining_start_time": 1, "referral_code": 1}
         ).limit(limit).to_list(limit)
         
         results["total_users_scanned"] = len(users)
@@ -20003,141 +20017,283 @@ async def admin_bulk_diagnose_all_users(
             uid = user.get("uid")
             user_issues = []
             user_fixes = []
+            user_prc_refunded = 0
             
-            # ========== 1. KYC SYNC CHECK ==========
-            kyc_status = user.get("kyc_status", "not_submitted")
-            kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
-            
-            # KYC document verified but profile not synced
-            if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
-                user_issues.append("KYC sync mismatch")
-                if not dry_run:
-                    await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
-                    user_fixes.append("KYC synced to verified")
-                    results["fixes_by_category"]["kyc_sync"] += 1
-                results["issues_fixed"] += 1
-            
-            # Orphaned KYC (pending but no document)
-            if kyc_status == "pending" and not kyc_doc:
-                user_issues.append("Orphaned KYC status")
-                if not dry_run:
-                    await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
-                    user_fixes.append("KYC reset to not_submitted")
-                    results["fixes_by_category"]["kyc_reset"] += 1
-                results["issues_fixed"] += 1
-            
-            # ========== 2. EXPIRED SUBSCRIPTION CHECK ==========
-            subscription_plan = user.get("subscription_plan", "explorer")
-            subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry")
-            
-            if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
-                try:
-                    expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
-                    if expiry_date < datetime.now(timezone.utc):
-                        user_issues.append(f"Expired {subscription_plan} subscription")
+            try:
+                # ========== 1. KYC ISSUES ==========
+                kyc_status = user.get("kyc_status", "not_submitted")
+                kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+                
+                # KYC sync mismatch
+                if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+                    user_issues.append("KYC sync mismatch")
+                    if not dry_run:
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+                        user_fixes.append("✅ KYC synced")
+                        results["fixes_by_category"]["kyc_sync"] += 1
+                    results["issues_fixed"] += 1
+                
+                # Orphaned KYC
+                if kyc_status == "pending" and not kyc_doc:
+                    user_issues.append("Orphaned KYC status")
+                    if not dry_run:
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+                        user_fixes.append("✅ KYC reset")
+                        results["fixes_by_category"]["kyc_reset"] += 1
+                    results["issues_fixed"] += 1
+                
+                # KYC rejected - allow resubmit
+                if kyc_status == "rejected":
+                    user_issues.append("KYC rejected - needs resubmit")
+                    if not dry_run:
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted", "kyc_can_resubmit": True}})
+                        user_fixes.append("✅ KYC resubmit allowed")
+                        results["fixes_by_category"]["kyc_resubmit"] += 1
+                    results["issues_fixed"] += 1
+                
+                # ========== 2. SUBSCRIPTION ISSUES ==========
+                subscription_plan = user.get("subscription_plan", "explorer")
+                subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                membership_type = user.get("membership_type", "free")
+                
+                # Expired subscription
+                if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
+                    try:
+                        expiry_date = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+                        if expiry_date < datetime.now(timezone.utc):
+                            user_issues.append(f"Expired {subscription_plan} subscription")
+                            if not dry_run:
+                                await db.users.update_one(
+                                    {"uid": uid},
+                                    {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
+                                )
+                                user_fixes.append("✅ Subscription reset to explorer")
+                                results["fixes_by_category"]["subscription_expired"] += 1
+                            results["issues_fixed"] += 1
+                    except:
+                        pass
+                
+                # Membership type mismatch
+                if is_paid_subscriber(user) and membership_type == "free":
+                    user_issues.append("Membership type mismatch")
+                    if not dry_run:
+                        await db.users.update_one({"uid": uid}, {"$set": {"membership_type": "paid"}})
+                        user_fixes.append("✅ Membership type fixed")
+                        results["fixes_by_category"]["membership_type_fix"] += 1
+                    results["issues_fixed"] += 1
+                
+                # Unactivated Razorpay payment
+                if membership_type in ["free", None, ""] or subscription_plan in ["explorer", "free", None, ""]:
+                    latest_razorpay = await db.razorpay_orders.find_one(
+                        {"user_id": uid, "status": "paid"},
+                        sort=[("paid_at", -1)]
+                    )
+                    if latest_razorpay:
+                        user_issues.append(f"Razorpay not activated: {latest_razorpay.get('plan_name')}")
                         if not dry_run:
+                            plan_name = latest_razorpay.get("plan_name", "").lower()
+                            plan_type = latest_razorpay.get("plan_type", "monthly")
+                            new_plan = "elite" if "elite" in plan_name else "growth" if "growth" in plan_name else "startup"
+                            days = 365 if plan_type == "yearly" else 30
+                            new_expiry = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+                            
                             await db.users.update_one(
                                 {"uid": uid},
-                                {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
+                                {"$set": {
+                                    "subscription_plan": new_plan,
+                                    "membership_type": "paid",
+                                    "subscription_expiry": new_expiry,
+                                    "subscription_start": timestamp
+                                }}
                             )
-                            user_fixes.append("Subscription reset to explorer")
-                            results["fixes_by_category"]["subscription_expired"] += 1
+                            user_fixes.append(f"✅ Subscription activated: {new_plan}")
+                            results["fixes_by_category"]["subscription_activate"] += 1
                         results["issues_fixed"] += 1
-                except:
-                    pass
-            
-            # ========== 3. UNACTIVATED RAZORPAY PAYMENTS ==========
-            if user.get("membership_type") in ["free", None, ""] or subscription_plan in ["explorer", "free", None, ""]:
-                latest_razorpay = await db.razorpay_orders.find_one(
-                    {"user_id": uid, "status": "paid"},
-                    sort=[("paid_at", -1)]
+                
+                # Unactivated VIP payment
+                latest_vip = await db.vip_payments.find_one(
+                    {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}], "status": "approved"},
+                    sort=[("approved_at", -1)]
                 )
-                if latest_razorpay:
-                    user_issues.append(f"Razorpay payment not activated: {latest_razorpay.get('plan_name')}")
+                if latest_vip and is_free_user(user):
+                    user_issues.append(f"VIP payment not synced: {latest_vip.get('plan')}")
                     if not dry_run:
-                        # Activate subscription
-                        plan_name = latest_razorpay.get("plan_name", "").lower()
-                        plan_type = latest_razorpay.get("plan_type", "monthly")
-                        
-                        if "elite" in plan_name:
-                            new_plan = "elite"
-                        elif "growth" in plan_name:
-                            new_plan = "growth"
-                        elif "startup" in plan_name:
-                            new_plan = "startup"
-                        else:
-                            new_plan = "startup"
-                        
-                        days = 365 if plan_type == "yearly" else 30
-                        new_expiry = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
-                        
                         await db.users.update_one(
                             {"uid": uid},
                             {"$set": {
-                                "subscription_plan": new_plan,
+                                "subscription_plan": latest_vip.get("plan", "startup"),
                                 "membership_type": "paid",
-                                "subscription_expiry": new_expiry,
-                                "subscription_start": timestamp,
-                                "subscription_activated_by_bulk_fix": True
+                                "subscription_expiry": latest_vip.get("expiry"),
+                                "subscription_start": latest_vip.get("approved_at")
                             }}
                         )
-                        user_fixes.append(f"Subscription activated: {new_plan}")
-                        results["fixes_by_category"]["subscription_activate"] += 1
+                        user_fixes.append(f"✅ VIP synced: {latest_vip.get('plan')}")
+                        results["fixes_by_category"]["subscription_vip_sync"] += 1
                     results["issues_fixed"] += 1
-            
-            # ========== 4. FAILED TRANSACTIONS WITHOUT REFUND ==========
-            failed_without_refund = await db.redeem_requests.find(
-                {
-                    "user_id": uid, 
+                
+                # ========== 3. FAILED TRANSACTIONS - BBPS ==========
+                failed_bbps = await db.redeem_requests.find({
+                    "user_id": uid,
                     "status": {"$in": ["failed", "RETRY_FAILED", "eko_failed", "rejected"]},
                     "prc_refunded": {"$ne": True}
-                }
-            ).to_list(50)
-            
-            for failed_txn in failed_without_refund:
-                prc_amount = failed_txn.get("total_prc_deducted") or failed_txn.get("prc_amount") or 0
-                if prc_amount > 0:
-                    user_issues.append(f"Failed txn without refund: {prc_amount} PRC")
+                }).to_list(50)
+                
+                for ftxn in failed_bbps:
+                    prc_amount = ftxn.get("total_prc_deducted") or ftxn.get("prc_amount") or 0
+                    if prc_amount > 0:
+                        user_issues.append(f"Failed BBPS no refund: {prc_amount} PRC")
+                        if not dry_run:
+                            current_balance = float(user.get("prc_balance", 0) or 0)
+                            new_balance = current_balance + prc_amount
+                            
+                            await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                            await db.redeem_requests.update_one(
+                                {"request_id": ftxn.get("request_id")},
+                                {"$set": {"prc_refunded": True, "refunded_at": timestamp, "refunded_by": "bulk_fix"}}
+                            )
+                            await db.transactions.insert_one({
+                                "transaction_id": f"BULK-{ftxn.get('request_id', '')[:8]}",
+                                "user_id": uid, "type": "bulk_refund", "amount": prc_amount,
+                                "description": "Bulk fix refund", "timestamp": timestamp
+                            })
+                            
+                            user_fixes.append(f"✅ Refunded {prc_amount} PRC (BBPS)")
+                            user["prc_balance"] = new_balance
+                            user_prc_refunded += prc_amount
+                            results["fixes_by_category"]["prc_refund_bbps"] += 1
+                        results["issues_fixed"] += 1
+                
+                # ========== 4. FAILED GIFT VOUCHERS ==========
+                failed_vouchers = await db.gift_voucher_requests.find({
+                    "user_id": uid,
+                    "status": {"$in": ["failed", "rejected"]},
+                    "prc_refunded": {"$ne": True}
+                }).to_list(20)
+                
+                for fv in failed_vouchers:
+                    prc_amount = fv.get("total_prc_deducted") or fv.get("prc_used") or 0
+                    if prc_amount > 0:
+                        user_issues.append(f"Failed voucher no refund: {prc_amount} PRC")
+                        if not dry_run:
+                            current_balance = float(user.get("prc_balance", 0) or 0)
+                            new_balance = current_balance + prc_amount
+                            
+                            await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                            await db.gift_voucher_requests.update_one(
+                                {"request_id": fv.get("request_id")},
+                                {"$set": {"prc_refunded": True, "refunded_at": timestamp}}
+                            )
+                            
+                            user_fixes.append(f"✅ Refunded {prc_amount} PRC (Voucher)")
+                            user["prc_balance"] = new_balance
+                            user_prc_refunded += prc_amount
+                            results["fixes_by_category"]["prc_refund_voucher"] += 1
+                        results["issues_fixed"] += 1
+                
+                # ========== 5. FAILED BANK TRANSFERS ==========
+                failed_bank = await db.bank_transfer_requests.find({
+                    "user_id": uid,
+                    "status": {"$in": ["failed", "rejected"]},
+                    "prc_refunded": {"$ne": True}
+                }).to_list(20)
+                
+                for fb in failed_bank:
+                    prc_amount = fb.get("total_prc_deducted") or fb.get("prc_amount") or 0
+                    if prc_amount > 0:
+                        user_issues.append(f"Failed bank transfer no refund: {prc_amount} PRC")
+                        if not dry_run:
+                            current_balance = float(user.get("prc_balance", 0) or 0)
+                            new_balance = current_balance + prc_amount
+                            
+                            await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                            await db.bank_transfer_requests.update_one(
+                                {"request_id": fb.get("request_id")},
+                                {"$set": {"prc_refunded": True, "refunded_at": timestamp}}
+                            )
+                            
+                            user_fixes.append(f"✅ Refunded {prc_amount} PRC (Bank)")
+                            user["prc_balance"] = new_balance
+                            user_prc_refunded += prc_amount
+                            results["fixes_by_category"]["prc_refund_bank"] += 1
+                        results["issues_fixed"] += 1
+                
+                # ========== 6. PRC BALANCE RESTORATION ==========
+                prc_balance = float(user.get("prc_balance", 0) or 0)
+                if is_paid_subscriber(user) and prc_balance == 0:
+                    restore_log = await db.prc_corrections_log.find_one({"uid": uid}, sort=[("corrected_at", -1)])
+                    if restore_log and restore_log.get("before", 0) > 0:
+                        user_issues.append(f"Zero balance restorable: {restore_log.get('before')} PRC")
+                        if not dry_run:
+                            restore_amount = restore_log.get("before", 0)
+                            await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": restore_amount}})
+                            user_fixes.append(f"✅ Restored {restore_amount} PRC")
+                            user["prc_balance"] = restore_amount
+                            results["fixes_by_category"]["balance_restore"] += 1
+                        results["issues_fixed"] += 1
+                
+                # ========== 7. LOGIN LOCKOUT ==========
+                identifier = user.get("mobile") or user.get("email")
+                if identifier:
+                    lockout = await db.login_attempts.find_one({"identifier": identifier})
+                    if lockout and lockout.get("locked_until"):
+                        try:
+                            locked_until = datetime.fromisoformat(lockout["locked_until"].replace('Z', '+00:00'))
+                            if locked_until > datetime.now(timezone.utc):
+                                user_issues.append("Account locked")
+                                if not dry_run:
+                                    await db.login_attempts.delete_one({"identifier": identifier})
+                                    user_fixes.append("✅ Lockout cleared")
+                                    results["fixes_by_category"]["lockout_clear"] += 1
+                                results["issues_fixed"] += 1
+                        except:
+                            pass
+                
+                # ========== 8. STUCK MINING ==========
+                mining_start = user.get("mining_start_time")
+                if mining_start:
+                    try:
+                        start_time = datetime.fromisoformat(mining_start.replace('Z', '+00:00'))
+                        hours_mining = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
+                        if hours_mining > 12:
+                            user_issues.append(f"Mining stuck: {hours_mining:.0f}h")
+                            if not dry_run:
+                                await db.users.update_one(
+                                    {"uid": uid},
+                                    {"$set": {"mining_active": False, "mining_start_time": None}}
+                                )
+                                user_fixes.append("✅ Mining reset")
+                                results["fixes_by_category"]["mining_reset"] += 1
+                            results["issues_fixed"] += 1
+                    except:
+                        pass
+                
+                # ========== 9. REFERRAL CODE ==========
+                if not user.get("referral_code"):
+                    user_issues.append("Missing referral code")
                     if not dry_run:
-                        # Refund PRC
-                        current_balance = float(user.get("prc_balance", 0) or 0)
-                        new_balance = current_balance + prc_amount
-                        
-                        await db.users.update_one(
-                            {"uid": uid},
-                            {"$set": {"prc_balance": new_balance}}
-                        )
-                        
-                        await db.redeem_requests.update_one(
-                            {"request_id": failed_txn.get("request_id")},
-                            {"$set": {"prc_refunded": True, "refunded_by": "bulk_fix", "refunded_at": timestamp}}
-                        )
-                        
-                        await db.transactions.insert_one({
-                            "transaction_id": f"BULK-REFUND-{failed_txn.get('request_id', '')[:10]}",
-                            "user_id": uid,
-                            "type": "bulk_refund",
-                            "amount": prc_amount,
-                            "description": "Bulk fix: Refund for failed transaction",
-                            "timestamp": timestamp
-                        })
-                        
-                        user_fixes.append(f"Refunded {prc_amount} PRC")
-                        results["fixes_by_category"]["prc_refund"] += 1
-                        results["prc_refunded"] += prc_amount
+                        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                        await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
+                        user_fixes.append(f"✅ Referral: {new_code}")
+                        results["fixes_by_category"]["referral_code"] += 1
                     results["issues_fixed"] += 1
-            
-            # Record user if has issues
-            if user_issues:
-                results["users_with_issues"] += 1
-                results["issues_found"] += len(user_issues)
-                results["details"].append({
-                    "uid": uid,
-                    "name": user.get("name", ""),
-                    "email": user.get("email", ""),
-                    "issues": user_issues,
-                    "fixes": user_fixes if not dry_run else ["Would fix"] * len(user_issues)
-                })
+                
+                # Record user if has issues
+                if user_issues:
+                    results["users_with_issues"] += 1
+                    results["issues_found"] += len(user_issues)
+                    results["prc_refunded"] += user_prc_refunded
+                    results["details"].append({
+                        "uid": uid,
+                        "name": user.get("name", ""),
+                        "email": user.get("email", ""),
+                        "issues_count": len(user_issues),
+                        "issues": user_issues[:5],  # Limit to 5 issues per user
+                        "fixes": user_fixes if not dry_run else [f"Would fix: {i}" for i in user_issues[:5]],
+                        "prc_refunded": user_prc_refunded
+                    })
+                    
+            except Exception as user_err:
+                results["errors"].append({"uid": uid, "error": str(user_err)})
         
         return {
             "success": True,
@@ -20152,7 +20308,8 @@ async def admin_bulk_diagnose_all_users(
                 "fixes_by_category": results["fixes_by_category"] if not dry_run else {}
             },
             "affected_users": results["details"][:100],
-            "note": "Run with dry_run=false to apply fixes" if dry_run else "All issues fixed successfully"
+            "errors": results["errors"][:20] if results["errors"] else [],
+            "note": "Run with dry_run=false to apply fixes" if dry_run else "All issues fixed successfully! ✅"
         }
         
     except Exception as e:
@@ -20163,6 +20320,7 @@ async def admin_bulk_diagnose_all_users(
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+        
 
 
 @api_router.get("/admin/user/{uid}/diagnose")
