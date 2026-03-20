@@ -3607,6 +3607,120 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
     if bill_payments:
         total_redeemed += bill_payments[0].get("total", 0)
     
+    return total_redeemed
+
+
+async def get_user_all_time_redeemed(user_id: str) -> float:
+    """
+    Get user's ALL TIME total PRC redeemed across all services.
+    No billing cycle - calculates total ever redeemed.
+    
+    Collections checked:
+    - payment_requests (legacy bill payments)
+    - bill_payment_requests (BBPS instant payments)
+    - gift_voucher_requests (gift vouchers)
+    - orders (marketplace)
+    - loan_payments (EMI)
+    - redeem_requests (bank withdrawals)
+    - bank_withdrawal_requests (bank withdrawals alt)
+    """
+    total_redeemed = 0
+    
+    # 1. Bill Payments (legacy)
+    bill_payments = await db.payment_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "success"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+    ]).to_list(1)
+    if bill_payments and bill_payments[0].get("total"):
+        total_redeemed += bill_payments[0].get("total", 0)
+    
+    # 2. BBPS/Instant Bill Payments
+    bbps_payments = await db.bill_payment_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+    ]).to_list(1)
+    if bbps_payments and bbps_payments[0].get("total"):
+        total_redeemed += bbps_payments[0].get("total", 0)
+    
+    # 3. Gift Vouchers
+    voucher_redemptions = await db.gift_voucher_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "success"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
+    ]).to_list(1)
+    if voucher_redemptions and voucher_redemptions[0].get("total"):
+        total_redeemed += voucher_redemptions[0].get("total", 0)
+    
+    # 4. Marketplace Orders
+    marketplace_orders = await db.orders.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$nin": ["cancelled", "refunded", "failed"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", "$prc_amount"]}}}}
+    ]).to_list(1)
+    if marketplace_orders and marketplace_orders[0].get("total"):
+        total_redeemed += marketplace_orders[0].get("total", 0)
+    
+    # 5. Loan EMI Payments
+    loan_payments = await db.loan_payments.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "approved", "success"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
+    ]).to_list(1)
+    if loan_payments and loan_payments[0].get("total"):
+        total_redeemed += loan_payments[0].get("total", 0)
+    
+    # 6. Bank Withdrawals / Redeem Requests
+    bank_withdrawals = await db.redeem_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+    ]).to_list(1)
+    if bank_withdrawals and bank_withdrawals[0].get("total"):
+        total_redeemed += bank_withdrawals[0].get("total", 0)
+    
+    # 7. Bank Withdrawal Requests (alternative collection)
+    bank_withdrawal_requests = await db.bank_withdrawal_requests.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "status": {"$in": ["completed", "success", "approved"]}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
+    ]).to_list(1)
+    if bank_withdrawal_requests and bank_withdrawal_requests[0].get("total"):
+        total_redeemed += bank_withdrawal_requests[0].get("total", 0)
+    
+    return total_redeemed
+    if bill_payments:
+        total_redeemed += bill_payments[0].get("total", 0)
+    
     # BBPS/Instant Bill Payments (new collection - unified_redeem_v2)
     bbps_payments = await db.bill_payment_requests.aggregate([
         {
