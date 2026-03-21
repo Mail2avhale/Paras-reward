@@ -130,6 +130,10 @@ const AdminUser360 = ({ user: adminUser }) => {
 
   // Search by UID directly
   const handleSearchByUid = async (uid) => {
+    if (!uid || uid.trim().length < 2) {
+      toast.error('Invalid user ID');
+      return;
+    }
     setLoading(true);
     try {
       const response = await axios.get(`${API}/admin/user-360?query=${encodeURIComponent(uid)}`);
@@ -138,7 +142,15 @@ const AdminUser360 = ({ user: adminUser }) => {
       toast.success('User found!');
     } catch (error) {
       console.error('Search error:', error);
-      toast.error(error.response?.data?.detail || 'Failed to search user');
+      if (error.response?.status === 404) {
+        toast.error('User not found');
+      } else if (error.response?.status === 500) {
+        toast.error(`Server error: ${error.response?.data?.detail || 'Unable to load user data'}`);
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Network error - please check your connection');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to search user');
+      }
       setUserData(null);
     } finally {
       setLoading(false);
@@ -149,6 +161,11 @@ const AdminUser360 = ({ user: adminUser }) => {
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error('Please enter search query');
+      return;
+    }
+    
+    if (searchQuery.trim().length < 2) {
+      toast.error('Search query must be at least 2 characters');
       return;
     }
 
@@ -162,6 +179,10 @@ const AdminUser360 = ({ user: adminUser }) => {
       console.error('Search error:', error);
       if (error.response?.status === 404) {
         toast.error('User not found');
+      } else if (error.response?.status === 500) {
+        toast.error(`Server error: ${error.response?.data?.detail || 'Unable to load user data'}`);
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error('Network error - please check your connection');
       } else {
         toast.error(error.response?.data?.detail || 'Failed to search user');
       }

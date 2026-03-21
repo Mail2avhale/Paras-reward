@@ -30,7 +30,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://auto-burn-tracker.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://admin-user-search-2.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials from the testing request
 TEST_USER_VERIFIED = {

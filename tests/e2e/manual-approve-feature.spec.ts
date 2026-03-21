@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://auto-burn-tracker.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://admin-user-search-2.preview.emergentagent.com';
 const ADMIN_UID = '1000001';
 const ADMIN_PIN = '123456';
 

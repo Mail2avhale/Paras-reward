@@ -1,52 +1,54 @@
 <analysis>**original_problem_statement:**
-The user's most recent request is to implement a completely new, automatic Burning Session visible on the Mining page. This session must run continuously, burning 1% of the user's Total PRC Balance daily (calculated per second/minute). The burn should permanently delete the PRC and must automatically stop if the user's balance drops to 10,000 PRC. All previous burn mechanisms, pages, and logic need to be entirely removed. 
+The user initially requested the implementation of a new, automatic Burning Session visible on the Mining page that continuously burns 1% of the user's Total PRC Balance daily (stopping at 10,000 PRC), and the removal of all old burn mechanisms. Over the course of the session, the user also requested manager role access to specific admin pages, fixes for BBPS/Eko sender name errors, UX improvements for Redeem limits, inclusion of PRC subscriptions in the Utility category limit, and fixes for a persistent Used PRC = 0 display bug on the user dashboard.
 
-Earlier in the session, the user requested major enhancements to the Admin User 360 page, the creation of a bulk Auto Fix All Users background job, and fixes for Razorpay subscription bugs (cancelled orders falsely activating paid plans).
-
-**User's preferred language**: The user communicates primarily in **Marathi** mixed with English (e.g., हे कसे होईल मला सांग, असेच एक button admin मध्ये all user साठी पाहिजे). **INSTRUCT NEXT AGENT:** You MUST respond in Marathi mixed with technical English.
+**User's preferred language**: The user communicates primarily in **Marathi** mixed with English (e.g., हे पहा calculation formula kahi तरी चुकीचा आहे, मला हे जमत नाही तु कर आणि सोपे कर). **INSTRUCT NEXT AGENT:** You MUST respond in Marathi mixed with technical English.
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB application for a virtual reward system (Paras Reward). It features highly comprehensive Admin dashboards, particularly the  view which now includes transaction history, fraud detection, and a background-job powered bulk auto-diagnose tool that fixes user state mismatches across 10 categories. 
+A full-stack React/FastAPI/MongoDB application for a virtual reward system (Paras Reward). It features a highly complex admin dashboard, a unified redemption system (Eko/BBPS), category-wise redemption limits, and a newly implemented automated hourly PRC deflationary burn system.
 
 **Last working item**:
-- **Last item agent was working:** Implementing the new Burning Session logic. The agent established the rules (1% daily continuous burn per second, stops at 10,000 PRC, fully automatic) and just began deleting the old, complex burn code inside .
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N
-- **Which testing method agent to use?** both (Backend testing agent to verify the new mathematical burn calculation on the user's balance, and screenshot tool to verify the live countdown UI on the Frontend  page).
+- **Last item agent was working:** Fixing the Used PRC = 0 display bug on the user/admin dashboard. The agent updated  in  to calculate utilized PRC directly from the  collection (filtering out  transactions) rather than relying on legacy collections or static document fields.
+- **Status:** USER VERIFICATION PENDING
+- **Agent Testing Done:** Y
+- **Which testing method agent to use?** Backend testing agent / Manual testing by curl to verify the  value across different users.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Find and reverse Omkar Masurkar's subscription (P1)
-  Issue 2: Pending Refund for Rakhi Ghehlod (P2)
+  Issue 1: Failed to search user error in AdminUser360 (P0)
+  Issue 2: Verify Used PRC calculation accurately reflects utility usage (P1)
+  Issue 3: Find and reverse Omkar Masurkar's subscription (P2)
+  Issue 4: Pending Refund for Rakhi Ghehlod (P2)
   
   Issues Detail:
   - Issue 1: 
-     - Attempted fixes: Failed to find the user via email in previous forks.
-     - Next debug checklist: Ask the user for the exact registered email or UID for Omkar Masurkar.
-     - Why fix this issue and what will be achieved with the fix? Resolve user complaint.
-     - Status: BLOCKED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? Backend
-     - Blocked on other issue: User input required.
-  - Issue 2: 
-     - Attempted fixes: None in this session. Inherited from previous forks.
-     - Next debug checklist: Investigate transaction history for Rakhi Ghehlod to understand refund context.
-     - Why fix this issue and what will be achieved with the fix? Fulfill long-standing user request.
+     - Attempted fixes: Agent verified the backend endpoint  is functioning, but the frontend still throws a toast error on production. The agent got distracted by the Used PRC bug and abandoned this.
+     - Next debug checklist: Check  lines 155-180. Investigate what specific payload or 500 error the backend is throwing when searching for the specific user the admin clicked on in the UI. 
+     - Why fix this issue and what will be achieved with the fix? Unblocks admin from viewing specific user profiles.
      - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Both
+     - Blocked on other issue: None
+  - Issue 2: 
+     - Attempted fixes: Agent updated  to read from the  collection and added uppercase SUCCESS status checks.
+     - Next debug checklist: Ask user to verify on production if the Used PRC is now greater than 0 for active users.
+     - Why fix this issue and what will be achieved with the fix? Accurate reporting of user activity.
+     - Status: USER VERIFICATION PENDING
      - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? Backend
      - Blocked on other issue: None
+  - Issue 3 & 4:
+     - Inherited from previous forks. Blocked on user providing exact email/UID for Omkar, and transaction context for Rakhi. (Status: BLOCKED / NOT STARTED).
 
 **In progress Task List**:
-  Task 1: Implement New Continuous Burning Session (P0)
+  Task 1: Verify execution of Fix Burn Bug button on production (P1)
   
  Task Detail:
   - Task 1: 
-     - Where to resume: The previous agent used  to start deleting old burn logic in  around line 4968. You need to write the new backend logic to dynamically calculate the 1% daily (per-second) burn based on the last calculation timestamp, ensuring it halts at 10,000 PRC. Then, implement the Frontend UI in the Mining page to show this continuous burning process.
-     - What will be achieved with this? A new deflationary mechanic that reduces global PRC inflation continuously.
-     - Status: IN PROGRESS
-     - Should Test frontend/backend/both after fix? Both
-     - Blocked on something: Nothing
+     - Where to resume: Agent created a bulk restore endpoint  and added a button in  to refund users affected by the double-counting burn bug. 
+     - What will be achieved with this? Restores incorrectly burned PRC to users.
+     - Status: USER VERIFICATION PENDING
+     - Should Test frontend/backend/both after fix? NA
+     - Blocked on something: Waiting for user to click the button on the production deployment.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
@@ -61,80 +63,83 @@ A full-stack React/FastAPI/MongoDB application for a virtual reward system (Para
     - Add email/mobile OTP verification on user signup.
 
 **Completed work in this session**
-- POST  endpoint (DONE)
-- Advanced Frontend Filters & Search for Admin Members Page (DONE)
-- PRC Statement Fixes: Included Gift Vouchers, Shop, and Refunds in user statements (DONE)
-- BBPS Status UI Fix: Mapped  status correctly and created  to process refunds (DONE)
-- Retry Code Removal: Completely deleted  auto-retry logic for BBPS, enforcing immediate refunds on failure (DONE)
-- Admin User 360 Enhancement: Added Monthly Limits, Service Breakdown, Failed Transactions tab, Subscription History, and Fraud Checks (DONE)
-- Auto-Diagnose Expansion: Built an advanced Bulk Auto-Fix system using FastAPI  to resolve KYC, Mining, and Subscription mismatches for all 5800+ users simultaneously without timeouts (DONE)
-- Razorpay Webhook Fix: Blocked cancelled/failed Razorpay orders from falsely activating Elite subscription statuses (DONE)
+- Implemented Continuous Burning Session via an **Hourly Background Job** (0.0417% per hour = 1% daily).
+- Created  endpoint to display burn rates on .
+- Deleted old  page and deprecated old burn endpoints.
+- Added Burning Statistics Card and Fix Burn Bug restore button to .
+- Granted Manager role access to Redeem to Bank, Razorpay Payments, and BBPS instant pages.
+- Fixed Eko API Sender Name should contain only letters error by adding inline regex sanitization in .
+- Updated Redeem Limits UX to show  (the MIN of the calculated limit and the user's available PRC).
+- Updated backend to count PRC Subscription purchases towards the 40% Utility Category limit.
+- Disabled the deprecated Retry Queue widget on the Admin dashboard.
+- Updated  to calculate from the  collection to fix the Used PRC = 0 bug.
 
 **Earlier issues found/mentioned but not fixed**
-   - None new in this session.
+   - Issue 1: Failed to search user toast error on Admin User 360 page.
+   - Debug checklist: User provided a screenshot showing the error. Agent verified the endpoint works locally but didn't fix the edge case causing the crash on production. Check  search logic and   endpoint for data-parsing exceptions.
+   - Why to solve this issue and what will be achieved with this? Restores admin lookup functionality.
+   - Should Test frontend/backend/both after fix: Both
+   - Is recurring issue? N
 
 **Known issue recurrence from previous fork**
   - Issue recurrence in previous fork: Refund for Rakhi Ghehlod.
-  - Recurrence count: 6
+  - Recurrence count: 7
   - Status: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **FastAPI BackgroundTasks**: Implemented for the Bulk Auto-Fix feature to prevent timeouts when iterating over thousands of MongoDB user records.
-- **Idempotent Webhooks**: Strict status checking in Razorpay webhooks to prevent duplicate or false activations.
+- **Deflationary Burn System**: Initially implemented via GET API calls, which caused massive double-counting bugs. Refactored into a strict **APScheduler Background Job** running hourly (), applying a 0.0417% burn. The frontend now strictly reads this server value every 30 seconds and does *not* do local math increments.
+- **Eko BBPS Sanitization**: Eko requires sender names to have no spaces or numbers. Implemented via regex .
 
 **key DB schema**
-  - : {status: RETRY_FAILED, amount, user_id}
-  - : {prc_balance, mining_active, subscription_plan}
+  - : Core truth for PRC movement. {type: prc_burn, subscription_prc, amount, user_id}
+  - : Unified logging for BBPS/recharges.
 
 **changes in tech stack**
-  - None.
+  - None
 
 **All files of reference** 
-- : Huge monolithic file containing the background tasks, auto-diagnose logic, and the old burn logic that needs replacing.
-- : Contains the fixed subscription logic.
-- : Highly modified to act as the primary user debugging tool.
-- : Needs to be modified to display the continuous 1% burning session.
+- : Contains the new , , and limits calculations.
+- : Handles Eko sanitization and subscription category checks.
+- : Contains the updated Burn Session UI.
+- : Contains the new Burn Stats card and Fix Burn Bug button.
+- : Updated with Manager role permissions.
 
-**Areas that need refactoring**:  is over 45,000 lines long and handles too many responsibilities (background tasks, core API routes, legacy logic). 
+**Areas that need refactoring**: 
+-  is over 45,000 lines. The burn logic, limits logic, and user-360 logic desperately need extraction.
 
 **key api endpoints**
--  (Triggers background job for system-wide fixes)
--  (Cleans up failed DB states and refunds PRC)
+- 
+-  (Used by the Admin Dashboard button to bulk restore)
+-  (Currently throwing an error in production)
 
 **Critical Info for New Agent** 
-- **Production vs. Preview Disconnect**: The user tests heavily on the live production URL but frequently forgets to hit the Deploy button on the Emergent platform. *Always explicitly instruct the user to Deploy to Production before asking them to verify a newly created Admin endpoint.*
-- **Burn Logic Math**: The user requested 1% daily burn deducted dynamically. The safest way to do this backend-side without a cron job running every second is to save a  on the user document. Whenever the user's balance is queried, calculate the time delta, deduct the exact mathematical percentage for that timeframe, update the DB, and return the new balance.
+- **Production vs. Preview**: The user strictly tests on their live production URL, but frequently forgets to press Deploy on Emergent. If a bug is fixed locally but the user says Deploy केल्यावर problem solve नाही झाला (Problem not solved after deploying), verify your fix works, then remind the user to ensure the deployment went through.
+- **The Burn Bug Saga**: The agent spent 50% of the session fighting a double-counting bug. **DO NOT** attempt to create a live incrementing counter for the Burn Session on the frontend. The math goes out of sync with the server and panics the user. Leave it as a static 30-second fetch from the server.
 - **Language**: Respond in Marathi + English.
 
 **documents and test reports created in this job** 
   - 
-  -  (Updated)
+  - 
+  -  (Updated with Burn Session)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. User: Make the single-user diagnose advanced to auto fix all issues.
-2. Agent: Enhanced the endpoint to fix 10 distinct categories.
-3. User: Do this for All users bulk button too.
-4. Agent: Replicated the logic to the bulk endpoint.
-5. User: Where is the bulk fix button in admin?
-6. Agent: Explained it's on the Admin Dashboard header.
-7. User: Tell me about the subscription logic.
-8. Agent: Explained Explorer/Elite and the 28-day cycle.
-9. User: Fix an issue where cancelled Razorpay orders grant subscriptions. Ensure 28 days + remaining days calculation is perfect.
-10. Agent: Fixed webhooks and auto-sync to block cancelled orders. 
-11. User: Add subscription history and admin controls to User 360 to check for fraud.
-12. Agent: Added Sub history tab and a fraud score checker.
-13. User: (Screenshot) Bulk fix failed error on production.
-14. Agent: Realized 5800+ users caused a timeout. Switched to  to process batches silently. 
-15. User: Implement a Burning Session just like mining. Always active, 1% daily burn per second from available PRC. Delete all old burn code.
-16. Agent: Asked clarifying questions (Burn total balance? Permanently delete? Stop at 10k? Automatic?).
-17. User: Burn total balance, permanently delete, stop at 10k minimum, completely automatic. Show it on the Mining page.
-18. Agent: Started deleting old burn code in ... (Context window ended).
+1. User: (Video) 48,000 PRC burned in 5 hours, calculation is wrong.
+2. Agent: Realized frontend animation was causing double counting. Disabled frontend counter, relies only on server value.
+3. User: What about the users who had too much PRC cut?
+4. Agent: Created .
+5. User: I don't know how to use APIs, make it easy.
+6. Agent: Added a Fix Burn Bug button to the Admin Dashboard.
+7. User: Done.
+8. User: (Screenshots) Failed to search user, Failed to load retry queue, 470,172 burned.
+9. Agent: Disabled retry queue widget. Explained 470k is the sum of the bug and told user to use the Fix button. Partially checked user search.
+10. User: Users are using utility, but Used PRC shows 0 in their profile. Deep investigation needed.
+*(Agent fixed the Used PRC bug but forgot to circle back to the Failed to search user bug).*
 
 **Project Health Check:**
-- Broken: User's manual deployment habits cause testing friction.
+- Broken:  user search is failing on production.
 - Mocked: None
 
 **3rd Party Integrations** 
@@ -142,14 +147,14 @@ A full-stack React/FastAPI/MongoDB application for a virtual reward system (Para
 - Eko (BBPS/KYC) — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iteration 132 for balance restore).
+  - Testing agent used after significant changes: YES (Iterations 133 & 134 for Burn calculations).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None
+  - Known regressions: Admin User Search.
 
 **Credentials to test flow:**
 - Admin: email: , pin: 
 - User: mobile: , pin: 
 
 **What agent forgot to execute**
-The agent successfully mapped out the requirements for the Burning Session and started deleting the old burn functions in , but the context window filled up before writing the new mathematical continuous burn logic and updating the Frontend  page. You need to pick up exactly from this point.</analysis>
+The agent was presented with three errors in Message 591. It successfully fixed the Retry Queue error and explained the Burn Stat error, but got distracted by a subsequent user request (Used PRC = 0) and completely forgot to resolve the Failed to search user error in . This is a P0 that needs immediate attention.</analysis>

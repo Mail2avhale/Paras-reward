@@ -16,7 +16,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://auto-burn-tracker.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://admin-user-search-2.preview.emergentagent.com').rstrip('/')
 
 # Test user with balance > 10,000 PRC (burning should be active)
 TEST_USER_UID = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"

@@ -3616,29 +3616,26 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     Get user's ALL TIME total PRC redeemed/used across all services.
     
     PRIMARY SOURCE: transactions collection (most reliable)
-    Types included: redeem, recharge, bill_payment, gift_voucher, bank_transfer, subscription
-    Types excluded: prc_burn (not user redemption), mining (credit), referral (credit)
+    Types included: Any debit that is NOT a burn
+    Types excluded: prc_burn, admin_burn, hourly_burn, daily_burn
     
     BACKUP: Individual collections for completeness
     """
     total_redeemed = 0
     
-    # PRIMARY: Use transactions collection - most reliable source
-    # Count all debits except burns (burns are not user redemptions)
-    redeem_types = [
-        "redeem", "recharge", "bill_payment", "bbps_payment", "mobile_recharge",
-        "dth_recharge", "electricity", "gas", "water", "broadband", "postpaid",
-        "gift_voucher", "voucher_redeem", "bank_transfer", "bank_withdrawal",
-        "subscription", "subscription_prc", "prc_to_bank", "dmt", "emi",
-        "utility", "shopping", "marketplace", "prc_debit"
+    # EXCLUDE these burn types
+    burn_types = [
+        "prc_burn", "admin_burn", "hourly_burn", "daily_burn", 
+        "burn", "auto_burn", "burn_overcorrection_fix"
     ]
     
+    # PRIMARY: Use transactions collection - all negative amounts except burns
     txn_debits = await db.transactions.aggregate([
         {
             "$match": {
                 "user_id": user_id,
                 "amount": {"$lt": 0},
-                "type": {"$in": redeem_types}
+                "type": {"$nin": burn_types}  # Exclude burn types
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
@@ -16555,7 +16552,8 @@ async def get_user_redeem_limit_internal(user_id: str, user: dict = None) -> dic
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
         total_limit = limit_info.get("total_limit", 0)
-        total_redeemed = await get_user_total_redeemed(user_id)
+        # Use get_user_all_time_redeemed for consistent calculation across the app
+        total_redeemed = await get_user_all_time_redeemed(user_id)
         remaining = max(0, total_limit - total_redeemed)
         
         return {
@@ -16590,8 +16588,8 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
         limit_info = await calculate_user_redeem_limit(user_id)
         total_limit = limit_info["total_limit"]
         
-        # Get total redeemed
-        total_redeemed = await get_user_total_redeemed(user_id)
+        # Get total redeemed - use consistent function
+        total_redeemed = await get_user_all_time_redeemed(user_id)
         
         # Calculate remaining
         remaining = total_limit - total_redeemed
@@ -16627,7 +16625,8 @@ async def get_user_redeem_limit(user_id: str):
     """Get user's redeem limit information with carry forward and new referral formula"""
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
-        total_redeemed = await get_user_total_redeemed(user_id)
+        # Use consistent function for total redeemed
+        total_redeemed = await get_user_all_time_redeemed(user_id)
         
         # Get user's current PRC balance
         user = await db.users.find_one({"uid": user_id}, {"prc_balance": 1})
@@ -19711,18 +19710,22 @@ async def get_user_360_view(query: str):
     
     query = query.strip()
     
+    # Escape regex special characters to prevent injection and errors
+    import re as regex_module
+    escaped_query = regex_module.escape(query)
+    
     # Build search query for multiple identifiers
     search_conditions = [
-        {"email": {"$regex": f"^{query}$", "$options": "i"}},
+        {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
         {"mobile": query},
         {"uid": query},
-        {"referral_code": {"$regex": f"^{query}$", "$options": "i"}},
-        {"pan_number": {"$regex": f"^{query}$", "$options": "i"}}
+        {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+        {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}}
     ]
     
     # For Aadhaar, search by last 4 digits
     if query.isdigit() and len(query) == 4:
-        search_conditions.append({"aadhaar_number": {"$regex": f"{query}$"}})
+        search_conditions.append({"aadhaar_number": {"$regex": f"{escaped_query}$"}})
     elif len(query) == 12 and query.isdigit():
         search_conditions.append({"aadhaar_number": query})
     
@@ -19747,12 +19750,22 @@ async def get_user_360_view(query: str):
     ]).to_list(1)
     total_mined = total_mined_result[0]["total"] if total_mined_result else 0
     
-    # Calculate total redeemed (spent)
+    # Calculate total redeemed (spent) - EXCLUDE burns to match get_user_all_time_redeemed
+    # Burns are deflationary mechanism, not user spending
+    burn_types = ["prc_burn", "admin_burn", "hourly_burn", "daily_burn", "burn", "auto_burn"]
     total_redeemed_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "prc_burn", "prc_rain_loss"]}}},
+        {"$match": {
+            "user_id": uid, 
+            "type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "redeem", "dmt_transfer", "prc_rain_loss"]},
+            "type": {"$nin": burn_types}  # Exclude burns
+        }},
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
     ]).to_list(1)
     total_redeemed = total_redeemed_result[0]["total"] if total_redeemed_result else 0
+    
+    # If no transactions found, use get_user_all_time_redeemed for backup
+    if total_redeemed == 0:
+        total_redeemed = await get_user_all_time_redeemed(uid)
     
     stats = {
         "total_mined": round(total_mined, 2),

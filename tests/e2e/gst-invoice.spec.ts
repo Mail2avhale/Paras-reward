@@ -13,7 +13,7 @@ const TEST_USER = {
   uid: 'cbdf46d7-7d66-4d43-8495-e1432a2ab071'
 };
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://auto-burn-tracker.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://admin-user-search-2.preview.emergentagent.com';
 
 test.describe('GST Invoice API Tests', () => {
   test('User invoices API returns correct structure', async ({ request }) => {

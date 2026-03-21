@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://auto-burn-tracker.preview.emergentagent.com';
+const API = process.env.REACT_APP_BACKEND_URL || 'https://admin-user-search-2.preview.emergentagent.com';
 
 // Test credentials
 const USER_MOBILE = '9421331342';

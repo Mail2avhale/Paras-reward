@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 # Get the API URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://auto-burn-tracker.preview.emergentagent.com'
+    BASE_URL = 'https://admin-user-search-2.preview.emergentagent.com'
 
 
 class TestRazorpayConfigEndpoint:
