@@ -11593,13 +11593,21 @@ async def get_current_rate_info():
                     "permanent": True
                 }
         
-        return {
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(content={
             "success": True,
             "current_rate": current_rate,
             "source": "manual_override" if override_active else "dynamic_economy",
             "override": override_info,
-            "note": f"Currently {current_rate} PRC = ₹1"
-        }
+            "note": f"Currently {current_rate} PRC = ₹1",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "cache_ttl_seconds": 300  # 5 minutes - frontend should refetch after this
+        })
+        # Add cache control headers to prevent stale rate caching
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     except Exception as e:
         return {"success": False, "error": str(e)}
 
