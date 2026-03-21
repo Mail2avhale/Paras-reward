@@ -353,12 +353,12 @@ const DailyRewards = ({ user }) => {
       }
     }, 30000);
     
-    // Refresh burning session every 60 seconds
+    // Refresh burning session every 10 seconds (shows accurate server value)
     const burnRefreshInterval = setInterval(() => {
       if (user?.uid) {
         fetchBurningSession();
       }
-    }, 60000);
+    }, 10000);
     
     return () => {
       clearInterval(refreshInterval);
@@ -466,23 +466,16 @@ const DailyRewards = ({ user }) => {
     };
   }, [isMining, miningRate, sessionStartTime]);
 
-  // Burning Session Live Counter - updates every second
+  // Burning Session Live Counter - DISABLED to prevent double counting
+  // Server applies the actual burn on each API call, so we just display server value
+  // The counter will update every 60 seconds when fetchBurningSession is called
   useEffect(() => {
+    // Clear any existing interval
     if (burnCounterRef.current) {
       clearInterval(burnCounterRef.current);
+      burnCounterRef.current = null;
     }
-    
-    if (burningSession?.is_active && burningSession?.burn_per_second > 0) {
-      burnCounterRef.current = setInterval(() => {
-        setLiveBurnAmount(prev => prev + burningSession.burn_per_second);
-      }, 1000);
-    }
-    
-    return () => {
-      if (burnCounterRef.current) {
-        clearInterval(burnCounterRef.current);
-      }
-    };
+    // No live counter - server value only
   }, [burningSession]);
 
   const startSession = async () => {

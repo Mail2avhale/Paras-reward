@@ -1,0 +1,71 @@
+{
+  "iteration": 134,
+  "mode": "update",
+  "summary": "Bug Fix Verified: Burning Session double counting issue fixed. Frontend was adding burn_per_second to liveBurnAmount every second, causing inflated values (28,000+ PRC shown when actual was ~2,900 PRC). Fix: Disabled frontend live counter, now shows server total_burned_lifetime value only with 10s refresh. All 36 tests pass (20 backend + 16 frontend).",
+  "baseline_commit": "2ce568f6b6a12c2c62ef77127cc5725e98d22e14",
+  "head_commit": "1ac3d3143246afa375e2b7298d20e9b639744876",
+  "specs_created": [],
+  "specs_updated": [
+    "/app/backend/tests/test_burning_session.py",
+    "/app/tests/e2e/burning-session.spec.ts"
+  ],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_burning_session.py",
+    "/app/tests/e2e/burning-session.spec.ts",
+    "/app/test_reports/pytest/burning_session_bugfix_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 36,
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_burning_session.py",
+    "/app/tests/e2e/burning-session.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% (20/20)",
+    "frontend": "100% (16/16)"
+  },
+  "seed_data_creation": "Used existing test user UID: cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix verified. Frontend no longer has live counter that increments burn amount every second. Server value (total_burned_lifetime) is displayed directly and refreshed every 10 seconds. Current test user has ~3,000 PRC burned (correct value) and ~27,000 PRC balance.",
+  "bug_fix_verification": {
+    "issue": "Burning Session showing wrong count - counter was double counting",
+    "reported_value": "28,000+ PRC burned",
+    "actual_value": "~2,900-3,000 PRC burned",
+    "root_cause": "Frontend was adding burn_per_second to liveBurnAmount every second, while server also applies burn on each API call",
+    "fix_applied": "Disabled frontend live counter, now shows server value only with 10s refresh",
+    "verification_results": {
+      "server_total_burned_lifetime": "~3,000 PRC (correct, not inflated)",
+      "api_refresh_interval": "10 seconds (not 1 second)",
+      "burn_calculation": "1% daily of current balance (correct)",
+      "balance_decreases_correctly": "Yes, on API calls"
+    }
+  },
+  "features_tested": {
+    "backend_api_endpoint": "PASS - GET /api/burning-session/status/{uid} returns 200 with valid structure",
+    "burning_active_above_10000": "PASS - is_active=true when balance > 10,000 PRC",
+    "burning_inactive_at_minimum": "PASS - is_active=false when balance <= 10,000 PRC",
+    "minimum_balance_threshold": "PASS - minimum_balance = 10,000 PRC",
+    "daily_burn_rate": "PASS - daily_burn_rate_percent = 1%",
+    "burn_per_second_calculation": "PASS - burn_per_second = balance * 0.01 / 86400",
+    "burn_per_hour_calculation": "PASS - burn_per_hour = burn_per_day / 24",
+    "burn_per_day_calculation": "PASS - burn_per_day = balance * 0.01",
+    "days_until_minimum": "PASS - Correctly calculates days until 10,000 PRC reached",
+    "burn_application": "PASS - Burns are applied when API is called",
+    "total_burned_lifetime": "PASS - Tracks cumulative burned amount correctly",
+    "error_handling": "PASS - Returns 404 for invalid user",
+    "frontend_burning_session_card": "PASS - Displays on Mining page with fire emoji",
+    "frontend_live_status": "PASS - Shows LIVE badge when burning active",
+    "frontend_burn_rates_display": "PASS - Shows Per Hour and Per Day burn rates",
+    "frontend_server_value_display": "PASS - Shows server total_burned_lifetime (not inflated)",
+    "frontend_no_double_counting": "PASS - Value does not increase rapidly",
+    "frontend_10s_refresh": "PASS - API called every 10 seconds (not every second)"
+  }
+}

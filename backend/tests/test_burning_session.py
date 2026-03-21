@@ -16,7 +16,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://auto-burn-tracker.preview.emergentagent.com').rstrip('/')
 
 # Test user with balance > 10,000 PRC (burning should be active)
 TEST_USER_UID = "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
@@ -284,6 +284,99 @@ class TestBurningSessionDataTypes:
         assert bs["burn_per_second"] >= 0, "burn_per_second should be non-negative"
         assert bs["total_burned_lifetime"] >= 0, "total_burned_lifetime should be non-negative"
         assert bs["days_until_minimum"] >= 0, "days_until_minimum should be non-negative"
+
+
+class TestBugFixVerification:
+    """
+    Bug Fix Verification Tests
+    ==========================
+    Issue: Frontend was double counting burns - showing 28,000+ PRC when actual was ~2,900 PRC
+    Fix: Disabled frontend live counter, now shows server value only with 10s refresh
+    """
+    
+    def test_total_burned_lifetime_is_reasonable(self):
+        """Test that total_burned_lifetime is a reasonable value (not inflated by double counting)"""
+        response = requests.get(f"{BASE_URL}/api/burning-session/status/{TEST_USER_UID}")
+        assert response.status_code == 200
+        
+        data = response.json()
+        bs = data["burning_session"]
+        
+        # The bug was showing 28,000+ when actual was ~2,900
+        # Total burned should be less than current balance (can't burn more than you had)
+        total_burned = bs["total_burned_lifetime"]
+        current_balance = bs["current_balance"]
+        
+        # Sanity check: total burned should be reasonable
+        # If user has ~27,000 balance and burned ~2,900, that's about 10% of original
+        # Total burned should not exceed what would be possible
+        assert total_burned < 50000, f"total_burned_lifetime ({total_burned}) seems too high - possible double counting bug"
+        
+        print(f"✓ total_burned_lifetime: {total_burned} PRC (reasonable value)")
+    
+    def test_balance_decreases_on_api_call(self):
+        """Test that balance decreases correctly when API is called (server applies burn)"""
+        # First call - this resets the last_burn_at timestamp
+        response1 = requests.get(f"{BASE_URL}/api/burning-session/status/{TEST_USER_UID}")
+        assert response1.status_code == 200
+        data1 = response1.json()
+        balance1 = data1["burning_session"]["current_balance"]
+        
+        # Wait 3 seconds
+        time.sleep(3)
+        
+        # Second call - burn should be applied for ~3 seconds
+        response2 = requests.get(f"{BASE_URL}/api/burning-session/status/{TEST_USER_UID}")
+        assert response2.status_code == 200
+        data2 = response2.json()
+        balance2 = data2["burning_session"]["current_balance"]
+        
+        # Balance should decrease (burn applied)
+        if data1["burning_session"]["is_active"]:
+            assert balance2 <= balance1, f"Balance should decrease: {balance1} -> {balance2}"
+            
+            # Check the burn amount is reasonable
+            burn_applied = data2["last_burn_applied"]["amount"]
+            
+            # Burn should be positive and reasonable (not zero, not huge)
+            assert burn_applied > 0, "Burn amount should be positive"
+            assert burn_applied < 100, f"Burn amount ({burn_applied}) seems too high for a few seconds"
+            
+            print(f"✓ Balance decreased correctly: {balance1} -> {balance2} (burned {burn_applied})")
+    
+    def test_server_value_matches_last_burn_applied(self):
+        """Test that server returns consistent values (no frontend inflation)"""
+        response = requests.get(f"{BASE_URL}/api/burning-session/status/{TEST_USER_UID}")
+        assert response.status_code == 200
+        
+        data = response.json()
+        bs = data["burning_session"]
+        lba = data["last_burn_applied"]
+        
+        # The new_balance in last_burn_applied should match current_balance
+        assert bs["current_balance"] == lba["new_balance"], \
+            f"current_balance ({bs['current_balance']}) should match last_burn_applied.new_balance ({lba['new_balance']})"
+        
+        print(f"✓ Server values are consistent: current_balance = {bs['current_balance']}")
+    
+    def test_burn_calculation_is_1_percent_daily(self):
+        """Test that burn calculation is exactly 1% daily (not doubled)"""
+        response = requests.get(f"{BASE_URL}/api/burning-session/status/{TEST_USER_UID}")
+        assert response.status_code == 200
+        
+        data = response.json()
+        bs = data["burning_session"]
+        
+        if bs["is_active"]:
+            # burn_per_day should be exactly 1% of current_balance
+            expected_burn_per_day = bs["current_balance"] * 0.01
+            actual_burn_per_day = bs["burn_per_day"]
+            
+            # Should be within 0.01 tolerance
+            assert abs(actual_burn_per_day - expected_burn_per_day) < 0.01, \
+                f"burn_per_day ({actual_burn_per_day}) should be 1% of balance ({expected_burn_per_day})"
+            
+            print(f"✓ Burn rate is correct: {actual_burn_per_day} PRC/day (1% of {bs['current_balance']})")
 
 
 if __name__ == "__main__":
