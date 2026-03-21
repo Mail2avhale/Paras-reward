@@ -1,0 +1,88 @@
+{
+  "iteration": 137,
+  "mode": "bug_investigation",
+  "summary": "PRC Rate Consistency Investigation: Backend API is WORKING CORRECTLY. All 11 tests pass. The /api/admin/prc-rate/current endpoint returns consistent rate (11) across all calls. No user-specific rate fields exist in user documents. The issue is likely PRODUCTION-SPECIFIC (different database) or BROWSER CACHING (PWA service worker).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prc_rate_consistency.py",
+    "/app/test_reports/pytest/prc_rate_consistency_results.xml"
+  ],
+  "action_items": [
+    "PRODUCTION INVESTIGATION NEEDED: This is a production issue - preview database shows consistent rate (11)",
+    "Check production database economy factors - they may calculate to 12 instead of 11",
+    "Ask affected users to clear browser cache and PWA data",
+    "Consider adding cache-busting headers to /api/admin/prc-rate/current endpoint",
+    "Add timestamp to rate response so frontend can detect stale cached values"
+  ],
+  "critical_code_review_comments": [
+    "Backend API /api/admin/prc-rate/current is correctly implemented - returns global rate from dynamic economy calculation",
+    "Frontend DashboardModern.js correctly fetches rate from API at lines 159, 163, 198",
+    "Service worker correctly excludes /admin/ paths from caching (line 78-82 of service-worker.js)",
+    "No user-specific prc_rate field exists in user documents",
+    "Rate is calculated using 5 economy factors and cached for 5 minutes (ECONOMY_CACHE_TTL = 300)",
+    "The raw_rate in preview is 10.58 which rounds to 11 - production may have different factors resulting in 11.5+ which rounds to 12"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prc_rate_consistency.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11)",
+    "frontend": "Not directly testable - requires login"
+  },
+  "test_credentials": {
+    "test_user_uid": "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
+  },
+  "seed_data_creation": "None - used existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "PRC rate API is working correctly in preview. Issue is production-specific. Backend returns consistent rate 11 across all API calls. No user-specific rate override exists. Possible causes: 1) Production database has different economy factors, 2) Browser/PWA caching old rate values.",
+  "investigation_findings": {
+    "issue_reported": "Different users see different PRC rates (11 vs 12)",
+    "preview_api_behavior": "Consistent - returns 11 on all calls",
+    "rate_source": "dynamic_economy (not manual override)",
+    "current_rate_preview": 11,
+    "raw_rate_preview": 10.58,
+    "economy_factors": {
+      "supply_factor": 0.8,
+      "redeem_factor": 1.2,
+      "burn_factor": 1.0,
+      "user_factor": 1.05,
+      "utility_factor": 1.05
+    },
+    "user_document_check": "No prc_rate field found - rate is truly global",
+    "service_worker_check": "Correctly excludes /admin/ paths from caching",
+    "possible_root_causes": [
+      "PRODUCTION DATABASE: Different economy factors may calculate to 12 instead of 11",
+      "BROWSER CACHING: Users may have cached old rate from when it was 12",
+      "PWA CACHING: Service worker may have cached old API response before exclusion was added",
+      "RATE CHANGE: If rate recently changed from 12 to 11, some users see old cached value"
+    ],
+    "recommended_actions": [
+      "Check production /api/admin/prc-rate/current to see actual rate",
+      "Check production /api/prc-economy/current-rate to see economy factors",
+      "Ask affected users to: 1) Clear browser cache, 2) Uninstall and reinstall PWA, 3) Hard refresh (Ctrl+Shift+R)",
+      "Consider adding no-cache headers to rate endpoint"
+    ]
+  },
+  "tests_executed": {
+    "test_prc_rate_api_returns_consistent_rate": "PASS - 10 consecutive calls returned same rate (11)",
+    "test_prc_economy_rate_matches_current_rate": "PASS - Both endpoints return 11",
+    "test_user_document_has_no_prc_rate_field": "PASS - No user-specific rate fields",
+    "test_dashboard_endpoint_has_no_user_specific_rate": "PASS - Dashboard doesn't return user rate",
+    "test_redeem_categories_has_no_user_specific_rate": "PASS - No rate in redeem categories",
+    "test_rate_source_is_dynamic_economy": "PASS - Source is dynamic_economy",
+    "test_rate_within_valid_range": "PASS - Rate 11 is within 6-20 range",
+    "test_economy_factors_are_valid": "PASS - All factors within expected ranges",
+    "test_multiple_users_see_same_rate": "PASS - Simulated users get same rate",
+    "test_rate_api_is_not_user_authenticated": "PASS - API is global, no auth required",
+    "test_rate_is_cached_for_performance": "PASS - Response times acceptable"
+  }
+}
