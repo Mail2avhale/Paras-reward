@@ -4968,15 +4968,17 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
 # ==================== PRC BURNING SESSION - MARCH 2026 ====================
 # NEW BURNING MECHANISM:
 # - Burning is ALWAYS ACTIVE (automatic)
-# - Burns 1% of PRC balance per day (calculated per second)
+# - Burns 1% of PRC balance per day
+# - Burn happens HOURLY (1%/24 = 0.0417% per hour)
 # - Minimum balance for burning: 10,000 PRC (stops below this)
 # - Burned PRC is permanently deleted
 # =============================================================================
 
 BURNING_SESSION_SETTINGS = {
     "daily_burn_percentage": 1.0,           # 1% daily
+    "hourly_burn_percentage": 1.0 / 24,     # 0.0417% per hour
     "minimum_balance_for_burn": 10000,      # Stop burning below 10,000 PRC
-    "burn_rate_per_second": 1.0 / 86400,    # 1% / 86400 seconds = per second rate
+    "burn_rate_per_second": 1.0 / 86400,    # For display only (rate calculation)
 }
 
 
@@ -5491,63 +5493,150 @@ async def daily_percentage_burn():
 
 async def run_prc_burn_job():
     """
-    Main PRC burn job - runs ONLY daily percentage burn
-    Called by scheduler at 11 AM and 11 PM IST
-    
-    IMPORTANT CHANGES (as per business requirement):
-    1. NO PRC EXPIRATION - Explorer/VIP expiry burns DISABLED
-    2. ONLY DAILY 0.5% BURN from available PRC balance
+    DEPRECATED - Use run_hourly_burn_job instead
+    Kept for backward compatibility
     """
+    return await run_hourly_burn_job()
+
+
+async def run_hourly_burn_job():
+    """
+    Hourly PRC burn job - burns 0.0417% per hour (1% daily / 24 hours)
+    Runs every hour at :00 minutes
+    
+    Only burns from users with balance > 10,000 PRC (minimum threshold)
+    """
+    from pymongo import UpdateOne
+    
     now = datetime.now(timezone.utc)
-    logging.info(f"[PRC BURN JOB] Starting burn job at {now.isoformat()}")
+    hour_ist = (now.hour + 5) % 24 + (1 if now.minute >= 30 else 0)  # Rough IST hour
     
-    results = {
-        "timestamp": now.isoformat(),
-        "explorer_burn": {"status": "DISABLED", "reason": "No PRC expiration policy"},
-        "expired_vip_burn": {"status": "DISABLED", "reason": "No PRC expiration policy"},
-        "daily_percentage_burn": {}
-    }
+    logging.info(f"[HOURLY BURN] Starting burn job at {now.isoformat()}")
     
-    # DISABLED: Explorer burn (4hr validity) - No more PRC expiration
-    # results["explorer_burn"] = await burn_expired_prc_for_explorer_users()
+    # Hourly burn rate = 1% / 24 = 0.041667%
+    HOURLY_BURN_PERCENT = 1.0 / 24  # 0.041667%
+    MINIMUM_BALANCE = 10000  # Don't burn if balance <= 10,000
     
-    # DISABLED: Expired VIP burn (2 day validity) - No more PRC expiration  
-    # results["expired_vip_burn"] = await burn_expired_prc_for_expired_vip()
+    reference_id = f"HOURLY-{now.strftime('%Y%m%d-%H')}"
     
-    try:
-        # ONLY THIS: Daily 0.5% burn for ALL users from available PRC
-        results["daily_percentage_burn"] = await daily_percentage_burn()
-    except Exception as e:
-        logging.error(f"[PRC BURN] Daily percentage burn error: {e}")
-        results["daily_percentage_burn"] = {"error": str(e)}
+    # Check if already ran this hour
+    existing_log = await db.burn_job_logs.find_one({
+        "job_type": "hourly_burn",
+        "reference_id": reference_id
+    })
     
-    # Calculate totals (only from daily burn now)
-    total_users = results.get("daily_percentage_burn", {}).get("users_affected", 0)
-    total_burned = results.get("daily_percentage_burn", {}).get("total_burned", 0)
+    if existing_log:
+        logging.info(f"[HOURLY BURN] Already ran this hour: {reference_id}")
+        return {"status": "already_ran", "reference_id": reference_id}
     
-    results["summary"] = {
-        "total_users_affected": total_users,
-        "total_prc_burned": round(total_burned, 2),
-        "status": "completed",
-        "note": "Only daily 0.5% burn active. No PRC expiration."
-    }
+    users_affected = 0
+    total_burned = 0
     
-    logging.info(f"[PRC BURN JOB] Completed: {total_users} users, {total_burned:.2f} PRC burned")
+    # Find users with balance > minimum
+    users = await db.users.find(
+        {"prc_balance": {"$gt": MINIMUM_BALANCE}},
+        {"uid": 1, "prc_balance": 1, "total_prc_burned": 1, "_id": 0}
+    ).to_list(10000)
     
-    # Save burn log to database for tracking
-    try:
-        await db.burn_job_logs.insert_one({
-            "job_type": "prc_burn",
-            "executed_at": now.isoformat(),
-            "date": now.strftime("%Y-%m-%d"),
-            "results": results,
-            "total_users": total_users,
-            "total_burned": total_burned
+    if not users:
+        logging.info("[HOURLY BURN] No eligible users found")
+        return {"status": "no_users", "users_affected": 0, "total_burned": 0}
+    
+    batch_operations = []
+    transaction_records = []
+    
+    for user in users:
+        uid = user.get("uid")
+        current_balance = float(user.get("prc_balance", 0) or 0)
+        
+        if current_balance <= MINIMUM_BALANCE:
+            continue
+        
+        # Calculate burn amount (0.0417% of balance)
+        burn_amount = round(current_balance * (HOURLY_BURN_PERCENT / 100), 4)
+        
+        if burn_amount < 0.0001:
+            continue
+        
+        # Don't burn below minimum
+        max_burnable = current_balance - MINIMUM_BALANCE
+        burn_amount = min(burn_amount, max_burnable)
+        
+        if burn_amount <= 0:
+            continue
+        
+        new_balance = round(current_balance - burn_amount, 4)
+        current_total_burned = float(user.get("total_prc_burned", 0) or 0)
+        new_total_burned = round(current_total_burned + burn_amount, 4)
+        
+        # Prepare bulk update
+        batch_operations.append(
+            UpdateOne(
+                {"uid": uid},
+                {
+                    "$set": {
+                        "prc_balance": new_balance,
+                        "last_burn_at": now.isoformat(),
+                        "total_prc_burned": new_total_burned
+                    }
+                }
+            )
+        )
+        
+        # Prepare transaction record
+        transaction_records.append({
+            "transaction_id": f"BURN-{uid[:8]}-{int(now.timestamp())}",
+            "user_id": uid,
+            "type": "prc_burn",
+            "amount": -burn_amount,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "description": f"Hourly burn: {HOURLY_BURN_PERCENT:.4f}%",
+            "reference_id": reference_id,
+            "created_at": now.isoformat(),
+            "timestamp": now.isoformat()
         })
-    except Exception as e:
-        logging.error(f"[PRC BURN] Failed to save burn log: {e}")
+        
+        users_affected += 1
+        total_burned += burn_amount
     
-    return results
+    # Execute bulk operations
+    if batch_operations:
+        try:
+            await db.users.bulk_write(batch_operations, ordered=False)
+            logging.info(f"[HOURLY BURN] Updated {len(batch_operations)} users")
+        except Exception as e:
+            logging.error(f"[HOURLY BURN] Bulk update error: {e}")
+    
+    # Insert transactions
+    if transaction_records:
+        try:
+            await db.transactions.insert_many(transaction_records, ordered=False)
+        except Exception as e:
+            logging.error(f"[HOURLY BURN] Transaction insert error: {e}")
+    
+    # Log this burn run
+    await db.burn_job_logs.insert_one({
+        "job_type": "hourly_burn",
+        "reference_id": reference_id,
+        "executed_at": now.isoformat(),
+        "hour_utc": now.hour,
+        "users_affected": users_affected,
+        "total_burned": round(total_burned, 4),
+        "burn_percent": HOURLY_BURN_PERCENT,
+        "minimum_balance": MINIMUM_BALANCE
+    })
+    
+    logging.info(f"[HOURLY BURN] Completed: {users_affected} users, {total_burned:.4f} PRC burned")
+    
+    return {
+        "status": "completed",
+        "reference_id": reference_id,
+        "users_affected": users_affected,
+        "total_burned": round(total_burned, 4),
+        "burn_percent": HOURLY_BURN_PERCENT,
+        "timestamp": now.isoformat()
+    }
 
 
 async def check_and_run_missed_burn_job():
@@ -45273,25 +45362,16 @@ async def startup_db():
     try:
         # ========== PRC BURN JOBS - UPDATED MARCH 2026 ==========
         # New burning rules:
-        # - Explorer: 4 hours validity
-        # - VIP: 2 days inactivity
-        # - Daily 1% burn: 0.5% at 11 AM + 0.5% at 11 PM
+        # - 1% daily burn distributed across 24 hours
+        # - 0.0417% per hour (1% / 24 = 0.0417%)
+        # - Runs every hour at :00 minutes
         
-        # PRC Burn Job at 11:00 AM IST (5:30 AM UTC)
+        # PRC Burn Job - HOURLY (every hour at :00)
         scheduler.add_job(
-            run_prc_burn_job,
-            CronTrigger(hour=5, minute=30),  # 11 AM IST = 5:30 AM UTC
-            id='prc_burn_morning',
-            name='PRC Burn Job - Morning (11 AM IST)',
-            replace_existing=True
-        )
-        
-        # PRC Burn Job at 11:00 PM IST (5:30 PM UTC)
-        scheduler.add_job(
-            run_prc_burn_job,
-            CronTrigger(hour=17, minute=30),  # 11 PM IST = 5:30 PM UTC
-            id='prc_burn_evening',
-            name='PRC Burn Job - Evening (11 PM IST)',
+            run_hourly_burn_job,
+            CronTrigger(minute=0),  # Every hour at :00
+            id='prc_burn_hourly',
+            name='PRC Burn Job - Hourly (1%/24 = 0.0417%/hr)',
             replace_existing=True
         )
         
