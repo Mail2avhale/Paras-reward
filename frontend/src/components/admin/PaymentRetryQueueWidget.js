@@ -19,6 +19,13 @@ const PaymentRetryQueueWidget = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async (isRefresh = false) => {
+    // DEPRECATED: Task retry system removed
+    // This widget should be hidden or removed from AdminDashboard
+    setLoading(false);
+    setRefreshing(false);
+    return;
+    
+    /* OLD CODE - DISABLED
     if (isRefresh) setRefreshing(true);
     try {
       const [statsRes, retriesRes, settingsRes] = await Promise.all([
@@ -37,6 +44,7 @@ const PaymentRetryQueueWidget = () => {
       setLoading(false);
       setRefreshing(false);
     }
+    */
   };
 
   useEffect(() => {
