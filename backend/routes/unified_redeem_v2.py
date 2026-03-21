@@ -29,6 +29,7 @@ import httpx
 import hashlib
 import hmac
 import base64
+import re
 
 # Import error monitoring functions
 try:
@@ -37,6 +38,19 @@ except ImportError:
     # Fallback if import fails
     async def log_error(*args, **kwargs): pass
     async def log_payment_event(*args, **kwargs): pass
+
+# Sanitize sender name for Eko API (only letters allowed)
+def sanitize_sender_name(name: str) -> str:
+    """
+    Sanitize sender name for Eko BBPS API.
+    Eko requires: "Sender Name should contain only letters"
+    """
+    if not name:
+        return "Customer"
+    sanitized = re.sub(r'[^a-zA-Z]', '', name)
+    if not sanitized or len(sanitized) == 0:
+        return "Customer"
+    return sanitized[:50]
 
 # Import redeem limit check function
 check_redeem_limit_func = None
@@ -320,7 +334,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             logging.warning(f"[BBPS-INSTANT] Could not check Eko balance: {balance_error}")
         
         # Import the working BBPS pay function
-        from routes.bbps_services import pay_bill, PayBillRequest, sanitize_sender_name
+        from routes.bbps_services import pay_bill, PayBillRequest
         
         # Get bill fetch response if available (required for some operators)
         bill_fetch_response = details.get("bill_fetch_response") or details.get("billfetchresponse")
