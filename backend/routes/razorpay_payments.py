@@ -262,7 +262,13 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        # ==================== STEP 4.1: CHECK ORDER NOT ALREADY USED ====================
+        # ==================== STEP 4.1: CHECK ORDER NOT CANCELLED ====================
+        # CRITICAL FIX: Do NOT activate subscription for cancelled/failed orders
+        if order.get("status") in ["cancelled", "failed", "error", "timeout", "dismissed"]:
+            logging.warning(f"[RAZORPAY] BLOCKED - Order {request.razorpay_order_id} is {order.get('status')} - NOT activating")
+            raise HTTPException(status_code=400, detail=f"This order was {order.get('status')}. Cannot activate subscription.")
+        
+        # ==================== STEP 4.2: CHECK ORDER NOT ALREADY USED ====================
         if order.get("status") == "paid":
             logging.warning(f"[RAZORPAY] Order already paid: {request.razorpay_order_id}")
             raise HTTPException(status_code=400, detail="This order has already been completed")
@@ -603,6 +609,11 @@ async def razorpay_webhook(request: Request):
                 if not order:
                     logging.warning(f"[WEBHOOK] Order {order_id} not found in database")
                     return {"status": "error", "message": "Order not found"}
+                
+                # CRITICAL FIX: Check if order was cancelled - DO NOT activate cancelled orders
+                if order.get("status") in ["cancelled", "failed", "error", "timeout", "dismissed"]:
+                    logging.warning(f"[WEBHOOK] Order {order_id} is {order.get('status')} - NOT activating subscription")
+                    return {"status": "ok", "message": f"Order was {order.get('status')}, skipping activation"}
                 
                 # If order already paid, skip
                 if order.get("status") in ["paid", "processing"]:

@@ -1816,8 +1816,10 @@ async def auto_sync_razorpay_payments():
         }
         
         # Get all pending orders - REDUCED limit to prevent event loop blocking
+        # CRITICAL FIX: Exclude cancelled/failed orders from auto-sync
         pending_orders = await db.razorpay_orders.find({
-            "status": {"$in": ["created", "pending", "attempted"]}
+            "status": {"$in": ["created", "pending", "attempted"]},
+            "status": {"$nin": ["cancelled", "failed", "error", "timeout", "dismissed"]}
         }).to_list(20)  # Reduced from 200 to 20 to minimize blocking time
         
         if not pending_orders:
