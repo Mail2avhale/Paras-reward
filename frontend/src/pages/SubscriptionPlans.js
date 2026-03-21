@@ -370,7 +370,7 @@ const SubscriptionPlans = ({ user }) => {
   // Handle PRC Payment for Subscription
   const handlePRCPayment = async () => {
     const prcRequired = getPRCPrice();
-    const availableLimit = redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
+    const availableLimit = redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
     
     if (availableLimit < prcRequired) {
       toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${prcRequired.toLocaleString()} PRC`);

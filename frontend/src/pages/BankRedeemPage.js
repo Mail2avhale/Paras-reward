@@ -227,7 +227,7 @@ const BankRedeemPage = ({ user: initialUser }) => {
     }
     
     // Check Available Redeem Limit (NOT prc_balance)
-    const availableLimit = redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
+    const availableLimit = redeemLimit?.effective_remaining || redeemLimit?.remaining_limit || redeemLimit?.remaining || 0;
     if (availableLimit < fees.total_prc) {
       toast.error(`Insufficient Redeem Limit. Available: ${availableLimit.toLocaleString()} PRC, Required: ${fees.total_prc.toLocaleString()} PRC`);
       return;

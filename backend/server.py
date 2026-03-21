@@ -16586,7 +16586,17 @@ async def get_user_redeem_limit(user_id: str):
         limit_info = await calculate_user_redeem_limit(user_id)
         total_redeemed = await get_user_total_redeemed(user_id)
         
-        remaining = limit_info["total_limit"] - total_redeemed
+        # Get user's current PRC balance
+        user = await db.users.find_one({"uid": user_id}, {"prc_balance": 1})
+        available_prc = float(user.get("prc_balance", 0) or 0) if user else 0
+        
+        # Calculate remaining based on limit
+        remaining_from_limit = limit_info["total_limit"] - total_redeemed
+        
+        # IMPORTANT: Effective remaining = MIN(remaining_limit, available_prc)
+        # User can only redeem up to their available PRC balance
+        effective_remaining = min(max(0, remaining_from_limit), available_prc)
+        
         usage_percentage = (total_redeemed / limit_info["total_limit"]) * 100 if limit_info["total_limit"] > 0 else 0
         
         return {
@@ -16601,9 +16611,12 @@ async def get_user_redeem_limit(user_id: str):
                 "referral_percentage_increase": limit_info.get("referral_percentage_increase", 0),
                 "total_limit": limit_info["total_limit"],
                 "total_redeemed": total_redeemed,
-                "remaining_limit": round(max(0, remaining), 2),
+                "remaining_limit": round(max(0, remaining_from_limit), 2),  # Limit-based remaining
+                "available_prc": round(available_prc, 2),  # User's actual PRC balance
+                "effective_remaining": round(effective_remaining, 2),  # MIN(remaining_limit, available_prc)
                 "usage_percentage": round(usage_percentage, 2),
-                "carry_forward_enabled": limit_info.get("carry_forward_enabled", True)
+                "carry_forward_enabled": limit_info.get("carry_forward_enabled", True),
+                "note": "effective_remaining = MIN(remaining_limit, available_prc)"
             }
         }
     except Exception as e:
