@@ -161,20 +161,22 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
     
     # ═══════════════════════════════════════════════════════════════════════
     # 2. redeem_requests (main redemption collection) - includes ALL service types
+    # NOTE: For bank category, we handle this separately to avoid double counting
     # ═══════════════════════════════════════════════════════════════════════
-    redeem_req = await safe_aggregate(
-        "redeem_requests",
-        {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
-        "total_prc_deducted"
-    )
-    # Also check prc_amount if total_prc_deducted is 0
-    if redeem_req == 0:
+    if category != "bank":
         redeem_req = await safe_aggregate(
             "redeem_requests",
             {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
-            "prc_amount"
+            "total_prc_deducted"
         )
-    total_used += redeem_req
+        # Also check prc_amount if total_prc_deducted is 0
+        if redeem_req == 0:
+            redeem_req = await safe_aggregate(
+                "redeem_requests",
+                {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                "prc_amount"
+            )
+        total_used += redeem_req
     
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY-SPECIFIC COLLECTIONS
@@ -226,31 +228,97 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         total_used += recharge
         
     elif category == "bank":
-        # Bank Transfers
+        # ═══════════════════════════════════════════════════════════════════════
+        # IMPORTANT: Bank withdrawals can be stored in multiple collections
+        # with different field names. Check ALL possible sources.
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # 1. redeem_requests with bank-related service_type
+        bank_redeem = await safe_aggregate(
+            "redeem_requests",
+            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}, 
+             "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "manual_bank", "prc_to_bank", "bank"]}},
+            "total_prc_deducted"
+        )
+        if bank_redeem == 0:
+            bank_redeem = await safe_aggregate(
+                "redeem_requests",
+                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+                 "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "manual_bank", "prc_to_bank", "bank"]}},
+                "prc_amount"
+            )
+        total_used += bank_redeem
+        
+        # 2. redeem_requests WITHOUT service_type (legacy bank withdrawals may not have service_type)
+        # Check if request_id starts with "BTR" (Bank Transfer Request)
+        bank_btr = await safe_aggregate(
+            "redeem_requests",
+            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+             "request_id": {"$regex": "^BTR"}},
+            "total_prc_deducted"
+        )
+        if bank_btr == 0:
+            bank_btr = await safe_aggregate(
+                "redeem_requests",
+                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+                 "request_id": {"$regex": "^BTR"}},
+                "prc_amount"
+            )
+        # Only add if not already counted
+        if bank_redeem == 0:
+            total_used += bank_btr
+        
+        # 3. Bank Transfers collection
         bank = await safe_aggregate(
             "bank_transfers",
             {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
             "prc_amount"
         )
+        if bank == 0:
+            bank = await safe_aggregate(
+                "bank_transfers",
+                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                "total_prc_deducted"
+            )
         total_used += bank
         
-        # Bank Withdrawal Requests
+        # 4. Bank Withdrawal Requests collection
         bank_wd = await safe_aggregate(
             "bank_withdrawal_requests",
             {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
             "prc_amount"
         )
+        if bank_wd == 0:
+            bank_wd = await safe_aggregate(
+                "bank_withdrawal_requests",
+                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                "total_prc_deducted"
+            )
         total_used += bank_wd
         
-        # DMT Transactions
+        # 5. Bank Redeem Requests collection
+        bank_redeem_coll = await safe_aggregate(
+            "bank_redeem_requests",
+            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            "prc_amount"
+        )
+        total_used += bank_redeem_coll
+        
+        # 6. DMT Transactions
         dmt = await safe_aggregate(
             "dmt_transactions",
             {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
             "prc_deducted"
         )
+        if dmt == 0:
+            dmt = await safe_aggregate(
+                "dmt_transactions",
+                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                "prc_amount"
+            )
         total_used += dmt
         
-        # Chatbot Withdrawals (deprecated)
+        # 7. Chatbot Withdrawals (deprecated)
         chatbot = await safe_aggregate(
             "chatbot_withdrawal_requests",
             {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},

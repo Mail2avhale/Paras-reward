@@ -1124,7 +1124,9 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 "status": {"$in": [
                     "completed", "COMPLETED", "Completed",
                     "approved", "APPROVED", "Approved", 
-                    "success", "SUCCESS", "Success"
+                    "success", "SUCCESS", "Success",
+                    "paid", "PAID", "Paid",
+                    "processing", "PROCESSING", "Processing"
                 ]},
                 "service_type": service_filter
             }
