@@ -22,6 +22,7 @@ const MENU_TO_PERMISSION = {
   'users': 'users',
   'user-360': 'users',
   'user-controls': 'user_360',
+  'members': 'members',
   'analytics': 'analytics',
   'kyc': 'kyc',
   // 'orders': 'orders', // Marketplace deprecated
@@ -50,7 +51,12 @@ const MENU_TO_PERMISSION = {
   'system-settings': 'system_settings',
   'web-settings': 'system_settings',
   'social-settings': 'system_settings',
-  'redeem-settings': 'redeem_settings'
+  'redeem-settings': 'redeem_settings',
+  // Manager accessible pages
+  'bank-transfers': 'bank-transfers',
+  'razorpay-subs': 'razorpay-subs',
+  'bbps-dashboard': 'bbps-dashboard',
+  'eko-services': 'eko-services'
 };
 
 const AdminLayout = ({ children, user, onLogout }) => {

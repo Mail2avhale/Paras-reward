@@ -39658,7 +39658,12 @@ async def update_accounting_settings(request: Request):
 # ==================== MANAGER ROLE ACCESS CONTROL ====================
 
 # Default permissions for manager role
-DEFAULT_MANAGER_PERMISSIONS = ["users", "subscription_payment", "kyc", "bill_payments", "gift_vouchers", "unified-payments"]
+DEFAULT_MANAGER_PERMISSIONS = [
+    "dashboard", "members", "users", "user-360", "subscription_payment", "kyc", 
+    "bill_payments", "gift_vouchers", "unified-payments",
+    # Added: Manager can now access these payment pages
+    "bank-transfers", "razorpay-subs", "bbps-dashboard", "eko-services"
+]
 
 # All available admin pages/permissions
 ALL_ADMIN_PERMISSIONS = [
@@ -39692,6 +39697,10 @@ ALL_ADMIN_PERMISSIONS = [
     {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
     {"id": "unified-payments", "label": "Unified Payments (All)", "category": "Payments"},
     {"id": "bank-withdrawals", "label": "Bank Withdrawals", "category": "Payments"},
+    {"id": "bank-transfers", "label": "Redeem to Bank", "category": "Payments"},
+    {"id": "razorpay-subs", "label": "Razorpay Payments", "category": "Payments"},
+    {"id": "bbps-dashboard", "label": "BBPS Instant", "category": "Payments"},
+    {"id": "eko-services", "label": "Eko Direct Services", "category": "Payments"},
     {"id": "gift_vouchers", "label": "Gift Vouchers", "category": "Payments"},
     {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
     {"id": "bill_payments", "label": "Bill Payments", "category": "Payments"},
@@ -39771,6 +39780,42 @@ async def update_user_permissions(uid: str, request: Request):
         return {"success": True, "permissions": permissions, "message": "Permissions updated successfully"}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.post("/admin/managers/sync-permissions")
+async def sync_manager_permissions():
+    """
+    Sync all managers to have the default permissions.
+    This updates existing managers with new default permissions.
+    """
+    try:
+        # Find all managers
+        managers = await db.users.find({"role": "manager"}).to_list(1000)
+        
+        updated_count = 0
+        for manager in managers:
+            current_perms = set(manager.get("allowed_pages", []))
+            default_perms = set(DEFAULT_MANAGER_PERMISSIONS)
+            
+            # Add any missing default permissions
+            new_perms = list(current_perms | default_perms)
+            
+            if set(new_perms) != current_perms:
+                await db.users.update_one(
+                    {"uid": manager.get("uid")},
+                    {"$set": {"allowed_pages": new_perms}}
+                )
+                updated_count += 1
+        
+        return {
+            "success": True,
+            "total_managers": len(managers),
+            "updated": updated_count,
+            "default_permissions": DEFAULT_MANAGER_PERMISSIONS,
+            "message": f"Synced permissions for {updated_count} managers"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
 
