@@ -43904,472 +43904,55 @@ async def view_archived_data(collection: str, page: int = 1, limit: int = 50):
 
 
 
-# ========== SIMPLE PRC BURN CONTROL (Manager/Admin) ==========
+# ========== OLD PRC BURN CONTROL - DEPRECATED ==========
+# Old manual burn system removed. New "Burning Session" (1% daily auto-burn) is on Mining page.
+# These endpoints return 410 Gone to inform clients this feature is deprecated.
 
 @api_router.get("/admin/prc-burn-control/settings")
-async def get_prc_burn_control_settings():
-    """Get PRC burn control settings"""
-    try:
-        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
-        if not settings:
-            return {
-                "enabled": False,
-                "burn_percentage": 1.0,
-                "min_balance": 100,
-                "target_type": "all_users",
-                "last_executed": None
-            }
-        return {
-            "enabled": settings.get("enabled", False),
-            "burn_percentage": settings.get("burn_percentage", 1.0),
-            "min_balance": settings.get("min_balance", 100),
-            "target_type": settings.get("target_type", "all_users"),
-            "last_executed": settings.get("last_executed"),
-            "last_burn_stats": settings.get("last_burn_stats")
-        }
-    except Exception as e:
-        logging.error(f"Error getting PRC burn control settings: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
-
+async def get_prc_burn_control_settings_deprecated():
+    """DEPRECATED - Old burn control removed. Use new Burning Session on Mining page."""
+    raise HTTPException(status_code=410, detail="PRC Burn Control deprecated. New Burning Session (1% daily auto-burn) is automatic on Mining page.")
 
 @api_router.post("/admin/prc-burn-control/settings")
-async def save_prc_burn_control_settings(request: Request):
-    """Save PRC burn control settings - Manager/Admin only"""
-    try:
-        data = await request.json()
-        
-        # Validate percentage
-        burn_pct = float(data.get("burn_percentage", 1.0))
-        if burn_pct < 0.1 or burn_pct > 50:
-            raise HTTPException(status_code=400, detail="Burn percentage must be between 0.1% and 50%")
-        
-        await db.system_settings.update_one(
-            {"type": "prc_burn_control"},
-            {"$set": {
-                "type": "prc_burn_control",
-                "enabled": data.get("enabled", False),
-                "burn_percentage": burn_pct,
-                "min_balance": int(data.get("min_balance", 100)),
-                "target_type": data.get("target_type", "all_users"),
-                "updated_by": data.get("updated_by"),
-                "updated_at": datetime.now(timezone.utc)
-            }},
-            upsert=True
-        )
-        
-        # Log admin action
-        await db.admin_action_logs.insert_one({
-            "admin_id": data.get("updated_by"),
-            "action": "prc_burn_settings_update",
-            "details": {
-                "enabled": data.get("enabled"),
-                "burn_percentage": burn_pct,
-                "target_type": data.get("target_type")
-            },
-            "timestamp": datetime.now(timezone.utc)
-        })
-        
-        return {"success": True, "message": "Settings saved"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Error saving PRC burn control settings: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
-
+async def save_prc_burn_control_settings_deprecated(request: Request):
+    """DEPRECATED - Old burn control removed."""
+    raise HTTPException(status_code=410, detail="PRC Burn Control deprecated. New Burning Session is automatic.")
 
 @api_router.get("/admin/prc-burn-control/stats")
-async def get_prc_burn_control_stats():
-    """Get stats for PRC burn control page"""
-    try:
-        # Get burn settings
-        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
-        burn_pct = settings.get("burn_percentage", 1.0) if settings else 1.0
-        min_balance = settings.get("min_balance", 100) if settings else 100
-        target_type = settings.get("target_type", "all_users") if settings else "all_users"
-        
-        # Build user query based on target type
-        user_query = {"prc_balance": {"$gte": min_balance}}
-        if target_type == "free_only":
-            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
-        elif target_type == "inactive":
-            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-            user_query["last_active"] = {"$lt": thirty_days_ago}
-        
-        # Get total PRC in circulation
-        total_prc_pipeline = [
-            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
-        ]
-        total_result = await db.users.aggregate(total_prc_pipeline).to_list(1)
-        total_prc = total_result[0]["total"] if total_result else 0
-        
-        # Get total users
-        total_users = await db.users.count_documents({})
-        
-        # Get eligible users count
-        eligible_users = await db.users.count_documents(user_query)
-        
-        # Calculate estimated burn
-        eligible_prc_pipeline = [
-            {"$match": user_query},
-            {"$group": {"_id": None, "total": {"$sum": "$prc_balance"}}}
-        ]
-        eligible_result = await db.users.aggregate(eligible_prc_pipeline).to_list(1)
-        eligible_prc = eligible_result[0]["total"] if eligible_result else 0
-        estimated_burn = eligible_prc * burn_pct / 100
-        
-        return {
-            "total_prc_circulation": round(total_prc, 2),
-            "total_users": total_users,
-            "eligible_users": eligible_users,
-            "estimated_burn": round(estimated_burn, 2)
-        }
-    except Exception as e:
-        logging.error(f"Error getting PRC burn control stats: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
-
+async def get_prc_burn_control_stats_deprecated():
+    """DEPRECATED - Use /admin/burn-statistics for new burning session stats."""
+    raise HTTPException(status_code=410, detail="Use /api/admin/burn-statistics for new Burning Session stats.")
 
 @api_router.post("/admin/prc-burn-control/execute")
-async def execute_prc_burn_control(request: Request):
-    """Execute PRC burn on all eligible users - Manager/Admin only"""
-    try:
-        data = await request.json()
-        admin_id = data.get("admin_id")
-        
-        # Get settings
-        settings = await db.system_settings.find_one({"type": "prc_burn_control"})
-        if not settings or not settings.get("enabled"):
-            raise HTTPException(status_code=400, detail="PRC Burn is not enabled")
-        
-        burn_pct = settings.get("burn_percentage", 1.0)
-        min_balance = settings.get("min_balance", 100)
-        target_type = settings.get("target_type", "all_users")
-        
-        # Build user query
-        user_query = {"prc_balance": {"$gte": min_balance}}
-        if target_type == "free_only":
-            user_query["subscription_plan"] = {"$in": ["explorer", None, ""]}
-        elif target_type == "inactive":
-            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-            user_query["last_active"] = {"$lt": thirty_days_ago}
-        
-        # Get eligible users
-        users = await db.users.find(user_query, {"uid": 1, "email": 1, "prc_balance": 1}).to_list(1000)
-        
-        total_burned = 0
-        users_affected = 0
-        
-        for user in users:
-            try:
-                current_balance = user.get("prc_balance", 0)
-                burn_amount = current_balance * burn_pct / 100
-                
-                if burn_amount < 0.01:
-                    continue
-                
-                new_balance = current_balance - burn_amount
-                
-                # Update user balance
-                await db.users.update_one(
-                    {"uid": user["uid"]},
-                    {"$set": {"prc_balance": round(new_balance, 2)}}
-                )
-                
-                # Log transaction
-                await db.transactions.insert_one({
-                    "user_id": user["uid"],
-                    "type": "prc_burn_control",
-                    "prc_amount": round(burn_amount, 2),
-                    "prc_balance_before": round(current_balance, 2),
-                    "prc_balance_after": round(new_balance, 2),
-                    "description": f"PRC Burn Control ({burn_pct}%)",
-                    "burn_percentage": burn_pct,
-                    "admin_id": admin_id,
-                    "timestamp": datetime.now(timezone.utc)
-                })
-                
-                # Log to PRC balance logs
-                await db.prc_balance_logs.insert_one({
-                    "user_email": user.get("email"),
-                    "user_id": user["uid"],
-                    "change_amount": -round(burn_amount, 2),
-                    "new_balance": round(new_balance, 2),
-                    "reason": f"PRC Burn Control ({burn_pct}%)",
-                    "admin_id": admin_id,
-                    "timestamp": datetime.now(timezone.utc)
-                })
-                
-                total_burned += burn_amount
-                users_affected += 1
-                
-            except Exception as e:
-                logging.error(f"Error burning PRC for user {user.get('uid')}: {e}")
-                continue
-        
-        # Update settings with last execution
-        await db.system_settings.update_one(
-            {"type": "prc_burn_control"},
-            {"$set": {
-                "last_executed": datetime.now(timezone.utc),
-                "last_burn_stats": {
-                    "total_burned": round(total_burned, 2),
-                    "users_affected": users_affected,
-                    "burn_percentage": burn_pct,
-                    "executed_by": admin_id
-                }
-            }}
-        )
-        
-        # Log admin action
-        await db.admin_action_logs.insert_one({
-            "admin_id": admin_id,
-            "action": "prc_burn_executed",
-            "details": {
-                "total_burned": round(total_burned, 2),
-                "users_affected": users_affected,
-                "burn_percentage": burn_pct,
-                "target_type": target_type
-            },
-            "timestamp": datetime.now(timezone.utc)
-        })
-        
-        logging.info(f"[PRC BURN CONTROL] Executed by {admin_id}: {users_affected} users, {total_burned:.2f} PRC burned")
-        
-        return {
-            "success": True,
-            "total_burned": round(total_burned, 2),
-            "users_affected": users_affected,
-            "burn_percentage": burn_pct
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logging.error(f"Error executing PRC burn control: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
-
-
-@api_router.post("/admin/smart-burn")
-async def smart_burn(request: Request):
-    """
-    Smart PRC Burn - Checks if burn already done today, prevents duplicate burns.
-    
-    This is a "once per day" burn that:
-    1. Checks if burn was already executed today
-    2. If not, executes the daily 0.5% burn
-    3. Records the burn in prc_burn_history collection
-    """
-    try:
-        data = await request.json()
-        admin_id = data.get("admin_id", "system")
-        force = data.get("force", False)  # Force burn even if already done today
-        
-        now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Check if burn was already done today
-        last_burn = await db.prc_burn_history.find_one(
-            {"burn_date": {"$gte": today_start}},
-            sort=[("burn_date", -1)]
-        )
-        
-        burn_needed = last_burn is None or force
-        burn_executed = False
-        burn_result = None
-        
-        if burn_needed:
-            # Execute the daily burn
-            burn_result = await run_prc_burn_job()
-            burn_executed = True
-            
-            # Record burn in history
-            await db.prc_burn_history.insert_one({
-                "burn_date": now,
-                "executed_by": admin_id,
-                "forced": force,
-                "result": burn_result,
-                "created_at": now
-            })
-        
-        # Get IST time for display
-        ist_offset = timedelta(hours=5, minutes=30)
-        
-        return {
-            "success": True,
-            "burn_needed": burn_needed,
-            "burn_executed": burn_executed,
-            "burn_result": burn_result,
-            "last_burn": {
-                "last_burn_time": last_burn.get("burn_date").isoformat() if last_burn else None,
-                "last_burn_time_ist": (last_burn.get("burn_date") + ist_offset).strftime("%Y-%m-%d %I:%M %p IST") if last_burn else "Never",
-                "last_executed_by": last_burn.get("executed_by") if last_burn else None
-            },
-            "message": "Burn executed successfully" if burn_executed else "Burn already done today (use force=true to override)"
-        }
-        
-    except Exception as e:
-        logging.error(f"[SMART BURN] Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Smart burn failed: {str(e)}")
-
-
-# ========== BURN HISTORY API ==========
+async def execute_prc_burn_control_deprecated(request: Request):
+    """DEPRECATED - Old manual burn removed. Burning is now automatic."""
+    raise HTTPException(status_code=410, detail="Manual burn deprecated. Burning Session is automatic (1% daily).")
 
 @api_router.get("/admin/prc-burn-control/history")
-async def get_burn_history(
-    page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100)
-):
-    """
-    Get PRC burn execution history with status and retry option
-    Shows all burn jobs - scheduled and manual
-    """
-    try:
-        skip = (page - 1) * limit
-        
-        # Get burn history from collection
-        burn_records = await db.prc_burn_history.find(
-            {},
-            {"_id": 0}
-        ).sort("burn_date", -1).skip(skip).limit(limit).to_list(limit)
-        
-        # Also check admin_actions for burn-related actions
-        admin_burn_actions = await db.admin_actions.find(
-            {"action_type": {"$in": ["prc_burn", "manual_burn", "smart_burn", "scheduled_burn"]}},
-            {"_id": 0}
-        ).sort("timestamp", -1).limit(limit).to_list(limit)
-        
-        # Combine and format results
-        history = []
-        ist_offset = timedelta(hours=5, minutes=30)
-        
-        for record in burn_records:
-            burn_date = record.get("burn_date")
-            result = record.get("result", {})
-            
-            # Get summary from nested result structure (from run_prc_burn_job)
-            summary = result.get("summary", {}) if result else {}
-            daily_burn = result.get("daily_percentage_burn", {}) if result else {}
-            
-            # Determine status
-            if result and (result.get("success") or summary.get("status") == "completed"):
-                status = "success"
-            elif result and result.get("error"):
-                status = "failed"
-            else:
-                status = "completed"
-            
-            # Get burned amount from different possible locations in result
-            total_burned = (
-                summary.get("total_prc_burned") or 
-                daily_burn.get("total_burned") or 
-                result.get("total_burned") or 
-                0
-            )
-            users_affected = (
-                summary.get("total_users_affected") or 
-                daily_burn.get("users_affected") or 
-                result.get("users_affected") or 
-                0
-            )
-            
-            history.append({
-                "id": burn_date.isoformat() if burn_date else None,
-                "type": "scheduled" if not record.get("forced") else "manual",
-                "burn_date": burn_date.isoformat() if burn_date else None,
-                "burn_date_ist": (burn_date + ist_offset).strftime("%d %b %Y, %I:%M %p IST") if burn_date else None,
-                "executed_by": record.get("executed_by", "system"),
-                "forced": record.get("forced", False),
-                "status": status,
-                "total_burned": total_burned,
-                "users_affected": users_affected,
-                "percentage": daily_burn.get("burn_percentage", 0.5),
-                "error": result.get("error") if result else None,
-                "can_retry": status == "failed"
-            })
-        
-        # Add admin actions not in burn_history
-        for action in admin_burn_actions:
-            timestamp = action.get("timestamp")
-            if timestamp:
-                # Check if already in history
-                if not any(h["burn_date"] == timestamp.isoformat() for h in history):
-                    history.append({
-                        "id": timestamp.isoformat(),
-                        "type": "manual",
-                        "burn_date": timestamp.isoformat(),
-                        "burn_date_ist": (timestamp + ist_offset).strftime("%d %b %Y, %I:%M %p IST"),
-                        "executed_by": action.get("admin_id", "admin"),
-                        "forced": True,
-                        "status": "success" if action.get("success") else "failed",
-                        "total_burned": action.get("total_burned", 0),
-                        "users_affected": action.get("users_affected", 0),
-                        "percentage": action.get("percentage", 0.5),
-                        "error": action.get("error"),
-                        "can_retry": not action.get("success", True)
-                    })
-        
-        # Sort by date descending
-        history.sort(key=lambda x: x["burn_date"] or "", reverse=True)
-        
-        # Get total count
-        total = await db.prc_burn_history.count_documents({})
-        
-        return {
-            "success": True,
-            "history": history[:limit],
-            "pagination": {
-                "page": page,
-                "limit": limit,
-                "total": total,
-                "pages": (total + limit - 1) // limit
-            }
-        }
-        
-    except Exception as e:
-        logging.error(f"[BURN HISTORY] Error: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
-
+async def get_prc_burn_control_history_deprecated():
+    """DEPRECATED - Old burn history."""
+    raise HTTPException(status_code=410, detail="Old burn history deprecated. Check user transactions for burn records.")
 
 @api_router.post("/admin/prc-burn-control/retry")
-async def retry_failed_burn(request: Request):
-    """
-    Retry a failed burn job
-    """
-    try:
-        data = await request.json()
-        admin_id = data.get("admin_id", "admin")
-        burn_id = data.get("burn_id")  # The ISO date string of the failed burn
-        
-        if not burn_id:
-            raise HTTPException(status_code=400, detail="burn_id is required")
-        
-        # Execute the burn
-        burn_result = await run_prc_burn_job()
-        
-        now = datetime.now(timezone.utc)
-        ist_offset = timedelta(hours=5, minutes=30)
-        
-        # Record retry in history
-        await db.prc_burn_history.insert_one({
-            "burn_date": now,
-            "executed_by": admin_id,
-            "forced": True,
-            "is_retry": True,
-            "original_burn_id": burn_id,
-            "result": burn_result,
-            "created_at": now
-        })
-        
-        return {
-            "success": True,
-            "message": "Retry executed successfully",
-            "burn_result": burn_result,
-            "burn_time_ist": (now + ist_offset).strftime("%d %b %Y, %I:%M %p IST")
-        }
-        
-    except Exception as e:
-        logging.error(f"[BURN RETRY] Error: {e}")
-        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+async def retry_prc_burn_control_deprecated(request: Request):
+    """DEPRECATED - Retry not needed for automatic burning session."""
+    raise HTTPException(status_code=410, detail="Retry deprecated. Burning Session is automatic.")
 
 
+# ========== Below is the old code - kept for reference but not executed ==========
+"""
+OLD PRC BURN CONTROL CODE - REMOVED
+The old manual burn system allowed admins to execute burns on demand.
+This has been replaced with the new "Burning Session" that automatically
+burns 1% of user balances daily (per second calculation).
+
+The new system:
+- Automatic: No admin action needed
+- Continuous: Burns every second (calculated on API call)
+- Minimum: Stops at 10,000 PRC balance
+- Visible: Shows on user's Mining page
+- Stats: Available at /api/admin/burn-statistics
+"""
 # ========== SCHEDULER HEALTH CHECK ==========
 
 @api_router.get("/admin/scheduler/status")

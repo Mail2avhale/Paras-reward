@@ -215,7 +215,7 @@ const AdminSecurityDashboard = IS_USER_BUILD ? null : lazy(() => import(/* webpa
 // AdminVIPPlans and AdminVIPPaymentVerification removed - replaced by AdminSubscriptionManagement (new 4-tier system)
 const AdminSubscriptionManagement = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminSubscriptionManagement"));
 const AdminMembers = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminMembers"));
-const AdminPRCBurnControl = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPRCBurnControl"));
+// AdminPRCBurnControl - REMOVED (old burn system deprecated, new Burning Session on Mining page)
 const AdminDataBackup = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminDataBackup"));
 // AdminBillPayments - REMOVED (all pending rejected + refunded)
 const AdminRazorpaySubscriptions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminRazorpaySubscriptions"));
@@ -423,7 +423,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/user-controls" element={<Navigate to="/admin/user-360" />} />
                 <Route path="/admin/user-360" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUser360 user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} />
-                <Route path="/admin/prc-burn-control" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCBurnControl user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                {/* AdminPRCBurnControl - REMOVED, redirect to admin */}
+                <Route path="/admin/prc-burn-control" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/data-backup" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminDataBackup user={user} onLogout={handleLogout} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 {/* AdminBillPayments - REMOVED, redirect to admin */}
                 <Route path="/admin/bill-payments" element={<Navigate to="/admin" replace />} />
