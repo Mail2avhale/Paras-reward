@@ -8,7 +8,7 @@ import {
   Store, Award, ShoppingCart, Bell, Settings, DollarSign, Truck, Activity,
   Shield, Wallet, AlertTriangle, Crown, RefreshCw, ChevronRight,
   UserCheck, Clock, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight,
-  Zap, Gift, Star, Target, Percent, BadgeCheck, UserCog
+  Zap, Gift, Star, Target, Percent, BadgeCheck, UserCog, Trophy, Flame
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminLoginAsUser from '@/components/AdminLoginAsUser';
@@ -31,6 +31,7 @@ const AdminDashboard = ({ user }) => {
   const [deliveryStats, setDeliveryStats] = useState(null);
   // Orders removed - Marketplace deprecated
   const [pendingKYC, setPendingKYC] = useState([]);
+  const [burningStats, setBurningStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLoginAsUser, setShowLoginAsUser] = useState(false);
@@ -129,15 +130,17 @@ const AdminDashboard = ({ user }) => {
     
     try {
       // Single combined API call + parallel secondary calls
-      const [statsRes, deliveryRes, kycRes] = await Promise.all([
+      const [statsRes, deliveryRes, kycRes, burningRes] = await Promise.all([
         axios.get(`${API}/admin/stats`).catch(() => ({ data: {} })),
         axios.get(`${API}/admin/delivery-partners/stats`).catch(() => ({ data: {} })),
         // Orders API removed - Marketplace deprecated
-        axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] }))
+        axios.get(`${API}/kyc/list?limit=10&status=pending`).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/burn-statistics`).catch(() => ({ data: null }))
       ]);
       
       setStats(statsRes.data);
       setDeliveryStats(deliveryRes.data);
+      setBurningStats(burningRes.data);
       // Orders removed - Marketplace deprecated
       const allKyc = Array.isArray(kycRes.data) ? kycRes.data : (kycRes.data?.users || []);
       setPendingKYC(allKyc.filter(k => k.status === 'pending').slice(0, 5));
@@ -438,6 +441,71 @@ const AdminDashboard = ({ user }) => {
         />
         {/* Orders card removed - Marketplace deprecated */}
       </div>
+
+      {/* 🔥 Burning Session Statistics Card */}
+      {burningStats && (
+        <Card className="p-5 bg-gradient-to-br from-red-950/30 via-orange-950/20 to-gray-950 border-red-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <span className="text-2xl">🔥</span>
+              Burning Session Statistics
+            </h3>
+            <div className="px-3 py-1.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-2">
+              <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
+              1% Daily Auto-Burn
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-black/30 rounded-xl p-4 text-center border border-red-500/20">
+              <p className="text-zinc-500 text-xs mb-1">Total Burned (Lifetime)</p>
+              <p className="text-2xl font-bold text-red-400 font-mono">
+                {(burningStats.statistics?.total_prc_burned_lifetime || 0).toLocaleString()}
+              </p>
+              <p className="text-xs text-zinc-600">PRC</p>
+            </div>
+            <div className="bg-black/30 rounded-xl p-4 text-center border border-orange-500/20">
+              <p className="text-zinc-500 text-xs mb-1">Active Burners</p>
+              <p className="text-2xl font-bold text-orange-400 font-mono">
+                {burningStats.statistics?.active_burning_users || 0}
+              </p>
+              <p className="text-xs text-zinc-600">Users &gt; 10K PRC</p>
+            </div>
+            <div className="bg-black/30 rounded-xl p-4 text-center border border-amber-500/20">
+              <p className="text-zinc-500 text-xs mb-1">Burn Rate / Day</p>
+              <p className="text-2xl font-bold text-amber-400 font-mono">
+                -{(burningStats.statistics?.total_burn_rate_per_day || 0).toLocaleString()}
+              </p>
+              <p className="text-xs text-zinc-600">PRC/day</p>
+            </div>
+            <div className="bg-black/30 rounded-xl p-4 text-center border border-yellow-500/20">
+              <p className="text-zinc-500 text-xs mb-1">Est. Monthly Burn</p>
+              <p className="text-2xl font-bold text-yellow-400 font-mono">
+                -{(burningStats.statistics?.estimated_monthly_burn || 0).toLocaleString()}
+              </p>
+              <p className="text-xs text-zinc-600">PRC/month</p>
+            </div>
+          </div>
+          
+          {/* Top Burners */}
+          {burningStats.top_burners?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-red-500/20">
+              <p className="text-zinc-400 text-xs mb-3 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                Top 5 Burners (Most PRC Burned)
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                {burningStats.top_burners.slice(0, 5).map((burner, i) => (
+                  <div key={burner.uid} className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                    <p className="text-xs text-zinc-400 truncate">{burner.name}</p>
+                    <p className="text-sm font-bold text-red-400">-{burner.total_burned}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Subscription Breakdown - Beautiful Progress Bars */}
       <Card className="p-5 bg-gradient-to-br from-gray-900/80 to-gray-950 border-gray-800">

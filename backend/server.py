@@ -31163,30 +31163,70 @@ async def clear_all_free_users_prc():
 
 @api_router.get("/admin/burn-statistics")
 async def get_burn_statistics():
-    """Get PRC burn statistics (Admin only)"""
-    # Get total burned from transactions
-    burn_transactions = await db.transactions.find({
-        "transaction_type": {"$in": ["prc_burn_free_user", "prc_burn_expired_vip"]}
-    }).to_list(1000)
+    """Get PRC burn statistics for the new Continuous Burning Session (Admin only)"""
     
-    total_burned = sum(t.get("prc_amount", 0) for t in burn_transactions)
-    free_user_burned = sum(t.get("prc_amount", 0) for t in burn_transactions if t.get("transaction_type") == "prc_burn_free_user")
-    vip_burned = sum(t.get("prc_amount", 0) for t in burn_transactions if t.get("transaction_type") == "prc_burn_expired_vip")
+    # Get all users with burning session data
+    burning_users = await db.users.find(
+        {"prc_balance": {"$gt": 0}},
+        {"_id": 0, "uid": 1, "name": 1, "prc_balance": 1, "total_prc_burned": 1, "last_burn_at": 1, "burning_session_started": 1}
+    ).to_list(10000)
     
-    # Count users with burned PRC
-    users_with_burned = await db.users.count_documents({
-        "mining_history.burned": True
-    })
+    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]  # 10,000
+    daily_rate = BURNING_SESSION_SETTINGS["daily_burn_percentage"]  # 1%
     
-    # Get recent burns
-    recent_burns = sorted(burn_transactions, key=lambda x: x.get("timestamp", ""), reverse=True)[:10]
+    # Calculate statistics
+    total_burned_lifetime = 0
+    active_burning_users = 0
+    inactive_burning_users = 0
+    total_burn_rate_per_day = 0
+    top_burners = []
+    
+    for user in burning_users:
+        balance = float(user.get("prc_balance", 0) or 0)
+        burned = float(user.get("total_prc_burned", 0) or 0)
+        total_burned_lifetime += burned
+        
+        if balance > minimum_balance:
+            active_burning_users += 1
+            daily_burn = balance * (daily_rate / 100)
+            total_burn_rate_per_day += daily_burn
+            
+            if burned > 0:
+                top_burners.append({
+                    "uid": user.get("uid"),
+                    "name": user.get("name", "Unknown"),
+                    "balance": round(balance, 2),
+                    "total_burned": round(burned, 2),
+                    "burn_per_day": round(daily_burn, 2)
+                })
+        else:
+            inactive_burning_users += 1
+    
+    # Sort top burners by total burned
+    top_burners.sort(key=lambda x: x["total_burned"], reverse=True)
+    
+    # Get recent burn transactions
+    recent_burns = await db.transactions.find(
+        {"type": "prc_burn"},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
     
     return {
-        "total_burned": total_burned,
-        "free_user_burned": free_user_burned,
-        "expired_vip_burned": vip_burned,
-        "users_affected": users_with_burned,
-        "recent_burns": recent_burns
+        "burning_session_settings": {
+            "daily_burn_rate_percent": daily_rate,
+            "minimum_balance_threshold": minimum_balance,
+            "burn_per_second_formula": "balance * 0.01 / 86400"
+        },
+        "statistics": {
+            "total_prc_burned_lifetime": round(total_burned_lifetime, 2),
+            "active_burning_users": active_burning_users,
+            "inactive_users": inactive_burning_users,
+            "total_burn_rate_per_day": round(total_burn_rate_per_day, 2),
+            "total_burn_rate_per_hour": round(total_burn_rate_per_day / 24, 2),
+            "estimated_monthly_burn": round(total_burn_rate_per_day * 30, 2)
+        },
+        "top_burners": top_burners[:10],
+        "recent_burn_transactions": recent_burns
     }
 
 # VIP Plans Management Endpoints
