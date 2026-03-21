@@ -36,8 +36,68 @@ const AdminDashboard = ({ user }) => {
   const [showLoginAsUser, setShowLoginAsUser] = useState(false);
   const [bulkFixing, setBulkFixing] = useState(false);
   const [bulkFixResult, setBulkFixResult] = useState(null);
+  const [bulkFixJob, setBulkFixJob] = useState(null);
 
-  // Bulk Fix All Users function
+  // Check for running bulk fix job on load
+  useEffect(() => {
+    const checkBulkFixJob = async () => {
+      try {
+        const res = await axios.get(`${API}/admin/bulk-fix-latest`);
+        if (res.data.job && res.data.job.status === 'running') {
+          setBulkFixJob(res.data.job);
+          pollJobStatus(res.data.job.job_id);
+        }
+      } catch (err) {
+        console.error('Failed to check bulk fix job:', err);
+      }
+    };
+    checkBulkFixJob();
+  }, []);
+
+  // Poll job status
+  const pollJobStatus = (jobId) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API}/admin/bulk-fix-status/${jobId}`);
+        setBulkFixJob(res.data.job);
+        
+        if (res.data.job.status === 'completed') {
+          clearInterval(interval);
+          toast.success(`✅ Bulk fix completed! Fixed ${res.data.job.issues_fixed} issues`);
+          fetchDashboardData(true);
+        } else if (res.data.job.status === 'failed') {
+          clearInterval(interval);
+          toast.error('Bulk fix job failed');
+        }
+      } catch (err) {
+        clearInterval(interval);
+      }
+    }, 2000); // Poll every 2 seconds
+  };
+
+  // Start background bulk fix
+  const startBulkFixJob = async () => {
+    setBulkFixing(true);
+    try {
+      const res = await axios.post(`${API}/admin/bulk-fix-start`);
+      if (res.data.success) {
+        toast.info(`🚀 Bulk fix started for ${res.data.total_users} users`);
+        setBulkFixJob({ job_id: res.data.job_id, status: 'running', progress: 0, total_users: res.data.total_users });
+        pollJobStatus(res.data.job_id);
+      } else {
+        toast.warning(res.data.message);
+        if (res.data.existing_job_id) {
+          pollJobStatus(res.data.existing_job_id);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start bulk fix');
+    } finally {
+      setBulkFixing(false);
+    }
+  };
+
+  // Bulk Fix All Users function (old - for preview)
   const runBulkFix = async (dryRun = true) => {
     setBulkFixing(true);
     try {
@@ -167,22 +227,19 @@ const AdminDashboard = ({ user }) => {
             variant="outline" 
             size="sm" 
             onClick={() => {
-              if (bulkFixResult && !bulkFixResult.dry_run) {
-                setBulkFixResult(null);
-                runBulkFix(true);
-              } else if (bulkFixResult) {
-                if (confirm(`Apply fixes to ${bulkFixResult.summary?.users_with_issues || 0} users?\n\nThis will fix ${bulkFixResult.summary?.total_issues_found || 0} issues including:\n- KYC sync issues\n- Expired subscriptions\n- Failed transaction refunds\n- Unactivated payments`)) {
-                  runBulkFix(false);
-                }
-              } else {
-                runBulkFix(true);
+              if (bulkFixJob && bulkFixJob.status === 'running') {
+                toast.info(`Job running: ${bulkFixJob.progress}% complete`);
+              } else if (confirm('Start bulk fix for ALL users? This runs in background.')) {
+                startBulkFixJob();
               }
             }}
-            disabled={bulkFixing}
-            className={`${bulkFixResult && bulkFixResult.dry_run ? 'text-green-400 border-green-500/50 hover:bg-green-500/10' : 'text-purple-400 border-purple-500/50 hover:bg-purple-500/10'}`}
+            disabled={bulkFixing || (bulkFixJob && bulkFixJob.status === 'running')}
+            className={`${bulkFixJob && bulkFixJob.status === 'running' ? 'text-blue-400 border-blue-500/50 animate-pulse' : 'text-purple-400 border-purple-500/50 hover:bg-purple-500/10'}`}
           >
-            <Zap className={`w-4 h-4 mr-2 ${bulkFixing ? 'animate-pulse' : ''}`} />
-            {bulkFixing ? 'Scanning...' : bulkFixResult && bulkFixResult.dry_run ? `Fix ${bulkFixResult.summary?.total_issues_found || 0} Issues` : '🔧 Auto Fix All'}
+            <Zap className={`w-4 h-4 mr-2 ${bulkFixing || (bulkFixJob && bulkFixJob.status === 'running') ? 'animate-spin' : ''}`} />
+            {bulkFixJob && bulkFixJob.status === 'running' 
+              ? `Fixing... ${bulkFixJob.progress || 0}%` 
+              : '🔧 Auto Fix All'}
           </Button>
           {/* Login As User Button */}
           <Button 
@@ -235,54 +292,118 @@ const AdminDashboard = ({ user }) => {
         </Card>
       )}
 
-      {/* Bulk Fix Results Panel */}
-      {bulkFixResult && (
-        <Card className={`p-4 ${bulkFixResult.dry_run ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30'}`}>
+      {/* Bulk Fix Results Panel - Running Job or Results */}
+      {(bulkFixJob || bulkFixResult) && (
+        <Card className={`p-4 ${
+          bulkFixJob?.status === 'running' ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30' :
+          bulkFixJob?.status === 'completed' ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' :
+          bulkFixResult?.dry_run ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30' : 
+          'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30'
+        }`}>
           <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <Zap className={`w-5 h-5 ${bulkFixResult.dry_run ? 'text-purple-400' : 'text-green-400'}`} />
-              <div>
-                <h3 className={`text-sm font-bold mb-2 ${bulkFixResult.dry_run ? 'text-purple-400' : 'text-green-400'}`}>
-                  {bulkFixResult.dry_run ? '🔍 Issues Found (Preview)' : '✅ Issues Fixed'}
+            <div className="flex items-start gap-3 flex-1">
+              <Zap className={`w-5 h-5 ${
+                bulkFixJob?.status === 'running' ? 'text-blue-400 animate-pulse' :
+                bulkFixJob?.status === 'completed' ? 'text-green-400' :
+                bulkFixResult?.dry_run ? 'text-purple-400' : 'text-green-400'
+              }`} />
+              <div className="flex-1">
+                <h3 className={`text-sm font-bold mb-2 ${
+                  bulkFixJob?.status === 'running' ? 'text-blue-400' :
+                  bulkFixJob?.status === 'completed' ? 'text-green-400' :
+                  bulkFixResult?.dry_run ? 'text-purple-400' : 'text-green-400'
+                }`}>
+                  {bulkFixJob?.status === 'running' ? '🔄 Bulk Fix Running...' :
+                   bulkFixJob?.status === 'completed' ? '✅ Bulk Fix Completed' :
+                   bulkFixResult?.dry_run ? '🔍 Issues Found (Preview)' : '✅ Issues Fixed'}
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-400">Users Scanned</p>
-                    <p className="text-white font-bold">{bulkFixResult.summary?.total_users_scanned || 0}</p>
+                
+                {/* Progress Bar for Running Job */}
+                {bulkFixJob?.status === 'running' && (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Processing {bulkFixJob.processed || 0} of {bulkFixJob.total_users} users</span>
+                      <span>{bulkFixJob.progress || 0}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                        style={{ width: `${bulkFixJob.progress || 0}%` }}
+                      />
+                    </div>
+                    <p className="text-gray-500 text-xs mt-1">Fixed: {bulkFixJob.issues_fixed || 0} issues | PRC Refunded: {bulkFixJob.prc_refunded || 0}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400">Users with Issues</p>
-                    <p className="text-white font-bold">{bulkFixResult.summary?.users_with_issues || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">Total Issues</p>
-                    <p className="text-white font-bold">{bulkFixResult.summary?.total_issues_found || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">PRC Refunded</p>
-                    <p className="text-green-400 font-bold">{bulkFixResult.summary?.total_prc_refunded || 0} PRC</p>
-                  </div>
-                </div>
-                {bulkFixResult.affected_users?.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-gray-400 text-xs mb-2">Affected Users:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {bulkFixResult.affected_users.slice(0, 5).map((u, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">
-                          {u.name || u.email?.split('@')[0]}
-                        </span>
-                      ))}
-                      {bulkFixResult.affected_users.length > 5 && (
-                        <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-400">
-                          +{bulkFixResult.affected_users.length - 5} more
-                        </span>
-                      )}
+                )}
+                
+                {/* Completed Job Results */}
+                {bulkFixJob?.status === 'completed' && bulkFixJob.results && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-400">Users Processed</p>
+                      <p className="text-white font-bold">{bulkFixJob.results.processed || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Users Fixed</p>
+                      <p className="text-white font-bold">{bulkFixJob.results.users_with_issues || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Issues Fixed</p>
+                      <p className="text-white font-bold">{bulkFixJob.results.issues_fixed || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">PRC Refunded</p>
+                      <p className="text-green-400 font-bold">{bulkFixJob.results.prc_refunded || 0} PRC</p>
                     </div>
                   </div>
                 )}
+                
+                {/* Preview Results (old system) */}
+                {bulkFixResult && !bulkFixJob && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-400">Users Scanned</p>
+                        <p className="text-white font-bold">{bulkFixResult.summary?.total_users_scanned || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Users with Issues</p>
+                        <p className="text-white font-bold">{bulkFixResult.summary?.users_with_issues || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Total Issues</p>
+                        <p className="text-white font-bold">{bulkFixResult.summary?.total_issues_found || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">PRC Refunded</p>
+                        <p className="text-green-400 font-bold">{bulkFixResult.summary?.total_prc_refunded || 0} PRC</p>
+                      </div>
+                    </div>
+                    {bulkFixResult.affected_users?.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-gray-400 text-xs mb-2">Affected Users:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {bulkFixResult.affected_users.slice(0, 5).map((u, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">
+                              {u.name || u.email?.split('@')[0]}
+                            </span>
+                          ))}
+                          {bulkFixResult.affected_users.length > 5 && (
+                            <span className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-400">
+                              +{bulkFixResult.affected_users.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-            <button onClick={() => setBulkFixResult(null)} className="text-gray-500 hover:text-white">
+            <button 
+              onClick={() => { setBulkFixResult(null); setBulkFixJob(null); }} 
+              className="text-gray-500 hover:text-white"
+              disabled={bulkFixJob?.status === 'running'}
+            >
               <XCircle className="w-5 h-5" />
             </button>
           </div>

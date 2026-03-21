@@ -20231,6 +20231,267 @@ async def admin_delete_payment_record(request: Request):
     }
 
 
+# ==================== BACKGROUND BULK FIX SYSTEM ====================
+
+async def run_bulk_fix_background(job_id: str, batch_size: int = 50):
+    """
+    Background task to fix all users in batches.
+    Updates job status in database as it progresses.
+    """
+    import random, string
+    
+    try:
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        # Update job status to running
+        await db.bulk_fix_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {"status": "running", "started_at": timestamp}}
+        )
+        
+        # Get total user count
+        total_users = await db.users.count_documents({})
+        
+        results = {
+            "total_users": total_users,
+            "processed": 0,
+            "users_with_issues": 0,
+            "issues_found": 0,
+            "issues_fixed": 0,
+            "prc_refunded": 0,
+            "errors": []
+        }
+        
+        # Process in batches
+        skip = 0
+        while skip < total_users:
+            users = await db.users.find(
+                {},
+                {"uid": 1, "name": 1, "email": 1, "mobile": 1, "kyc_status": 1, "subscription_plan": 1, 
+                 "subscription_expires": 1, "subscription_expiry": 1, "vip_expiry": 1,
+                 "prc_balance": 1, "membership_type": 1, "mining_start_time": 1, "referral_code": 1}
+            ).skip(skip).limit(batch_size).to_list(batch_size)
+            
+            if not users:
+                break
+            
+            for user in users:
+                uid = user.get("uid")
+                user_fixed = False
+                
+                try:
+                    # 1. KYC sync
+                    kyc_status = user.get("kyc_status", "not_submitted")
+                    kyc_doc = await db.kyc_documents.find_one({"user_id": uid})
+                    
+                    if kyc_doc and kyc_doc.get("status") == "verified" and kyc_status != "verified":
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "verified"}})
+                        results["issues_fixed"] += 1
+                        user_fixed = True
+                    
+                    if kyc_status == "pending" and not kyc_doc:
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted"}})
+                        results["issues_fixed"] += 1
+                        user_fixed = True
+                    
+                    if kyc_status == "rejected":
+                        await db.users.update_one({"uid": uid}, {"$set": {"kyc_status": "not_submitted", "kyc_can_resubmit": True}})
+                        results["issues_fixed"] += 1
+                        user_fixed = True
+                    
+                    # 2. Expired subscription
+                    subscription_plan = user.get("subscription_plan", "explorer")
+                    subscription_expiry = user.get("subscription_expires") or user.get("subscription_expiry") or user.get("vip_expiry")
+                    membership_type = user.get("membership_type", "free")
+                    
+                    if subscription_expiry and subscription_plan not in ["explorer", "free", "", None]:
+                        try:
+                            expiry_date = datetime.fromisoformat(str(subscription_expiry).replace('Z', '+00:00'))
+                            if expiry_date < datetime.now(timezone.utc):
+                                await db.users.update_one(
+                                    {"uid": uid},
+                                    {"$set": {"subscription_plan": "explorer", "membership_type": "free"}}
+                                )
+                                results["issues_fixed"] += 1
+                                user_fixed = True
+                        except:
+                            pass
+                    
+                    # 3. Membership type mismatch
+                    if is_paid_subscriber(user) and membership_type == "free":
+                        await db.users.update_one({"uid": uid}, {"$set": {"membership_type": "paid"}})
+                        results["issues_fixed"] += 1
+                        user_fixed = True
+                    
+                    # 4. Failed transactions refund
+                    failed_txns = await db.redeem_requests.find({
+                        "user_id": uid,
+                        "status": {"$in": ["failed", "RETRY_FAILED", "eko_failed", "rejected"]},
+                        "prc_refunded": {"$ne": True}
+                    }).to_list(20)
+                    
+                    for ftxn in failed_txns:
+                        prc_amount = ftxn.get("total_prc_deducted") or ftxn.get("prc_amount") or 0
+                        if prc_amount > 0:
+                            current_balance = float(user.get("prc_balance", 0) or 0)
+                            new_balance = current_balance + prc_amount
+                            
+                            await db.users.update_one({"uid": uid}, {"$set": {"prc_balance": new_balance}})
+                            await db.redeem_requests.update_one(
+                                {"request_id": ftxn.get("request_id")},
+                                {"$set": {"prc_refunded": True, "refunded_at": timestamp, "refunded_by": "bulk_fix_job"}}
+                            )
+                            
+                            user["prc_balance"] = new_balance
+                            results["prc_refunded"] += prc_amount
+                            results["issues_fixed"] += 1
+                            user_fixed = True
+                    
+                    # 5. Mining reset
+                    mining_start = user.get("mining_start_time")
+                    if mining_start:
+                        try:
+                            start_time = datetime.fromisoformat(str(mining_start).replace('Z', '+00:00'))
+                            hours_mining = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
+                            if hours_mining > 12:
+                                await db.users.update_one(
+                                    {"uid": uid},
+                                    {"$set": {"mining_active": False, "mining_start_time": None}}
+                                )
+                                results["issues_fixed"] += 1
+                                user_fixed = True
+                        except:
+                            pass
+                    
+                    # 6. Referral code
+                    if not user.get("referral_code"):
+                        new_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                        await db.users.update_one({"uid": uid}, {"$set": {"referral_code": new_code}})
+                        results["issues_fixed"] += 1
+                        user_fixed = True
+                    
+                    if user_fixed:
+                        results["users_with_issues"] += 1
+                    
+                except Exception as user_err:
+                    results["errors"].append({"uid": uid, "error": str(user_err)})
+                
+                results["processed"] += 1
+            
+            skip += batch_size
+            
+            # Update progress in database
+            progress = int((results["processed"] / total_users) * 100)
+            await db.bulk_fix_jobs.update_one(
+                {"job_id": job_id},
+                {"$set": {
+                    "progress": progress,
+                    "processed": results["processed"],
+                    "issues_fixed": results["issues_fixed"],
+                    "prc_refunded": round(results["prc_refunded"], 2),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        
+        # Mark job as completed
+        await db.bulk_fix_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "results": results
+            }}
+        )
+        
+    except Exception as e:
+        # Mark job as failed
+        await db.bulk_fix_jobs.update_one(
+            {"job_id": job_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e),
+                "failed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        logging.error(f"[BULK FIX JOB] Job {job_id} failed: {e}")
+
+
+@api_router.post("/admin/bulk-fix-start")
+async def start_bulk_fix_job(background_tasks: BackgroundTasks):
+    """
+    Start a background job to fix ALL users.
+    Returns job_id to track progress.
+    """
+    import uuid
+    
+    job_id = f"BFJ-{uuid.uuid4().hex[:12].upper()}"
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Check if any job is already running
+    running_job = await db.bulk_fix_jobs.find_one({"status": "running"})
+    if running_job:
+        return {
+            "success": False,
+            "message": "A bulk fix job is already running",
+            "existing_job_id": running_job.get("job_id"),
+            "progress": running_job.get("progress", 0)
+        }
+    
+    # Get total users count
+    total_users = await db.users.count_documents({})
+    
+    # Create job record
+    await db.bulk_fix_jobs.insert_one({
+        "job_id": job_id,
+        "status": "pending",
+        "total_users": total_users,
+        "processed": 0,
+        "progress": 0,
+        "issues_fixed": 0,
+        "prc_refunded": 0,
+        "created_at": timestamp,
+        "started_at": None,
+        "completed_at": None
+    })
+    
+    # Start background task
+    background_tasks.add_task(run_bulk_fix_background, job_id)
+    
+    return {
+        "success": True,
+        "message": "Bulk fix job started",
+        "job_id": job_id,
+        "total_users": total_users,
+        "estimated_time": f"~{total_users // 50} seconds"
+    }
+
+
+@api_router.get("/admin/bulk-fix-status/{job_id}")
+async def get_bulk_fix_status(job_id: str):
+    """Get status of a bulk fix job."""
+    job = await db.bulk_fix_jobs.find_one({"job_id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return {
+        "success": True,
+        "job": job
+    }
+
+
+@api_router.get("/admin/bulk-fix-latest")
+async def get_latest_bulk_fix_job():
+    """Get the latest/current bulk fix job."""
+    job = await db.bulk_fix_jobs.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    if not job:
+        return {"success": True, "job": None, "message": "No bulk fix jobs found"}
+    
+    return {
+        "success": True,
+        "job": job
+    }
+
+
 @api_router.get("/admin/bulk-diagnose-all")
 @api_router.post("/admin/bulk-diagnose-all")
 async def admin_bulk_diagnose_all_users(
