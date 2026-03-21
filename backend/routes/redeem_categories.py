@@ -187,10 +187,11 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
     
     # ═══════════════════════════════════════════════════════════════════════
     # 1. unified_redemptions (newer unified collection)
+    # NO DATE FILTER - count ALL TIME from joining
     # ═══════════════════════════════════════════════════════════════════════
     unified = await safe_aggregate(
         "unified_redemptions",
-        {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+        {"user_id": uid, "service_type": {"$in": services}, "status": {"$in": success_statuses}},
         "prc_deducted"
     )
     total_used += unified
@@ -198,18 +199,19 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
     # ═══════════════════════════════════════════════════════════════════════
     # 2. redeem_requests (main redemption collection) - includes ALL service types
     # NOTE: For bank category, we handle this separately to avoid double counting
+    # NO DATE FILTER - count ALL TIME from joining
     # ═══════════════════════════════════════════════════════════════════════
     if category != "bank":
         redeem_req = await safe_aggregate(
             "redeem_requests",
-            {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "service_type": {"$in": services}, "status": {"$in": success_statuses}},
             "total_prc_deducted"
         )
         # Also check prc_amount if total_prc_deducted is 0
         if redeem_req == 0:
             redeem_req = await safe_aggregate(
                 "redeem_requests",
-                {"user_id": uid, "service_type": {"$in": services}, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "service_type": {"$in": services}, "status": {"$in": success_statuses}},
                 "prc_amount"
             )
         total_used += redeem_req
@@ -219,49 +221,89 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
     # ═══════════════════════════════════════════════════════════════════════
     
     if category == "utility":
-        # Gift Voucher Requests
+        # ═══════════════════════════════════════════════════════════════════════
+        # UTILITY: Gift Vouchers, BBPS, Subscriptions, Recharges
+        # NO DATE FILTER - count ALL TIME from joining
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # 1. Gift Voucher Requests
         voucher = await safe_aggregate(
             "gift_voucher_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_amount"
         )
         if voucher == 0:
             voucher = await safe_aggregate(
                 "gift_voucher_requests",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "status": {"$in": success_statuses}},
                 "total_prc_deducted"
             )
         total_used += voucher
         
-        # Bill Payment Requests (BBPS)
+        # 2. Bill Payment Requests (BBPS)
         bbps = await safe_aggregate(
             "bill_payment_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_used"
         )
         if bbps == 0:
             bbps = await safe_aggregate(
                 "bill_payment_requests",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "status": {"$in": success_statuses}},
                 "total_prc_deducted"
             )
         total_used += bbps
         
-        # PRC Subscription Payments
+        # 3. PRC Subscription Payments
         sub_prc = await safe_aggregate(
             "subscription_payments",
-            {"user_id": uid, "payment_method": "prc", "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "payment_method": "prc", "status": {"$in": success_statuses}},
             "prc_amount"
         )
+        if sub_prc == 0:
+            sub_prc = await safe_aggregate(
+                "subscription_payments",
+                {"user_id": uid, "payment_method": "prc", "status": {"$in": success_statuses}},
+                "inr_equivalent"
+            )
         total_used += sub_prc
         
-        # Recharge Requests (legacy)
+        # 4. Recharge Requests (legacy)
         recharge = await safe_aggregate(
             "recharge_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_used"
         )
+        if recharge == 0:
+            recharge = await safe_aggregate(
+                "recharge_requests",
+                {"user_id": uid, "status": {"$in": success_statuses}},
+                "prc_amount"
+            )
         total_used += recharge
+        
+        # 5. redeem_requests with utility service_types
+        utility_services = [
+            "gift_voucher", "bbps", "subscription", "recharge", "bill_payment",
+            "mobile_recharge", "mobile_prepaid", "mobile_postpaid", "dth",
+            "electricity", "gas", "water", "broadband", "landline", "postpaid",
+            "fastag", "loan_emi", "insurance", "lpg", "cable_tv", "education",
+            "municipal_tax", "housing_society", "credit_card", "other"
+        ]
+        utility_redeem = await safe_aggregate(
+            "redeem_requests",
+            {"user_id": uid, "status": {"$in": success_statuses}, 
+             "service_type": {"$in": utility_services}},
+            "total_prc_deducted"
+        )
+        if utility_redeem == 0:
+            utility_redeem = await safe_aggregate(
+                "redeem_requests",
+                {"user_id": uid, "status": {"$in": success_statuses},
+                 "service_type": {"$in": utility_services}},
+                "prc_amount"
+            )
+        total_used += utility_redeem
         
     elif category == "bank":
         # ═══════════════════════════════════════════════════════════════════════
@@ -384,13 +426,41 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         total_used += chatbot
         
     elif category == "shopping":
-        # Orders
+        # ═══════════════════════════════════════════════════════════════════════
+        # SHOPPING: Orders, E-commerce, Marketplace
+        # NO DATE FILTER - count ALL TIME from joining
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        # 1. Orders collection
         orders = await safe_aggregate(
             "orders",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}},
+            {"user_id": uid, "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}},
             "total_prc"
         )
+        if orders == 0:
+            orders = await safe_aggregate(
+                "orders",
+                {"user_id": uid, "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}},
+                "prc_amount"
+            )
         total_used += orders
+        
+        # 2. redeem_requests with shopping service_types
+        shopping_services = ["shopping", "ecommerce", "product", "marketplace", "order"]
+        shopping_redeem = await safe_aggregate(
+            "redeem_requests",
+            {"user_id": uid, "status": {"$in": success_statuses}, 
+             "service_type": {"$in": shopping_services}},
+            "total_prc_deducted"
+        )
+        if shopping_redeem == 0:
+            shopping_redeem = await safe_aggregate(
+                "redeem_requests",
+                {"user_id": uid, "status": {"$in": success_statuses},
+                 "service_type": {"$in": shopping_services}},
+                "prc_amount"
+            )
+        total_used += shopping_redeem
     
     return total_used
 
