@@ -20235,7 +20235,7 @@ async def admin_delete_payment_record(request: Request):
 @api_router.post("/admin/bulk-diagnose-all")
 async def admin_bulk_diagnose_all_users(
     dry_run: bool = True,
-    limit: int = 500
+    limit: int = 100
 ):
     """
     🔧 ADVANCED BULK AUTO-FIX: Diagnose and fix ALL issues for ALL users.
@@ -20254,11 +20254,15 @@ async def admin_bulk_diagnose_all_users(
     
     Query Params:
     - dry_run: If True, only preview (default: True)
-    - limit: Max users to process (default: 500)
+    - limit: Max users to process (default: 100, max: 200 to prevent timeout)
     
     ⚠️ SET dry_run=false TO ACTUALLY FIX ISSUES
     """
     import random, string
+    
+    # Limit to prevent timeout on large databases
+    limit = min(limit, 200)
+    
     timestamp = datetime.now(timezone.utc).isoformat()
     
     results = {

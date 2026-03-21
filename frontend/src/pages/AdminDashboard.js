@@ -41,7 +41,9 @@ const AdminDashboard = ({ user }) => {
   const runBulkFix = async (dryRun = true) => {
     setBulkFixing(true);
     try {
-      const response = await axios.post(`${API}/admin/bulk-diagnose-all?dry_run=${dryRun}&limit=1000`);
+      const response = await axios.post(`${API}/admin/bulk-diagnose-all?dry_run=${dryRun}&limit=100`, {}, {
+        timeout: 60000 // 60 second timeout
+      });
       setBulkFixResult(response.data);
       if (dryRun) {
         toast.info(`Found ${response.data.summary?.total_issues_found || 0} issues in ${response.data.summary?.users_with_issues || 0} users`);
@@ -50,7 +52,12 @@ const AdminDashboard = ({ user }) => {
         fetchDashboardData(true); // Refresh stats
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Bulk fix failed');
+      console.error('Bulk fix error:', error);
+      if (error.code === 'ECONNABORTED') {
+        toast.error('Request timed out. Try with fewer users or run again.');
+      } else {
+        toast.error(error.response?.data?.detail || error.message || 'Bulk fix failed');
+      }
     } finally {
       setBulkFixing(false);
     }
