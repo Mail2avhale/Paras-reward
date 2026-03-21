@@ -331,8 +331,8 @@ const DailyRewards = ({ user }) => {
       
       if (data?.burning_session) {
         setBurningSession(data.burning_session);
-        // Reset live burn counter to server value (prevents double counting)
-        // Server already applies the burn, so we just show the server's total
+        // Store server's total burned value and current timestamp
+        // Live counter will animate from this point
         setLiveBurnAmount(data.burning_session.total_burned_lifetime || 0);
       }
     } catch (error) {
@@ -353,12 +353,13 @@ const DailyRewards = ({ user }) => {
       }
     }, 30000);
     
-    // Refresh burning session every 10 seconds (shows accurate server value)
+    // Refresh burning session every 30 seconds (sync with server)
+    // Between refreshes, the live counter animates locally
     const burnRefreshInterval = setInterval(() => {
       if (user?.uid) {
         fetchBurningSession();
       }
-    }, 10000);
+    }, 30000);
     
     return () => {
       clearInterval(refreshInterval);
@@ -466,16 +467,33 @@ const DailyRewards = ({ user }) => {
     };
   }, [isMining, miningRate, sessionStartTime]);
 
-  // Burning Session Live Counter - DISABLED to prevent double counting
-  // Server applies the actual burn on each API call, so we just display server value
-  // The counter will update every 60 seconds when fetchBurningSession is called
+  // Burning Session Live Counter - ANIMATED DISPLAY
+  // This creates the visual effect of live burning
+  // Actual burn happens via hourly scheduled job on backend
+  // This counter is reset to server value every 30 seconds
   useEffect(() => {
     // Clear any existing interval
     if (burnCounterRef.current) {
       clearInterval(burnCounterRef.current);
       burnCounterRef.current = null;
     }
-    // No live counter - server value only
+    
+    // Start animated counter if burning is active
+    if (burningSession?.is_active && burningSession?.burn_per_second > 0) {
+      burnCounterRef.current = setInterval(() => {
+        setLiveBurnAmount(prev => {
+          // Add burn_per_second for visual animation
+          const newAmount = prev + burningSession.burn_per_second;
+          return parseFloat(newAmount.toFixed(4));
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (burnCounterRef.current) {
+        clearInterval(burnCounterRef.current);
+      }
+    };
   }, [burningSession]);
 
   const startSession = async () => {
