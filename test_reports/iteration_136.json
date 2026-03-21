@@ -1,0 +1,71 @@
+{
+  "iteration": 136,
+  "mode": "bug_fix_verification",
+  "summary": "Bug Fix Verified: 'Used PRC = 0' display bug is FIXED. All 11 backend API tests pass. The test user (cbdf46d7-7d66-4d43-8495-e1432a2ab071) correctly shows total_redeemed = 1500 PRC across all endpoints (redeem-limit, user profile, dashboard, admin user-360). Burns are correctly excluded from the calculation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_used_prc_redeem_limit_bug.py",
+    "/app/test_reports/pytest/used_prc_redeem_limit_bug_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "get_user_all_time_redeemed() function at line 3614 correctly combines transactions + service collections",
+    "Status checks now include 'SUCCESS' uppercase (line 3722) for bank withdrawals",
+    "/user/{uid} endpoint at line 8489 now uses centralized get_user_all_time_redeemed() function",
+    "/user/{uid}/dashboard endpoint at line 8375 uses get_user_all_time_redeemed() for real-time calculation",
+    "get_user_redeem_limit_internal() at line 16416 uses get_user_all_time_redeemed() for consistency",
+    "Burns are correctly excluded via burn_types array at line 3627-3630"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_used_prc_redeem_limit_bug.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11)",
+    "frontend": "Not tested (backend-only verification)"
+  },
+  "test_credentials": {
+    "test_user_uid": "cbdf46d7-7d66-4d43-8495-e1432a2ab071",
+    "test_user_redemptions": "1500 PRC (500 bill payment + 1000 bank transfer)"
+  },
+  "seed_data_creation": "Used existing test data created by main agent",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Used PRC = 0 bug is fixed. All redeem limit APIs now correctly calculate total_redeemed using get_user_all_time_redeemed() function. Test user cbdf46d7-7d66-4d43-8495-e1432a2ab071 has 1500 PRC in successful redemptions.",
+  "bug_fix_verification": {
+    "issue": "Used PRC = 0 display bug - Redeem limit showed 0 even for users with redemptions",
+    "root_cause": [
+      "get_user_all_time_redeemed had early return preventing backup collections check",
+      "/user/{uid} endpoint had duplicate logic not using centralized function",
+      "Status checks didn't include 'SUCCESS' uppercase for bank withdrawals"
+    ],
+    "fix_applied": [
+      "Removed early return in get_user_all_time_redeemed to always check backup collections",
+      "Updated /user/{uid} endpoint to use centralized get_user_all_time_redeemed()",
+      "Added 'SUCCESS' to status checks in bank withdrawal queries"
+    ],
+    "verification_results": {
+      "GET /api/user/{uid}/redeem-limit": "PASS - total_redeemed = 1500",
+      "GET /api/user/{uid}": "PASS - total_redeemed = 1500",
+      "GET /api/user/{uid}/dashboard": "PASS - user.total_redeemed = 1500",
+      "GET /api/admin/user-360 stats": "PASS - stats.total_redeemed = 1500",
+      "GET /api/admin/user-360 redeem_limit": "PASS - redeem_limit.total_redeemed = 1500",
+      "consistency_check": "PASS - 0% variance across all endpoints",
+      "burns_excluded": "PASS - Burns not included in Used PRC calculation"
+    }
+  },
+  "features_tested": {
+    "GET /api/user/{uid}/redeem-limit": "PASS - Returns total_redeemed > 0 for users with redemptions",
+    "GET /api/user/{uid}": "PASS - Returns total_redeemed field correctly",
+    "GET /api/user/{uid}/dashboard": "PASS - Returns user.total_redeemed correctly",
+    "GET /api/admin/user-360": "PASS - stats.total_redeemed and redeem_limit.total_redeemed are consistent",
+    "Burns exclusion": "PASS - Burns are NOT included in Used PRC calculation"
+  }
+}

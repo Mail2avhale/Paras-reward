@@ -3615,11 +3615,11 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     """
     Get user's ALL TIME total PRC redeemed/used across all services.
     
-    PRIMARY SOURCE: transactions collection (most reliable)
-    Types included: Any debit that is NOT a burn
-    Types excluded: prc_burn, admin_burn, hourly_burn, daily_burn
+    COMBINES data from:
+    1. transactions collection (negative amounts excluding burns)
+    2. Individual service collections (for legacy/direct entries)
     
-    BACKUP: Individual collections for completeness
+    Types excluded: prc_burn, admin_burn, hourly_burn, daily_burn
     """
     total_redeemed = 0
     
@@ -3629,7 +3629,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         "burn", "auto_burn", "burn_overcorrection_fix"
     ]
     
-    # PRIMARY: Use transactions collection - all negative amounts except burns
+    # SOURCE 1: transactions collection - all negative amounts except burns
     txn_debits = await db.transactions.aggregate([
         {
             "$match": {
@@ -3641,14 +3641,12 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
     ]).to_list(1)
     
+    txn_total = 0
     if txn_debits and txn_debits[0].get("total"):
-        total_redeemed = txn_debits[0].get("total", 0)
-        # If we have transaction data, return it (most reliable)
-        if total_redeemed > 0:
-            return round(total_redeemed, 2)
+        txn_total = txn_debits[0].get("total", 0)
     
-    # BACKUP: Check individual collections if transactions don't have data
-    # This handles legacy data before transactions were properly logged
+    # SOURCE 2: ALWAYS check individual collections for completeness
+    # This handles legacy data and direct service entries
     
     # 1. Bill Payments (legacy)
     bill_payments = await db.payment_requests.aggregate([
@@ -3742,95 +3740,10 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     if bank_withdrawal_requests and bank_withdrawal_requests[0].get("total"):
         total_redeemed += bank_withdrawal_requests[0].get("total", 0)
     
-    return total_redeemed
-    if bill_payments:
-        total_redeemed += bill_payments[0].get("total", 0)
-    
-    # BBPS/Instant Bill Payments (new collection - unified_redeem_v2)
-    bbps_payments = await db.bill_payment_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved", "pending"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}}}}
-    ]).to_list(1)
-    if bbps_payments:
-        total_redeemed += bbps_payments[0].get("total", 0)
-    
-    # Gift Vouchers
-    voucher_redemptions = await db.gift_voucher_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": ["completed", "approved", "pending"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": "$total_prc_deducted"}}}
-    ]).to_list(1)
-    if voucher_redemptions:
-        total_redeemed += voucher_redemptions[0].get("total", 0)
-    
-    # Marketplace Orders
-    marketplace_orders = await db.orders.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$nin": ["cancelled", "refunded"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": "$total_prc"}}}
-    ]).to_list(1)
-    if marketplace_orders:
-        total_redeemed += marketplace_orders[0].get("total", 0)
-    
-    # Loan EMI Payments
-    loan_payments = await db.loan_payments.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": ["completed", "approved", "pending"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": "$prc_amount"}}}
-    ]).to_list(1)
-    if loan_payments:
-        total_redeemed += loan_payments[0].get("total", 0)
-    
-    # Bank Withdrawals / Redeem Requests
-    bank_withdrawals = await db.redeem_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved", "pending"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
-    ]).to_list(1)
-    if bank_withdrawals:
-        total_redeemed += bank_withdrawals[0].get("total", 0)
-    
-    # Bank Withdrawal Requests (alternative collection)
-    bank_withdrawal_requests = await db.bank_withdrawal_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved", "pending"]},
-                "created_at": {"$gte": cycle_start_str}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$total_prc"]}}}}
-    ]).to_list(1)
-    if bank_withdrawal_requests:
-        total_redeemed += bank_withdrawal_requests[0].get("total", 0)
-    
-    return total_redeemed
+    # COMBINE: Return MAX of transactions total OR individual collections total
+    # This handles cases where data might be in one place but not the other
+    final_total = max(txn_total, total_redeemed)
+    return round(final_total, 2)
 
 
 async def calculate_carry_forward_limit(user: dict, base_monthly_limit: float) -> dict:
@@ -8571,62 +8484,9 @@ async def get_user_data(uid: str):
     referral_count = await db.users.count_documents({"referred_by": uid})
     user["referral_count"] = referral_count
     
-    # OPTIMIZED: Calculate total_redeemed using aggregation pipeline
-    # Combines orders, bill_payments, gift_vouchers, and burns in single query
-    total_redeemed = 0
-    
-    # PERFORMANCE FIX: Run all aggregations in parallel using asyncio.gather
-    # This reduces response time from 6 sequential calls to 1 parallel batch
-    import asyncio
-    
-    async def safe_aggregate(collection, pipeline):
-        """Safely run aggregation and return result or 0"""
-        try:
-            result = await collection.aggregate(pipeline).to_list(1)
-            return result[0].get("total", 0) if result else 0
-        except Exception as e:
-            print(f"[DB] Aggregation error: {e}")
-            return 0
-    
-    # Define all aggregation pipelines
-    orders_pipeline = [
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]
-    
-    bp_pipeline = [
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-    ]
-    
-    gv_pipeline = [
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", 0]}}}}
-    ]
-    
-    bank_pipeline = [
-        {"$match": {"user_id": uid, "status": {"$in": ["approved", "completed", "processing"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", 0]}}}}
-    ]
-    
-    # Chatbot withdrawal pipeline REMOVED - feature deprecated (March 2026)
-    
-    # Run ALL aggregations in parallel
-    results = await asyncio.gather(
-        safe_aggregate(db.orders, orders_pipeline),
-        safe_aggregate(db.bill_payment_requests, bp_pipeline),
-        safe_aggregate(db.gift_voucher_requests, gv_pipeline),
-        safe_aggregate(db.bank_redeem_requests, bank_pipeline),
-        return_exceptions=True
-    )
-    
-    # Sum all results
-    for result in results:
-        if isinstance(result, (int, float)):
-            total_redeemed += result
-    
-    # Note: Removed PRC burns from total_redeemed as burns are not user-initiated redemptions
-    # Burns are automatic system operations, not user redemptions
+    # OPTIMIZED: Calculate total_redeemed using the centralized function
+    # This ensures consistency across all endpoints (dashboard, profile, admin, etc.)
+    total_redeemed = await get_user_all_time_redeemed(uid)
     
     user["total_redeemed"] = round(total_redeemed, 2)
     
