@@ -452,14 +452,27 @@ const AdminBankTransfers = () => {
               />
             </div>
             
+            {/* Sort By Dropdown */}
+            <select
+              data-testid="sort-by-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-white rounded-md px-3 py-2 text-sm"
+            >
+              <option value="created_at">Sort by: Date</option>
+              <option value="amount">Sort by: Amount</option>
+              <option value="user_name">Sort by: Name</option>
+            </select>
+            
             {/* Sort Order */}
             <Button
               variant="outline"
               onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
               className="border-slate-600 text-slate-300"
+              data-testid="sort-order-btn"
             >
               <ArrowUpDown className="w-4 h-4 mr-2" />
-              {sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
+              {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
             </Button>
             
             {/* Reset */}
