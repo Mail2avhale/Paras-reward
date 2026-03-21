@@ -3613,19 +3613,45 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 
 async def get_user_all_time_redeemed(user_id: str) -> float:
     """
-    Get user's ALL TIME total PRC redeemed across all services.
-    No billing cycle - calculates total ever redeemed.
+    Get user's ALL TIME total PRC redeemed/used across all services.
     
-    Collections checked:
-    - payment_requests (legacy bill payments)
-    - bill_payment_requests (BBPS instant payments) - uses prc_used field
-    - gift_voucher_requests (gift vouchers)
-    - orders (marketplace)
-    - loan_payments (EMI)
-    - redeem_requests (bank withdrawals) - uses total_prc_deducted field
-    - bank_withdrawal_requests (bank withdrawals alt)
+    PRIMARY SOURCE: transactions collection (most reliable)
+    Types included: redeem, recharge, bill_payment, gift_voucher, bank_transfer, subscription
+    Types excluded: prc_burn (not user redemption), mining (credit), referral (credit)
+    
+    BACKUP: Individual collections for completeness
     """
     total_redeemed = 0
+    
+    # PRIMARY: Use transactions collection - most reliable source
+    # Count all debits except burns (burns are not user redemptions)
+    redeem_types = [
+        "redeem", "recharge", "bill_payment", "bbps_payment", "mobile_recharge",
+        "dth_recharge", "electricity", "gas", "water", "broadband", "postpaid",
+        "gift_voucher", "voucher_redeem", "bank_transfer", "bank_withdrawal",
+        "subscription", "subscription_prc", "prc_to_bank", "dmt", "emi",
+        "utility", "shopping", "marketplace", "prc_debit"
+    ]
+    
+    txn_debits = await db.transactions.aggregate([
+        {
+            "$match": {
+                "user_id": user_id,
+                "amount": {"$lt": 0},
+                "type": {"$in": redeem_types}
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
+    ]).to_list(1)
+    
+    if txn_debits and txn_debits[0].get("total"):
+        total_redeemed = txn_debits[0].get("total", 0)
+        # If we have transaction data, return it (most reliable)
+        if total_redeemed > 0:
+            return round(total_redeemed, 2)
+    
+    # BACKUP: Check individual collections if transactions don't have data
+    # This handles legacy data before transactions were properly logged
     
     # 1. Bill Payments (legacy)
     bill_payments = await db.payment_requests.aggregate([
@@ -3693,14 +3719,15 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         total_redeemed += loan_payments[0].get("total", 0)
     
     # 6. Bank Withdrawals / Redeem Requests - uses total_prc_deducted
+    # IMPORTANT: Check all possible success statuses including SUCCESS, completed, approved
     bank_withdrawals = await db.redeem_requests.aggregate([
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved"]}
+                "status": {"$in": ["completed", "success", "SUCCESS", "approved", "paid"]}
             }
         },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$total_prc"]}]}}}}
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc", "$amount_inr"]}]}]}}}}
     ]).to_list(1)
     if bank_withdrawals and bank_withdrawals[0].get("total"):
         total_redeemed += bank_withdrawals[0].get("total", 0)
@@ -8435,7 +8462,7 @@ async def get_user_dashboard_combined(uid: str):
             "mobile": user.get("mobile", ""),
             "prc_balance": round(user.get("prc_balance", 0), 4),
             "total_mined": round(user.get("total_mined", 0), 4),
-            "total_redeemed": round(user.get("total_redeemed", 0), 2),
+            "total_redeemed": round(await get_user_all_time_redeemed(uid), 2),  # Calculate real-time
             "referral_count": referral_count,
             "referral_code": user.get("referral_code", ""),
             "subscription_plan": subscription_plan,
@@ -16376,7 +16403,7 @@ async def get_user_total_redeemed(user_id: str) -> float:
         # 5c. Generic redeem_requests collection
         redeem_requests = await db.redeem_requests.find({
             "user_id": user_id,
-            "status": {"$in": ["success", "completed", "pending", "processing", "approved"]}
+            "status": {"$in": ["success", "SUCCESS", "completed", "pending", "processing", "approved"]}
         }).to_list(5000)
         
         for rr in redeem_requests:
