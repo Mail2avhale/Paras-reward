@@ -352,17 +352,40 @@ async def create_redeem_request(request: RedeemRequest):
         now = datetime.now(timezone.utc)
         cutoff_time = now - timedelta(days=cooldown_days)
         
-        # Check BOTH collections for last request (bank_withdrawal_requests AND redeem_requests)
-        last_request = await db.bank_withdrawal_requests.find_one(
+        # ═══════════════════════════════════════════════════════════════════════
+        # IMPORTANT: Check ALL THREE collections where bank requests might be stored
+        # 1. bank_withdrawal_requests (legacy)
+        # 2. redeem_requests (unified)
+        # 3. bank_transfer_requests (THIS service's collection)
+        # ═══════════════════════════════════════════════════════════════════════
+        
+        last_request = None
+        last_request_time = None
+        
+        # Check 1: bank_withdrawal_requests
+        bw_request = await db.bank_withdrawal_requests.find_one(
             {
                 "user_id": user_id,
                 "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED"]}
             },
             sort=[("created_at", -1)]
         )
+        if bw_request:
+            bw_time = bw_request.get("created_at")
+            if isinstance(bw_time, str):
+                try:
+                    bw_time = datetime.fromisoformat(bw_time.replace('Z', '+00:00'))
+                except:
+                    bw_time = None
+            if bw_time:
+                if bw_time.tzinfo is None:
+                    bw_time = bw_time.replace(tzinfo=timezone.utc)
+                if last_request_time is None or bw_time > last_request_time:
+                    last_request = bw_request
+                    last_request_time = bw_time
         
-        # Also check redeem_requests collection (where bank transfers might be stored)
-        last_redeem_request = await db.redeem_requests.find_one(
+        # Check 2: redeem_requests with bank service_type
+        redeem_req = await db.redeem_requests.find_one(
             {
                 "user_id": user_id,
                 "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "bank", "prc_to_bank"]},
@@ -370,58 +393,59 @@ async def create_redeem_request(request: RedeemRequest):
             },
             sort=[("created_at", -1)]
         )
-        
-        # Use the most recent request from either collection
-        if last_redeem_request:
-            redeem_time = last_redeem_request.get("created_at")
+        if redeem_req:
+            redeem_time = redeem_req.get("created_at")
             if isinstance(redeem_time, str):
                 try:
                     redeem_time = datetime.fromisoformat(redeem_time.replace('Z', '+00:00'))
                 except:
                     redeem_time = None
-            
             if redeem_time:
-                if last_request:
-                    last_time = last_request.get("created_at")
-                    if isinstance(last_time, str):
-                        try:
-                            last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
-                        except:
-                            last_time = None
-                    
-                    # Use the more recent one
-                    if last_time and redeem_time > last_time:
-                        last_request = last_redeem_request
-                else:
-                    last_request = last_redeem_request
+                if redeem_time.tzinfo is None:
+                    redeem_time = redeem_time.replace(tzinfo=timezone.utc)
+                if last_request_time is None or redeem_time > last_request_time:
+                    last_request = redeem_req
+                    last_request_time = redeem_time
         
-        if last_request:
-            last_time = last_request.get("created_at")
-            if isinstance(last_time, str):
+        # Check 3: bank_transfer_requests (THIS SERVICE'S COLLECTION - CRITICAL!)
+        bt_request = await db.bank_transfer_requests.find_one(
+            {
+                "user_id": user_id,
+                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED"]}
+            },
+            sort=[("created_at", -1)]
+        )
+        if bt_request:
+            bt_time = bt_request.get("created_at")
+            if isinstance(bt_time, str):
                 try:
-                    last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+                    bt_time = datetime.fromisoformat(bt_time.replace('Z', '+00:00'))
                 except:
-                    last_time = None
-            
-            if last_time:
-                if last_time.tzinfo is None:
-                    last_time = last_time.replace(tzinfo=timezone.utc)
-                
-                if last_time > cutoff_time:
-                    time_passed = now - last_time
-                    remaining = timedelta(days=cooldown_days) - time_passed
-                    remaining_days = remaining.total_seconds() / 86400  # seconds in a day
-                    if remaining_days >= 1:
-                        raise HTTPException(
-                            status_code=429,
-                            detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_days:.0f} days before requesting another bank transfer."
-                        )
-                    else:
-                        remaining_hours = remaining.total_seconds() / 3600
-                        raise HTTPException(
-                            status_code=429,
-                            detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
-                        )
+                    bt_time = None
+            if bt_time:
+                if bt_time.tzinfo is None:
+                    bt_time = bt_time.replace(tzinfo=timezone.utc)
+                if last_request_time is None or bt_time > last_request_time:
+                    last_request = bt_request
+                    last_request_time = bt_time
+        
+        # Now check if last request is within cooldown period
+        if last_request and last_request_time:
+            if last_request_time > cutoff_time:
+                time_passed = now - last_request_time
+                remaining = timedelta(days=cooldown_days) - time_passed
+                remaining_days = remaining.total_seconds() / 86400
+                if remaining_days >= 1:
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_days:.0f} days before requesting another bank transfer."
+                    )
+                else:
+                    remaining_hours = remaining.total_seconds() / 3600
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
+                    )
         
         # 3. Check KYC
         if user.get("kyc_status") != "verified":

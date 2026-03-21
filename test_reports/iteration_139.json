@@ -1,0 +1,92 @@
+{
+  "iteration": 139,
+  "mode": "bug_fix_verification",
+  "summary": "All 3 critical bug fixes VERIFIED WORKING: 1) bank_transfer_requests collection is now checked in category limits - Bank USED = 108,010 PRC (correctly counting all collections). 2) bank_transfer_requests collection is now checked in cooling period - returns 429 with '7 days' message. 3) Limit check prevents withdrawal exceeding available limit - remaining = 0 when used > limit.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bank_transfer_requests_fix.py",
+    "/app/backend/tests/test_bank_category_cooling_period.py",
+    "/app/test_reports/pytest/bank_transfer_requests_fix_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "redeem_categories.py (lines 308-326): Bank category now correctly includes bank_transfer_requests collection with multiple field checks (total_prc_deducted, prc_deducted, total_prc)",
+    "manual_bank_transfer.py (lines 410-430): Cooling period now checks ALL THREE collections: bank_withdrawal_requests, redeem_requests, AND bank_transfer_requests",
+    "server.py (lines 3796-3803): get_user_all_time_redeemed now includes bank_transfer_requests collection",
+    "'Paid' status is correctly included in success_statuses list for all calculations"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bank_transfer_requests_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed - 10 from existing + 10 new)"
+  },
+  "test_credentials": {
+    "test_user_uid": "cbdf46d7-7d66-4d43-8495-e1432a2ab071"
+  },
+  "seed_data_creation": "None - used existing test data in bank_transfer_requests collection",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 3 bug fixes verified working. Bank USED = 108,010 PRC (correctly counting all collections including bank_transfer_requests). 7-day cooling period blocks with message 'Bank transfer is limited to ONE per week. Please wait 7 days before requesting another bank transfer.' Test data in bank_transfer_requests: 2 records (BTR-20260320124631 with Paid status, BTR-20260321150000 with pending status).",
+  "verification_results": {
+    "fix_1_bank_transfer_requests_in_category_limits": {
+      "status": "VERIFIED WORKING",
+      "file": "redeem_categories.py lines 308-326",
+      "evidence": "Bank USED = 108,010 PRC (includes bank_transfer_requests)",
+      "details": "Bank category now checks bank_transfer_requests collection with fields: total_prc_deducted, prc_deducted, total_prc"
+    },
+    "fix_2_bank_transfer_requests_in_cooling_period": {
+      "status": "VERIFIED WORKING",
+      "file": "manual_bank_transfer.py lines 410-430",
+      "http_status": 429,
+      "error_message": "Bank transfer is limited to ONE per week. Please wait 7 days before requesting another bank transfer.",
+      "details": "Cooling period now checks ALL THREE collections: bank_withdrawal_requests, redeem_requests, bank_transfer_requests"
+    },
+    "fix_3_get_user_all_time_redeemed": {
+      "status": "VERIFIED WORKING",
+      "file": "server.py lines 3796-3803",
+      "evidence": "Bank USED > 100,000 PRC confirms bank_transfer_requests is included",
+      "details": "get_user_all_time_redeemed now includes bank_transfer_requests with fields: total_prc_deducted, prc_deducted, total_prc, prc_amount"
+    },
+    "fix_4_limit_check_prevents_exceeding": {
+      "status": "VERIFIED WORKING",
+      "evidence": "Bank remaining = 0 when used (108,010) > limit (7,485)",
+      "details": "Limit check correctly calculates remaining = max(0, limit - used)"
+    }
+  },
+  "tests_executed": {
+    "test_bank_category_includes_bank_transfer_requests": "PASS",
+    "test_bank_used_greater_than_100000_prc": "PASS - Bank USED = 108,010 PRC",
+    "test_cooling_period_checks_bank_transfer_requests": "PASS",
+    "test_cooling_period_returns_429_with_7_days_message": "PASS",
+    "test_bank_used_sums_all_collections": "PASS",
+    "test_paid_status_included_in_success_statuses": "PASS",
+    "test_limit_check_endpoint": "PASS",
+    "test_bank_transfer_request_checks_limit": "PASS",
+    "test_user_redeem_limit_includes_bank_transfer_requests": "PASS",
+    "test_cooling_period_comprehensive_check": "PASS"
+  },
+  "rca_of_the_issue": {
+    "root_cause": "manual_bank_transfer route saves to 'bank_transfer_requests' collection, but this collection was NOT being checked in: 1) Category limits calculation (redeem_categories.py), 2) Cooling period check (manual_bank_transfer.py), 3) Total redeemed calculation (server.py get_user_all_time_redeemed)",
+    "reproduction_steps": [
+      "1. User makes bank transfer via manual_bank_transfer route",
+      "2. Request saved to bank_transfer_requests collection",
+      "3. Category limits API returns Bank USED = 0 (not checking bank_transfer_requests)",
+      "4. User can make another request within 7 days (cooling period not checking bank_transfer_requests)",
+      "5. User can exceed limit (limit check not counting bank_transfer_requests)"
+    ],
+    "mitigation": [
+      "Added bank_transfer_requests to category limits calculation (redeem_categories.py lines 308-326)",
+      "Added bank_transfer_requests to cooling period check (manual_bank_transfer.py lines 410-430)",
+      "Added bank_transfer_requests to get_user_all_time_redeemed (server.py lines 3796-3803)"
+    ]
+  }
+}

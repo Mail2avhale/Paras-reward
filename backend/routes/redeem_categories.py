@@ -265,12 +265,14 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         
     elif category == "bank":
         # ═══════════════════════════════════════════════════════════════════════
-        # IMPORTANT: Bank withdrawals can be stored in multiple collections
-        # with different field names. Check ALL possible sources.
-        # DATE FILTER REMOVED for now to ensure we catch all transactions
+        # IMPORTANT: Bank withdrawals can be stored in FOUR collections!
+        # 1. redeem_requests (with bank service_type)
+        # 2. bank_withdrawal_requests
+        # 3. bank_transfer_requests (NEW - from manual_bank_transfer route)
+        # 4. bank_transfers, dmt_transactions, etc.
         # ═══════════════════════════════════════════════════════════════════════
         
-        # 1. redeem_requests with bank-related service_type (NO DATE FILTER to catch all)
+        # 1. redeem_requests with bank-related service_type
         bank_redeem = await safe_aggregate(
             "redeem_requests",
             {"user_id": uid, "status": {"$in": success_statuses}, 
@@ -286,7 +288,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
             )
         total_used += bank_redeem
         
-        # 2. redeem_requests WITHOUT service_type - check by request_id pattern
+        # 2. redeem_requests by BTR request_id pattern (backup check)
         bank_btr = await safe_aggregate(
             "redeem_requests",
             {"user_id": uid, "status": {"$in": success_statuses},
@@ -300,11 +302,30 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
                  "request_id": {"$regex": "^BTR"}},
                 "prc_amount"
             )
-        # Avoid double counting - only add if service_type didn't match
         if bank_redeem == 0:
             total_used += bank_btr
         
-        # 3. Bank Transfers collection
+        # 3. bank_transfer_requests (CRITICAL - THIS IS WHERE manual_bank_transfer SAVES!)
+        bt_requests = await safe_aggregate(
+            "bank_transfer_requests",
+            {"user_id": uid, "status": {"$in": success_statuses}},
+            "total_prc_deducted"
+        )
+        if bt_requests == 0:
+            bt_requests = await safe_aggregate(
+                "bank_transfer_requests",
+                {"user_id": uid, "status": {"$in": success_statuses}},
+                "prc_deducted"
+            )
+        if bt_requests == 0:
+            bt_requests = await safe_aggregate(
+                "bank_transfer_requests",
+                {"user_id": uid, "status": {"$in": success_statuses}},
+                "total_prc"
+            )
+        total_used += bt_requests
+        
+        # 4. Bank Transfers collection (legacy)
         bank = await safe_aggregate(
             "bank_transfers",
             {"user_id": uid, "status": {"$in": success_statuses}},
@@ -318,7 +339,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
             )
         total_used += bank
         
-        # 4. Bank Withdrawal Requests collection
+        # 5. Bank Withdrawal Requests collection
         bank_wd = await safe_aggregate(
             "bank_withdrawal_requests",
             {"user_id": uid, "status": {"$in": success_statuses}},
@@ -332,7 +353,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
             )
         total_used += bank_wd
         
-        # 5. Bank Redeem Requests collection
+        # 6. Bank Redeem Requests collection
         bank_redeem_coll = await safe_aggregate(
             "bank_redeem_requests",
             {"user_id": uid, "status": {"$in": success_statuses}},
@@ -340,7 +361,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         )
         total_used += bank_redeem_coll
         
-        # 6. DMT Transactions
+        # 7. DMT Transactions
         dmt = await safe_aggregate(
             "dmt_transactions",
             {"user_id": uid, "status": {"$in": success_statuses}},
@@ -354,7 +375,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
             )
         total_used += dmt
         
-        # 7. Chatbot Withdrawals (deprecated)
+        # 8. Chatbot Withdrawals (deprecated)
         chatbot = await safe_aggregate(
             "chatbot_withdrawal_requests",
             {"user_id": uid, "status": {"$in": success_statuses}},

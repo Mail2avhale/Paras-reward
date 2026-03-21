@@ -3793,6 +3793,16 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     total_redeemed += bank_transfers_total
     
     # ─────────────────────────────────────────────────────────────────────
+    # 4.5 bank_transfer_requests (CRITICAL - from manual_bank_transfer route!)
+    # ─────────────────────────────────────────────────────────────────────
+    bank_transfer_reqs_total = await safe_sum(
+        "bank_transfer_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["total_prc_deducted", "prc_deducted", "total_prc", "prc_amount"]
+    )
+    total_redeemed += bank_transfer_reqs_total
+    
+    # ─────────────────────────────────────────────────────────────────────
     # 5. DMT (Direct Money Transfer) - Old service
     # ─────────────────────────────────────────────────────────────────────
     dmt_total = await safe_sum(
