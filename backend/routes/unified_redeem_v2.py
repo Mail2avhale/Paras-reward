@@ -270,7 +270,10 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         amount = str(int(request_doc["amount_inr"]))
         # CRITICAL: Sanitize sender name - Eko requires only letters (no spaces/numbers)
         raw_sender_name = request_doc.get("user_name", "ParasReward")
-        sender_name = sanitize_sender_name(raw_sender_name)
+        # Inline sanitization to avoid any import issues
+        import re as re_inline
+        sender_name = re_inline.sub(r'[^a-zA-Z]', '', raw_sender_name) or "Customer"
+        sender_name = sender_name[:50]  # Limit length
         user_mobile = request_doc.get("user_mobile", "9999999999")
         
         # Get utility_acc_no based on service type
