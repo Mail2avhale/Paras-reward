@@ -1,0 +1,101 @@
+{
+  "iteration": 140,
+  "mode": "bug_investigation",
+  "summary": "User 360 API returns 500 Internal Server Error on PRODUCTION (www.parasreward.com) but works correctly on PREVIEW (redemption-limits.preview.emergentagent.com). This is a DEPLOYMENT ISSUE - the latest code with sanitize_mongo_doc fix has NOT been deployed to production.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/admin/user-360",
+        "issue": "Returns 500 Internal Server Error on PRODUCTION for most user queries",
+        "priority": "CRITICAL",
+        "environment": "PRODUCTION ONLY",
+        "evidence": {
+          "production_failing_queries": [
+            "92bcbe40-b08f-4096-8f66-0b99072ec0c7 -> 500",
+            "9970100782 -> 500"
+          ],
+          "production_working_queries": [
+            "admin@paras.com -> 200 (works for some users)"
+          ],
+          "preview_all_working": [
+            "admin@test.com -> 200",
+            "9970100782 -> 200",
+            "cbdf46d7-7d66-4d43-8495-e1432a2ab071 -> 200"
+          ]
+        }
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "CRITICAL: Deploy the latest code to PRODUCTION (www.parasreward.com)",
+    "The sanitize_mongo_doc fix in server.py (lines 19754-19765) is working in preview but NOT deployed to production",
+    "After deployment, verify the user-360 API works for UID 92bcbe40-b08f-4096-8f66-0b99072ec0c7",
+    "Check production server logs for the exact error message causing the 500"
+  ],
+  "critical_code_review_comments": [
+    "The sanitize_mongo_doc function (lines 19754-19765) correctly handles ObjectId and datetime serialization",
+    "The function is called on all response data before returning (lines 20220-20238)",
+    "Preview environment confirms the code is working correctly",
+    "PRODUCTION DEPLOYMENT IS REQUIRED to fix this issue"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend_preview": "100% (all queries working)",
+    "backend_production": "~30% (only some users work, most fail with 500)"
+  },
+  "test_credentials": {
+    "preview_admin": {
+      "url": "https://redemption-limits.preview.emergentagent.com",
+      "email": "admin@test.com",
+      "pin": "123456"
+    },
+    "production_admin": {
+      "url": "https://www.parasreward.com",
+      "email": "admin@paras.com",
+      "password": "153759"
+    }
+  },
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The User 360 bug is a DEPLOYMENT ISSUE. Preview environment works perfectly with the sanitize_mongo_doc fix. Production needs to be redeployed with the latest code. After deployment, test with UID 92bcbe40-b08f-4096-8f66-0b99072ec0c7 on production.",
+  "rca_of_the_issue": {
+    "root_cause": "PRODUCTION DEPLOYMENT NOT UPDATED - The latest code with sanitize_mongo_doc fix exists in preview but has NOT been deployed to production (www.parasreward.com)",
+    "evidence": {
+      "preview_working": "All user-360 queries return 200 OK on preview",
+      "production_failing": "Most user-360 queries return 500 Internal Server Error on production",
+      "code_fix_present": "sanitize_mongo_doc function exists in server.py lines 19754-19765"
+    },
+    "reproduction_steps": [
+      "1. Go to production: https://www.parasreward.com",
+      "2. Login as admin@paras.com / 153759",
+      "3. Navigate to User 360 page",
+      "4. Search for UID: 92bcbe40-b08f-4096-8f66-0b99072ec0c7",
+      "5. Observe 'Internal Server Error' message"
+    ],
+    "mitigation": [
+      "Deploy the latest code from preview to production",
+      "The sanitize_mongo_doc fix handles ObjectId serialization correctly",
+      "No code changes needed - just deployment"
+    ]
+  },
+  "testing_environment_comparison": {
+    "preview": {
+      "url": "https://redemption-limits.preview.emergentagent.com",
+      "status": "WORKING",
+      "api_response": "200 OK for all tested queries"
+    },
+    "production": {
+      "url": "https://www.parasreward.com",
+      "status": "FAILING",
+      "api_response": "500 Internal Server Error for most queries"
+    }
+  }
+}
