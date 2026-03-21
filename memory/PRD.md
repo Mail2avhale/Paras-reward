@@ -351,11 +351,16 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 - **Testing**: 16/16 backend tests pass - search by mobile, email, UID, special chars all work
 - **Test File**: `/app/backend/tests/test_admin_user_360_search.py`
 
-### ✅ Consistency Fix: Used PRC Calculation
-- **Issue**: `stats.total_redeemed` included burns while `redeem_limit.total_redeemed` excluded them
-- **Fix**: Both now use `get_user_all_time_redeemed()` which excludes burn types
-- **Affected Functions**:
-  - `get_user_redeem_limit_internal()` (line 16547)
-  - `check_redeem_limit()` (line 16581)
-  - `get_user_redeem_limit()` endpoint (line 16623)
-  - Stats calculation in user-360 (line 19753-19770)
+### ✅ P1 FIXED: Used PRC = 0 Display Bug (21 March 2026)
+- **Issue**: Redeem limit showed "Used = 0" for all users even when they had redemptions
+- **Root Cause**:
+  1. `get_user_all_time_redeemed()` had early return preventing backup collections check
+  2. `/user/{uid}` endpoint had duplicate logic not using centralized function
+  3. Status checks didn't include 'SUCCESS' uppercase for bank withdrawals
+- **Fix Applied**:
+  - Removed early return in `get_user_all_time_redeemed()` - now always checks backup collections (line 3614-3745)
+  - Updated `/user/{uid}` endpoint to use centralized `get_user_all_time_redeemed()` (line 8489)
+  - Added 'SUCCESS' to status checks in bank withdrawal queries (line 3722)
+  - Made stats.total_redeemed consistent with redeem_limit.total_redeemed
+- **Testing**: 11/11 backend tests pass - all endpoints show consistent Used PRC values
+- **Test File**: `/app/backend/tests/test_used_prc_redeem_limit_bug.py`
