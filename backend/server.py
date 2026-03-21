@@ -5146,31 +5146,20 @@ async def get_burning_session_status(user: dict) -> dict:
 async def get_user_burning_session_status(uid: str):
     """
     Get the continuous burning session status for a user.
-    Burns 1% of PRC balance daily (calculated per second).
-    Stops when balance reaches 10,000 PRC minimum.
+    Shows burn RATE only - does NOT apply burn.
+    Actual burn happens in scheduled 11 AM job.
     """
-    logging.info(f"[BURN-API] Request for user: {uid}")
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "pin_hash": 0})
     if not user:
-        logging.warning(f"[BURN-API] User not found: {uid}")
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Apply burn first to update balance
-    burn_result = await calculate_and_apply_burn(user)
-    
-    # Get updated status
-    updated_user = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1, "total_prc_burned": 1, "last_burn_at": 1, "burning_session_started": 1})
-    burn_status = await get_burning_session_status(updated_user)
+    # DO NOT apply burn here - just show status
+    # Burn is applied once daily in the 11 AM scheduled job
+    burn_status = await get_burning_session_status(user)
     
     return {
         "uid": uid,
-        "burning_session": burn_status,
-        "last_burn_applied": {
-            "amount": burn_result.get("burn_applied", 0),
-            "old_balance": burn_result.get("old_balance", 0),
-            "new_balance": burn_result.get("new_balance", 0),
-            "reason": burn_result.get("reason", "")
-        }
+        "burning_session": burn_status
     }
 
 
