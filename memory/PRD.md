@@ -1,7 +1,36 @@
 # PARAS REWARD - Product Requirements Document
 
 ## ✅ DEPLOYED - 19 March 2026
-## 📝 LAST UPDATED - 20 March 2026 (Session 2)
+## 📝 LAST UPDATED - 21 March 2026 (Burning Session Feature)
+
+## 🔥 NEW: Continuous Burning Session (21 March 2026)
+```
+╔════════════════════════════════════════════════════════════════╗
+║  BURNING SESSION - PRC DEFLATION MECHANISM                      ║
+║                                                                 ║
+║  RULES:                                                         ║
+║  • Burns 1% of user's total PRC balance daily                   ║
+║  • Calculated per second (dynamic burn rate)                    ║
+║  • ALWAYS ACTIVE - No user action required                      ║
+║  • AUTO-STOPS when balance reaches 10,000 PRC minimum           ║
+║  • Burned PRC is permanently deleted (deflation)                ║
+║                                                                 ║
+║  CALCULATION:                                                   ║
+║  • burn_per_day = balance * 0.01                                ║
+║  • burn_per_hour = burn_per_day / 24                            ║
+║  • burn_per_second = burn_per_day / 86400                       ║
+║                                                                 ║
+║  API ENDPOINT: GET /api/burning-session/status/{uid}            ║
+║  - Returns: is_active, burn rates, total_burned_lifetime        ║
+║  - Applies burn on each call (time-delta based)                 ║
+║                                                                 ║
+║  UI: Mining page displays live burn counter                     ║
+║  - Fire emoji animation                                         ║
+║  - LIVE badge when active                                       ║
+║  - Per hour/day burn rates                                      ║
+║  - Days until 10,000 PRC minimum reached                        ║
+╚════════════════════════════════════════════════════════════════╝
+```
 
 ## ✅ NEW: PRC Restoration for Zero-Balance Users (20 March 2026)
 ```
