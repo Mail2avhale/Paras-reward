@@ -347,18 +347,53 @@ async def create_redeem_request(request: RedeemRequest):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # 2.5. CHECK 24-HOUR COOLDOWN
-        cooldown_hours = 24
+        # 2.5. CHECK 7-DAY COOLDOWN (One bank transfer per week)
+        cooldown_days = 7
         now = datetime.now(timezone.utc)
-        cutoff_time = now - timedelta(hours=cooldown_hours)
+        cutoff_time = now - timedelta(days=cooldown_days)
         
+        # Check BOTH collections for last request (bank_withdrawal_requests AND redeem_requests)
         last_request = await db.bank_withdrawal_requests.find_one(
             {
                 "user_id": user_id,
-                "status": {"$nin": ["rejected", "failed", "cancelled"]}
+                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED"]}
             },
             sort=[("created_at", -1)]
         )
+        
+        # Also check redeem_requests collection (where bank transfers might be stored)
+        last_redeem_request = await db.redeem_requests.find_one(
+            {
+                "user_id": user_id,
+                "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "bank", "prc_to_bank"]},
+                "status": {"$nin": ["rejected", "failed", "cancelled", "Failed", "FAILED", "Rejected", "REJECTED", "Cancelled", "CANCELLED", "retry_failed"]}
+            },
+            sort=[("created_at", -1)]
+        )
+        
+        # Use the most recent request from either collection
+        if last_redeem_request:
+            redeem_time = last_redeem_request.get("created_at")
+            if isinstance(redeem_time, str):
+                try:
+                    redeem_time = datetime.fromisoformat(redeem_time.replace('Z', '+00:00'))
+                except:
+                    redeem_time = None
+            
+            if redeem_time:
+                if last_request:
+                    last_time = last_request.get("created_at")
+                    if isinstance(last_time, str):
+                        try:
+                            last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+                        except:
+                            last_time = None
+                    
+                    # Use the more recent one
+                    if last_time and redeem_time > last_time:
+                        last_request = last_redeem_request
+                else:
+                    last_request = last_redeem_request
         
         if last_request:
             last_time = last_request.get("created_at")
@@ -374,12 +409,19 @@ async def create_redeem_request(request: RedeemRequest):
                 
                 if last_time > cutoff_time:
                     time_passed = now - last_time
-                    remaining = timedelta(hours=cooldown_hours) - time_passed
-                    remaining_hours = remaining.total_seconds() / 3600
-                    raise HTTPException(
-                        status_code=429,
-                        detail=f"Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
-                    )
+                    remaining = timedelta(days=cooldown_days) - time_passed
+                    remaining_days = remaining.total_seconds() / 86400  # seconds in a day
+                    if remaining_days >= 1:
+                        raise HTTPException(
+                            status_code=429,
+                            detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_days:.0f} days before requesting another bank transfer."
+                        )
+                    else:
+                        remaining_hours = remaining.total_seconds() / 3600
+                        raise HTTPException(
+                            status_code=429,
+                            detail=f"Bank transfer is limited to ONE per week. Please wait {remaining_hours:.0f} hours before requesting another bank transfer."
+                        )
         
         # 3. Check KYC
         if user.get("kyc_status") != "verified":

@@ -144,9 +144,45 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
                 {"$group": {"_id": None, "total": {"$sum": {"$ifNull": [f"${sum_field}", 0]}}}}
             ]
             result = await db[collection_name].aggregate(pipeline).to_list(1)
-            return result[0].get("total", 0) if result else 0
+            total = result[0].get("total", 0) if result else 0
+            # Debug logging
+            if total > 0:
+                logging.debug(f"[CATEGORY-{category}] Found {total} in {collection_name}.{sum_field}")
+            return total
         except Exception as e:
-            logging.debug(f"[CATEGORY] Error querying {collection_name}: {e}")
+            logging.warning(f"[CATEGORY] Error querying {collection_name}: {e}")
+            return 0
+    
+    # ALSO check with $gte on created_at as date object (for ISO string dates)
+    async def safe_aggregate_with_date(collection_name, match_query_base, sum_field, start_dt):
+        """Try both string and date comparison for created_at"""
+        try:
+            # First try with ISO string
+            match_str = {**match_query_base, "created_at": {"$gte": start_dt.isoformat()}}
+            pipeline = [
+                {"$match": match_str},
+                {"$group": {"_id": None, "total": {"$sum": {"$ifNull": [f"${sum_field}", 0]}}}}
+            ]
+            result = await db[collection_name].aggregate(pipeline).to_list(1)
+            total = result[0].get("total", 0) if result else 0
+            
+            # If no result, try without date filter to see if there's ANY data
+            if total == 0:
+                match_no_date = {k: v for k, v in match_query_base.items() if k != "created_at"}
+                pipeline_no_date = [
+                    {"$match": match_no_date},
+                    {"$group": {"_id": None, "total": {"$sum": {"$ifNull": [f"${sum_field}", 0]}}}}
+                ]
+                result_no_date = await db[collection_name].aggregate(pipeline_no_date).to_list(1)
+                total_no_date = result_no_date[0].get("total", 0) if result_no_date else 0
+                if total_no_date > 0:
+                    logging.debug(f"[CATEGORY-{category}] Found {total_no_date} in {collection_name} WITHOUT date filter - possible date format issue")
+                    # Return the total without date filter for now (to debug)
+                    return total_no_date
+            
+            return total
+        except Exception as e:
+            logging.warning(f"[CATEGORY] Error querying {collection_name}: {e}")
             return 0
     
     # ═══════════════════════════════════════════════════════════════════════
@@ -231,53 +267,53 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         # ═══════════════════════════════════════════════════════════════════════
         # IMPORTANT: Bank withdrawals can be stored in multiple collections
         # with different field names. Check ALL possible sources.
+        # DATE FILTER REMOVED for now to ensure we catch all transactions
         # ═══════════════════════════════════════════════════════════════════════
         
-        # 1. redeem_requests with bank-related service_type
+        # 1. redeem_requests with bank-related service_type (NO DATE FILTER to catch all)
         bank_redeem = await safe_aggregate(
             "redeem_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}, 
+            {"user_id": uid, "status": {"$in": success_statuses}, 
              "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "manual_bank", "prc_to_bank", "bank"]}},
             "total_prc_deducted"
         )
         if bank_redeem == 0:
             bank_redeem = await safe_aggregate(
                 "redeem_requests",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+                {"user_id": uid, "status": {"$in": success_statuses},
                  "service_type": {"$in": ["bank_transfer", "bank_withdrawal", "bank_redeem", "manual_bank", "prc_to_bank", "bank"]}},
                 "prc_amount"
             )
         total_used += bank_redeem
         
-        # 2. redeem_requests WITHOUT service_type (legacy bank withdrawals may not have service_type)
-        # Check if request_id starts with "BTR" (Bank Transfer Request)
+        # 2. redeem_requests WITHOUT service_type - check by request_id pattern
         bank_btr = await safe_aggregate(
             "redeem_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+            {"user_id": uid, "status": {"$in": success_statuses},
              "request_id": {"$regex": "^BTR"}},
             "total_prc_deducted"
         )
         if bank_btr == 0:
             bank_btr = await safe_aggregate(
                 "redeem_requests",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses},
+                {"user_id": uid, "status": {"$in": success_statuses},
                  "request_id": {"$regex": "^BTR"}},
                 "prc_amount"
             )
-        # Only add if not already counted
+        # Avoid double counting - only add if service_type didn't match
         if bank_redeem == 0:
             total_used += bank_btr
         
         # 3. Bank Transfers collection
         bank = await safe_aggregate(
             "bank_transfers",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_amount"
         )
         if bank == 0:
             bank = await safe_aggregate(
                 "bank_transfers",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "status": {"$in": success_statuses}},
                 "total_prc_deducted"
             )
         total_used += bank
@@ -285,13 +321,13 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         # 4. Bank Withdrawal Requests collection
         bank_wd = await safe_aggregate(
             "bank_withdrawal_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_amount"
         )
         if bank_wd == 0:
             bank_wd = await safe_aggregate(
                 "bank_withdrawal_requests",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "status": {"$in": success_statuses}},
                 "total_prc_deducted"
             )
         total_used += bank_wd
@@ -299,7 +335,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         # 5. Bank Redeem Requests collection
         bank_redeem_coll = await safe_aggregate(
             "bank_redeem_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_amount"
         )
         total_used += bank_redeem_coll
@@ -307,13 +343,13 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         # 6. DMT Transactions
         dmt = await safe_aggregate(
             "dmt_transactions",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_deducted"
         )
         if dmt == 0:
             dmt = await safe_aggregate(
                 "dmt_transactions",
-                {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+                {"user_id": uid, "status": {"$in": success_statuses}},
                 "prc_amount"
             )
         total_used += dmt
@@ -321,7 +357,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
         # 7. Chatbot Withdrawals (deprecated)
         chatbot = await safe_aggregate(
             "chatbot_withdrawal_requests",
-            {"user_id": uid, "created_at": {"$gte": start_date_str}, "status": {"$in": success_statuses}},
+            {"user_id": uid, "status": {"$in": success_statuses}},
             "prc_amount"
         )
         total_used += chatbot
