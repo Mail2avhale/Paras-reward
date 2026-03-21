@@ -1021,9 +1021,6 @@ const DailyRewards = ({ user }) => {
                     <h3 className={`font-semibold ${burningSession.is_active ? 'text-red-400' : 'text-zinc-400'}`}>
                       Burning Session
                     </h3>
-                    <p className="text-xs text-zinc-500">
-                      {burningSession.is_active ? '1% Daily Auto-Burn Active' : 'Inactive (Balance ≤ 10,000)'}
-                    </p>
                   </div>
                 </div>
                 
@@ -1095,18 +1092,6 @@ const DailyRewards = ({ user }) => {
                       </p>
                     </div>
                   </div>
-                  
-                  {/* Time Until Minimum */}
-                  {burningSession.days_until_minimum > 0 && (
-                    <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                      <p className="text-amber-400 text-xs flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>
-                          {burningSession.days_until_minimum.toFixed(1)} days until 10,000 PRC minimum reached
-                        </span>
-                      </p>
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className="text-center py-4">
