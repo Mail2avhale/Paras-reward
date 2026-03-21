@@ -4965,79 +4965,217 @@ async def check_vip_marketplace_access(uid: str) -> Dict:
     """Backward compatible wrapper"""
     return await check_vip_service_access(uid, "marketplace")
 
-# ==================== PRC BURN SYSTEM - UPDATED MARCH 2026 ====================
-# NEW BURNING RULES:
-# 1. Explorer (Free): 4 hours validity - then burn
-# =============================================================================
-# PRC BURN SETTINGS - UPDATED (March 10, 2026)
-# =============================================================================
-# NEW RULES:
-# 1. PRC VALIDITY = LIFETIME (No expiry for anyone!)
-# 2. DAILY AUTO BURN = 1% (0.5% at 11 AM + 0.5% at 11 PM)
+# ==================== PRC BURNING SESSION - MARCH 2026 ====================
+# NEW BURNING MECHANISM:
+# - Burning is ALWAYS ACTIVE (automatic)
+# - Burns 1% of PRC balance per day (calculated per second)
+# - Minimum balance for burning: 10,000 PRC (stops below this)
+# - Burned PRC is permanently deleted
 # =============================================================================
 
-# Burn Settings
-BURN_SETTINGS = {
-    # DISABLED - No more time-based expiry
-    "explorer_validity_hours": 999999,    # Effectively LIFETIME (disabled)
-    "vip_inactivity_days": 999999,        # Effectively LIFETIME (disabled)
-    "expired_vip_validity_days": 999999,  # Effectively LIFETIME (disabled)
-    
-    # ACTIVE - Daily percentage burn
-    "daily_burn_percentage": 1.0,         # 1% daily total
-    "burn_schedule_hours": [11, 23],      # 11 AM and 11 PM IST
-    "per_session_burn_percentage": 0.5,   # 0.5% per session (2 sessions = 1% daily)
-    
-    # Feature flags
-    "time_based_expiry_enabled": False,   # DISABLED - Lifetime validity
-    "daily_percentage_burn_enabled": True # ACTIVE - 1% daily burn
+BURNING_SESSION_SETTINGS = {
+    "daily_burn_percentage": 1.0,           # 1% daily
+    "minimum_balance_for_burn": 10000,      # Stop burning below 10,000 PRC
+    "burn_rate_per_second": 1.0 / 86400,    # 1% / 86400 seconds = per second rate
 }
 
-async def get_user_burn_status(user: dict) -> dict:
+
+async def calculate_and_apply_burn(user: dict) -> dict:
     """
-    Determine user's burn status and applicable rules
+    Calculate and apply PRC burn for a user based on time elapsed since last burn.
+    Called whenever user balance is accessed.
+    
+    Returns:
+    - burn_applied: amount of PRC burned
+    - new_balance: updated balance after burn
+    - burn_session_active: whether burning is currently active
     """
     uid = user.get("uid")
-    subscription_plan = user.get("subscription_plan", "explorer")
-    prc_balance = user.get("prc_balance", 0)
+    current_balance = float(user.get("prc_balance", 0) or 0)
+    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]
     
-    # Check subscription expiry
-    is_vip = subscription_plan in ["startup", "growth", "elite"]
-    is_expired_vip = False
+    result = {
+        "uid": uid,
+        "burn_applied": 0,
+        "old_balance": round(current_balance, 2),
+        "new_balance": round(current_balance, 2),
+        "burn_session_active": current_balance > minimum_balance,
+        "minimum_balance": minimum_balance,
+        "daily_burn_rate": BURNING_SESSION_SETTINGS["daily_burn_percentage"]
+    }
     
-    if is_vip:
-        expiry = user.get("subscription_expiry") or user.get("membership_expiry")
-        if expiry:
-            try:
-                expiry_date = datetime.fromisoformat(str(expiry).replace('Z', '+00:00'))
-                if expiry_date.tzinfo is None:
-                    expiry_date = expiry_date.replace(tzinfo=timezone.utc)
-                if expiry_date < datetime.now(timezone.utc):
-                    is_vip = False
-                    is_expired_vip = True
-            except:
-                pass
+    # If balance is at or below minimum, no burning
+    if current_balance <= minimum_balance:
+        result["burn_session_active"] = False
+        result["reason"] = f"Balance at or below minimum ({minimum_balance} PRC)"
+        return result
     
-    # Determine user type and validity
-    if is_vip:
-        user_type = "vip"
-        validity_hours = BURN_SETTINGS["vip_inactivity_days"] * 24
-    elif is_expired_vip:
-        user_type = "expired_vip"
-        validity_hours = BURN_SETTINGS["expired_vip_validity_days"] * 24
+    # Get last burn timestamp
+    last_burn_at = user.get("last_burn_at")
+    now = datetime.now(timezone.utc)
+    
+    if not last_burn_at:
+        # First time - set timestamp and don't burn yet
+        await db.users.update_one(
+            {"uid": uid},
+            {"$set": {"last_burn_at": now.isoformat(), "burning_session_started": now.isoformat()}}
+        )
+        result["reason"] = "Burning session initialized"
+        return result
+    
+    # Calculate time elapsed since last burn
+    try:
+        if isinstance(last_burn_at, str):
+            last_burn_time = datetime.fromisoformat(last_burn_at.replace('Z', '+00:00'))
+        else:
+            last_burn_time = last_burn_at
+        
+        if last_burn_time.tzinfo is None:
+            last_burn_time = last_burn_time.replace(tzinfo=timezone.utc)
+        
+        elapsed_seconds = (now - last_burn_time).total_seconds()
+        
+        # Don't burn if less than 1 second elapsed
+        if elapsed_seconds < 1:
+            result["reason"] = "Less than 1 second elapsed"
+            return result
+        
+        # Calculate burn amount
+        # Daily rate = 1%, so per second = balance * 0.01 / 86400
+        burn_rate_per_second = current_balance * BURNING_SESSION_SETTINGS["burn_rate_per_second"]
+        burn_amount = burn_rate_per_second * elapsed_seconds
+        
+        # Make sure we don't burn below minimum
+        max_burnable = current_balance - minimum_balance
+        burn_amount = min(burn_amount, max_burnable)
+        
+        if burn_amount <= 0:
+            result["burn_session_active"] = False
+            result["reason"] = "Would burn below minimum"
+            return result
+        
+        burn_amount = round(burn_amount, 4)  # 4 decimal places for precision
+        new_balance = round(current_balance - burn_amount, 2)
+        
+        # Apply burn
+        await db.users.update_one(
+            {"uid": uid},
+            {
+                "$set": {
+                    "prc_balance": new_balance,
+                    "last_burn_at": now.isoformat()
+                },
+                "$inc": {
+                    "total_prc_burned": burn_amount
+                }
+            }
+        )
+        
+        # Log burn transaction
+        await db.transactions.insert_one({
+            "transaction_id": f"BURN-{uid[:8]}-{int(now.timestamp())}",
+            "user_id": uid,
+            "type": "prc_burn",
+            "amount": -burn_amount,
+            "balance_before": current_balance,
+            "balance_after": new_balance,
+            "description": f"Auto-burn: {elapsed_seconds:.0f}s @ {BURNING_SESSION_SETTINGS['daily_burn_percentage']}%/day",
+            "created_at": now.isoformat(),
+            "timestamp": now.isoformat()
+        })
+        
+        result["burn_applied"] = round(burn_amount, 4)
+        result["new_balance"] = new_balance
+        result["elapsed_seconds"] = round(elapsed_seconds, 0)
+        result["reason"] = "Burn applied successfully"
+        
+    except Exception as e:
+        logging.error(f"[BURN] Error calculating burn for {uid}: {e}")
+        result["error"] = str(e)
+    
+    return result
+
+
+async def get_burning_session_status(user: dict) -> dict:
+    """
+    Get current burning session status for display on Mining page.
+    Does NOT apply burn - just calculates current status.
+    """
+    uid = user.get("uid")
+    current_balance = float(user.get("prc_balance", 0) or 0)
+    minimum_balance = BURNING_SESSION_SETTINGS["minimum_balance_for_burn"]
+    daily_rate = BURNING_SESSION_SETTINGS["daily_burn_percentage"]
+    
+    is_active = current_balance > minimum_balance
+    total_burned = float(user.get("total_prc_burned", 0) or 0)
+    
+    # Calculate burn rates
+    if is_active:
+        burn_per_day = current_balance * (daily_rate / 100)
+        burn_per_hour = burn_per_day / 24
+        burn_per_minute = burn_per_day / 1440
+        burn_per_second = burn_per_day / 86400
     else:
-        user_type = "explorer"
-        validity_hours = BURN_SETTINGS["explorer_validity_hours"]
+        burn_per_day = burn_per_hour = burn_per_minute = burn_per_second = 0
+    
+    # Calculate time until minimum balance reached
+    if is_active and burn_per_day > 0:
+        burnable_amount = current_balance - minimum_balance
+        days_until_minimum = burnable_amount / burn_per_day
+    else:
+        days_until_minimum = 0
+    
+    return {
+        "is_active": is_active,
+        "current_balance": round(current_balance, 2),
+        "minimum_balance": minimum_balance,
+        "daily_burn_rate_percent": daily_rate,
+        "burn_per_day": round(burn_per_day, 4),
+        "burn_per_hour": round(burn_per_hour, 4),
+        "burn_per_minute": round(burn_per_minute, 6),
+        "burn_per_second": round(burn_per_second, 8),
+        "total_burned_lifetime": round(total_burned, 2),
+        "days_until_minimum": round(days_until_minimum, 1),
+        "burning_since": user.get("burning_session_started"),
+        "last_burn_at": user.get("last_burn_at")
+    }
+
+
+# ==================== BURNING SESSION API ENDPOINT ====================
+@api_router.get("/burning-session/status/{uid}")
+async def get_user_burning_session_status(uid: str):
+    """
+    Get the continuous burning session status for a user.
+    Burns 1% of PRC balance daily (calculated per second).
+    Stops when balance reaches 10,000 PRC minimum.
+    """
+    logging.info(f"[BURN-API] Request for user: {uid}")
+    user = await db.users.find_one({"uid": uid}, {"_id": 0, "password_hash": 0, "pin_hash": 0})
+    if not user:
+        logging.warning(f"[BURN-API] User not found: {uid}")
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Apply burn first to update balance
+    burn_result = await calculate_and_apply_burn(user)
+    
+    # Get updated status
+    updated_user = await db.users.find_one({"uid": uid}, {"_id": 0, "prc_balance": 1, "total_prc_burned": 1, "last_burn_at": 1, "burning_session_started": 1})
+    burn_status = await get_burning_session_status(updated_user)
     
     return {
         "uid": uid,
-        "user_type": user_type,
-        "is_vip": is_vip,
-        "is_expired_vip": is_expired_vip,
-        "prc_balance": prc_balance,
-        "validity_hours": validity_hours,
-        "daily_burn_pct": BURN_SETTINGS["daily_burn_percentage"]
+        "burning_session": burn_status,
+        "last_burn_applied": {
+            "amount": burn_result.get("burn_applied", 0),
+            "old_balance": burn_result.get("old_balance", 0),
+            "new_balance": burn_result.get("new_balance", 0),
+            "reason": burn_result.get("reason", "")
+        }
     }
+
+
+# ==================== OLD BURN SYSTEM DISABLED ====================
+# The following functions are kept for backward compatibility but disabled
 
 async def burn_expired_prc_for_explorer_users():
     """

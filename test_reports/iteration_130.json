@@ -28,7 +28,7 @@
       "description": "PRC statement endpoint fails with datetime comparison error - '<' not supported between instances of 'datetime.datetime' and 'str'",
       "endpoint_or_component": "/api/user/prc-statement/{uid}",
       "surfaces": ["backend"],
-      "reproduction": "curl https://expiry-recovery.preview.emergentagent.com/api/user/prc-statement/6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
+      "reproduction": "curl https://auto-burn-tracker.preview.emergentagent.com/api/user/prc-statement/6c96a6cc-08a2-442c-8e2d-f1fb6f18aa21",
       "affected_test": "Not tested - separate issue from PRC field standardization"
     }
   ],

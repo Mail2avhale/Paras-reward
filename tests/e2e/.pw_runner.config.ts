@@ -2,16 +2,16 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '/app/tests/e2e',
-  outputDir: '/root/.emergent/automation_output/20260319_054448/test-results',
+  outputDir: '/root/.emergent/automation_output/20260321_033905/test-results',
   timeout: 60000,
   retries: 0,
   workers: 1,
   reporter: [
     ['line'],
-    ['json', { outputFile: '/root/.emergent/automation_output/20260319_054448/results.json' }],
+    ['json', { outputFile: '/root/.emergent/automation_output/20260321_033905/results.json' }],
   ],
   use: {
-    baseURL: 'https://expiry-recovery.preview.emergentagent.com',
+    baseURL: 'https://auto-burn-tracker.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,

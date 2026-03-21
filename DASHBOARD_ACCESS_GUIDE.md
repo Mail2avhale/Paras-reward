@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://expiry-recovery.preview.emergentagent.com/setup
+   https://auto-burn-tracker.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

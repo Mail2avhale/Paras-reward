@@ -16,7 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://expiry-recovery.preview.emergentagent.com';
+const BASE_URL = 'https://auto-burn-tracker.preview.emergentagent.com';
 
 // Test data
 const TEST_CREDENTIALS = {

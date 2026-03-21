@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://expiry-recovery.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://auto-burn-tracker.preview.emergentagent.com';
 
 /**
  * BBPS Airtel Postpaid E2E Tests
