@@ -3620,6 +3620,9 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     2. Individual service collections (for legacy/direct entries)
     
     Types excluded: prc_burn, admin_burn, hourly_burn, daily_burn
+    
+    IMPORTANT: Status checks include BOTH uppercase and lowercase versions
+    as different systems may use different casing (COMPLETED vs completed)
     """
     total_redeemed = 0
     
@@ -3627,6 +3630,15 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     burn_types = [
         "prc_burn", "admin_burn", "hourly_burn", "daily_burn", 
         "burn", "auto_burn", "burn_overcorrection_fix"
+    ]
+    
+    # All possible SUCCESS statuses (both cases)
+    success_statuses = [
+        "completed", "COMPLETED", "Completed",
+        "success", "SUCCESS", "Success",
+        "approved", "APPROVED", "Approved",
+        "paid", "PAID", "Paid",
+        "processing", "PROCESSING"
     ]
     
     # SOURCE 1: transactions collection - all negative amounts except burns
@@ -3653,7 +3665,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "approved", "success"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
@@ -3666,7 +3678,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_used", {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}]}}}}
@@ -3679,7 +3691,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "approved", "success"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
@@ -3692,7 +3704,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$nin": ["cancelled", "refunded", "failed"]}
+                "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
@@ -3705,7 +3717,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "approved", "success"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$prc_used"]}}}}
@@ -3714,12 +3726,11 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         total_redeemed += loan_payments[0].get("total", 0)
     
     # 6. Bank Withdrawals / Redeem Requests - uses total_prc_deducted
-    # IMPORTANT: Check all possible success statuses including SUCCESS, completed, approved
     bank_withdrawals = await db.redeem_requests.aggregate([
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "success", "SUCCESS", "approved", "paid"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc", "$amount_inr"]}]}]}}}}
@@ -3732,7 +3743,7 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
         {
             "$match": {
                 "user_id": user_id,
-                "status": {"$in": ["completed", "success", "approved"]}
+                "status": {"$in": success_statuses}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$total_prc"]}]}}}}

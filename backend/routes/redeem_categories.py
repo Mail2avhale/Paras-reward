@@ -100,6 +100,16 @@ async def get_user_total_limit(user: dict) -> dict:
 async def get_category_usage(uid: str, category: str, start_date: datetime) -> float:
     """Get total PRC used in a specific category since start_date"""
     
+    # All possible SUCCESS statuses (both cases)
+    success_statuses = [
+        "completed", "COMPLETED", "Completed",
+        "pending", "PENDING", "Pending",
+        "processing", "PROCESSING", "Processing",
+        "approved", "APPROVED", "Approved",
+        "success", "SUCCESS", "Success",
+        "paid", "PAID", "Paid"
+    ]
+    
     # Map category to service types
     category_services = {
         "utility": ["gift_voucher", "bbps", "subscription", "recharge", "bill_payment", "mobile_recharge", "dth", "electricity", "gas", "water", "broadband", "landline", "postpaid", "fastag", "loan_emi", "insurance", "other"],
@@ -119,7 +129,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
                 "user_id": uid,
                 "service_type": {"$in": services},
                 "created_at": {"$gte": start_date.isoformat()},
-                "status": {"$in": ["completed", "pending", "processing", "approved"]}
+                "status": {"$in": success_statuses}
             }
         },
         {
@@ -141,7 +151,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
                 "$match": {
                     "user_id": uid,
                     "created_at": {"$gte": start_date.isoformat()},
-                    "status": {"$in": ["completed", "paid", "pending", "processing"]}
+                    "status": {"$in": success_statuses}
                 }
             },
             {
@@ -162,7 +172,7 @@ async def get_category_usage(uid: str, category: str, start_date: datetime) -> f
                 "$match": {
                     "user_id": uid,
                     "created_at": {"$gte": start_date.isoformat()},
-                    "status": {"$in": ["completed", "approved", "pending", "processing"]}
+                    "status": {"$in": success_statuses}
                 }
             },
             {

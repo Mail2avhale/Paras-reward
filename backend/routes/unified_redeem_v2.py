@@ -1121,7 +1121,11 @@ async def create_redeem_request(request: RedeemRequestCreate):
             "$match": {
                 "user_id": request.user_id,
                 "created_at": {"$gte": month_start},
-                "status": {"$in": ["completed", "approved", "success", "SUCCESS"]},
+                "status": {"$in": [
+                    "completed", "COMPLETED", "Completed",
+                    "approved", "APPROVED", "Approved", 
+                    "success", "SUCCESS", "Success"
+                ]},
                 "service_type": service_filter
             }
         },
@@ -1145,7 +1149,11 @@ async def create_redeem_request(request: RedeemRequestCreate):
                         "user_id": request.user_id,
                         "created_at": {"$gte": month_start},
                         "payment_method": "prc",
-                        "status": {"$in": ["paid", "success", "completed"]}
+                        "status": {"$in": [
+                            "paid", "PAID", "Paid",
+                            "success", "SUCCESS", "Success", 
+                            "completed", "COMPLETED", "Completed"
+                        ]}
                     }
                 },
                 {
