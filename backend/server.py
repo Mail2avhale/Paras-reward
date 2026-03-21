@@ -19792,6 +19792,120 @@ async def get_user_360_view(query: str):
     # Sort all failed transactions by date
     failed_transactions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     
+    # ========== SUBSCRIPTION HISTORY & FRAUD CHECK ==========
+    subscription_history = []
+    fraud_indicators = []
+    
+    # Get Razorpay payment history
+    razorpay_payments = await db.razorpay_orders.find(
+        {"user_id": uid},
+        {"_id": 0, "order_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1, "plan_type": 1,
+         "status": 1, "created_at": 1, "paid_at": 1, "cancelled_at": 1, "failure_reason": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for rp in razorpay_payments:
+        rp["source"] = "razorpay"
+        rp["amount_display"] = f"₹{rp.get('amount', 0)}"
+        subscription_history.append(rp)
+    
+    # Get VIP/Manual payment history
+    vip_payments = await db.vip_payments.find(
+        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}]},
+        {"_id": 0, "payment_id": 1, "amount": 1, "plan": 1, "plan_type": 1, "status": 1,
+         "created_at": 1, "approved_at": 1, "rejected_at": 1, "utr_number": 1, "screenshot_url": 1}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for vp in vip_payments:
+        vp["source"] = "vip_manual"
+        vp["amount_display"] = f"₹{vp.get('amount', 0)}"
+        subscription_history.append(vp)
+    
+    # Sort combined history
+    subscription_history.sort(key=lambda x: x.get("created_at", "") or x.get("paid_at", ""), reverse=True)
+    
+    # ========== FRAUD DETECTION ==========
+    # 1. Multiple failed payments in short time
+    failed_count = len([p for p in razorpay_payments if p.get("status") in ["failed", "cancelled"]])
+    if failed_count >= 3:
+        fraud_indicators.append({
+            "type": "multiple_failed_payments",
+            "severity": "medium",
+            "description": f"{failed_count} failed/cancelled payments detected",
+            "action": "Review payment attempts"
+        })
+    
+    # 2. Subscription active but no successful payment
+    user_plan = user.get("subscription_plan", "explorer")
+    successful_payments = [p for p in razorpay_payments if p.get("status") == "paid"]
+    successful_vip = [p for p in vip_payments if p.get("status") == "approved"]
+    
+    if user_plan not in ["explorer", "free", "", None] and len(successful_payments) == 0 and len(successful_vip) == 0:
+        fraud_indicators.append({
+            "type": "no_payment_record",
+            "severity": "high",
+            "description": f"User has '{user_plan}' subscription but NO payment record found",
+            "action": "Investigate how subscription was activated"
+        })
+    
+    # 3. Payment amount mismatch
+    for rp in successful_payments[:5]:
+        amount = rp.get("amount", 0)
+        plan = rp.get("plan_name", "").lower()
+        # Elite monthly = 799
+        if "elite" in plan and "monthly" in rp.get("plan_type", ""):
+            if amount < 700:
+                fraud_indicators.append({
+                    "type": "amount_mismatch",
+                    "severity": "high",
+                    "description": f"Elite monthly paid only ₹{amount} (expected ₹799)",
+                    "action": "Check for coupon abuse or payment tampering"
+                })
+    
+    # 4. Rapid plan changes
+    plan_changes = await db.admin_actions.find(
+        {"user_id": uid, "action": {"$in": ["plan_change", "subscription_update", "redeem_limit_override"]}},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(20).to_list(20)
+    
+    if len(plan_changes) >= 5:
+        fraud_indicators.append({
+            "type": "frequent_plan_changes",
+            "severity": "low",
+            "description": f"{len(plan_changes)} admin plan changes detected",
+            "action": "Review if changes were legitimate"
+        })
+    
+    # 5. Subscription expiry in far future (manipulation)
+    expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+    if expiry:
+        try:
+            if isinstance(expiry, str):
+                expiry_date = datetime.fromisoformat(expiry.replace('Z', '+00:00'))
+            else:
+                expiry_date = expiry
+            
+            days_until_expiry = (expiry_date.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).days
+            if days_until_expiry > 400:  # More than 1 year + buffer
+                fraud_indicators.append({
+                    "type": "excessive_subscription_period",
+                    "severity": "high",
+                    "description": f"Subscription expires in {days_until_expiry} days ({days_until_expiry//30} months)",
+                    "action": "Verify if this is legitimate multi-year purchase"
+                })
+        except:
+            pass
+    
+    # Calculate fraud score
+    fraud_score = 0
+    for indicator in fraud_indicators:
+        if indicator["severity"] == "high":
+            fraud_score += 30
+        elif indicator["severity"] == "medium":
+            fraud_score += 15
+        elif indicator["severity"] == "low":
+            fraud_score += 5
+    fraud_score = min(100, fraud_score)
+    
     return {
         "user": user,
         "stats": stats,
@@ -19802,7 +19916,13 @@ async def get_user_360_view(query: str):
         "login_history": login_history,
         "redeem_limit": redeem_limit_data,
         "redeem_breakdown": redeem_breakdown,
-        "failed_transactions": failed_transactions[:30]
+        "failed_transactions": failed_transactions[:30],
+        "subscription_history": subscription_history[:30],
+        "fraud_check": {
+            "score": fraud_score,
+            "indicators": fraud_indicators,
+            "status": "clean" if fraud_score == 0 else "suspicious" if fraud_score < 50 else "high_risk"
+        }
     }
 
 
@@ -19945,6 +20065,169 @@ async def admin_override_redeem_limit(request: Request):
         "message": f"Redeem limit updated to {new_limit}",
         "old_limit": old_limit,
         "new_limit": new_limit
+    }
+
+
+@api_router.post("/admin/update-subscription")
+async def admin_update_subscription(request: Request):
+    """
+    Admin: Update user's subscription plan, expiry, or cancel subscription.
+    Actions: update_plan, change_expiry, cancel, extend
+    """
+    data = await request.json()
+    user_id = data.get("user_id")
+    action = data.get("action")  # update_plan, change_expiry, cancel, extend
+    admin_id = data.get("admin_id")
+    reason = data.get("reason", "Admin action")
+    
+    if not user_id or not action:
+        raise HTTPException(status_code=400, detail="Missing user_id or action")
+    
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    old_data = {
+        "plan": user.get("subscription_plan"),
+        "expiry": user.get("subscription_expiry") or user.get("subscription_expires"),
+        "membership_type": user.get("membership_type")
+    }
+    
+    update_fields = {}
+    action_description = ""
+    
+    if action == "update_plan":
+        new_plan = data.get("new_plan", "explorer")
+        if new_plan not in ["explorer", "startup", "growth", "elite"]:
+            raise HTTPException(status_code=400, detail="Invalid plan name")
+        
+        update_fields["subscription_plan"] = new_plan
+        update_fields["membership_type"] = "free" if new_plan == "explorer" else "paid"
+        action_description = f"Plan changed from {old_data['plan']} to {new_plan}"
+    
+    elif action == "change_expiry":
+        new_expiry = data.get("new_expiry")  # ISO date string or days to add
+        if not new_expiry:
+            raise HTTPException(status_code=400, detail="Missing new_expiry")
+        
+        if isinstance(new_expiry, int) or (isinstance(new_expiry, str) and new_expiry.isdigit()):
+            # Days to add from now
+            days = int(new_expiry)
+            new_expiry_date = datetime.now(timezone.utc) + timedelta(days=days)
+        else:
+            # ISO date string
+            new_expiry_date = datetime.fromisoformat(new_expiry.replace('Z', '+00:00'))
+        
+        update_fields["subscription_expiry"] = new_expiry_date.isoformat()
+        update_fields["subscription_expires"] = new_expiry_date
+        action_description = f"Expiry changed from {old_data['expiry']} to {new_expiry_date.isoformat()}"
+    
+    elif action == "cancel":
+        update_fields["subscription_plan"] = "explorer"
+        update_fields["membership_type"] = "free"
+        update_fields["subscription_cancelled_at"] = timestamp
+        update_fields["subscription_cancelled_by"] = admin_id
+        update_fields["subscription_cancelled_reason"] = reason
+        action_description = f"Subscription cancelled (was {old_data['plan']})"
+    
+    elif action == "extend":
+        days_to_add = data.get("days", 28)
+        current_expiry = user.get("subscription_expiry") or user.get("subscription_expires")
+        
+        if current_expiry:
+            if isinstance(current_expiry, str):
+                current_expiry = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+            base_date = max(current_expiry, datetime.now(timezone.utc))
+        else:
+            base_date = datetime.now(timezone.utc)
+        
+        new_expiry_date = base_date + timedelta(days=days_to_add)
+        update_fields["subscription_expiry"] = new_expiry_date.isoformat()
+        update_fields["subscription_expires"] = new_expiry_date
+        action_description = f"Extended by {days_to_add} days (new expiry: {new_expiry_date.date()})"
+    
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
+    
+    # Apply updates
+    update_fields["subscription_last_modified"] = timestamp
+    update_fields["subscription_modified_by"] = admin_id
+    
+    await db.users.update_one({"uid": user_id}, {"$set": update_fields})
+    
+    # Log admin action
+    await db.admin_actions.insert_one({
+        "action": "subscription_update",
+        "sub_action": action,
+        "user_id": user_id,
+        "admin_id": admin_id,
+        "old_data": old_data,
+        "new_data": update_fields,
+        "reason": reason,
+        "description": action_description,
+        "timestamp": timestamp
+    })
+    
+    return {
+        "success": True,
+        "message": action_description,
+        "old_data": old_data,
+        "new_data": {k: str(v) if isinstance(v, datetime) else v for k, v in update_fields.items()}
+    }
+
+
+@api_router.post("/admin/delete-payment-record")
+async def admin_delete_payment_record(request: Request):
+    """
+    Admin: Delete a fraudulent or erroneous payment record.
+    This does NOT refund money - use for cleaning up fake/test records.
+    """
+    data = await request.json()
+    order_id = data.get("order_id")
+    payment_id = data.get("payment_id")
+    source = data.get("source", "razorpay")  # razorpay or vip
+    admin_id = data.get("admin_id")
+    reason = data.get("reason", "Admin deletion")
+    
+    if not order_id and not payment_id:
+        raise HTTPException(status_code=400, detail="Missing order_id or payment_id")
+    
+    timestamp = datetime.now(timezone.utc).isoformat()
+    deleted_record = None
+    
+    if source == "razorpay":
+        query = {"order_id": order_id} if order_id else {"payment_id": payment_id}
+        deleted_record = await db.razorpay_orders.find_one(query)
+        if deleted_record:
+            await db.razorpay_orders.delete_one(query)
+    else:
+        query = {"payment_id": payment_id} if payment_id else {"_id": order_id}
+        deleted_record = await db.vip_payments.find_one(query)
+        if deleted_record:
+            await db.vip_payments.delete_one(query)
+    
+    if not deleted_record:
+        raise HTTPException(status_code=404, detail="Payment record not found")
+    
+    # Convert ObjectId for logging
+    if "_id" in deleted_record:
+        deleted_record["_id"] = str(deleted_record["_id"])
+    
+    # Log deletion
+    await db.admin_actions.insert_one({
+        "action": "payment_record_deleted",
+        "source": source,
+        "deleted_record": deleted_record,
+        "admin_id": admin_id,
+        "reason": reason,
+        "timestamp": timestamp
+    })
+    
+    return {
+        "success": True,
+        "message": f"Payment record deleted ({source})",
+        "deleted_record": deleted_record
     }
 
 

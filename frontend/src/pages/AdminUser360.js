@@ -1325,7 +1325,7 @@ const AdminUser360 = ({ user: adminUser }) => {
                 { id: 'redemptions', label: 'Redemptions', icon: Wallet, count: userData.transactions.redemptions?.length || 0 },
                 { id: 'mining', label: 'Mining', icon: Zap, count: userData.transactions.mining_history?.length || 0 },
                 { id: 'vouchers', label: 'Vouchers', icon: Gift, count: userData.transactions.gift_vouchers?.length || 0 },
-                { id: 'subscriptions', label: 'Plans', icon: Crown, count: userData.transactions.subscriptions?.length || 0 },
+                { id: 'subscription_history', label: 'Sub History', icon: Crown, count: userData.subscription_history?.length || 0, highlight: userData.fraud_check?.score > 0 },
                 { id: 'prc_ledger', label: 'PRC Ledger', icon: FileText, count: userData.transactions.prc_ledger?.length || 0 },
                 { id: 'login_history', label: 'Logins', icon: Activity, count: userData.login_history?.length || 0 },
                 { id: 'failed', label: 'Failed/Pending', icon: AlertTriangle, count: userData.failed_transactions?.length || 0, highlight: (userData.failed_transactions?.length || 0) > 0 }
@@ -2134,9 +2134,230 @@ const AdminUser360 = ({ user: adminUser }) => {
                   )}
                 </div>
               )}
+
+              {/* Subscription History Tab */}
+              {activeTab === 'subscription_history' && (
+                <div className="space-y-4">
+                  {/* Fraud Check Alert */}
+                  {userData.fraud_check && userData.fraud_check.score > 0 && (
+                    <div className={`p-4 rounded-lg border ${
+                      userData.fraud_check.status === 'high_risk' 
+                        ? 'bg-red-500/10 border-red-500/50' 
+                        : 'bg-yellow-500/10 border-yellow-500/50'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Shield className={`w-5 h-5 ${userData.fraud_check.status === 'high_risk' ? 'text-red-400' : 'text-yellow-400'}`} />
+                        <span className={`font-bold ${userData.fraud_check.status === 'high_risk' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          Fraud Score: {userData.fraud_check.score}/100 ({userData.fraud_check.status})
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {userData.fraud_check.indicators?.map((indicator, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-sm">
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${
+                              indicator.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                              indicator.severity === 'medium' ? 'bg-orange-500/20 text-orange-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>{indicator.severity}</span>
+                            <div>
+                              <p className="text-gray-300">{indicator.description}</p>
+                              <p className="text-gray-500 text-xs">Action: {indicator.action}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Subscription Controls */}
+                  <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-800/50 rounded-lg">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const days = prompt('Extend subscription by how many days?', '28');
+                        if (days && !isNaN(days)) {
+                          setProcessing(true);
+                          try {
+                            await axios.post(`${API}/admin/update-subscription`, {
+                              user_id: userData.user.uid,
+                              action: 'extend',
+                              days: parseInt(days),
+                              admin_id: adminUser?.uid,
+                              reason: `Extended by ${days} days`
+                            });
+                            toast.success(`Extended by ${days} days`);
+                            refreshUserData();
+                          } catch (err) {
+                            toast.error(err.response?.data?.detail || 'Failed');
+                          } finally {
+                            setProcessing(false);
+                          }
+                        }
+                      }}
+                      disabled={processing}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      ➕ Extend Days
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const newDate = prompt('New expiry date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+                        if (newDate) {
+                          setProcessing(true);
+                          try {
+                            await axios.post(`${API}/admin/update-subscription`, {
+                              user_id: userData.user.uid,
+                              action: 'change_expiry',
+                              new_expiry: newDate,
+                              admin_id: adminUser?.uid
+                            });
+                            toast.success('Expiry date updated');
+                            refreshUserData();
+                          } catch (err) {
+                            toast.error(err.response?.data?.detail || 'Failed');
+                          } finally {
+                            setProcessing(false);
+                          }
+                        }
+                      }}
+                      disabled={processing}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      📅 Change Expiry
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const plans = ['explorer', 'startup', 'growth', 'elite'];
+                        const newPlan = prompt(`Change plan to:\n${plans.join(', ')}`, userData.user.subscription_plan);
+                        if (newPlan && plans.includes(newPlan)) {
+                          setProcessing(true);
+                          try {
+                            await axios.post(`${API}/admin/update-subscription`, {
+                              user_id: userData.user.uid,
+                              action: 'update_plan',
+                              new_plan: newPlan,
+                              admin_id: adminUser?.uid
+                            });
+                            toast.success(`Plan changed to ${newPlan}`);
+                            refreshUserData();
+                          } catch (err) {
+                            toast.error(err.response?.data?.detail || 'Failed');
+                          } finally {
+                            setProcessing(false);
+                          }
+                        }
+                      }}
+                      disabled={processing}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      🔄 Change Plan
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        const reason = prompt('Reason for cancellation:');
+                        if (reason && confirm('Cancel subscription? User will become Explorer.')) {
+                          setProcessing(true);
+                          try {
+                            await axios.post(`${API}/admin/update-subscription`, {
+                              user_id: userData.user.uid,
+                              action: 'cancel',
+                              reason: reason,
+                              admin_id: adminUser?.uid
+                            });
+                            toast.success('Subscription cancelled');
+                            refreshUserData();
+                          } catch (err) {
+                            toast.error(err.response?.data?.detail || 'Failed');
+                          } finally {
+                            setProcessing(false);
+                          }
+                        }
+                      }}
+                      disabled={processing}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      ❌ Cancel Sub
+                    </Button>
+                  </div>
+                  
+                  {/* Payment History */}
+                  <h4 className="text-sm font-medium text-gray-400 mb-2">Payment History</h4>
+                  {!userData.subscription_history?.length ? (
+                    <p className="text-gray-500 text-center py-4">No payment history found</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {userData.subscription_history.map((payment, idx) => (
+                        <div key={idx} className={`p-3 rounded-lg border ${
+                          payment.status === 'paid' || payment.status === 'approved' 
+                            ? 'bg-green-500/5 border-green-500/30' 
+                            : payment.status === 'cancelled' || payment.status === 'rejected'
+                              ? 'bg-red-500/5 border-red-500/30'
+                              : 'bg-gray-800/50 border-gray-700'
+                        }`}>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-white font-medium">{payment.plan_name || payment.plan || 'Unknown Plan'}</span>
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  payment.status === 'paid' || payment.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                                  payment.status === 'cancelled' || payment.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                  payment.status === 'created' || payment.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-gray-500/20 text-gray-400'
+                                }`}>{payment.status}</span>
+                                <span className="px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-400">
+                                  {payment.source === 'razorpay' ? '💳 Razorpay' : '📋 VIP/Manual'}
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">{payment.amount_display}</p>
+                              <p className="text-gray-500 text-xs">
+                                {payment.order_id && `Order: ${payment.order_id.slice(0,15)}...`}
+                                {payment.utr_number && ` | UTR: ${payment.utr_number}`}
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                {formatDate(payment.created_at || payment.paid_at)}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => {
+                                if (confirm('Delete this payment record? This cannot be undone!')) {
+                                  setProcessing(true);
+                                  try {
+                                    await axios.post(`${API}/admin/delete-payment-record`, {
+                                      order_id: payment.order_id,
+                                      payment_id: payment.payment_id,
+                                      source: payment.source,
+                                      admin_id: adminUser?.uid,
+                                      reason: 'Manual deletion from User 360'
+                                    });
+                                    toast.success('Payment record deleted');
+                                    refreshUserData();
+                                  } catch (err) {
+                                    toast.error(err.response?.data?.detail || 'Failed');
+                                  } finally {
+                                    setProcessing(false);
+                                  }
+                                }
+                              }}
+                              disabled={processing}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            >
+                              🗑️
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
-
+          
           {/* Fourth Row - Quick Actions & Admin Notes */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quick Actions */}
