@@ -331,7 +331,8 @@ const DailyRewards = ({ user }) => {
       
       if (data?.burning_session) {
         setBurningSession(data.burning_session);
-        // Initialize live burn counter from server data
+        // Reset live burn counter to server value (prevents double counting)
+        // Server already applies the burn, so we just show the server's total
         setLiveBurnAmount(data.burning_session.total_burned_lifetime || 0);
       }
     } catch (error) {
