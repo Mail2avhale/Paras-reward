@@ -22013,6 +22013,120 @@ async def restore_user_prc(uid: str):
     }
 
 
+@api_router.post("/admin/fix-burn-overcorrection")
+async def fix_burn_overcorrection(request: Request):
+    """
+    Fix PRC for users affected by the burn bug (double counting).
+    This endpoint:
+    1. Finds users with total_prc_burned > expected
+    2. Calculates correct burn based on 1% daily rate
+    3. Restores over-burned PRC to their balance
+    4. Resets total_prc_burned to correct value
+    """
+    try:
+        data = await request.json()
+        hours_since_burn_start = data.get("hours_since_burn_start", 24)  # Default 24 hours
+        dry_run = data.get("dry_run", True)  # Default to dry run
+        specific_uids = data.get("uids", None)  # Optional: specific users only
+        
+        now = datetime.now(timezone.utc)
+        
+        # Find affected users
+        query = {"total_prc_burned": {"$gt": 0}}
+        if specific_uids:
+            query["uid"] = {"$in": specific_uids}
+        
+        users = await db.users.find(
+            query,
+            {"uid": 1, "name": 1, "email": 1, "prc_balance": 1, "total_prc_burned": 1}
+        ).to_list(10000)
+        
+        results = []
+        total_restored = 0
+        
+        for user in users:
+            uid = user.get("uid")
+            name = user.get("name", "Unknown")
+            current_balance = float(user.get("prc_balance", 0) or 0)
+            total_burned = float(user.get("total_prc_burned", 0) or 0)
+            
+            # Calculate expected burn
+            # Original balance = current + burned
+            original_balance = current_balance + total_burned
+            
+            # Expected burn: 1% per day = 0.0417% per hour
+            expected_burn_percent = (1.0 / 24) * hours_since_burn_start
+            expected_burn = original_balance * (expected_burn_percent / 100)
+            
+            # Over-burned amount
+            over_burned = total_burned - expected_burn
+            
+            if over_burned > 1:  # More than 1 PRC over-burned
+                restore_amount = round(over_burned, 2)
+                new_balance = round(current_balance + restore_amount, 2)
+                correct_burned = round(expected_burn, 2)
+                
+                result = {
+                    "uid": uid,
+                    "name": name,
+                    "email": user.get("email"),
+                    "current_balance": current_balance,
+                    "total_burned_before": total_burned,
+                    "expected_burn": round(expected_burn, 2),
+                    "over_burned": restore_amount,
+                    "new_balance": new_balance,
+                    "correct_burned": correct_burned
+                }
+                
+                if not dry_run:
+                    # Apply the fix
+                    await db.users.update_one(
+                        {"uid": uid},
+                        {
+                            "$set": {
+                                "prc_balance": new_balance,
+                                "total_prc_burned": correct_burned
+                            }
+                        }
+                    )
+                    
+                    # Log the restoration
+                    await db.transactions.insert_one({
+                        "transaction_id": f"BURN-FIX-{uid[:8]}-{int(now.timestamp())}",
+                        "user_id": uid,
+                        "type": "burn_overcorrection_fix",
+                        "amount": restore_amount,
+                        "balance_before": current_balance,
+                        "balance_after": new_balance,
+                        "description": f"Burn bug fix: restored {restore_amount:.2f} PRC (over-burned due to frontend bug)",
+                        "burned_before": total_burned,
+                        "burned_after": correct_burned,
+                        "created_at": now.isoformat(),
+                        "timestamp": now.isoformat()
+                    })
+                    
+                    result["status"] = "FIXED"
+                else:
+                    result["status"] = "DRY_RUN"
+                
+                results.append(result)
+                total_restored += restore_amount
+        
+        return {
+            "success": True,
+            "dry_run": dry_run,
+            "hours_calculated": hours_since_burn_start,
+            "users_affected": len(results),
+            "total_restored": round(total_restored, 2),
+            "details": results,
+            "message": f"{'Would restore' if dry_run else 'Restored'} {total_restored:.2f} PRC to {len(results)} users"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error fixing burn overcorrection: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/admin/bulk-restore-prc")
 async def bulk_restore_prc(request: Request):
     """
