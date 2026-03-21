@@ -1064,7 +1064,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
         "mobile_recharge", "mobile_postpaid", "electricity", "gas", "water",
         "broadband", "landline", "dth", "cable_tv", "emi", "credit_card",
         "insurance", "fastag", "education", "municipal_tax", "housing_society", "lpg",
-        "recharge", "postpaid"
+        "recharge", "postpaid", "subscription", "subscription_prc"  # Added: subscription counts as utility
     ]
     BANK_SERVICES = ["bank_transfer", "prc_to_bank", "dmt", "bank_withdrawal"]
     SHOPPING_SERVICES = ["gift_voucher", "shopping", "marketplace"]
@@ -1133,6 +1133,29 @@ async def create_redeem_request(request: RedeemRequestCreate):
     try:
         category_result = await db.redeem_requests.aggregate(category_pipeline).to_list(length=1)
         category_used = category_result[0]["total_amount"] if category_result else 0
+        
+        # Also add subscription payments for utility category
+        if category == "utility":
+            sub_pipeline = [
+                {
+                    "$match": {
+                        "user_id": request.user_id,
+                        "created_at": {"$gte": month_start},
+                        "payment_method": "prc",
+                        "status": {"$in": ["paid", "success", "completed"]}
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": None,
+                        "total_amount": {"$sum": {"$ifNull": ["$inr_equivalent", "$prc_amount"]}}
+                    }
+                }
+            ]
+            sub_result = await db.subscription_payments.aggregate(sub_pipeline).to_list(length=1)
+            sub_used = sub_result[0]["total_amount"] if sub_result else 0
+            category_used += sub_used
+            
     except Exception as e:
         logging.warning(f"Category limit query error: {e}")
         category_used = 0

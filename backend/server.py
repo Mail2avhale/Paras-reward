@@ -12056,6 +12056,22 @@ async def subscription_pay_with_prc(request: Request):
         except:
             pass
         
+        # Record category usage for utility limit (subscription counts as utility - 40%)
+        try:
+            category_usage_record = {
+                "user_id": user_id,
+                "category": "utility",
+                "service_type": "subscription_prc",
+                "amount_prc": prc_amount,
+                "amount_inr": plan_price,
+                "description": f"Subscription: {plan_name.capitalize()}",
+                "created_at": now.isoformat(),
+                "status": "completed"
+            }
+            await db.category_usage.insert_one(category_usage_record)
+        except Exception as cat_err:
+            logging.warning(f"[PRC-SUB] Category usage record failed: {cat_err}")
+        
         # Log activity and notification
         try:
             await log_activity(user_id=user_id, action_type="subscription_prc_payment",
