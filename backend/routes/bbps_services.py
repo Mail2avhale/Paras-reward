@@ -189,9 +189,8 @@ def sanitize_sender_name(name: str) -> str:
     Sanitize sender name for Eko BBPS API.
     
     Eko BBPS requirement: "Sender Name should contain only letters"
-    - Remove all numbers and special characters
-    - Keep only alphabets and spaces
-    - Trim extra whitespace
+    - Remove ALL numbers, special characters, AND SPACES
+    - Keep only alphabets (a-z, A-Z)
     - Return "Customer" as fallback if empty
     
     Reference: https://developers.eko.in/v1/docs/bbps-faqs
@@ -199,17 +198,15 @@ def sanitize_sender_name(name: str) -> str:
     if not name:
         return "Customer"
     
-    # Remove everything except letters (a-z, A-Z) and spaces
-    sanitized = re.sub(r'[^a-zA-Z\s]', '', name)
-    
-    # Collapse multiple spaces into single space and trim
-    sanitized = ' '.join(sanitized.split())
+    # Remove EVERYTHING except letters (a-z, A-Z) - NO SPACES
+    sanitized = re.sub(r'[^a-zA-Z]', '', name)
     
     # If result is empty after sanitization, return default
-    if not sanitized or len(sanitized.strip()) == 0:
+    if not sanitized or len(sanitized) == 0:
         return "Customer"
     
-    return sanitized
+    # Limit to reasonable length (Eko may have max length)
+    return sanitized[:50]
 
 
 def get_common_error_message(msg_or_code):

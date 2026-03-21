@@ -254,7 +254,9 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
         details = request_doc.get("details", {})
         service_type = request_doc.get("service_type", "mobile_recharge")
         amount = str(int(request_doc["amount_inr"]))
-        sender_name = request_doc.get("user_name", "ParasReward")
+        # CRITICAL: Sanitize sender name - Eko requires only letters (no spaces/numbers)
+        raw_sender_name = request_doc.get("user_name", "ParasReward")
+        sender_name = sanitize_sender_name(raw_sender_name)
         user_mobile = request_doc.get("user_mobile", "9999999999")
         
         # Get utility_acc_no based on service type
@@ -318,7 +320,7 @@ async def execute_eko_recharge(request_doc: dict) -> dict:
             logging.warning(f"[BBPS-INSTANT] Could not check Eko balance: {balance_error}")
         
         # Import the working BBPS pay function
-        from routes.bbps_services import pay_bill, PayBillRequest
+        from routes.bbps_services import pay_bill, PayBillRequest, sanitize_sender_name
         
         # Get bill fetch response if available (required for some operators)
         bill_fetch_response = details.get("bill_fetch_response") or details.get("billfetchresponse")
