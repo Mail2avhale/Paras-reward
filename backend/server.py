@@ -3613,41 +3613,49 @@ async def get_user_monthly_redemption_usage(user_id: str, subscription_start: st
 
 async def get_user_all_time_redeemed(user_id: str) -> float:
     """
-    Get user's ALL TIME total PRC redeemed/used across all services.
+    Get user's ALL TIME total PRC redeemed/used across ALL services from JOINING DATE.
     
-    COMBINES data from:
+    COMPREHENSIVE CALCULATION includes:
     1. transactions collection (negative amounts excluding burns)
-    2. Individual service collections (for legacy/direct entries)
+    2. Gift Vouchers
+    3. Utility (BBPS, recharges, electricity, etc.)
+    4. PRC Subscription purchases
+    5. Bank Withdrawals / DMT
+    6. All OLD/discontinued services
     
-    Types excluded: prc_burn, admin_burn, hourly_burn, daily_burn
+    Types EXCLUDED: prc_burn, admin_burn, hourly_burn (these are not user redemptions)
     
     IMPORTANT: Status checks include BOTH uppercase and lowercase versions
     as different systems may use different casing (COMPLETED vs completed)
     """
     total_redeemed = 0
     
-    # EXCLUDE these burn types
+    # EXCLUDE these burn types (burns are deflationary, not user spending)
     burn_types = [
         "prc_burn", "admin_burn", "hourly_burn", "daily_burn", 
         "burn", "auto_burn", "burn_overcorrection_fix"
     ]
     
-    # All possible SUCCESS statuses (both cases)
+    # All possible SUCCESS statuses (both cases for compatibility)
     success_statuses = [
         "completed", "COMPLETED", "Completed",
         "success", "SUCCESS", "Success",
         "approved", "APPROVED", "Approved",
         "paid", "PAID", "Paid",
-        "processing", "PROCESSING"
+        "processing", "PROCESSING", "Processing",
+        "delivered", "DELIVERED", "Delivered"
     ]
     
+    # ═══════════════════════════════════════════════════════════════════════
     # SOURCE 1: transactions collection - all negative amounts except burns
+    # This is the PRIMARY source for most recent transactions
+    # ═══════════════════════════════════════════════════════════════════════
     txn_debits = await db.transactions.aggregate([
         {
             "$match": {
                 "user_id": user_id,
                 "amount": {"$lt": 0},
-                "type": {"$nin": burn_types}  # Exclude burn types
+                "type": {"$nin": burn_types}
             }
         },
         {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
@@ -3657,103 +3665,210 @@ async def get_user_all_time_redeemed(user_id: str) -> float:
     if txn_debits and txn_debits[0].get("total"):
         txn_total = txn_debits[0].get("total", 0)
     
-    # SOURCE 2: ALWAYS check individual collections for completeness
-    # This handles legacy data and direct service entries
+    # ═══════════════════════════════════════════════════════════════════════
+    # SOURCE 2: Individual service collections (for legacy/direct entries)
+    # Check ALL collections to ensure nothing is missed
+    # ═══════════════════════════════════════════════════════════════════════
     
-    # 1. Bill Payments (legacy)
-    bill_payments = await db.payment_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
-    ]).to_list(1)
-    if bill_payments and bill_payments[0].get("total"):
-        total_redeemed += bill_payments[0].get("total", 0)
+    # Helper function for safe aggregation
+    async def safe_sum(collection_name, match_query, sum_fields):
+        """Safely aggregate sum from a collection"""
+        try:
+            # Build $ifNull chain for multiple possible field names
+            if isinstance(sum_fields, list):
+                sum_expr = sum_fields[0]
+                for field in sum_fields[1:]:
+                    sum_expr = {"$ifNull": [f"${field}", sum_expr]}
+                sum_expr = {"$ifNull": [f"${sum_fields[0]}", sum_expr]}
+            else:
+                sum_expr = f"${sum_fields}"
+            
+            # Actually build correct nested ifNull
+            if isinstance(sum_fields, list) and len(sum_fields) > 1:
+                sum_expr = f"${sum_fields[-1]}"
+                for field in reversed(sum_fields[:-1]):
+                    sum_expr = {"$ifNull": [f"${field}", sum_expr]}
+            elif isinstance(sum_fields, list):
+                sum_expr = f"${sum_fields[0]}"
+            else:
+                sum_expr = f"${sum_fields}"
+                
+            result = await db[collection_name].aggregate([
+                {"$match": match_query},
+                {"$group": {"_id": None, "total": {"$sum": sum_expr}}}
+            ]).to_list(1)
+            return result[0].get("total", 0) if result else 0
+        except Exception as e:
+            logging.debug(f"[REDEEMED] Error querying {collection_name}: {e}")
+            return 0
     
-    # 2. BBPS/Instant Bill Payments - uses prc_used field
-    bbps_payments = await db.bill_payment_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_used", {"$ifNull": ["$total_prc_deducted", "$prc_amount"]}]}}}}
-    ]).to_list(1)
-    if bbps_payments and bbps_payments[0].get("total"):
-        total_redeemed += bbps_payments[0].get("total", 0)
+    # ─────────────────────────────────────────────────────────────────────
+    # 1. GIFT VOUCHERS
+    # ─────────────────────────────────────────────────────────────────────
+    gift_voucher_total = await safe_sum(
+        "gift_voucher_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["total_prc_deducted", "prc_amount", "prc_used", "amount"]
+    )
+    total_redeemed += gift_voucher_total
     
-    # 3. Gift Vouchers
-    voucher_redemptions = await db.gift_voucher_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
-    ]).to_list(1)
-    if voucher_redemptions and voucher_redemptions[0].get("total"):
-        total_redeemed += voucher_redemptions[0].get("total", 0)
+    # ─────────────────────────────────────────────────────────────────────
+    # 2. UTILITY - BBPS/Instant Bill Payments (Electricity, Gas, Water, etc.)
+    # ─────────────────────────────────────────────────────────────────────
+    bbps_total = await safe_sum(
+        "bill_payment_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_used", "total_prc_deducted", "prc_amount", "amount"]
+    )
+    total_redeemed += bbps_total
     
-    # 4. Marketplace Orders
-    marketplace_orders = await db.orders.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", "$prc_used"]}]}}}}
-    ]).to_list(1)
-    if marketplace_orders and marketplace_orders[0].get("total"):
-        total_redeemed += marketplace_orders[0].get("total", 0)
+    # Legacy bill_payments collection
+    bill_payments_total = await safe_sum(
+        "bill_payments",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_used", "total_prc_deducted", "prc_amount"]
+    )
+    total_redeemed += bill_payments_total
     
-    # 5. Loan EMI Payments
-    loan_payments = await db.loan_payments.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$prc_amount", "$prc_used"]}}}}
-    ]).to_list(1)
-    if loan_payments and loan_payments[0].get("total"):
-        total_redeemed += loan_payments[0].get("total", 0)
+    # Legacy payment_requests collection
+    payment_requests_total = await safe_sum(
+        "payment_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["total_prc_deducted", "prc_amount", "prc_used"]
+    )
+    total_redeemed += payment_requests_total
     
-    # 6. Bank Withdrawals / Redeem Requests - uses total_prc_deducted
-    bank_withdrawals = await db.redeem_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", {"$ifNull": ["$total_prc", "$amount_inr"]}]}]}}}}
-    ]).to_list(1)
-    if bank_withdrawals and bank_withdrawals[0].get("total"):
-        total_redeemed += bank_withdrawals[0].get("total", 0)
+    # ─────────────────────────────────────────────────────────────────────
+    # 3. PRC SUBSCRIPTION PURCHASES (counts as Utility)
+    # ─────────────────────────────────────────────────────────────────────
+    # subscription_payments - PRC used to buy subscriptions
+    subscription_prc_total = await safe_sum(
+        "subscription_payments",
+        {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}},
+        ["prc_amount", "inr_equivalent", "amount"]
+    )
+    total_redeemed += subscription_prc_total
     
-    # 7. Bank Withdrawal Requests (alternative collection)
-    bank_withdrawal_requests = await db.bank_withdrawal_requests.aggregate([
-        {
-            "$match": {
-                "user_id": user_id,
-                "status": {"$in": success_statuses}
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", "$total_prc"]}]}}}}
-    ]).to_list(1)
-    if bank_withdrawal_requests and bank_withdrawal_requests[0].get("total"):
-        total_redeemed += bank_withdrawal_requests[0].get("total", 0)
+    # vip_payments with PRC
+    vip_prc_total = await safe_sum(
+        "vip_payments",
+        {"user_id": user_id, "payment_method": "prc", "status": {"$in": success_statuses}},
+        ["prc_amount", "prc_used", "amount"]
+    )
+    total_redeemed += vip_prc_total
     
-    # COMBINE: Return MAX of transactions total OR individual collections total
+    # ─────────────────────────────────────────────────────────────────────
+    # 4. BANK WITHDRAWALS / TRANSFERS
+    # ─────────────────────────────────────────────────────────────────────
+    # redeem_requests - main collection for bank transfers
+    redeem_requests_total = await safe_sum(
+        "redeem_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["total_prc_deducted", "prc_amount", "total_prc", "amount_inr", "amount"]
+    )
+    total_redeemed += redeem_requests_total
+    
+    # bank_withdrawal_requests
+    bank_withdrawal_total = await safe_sum(
+        "bank_withdrawal_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["total_prc_deducted", "prc_amount", "total_prc", "amount"]
+    )
+    total_redeemed += bank_withdrawal_total
+    
+    # bank_redeem_requests
+    bank_redeem_total = await safe_sum(
+        "bank_redeem_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_amount", "total_prc_deducted", "amount"]
+    )
+    total_redeemed += bank_redeem_total
+    
+    # bank_transfers
+    bank_transfers_total = await safe_sum(
+        "bank_transfers",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_amount", "total_prc_deducted", "amount"]
+    )
+    total_redeemed += bank_transfers_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 5. DMT (Direct Money Transfer) - Old service
+    # ─────────────────────────────────────────────────────────────────────
+    dmt_total = await safe_sum(
+        "dmt_transactions",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_deducted", "prc_amount", "total_prc", "amount"]
+    )
+    total_redeemed += dmt_total
+    
+    # dmt_logs (alternative DMT collection)
+    dmt_logs_total = await safe_sum(
+        "dmt_logs",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_deducted", "prc_amount", "amount"]
+    )
+    total_redeemed += dmt_logs_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 6. MARKETPLACE ORDERS / SHOPPING
+    # ─────────────────────────────────────────────────────────────────────
+    orders_total = await safe_sum(
+        "orders",
+        {"user_id": user_id, "status": {"$nin": ["cancelled", "refunded", "failed", "CANCELLED", "REFUNDED", "FAILED"]}},
+        ["total_prc", "prc_amount", "prc_used", "amount"]
+    )
+    total_redeemed += orders_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 7. RECHARGE REQUESTS (Mobile, DTH, etc.) - Legacy
+    # ─────────────────────────────────────────────────────────────────────
+    recharge_total = await safe_sum(
+        "recharge_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_used", "prc_amount", "total_prc_deducted", "amount"]
+    )
+    total_redeemed += recharge_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 8. LOAN EMI PAYMENTS
+    # ─────────────────────────────────────────────────────────────────────
+    loan_total = await safe_sum(
+        "loan_payments",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_amount", "prc_used", "amount"]
+    )
+    total_redeemed += loan_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 9. UNIFIED REDEMPTIONS (newer unified collection)
+    # ─────────────────────────────────────────────────────────────────────
+    unified_total = await safe_sum(
+        "unified_redemptions",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_deducted", "prc_amount", "total_prc", "amount"]
+    )
+    total_redeemed += unified_total
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # 10. CHATBOT WITHDRAWAL REQUESTS (Old/Deprecated)
+    # ─────────────────────────────────────────────────────────────────────
+    chatbot_total = await safe_sum(
+        "chatbot_withdrawal_requests",
+        {"user_id": user_id, "status": {"$in": success_statuses}},
+        ["prc_amount", "amount", "total_prc"]
+    )
+    total_redeemed += chatbot_total
+    
+    # ═══════════════════════════════════════════════════════════════════════
+    # FINAL CALCULATION
+    # Return MAX of transactions total OR individual collections total
     # This handles cases where data might be in one place but not the other
+    # ═══════════════════════════════════════════════════════════════════════
     final_total = max(txn_total, total_redeemed)
+    
+    logging.debug(f"[REDEEMED] User {user_id}: txn_total={txn_total}, collections_total={total_redeemed}, final={final_total}")
+    
     return round(final_total, 2)
 
 
