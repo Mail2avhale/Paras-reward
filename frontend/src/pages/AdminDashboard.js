@@ -38,6 +38,8 @@ const AdminDashboard = ({ user }) => {
   const [bulkFixing, setBulkFixing] = useState(false);
   const [bulkFixResult, setBulkFixResult] = useState(null);
   const [bulkFixJob, setBulkFixJob] = useState(null);
+  const [burnFixing, setBurnFixing] = useState(false);
+  const [burnFixResult, setBurnFixResult] = useState(null);
 
   // Check for running bulk fix job on load
   useEffect(() => {
@@ -121,6 +123,56 @@ const AdminDashboard = ({ user }) => {
       }
     } finally {
       setBulkFixing(false);
+    }
+  };
+
+  // Fix Burn Bug - Restore over-burned PRC
+  const fixBurnBug = async () => {
+    if (!window.confirm('Are you sure? This will restore PRC to users affected by the burn bug.')) {
+      return;
+    }
+    
+    setBurnFixing(true);
+    try {
+      // First do dry run to show what will be fixed
+      const dryResponse = await axios.post(`${API}/admin/fix-burn-overcorrection`, {
+        hours_since_burn_start: 24,
+        dry_run: true
+      });
+      
+      if (dryResponse.data.users_affected === 0) {
+        toast.info('No users affected by burn bug');
+        setBurnFixing(false);
+        return;
+      }
+      
+      // Show confirmation with details
+      const confirmed = window.confirm(
+        `Found ${dryResponse.data.users_affected} affected users.\n` +
+        `Total to restore: ${dryResponse.data.total_restored.toLocaleString()} PRC\n\n` +
+        `Click OK to fix now.`
+      );
+      
+      if (!confirmed) {
+        setBurnFixing(false);
+        return;
+      }
+      
+      // Actually fix
+      const response = await axios.post(`${API}/admin/fix-burn-overcorrection`, {
+        hours_since_burn_start: 24,
+        dry_run: false
+      });
+      
+      setBurnFixResult(response.data);
+      toast.success(`Fixed! Restored ${response.data.total_restored.toLocaleString()} PRC to ${response.data.users_affected} users`);
+      fetchDashboardData(true);
+      
+    } catch (error) {
+      console.error('Burn fix error:', error);
+      toast.error(error.response?.data?.detail || 'Burn fix failed');
+    } finally {
+      setBurnFixing(false);
     }
   };
 
@@ -504,6 +556,32 @@ const AdminDashboard = ({ user }) => {
               </div>
             </div>
           )}
+          
+          {/* Fix Burn Bug Button */}
+          <div className="mt-4 pt-4 border-t border-red-500/20">
+            <Button
+              onClick={fixBurnBug}
+              disabled={burnFixing}
+              className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white"
+            >
+              {burnFixing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Fixing...
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  🔧 Fix Burn Bug (Restore Over-Burned PRC)
+                </>
+              )}
+            </Button>
+            {burnFixResult && (
+              <p className="text-xs text-green-400 mt-2 text-center">
+                ✅ Restored {burnFixResult.total_restored?.toLocaleString()} PRC to {burnFixResult.users_affected} users
+              </p>
+            )}
+          </div>
         </Card>
       )}
 
