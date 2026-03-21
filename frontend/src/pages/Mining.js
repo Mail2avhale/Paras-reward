@@ -478,16 +478,10 @@ const DailyRewards = ({ user }) => {
       burnCounterRef.current = null;
     }
     
-    // Start animated counter if burning is active
-    if (burningSession?.is_active && burningSession?.burn_per_second > 0) {
-      burnCounterRef.current = setInterval(() => {
-        setLiveBurnAmount(prev => {
-          // Add burn_per_second for visual animation
-          const newAmount = prev + burningSession.burn_per_second;
-          return parseFloat(newAmount.toFixed(4));
-        });
-      }, 1000);
-    }
+    // DISABLED: Live counter causes double counting
+    // Backend applies burn hourly via scheduled job
+    // Frontend just shows server value (updated every 30 seconds)
+    // The burn_per_second is for DISPLAY of rate only, not for incrementing
     
     return () => {
       if (burnCounterRef.current) {
