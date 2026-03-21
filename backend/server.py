@@ -19734,7 +19734,11 @@ async def get_user_360_view(query: str):
         search_conditions.append({"aadhaar_number": query})
     
     # Find user
-    user = await db.users.find_one({"$or": search_conditions})
+    try:
+        user = await db.users.find_one({"$or": search_conditions})
+    except Exception as e:
+        logging.error(f"User 360 search error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search error: {str(e)[:100]}")
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -19745,6 +19749,23 @@ async def get_user_360_view(query: str):
     user.pop("password_hash", None)
     user.pop("reset_token", None)
     user.pop("_id", None)
+    
+    # Helper function to convert ObjectIds and datetimes to serializable format
+    def sanitize_mongo_doc(doc):
+        """Convert ObjectIds, datetimes and other non-serializable types to strings"""
+        if isinstance(doc, dict):
+            return {k: sanitize_mongo_doc(v) for k, v in doc.items()}
+        elif isinstance(doc, list):
+            return [sanitize_mongo_doc(item) for item in doc]
+        elif hasattr(doc, '__str__') and type(doc).__name__ == 'ObjectId':
+            return str(doc)
+        elif isinstance(doc, datetime):
+            return doc.isoformat()
+        else:
+            return doc
+    
+    # Sanitize user document
+    user = sanitize_mongo_doc(user)
     
     # ========== FINANCIAL STATS ==========
     # Calculate total mined
@@ -20193,26 +20214,32 @@ async def get_user_360_view(query: str):
             fraud_score += 15
         elif indicator["severity"] == "low":
             fraud_score += 5
-    fraud_score = min(100, fraud_score)
+        fraud_score = min(100, fraud_score)
     
-    return {
-        "user": user,
-        "stats": stats,
-        "referral": referral_data,
-        "transactions": transactions,
-        "activity": activity[:30],
-        "kyc": kyc_docs,
-        "login_history": login_history,
-        "redeem_limit": redeem_limit_data,
-        "redeem_breakdown": redeem_breakdown,
-        "failed_transactions": failed_transactions[:30],
-        "subscription_history": subscription_history[:30],
-        "fraud_check": {
-            "score": fraud_score,
-            "indicators": fraud_indicators,
-            "status": "clean" if fraud_score == 0 else "suspicious" if fraud_score < 50 else "high_risk"
+    # Sanitize all data before returning to avoid ObjectId serialization errors
+    try:
+        response_data = {
+            "user": sanitize_mongo_doc(user),
+            "stats": sanitize_mongo_doc(stats),
+            "referral": sanitize_mongo_doc(referral_data),
+            "transactions": sanitize_mongo_doc(transactions),
+            "activity": sanitize_mongo_doc(activity[:30]),
+            "kyc": sanitize_mongo_doc(kyc_docs),
+            "login_history": sanitize_mongo_doc(login_history),
+            "redeem_limit": sanitize_mongo_doc(redeem_limit_data),
+            "redeem_breakdown": sanitize_mongo_doc(redeem_breakdown),
+            "failed_transactions": sanitize_mongo_doc(failed_transactions[:30]),
+            "subscription_history": sanitize_mongo_doc(subscription_history[:30]),
+            "fraud_check": {
+                "score": fraud_score,
+                "indicators": fraud_indicators,
+                "status": "clean" if fraud_score == 0 else "suspicious" if fraud_score < 50 else "high_risk"
+            }
         }
-    }
+        return response_data
+    except Exception as e:
+        logging.error(f"User 360 serialization error for {uid}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Data serialization error: {str(e)[:100]}")
 
 
 @api_router.post("/admin/refund-transaction")

@@ -622,9 +622,13 @@ async def get_all_requests(
     status: Optional[str] = None,
     limit: int = Query(default=50, le=200),
     skip: int = 0,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    sort_by: Optional[str] = Query(default="created_at", description="Sort by: created_at, amount, user_name"),
+    sort_order: Optional[str] = Query(default="asc", description="Sort order: asc or desc")
 ):
-    """Get all bank transfer requests for admin."""
+    """Get all bank transfer requests for admin with advanced filtering and sorting."""
     try:
         query = {}
         if status:
@@ -637,14 +641,45 @@ async def get_all_requests(
                 {"account_number": {"$regex": search, "$options": "i"}}
             ]
         
+        # Date filter (server-side)
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                try:
+                    from_date = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+                    date_query["$gte"] = from_date.isoformat()
+                except:
+                    date_query["$gte"] = date_from
+            if date_to:
+                try:
+                    to_date = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+                    # Include full day
+                    to_date = to_date.replace(hour=23, minute=59, second=59)
+                    date_query["$lte"] = to_date.isoformat()
+                except:
+                    date_query["$lte"] = date_to + "T23:59:59"
+            if date_query:
+                query["created_at"] = date_query
+        
+        # Sort configuration
+        sort_field_map = {
+            "created_at": "created_at",
+            "date": "created_at",
+            "amount": "withdrawal_amount",
+            "name": "user_name",
+            "user_name": "user_name"
+        }
+        sort_field = sort_field_map.get(sort_by, "created_at")
+        sort_direction = 1 if sort_order == "asc" else -1  # 1 = ascending, -1 = descending
+        
         requests = await db.bank_transfer_requests.find(
             query,
             {"_id": 0}
-        ).sort("created_at", 1).skip(skip).limit(limit).to_list(limit)  # 1 = oldest first
+        ).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
         
         total = await db.bank_transfer_requests.count_documents(query)
         
-        # Get counts by status
+        # Get counts by status (without date filter for overall stats)
         pending_count = await db.bank_transfer_requests.count_documents({"status": "pending"})
         paid_count = await db.bank_transfer_requests.count_documents({"status": "paid"})
         failed_count = await db.bank_transfer_requests.count_documents({"status": "failed"})
@@ -685,6 +720,12 @@ async def get_all_requests(
                     "amount": totals_dict.get("failed", {}).get("total_amount", 0),
                     "prc": totals_dict.get("failed", {}).get("total_prc", 0)
                 }
+            },
+            "filters_applied": {
+                "date_from": date_from,
+                "date_to": date_to,
+                "sort_by": sort_by,
+                "sort_order": sort_order
             }
         }
         

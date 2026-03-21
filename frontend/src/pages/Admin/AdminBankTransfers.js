@@ -81,6 +81,7 @@ const AdminBankTransfers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [sortBy, setSortBy] = useState('created_at'); // 'created_at', 'amount', 'user_name'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' = oldest first
   
   // Pagination
@@ -189,33 +190,21 @@ const AdminBankTransfers = () => {
     try {
       const params = new URLSearchParams({
         limit: limit.toString(),
-        skip: ((page - 1) * limit).toString()
+        skip: ((page - 1) * limit).toString(),
+        sort_by: sortBy,
+        sort_order: sortOrder
       });
       
       if (statusFilter) params.append('status', statusFilter);
       if (searchQuery) params.append('search', searchQuery);
       
+      // Server-side date filtering
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
+      
       const res = await axios.get(`${API}/bank-transfer/admin/requests?${params}`);
       
       let data = res.data.requests || [];
-      
-      // Client-side date filtering
-      if (dateFrom) {
-        const fromDate = new Date(dateFrom);
-        data = data.filter(r => new Date(r.created_at) >= fromDate);
-      }
-      if (dateTo) {
-        const toDate = new Date(dateTo);
-        toDate.setHours(23, 59, 59, 999);
-        data = data.filter(r => new Date(r.created_at) <= toDate);
-      }
-      
-      // Sort by created_at - oldest first (asc) or newest first (desc)
-      data.sort((a, b) => {
-        const dateA = new Date(a.created_at);
-        const dateB = new Date(b.created_at);
-        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-      });
       
       setRequests(data);
       setStats(res.data.stats || { pending: {}, paid: {}, failed: {} });
@@ -227,7 +216,7 @@ const AdminBankTransfers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortOrder]);
+  }, [page, statusFilter, searchQuery, dateFrom, dateTo, sortBy, sortOrder]);
 
   useEffect(() => {
     loadRequests();

@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
  * Both Bill Payments and Bank Redeem (DMT) admin pages
  */
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://admin-user-search-2.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redemption-limits.preview.emergentagent.com';
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';
 const ADMIN_PIN = '123456';
 

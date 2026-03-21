@@ -29,7 +29,7 @@
       "description": "User Lookup API endpoint (/api/admin/user-lookup/{identifier}) returns 404 Not Found because it's defined AFTER app.include_router(api_router) in server.py. Routes defined after include_router are NOT registered.",
       "endpoint_or_component": "/api/admin/user-lookup/{identifier}",
       "surfaces": ["backend"],
-      "reproduction": "curl 'https://admin-user-search-2.preview.emergentagent.com/api/admin/user-lookup/9421331342' returns 404",
+      "reproduction": "curl 'https://redemption-limits.preview.emergentagent.com/api/admin/user-lookup/9421331342' returns 404",
       "affected_test": "test_admin_user_lookup.py - Tests verify the 404 bug exists"
     },
     {
