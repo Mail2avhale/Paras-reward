@@ -329,7 +329,7 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 ## Notes for Next Agent
 1. User's primary language is **English and Marathi** - respond accordingly
 2. Razorpay webhook is **disabled** by user
-3. `server.py` is very large (~44K lines) - needs refactoring
+3. `server.py` is very large (~45K lines) - needs refactoring
 4. Always run tests after making changes to redemption logic
 5. **Eko DMT is BLOCKED** - needs Eko support action, not code fix
 6. **Rakhi Ghehlod refund (14,260 PRC)** - PRODUCTION ONLY task
@@ -337,3 +337,25 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 8. Validation order is correct - KYC -> Subscription -> Expiry -> Limits
 9. **Two-Plan System**: Explorer (free) and Elite (paid). Legacy plans (startup/growth/vip) treated as Elite
 10. Use `is_paid_subscriber(user)` to check if user has paid subscription
+
+---
+
+## Recent Bug Fixes (21 March 2026)
+
+### ✅ P0 FIXED: Admin User 360 Search Error
+- **Issue**: "Failed to search user" error in AdminUser360 page
+- **Root Cause**: Special characters in search queries were not escaped, causing regex errors
+- **Fix Applied**: 
+  - Added `regex_module.escape(query)` in `/api/admin/user-360` endpoint (server.py line 19714-19715)
+  - Improved frontend error handling with specific error messages for 404, 500, network errors
+- **Testing**: 16/16 backend tests pass - search by mobile, email, UID, special chars all work
+- **Test File**: `/app/backend/tests/test_admin_user_360_search.py`
+
+### ✅ Consistency Fix: Used PRC Calculation
+- **Issue**: `stats.total_redeemed` included burns while `redeem_limit.total_redeemed` excluded them
+- **Fix**: Both now use `get_user_all_time_redeemed()` which excludes burn types
+- **Affected Functions**:
+  - `get_user_redeem_limit_internal()` (line 16547)
+  - `check_redeem_limit()` (line 16581)
+  - `get_user_redeem_limit()` endpoint (line 16623)
+  - Stats calculation in user-360 (line 19753-19770)
