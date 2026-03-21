@@ -19768,148 +19768,183 @@ async def get_user_360_view(query: str):
     user = sanitize_mongo_doc(user)
     
     # ========== FINANCIAL STATS ==========
-    # Calculate total mined
-    total_mined_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game", "referral", "admin_credit", "prc_rain_gain"]}}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]).to_list(1)
-    total_mined = total_mined_result[0]["total"] if total_mined_result else 0
+    try:
+        # Calculate total mined
+        total_mined_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game", "referral", "admin_credit", "prc_rain_gain"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        total_mined = total_mined_result[0]["total"] if total_mined_result else 0
+    except Exception as e:
+        logging.error(f"User360 total_mined error for {uid}: {e}")
+        total_mined = 0
     
-    # Calculate total redeemed (spent) - EXCLUDE burns to match get_user_all_time_redeemed
-    # Burns are deflationary mechanism, not user spending
-    burn_types = ["prc_burn", "admin_burn", "hourly_burn", "daily_burn", "burn", "auto_burn"]
-    total_redeemed_result = await db.transactions.aggregate([
-        {"$match": {
-            "user_id": uid, 
-            "type": {"$in": ["order", "bill_payment_request", "gift_voucher_request", "redeem", "dmt_transfer", "prc_rain_loss"]},
-            "type": {"$nin": burn_types}  # Exclude burns
-        }},
-        {"$group": {"_id": None, "total": {"$sum": {"$abs": "$amount"}}}}
-    ]).to_list(1)
-    total_redeemed = total_redeemed_result[0]["total"] if total_redeemed_result else 0
-    
-    # If no transactions found, use get_user_all_time_redeemed for backup
-    if total_redeemed == 0:
+    try:
+        # Calculate total redeemed using centralized function
         total_redeemed = await get_user_all_time_redeemed(uid)
+    except Exception as e:
+        logging.error(f"User360 total_redeemed error for {uid}: {e}")
+        total_redeemed = 0
     
     stats = {
         "total_mined": round(total_mined, 2),
         "total_redeemed": round(total_redeemed, 2),
-        "net_balance": round(user.get("prc_balance", 0), 2)
+        "net_balance": round(float(user.get("prc_balance", 0) or 0), 2)
     }
     
     # ========== REFERRAL NETWORK ==========
-    # Get who referred this user
-    referred_by_name = None
-    if user.get("referred_by"):
-        referrer = await db.users.find_one({"uid": user["referred_by"]}, {"_id": 0, "name": 1, "email": 1})
-        if referrer:
-            referred_by_name = referrer.get("name") or referrer.get("email", "").split("@")[0]
-    
-    # Get direct referrals
-    referrals = await db.users.find(
-        {"referred_by": uid},
-        {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "mining_active": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
-    
-    # Count active referrals (users who have mining_active or have mined recently)
-    active_referrals = 0
-    for ref in referrals:
-        if ref.get("mining_active"):
-            active_referrals += 1
-        else:
-            # Check if they have any recent activity (last 7 days)
-            recent_activity = await db.transactions.find_one({
-                "user_id": ref["uid"],
-                "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
-            })
-            if recent_activity:
+    try:
+        # Get who referred this user
+        referred_by_name = None
+        if user.get("referred_by"):
+            referrer = await db.users.find_one({"uid": user["referred_by"]}, {"_id": 0, "name": 1, "email": 1})
+            if referrer:
+                referred_by_name = referrer.get("name") or referrer.get("email", "").split("@")[0]
+        
+        # Get direct referrals
+        referrals = await db.users.find(
+            {"referred_by": uid},
+            {"_id": 0, "uid": 1, "name": 1, "email": 1, "created_at": 1, "mining_active": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        # Count active referrals (users who have mining_active or have mined recently)
+        active_referrals = 0
+        for ref in referrals:
+            if ref.get("mining_active"):
                 active_referrals += 1
-    
-    # Calculate referral earnings - check all referral-related transaction types
-    referral_types = ["referral", "referral_bonus", "referral_reward"]
-    referral_earnings_result = await db.transactions.aggregate([
-        {"$match": {"user_id": uid, "type": {"$in": referral_types}}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]).to_list(1)
-    referral_earnings = referral_earnings_result[0]["total"] if referral_earnings_result else 0
-    
-    # Also check users collection for total_referral_earnings field if transactions don't have data
-    if referral_earnings == 0:
-        user_data = await db.users.find_one({"uid": uid}, {"_id": 0, "total_referral_earnings": 1})
-        if user_data:
-            referral_earnings = user_data.get("total_referral_earnings", 0)
-    
-    referral_data = {
-        "referred_by_name": referred_by_name,
-        "total_referrals": len(referrals),
-        "active_referrals": active_referrals,
-        "total_earnings": round(referral_earnings, 2),
-        "referrals": referrals[:10]  # First 10 referrals
-    }
+            else:
+                # Check if they have any recent activity (last 7 days)
+                try:
+                    recent_activity = await db.transactions.find_one({
+                        "user_id": ref.get("uid", ""),
+                        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
+                    })
+                    if recent_activity:
+                        active_referrals += 1
+                except:
+                    pass
+        
+        # Calculate referral earnings - check all referral-related transaction types
+        referral_types = ["referral", "referral_bonus", "referral_reward"]
+        referral_earnings_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": referral_types}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        referral_earnings = referral_earnings_result[0]["total"] if referral_earnings_result else 0
+        
+        # Also check users collection for total_referral_earnings field if transactions don't have data
+        if referral_earnings == 0:
+            user_data = await db.users.find_one({"uid": uid}, {"_id": 0, "total_referral_earnings": 1})
+            if user_data:
+                referral_earnings = user_data.get("total_referral_earnings", 0)
+        
+        referral_data = {
+            "referred_by_name": referred_by_name,
+            "total_referrals": len(referrals),
+            "active_referrals": active_referrals,
+            "total_earnings": round(float(referral_earnings or 0), 2),
+            "referrals": referrals[:10]  # First 10 referrals
+        }
+    except Exception as e:
+        logging.error(f"User360 referral error for {uid}: {e}")
+        referral_data = {
+            "referred_by_name": None,
+            "total_referrals": 0,
+            "active_referrals": 0,
+            "total_earnings": 0,
+            "referrals": []
+        }
     
     # ========== TRANSACTIONS HISTORY ==========
-    # Orders (Marketplace)
-    orders = await db.orders.find(
-        {"user_id": uid},
-        {"_id": 0, "order_id": 1, "total_prc": 1, "prc_amount": 1, "status": 1, "created_at": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Orders (Marketplace)
+        orders = await db.orders.find(
+            {"user_id": uid},
+            {"_id": 0, "order_id": 1, "total_prc": 1, "prc_amount": 1, "status": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    except Exception as e:
+        logging.error(f"User360 orders error for {uid}: {e}")
+        orders = []
     
-    # Bill Payments
-    bill_payments = await db.bill_payment_requests.find(
-        {"user_id": uid},
-        {"_id": 0, "request_id": 1, "request_type": 1, "amount_inr": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Bill Payments
+        bill_payments = await db.bill_payment_requests.find(
+            {"user_id": uid},
+            {"_id": 0, "request_id": 1, "request_type": 1, "amount_inr": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    except Exception as e:
+        logging.error(f"User360 bill_payments error for {uid}: {e}")
+        bill_payments = []
     
-    # Gift Vouchers
-    gift_vouchers = await db.gift_voucher_requests.find(
-        {"user_id": uid},
-        {"_id": 0, "request_id": 1, "denomination": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Gift Vouchers
+        gift_vouchers = await db.gift_voucher_requests.find(
+            {"user_id": uid},
+            {"_id": 0, "request_id": 1, "denomination": 1, "total_prc_deducted": 1, "status": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    except Exception as e:
+        logging.error(f"User360 gift_vouchers error for {uid}: {e}")
+        gift_vouchers = []
     
-    # Subscriptions - Include _id for deletion capability
-    subscriptions_raw = await db.subscriptions.find(
-        {"user_id": uid},
-        {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
-    ).sort("submitted_at", -1).limit(20).to_list(20)
+    try:
+        # Subscriptions - Include _id for deletion capability
+        subscriptions_raw = await db.subscriptions.find(
+            {"user_id": uid},
+            {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+        ).sort("submitted_at", -1).limit(20).to_list(20)
+        
+        # Convert _id to string for JSON serialization
+        subscriptions = []
+        for sub in subscriptions_raw:
+            sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+            subscriptions.append(sub)
+    except Exception as e:
+        logging.error(f"User360 subscriptions error for {uid}: {e}")
+        subscriptions = []
     
-    # Convert _id to string for JSON serialization
-    subscriptions = []
-    for sub in subscriptions_raw:
-        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
-        subscriptions.append(sub)
-    
-    # Also check vip_subscriptions collection
-    vip_subscriptions_raw = await db.vip_subscriptions.find(
-        {"user_id": uid},
-        {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
-    ).sort("submitted_at", -1).limit(20).to_list(20)
-    
-    vip_subscriptions = []
-    for sub in vip_subscriptions_raw:
-        sub["_id"] = str(sub["_id"]) if "_id" in sub else None
-        vip_subscriptions.append(sub)
+    try:
+        # Also check vip_subscriptions collection
+        vip_subscriptions_raw = await db.vip_subscriptions.find(
+            {"user_id": uid},
+            {"payment_id": 1, "subscription_plan": 1, "plan_type": 1, "amount": 1, "status": 1, "submitted_at": 1}
+        ).sort("submitted_at", -1).limit(20).to_list(20)
+        
+        vip_subscriptions = []
+        for sub in vip_subscriptions_raw:
+            sub["_id"] = str(sub["_id"]) if "_id" in sub else None
+            vip_subscriptions.append(sub)
+    except Exception as e:
+        logging.error(f"User360 vip_subscriptions error for {uid}: {e}")
+        vip_subscriptions = []
     
     # Merge subscription lists
     all_subscriptions = subscriptions + vip_subscriptions
-    all_subscriptions.sort(key=lambda x: x.get("submitted_at", ""), reverse=True)
+    all_subscriptions.sort(key=lambda x: x.get("submitted_at", "") or "", reverse=True)
     
-    # Get VIP payments history - Include _id for deletion capability
-    vip_payments_raw = await db.vip_payments.find(
-        {"uid": uid},
-        {"payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Get VIP payments history - Include _id for deletion capability
+        vip_payments_raw = await db.vip_payments.find(
+            {"uid": uid},
+            {"payment_id": 1, "plan": 1, "plan_type": 1, "amount": 1, "status": 1, "created_at": 1, "approved_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        
+        vip_payments = []
+        for payment in vip_payments_raw:
+            payment["_id"] = str(payment["_id"]) if "_id" in payment else None
+            vip_payments.append(payment)
+    except Exception as e:
+        logging.error(f"User360 vip_payments error for {uid}: {e}")
+        vip_payments = []
     
-    vip_payments = []
-    for payment in vip_payments_raw:
-        payment["_id"] = str(payment["_id"]) if "_id" in payment else None
-        vip_payments.append(payment)
-    
-    # Get Razorpay orders
-    razorpay_orders = await db.razorpay_orders.find(
-        {"user_id": uid},
-        {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Get Razorpay orders
+        razorpay_orders = await db.razorpay_orders.find(
+            {"user_id": uid},
+            {"_id": 0, "order_id": 1, "plan_name": 1, "plan_type": 1, "amount": 1, "status": 1, "payment_id": 1, "created_at": 1, "paid_at": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    except Exception as e:
+        logging.error(f"User360 razorpay_orders error for {uid}: {e}")
+        razorpay_orders = []
     
     transactions = {
         "orders": orders,
@@ -19924,65 +19959,83 @@ async def get_user_360_view(query: str):
     }
     
     # ========== REDEMPTION REQUESTS ==========
-    # Check multiple possible collections for redemptions
-    redemptions = await db.redemption_requests.find(
-        {"user_id": uid},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(50).to_list(50)
-    
-    if not redemptions:
-        # Also try bank_transfers collection
-        redemptions = await db.bank_transfers.find(
+    try:
+        # Check multiple possible collections for redemptions
+        redemptions = await db.redemption_requests.find(
             {"user_id": uid},
             {"_id": 0}
         ).sort("created_at", -1).limit(50).to_list(50)
-    
-    transactions["redemptions"] = redemptions
+        
+        if not redemptions:
+            # Also try bank_transfers collection
+            redemptions = await db.bank_transfers.find(
+                {"user_id": uid},
+                {"_id": 0}
+            ).sort("created_at", -1).limit(50).to_list(50)
+        
+        transactions["redemptions"] = redemptions
+    except Exception as e:
+        logging.error(f"User360 redemptions error for {uid}: {e}")
+        transactions["redemptions"] = []
     
     # ========== MINING HISTORY ==========
-    mining_history = await db.mining_sessions.find(
-        {"user_id": uid},
-        {"_id": 0, "prc_earned": 1, "session_duration": 1, "created_at": 1, "timestamp": 1, "amount": 1, "duration": 1}
-    ).sort("created_at", -1).limit(100).to_list(100)
-    
-    if not mining_history:
-        # Get from transactions with type mining
-        mining_history = await db.transactions.find(
-            {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
-            {"_id": 0, "amount": 1, "type": 1, "created_at": 1, "description": 1}
+    try:
+        mining_history = await db.mining_sessions.find(
+            {"user_id": uid},
+            {"_id": 0, "prc_earned": 1, "session_duration": 1, "created_at": 1, "timestamp": 1, "amount": 1, "duration": 1}
         ).sort("created_at", -1).limit(100).to_list(100)
-        # Format for frontend
-        for m in mining_history:
-            m["prc_earned"] = m.get("amount", 0)
-    
-    transactions["mining_history"] = mining_history
+        
+        if not mining_history:
+            # Get from transactions with type mining
+            mining_history = await db.transactions.find(
+                {"user_id": uid, "type": {"$in": ["mining", "tap_game"]}},
+                {"_id": 0, "amount": 1, "type": 1, "created_at": 1, "description": 1}
+            ).sort("created_at", -1).limit(100).to_list(100)
+            # Format for frontend
+            for m in mining_history:
+                m["prc_earned"] = m.get("amount", 0)
+        
+        transactions["mining_history"] = mining_history
+    except Exception as e:
+        logging.error(f"User360 mining_history error for {uid}: {e}")
+        transactions["mining_history"] = []
     
     # ========== PRC LEDGER (All Transactions) ==========
-    prc_ledger = await db.transactions.find(
-        {"user_id": uid},
-        {"_id": 0, "type": 1, "amount": 1, "description": 1, "reason": 1, "created_at": 1, "timestamp": 1, "balance_after": 1}
-    ).sort("created_at", -1).limit(200).to_list(200)
-    
-    # Format ledger entries
-    for entry in prc_ledger:
-        amount = entry.get("amount", 0)
-        entry["type"] = "credit" if amount > 0 else "debit"
-        entry["amount"] = abs(amount)
-    
-    transactions["prc_ledger"] = prc_ledger
+    try:
+        prc_ledger = await db.transactions.find(
+            {"user_id": uid},
+            {"_id": 0, "type": 1, "amount": 1, "description": 1, "reason": 1, "created_at": 1, "timestamp": 1, "balance_after": 1}
+        ).sort("created_at", -1).limit(200).to_list(200)
+        
+        # Format ledger entries
+        for entry in prc_ledger:
+            amount = entry.get("amount", 0) or 0
+            entry["type"] = "credit" if amount > 0 else "debit"
+            entry["amount"] = abs(amount)
+        
+        transactions["prc_ledger"] = prc_ledger
+    except Exception as e:
+        logging.error(f"User360 prc_ledger error for {uid}: {e}")
+        transactions["prc_ledger"] = []
     
     # ========== ACTIVITY TIMELINE ==========
-    # Get recent transactions as activity
-    recent_transactions = await db.transactions.find(
-        {"user_id": uid},
-        {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}
-    ).sort("created_at", -1).limit(30).to_list(30)
+    try:
+        # Get recent transactions as activity
+        recent_transactions = await db.transactions.find(
+            {"user_id": uid},
+            {"_id": 0, "type": 1, "amount": 1, "description": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(30).to_list(30)
+    except:
+        recent_transactions = []
     
-    # Get recent activity logs
-    recent_activities = await db.activity_logs.find(
-        {"user_id": uid},
-        {"_id": 0, "action_type": 1, "description": 1, "created_at": 1, "timestamp": 1}
-    ).sort("created_at", -1).limit(20).to_list(20)
+    try:
+        # Get recent activity logs
+        recent_activities = await db.activity_logs.find(
+            {"user_id": uid},
+            {"_id": 0, "action_type": 1, "description": 1, "created_at": 1, "timestamp": 1}
+        ).sort("created_at", -1).limit(20).to_list(20)
+    except:
+        recent_activities = []
     
     # Merge and format activity
     activity = []
@@ -19990,7 +20043,7 @@ async def get_user_360_view(query: str):
         activity.append({
             "type": "transaction",
             "action_type": txn.get("type"),
-            "description": f"{txn.get('type', 'Transaction').replace('_', ' ').title()}: {txn.get('amount', 0)} PRC",
+            "description": f"{(txn.get('type') or 'Transaction').replace('_', ' ').title()}: {txn.get('amount', 0)} PRC",
             "created_at": txn.get("created_at")
         })
     
@@ -20006,132 +20059,175 @@ async def get_user_360_view(query: str):
     activity.sort(key=lambda x: x.get("created_at") or "1970-01-01", reverse=True)
     
     # ========== KYC INFORMATION ==========
-    kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
+    try:
+        kyc_docs = await db.kyc_documents.find_one({"user_id": uid}, {"_id": 0})
+    except Exception as e:
+        logging.error(f"User360 kyc error for {uid}: {e}")
+        kyc_docs = None
     
     # ========== LOGIN HISTORY ==========
-    login_history = await db.login_history.find(
-        {"user_id": uid},
-        {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
-    ).sort("timestamp", -1).limit(50).to_list(50)
+    try:
+        login_history = await db.login_history.find(
+            {"user_id": uid},
+            {"_id": 0, "timestamp": 1, "created_at": 1, "ip_address": 1, "user_agent": 1, "device": 1, "success": 1}
+        ).sort("timestamp", -1).limit(50).to_list(50)
+    except Exception as e:
+        logging.error(f"User360 login_history error for {uid}: {e}")
+        login_history = []
     
     # ========== REDEEM LIMIT INFO ==========
-    redeem_limit_data = await get_user_redeem_limit_internal(uid)
+    try:
+        redeem_limit_data = await get_user_redeem_limit_internal(uid)
+    except Exception as e:
+        logging.error(f"User360 redeem_limit error for {uid}: {e}")
+        redeem_limit_data = {"total_limit": 0, "total_redeemed": 0, "remaining_limit": 0}
     
     # ========== REDEEM BREAKDOWN BY SERVICE ==========
     redeem_breakdown = {}
     
-    # BBPS/Bill Payments
-    bbps_total = await db.redeem_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "success", "paid"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]).to_list(1)
-    if bbps_total and bbps_total[0].get("total", 0) > 0:
-        redeem_breakdown["bbps"] = round(bbps_total[0]["total"], 2)
+    try:
+        # BBPS/Bill Payments
+        bbps_total = await db.redeem_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["completed", "success", "paid"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if bbps_total and bbps_total[0].get("total", 0) > 0:
+            redeem_breakdown["bbps"] = round(bbps_total[0]["total"], 2)
+    except:
+        pass
     
-    # Gift Vouchers
-    voucher_total = await db.gift_voucher_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "success"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_used", 0]}]}}}}
-    ]).to_list(1)
-    if voucher_total and voucher_total[0].get("total", 0) > 0:
-        redeem_breakdown["gift_voucher"] = round(voucher_total[0]["total"], 2)
+    try:
+        # Gift Vouchers
+        voucher_total = await db.gift_voucher_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "success"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_used", 0]}]}}}}
+        ]).to_list(1)
+        if voucher_total and voucher_total[0].get("total", 0) > 0:
+            redeem_breakdown["gift_voucher"] = round(voucher_total[0]["total"], 2)
+    except:
+        pass
     
-    # Bank Transfers/Withdrawals
-    bank_total = await db.bank_transfer_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "paid", "success"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]).to_list(1)
-    if bank_total and bank_total[0].get("total", 0) > 0:
-        redeem_breakdown["bank_transfer"] = round(bank_total[0]["total"], 2)
+    try:
+        # Bank Transfers/Withdrawals
+        bank_total = await db.bank_transfer_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["completed", "paid", "success"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if bank_total and bank_total[0].get("total", 0) > 0:
+            redeem_breakdown["bank_transfer"] = round(bank_total[0]["total"], 2)
+    except:
+        pass
     
-    # DMT (Money Transfer)
-    dmt_total = await db.dmt_requests.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "success"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]).to_list(1)
-    if dmt_total and dmt_total[0].get("total", 0) > 0:
-        redeem_breakdown["dmt"] = round(dmt_total[0]["total"], 2)
+    try:
+        # DMT (Money Transfer)
+        dmt_total = await db.dmt_requests.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["completed", "success"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc_deducted", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if dmt_total and dmt_total[0].get("total", 0) > 0:
+            redeem_breakdown["dmt"] = round(dmt_total[0]["total"], 2)
+    except:
+        pass
     
-    # Shop/Orders
-    shop_total = await db.orders.aggregate([
-        {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "shipped"]}}},
-        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
-    ]).to_list(1)
-    if shop_total and shop_total[0].get("total", 0) > 0:
-        redeem_breakdown["shop"] = round(shop_total[0]["total"], 2)
+    try:
+        # Shop/Orders
+        shop_total = await db.orders.aggregate([
+            {"$match": {"user_id": uid, "status": {"$in": ["completed", "delivered", "shipped"]}}},
+            {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_prc", {"$ifNull": ["$prc_amount", 0]}]}}}}
+        ]).to_list(1)
+        if shop_total and shop_total[0].get("total", 0) > 0:
+            redeem_breakdown["shop"] = round(shop_total[0]["total"], 2)
+    except:
+        pass
     
     # ========== FAILED/PENDING TRANSACTIONS (For Issue Resolution) ==========
     failed_transactions = []
     
-    # Failed BBPS/Bill Payments
-    failed_bbps = await db.redeem_requests.find(
-        {"user_id": uid, "status": {"$in": ["failed", "rejected", "RETRY_FAILED", "eko_failed", "pending"]}},
-        {"_id": 0, "request_id": 1, "service_type": 1, "amount": 1, "total_prc_deducted": 1, "prc_amount": 1, 
-         "status": 1, "created_at": 1, "error_message": 1, "prc_refunded": 1, "consumer_number": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
+    try:
+        # Failed BBPS/Bill Payments
+        failed_bbps = await db.redeem_requests.find(
+            {"user_id": uid, "status": {"$in": ["failed", "rejected", "RETRY_FAILED", "eko_failed", "pending"]}},
+            {"_id": 0, "request_id": 1, "service_type": 1, "amount": 1, "total_prc_deducted": 1, "prc_amount": 1, 
+             "status": 1, "created_at": 1, "error_message": 1, "prc_refunded": 1, "consumer_number": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        for req in failed_bbps:
+            req["type"] = "bbps"
+            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+            failed_transactions.append(req)
+    except Exception as e:
+        logging.error(f"User360 failed_bbps error for {uid}: {e}")
     
-    for req in failed_bbps:
-        req["type"] = "bbps"
-        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
-        failed_transactions.append(req)
+    try:
+        # Failed Gift Vouchers
+        failed_vouchers = await db.gift_voucher_requests.find(
+            {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
+            {"_id": 0, "request_id": 1, "brand_name": 1, "denomination": 1, "total_prc_deducted": 1, "prc_used": 1,
+             "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        for req in failed_vouchers:
+            req["type"] = "gift_voucher"
+            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_used") or 0
+            failed_transactions.append(req)
+    except Exception as e:
+        logging.error(f"User360 failed_vouchers error for {uid}: {e}")
     
-    # Failed Gift Vouchers
-    failed_vouchers = await db.gift_voucher_requests.find(
-        {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
-        {"_id": 0, "request_id": 1, "brand_name": 1, "denomination": 1, "total_prc_deducted": 1, "prc_used": 1,
-         "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
-    
-    for req in failed_vouchers:
-        req["type"] = "gift_voucher"
-        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_used") or 0
-        failed_transactions.append(req)
-    
-    # Failed/Pending Bank Transfers
-    failed_bank = await db.bank_transfer_requests.find(
-        {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
-        {"_id": 0, "request_id": 1, "amount_inr": 1, "total_prc_deducted": 1, "prc_amount": 1,
-         "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1, "bank_name": 1, "account_number": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
-    
-    for req in failed_bank:
-        req["type"] = "bank_transfer"
-        req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
-        failed_transactions.append(req)
+    try:
+        # Failed/Pending Bank Transfers
+        failed_bank = await db.bank_transfer_requests.find(
+            {"user_id": uid, "status": {"$in": ["failed", "rejected", "pending", "processing"]}},
+            {"_id": 0, "request_id": 1, "amount_inr": 1, "total_prc_deducted": 1, "prc_amount": 1,
+             "status": 1, "created_at": 1, "rejection_reason": 1, "prc_refunded": 1, "bank_name": 1, "account_number": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        for req in failed_bank:
+            req["type"] = "bank_transfer"
+            req["prc_amount"] = req.get("total_prc_deducted") or req.get("prc_amount") or 0
+            failed_transactions.append(req)
+    except Exception as e:
+        logging.error(f"User360 failed_bank error for {uid}: {e}")
     
     # Sort all failed transactions by date
-    failed_transactions.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    failed_transactions.sort(key=lambda x: x.get("created_at") or "", reverse=True)
     
     # ========== SUBSCRIPTION HISTORY & FRAUD CHECK ==========
     subscription_history = []
     fraud_indicators = []
     
-    # Get Razorpay payment history
-    razorpay_payments = await db.razorpay_orders.find(
-        {"user_id": uid},
-        {"_id": 0, "order_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1, "plan_type": 1,
-         "status": 1, "created_at": 1, "paid_at": 1, "cancelled_at": 1, "failure_reason": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
+    try:
+        # Get Razorpay payment history
+        razorpay_payments = await db.razorpay_orders.find(
+            {"user_id": uid},
+            {"_id": 0, "order_id": 1, "payment_id": 1, "amount": 1, "plan_name": 1, "plan_type": 1,
+             "status": 1, "created_at": 1, "paid_at": 1, "cancelled_at": 1, "failure_reason": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        for rp in razorpay_payments:
+            rp["source"] = "razorpay"
+            rp["amount_display"] = f"₹{rp.get('amount', 0)}"
+            subscription_history.append(rp)
+    except Exception as e:
+        logging.error(f"User360 razorpay_payments error for {uid}: {e}")
+        razorpay_payments = []
     
-    for rp in razorpay_payments:
-        rp["source"] = "razorpay"
-        rp["amount_display"] = f"₹{rp.get('amount', 0)}"
-        subscription_history.append(rp)
-    
-    # Get VIP/Manual payment history
-    vip_payments = await db.vip_payments.find(
-        {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}]},
-        {"_id": 0, "payment_id": 1, "amount": 1, "plan": 1, "plan_type": 1, "status": 1,
-         "created_at": 1, "approved_at": 1, "rejected_at": 1, "utr_number": 1, "screenshot_url": 1}
-    ).sort("created_at", -1).limit(50).to_list(50)
-    
-    for vp in vip_payments:
-        vp["source"] = "vip_manual"
-        vp["amount_display"] = f"₹{vp.get('amount', 0)}"
-        subscription_history.append(vp)
+    try:
+        # Get VIP/Manual payment history
+        vip_payments_hist = await db.vip_payments.find(
+            {"$or": [{"user_uid": uid}, {"user_id": uid}, {"uid": uid}]},
+            {"_id": 0, "payment_id": 1, "amount": 1, "plan": 1, "plan_type": 1, "status": 1,
+             "created_at": 1, "approved_at": 1, "rejected_at": 1, "utr_number": 1, "screenshot_url": 1}
+        ).sort("created_at", -1).limit(50).to_list(50)
+        
+        for vp in vip_payments_hist:
+            vp["source"] = "vip_manual"
+            vp["amount_display"] = f"₹{vp.get('amount', 0)}"
+            subscription_history.append(vp)
+    except Exception as e:
+        logging.error(f"User360 vip_payments_hist error for {uid}: {e}")
     
     # Sort combined history
-    subscription_history.sort(key=lambda x: x.get("created_at", "") or x.get("paid_at", ""), reverse=True)
+    subscription_history.sort(key=lambda x: x.get("created_at") or x.get("paid_at") or "", reverse=True)
     
     # ========== FRAUD DETECTION ==========
     # 1. Multiple failed payments in short time
