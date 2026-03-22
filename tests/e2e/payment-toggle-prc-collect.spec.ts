@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redemption-limits.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redeem-system-v2.preview.emergentagent.com';
 
 /**
  * Test Suite: Payment Gateway Toggles and PRC Collect Button

@@ -14,7 +14,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redemption-limits.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://redeem-system-v2.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "Santosh@paras.com"
