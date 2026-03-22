@@ -254,6 +254,123 @@
         
         body.lang-mr .marathi { display: block; }
         body.lang-mr .english { display: none; }
+        
+        /* App Demo Styles */
+        .app-demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .demo-card {
+            background: linear-gradient(145deg, rgba(30,30,50,0.9), rgba(20,20,35,0.95));
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+        }
+        
+        .demo-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .demo-card-content {
+            padding: 20px;
+        }
+        
+        .demo-card h4 {
+            color: #ffd700;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .demo-card p {
+            color: #a0a0a0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 24px;
+        }
+        
+        .disclaimer-box {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            border: 2px solid #ef4444;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        
+        .disclaimer-box h3 {
+            color: #ef4444;
+            font-size: 22px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .disclaimer-box ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .disclaimer-box li {
+            padding: 10px 0;
+            color: #d0d0d0;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .disclaimer-box li:before {
+            content: "⚠️";
+        }
+        
+        .blur-name {
+            filter: blur(8px);
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -665,6 +782,309 @@
                     <li>📧 ईमेल: support@parasreward.com</li>
                     <li>🌐 वेबसाइट: www.parasreward.com</li>
                     <li>💬 इन-अ‍ॅप सपोर्ट: 24/7 उपलब्ध</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- APP DEMO SECTION - ENGLISH -->
+        <div class="english">
+            <div class="section">
+                <h2>📱 Complete App Demo Guide</h2>
+                <p>Follow this step-by-step visual guide to understand how to use PARAS REWARD app effectively.</p>
+                
+                <div class="app-demo-grid">
+                    <!-- Dashboard -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">1</span> Home Dashboard</h4>
+                            <p>Your main dashboard shows:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>Current PRC Balance</li>
+                                <li>Elite Plan Status with Days Left</li>
+                                <li>Quick Access: Rewards, Invite Friends, Redeem to Bank, Shop</li>
+                                <li>Available PRC to Redeem (INR equivalent)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Services -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">2</span> Services Section</h4>
+                            <p>Access all services from home:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li><strong>Bill Payments:</strong> Mobile, DTH, Electric, Pay EMI</li>
+                                <li><strong>Gift Vouchers:</strong> Amazon, Flipkart & more</li>
+                                <li><strong>Shop:</strong> Products & deals</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Rewards -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">3</span> Rewards & Mining</h4>
+                            <p>Start earning PRC:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>Tap "Start Session" to begin mining</li>
+                                <li>View your Reward Rate (PRC/hour)</li>
+                                <li>See Burning Session (live PRC burn)</li>
+                                <li>Mining Speed Breakdown by referral levels</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Referral -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">4</span> Invite Friends</h4>
+                            <p>Grow your network:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>Your unique Invite Code</li>
+                                <li>Share via WhatsApp or Copy Link</li>
+                                <li>Track: Total Invited, Your Circle, Active Users</li>
+                                <li>Reward Levels: L1, L2, L3 bonuses</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Bill Payments -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">5</span> Utility Bill Payments</h4>
+                            <p>Pay all your bills with PRC:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li><strong>Mobile:</strong> Recharge & Postpaid</li>
+                                <li><strong>Entertainment:</strong> DTH, Cable TV, OTT</li>
+                                <li><strong>Utility:</strong> Electricity, Water, Gas, LPG</li>
+                                <li><strong>Telecom:</strong> Broadband, Landline</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Redeem to Bank -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">6</span> Redeem to Bank</h4>
+                            <p>Transfer PRC to your bank:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>View Bank Limit: Total, Used, Available</li>
+                                <li>Enter Withdrawal Amount (Min ₹200 - Max ₹10,000)</li>
+                                <li>Rate: 1 INR = 11 PRC | Fee: ₹10 + 20%</li>
+                                <li>Add Bank Account Details with IFSC verification</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Gift Vouchers -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">7</span> Gift Vouchers</h4>
+                            <p>Redeem PRC for brand vouchers:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>PhonePe vouchers: ₹10 to ₹5000</li>
+                                <li>Amazon, Flipkart & more brands</li>
+                                <li>Instant processing</li>
+                                <li>Track voucher history</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscription -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">8</span> Subscription Plans</h4>
+                            <p>Manage your subscription:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>View Current Plan status & expiry</li>
+                                <li><strong>Explorer:</strong> FREE - Mine but can't collect</li>
+                                <li><strong>Elite:</strong> ₹799/month - Full access</li>
+                                <li>Limited Time: Up to 60% OFF</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <span class="feature-icon">🏠</span>
+                        <span>Home Dashboard</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">⛏️</span>
+                        <span>Daily Mining</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">👥</span>
+                        <span>Referral Network</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">💳</span>
+                        <span>Bill Payments</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🏦</span>
+                        <span>Bank Transfer</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🎁</span>
+                        <span>Gift Vouchers</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DISCLAIMER SECTION -->
+            <div class="disclaimer-box">
+                <h3>⚠️ Important Disclaimer</h3>
+                <ul>
+                    <li>PARAS REWARD is a rewards platform, NOT a cryptocurrency or investment scheme.</li>
+                    <li>PRC (Paras Reward Coins) have NO monetary value outside this platform.</li>
+                    <li>Mining rewards and redemption rates may change without prior notice.</li>
+                    <li>Subscription fees are non-refundable once the plan is activated.</li>
+                    <li>Bank transfers may take 24-72 hours to process.</li>
+                    <li>Users must complete KYC verification for bank withdrawals above ₹5,000.</li>
+                    <li>Referral bonuses are subject to active status of referred users.</li>
+                    <li>The platform reserves the right to suspend accounts for suspicious activity.</li>
+                    <li>All redemptions are subject to availability and platform terms.</li>
+                    <li>This is NOT financial advice. Use the platform at your own discretion.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- APP DEMO SECTION - MARATHI -->
+        <div class="marathi">
+            <div class="section">
+                <h2>📱 संपूर्ण अ‍ॅप डेमो गाईड</h2>
+                <p>PARAS REWARD अ‍ॅप प्रभावीपणे कसे वापरायचे हे समजून घेण्यासाठी या स्टेप-बाय-स्टेप गाईडचे अनुसरण करा.</p>
+                
+                <div class="app-demo-grid">
+                    <!-- Dashboard -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">1</span> होम डॅशबोर्ड</h4>
+                            <p>तुमचे मुख्य डॅशबोर्ड दाखवते:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>सध्याचा PRC बॅलन्स</li>
+                                <li>Elite प्लॅन स्टेटस आणि उरलेले दिवस</li>
+                                <li>क्विक ऍक्सेस: Rewards, Invite Friends, Redeem to Bank, Shop</li>
+                                <li>Redeem करण्यासाठी उपलब्ध PRC (INR मध्ये)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Services -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">2</span> सर्व्हिसेस सेक्शन</h4>
+                            <p>होमवरून सर्व सेवांमध्ये प्रवेश करा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li><strong>बिल पेमेंट:</strong> मोबाइल, DTH, इलेक्ट्रिक, EMI</li>
+                                <li><strong>गिफ्ट व्हाउचर:</strong> Amazon, Flipkart आणि बरेच काही</li>
+                                <li><strong>शॉप:</strong> प्रॉडक्ट्स आणि डील्स</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Rewards -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">3</span> रिवॉर्ड्स आणि मायनिंग</h4>
+                            <p>PRC कमवायला सुरुवात करा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>मायनिंग सुरू करण्यासाठी "Start Session" वर टॅप करा</li>
+                                <li>तुमचा Reward Rate (PRC/hour) बघा</li>
+                                <li>Burning Session (लाइव PRC बर्न) बघा</li>
+                                <li>रेफरल लेव्हलनुसार Mining Speed Breakdown</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Referral -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">4</span> मित्रांना आमंत्रित करा</h4>
+                            <p>तुमचे नेटवर्क वाढवा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>तुमचा युनिक Invite Code</li>
+                                <li>WhatsApp किंवा Copy Link द्वारे शेअर करा</li>
+                                <li>ट्रॅक करा: Total Invited, Your Circle, Active Users</li>
+                                <li>Reward Levels: L1, L2, L3 बोनस</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Bill Payments -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">5</span> युटिलिटी बिल पेमेंट</h4>
+                            <p>तुमची सर्व बिले PRC ने भरा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li><strong>मोबाइल:</strong> रिचार्ज आणि पोस्टपेड</li>
+                                <li><strong>एंटरटेनमेंट:</strong> DTH, Cable TV, OTT</li>
+                                <li><strong>युटिलिटी:</strong> इलेक्ट्रिसिटी, पाणी, गॅस, LPG</li>
+                                <li><strong>टेलिकॉम:</strong> ब्रॉडबँड, लँडलाइन</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Redeem to Bank -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">6</span> बँकेत Redeem करा</h4>
+                            <p>PRC तुमच्या बँकेत ट्रान्सफर करा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>Bank Limit बघा: Total, Used, Available</li>
+                                <li>Withdrawal Amount एंटर करा (Min ₹200 - Max ₹10,000)</li>
+                                <li>Rate: 1 INR = 11 PRC | Fee: ₹10 + 20%</li>
+                                <li>IFSC verification सह Bank Account Details जोडा</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Gift Vouchers -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">7</span> गिफ्ट व्हाउचर</h4>
+                            <p>ब्रँड व्हाउचरसाठी PRC Redeem करा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>PhonePe व्हाउचर: ₹10 ते ₹5000</li>
+                                <li>Amazon, Flipkart आणि अधिक ब्रँड्स</li>
+                                <li>तात्काळ प्रोसेसिंग</li>
+                                <li>व्हाउचर हिस्ट्री ट्रॅक करा</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscription -->
+                    <div class="demo-card">
+                        <div class="demo-card-content">
+                            <h4><span class="step-number">8</span> सबस्क्रिप्शन प्लॅन्स</h4>
+                            <p>तुमची सबस्क्रिप्शन व्यवस्थापित करा:</p>
+                            <ul style="color: #a0a0a0; font-size: 14px; margin-left: 20px;">
+                                <li>सध्याचा प्लॅन स्टेटस आणि एक्सपायरी बघा</li>
+                                <li><strong>Explorer:</strong> FREE - माइन करा पण collect करता येत नाही</li>
+                                <li><strong>Elite:</strong> ₹799/महिना - पूर्ण ऍक्सेस</li>
+                                <li>मर्यादित वेळ: 60% पर्यंत OFF</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DISCLAIMER SECTION - MARATHI -->
+            <div class="disclaimer-box">
+                <h3>⚠️ महत्त्वाचा अस्वीकरण</h3>
+                <ul>
+                    <li>PARAS REWARD एक रिवॉर्ड्स प्लॅटफॉर्म आहे, क्रिप्टोकरन्सी किंवा इन्व्हेस्टमेंट स्कीम नाही.</li>
+                    <li>PRC (Paras Reward Coins) चे या प्लॅटफॉर्मबाहेर कोणतेही आर्थिक मूल्य नाही.</li>
+                    <li>मायनिंग रिवॉर्ड्स आणि redemption rates पूर्वसूचनेशिवाय बदलू शकतात.</li>
+                    <li>प्लॅन ऍक्टिव्हेट झाल्यावर सबस्क्रिप्शन फी परत मिळणार नाही.</li>
+                    <li>बँक ट्रान्सफर प्रोसेस होण्यास 24-72 तास लागू शकतात.</li>
+                    <li>₹5,000 वरील बँक विड्रॉवलसाठी KYC व्हेरिफिकेशन आवश्यक आहे.</li>
+                    <li>रेफरल बोनस रेफर केलेल्या युजर्सच्या ऍक्टिव्ह स्टेटसवर अवलंबून आहेत.</li>
+                    <li>संशयास्पद ऍक्टिव्हिटीसाठी प्लॅटफॉर्म खाते निलंबित करण्याचा अधिकार राखून ठेवतो.</li>
+                    <li>सर्व redemptions उपलब्धता आणि प्लॅटफॉर्म अटींच्या अधीन आहेत.</li>
+                    <li>हा आर्थिक सल्ला नाही. प्लॅटफॉर्म तुमच्या स्वतःच्या निर्णयानुसार वापरा.</li>
                 </ul>
             </div>
         </div>
