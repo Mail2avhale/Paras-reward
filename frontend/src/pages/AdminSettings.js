@@ -56,8 +56,10 @@ const AdminSettings = ({ user }) => {
   // Payment Gateway Toggles State
   const [razorpayEnabled, setRazorpayEnabled] = useState(true);
   const [manualPaymentEnabled, setManualPaymentEnabled] = useState(true);
+  const [prcPaymentEnabled, setPrcPaymentEnabled] = useState(true);
   const [togglingRazorpay, setTogglingRazorpay] = useState(false);
   const [togglingManual, setTogglingManual] = useState(false);
+  const [togglingPrc, setTogglingPrc] = useState(false);
 
   useEffect(() => {
     // Check if user is admin
@@ -124,8 +126,9 @@ const AdminSettings = ({ user }) => {
     try {
       const publicSettings = await axios.get(`${API}/settings/public`);
       if (publicSettings.data) {
-        setRazorpayEnabled(publicSettings.data.razorpay_enabled !== false);
-        setManualPaymentEnabled(publicSettings.data.manual_subscription_enabled !== false);
+        setRazorpayEnabled(publicSettings.data.razorpay_enabled === true);
+        setManualPaymentEnabled(publicSettings.data.manual_subscription_enabled === true);
+        setPrcPaymentEnabled(publicSettings.data.prc_subscription_enabled !== false);
       }
     } catch (error) {
       console.error('Error fetching gateway status:', error);
@@ -184,6 +187,27 @@ const AdminSettings = ({ user }) => {
       toast.error(error.response?.data?.detail || 'Failed to toggle Manual Payment');
     } finally {
       setTogglingManual(false);
+    }
+  };
+
+  // Toggle PRC Payment Gateway
+  const handleTogglePrcPayment = async () => {
+    const adminPin = prompt('Enter Admin PIN to confirm:');
+    if (!adminPin) return;
+    
+    setTogglingPrc(true);
+    try {
+      await axios.post(`${API}/admin/toggle-prc-subscription`, {
+        enabled: !prcPaymentEnabled,
+        admin_pin: adminPin
+      });
+      setPrcPaymentEnabled(!prcPaymentEnabled);
+      toast.success(`PRC Payment ${!prcPaymentEnabled ? 'enabled' : 'disabled'} successfully!`);
+    } catch (error) {
+      console.error('Error toggling PRC Payment:', error);
+      toast.error(error.response?.data?.detail || 'Failed to toggle PRC Payment');
+    } finally {
+      setTogglingPrc(false);
     }
   };
 
@@ -695,6 +719,63 @@ const AdminSettings = ({ user }) => {
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Enable Manual Payment
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* PRC Payment Gateway Card */}
+            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    prcPaymentEnabled ? 'bg-purple-500/20' : 'bg-gray-700'
+                  }`}>
+                    <Coins className={`w-6 h-6 ${prcPaymentEnabled ? 'text-purple-400' : 'text-gray-500'}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">Pay with PRC</h3>
+                    <p className="text-gray-400 text-xs">From Redeem Limit</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {prcPaymentEnabled ? (
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Active
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Disabled
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                {prcPaymentEnabled 
+                  ? 'Users can pay for subscription using their PRC from redeem limit.' 
+                  : 'PRC payment is disabled. Users cannot use PRC for subscription.'}
+              </p>
+              <Button
+                onClick={handleTogglePrcPayment}
+                disabled={togglingPrc}
+                className={`w-full ${
+                  prcPaymentEnabled
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+                data-testid="toggle-prc-payment-btn"
+              >
+                {togglingPrc ? (
+                  'Processing...'
+                ) : prcPaymentEnabled ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Disable PRC Payment
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Enable PRC Payment
                   </>
                 )}
               </Button>

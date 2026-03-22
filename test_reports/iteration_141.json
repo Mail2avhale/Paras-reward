@@ -1,0 +1,69 @@
+{
+  "iteration": 141,
+  "mode": "feature_testing",
+  "summary": "Tested payment gateway toggles feature for subscription page. Backend APIs working correctly - all 7 tests passed. Frontend code review confirms correct implementation of conditional rendering for Manual and PRC payment options.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_payment_gateway_toggles.py",
+    "/app/test_reports/pytest/payment_gateway_toggles_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend /settings/public endpoint correctly returns all 3 flags: manual_subscription_enabled, razorpay_enabled, prc_subscription_enabled (lines 11437-11439)",
+    "Backend /admin/toggle-prc-subscription endpoint correctly toggles PRC subscription with admin PIN validation (lines 11477-11505)",
+    "Backend /admin/toggle-manual-subscription endpoint correctly toggles Manual subscription with admin PIN validation (lines 11446-11474)",
+    "Frontend AdminSettings.js has all 3 toggle cards with data-testid attributes: toggle-razorpay-btn, toggle-manual-payment-btn, toggle-prc-payment-btn",
+    "Frontend SubscriptionPlans.js correctly wraps Manual UPI/Bank button with {manualEnabled && (...)} (line 1140)",
+    "Frontend SubscriptionPlans.js correctly wraps PRC Payment button with {prcEnabled && (...)} (line 1174)",
+    "Frontend correctly fetches gateway status from /settings/public and sets state variables (lines 133-138)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_payment_gateway_toggles.py"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 tests passed)",
+    "frontend": "Code review passed - conditional rendering implemented correctly"
+  },
+  "test_credentials": {
+    "admin_pin_for_toggle": "123456"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payment gateway toggles feature is fully implemented. Backend APIs tested and working. Frontend code review confirms correct conditional rendering. When Manual is disabled, the Manual UPI/Bank button will NOT appear on subscription page. When PRC is disabled, the Pay with PRC button will NOT appear.",
+  "feature_verification": {
+    "backend_api_settings_public": {
+      "status": "PASS",
+      "returns_all_3_flags": true,
+      "flags": ["manual_subscription_enabled", "razorpay_enabled", "prc_subscription_enabled"]
+    },
+    "backend_api_toggle_prc": {
+      "status": "PASS",
+      "endpoint": "/admin/toggle-prc-subscription",
+      "requires_admin_pin": true
+    },
+    "backend_api_toggle_manual": {
+      "status": "PASS",
+      "endpoint": "/admin/toggle-manual-subscription",
+      "requires_admin_pin": true
+    },
+    "frontend_admin_settings": {
+      "status": "PASS (code review)",
+      "has_3_toggle_cards": true,
+      "data_testids": ["toggle-razorpay-btn", "toggle-manual-payment-btn", "toggle-prc-payment-btn"]
+    },
+    "frontend_subscription_page": {
+      "status": "PASS (code review)",
+      "manual_conditional_rendering": "Line 1140: {manualEnabled && (...)}",
+      "prc_conditional_rendering": "Line 1174: {prcEnabled && (...)}"
+    }
+  }
+}

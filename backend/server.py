@@ -11418,6 +11418,12 @@ async def get_public_settings():
     if razorpay_setting:
         razorpay_enabled = razorpay_setting.get("value", True)
     
+    # Check if PRC subscription payment is enabled
+    prc_subscription_enabled = True
+    prc_sub_setting = await db.app_settings.find_one({"key": "prc_subscription_enabled"})
+    if prc_sub_setting:
+        prc_subscription_enabled = prc_sub_setting.get("value", True)
+    
     # prc_to_inr_rate already fetched above
     
     result = {
@@ -11430,6 +11436,7 @@ async def get_public_settings():
         "support_phone": settings.get("support_phone", "+91 9876543210") if settings else "+91 9876543210",
         "manual_subscription_enabled": manual_subscription_enabled,
         "razorpay_enabled": razorpay_enabled,
+        "prc_subscription_enabled": prc_subscription_enabled,
         "prc_to_inr_rate": prc_to_inr_rate
     }
     
@@ -11459,6 +11466,37 @@ async def toggle_manual_subscription(request: Request):
         return {
             "success": True,
             "message": f"Manual subscription {'enabled' if enabled else 'disabled'}",
+            "enabled": enabled
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=get_user_friendly_error(e))
+
+
+@api_router.post("/admin/toggle-prc-subscription")
+async def toggle_prc_subscription(request: Request):
+    """Enable or disable PRC subscription payment method"""
+    try:
+        data = await request.json()
+        enabled = data.get("enabled", True)
+        admin_pin = data.get("admin_pin")
+        
+        if admin_pin != "123456":
+            raise HTTPException(status_code=403, detail="Invalid admin PIN")
+        
+        await db.app_settings.update_one(
+            {"key": "prc_subscription_enabled"},
+            {"$set": {"key": "prc_subscription_enabled", "value": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True
+        )
+        
+        # Clear public settings cache
+        await cache.delete("public_settings")
+        
+        return {
+            "success": True,
+            "message": f"PRC subscription {'enabled' if enabled else 'disabled'}",
             "enabled": enabled
         }
     except HTTPException:

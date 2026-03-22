@@ -51,6 +51,7 @@ const SubscriptionPlans = ({ user }) => {
   const [paymentSuccess, setPaymentSuccess] = useState(false); // true = instant activation, false = pending verification
   const [razorpayEnabled, setRazorpayEnabled] = useState(true); // Gateway enabled status
   const [manualEnabled, setManualEnabled] = useState(true); // Manual subscription enabled status
+  const [prcEnabled, setPrcEnabled] = useState(true); // PRC subscription enabled status
   const [redeemLimit, setRedeemLimit] = useState(null); // For PRC payment option
   const [prcPaymentLoading, setPrcPaymentLoading] = useState(false);
   
@@ -129,16 +130,20 @@ const SubscriptionPlans = ({ user }) => {
       }
       
       // Get gateway statuses from public settings
-      const isManualEnabled = configRes.data.manual_subscription_enabled !== false;
-      const isRazorpayEnabled = configRes.data.razorpay_enabled !== false;
+      const isManualEnabled = configRes.data.manual_subscription_enabled === true;
+      const isRazorpayEnabled = configRes.data.razorpay_enabled === true;
+      const isPrcEnabled = configRes.data.prc_subscription_enabled !== false; // Default true
       setManualEnabled(isManualEnabled);
       setRazorpayEnabled(isRazorpayEnabled);
+      setPrcEnabled(isPrcEnabled);
       
-      // Set default payment method based on what's enabled
+      // Set default payment method based on what's enabled (priority: Razorpay > Manual > PRC)
       if (isRazorpayEnabled) {
         setPaymentMethod('razorpay');
       } else if (isManualEnabled) {
         setPaymentMethod('manual');
+      } else if (isPrcEnabled) {
+        setPaymentMethod('prc');
       }
       
       // Fetch subscription history
@@ -1166,6 +1171,7 @@ const SubscriptionPlans = ({ user }) => {
             )}
 
             {/* Pay with PRC - From Redeem Limit */}
+            {prcEnabled && (
             <button
               onClick={() => setPaymentMethod('prc')}
               className={`w-full p-4 rounded-2xl border-2 transition-all ${
@@ -1204,6 +1210,7 @@ const SubscriptionPlans = ({ user }) => {
                 </div>
               </div>
             </button>
+            )}
           </div>
 
           {/* Razorpay Pay Now Button */}
