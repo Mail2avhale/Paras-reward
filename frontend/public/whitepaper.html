@@ -3,143 +3,916 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paras Reward Whitepaper</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Paras Reward - Whitepaper | India's First Real Utility Reward Ecosystem</title>
+<meta name="description" content="Official whitepaper of Paras Reward Technologies Pvt Ltd - A transparent, sustainable utility-based reward ecosystem.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+:root{
+    --primary:#0f172a;
+    --secondary:#1e293b;
+    --accent:#10b981;
+    --accent-light:#34d399;
+    --blue:#3b82f6;
+    --gold:#fbbf24;
+    --text:#f1f5f9;
+    --text-muted:#94a3b8;
+    --border:rgba(255,255,255,0.08);
+}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Poppins',sans-serif;background:#020617;color:white;scroll-behavior:smooth;overflow-x:hidden;}
-body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 80%, rgba(34,197,94,0.15) 0%, transparent 50%),radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%);pointer-events:none;z-index:-1;}
-.lang-toggle{position:fixed;top:20px;right:20px;z-index:1000;display:flex;gap:5px;background:rgba(0,0,0,0.8);padding:8px;border-radius:50px;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);}
-.lang-btn{padding:10px 18px;border:none;border-radius:50px;background:transparent;color:#94a3b8;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.3s ease;}
-.lang-btn:hover{color:white;}.lang-btn.active{background:linear-gradient(135deg,#22c55e,#16a34a);color:white;box-shadow:0 4px 15px rgba(34,197,94,0.4);}
-.english{display:block;}.hindi{display:none;}.marathi{display:none;}
-body.lang-hi .english{display:none;}body.lang-hi .hindi{display:block;}body.lang-mr .english{display:none;}body.lang-mr .marathi{display:block;}
-.hero{min-height:100vh;padding:100px 10% 80px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;}
-.hero-content{max-width:600px;animation:fadeInUp 1s ease;}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
-.hero h1{font-size:48px;font-weight:800;line-height:1.2;background:linear-gradient(135deg,#ffffff,#22c55e,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:15px;}
-.hero .subtitle{font-size:22px;color:#22c55e;font-weight:600;margin-bottom:15px;}
-.hero p{color:#94a3b8;font-size:16px;line-height:1.8;margin-bottom:25px;}
-.tagline{display:inline-block;background:linear-gradient(135deg,rgba(34,197,94,0.2),rgba(22,163,74,0.1));border:1px solid rgba(34,197,94,0.3);padding:12px 20px;border-radius:50px;font-size:14px;color:#22c55e;margin-bottom:25px;}
-.stats{display:flex;gap:15px;margin:30px 0;flex-wrap:wrap;}
-.stat{background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);padding:15px 25px;border-radius:15px;border:1px solid rgba(255,255,255,0.08);font-size:15px;font-weight:500;transition:all 0.3s ease;}
-.stat:hover{transform:translateY(-5px);border-color:rgba(34,197,94,0.3);box-shadow:0 10px 30px rgba(34,197,94,0.15);}
+html{scroll-behavior:smooth;}
+body{
+    font-family:'Inter',sans-serif;
+    background:var(--primary);
+    color:var(--text);
+    line-height:1.7;
+    overflow-x:hidden;
+}
+
+/* Navbar */
+.navbar{
+    position:fixed;top:0;left:0;right:0;z-index:1000;
+    background:rgba(15,23,42,0.95);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    padding:15px 5%;
+    display:flex;justify-content:space-between;align-items:center;
+}
+.logo{font-size:20px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:10px;}
+.logo-icon{width:35px;height:35px;background:linear-gradient(135deg,var(--accent),var(--blue));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;color:white;}
+.nav-links{display:flex;gap:30px;}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:0.3s;}
+.nav-links a:hover{color:var(--accent);}
+
+/* Hero */
+.hero{
+    min-height:100vh;
+    padding:140px 5% 80px;
+    background:linear-gradient(180deg,var(--primary) 0%,var(--secondary) 100%);
+    position:relative;
+    overflow:hidden;
+}
+.hero::before{
+    content:'';position:absolute;top:-50%;right:-20%;
+    width:800px;height:800px;
+    background:radial-gradient(circle,rgba(16,185,129,0.1) 0%,transparent 70%);
+    pointer-events:none;
+}
+.hero-container{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:50px;}
+.hero-content{max-width:600px;}
+.badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);
+    padding:8px 16px;border-radius:50px;font-size:13px;color:var(--accent);margin-bottom:25px;
+}
+.badge-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.hero h1{
+    font-size:52px;font-weight:800;line-height:1.15;margin-bottom:20px;
+    background:linear-gradient(135deg,#ffffff 0%,var(--accent-light) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero .subtitle{font-size:20px;color:var(--accent);font-weight:600;margin-bottom:15px;letter-spacing:1px;}
+.hero p{color:var(--text-muted);font-size:16px;margin-bottom:30px;}
+.trust-line{
+    display:flex;align-items:center;gap:15px;flex-wrap:wrap;
+    padding:15px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    margin-bottom:30px;
+}
+.trust-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);}
+.trust-item svg{width:16px;height:16px;color:var(--accent);}
+.stats-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:35px;}
+.stat-card{
+    background:var(--secondary);border:1px solid var(--border);
+    padding:20px 25px;border-radius:12px;min-width:140px;
+    transition:0.3s;
+}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-3px);}
+.stat-value{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:5px;}
+.stat-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;}
 .btn-group{display:flex;gap:15px;flex-wrap:wrap;}
-.btn{padding:16px 32px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s ease;text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
-.btn-primary{background:linear-gradient(135deg,#22c55e,#16a34a);color:white;box-shadow:0 4px 20px rgba(34,197,94,0.4);}
-.btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(34,197,94,0.5);}
-.btn-secondary{background:rgba(255,255,255,0.05);color:white;border:1px solid rgba(255,255,255,0.2);}
-.hero-image{animation:float 6s ease-in-out infinite;}
-@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-20px);}}
-.hero-image img{width:380px;filter:drop-shadow(0 30px 60px rgba(34,197,94,0.3));}
-.section{padding:80px 10%;}.section-header{text-align:center;margin-bottom:50px;}
-.section h2{font-size:36px;font-weight:700;margin-bottom:15px;background:linear-gradient(135deg,#ffffff,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.section-subtitle{color:#64748b;font-size:16px;max-width:600px;margin:0 auto;}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:25px;}
-.card{background:linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));padding:30px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);transition:all 0.4s ease;position:relative;overflow:hidden;}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#3b82f6,#a855f7);opacity:0;transition:opacity 0.3s;}
-.card:hover{transform:translateY(-10px);border-color:rgba(34,197,94,0.3);box-shadow:0 20px 40px rgba(0,0,0,0.3);}
-.card:hover::before{opacity:1;}
-.card-icon{font-size:40px;margin-bottom:15px;display:block;}
-.card h4{font-size:18px;font-weight:600;margin-bottom:10px;color:white;}
-.card p{color:#94a3b8;font-size:14px;line-height:1.6;}
-.flow-grid{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;}
-.flow-card{background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(22,163,74,0.05));border:1px solid rgba(34,197,94,0.2);padding:25px 35px;border-radius:15px;text-align:center;min-width:150px;position:relative;transition:all 0.3s ease;}
-.flow-card:hover{transform:scale(1.05);box-shadow:0 10px 30px rgba(34,197,94,0.2);}
-.flow-card .step{position:absolute;top:-15px;left:50%;transform:translateX(-50%);width:30px;height:30px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
-.flow-card h4{margin-top:10px;font-size:15px;color:white;}
-.highlight{background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(22,163,74,0.05));border:2px solid rgba(34,197,94,0.3);padding:35px;border-radius:20px;max-width:700px;margin:0 auto;}
-.highlight h3{color:#22c55e;font-size:20px;margin-bottom:20px;}
-.highlight p{color:#b0b0b0;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:10px;}
-.highlight p:last-child{border-bottom:none;}
-.check{color:#22c55e;font-weight:bold;}
-.tokenomics-container{display:flex;align-items:center;justify-content:center;gap:60px;flex-wrap:wrap;}
-.chart-box{max-width:350px;}.token-info{max-width:400px;}
-.token-item{display:flex;align-items:center;gap:15px;padding:15px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-.token-item:last-child{border-bottom:none;}
-.token-dot{width:15px;height:15px;border-radius:50%;}
-.token-dot.green{background:#22c55e;}.token-dot.blue{background:#3b82f6;}.token-dot.yellow{background:#facc15;}.token-dot.red{background:#ef4444;}
-.token-item span{color:#94a3b8;font-size:14px;}.token-item strong{color:white;font-size:18px;margin-left:auto;}
-.demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:25px;}
-.demo-card{background:linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);transition:all 0.4s ease;}
-.demo-card:hover{transform:translateY(-10px);box-shadow:0 20px 50px rgba(34,197,94,0.2);}
-.demo-card img{width:100%;height:250px;object-fit:cover;}
-.demo-card-content{padding:20px;}.demo-card h4{color:#22c55e;font-size:16px;margin-bottom:8px;}.demo-card p{color:#94a3b8;font-size:13px;}
-.founder-section{background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,149,0,0.04));border:2px solid rgba(255,215,0,0.2);border-radius:25px;padding:50px;text-align:center;max-width:800px;margin:0 auto;position:relative;}
-.founder-section::before{content:'"';position:absolute;top:20px;left:40px;font-size:100px;color:rgba(255,215,0,0.2);font-family:Georgia,serif;line-height:1;}
-.founder-section p{font-size:18px;line-height:2;color:#e0e0e0;font-style:italic;position:relative;z-index:1;}
-.founder-sign{margin-top:30px;color:#ffd700;font-weight:600;font-size:16px;font-style:normal;}
-.cta{text-align:center;padding:100px 10%;background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(22,163,74,0.05));}
-.cta h2{font-size:40px;margin-bottom:15px;color:white;}.cta p{color:#94a3b8;margin-bottom:30px;font-size:16px;}
-.footer{text-align:center;padding:30px;color:#64748b;font-size:14px;border-top:1px solid rgba(255,255,255,0.05);}
-@media(max-width:768px){.hero{flex-direction:column;text-align:center;padding:120px 5% 60px;}.hero h1{font-size:32px;}.hero-image img{width:250px;}.stats{justify-content:center;}.btn-group{justify-content:center;}.section{padding:60px 5%;}.section h2{font-size:28px;}.lang-toggle{top:10px;right:10px;}.lang-btn{padding:8px 12px;font-size:11px;}.tokenomics-container{flex-direction:column;}.founder-section{padding:30px 20px;}}
-.fade-in{opacity:0;transform:translateY(30px);transition:all 0.6s ease;}.fade-in.visible{opacity:1;transform:translateY(0);}
+.btn{
+    padding:14px 28px;border-radius:10px;font-size:14px;font-weight:600;
+    cursor:pointer;transition:all 0.3s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;border:none;
+}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#059669);color:white;box-shadow:0 4px 20px rgba(16,185,129,0.3);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(16,185,129,0.4);}
+.btn-secondary{background:var(--secondary);color:white;border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);}
+.hero-visual{position:relative;}
+.hero-card{
+    background:linear-gradient(135deg,var(--secondary),rgba(30,41,59,0.8));
+    border:1px solid var(--border);border-radius:20px;padding:30px;
+    width:350px;backdrop-filter:blur(10px);
+}
+.hero-card-header{display:flex;align-items:center;gap:15px;margin-bottom:25px;}
+.hero-card-icon{width:50px;height:50px;background:linear-gradient(135deg,var(--accent),var(--blue));border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.hero-card-icon svg{width:24px;height:24px;color:white;}
+.hero-card-title{font-size:14px;color:var(--text-muted);}
+.hero-card-value{font-size:28px;font-weight:700;}
+.mini-chart{height:60px;margin:20px 0;background:linear-gradient(180deg,rgba(16,185,129,0.2) 0%,transparent 100%);border-radius:8px;}
+
+/* Section */
+.section{padding:100px 5%;max-width:1200px;margin:0 auto;}
+.section-header{text-align:center;margin-bottom:60px;}
+.section-badge{
+    display:inline-block;background:rgba(16,185,129,0.1);
+    color:var(--accent);padding:6px 14px;border-radius:50px;
+    font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:15px;
+}
+.section h2{font-size:36px;font-weight:700;margin-bottom:15px;}
+.section-subtitle{color:var(--text-muted);font-size:16px;max-width:600px;margin:0 auto;}
+
+/* Cards Grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:25px;}
+.card{
+    background:var(--secondary);border:1px solid var(--border);
+    border-radius:16px;padding:30px;transition:all 0.3s;position:relative;overflow:hidden;
+}
+.card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--accent),var(--blue));
+    transform:scaleX(0);transition:transform 0.3s;transform-origin:left;
+}
+.card:hover{border-color:rgba(16,185,129,0.3);transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,0,0,0.2);}
+.card:hover::before{transform:scaleX(1);}
+.card-icon{
+    width:50px;height:50px;border-radius:12px;
+    background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;
+    margin-bottom:20px;font-size:24px;
+}
+.card h3{font-size:18px;font-weight:600;margin-bottom:10px;}
+.card p{color:var(--text-muted);font-size:14px;line-height:1.7;}
+
+/* Highlight Box */
+.highlight-box{
+    background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(59,130,246,0.05));
+    border:2px solid rgba(16,185,129,0.3);border-radius:16px;padding:35px;margin:40px 0;
+}
+.highlight-box.warning{
+    background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(245,158,11,0.05));
+    border-color:rgba(251,191,36,0.3);
+}
+.highlight-box.info{
+    background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(99,102,241,0.05));
+    border-color:rgba(59,130,246,0.3);
+}
+.highlight-box h3{font-size:18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.highlight-box h3 svg{width:24px;height:24px;}
+.highlight-box ul{list-style:none;}
+.highlight-box li{padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;color:var(--text-muted);}
+.highlight-box li:last-child{border-bottom:none;}
+.highlight-box li svg{width:20px;height:20px;color:var(--accent);flex-shrink:0;margin-top:2px;}
+
+/* Steps */
+.steps-container{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;}
+.step{
+    background:var(--secondary);border:1px solid var(--border);
+    border-radius:16px;padding:30px;text-align:center;min-width:200px;
+    position:relative;transition:0.3s;
+}
+.step:hover{border-color:var(--accent);transform:translateY(-5px);}
+.step-number{
+    position:absolute;top:-15px;left:50%;transform:translateX(-50%);
+    width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--blue));
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;
+}
+.step-icon{font-size:36px;margin:15px 0;}
+.step h4{font-size:16px;font-weight:600;margin-bottom:8px;}
+.step p{font-size:13px;color:var(--text-muted);}
+
+/* Tokenomics */
+.tokenomics-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;}
+.chart-container{max-width:350px;margin:0 auto;}
+.token-list{display:flex;flex-direction:column;gap:15px;}
+.token-item{
+    display:flex;align-items:center;gap:15px;
+    background:var(--secondary);border:1px solid var(--border);
+    padding:15px 20px;border-radius:12px;transition:0.3s;
+}
+.token-item:hover{border-color:var(--accent);}
+.token-dot{width:12px;height:12px;border-radius:50%;}
+.token-dot.green{background:var(--accent);}
+.token-dot.blue{background:var(--blue);}
+.token-dot.yellow{background:var(--gold);}
+.token-dot.red{background:#ef4444;}
+.token-info{flex:1;}
+.token-label{font-size:14px;color:var(--text-muted);}
+.token-value{font-size:20px;font-weight:700;}
+
+/* Founder */
+.founder-section{
+    background:linear-gradient(135deg,var(--secondary),rgba(30,41,59,0.5));
+    border:1px solid var(--border);border-radius:20px;padding:50px;
+    text-align:center;position:relative;
+}
+.founder-section::before{
+    content:'"';position:absolute;top:30px;left:50px;font-size:120px;
+    color:rgba(16,185,129,0.1);font-family:Georgia,serif;line-height:1;
+}
+.founder-avatar{
+    width:80px;height:80px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--blue));
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 25px;font-size:32px;font-weight:700;
+}
+.founder-section blockquote{
+    font-size:18px;line-height:2;color:var(--text);font-style:italic;
+    max-width:700px;margin:0 auto 25px;position:relative;z-index:1;
+}
+.founder-name{color:var(--accent);font-weight:600;}
+.founder-title{color:var(--text-muted);font-size:14px;}
+
+/* Disclaimer */
+.disclaimer-box{
+    background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.05));
+    border:2px solid rgba(239,68,68,0.3);border-radius:16px;padding:35px;
+}
+.disclaimer-box h3{color:#ef4444;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.disclaimer-box li svg{color:#ef4444;}
+
+/* CTA */
+.cta-section{
+    background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(59,130,246,0.05));
+    border-radius:20px;padding:80px 40px;text-align:center;margin:60px 0;
+}
+.cta-section h2{font-size:36px;margin-bottom:15px;}
+.cta-section p{color:var(--text-muted);margin-bottom:30px;font-size:16px;}
+
+/* Footer */
+.footer{
+    background:var(--secondary);border-top:1px solid var(--border);
+    padding:60px 5% 30px;
+}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;max-width:1200px;margin:0 auto 40px;}
+.footer-brand h3{font-size:20px;margin-bottom:15px;color:var(--accent);}
+.footer-brand p{color:var(--text-muted);font-size:14px;line-height:1.8;}
+.footer-links h4{font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;color:var(--text);}
+.footer-links a{display:block;color:var(--text-muted);text-decoration:none;font-size:14px;padding:8px 0;transition:0.3s;}
+.footer-links a:hover{color:var(--accent);}
+.footer-bottom{
+    text-align:center;padding-top:30px;border-top:1px solid var(--border);
+    color:var(--text-muted);font-size:13px;max-width:1200px;margin:0 auto;
+}
+
+/* Mobile */
+@media(max-width:968px){
+    .navbar{padding:12px 4%;}
+    .nav-links{display:none;}
+    .hero{padding:120px 4% 60px;}
+    .hero h1{font-size:36px;}
+    .hero-container{flex-direction:column;text-align:center;}
+    .hero-content{max-width:100%;}
+    .trust-line,.stats-row,.btn-group{justify-content:center;}
+    .hero-card{width:100%;max-width:350px;}
+    .section{padding:60px 4%;}
+    .section h2{font-size:28px;}
+    .tokenomics-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:480px){
+    .hero h1{font-size:28px;}
+    .stats-row{flex-direction:column;align-items:center;}
+    .stat-card{width:100%;text-align:center;}
+    .footer-grid{grid-template-columns:1fr;}
+}
+
+/* Animations */
+.fade-in{opacity:0;transform:translateY(30px);transition:all 0.6s ease;}
+.fade-in.visible{opacity:1;transform:translateY(0);}
 </style>
 </head>
 <body>
-<div class="lang-toggle">
-<button class="lang-btn active" onclick="setLang('en')">English</button>
-<button class="lang-btn" onclick="setLang('hi')">हिंदी</button>
-<button class="lang-btn" onclick="setLang('mr')">मराठी</button>
-</div>
-<div class="english">
+
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="logo">
+        <div class="logo-icon">P</div>
+        PARAS REWARD
+    </div>
+    <div class="nav-links">
+        <a href="#about">About</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#tokenomics">Tokenomics</a>
+        <a href="#security">Security</a>
+        <a href="https://play.google.com/store/apps/details?id=com.parasreward">Download App</a>
+    </div>
+</nav>
+
+<!-- Hero Section -->
 <section class="hero">
-<div class="hero-content">
-<div class="tagline">🚀 India's Most Trusted Reward Platform</div>
-<h1>India's First Real Utility Reward Ecosystem</h1>
-<p class="subtitle">Earn → Use → Redeem in Real Life</p>
-<p>Where users earn PRC through daily activities and convert them into real value - mobile recharge, bill payments, gift vouchers, and direct bank transfers.</p>
-<div class="stats"><div class="stat">👥 10,000+ Users</div><div class="stat">💰 ₹1Cr+ Value</div><div class="stat">🔒 Secure System</div></div>
-<p><b>✨ Trusted by users | 📊 Transparent | 🎯 Controlled Economy</b></p>
-<div class="btn-group"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 Start Earning</a><a href="/subscription" class="btn btn-secondary">👑 Become Elite</a></div>
-</div>
-<div class="hero-image"><img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Paras"></div>
+    <div class="hero-container">
+        <div class="hero-content">
+            <div class="badge">
+                <span class="badge-dot"></span>
+                Official Whitepaper v2.0
+            </div>
+            <h1>India's First Real Utility Reward Ecosystem</h1>
+            <p class="subtitle">EARN → USE → REDEEM IN REAL LIFE</p>
+            <p>A transparent, sustainable platform where users earn reward points through daily activities and use them for real services - mobile recharge, bill payments, shopping vouchers, and bank transfers.</p>
+            
+            <div class="trust-line">
+                <div class="trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Trusted Platform
+                </div>
+                <div class="trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    Transparent System
+                </div>
+                <div class="trust-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                    Controlled Economy
+                </div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value">10,000+</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">₹1Cr+</div>
+                    <div class="stat-label">Value Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">99.9%</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Start Earning
+                </a>
+                <a href="/subscription" class="btn btn-secondary">Become VIP Member</a>
+            </div>
+        </div>
+        
+        <div class="hero-visual">
+            <div class="hero-card">
+                <div class="hero-card-header">
+                    <div class="hero-card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                    <div>
+                        <div class="hero-card-title">Your PRC Balance</div>
+                        <div class="hero-card-value">12,450.00</div>
+                    </div>
+                </div>
+                <div class="mini-chart"></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);">
+                    <span>Today's Mining: +24.5 PRC</span>
+                    <span style="color:var(--accent);">↑ Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
-<section class="section fade-in"><div class="section-header"><h2>⚡ How It Works</h2><p class="section-subtitle">Simple 4-step process</p></div>
-<div class="flow-grid"><div class="flow-card"><span class="step">1</span><span class="card-icon">📲</span><h4>Register</h4></div><div class="flow-card"><span class="step">2</span><span class="card-icon">📅</span><h4>Daily Login</h4></div><div class="flow-card"><span class="step">3</span><span class="card-icon">⛏️</span><h4>Earn PRC</h4></div><div class="flow-card"><span class="step">4</span><span class="card-icon">💰</span><h4>Use/Redeem</h4></div></div></section>
-<section class="section fade-in"><div class="section-header"><h2>🎯 Why Paras is Different</h2></div>
-<div class="grid"><div class="card"><span class="card-icon">🛒</span><h4>Real Utility</h4><p>Use PRC for recharges, bills, shopping</p></div><div class="card"><span class="card-icon">💱</span><h4>Real Value</h4><p>Dynamic PRC-to-INR rate</p></div><div class="card"><span class="card-icon">⚖️</span><h4>Controlled Economy</h4><p>Weekly limits & burn mechanism</p></div><div class="card"><span class="card-icon">📋</span><h4>Transparent</h4><p>No hidden terms</p></div></div></section>
-<section class="section fade-in"><div class="section-header"><h2>🎁 Earning System</h2></div>
-<div class="grid"><div class="card"><span class="card-icon">🎁</span><h4>Daily Bonus</h4><p>Login daily for bonus PRC</p></div><div class="card"><span class="card-icon">⛏️</span><h4>Mining</h4><p>~1 PRC per hour</p></div><div class="card"><span class="card-icon">👥</span><h4>Referral</h4><p>L1(50%), L2(20%), L3(10%)</p></div><div class="card"><span class="card-icon">🎮</span><h4>Games</h4><p>Events & rewards</p></div></div></section>
-<section class="section fade-in"><div class="section-header"><h2>📊 Tokenomics</h2></div>
-<div class="tokenomics-container"><div class="chart-box"><canvas id="tokenChart"></canvas></div><div class="token-info"><div class="token-item"><span class="token-dot green"></span><span>Users</span><strong>50%</strong></div><div class="token-item"><span class="token-dot blue"></span><span>System</span><strong>20%</strong></div><div class="token-item"><span class="token-dot yellow"></span><span>Rewards</span><strong>15%</strong></div><div class="token-item"><span class="token-dot red"></span><span>Burn</span><strong>15%</strong></div></div></div>
-<p style="text-align:center;color:#64748b;margin-top:30px;">🔥 15% burn ensures long-term value</p></section>
-<section class="section fade-in"><div class="section-header"><h2>🔒 Security & Trust</h2></div>
-<div class="grid"><div class="card"><span class="card-icon">🔐</span><h4>Secure</h4><p>End-to-end encryption</p></div><div class="card"><span class="card-icon">🛡️</span><h4>Fraud Detection</h4><p>AI-powered security</p></div><div class="card"><span class="card-icon">📊</span><h4>Transparent</h4><p>Real-time tracking</p></div><div class="card"><span class="card-icon">⚡</span><h4>Controlled</h4><p>Weekly limits</p></div></div></section>
-<section class="section fade-in"><div class="section-header"><h2>📱 App Screenshots</h2></div>
-<div class="demo-grid"><div class="demo-card"><img src="/app-screenshots/dashboard.jpeg" alt="Dashboard"><div class="demo-card-content"><h4>📊 Dashboard</h4><p>PRC balance, mining status</p></div></div><div class="demo-card"><img src="/app-screenshots/mining.jpeg" alt="Mining"><div class="demo-card-content"><h4>⛏️ Mining</h4><p>Start sessions, track earnings</p></div></div><div class="demo-card"><img src="/app-screenshots/referral.jpeg" alt="Referral"><div class="demo-card-content"><h4>👥 Referral</h4><p>Invite friends, earn bonus</p></div></div><div class="demo-card"><img src="/app-screenshots/redeem.jpeg" alt="Redeem"><div class="demo-card-content"><h4>🏦 Bank Transfer</h4><p>Redeem to bank</p></div></div></div></section>
-<section class="section fade-in"><div class="section-header"><h2>✅ Transparency Promise</h2></div>
-<div class="highlight"><h3>📋 Important Points</h3><p><span class="check">✓</span> Weekly Redeem Limit applied</p><p><span class="check">✓</span> System has stability controls</p><p><span class="check">✓</span> No guaranteed income</p><p><span class="check">✓</span> Rate depends on user growth</p><p><span class="check">✓</span> NOT cryptocurrency or investment</p></div></section>
-<section class="section fade-in"><div class="section-header"><h2>👨‍💼 Founder Message</h2></div>
-<div class="founder-section"><p>We are not building a fake earning system.</p><p>We are building a <strong>sustainable reward ecosystem</strong> where users earn and use real value.</p><p>Your trust is our most valuable asset!</p><p class="founder-sign">— Founder, PARAS REWARD</p></div></section>
-<section class="cta fade-in"><h2>Start Your Journey Today</h2><p>Join 10,000+ users earning with PARAS REWARD</p><div class="btn-group" style="justify-content:center;"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 Join Paras Today</a></div></section>
-</div>
-<div class="hindi">
-<section class="hero"><div class="hero-content"><div class="tagline">🚀 भारत का सबसे भरोसेमंद रिवॉर्ड प्लेटफॉर्म</div><h1>भारत का पहला Real Utility Reward Ecosystem</h1><p class="subtitle">कमाओ → उपयोग करो → रिडीम करो</p><p>जहां यूजर्स दैनिक गतिविधियों से PRC कमाते हैं और रियल वैल्यू में बदलते हैं।</p><div class="stats"><div class="stat">👥 10,000+ यूजर्स</div><div class="stat">💰 ₹1Cr+ वैल्यू</div><div class="stat">🔒 सुरक्षित</div></div><div class="btn-group"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 कमाई शुरू करें</a><a href="/subscription" class="btn btn-secondary">👑 Elite बनें</a></div></div><div class="hero-image"><img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Paras"></div></section>
-<section class="section"><div class="section-header"><h2>⚡ कैसे काम करता है</h2></div><div class="flow-grid"><div class="flow-card"><span class="step">1</span><span class="card-icon">📲</span><h4>रजिस्टर</h4></div><div class="flow-card"><span class="step">2</span><span class="card-icon">📅</span><h4>डेली लॉगिन</h4></div><div class="flow-card"><span class="step">3</span><span class="card-icon">⛏️</span><h4>PRC कमाएं</h4></div><div class="flow-card"><span class="step">4</span><span class="card-icon">💰</span><h4>रिडीम</h4></div></div></section>
-<section class="section"><div class="section-header"><h2>📊 टोकनोमिक्स</h2></div><div class="tokenomics-container"><div class="chart-box"><canvas id="tokenChartHi"></canvas></div><div class="token-info"><div class="token-item"><span class="token-dot green"></span><span>यूजर्स</span><strong>50%</strong></div><div class="token-item"><span class="token-dot blue"></span><span>सिस्टम</span><strong>20%</strong></div><div class="token-item"><span class="token-dot yellow"></span><span>रिवार्ड्स</span><strong>15%</strong></div><div class="token-item"><span class="token-dot red"></span><span>बर्न</span><strong>15%</strong></div></div></div></section>
-<section class="section"><div class="section-header"><h2>✅ पारदर्शिता</h2></div><div class="highlight"><p><span class="check">✓</span> साप्ताहिक रिडीम लिमिट लागू</p><p><span class="check">✓</span> सिस्टम स्थिरता नियंत्रण</p><p><span class="check">✓</span> आय की गारंटी नहीं</p><p><span class="check">✓</span> यह cryptocurrency नहीं</p></div></section>
-<section class="section"><div class="section-header"><h2>👨‍💼 संस्थापक का संदेश</h2></div><div class="founder-section"><p>हम fake system नहीं बना रहे। हम <strong>sustainable ecosystem</strong> बना रहे हैं।</p><p class="founder-sign">— Founder, PARAS REWARD</p></div></section>
-<section class="cta"><h2>आज ही शुरू करें</h2><div class="btn-group" style="justify-content:center;"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 जॉइन करें</a></div></section>
-</div>
-<div class="marathi">
-<section class="hero"><div class="hero-content"><div class="tagline">🚀 भारतातील सर्वात विश्वसनीय रिवॉर्ड प्लॅटफॉर्म</div><h1>भारतातील पहिले Real Utility Reward Ecosystem</h1><p class="subtitle">कमवा → वापरा → Redeem करा</p><p>जिथे वापरकर्ते दैनंदिन क्रियाकलापांमधून PRC कमवतात आणि real value मध्ये रूपांतर करतात.</p><div class="stats"><div class="stat">👥 10,000+ युजर्स</div><div class="stat">💰 ₹1Cr+ व्हॅल्यू</div><div class="stat">🔒 सुरक्षित</div></div><div class="btn-group"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 कमाई सुरू करा</a><a href="/subscription" class="btn btn-secondary">👑 Elite व्हा</a></div></div><div class="hero-image"><img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Paras"></div></section>
-<section class="section"><div class="section-header"><h2>⚡ कसे काम करते</h2></div><div class="flow-grid"><div class="flow-card"><span class="step">1</span><span class="card-icon">📲</span><h4>रजिस्टर</h4></div><div class="flow-card"><span class="step">2</span><span class="card-icon">📅</span><h4>दररोज लॉगिन</h4></div><div class="flow-card"><span class="step">3</span><span class="card-icon">⛏️</span><h4>PRC कमवा</h4></div><div class="flow-card"><span class="step">4</span><span class="card-icon">💰</span><h4>Redeem</h4></div></div></section>
-<section class="section"><div class="section-header"><h2>📊 टोकनोमिक्स</h2></div><div class="tokenomics-container"><div class="chart-box"><canvas id="tokenChartMr"></canvas></div><div class="token-info"><div class="token-item"><span class="token-dot green"></span><span>युजर्स</span><strong>50%</strong></div><div class="token-item"><span class="token-dot blue"></span><span>सिस्टम</span><strong>20%</strong></div><div class="token-item"><span class="token-dot yellow"></span><span>रिवॉर्ड्स</span><strong>15%</strong></div><div class="token-item"><span class="token-dot red"></span><span>बर्न</span><strong>15%</strong></div></div></div></section>
-<section class="section"><div class="section-header"><h2>✅ पारदर्शकता</h2></div><div class="highlight"><p><span class="check">✓</span> साप्ताहिक Redeem लिमिट लागू</p><p><span class="check">✓</span> सिस्टम स्थिरता नियंत्रण</p><p><span class="check">✓</span> उत्पन्नाची गॅरंटी नाही</p><p><span class="check">✓</span> हे cryptocurrency नाही</p></div></section>
-<section class="section"><div class="section-header"><h2>👨‍💼 संस्थापकांचा संदेश</h2></div><div class="founder-section"><p>आम्ही fake system बनवत नाही. आम्ही <strong>sustainable ecosystem</strong> बनवत आहोत.</p><p class="founder-sign">— Founder, PARAS REWARD</p></div></section>
-<section class="cta"><h2>आजच सुरू करा</h2><div class="btn-group" style="justify-content:center;"><a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">🚀 जॉइन करा</a></div></section>
-</div>
-<div class="footer">© 2026 Paras Reward Technologies Pvt Ltd</div>
+
+<!-- Introduction -->
+<section class="section fade-in" id="about">
+    <div class="section-header">
+        <span class="section-badge">Introduction</span>
+        <h2>What is PARAS REWARD?</h2>
+        <p class="section-subtitle">A utility-based reward ecosystem built on transparency and sustainability</p>
+    </div>
+    
+    <div class="cards-grid">
+        <div class="card">
+            <div class="card-icon">🎯</div>
+            <h3>Utility-Based Rewards</h3>
+            <p>Earn points (PRC) through daily activities like mining, referrals, and engagement. Use them for real services - not just virtual rewards that expire.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">💳</div>
+            <h3>Real-World Usage</h3>
+            <p>Redeem your PRC for mobile recharge, bill payments, shopping vouchers, or direct bank transfers. Real value for your time.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🔄</div>
+            <h3>Sustainable Model</h3>
+            <p>Our controlled economy with burn mechanisms and weekly limits ensures long-term platform stability and fair value distribution.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Problem & Solution -->
+<section class="section fade-in">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+        <div>
+            <span class="section-badge" style="background:rgba(239,68,68,0.1);color:#ef4444;">The Problem</span>
+            <h2 style="margin:15px 0 20px;">Why Existing Reward Apps Fail</h2>
+            <div class="highlight-box" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05);">
+                <ul>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                        Points with no real usage or redemption value
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                        Unclear systems and hidden terms
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                        Fake promises and unrealistic income claims
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                        Users lose trust and eventually quit
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <span class="section-badge">Our Solution</span>
+            <h2 style="margin:15px 0 20px;">How PARAS is Different</h2>
+            <div class="highlight-box">
+                <ul>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Real utility - use PRC for actual services
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Transparent rules - everything documented
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Controlled economy - sustainable for long-term
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        No fake promises - honest communication
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vision & Mission -->
+<section class="section fade-in">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+        <div class="card" style="border-left:4px solid var(--accent);">
+            <div class="card-icon">🎯</div>
+            <h3>Our Vision</h3>
+            <p style="font-size:18px;color:var(--text);font-weight:500;">"To become India's most trusted utility-based reward ecosystem."</p>
+            <p style="margin-top:15px;">We envision a platform where every user feels valued, every point has real utility, and trust is built through transparency.</p>
+        </div>
+        <div class="card" style="border-left:4px solid var(--blue);">
+            <div class="card-icon">🚀</div>
+            <h3>Our Mission</h3>
+            <p style="font-size:18px;color:var(--text);font-weight:500;">"To provide a transparent, sustainable, and real-use earning platform."</p>
+            <p style="margin-top:15px;">We're committed to building a fair ecosystem where users can earn and use rewards for genuine services.</p>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="section fade-in" id="how-it-works">
+    <div class="section-header">
+        <span class="section-badge">Process</span>
+        <h2>How It Works</h2>
+        <p class="section-subtitle">Simple 4-step journey from registration to redemption</p>
+    </div>
+    
+    <div class="steps-container">
+        <div class="step">
+            <span class="step-number">1</span>
+            <div class="step-icon">📲</div>
+            <h4>Register</h4>
+            <p>Download app & create your account</p>
+        </div>
+        <div class="step">
+            <span class="step-number">2</span>
+            <div class="step-icon">📅</div>
+            <h4>Daily Login</h4>
+            <p>Login daily to stay active</p>
+        </div>
+        <div class="step">
+            <span class="step-number">3</span>
+            <div class="step-icon">⛏️</div>
+            <h4>Earn PRC</h4>
+            <p>Mine, refer, play & earn</p>
+        </div>
+        <div class="step">
+            <span class="step-number">4</span>
+            <div class="step-icon">💰</div>
+            <h4>Use / Redeem</h4>
+            <p>Recharge, bills, bank transfer</p>
+        </div>
+    </div>
+</section>
+
+<!-- Earning System -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Earning</span>
+        <h2>Earning System</h2>
+        <p class="section-subtitle">Multiple ways to grow your PRC balance</p>
+    </div>
+    
+    <div class="cards-grid">
+        <div class="card">
+            <div class="card-icon">🎁</div>
+            <h3>Daily Login Bonus</h3>
+            <p>Claim your daily bonus PRC just by logging in. Consistent activity is rewarded.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">⛏️</div>
+            <h3>Mining System</h3>
+            <p>Start mining sessions and earn PRC automatically over time. Mining rate depends on your subscription level.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">👥</div>
+            <h3>Referral Program</h3>
+            <p>Invite friends and earn bonus PRC from their activity. 3-level referral system (L1: 50%, L2: 20%, L3: 10%).</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🎮</div>
+            <h3>Games & Activities</h3>
+            <p>Participate in events, complete tasks, and earn additional rewards.</p>
+        </div>
+    </div>
+    
+    <div class="highlight-box warning" style="margin-top:40px;">
+        <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Important Note
+        </h3>
+        <p style="color:var(--text-muted);">Earnings depend on user activity, platform engagement, and system economics. We do NOT guarantee any fixed income. This is a utility-based reward platform, not an investment scheme.</p>
+    </div>
+</section>
+
+<!-- Tokenomics -->
+<section class="section fade-in" id="tokenomics">
+    <div class="section-header">
+        <span class="section-badge">Economics</span>
+        <h2>Tokenomics</h2>
+        <p class="section-subtitle">Sustainable distribution for long-term value</p>
+    </div>
+    
+    <div class="tokenomics-grid">
+        <div class="chart-container">
+            <canvas id="tokenChart"></canvas>
+        </div>
+        <div>
+            <div class="token-list">
+                <div class="token-item">
+                    <span class="token-dot green"></span>
+                    <div class="token-info">
+                        <div class="token-label">Users Allocation</div>
+                        <div class="token-value">50%</div>
+                    </div>
+                </div>
+                <div class="token-item">
+                    <span class="token-dot blue"></span>
+                    <div class="token-info">
+                        <div class="token-label">System Reserve</div>
+                        <div class="token-value">20%</div>
+                    </div>
+                </div>
+                <div class="token-item">
+                    <span class="token-dot yellow"></span>
+                    <div class="token-info">
+                        <div class="token-label">Rewards Pool</div>
+                        <div class="token-value">15%</div>
+                    </div>
+                </div>
+                <div class="token-item">
+                    <span class="token-dot red"></span>
+                    <div class="token-info">
+                        <div class="token-label">Burn Mechanism</div>
+                        <div class="token-value">15%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top:30px;padding:20px;">
+                <p style="color:var(--text-muted);font-size:14px;">
+                    <strong style="color:var(--accent);">🔥 Burn Mechanism:</strong> 
+                    15% of PRC is systematically burned to maintain value stability and prevent inflation. This ensures long-term sustainability of the ecosystem.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Revenue Model -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Business</span>
+        <h2>Revenue Model</h2>
+        <p class="section-subtitle">How we sustain the platform</p>
+    </div>
+    
+    <div class="cards-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+        <div class="card" style="text-align:center;">
+            <div class="card-icon" style="margin:0 auto 20px;">📺</div>
+            <h3>Advertising</h3>
+            <p>In-app ads via AdMob and partner networks</p>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div class="card-icon" style="margin:0 auto 20px;">👑</div>
+            <h3>VIP Membership</h3>
+            <p>Premium subscriptions with enhanced benefits</p>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div class="card-icon" style="margin:0 auto 20px;">💼</div>
+            <h3>Service Commission</h3>
+            <p>Small fees on recharges and bill payments</p>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div class="card-icon" style="margin:0 auto 20px;">🏪</div>
+            <h3>Marketplace</h3>
+            <p>Partner merchant fees and transactions</p>
+        </div>
+    </div>
+</section>
+
+<!-- Security & Trust -->
+<section class="section fade-in" id="security">
+    <div class="section-header">
+        <span class="section-badge">Security</span>
+        <h2>Security & Trust</h2>
+        <p class="section-subtitle">Your safety is our top priority</p>
+    </div>
+    
+    <div class="cards-grid">
+        <div class="card">
+            <div class="card-icon">🔐</div>
+            <h3>End-to-End Security</h3>
+            <p>All transactions are encrypted and processed through secure channels. Your data is protected with industry-standard security.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🛡️</div>
+            <h3>Fraud Detection</h3>
+            <p>AI-powered systems monitor for suspicious activity, protecting the platform and genuine users from abuse.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">⚡</div>
+            <h3>Controlled Withdrawals</h3>
+            <p>Weekly limits and verification processes ensure system stability and fair distribution of resources.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">✅</div>
+            <h3>Activity Validation</h3>
+            <p>Only genuine, active users benefit. Automated checks prevent fake accounts and manipulation.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Transparency -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Transparency</span>
+        <h2>Our Transparency Promise</h2>
+    </div>
+    
+    <div class="highlight-box" style="max-width:800px;margin:0 auto;">
+        <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Important Information for Users
+        </h3>
+        <ul>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>Weekly Redeem Limit:</strong> Limits are applied to maintain system stability and ensure fair access for all users.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>System Controls:</strong> Various controls are in place to ensure platform sustainability and prevent abuse.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>No Guaranteed Income:</strong> Earnings depend on activity, engagement, and platform economics.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span><strong>Dynamic Rates:</strong> PRC-to-INR conversion rates may change based on platform health and user growth.</span>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- Manual Process Note -->
+<section class="section fade-in">
+    <div class="highlight-box info" style="max-width:800px;margin:0 auto;">
+        <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Manual Processing Notice
+        </h3>
+        <p style="color:var(--text-muted);font-size:15px;line-height:1.8;">
+            Some withdrawal and service requests are processed <strong>manually</strong> to maintain system accuracy and security. 
+            This ensures every transaction is verified and genuine users are protected.
+            <br><br>
+            <strong>Processing may take 24-48 hours.</strong> Your patience is important and greatly appreciated.
+            We're committed to processing every legitimate request fairly.
+        </p>
+    </div>
+</section>
+
+<!-- Social Proof -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Community</span>
+        <h2>Growing Community</h2>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:30px;text-align:center;">
+        <div class="card">
+            <div style="font-size:42px;font-weight:800;color:var(--accent);margin-bottom:10px;">10K+</div>
+            <div style="color:var(--text-muted);">Active Users</div>
+        </div>
+        <div class="card">
+            <div style="font-size:42px;font-weight:800;color:var(--blue);margin-bottom:10px;">₹1Cr+</div>
+            <div style="color:var(--text-muted);">Transactions Processed</div>
+        </div>
+        <div class="card">
+            <div style="font-size:42px;font-weight:800;color:var(--gold);margin-bottom:10px;">50K+</div>
+            <div style="color:var(--text-muted);">Recharges Done</div>
+        </div>
+        <div class="card">
+            <div style="font-size:42px;font-weight:800;color:#a855f7;margin-bottom:10px;">4.2★</div>
+            <div style="color:var(--text-muted);">User Rating</div>
+        </div>
+    </div>
+</section>
+
+<!-- Benefits -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Benefits</span>
+        <h2>Why Choose PARAS?</h2>
+    </div>
+    
+    <div class="cards-grid">
+        <div class="card">
+            <div class="card-icon">💎</div>
+            <h3>Real Earning Opportunity</h3>
+            <p>Genuine rewards for your time and activity. No fake promises, just real value.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🎁</div>
+            <h3>Daily Rewards</h3>
+            <p>Consistent bonuses and mining rewards for active participation.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🛒</div>
+            <h3>Real Utility</h3>
+            <p>Use your PRC for actual services - recharge, bills, vouchers, bank transfer.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🔒</div>
+            <h3>Secure Platform</h3>
+            <p>Your data and earnings are protected with enterprise-grade security.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Disclaimer -->
+<section class="section fade-in">
+    <div class="disclaimer-box" style="max-width:800px;margin:0 auto;">
+        <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Legal Disclaimer
+        </h3>
+        <ul>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>Not an Investment Platform:</strong> PARAS REWARD is a utility-based reward system, not an investment or trading platform.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>No Guaranteed Income:</strong> Rewards depend on user activity, engagement, and platform economics. Past performance is not indicative of future results.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>Activity-Based Rewards:</strong> Earnings are based on genuine platform usage and activity, not deposits or investments.</span>
+            </li>
+            <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><strong>Utility Model:</strong> This platform follows a utility-based reward model compliant with applicable regulations.</span>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- Founder Message -->
+<section class="section fade-in">
+    <div class="section-header">
+        <span class="section-badge">Leadership</span>
+        <h2>Message from Founder</h2>
+    </div>
+    
+    <div class="founder-section">
+        <div class="founder-avatar">P</div>
+        <blockquote>
+            "We are not building a fake earning system.<br><br>
+            We are building a long-term sustainable ecosystem where users can earn and use real value.<br><br>
+            Your trust and patience are most important for us. Thank you for being part of this journey."
+        </blockquote>
+        <div class="founder-name">— Founder</div>
+        <div class="founder-title">Paras Reward Technologies Pvt Ltd</div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="section fade-in">
+    <div class="cta-section">
+        <h2>Ready to Start Your Journey?</h2>
+        <p>Join thousands of users already earning and using real rewards with PARAS</p>
+        <div class="btn-group" style="justify-content:center;">
+            <a href="https://play.google.com/store/apps/details?id=com.parasreward" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Start Earning Now
+            </a>
+            <a href="/subscription" class="btn btn-secondary">Join as VIP Member</a>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <h3>PARAS REWARD</h3>
+            <p>India's First Real Utility Reward Ecosystem. Earn, use, and redeem rewards for real services.</p>
+            <p style="margin-top:15px;">© 2026 Paras Reward Technologies Pvt Ltd<br>All Rights Reserved</p>
+        </div>
+        <div class="footer-links">
+            <h4>Quick Links</h4>
+            <a href="#about">About Us</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="#tokenomics">Tokenomics</a>
+            <a href="#security">Security</a>
+        </div>
+        <div class="footer-links">
+            <h4>Legal</h4>
+            <a href="/terms">Terms of Service</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/refund">Refund Policy</a>
+            <a href="/disclaimer">Disclaimer</a>
+        </div>
+        <div class="footer-links">
+            <h4>Contact</h4>
+            <a href="mailto:support@parasreward.com">support@parasreward.com</a>
+            <a href="https://www.parasreward.com">www.parasreward.com</a>
+            <a href="https://play.google.com/store/apps/details?id=com.parasreward">Download App</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>This document is for informational purposes only. PARAS REWARD is a utility-based reward platform, not an investment scheme. Please read our terms and disclaimer carefully.</p>
+    </div>
+</footer>
+
 <script>
-function setLang(lang){document.body.className=lang==='hi'?'lang-hi':lang==='mr'?'lang-mr':'';document.querySelectorAll('.lang-btn').forEach((btn,i)=>{btn.classList.toggle('active',(lang==='en'&&i===0)||(lang==='hi'&&i===1)||(lang==='mr'&&i===2));});}
-const chartConfig={type:'doughnut',data:{labels:['Users','System','Rewards','Burn'],datasets:[{data:[50,20,15,15],backgroundColor:['#22c55e','#3b82f6','#facc15','#ef4444'],borderWidth:0,hoverOffset:10}]},options:{responsive:true,cutout:'60%',plugins:{legend:{display:false}}}};
-new Chart(document.getElementById('tokenChart'),chartConfig);
-new Chart(document.getElementById('tokenChartHi'),chartConfig);
-new Chart(document.getElementById('tokenChartMr'),chartConfig);
-const observer=new IntersectionObserver((entries)=>{entries.forEach(entry=>{if(entry.isIntersecting)entry.target.classList.add('visible');});},{threshold:0.1});
-document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
+// Tokenomics Chart
+new Chart(document.getElementById('tokenChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Users (50%)', 'System (20%)', 'Rewards (15%)', 'Burn (15%)'],
+        datasets: [{
+            data: [50, 20, 15, 15],
+            backgroundColor: ['#10b981', '#3b82f6', '#fbbf24', '#ef4444'],
+            borderWidth: 0,
+            hoverOffset: 15
+        }]
+    },
+    options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// Scroll Animation
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
 </script>
+
 </body>
 </html>
