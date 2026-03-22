@@ -348,10 +348,26 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
   - Dark theme professional design with gradient accents
   - 3-language support: English, Hindi (हिंदी), Marathi (मराठी)
   - Language toggle in top-right corner
-  - All sections: Introduction, Vision, How It Works, Subscription Plans, Tokenomics, Referral System, Redemption Options, Security, Revenue Model, Growth Strategy, Roadmap, App Demo, Risk/Disclaimer, Founder's Message
-  - App Demo section with 4 Gemini-generated mockup images showing Dashboard, Mining, Referral, Bank Transfer
+  - All sections: Introduction, Vision, How It Works, Subscription Plans, Tokenomics with Chart.js Pie Chart, Referral System, Redemption Options, Security, Revenue Model, Growth Strategy, Roadmap, App Demo with REAL screenshots, Risk/Disclaimer, Founder's Message
   - Responsive design for mobile/desktop
 - **Testing**: Verified via screenshot tool - all sections render correctly, language switching works
+
+---
+
+## Payment Gateway Toggles (22 March 2026)
+
+### ✅ COMPLETED: Strict Enable/Disable for Payment Methods
+- **Files Modified**:
+  - `/app/backend/server.py`: Added `prc_subscription_enabled` flag to `/settings/public` and new `/admin/toggle-prc-subscription` endpoint
+  - `/app/frontend/src/pages/AdminSettings.js`: Added PRC payment toggle card
+  - `/app/frontend/src/pages/SubscriptionPlans.js`: Added conditional rendering for all 3 payment methods
+- **Features**:
+  - Manual UPI/Bank - toggle enable/disable
+  - Razorpay Gateway - toggle enable/disable  
+  - Pay with PRC - toggle enable/disable (NEW)
+  - Strict conditional rendering: When disabled, option does NOT appear on subscription page
+  - Admin PIN (123456) required for toggle actions
+- **Testing**: Backend 7/7 tests passed, Frontend code review passed
 
 ---
 
