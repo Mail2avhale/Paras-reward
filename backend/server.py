@@ -19784,6 +19784,91 @@ async def get_user_details(uid: str):
 
 # ========== USER 360° VIEW - COMPREHENSIVE ADMIN ANALYTICS ==========
 
+@api_router.get("/admin/user-360-debug")
+async def admin_user_360_debug(query: str = None):
+    """
+    Debug endpoint to identify what's causing User 360 to fail for specific users
+    """
+    if not query:
+        raise HTTPException(status_code=400, detail="Query required")
+    
+    query = query.strip()
+    debug_info = {"query": query, "steps": []}
+    
+    # Step 1: Find user
+    try:
+        search_conditions = [
+            {"uid": query},
+            {"email": {"$regex": f"^{query}$", "$options": "i"}},
+            {"phone": query},
+            {"referral_code": query.upper()}
+        ]
+        user = await db.users.find_one({"$or": search_conditions})
+        debug_info["steps"].append({"step": "find_user", "success": user is not None, "uid": user.get("uid") if user else None})
+        
+        if not user:
+            debug_info["error"] = "User not found"
+            return debug_info
+    except Exception as e:
+        debug_info["steps"].append({"step": "find_user", "success": False, "error": str(e)[:200]})
+        return debug_info
+    
+    uid = user.get("uid")
+    
+    # Step 2: Check user fields for problematic data
+    problematic_fields = []
+    for key, value in user.items():
+        try:
+            # Try to serialize each field
+            import json
+            json.dumps({key: str(value) if value is not None else None})
+        except Exception as e:
+            problematic_fields.append({"field": key, "type": type(value).__name__, "error": str(e)[:50]})
+    
+    debug_info["steps"].append({"step": "check_user_fields", "problematic_fields": problematic_fields})
+    
+    # Step 3: Check transactions aggregation
+    try:
+        total_mined_result = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "type": {"$in": ["mining", "tap_game", "referral"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+        ]).to_list(1)
+        debug_info["steps"].append({"step": "transactions_aggregation", "success": True, "count": len(total_mined_result)})
+    except Exception as e:
+        debug_info["steps"].append({"step": "transactions_aggregation", "success": False, "error": str(e)[:200]})
+    
+    # Step 4: Check referrals
+    try:
+        referrals_l1 = await db.users.find({"referred_by": uid}, {"uid": 1, "email": 1}).limit(5).to_list(5)
+        debug_info["steps"].append({"step": "referrals_query", "success": True, "l1_count": len(referrals_l1)})
+    except Exception as e:
+        debug_info["steps"].append({"step": "referrals_query", "success": False, "error": str(e)[:200]})
+    
+    # Step 5: Check subscription history
+    try:
+        sub_hist = await db.razorpay_orders.find({"user_id": uid}).limit(5).to_list(5)
+        debug_info["steps"].append({"step": "subscription_history", "success": True, "count": len(sub_hist)})
+    except Exception as e:
+        debug_info["steps"].append({"step": "subscription_history", "success": False, "error": str(e)[:200]})
+    
+    # Step 6: Check activity logs
+    try:
+        activities = await db.activity_logs.find({"user_id": uid}).limit(5).to_list(5)
+        debug_info["steps"].append({"step": "activity_logs", "success": True, "count": len(activities)})
+    except Exception as e:
+        debug_info["steps"].append({"step": "activity_logs", "success": False, "error": str(e)[:200]})
+    
+    debug_info["user_basic"] = {
+        "uid": uid,
+        "email": user.get("email"),
+        "subscription_plan": user.get("subscription_plan"),
+        "subscription_expiry": str(user.get("subscription_expiry")),
+        "created_at": str(user.get("created_at"))
+    }
+    
+    return debug_info
+
+
 @api_router.get("/admin/user-360")
 async def get_user_360_view(query: str):
     """
@@ -19825,7 +19910,11 @@ async def get_user_360_view(query: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    uid = user["uid"]
+    # Safely get uid with fallback
+    uid = user.get("uid")
+    if not uid:
+        logging.error(f"User 360: User found but no uid field! Query: {query}")
+        raise HTTPException(status_code=500, detail="User data corrupted - missing uid")
     
     # Remove sensitive data from user
     user.pop("password_hash", None)
@@ -19833,18 +19922,33 @@ async def get_user_360_view(query: str):
     user.pop("_id", None)
     
     # Helper function to convert ObjectIds and datetimes to serializable format
-    def sanitize_mongo_doc(doc):
+    def sanitize_mongo_doc(doc, depth=0):
         """Convert ObjectIds, datetimes and other non-serializable types to strings"""
-        if isinstance(doc, dict):
-            return {k: sanitize_mongo_doc(v) for k, v in doc.items()}
-        elif isinstance(doc, list):
-            return [sanitize_mongo_doc(item) for item in doc]
-        elif hasattr(doc, '__str__') and type(doc).__name__ == 'ObjectId':
-            return str(doc)
-        elif isinstance(doc, datetime):
-            return doc.isoformat()
-        else:
-            return doc
+        # Prevent infinite recursion
+        if depth > 20:
+            return str(doc) if doc is not None else None
+        
+        try:
+            if doc is None:
+                return None
+            elif isinstance(doc, dict):
+                return {str(k): sanitize_mongo_doc(v, depth + 1) for k, v in doc.items()}
+            elif isinstance(doc, list):
+                return [sanitize_mongo_doc(item, depth + 1) for item in doc]
+            elif hasattr(doc, '__str__') and type(doc).__name__ == 'ObjectId':
+                return str(doc)
+            elif isinstance(doc, datetime):
+                return doc.isoformat()
+            elif isinstance(doc, (int, float, str, bool)):
+                return doc
+            elif isinstance(doc, bytes):
+                return doc.decode('utf-8', errors='replace')
+            else:
+                # For any other type, convert to string
+                return str(doc)
+        except Exception as e:
+            logging.warning(f"sanitize_mongo_doc error: {e}, returning str")
+            return str(doc) if doc is not None else None
     
     # Sanitize user document
     user = sanitize_mongo_doc(user)
