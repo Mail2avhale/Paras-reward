@@ -478,6 +478,25 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 | User accessing other's data | ✅ 403 "Access denied" |
 | Admin accessing any user | ✅ Success |
 
+### ✅ COMPLETED: Frontend Role Validation + Extended IDOR (23 March 2026)
+
+1. **Frontend Role Validation via API** ✅
+   - Added `validateUserRole()` function in `/app/frontend/src/App.js`
+   - Calls `/api/auth/me` on app load to verify role server-side
+   - Auto-logout on invalid/expired token
+   - Updates localStorage if role mismatch detected
+
+2. **Extended IDOR Protection** ✅
+   - `/api/user/{uid}/weekly-limits` - Protected
+   - `/api/user/{uid}/redemption-stats` - Protected
+   - `/api/subscription/user/{uid}` - Protected
+   - `/api/subscription/history/{uid}` - Protected
+   - All return 403 for unauthorized access
+
+**Files Modified**:
+- `/app/frontend/src/App.js` - validateUserRole() function added
+- `/app/backend/server.py` - IDOR protection on 4 additional endpoints
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected

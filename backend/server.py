@@ -8747,11 +8747,26 @@ async def get_user_data(uid: str, request: Request):
     return user
 
 @api_router.get("/user/{uid}/weekly-limits")
-async def get_user_weekly_limits(uid: str):
+async def get_user_weekly_limits(uid: str, request: Request):
     """
     Get user's weekly redemption limits and current usage per service type.
     Shows cooldown timer after first redemption of the week.
+    SECURITY: IDOR Protection - Users can only access their own limits
     """
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(status_code=403, detail="Access denied. You can only view your own limits.")
+        except jwt.InvalidTokenError:
+            pass
+    
     try:
         user = await db.users.find_one({"uid": uid})
         if not user:
@@ -8833,7 +8848,7 @@ async def get_user_weekly_limits(uid: str):
 
 
 @api_router.get("/user/{uid}/redemption-stats")
-async def get_user_redemption_stats(uid: str):
+async def get_user_redemption_stats(uid: str, request: Request):
     """
     Comprehensive stats for user's PRC redemption and earnings.
     Shows:
@@ -8844,7 +8859,22 @@ async def get_user_redemption_stats(uid: str):
     - Orders count
     
     OPTIMIZED: Cached for 2 minutes to reduce DB load on Mining page
+    SECURITY: IDOR Protection - Users can only access their own stats
     """
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(status_code=403, detail="Access denied. You can only view your own stats.")
+        except jwt.InvalidTokenError:
+            pass
+    
     # Try cache first (2 minute TTL)
     cache_key = f"redemption_stats:{uid}"
     cached = await cache.get(cache_key)
@@ -9165,8 +9195,24 @@ async def get_subscription_plans():
     return result
 
 @api_router.get("/subscription/user/{uid}")
-async def get_user_subscription(uid: str):
-    """Get user's current subscription status"""
+async def get_user_subscription(uid: str, request: Request):
+    """Get user's current subscription status
+    SECURITY: IDOR Protection - Users can only access their own subscription
+    """
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(status_code=403, detail="Access denied. You can only view your own subscription.")
+        except jwt.InvalidTokenError:
+            pass
+    
     user = await db.users.find_one({"uid": uid}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -9186,8 +9232,24 @@ async def get_user_subscription(uid: str):
 
 
 @api_router.get("/subscription/history/{uid}")
-async def get_user_subscription_history(uid: str):
-    """Get user's complete subscription history including expired ones"""
+async def get_user_subscription_history(uid: str, request: Request):
+    """Get user's complete subscription history including expired ones
+    SECURITY: IDOR Protection - Users can only access their own history
+    """
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(status_code=403, detail="Access denied. You can only view your own history.")
+        except jwt.InvalidTokenError:
+            pass
+    
     user = await db.users.find_one({"uid": uid}, {"_id": 0, "name": 1, "subscription_plan": 1})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

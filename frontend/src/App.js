@@ -529,6 +529,51 @@ function App() {
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [loading, setLoading] = useState(true);
+  const [roleValidated, setRoleValidated] = useState(false);
+
+  // SECURITY: Validate user role via API instead of trusting localStorage
+  const validateUserRole = async (storedUser) => {
+    if (!storedUser?.token) return null;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${storedUser.token}`
+        }
+      });
+      
+      if (response.ok) {
+        const verifiedUser = await response.json();
+        // Update role from server-verified response
+        const updatedUser = {
+          ...storedUser,
+          role: verifiedUser.role,
+          is_admin: verifiedUser.is_admin,
+          verified: verifiedUser.verified
+        };
+        
+        // If role mismatch, update localStorage
+        if (storedUser.role !== verifiedUser.role) {
+          console.warn('[SECURITY] Role mismatch detected:', {
+            stored: storedUser.role,
+            verified: verifiedUser.role
+          });
+          localStorage.setItem("paras_user", JSON.stringify(updatedUser));
+        }
+        
+        return updatedUser;
+      } else if (response.status === 401) {
+        // Token expired or invalid - logout
+        console.warn('[SECURITY] Token invalid, clearing session');
+        localStorage.removeItem("paras_user");
+        localStorage.removeItem("paras_session_token");
+        return null;
+      }
+    } catch (error) {
+      console.error('[SECURITY] Role validation failed:', error);
+    }
+    return storedUser; // Fallback to stored user on network error
+  };
 
   // Refresh user data from server to ensure subscription info is current
   const refreshUserData = async (uid) => {
@@ -595,23 +640,47 @@ function App() {
   };
 
   useEffect(() => {
-    // If user exists, refresh data from server
-    // Add max timeout of 20 seconds to prevent stuck loading
+    // If user exists, validate role via API and refresh data from server
+    // SECURITY: Validate role server-side before allowing admin access
     let timeoutFallback;
     
-    if (user?.uid) {
-      timeoutFallback = setTimeout(() => {
-        console.warn('[APP] Loading fallback triggered after 20 seconds');
+    const initializeUser = async () => {
+      if (user?.uid) {
+        // First validate role via /auth/me API
+        const validatedUser = await validateUserRole(user);
+        
+        if (!validatedUser) {
+          // Token invalid - clear user
+          setUser(null);
+          setLoading(false);
+          setRoleValidated(true);
+          return;
+        }
+        
+        // Update user with validated role
+        if (validatedUser.role !== user.role) {
+          setUser(validatedUser);
+        }
+        setRoleValidated(true);
+        
+        // Then refresh full user data
+        await refreshUserData(user.uid);
         setLoading(false);
-      }, 20000);
-      
-      refreshUserData(user.uid).finally(() => {
-        clearTimeout(timeoutFallback);
+      } else {
         setLoading(false);
-      });
-    } else {
+        setRoleValidated(true);
+      }
+    };
+    
+    timeoutFallback = setTimeout(() => {
+      console.warn('[APP] Loading fallback triggered after 20 seconds');
       setLoading(false);
-    }
+      setRoleValidated(true);
+    }, 20000);
+    
+    initializeUser().finally(() => {
+      clearTimeout(timeoutFallback);
+    });
     
     return () => {
       if (timeoutFallback) clearTimeout(timeoutFallback);
