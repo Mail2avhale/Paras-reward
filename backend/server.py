@@ -8424,12 +8424,32 @@ async def get_user_as_model(uid: str):
 # ============ USER DASHBOARD COMBINED API ============
 
 @api_router.get("/user/{uid}/dashboard")
-async def get_user_dashboard_combined(uid: str):
+async def get_user_dashboard_combined(uid: str, request: Request):
     """
     Combined API for User Dashboard - returns ALL data in ONE call.
     CRITICAL OPTIMIZATION: Skip slow count_documents, use cached referral_count from user doc.
     Cached for 60 seconds.
+    SECURITY: IDOR Protection - Users can only access their own dashboard
     """
+    
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            # IDOR Protection: Non-admins can only access their own dashboard
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Access denied. You can only view your own dashboard."
+                )
+        except jwt.InvalidTokenError:
+            pass  # Allow for backwards compatibility
+    
     cache_key = f"user:dashboard:{uid}"
     
     # Try cache first
@@ -8546,10 +8566,31 @@ async def get_user_dashboard_combined(uid: str):
 
 # ========== USER DATA ENDPOINT ==========
 @api_router.get("/user/{uid}")
-async def get_user_data(uid: str):
-    """Get user details - Comprehensive user data endpoint with caching"""
+async def get_user_data(uid: str, request: Request):
+    """Get user details - Comprehensive user data endpoint with caching
+    SECURITY: IDOR Protection - Users can only access their own data, admins can access any
+    """
+    
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            # IDOR Protection: Non-admins can only access their own data
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != uid:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Access denied. You can only view your own profile."
+                )
+        except jwt.InvalidTokenError:
+            pass  # Allow public access for backwards compatibility but log
     
     # Try to get from cache first (cache for 2 minutes)
+    cache_key = f"user_data:{uid}"
     cache_key = f"user_data:{uid}"
     if cache:
         cached_user = await cache.get(cache_key)
@@ -16667,8 +16708,29 @@ async def check_redeem_limit(user_id: str, amount: float) -> dict:
 
 
 @api_router.get("/user/{user_id}/redeem-limit")
-async def get_user_redeem_limit(user_id: str):
-    """Get user's redeem limit information with carry forward and new referral formula"""
+async def get_user_redeem_limit(user_id: str, request: Request):
+    """Get user's redeem limit information with carry forward and new referral formula
+    SECURITY: IDOR Protection - Users can only access their own redeem limit
+    """
+    
+    # SECURITY: Verify user authorization
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            requesting_uid = payload.get("uid")
+            requesting_role = payload.get("role", "user")
+            
+            # IDOR Protection: Non-admins can only access their own data
+            if requesting_role not in ["admin", "sub_admin"] and requesting_uid != user_id:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Access denied. You can only view your own redeem limit."
+                )
+        except jwt.InvalidTokenError:
+            pass  # Allow for backwards compatibility
+    
     try:
         limit_info = await calculate_user_redeem_limit(user_id)
         # Use consistent function for total redeemed

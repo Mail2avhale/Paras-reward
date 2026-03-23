@@ -440,6 +440,61 @@ async def set_new_pin(request: Request):
         raise HTTPException(status_code=500, detail="Something went wrong. Please try again.")
 
 
+# ========== VERIFY CURRENT USER (ME) ENDPOINT ==========
+
+@router.get("/me")
+async def get_current_user_info(request: Request):
+    """
+    SECURITY: Validate current user session via JWT token
+    Returns user info if token is valid, 401 if not
+    Used by frontend to verify admin role via API instead of localStorage
+    """
+    # Extract Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = auth_header.replace("Bearer ", "")
+    
+    try:
+        import jwt
+        JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        
+        user_id = payload.get("uid")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Fetch fresh user data from database
+        user = await db.users.find_one(
+            {"uid": user_id},
+            {"_id": 0, "password": 0, "pin_hash": 0, "hashed_pin": 0, "password_hash": 0}
+        )
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if user.get("is_banned"):
+            raise HTTPException(status_code=403, detail="Account suspended")
+        
+        # Return verified user info
+        return {
+            "uid": user.get("uid"),
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "role": user.get("role", "user"),
+            "is_admin": user.get("role") in ["admin", "sub_admin"],
+            "is_active": user.get("is_active", True),
+            "verified": True
+        }
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 # ========== LOGIN ==========
 
 @router.post("/login")

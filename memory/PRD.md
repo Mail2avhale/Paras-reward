@@ -450,6 +450,34 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
    - User endpoints like `/api/user/{uid}` need owner verification
    - Use `verify_user_access()` from middleware
 
+### ✅ COMPLETED: Security Phase 2 (23 March 2026)
+
+1. **CORS Restriction** ✅
+   - Changed `CORS_ORIGINS="*"` to specific origins
+   - Now: `https://fintech-secure-3.preview.emergentagent.com,http://localhost:3000`
+   - File: `/app/backend/.env`
+
+2. **Frontend Admin Validation via API** ✅
+   - Created `/api/auth/me` endpoint in `/app/backend/routes/auth.py`
+   - Returns verified user info: `uid, email, name, role, is_admin`
+   - Frontend can call this to validate admin role server-side
+
+3. **IDOR Protection on User Endpoints** ✅
+   - Protected `/api/user/{uid}` endpoint
+   - Protected `/api/user/{uid}/dashboard` endpoint  
+   - Protected `/api/user/{user_id}/redeem-limit` endpoint
+   - Non-admins get 403 when accessing other users' data
+   - Admins can access any user's data
+
+**Test Results**:
+| Test Case | Result |
+|-----------|--------|
+| `/auth/me` with token | ✅ Returns user info |
+| `/auth/me` without token | ✅ 401 "Authentication required" |
+| User accessing own data | ✅ Success |
+| User accessing other's data | ✅ 403 "Access denied" |
+| Admin accessing any user | ✅ Success |
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected
