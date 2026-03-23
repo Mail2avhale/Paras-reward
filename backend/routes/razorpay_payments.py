@@ -182,7 +182,8 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
     """Verify payment signature and activate subscription - WITH DOUBLE VERIFICATION"""
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay not configured")
-    
+    order_claimed_for_processing = False
+
     try:
         # ==================== SECURITY: Rate Limiting ====================
         # Check if this order_id has been verified too many times (prevent replay attacks)
@@ -340,6 +341,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                     }
                 raise HTTPException(status_code=400, detail="Payment already processed successfully")
             raise HTTPException(status_code=400, detail="Order is being processed. Please wait.")
+        order_claimed_for_processing = True
         
         # ==================== STEP 6: VERIFY AMOUNT MATCHES ====================
         expected_amount = order.get("amount", 0)
@@ -347,23 +349,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             logging.warning(f"[RAZORPAY] Amount mismatch: expected {expected_amount}, got {payment_amount}")
             raise HTTPException(status_code=400, detail="Payment amount mismatch")
         
-        # ==================== STEP 7: UPDATE ORDER STATUS ====================
-        await db.razorpay_orders.update_one(
-            {"order_id": request.razorpay_order_id},
-            {
-                "$set": {
-                    "status": "paid",
-                    "payment_id": request.razorpay_payment_id,
-                    "signature": request.razorpay_signature,
-                    "payment_status": payment_status,
-                    "payment_captured": payment_captured,
-                    "verified_amount": payment_amount,
-                    "paid_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-        
-        # ==================== STEP 8: ACTIVATE USER SUBSCRIPTION ====================
+        # ==================== STEP 7: ACTIVATE USER SUBSCRIPTION ====================
         plan_type = order.get("plan_type", "monthly")
         plan_name = order.get("plan_name", "startup")
         duration_days = PLAN_DURATIONS.get(plan_type, 28)
@@ -421,7 +407,7 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         logging.info(f"[RAZORPAY] User {request.user_id}: New plan {duration_days} days + Remaining {remaining_days} days = Total {total_days} days")
         
         # Update user subscription (set BOTH expiry field names for consistency)
-        await db.users.update_one(
+        user_update_result = await db.users.update_one(
             {"uid": request.user_id},
             {
                 "$set": {
@@ -438,44 +424,84 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
                 }
             }
         )
+
+        if user_update_result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found for subscription activation")
+
+        # ==================== STEP 8: MARK ORDER AS PAID ====================
+        # Order becomes paid only after subscription activation succeeds.
+        await db.razorpay_orders.update_one(
+            {"order_id": request.razorpay_order_id},
+            {
+                "$set": {
+                    "status": "paid",
+                    "payment_id": request.razorpay_payment_id,
+                    "signature": request.razorpay_signature,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "verified_amount": payment_amount,
+                    "paid_at": datetime.now(timezone.utc)
+                },
+                "$unset": {
+                    "claimed_at": "",
+                    "claimed_by": ""
+                }
+            }
+        )
+        order_claimed_for_processing = False
         
         # ==================== STEP 9: LOG TRANSACTION ====================
-        await db.transactions.insert_one({
-            "user_id": request.user_id,
-            "type": "subscription_payment",
-            "amount": payment_amount,  # Use verified amount from Razorpay
-            "payment_id": request.razorpay_payment_id,
-            "order_id": request.razorpay_order_id,
-            "plan_name": plan_name,
-            "plan_type": plan_type,
-            "duration_days": duration_days,
-            "remaining_days_added": remaining_days,
-            "total_days": total_days,
-            "payment_status": payment_status,
-            "payment_captured": payment_captured,
-            "timestamp": now
-        })
+        try:
+            existing_txn = await db.transactions.find_one({
+                "payment_id": request.razorpay_payment_id,
+                "type": "subscription_payment"
+            })
+            if not existing_txn:
+                await db.transactions.insert_one({
+                    "user_id": request.user_id,
+                    "type": "subscription_payment",
+                    "amount": payment_amount,  # Use verified amount from Razorpay
+                    "payment_id": request.razorpay_payment_id,
+                    "order_id": request.razorpay_order_id,
+                    "plan_name": plan_name,
+                    "plan_type": plan_type,
+                    "duration_days": duration_days,
+                    "remaining_days_added": remaining_days,
+                    "total_days": total_days,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "timestamp": now
+                })
+        except Exception as txn_error:
+            logging.error(f"[RAZORPAY] Transaction log insert failed for payment {request.razorpay_payment_id}: {txn_error}")
         
         # ==================== STEP 10: ADD TO VIP_PAYMENTS FOR ADMIN DASHBOARD ====================
         # This is critical - admin dashboard shows vip_payments collection
-        await db.vip_payments.insert_one({
-            "user_id": request.user_id,
-            "order_id": request.razorpay_order_id,
-            "payment_id": request.razorpay_payment_id,
-            "amount": payment_amount,
-            "subscription_plan": plan_name,
-            "plan_type": plan_type,
-            "status": "approved",
-            "payment_method": "razorpay",
-            "payment_captured": payment_captured,
-            "new_expiry": expiry_date.isoformat(),
-            "duration_days": total_days,
-            "remaining_days_added": remaining_days,
-            "approved_at": now.isoformat(),
-            "created_at": now.isoformat(),
-            "auto_activated": True,
-            "activation_source": "razorpay_verify"
-        })
+        try:
+            existing_vip_payment = await db.vip_payments.find_one({
+                "payment_id": request.razorpay_payment_id
+            })
+            if not existing_vip_payment:
+                await db.vip_payments.insert_one({
+                    "user_id": request.user_id,
+                    "order_id": request.razorpay_order_id,
+                    "payment_id": request.razorpay_payment_id,
+                    "amount": payment_amount,
+                    "subscription_plan": plan_name,
+                    "plan_type": plan_type,
+                    "status": "approved",
+                    "payment_method": "razorpay",
+                    "payment_captured": payment_captured,
+                    "new_expiry": expiry_date.isoformat(),
+                    "duration_days": total_days,
+                    "remaining_days_added": remaining_days,
+                    "approved_at": now.isoformat(),
+                    "created_at": now.isoformat(),
+                    "auto_activated": True,
+                    "activation_source": "razorpay_verify"
+                })
+        except Exception as vip_payment_error:
+            logging.error(f"[RAZORPAY] vip_payments insert failed for payment {request.razorpay_payment_id}: {vip_payment_error}")
         
         # ==================== STEP 11: GENERATE GST INVOICE ====================
         try:
@@ -551,9 +577,53 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             }
         }
         
-    except HTTPException:
+    except HTTPException as http_exc:
+        if db is not None and order_claimed_for_processing:
+            try:
+                await db.razorpay_orders.update_one(
+                    {
+                        "order_id": request.razorpay_order_id,
+                        "status": "processing",
+                        "claimed_by": "verify_payment"
+                    },
+                    {
+                        "$set": {
+                            "status": "created",
+                            "verification_rollback_reason": str(getattr(http_exc, "detail", "verify_payment_failed")),
+                            "verification_rollback_at": datetime.now(timezone.utc)
+                        },
+                        "$unset": {
+                            "claimed_at": "",
+                            "claimed_by": ""
+                        }
+                    }
+                )
+            except Exception as rollback_error:
+                logging.error(f"[RAZORPAY] Failed to rollback order {request.razorpay_order_id} from processing: {rollback_error}")
         raise
     except Exception as e:
+        if db is not None and order_claimed_for_processing:
+            try:
+                await db.razorpay_orders.update_one(
+                    {
+                        "order_id": request.razorpay_order_id,
+                        "status": "processing",
+                        "claimed_by": "verify_payment"
+                    },
+                    {
+                        "$set": {
+                            "status": "created",
+                            "verification_rollback_reason": f"Unhandled verify-payment error: {str(e)}",
+                            "verification_rollback_at": datetime.now(timezone.utc)
+                        },
+                        "$unset": {
+                            "claimed_at": "",
+                            "claimed_by": ""
+                        }
+                    }
+                )
+            except Exception as rollback_error:
+                logging.error(f"[RAZORPAY] Failed to rollback order {request.razorpay_order_id} after exception: {rollback_error}")
         logging.error(f"[RAZORPAY] Payment verification failed: {e}")
         raise HTTPException(status_code=500, detail="Payment verification failed. Please contact support if amount was deducted.")
 
@@ -925,6 +995,31 @@ async def update_order_status(request: Request):
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
         
         if db is not None:
+            existing_order = await db.razorpay_orders.find_one({"order_id": order_id})
+            if not existing_order:
+                raise HTTPException(status_code=404, detail="Order not found")
+
+            current_status = existing_order.get("status")
+            if current_status == "paid":
+                logging.warning(f"[RAZORPAY] Ignored status downgrade for paid order {order_id} -> {status}")
+                return {
+                    "success": True,
+                    "message": "Order is already paid. Status unchanged.",
+                    "order_id": order_id,
+                    "current_status": current_status,
+                    "ignored": True
+                }
+
+            if current_status == "processing":
+                logging.warning(f"[RAZORPAY] Ignored frontend status update for processing order {order_id} -> {status}")
+                return {
+                    "success": True,
+                    "message": "Order is being verified. Status unchanged.",
+                    "order_id": order_id,
+                    "current_status": current_status,
+                    "ignored": True
+                }
+
             await db.razorpay_orders.update_one(
                 {"order_id": order_id},
                 {
