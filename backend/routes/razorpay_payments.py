@@ -345,25 +345,27 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         expected_amount = order.get("amount", 0)
         if abs(payment_amount - expected_amount) > 1:  # Allow ₹1 tolerance
             logging.warning(f"[RAZORPAY] Amount mismatch: expected {expected_amount}, got {payment_amount}")
+            # ROLLBACK: Reset order status since verification failed
+            await db.razorpay_orders.update_one(
+                {"order_id": request.razorpay_order_id, "status": "processing"},
+                {"$set": {"status": "created", "rollback_reason": "amount_mismatch", "rollback_at": datetime.now(timezone.utc)}}
+            )
             raise HTTPException(status_code=400, detail="Payment amount mismatch")
         
-        # ==================== STEP 7: UPDATE ORDER STATUS ====================
-        await db.razorpay_orders.update_one(
-            {"order_id": request.razorpay_order_id},
-            {
-                "$set": {
-                    "status": "paid",
-                    "payment_id": request.razorpay_payment_id,
-                    "signature": request.razorpay_signature,
-                    "payment_status": payment_status,
-                    "payment_captured": payment_captured,
-                    "verified_amount": payment_amount,
-                    "paid_at": datetime.now(timezone.utc)
-                }
-            }
-        )
+        # ==================== STEP 6.1: VERIFY USER EXISTS ====================
+        # CRITICAL: Check user exists before any activation
+        user = await db.users.find_one({"uid": request.user_id})
+        if not user:
+            logging.error(f"[RAZORPAY] CRITICAL - User not found: {request.user_id}")
+            # ROLLBACK: Reset order status since user doesn't exist
+            await db.razorpay_orders.update_one(
+                {"order_id": request.razorpay_order_id, "status": "processing"},
+                {"$set": {"status": "created", "rollback_reason": "user_not_found", "rollback_at": datetime.now(timezone.utc)}}
+            )
+            raise HTTPException(status_code=404, detail="User not found. Please contact support.")
         
-        # ==================== STEP 8: ACTIVATE USER SUBSCRIPTION ====================
+        # ==================== STEP 7: ACTIVATE USER SUBSCRIPTION FIRST ====================
+        # IMPORTANT: Activate subscription BEFORE marking order as paid (safer sequence)
         plan_type = order.get("plan_type", "monthly")
         plan_name = order.get("plan_name", "startup")
         duration_days = PLAN_DURATIONS.get(plan_type, 28)
@@ -371,50 +373,46 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         now = datetime.now(timezone.utc)
         
         # Check if user has existing active subscription - ADD remaining days
-        user = await db.users.find_one({"uid": request.user_id})
         remaining_days = 0
         old_plan = None
         old_expiry_str = None
         
-        if user:
-            old_plan = user.get("subscription_plan")
-            
-            # Check BOTH field names for expiry (subscription_expires AND subscription_expiry)
-            raw_expires = user.get("subscription_expires")
-            raw_expiry = user.get("subscription_expiry")
-            raw_vip = user.get("vip_expiry")
-            
-            logging.info(f"[RAZORPAY] User {request.user_id} expiry fields - subscription_expires: {raw_expires} (type: {type(raw_expires).__name__}), subscription_expiry: {raw_expiry}, vip_expiry: {raw_vip}")
-            
-            existing_expiry = raw_expires or raw_expiry or raw_vip
-            
-            if existing_expiry:
-                old_expiry_str = str(existing_expiry)
-                
-                # Handle both datetime object and string
-                if isinstance(existing_expiry, str):
-                    try:
-                        existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
-                        logging.info(f"[RAZORPAY] Parsed expiry string to datetime: {existing_expiry}")
-                    except Exception as e:
-                        logging.warning(f"[RAZORPAY] Could not parse expiry date: {existing_expiry}, error: {e}")
-                        existing_expiry = None
-                
-                # Make sure existing_expiry is timezone aware
-                if existing_expiry:
-                    if existing_expiry.tzinfo is None:
-                        existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
-                    
-                    if existing_expiry > now:
-                        # User has active subscription - calculate remaining days
-                        remaining_days = (existing_expiry - now).days
-                        logging.info(f"[RAZORPAY] ✅ User {request.user_id} has {remaining_days} days remaining from {old_plan}, will be added to new plan")
-                    else:
-                        logging.info(f"[RAZORPAY] User {request.user_id} subscription expired on {existing_expiry}, no days to add")
-            else:
-                logging.info(f"[RAZORPAY] User {request.user_id} has no existing subscription expiry")
+        old_plan = user.get("subscription_plan")
         
-        # New expiry = today + new plan duration + remaining days
+        # Check BOTH field names for expiry (subscription_expires AND subscription_expiry)
+        raw_expires = user.get("subscription_expires")
+        raw_expiry = user.get("subscription_expiry")
+        raw_vip = user.get("vip_expiry")
+        
+        logging.info(f"[RAZORPAY] User {request.user_id} expiry fields - subscription_expires: {raw_expires} (type: {type(raw_expires).__name__}), subscription_expiry: {raw_expiry}, vip_expiry: {raw_vip}")
+        
+        existing_expiry = raw_expires or raw_expiry or raw_vip
+        
+        if existing_expiry:
+            old_expiry_str = str(existing_expiry)
+            
+            # Handle both datetime object and string
+            if isinstance(existing_expiry, str):
+                try:
+                    existing_expiry = datetime.fromisoformat(existing_expiry.replace('Z', '+00:00'))
+                    logging.info(f"[RAZORPAY] Parsed expiry string to datetime: {existing_expiry}")
+                except Exception as e:
+                    logging.warning(f"[RAZORPAY] Could not parse expiry date: {existing_expiry}, error: {e}")
+                    existing_expiry = None
+            
+            # Make sure existing_expiry is timezone aware
+            if existing_expiry:
+                if existing_expiry.tzinfo is None:
+                    existing_expiry = existing_expiry.replace(tzinfo=timezone.utc)
+                
+                if existing_expiry > now:
+                    # User has active subscription - calculate remaining days
+                    remaining_days = (existing_expiry - now).days
+                    logging.info(f"[RAZORPAY] ✅ User {request.user_id} has {remaining_days} days remaining from {old_plan}, will be added to new plan")
+                else:
+                    logging.info(f"[RAZORPAY] User {request.user_id} subscription expired on {existing_expiry}, no days to add")
+        else:
+            logging.info(f"[RAZORPAY] User {request.user_id} has no existing subscription expiry")
         total_days = duration_days + remaining_days
         expiry_date = now + timedelta(days=total_days)
         
@@ -439,43 +437,54 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             }
         )
         
-        # ==================== STEP 9: LOG TRANSACTION ====================
-        await db.transactions.insert_one({
-            "user_id": request.user_id,
-            "type": "subscription_payment",
-            "amount": payment_amount,  # Use verified amount from Razorpay
-            "payment_id": request.razorpay_payment_id,
-            "order_id": request.razorpay_order_id,
-            "plan_name": plan_name,
-            "plan_type": plan_type,
-            "duration_days": duration_days,
-            "remaining_days_added": remaining_days,
-            "total_days": total_days,
-            "payment_status": payment_status,
-            "payment_captured": payment_captured,
-            "timestamp": now
-        })
+        # ==================== STEP 9: LOG TRANSACTION (IDEMPOTENT) ====================
+        # Check if transaction already exists to prevent duplicates
+        existing_txn = await db.transactions.find_one({"payment_id": request.razorpay_payment_id, "type": "subscription_payment"})
+        if not existing_txn:
+            try:
+                await db.transactions.insert_one({
+                    "user_id": request.user_id,
+                    "type": "subscription_payment",
+                    "amount": payment_amount,  # Use verified amount from Razorpay
+                    "payment_id": request.razorpay_payment_id,
+                    "order_id": request.razorpay_order_id,
+                    "plan_name": plan_name,
+                    "plan_type": plan_type,
+                    "duration_days": duration_days,
+                    "remaining_days_added": remaining_days,
+                    "total_days": total_days,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "timestamp": now
+                })
+            except Exception as txn_error:
+                logging.warning(f"[RAZORPAY] Transaction insert error (non-fatal): {txn_error}")
         
-        # ==================== STEP 10: ADD TO VIP_PAYMENTS FOR ADMIN DASHBOARD ====================
-        # This is critical - admin dashboard shows vip_payments collection
-        await db.vip_payments.insert_one({
-            "user_id": request.user_id,
-            "order_id": request.razorpay_order_id,
-            "payment_id": request.razorpay_payment_id,
-            "amount": payment_amount,
-            "subscription_plan": plan_name,
-            "plan_type": plan_type,
-            "status": "approved",
-            "payment_method": "razorpay",
-            "payment_captured": payment_captured,
-            "new_expiry": expiry_date.isoformat(),
-            "duration_days": total_days,
-            "remaining_days_added": remaining_days,
-            "approved_at": now.isoformat(),
-            "created_at": now.isoformat(),
-            "auto_activated": True,
-            "activation_source": "razorpay_verify"
-        })
+        # ==================== STEP 10: ADD TO VIP_PAYMENTS (IDEMPOTENT) ====================
+        # Check if vip_payment already exists to prevent duplicates
+        existing_vip = await db.vip_payments.find_one({"payment_id": request.razorpay_payment_id})
+        if not existing_vip:
+            try:
+                await db.vip_payments.insert_one({
+                    "user_id": request.user_id,
+                    "order_id": request.razorpay_order_id,
+                    "payment_id": request.razorpay_payment_id,
+                    "amount": payment_amount,
+                    "subscription_plan": plan_name,
+                    "plan_type": plan_type,
+                    "status": "approved",
+                    "payment_method": "razorpay",
+                    "payment_captured": payment_captured,
+                    "new_expiry": expiry_date.isoformat(),
+                    "duration_days": total_days,
+                    "remaining_days_added": remaining_days,
+                    "approved_at": now.isoformat(),
+                    "created_at": now.isoformat(),
+                    "auto_activated": True,
+                    "activation_source": "razorpay_verify"
+                })
+            except Exception as vip_error:
+                logging.warning(f"[RAZORPAY] VIP payment insert error (non-fatal): {vip_error}")
         
         # ==================== STEP 11: GENERATE GST INVOICE ====================
         try:
@@ -536,6 +545,24 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
             logging.error(f"[INVOICE] Invoice generation error: {invoice_error}")
             # Don't fail payment verification if invoice generation fails
         
+        # ==================== STEP 12: MARK ORDER AS PAID (AFTER SUBSCRIPTION SUCCESS) ====================
+        # IMPORTANT: Only mark as paid AFTER subscription is successfully activated
+        await db.razorpay_orders.update_one(
+            {"order_id": request.razorpay_order_id},
+            {
+                "$set": {
+                    "status": "paid",
+                    "payment_id": request.razorpay_payment_id,
+                    "signature": request.razorpay_signature,
+                    "payment_status": payment_status,
+                    "payment_captured": payment_captured,
+                    "verified_amount": payment_amount,
+                    "paid_at": datetime.now(timezone.utc),
+                    "subscription_activated": True
+                }
+            }
+        )
+        
         logging.info(f"[RAZORPAY] SUCCESS - Subscription activated for user {request.user_id}, plan: {plan_name}, total days: {total_days}")
         
         return {
@@ -555,6 +582,15 @@ async def verify_razorpay_payment(request: VerifyPaymentRequest):
         raise
     except Exception as e:
         logging.error(f"[RAZORPAY] Payment verification failed: {e}")
+        # ROLLBACK: If any unexpected error, reset order status so user can retry
+        try:
+            await db.razorpay_orders.update_one(
+                {"order_id": request.razorpay_order_id, "status": "processing"},
+                {"$set": {"status": "created", "rollback_reason": f"error: {str(e)[:100]}", "rollback_at": datetime.now(timezone.utc)}}
+            )
+            logging.info(f"[RAZORPAY] Rolled back order {request.razorpay_order_id} to created status")
+        except Exception as rollback_error:
+            logging.error(f"[RAZORPAY] Rollback failed: {rollback_error}")
         raise HTTPException(status_code=500, detail="Payment verification failed. Please contact support if amount was deducted.")
 
 
