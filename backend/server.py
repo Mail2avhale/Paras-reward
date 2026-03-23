@@ -20078,12 +20078,15 @@ async def admin_user_360_debug(query: str = None):
 
 
 @api_router.get("/admin/user-360")
-async def get_user_360_view(query: str):
+async def get_user_360_view(query: str, request: Request):
     """
     Get comprehensive 360° view of a user for admin analytics.
     Search by: email, mobile, Aadhaar (last 4 digits), PAN, UID, or referral code.
     Returns: user profile, financial summary, referral network, all transactions, and activity timeline.
     """
+    # Log the incoming request for debugging
+    logging.info(f"[USER360] Request received - query: {query}")
+    
     if not query or len(query.strip()) < 2:
         raise HTTPException(status_code=400, detail="Search query too short")
     
@@ -20111,8 +20114,9 @@ async def get_user_360_view(query: str):
     # Find user
     try:
         user = await db.users.find_one({"$or": search_conditions})
+        logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
     except Exception as e:
-        logging.error(f"User 360 search error: {str(e)}")
+        logging.error(f"[USER360] Search error: {str(e)} for query: {query}")
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)[:100]}")
     
     if not user:

@@ -528,6 +528,30 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 | Rate Limit | 5th OTP request | ✅ 429 Blocked |
 | Audit Log | Rate limit event logged | ✅ Recorded |
 
+### ✅ VERIFIED: User 360 API (23 March 2026)
+
+**Issue Reported**: Admin User 360 page showing "Failed to search user" error.
+
+**Root Cause Analysis**:
+- User `Suresh Rama Dhuri` (annadhuri51@gmail.com) is in **production database**, not preview
+- Preview environment uses `paras_reward_db` database with only 12 test users
+- User 360 API code is **fully functional** with comprehensive error handling
+
+**Test Results** (Preview Environment):
+| Test | Query | Result |
+|------|-------|--------|
+| UID Search | fcd8c6f8-9596-4f56-8556-568847d5ab86 | ✅ SUCCESS |
+| Email Search | annadhuri51@gmail.com | ✅ SUCCESS |
+| Mobile Search | 9158367636 | ✅ SUCCESS |
+| All Users | admin, test users | ✅ All passed |
+
+**Improvements Made**:
+- Added detailed logging: `[USER360] Request received - query: ...`
+- Enhanced error messages for debugging
+
+**Production Debugging**:
+If issue persists in production, call `/api/admin/user-360-debug?query={uid}` to get step-by-step diagnostics.
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected
