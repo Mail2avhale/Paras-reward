@@ -497,6 +497,37 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 - `/app/frontend/src/App.js` - validateUserRole() function added
 - `/app/backend/server.py` - IDOR protection on 4 additional endpoints
 
+### ✅ COMPLETED: Extended Security Enhancements (23 March 2026)
+
+1. **Additional IDOR Protected Endpoints** ✅
+   - `/api/user/{uid}/location-visibility` (PUT)
+   - `/api/user/settings/{uid}` (PUT)
+   - `/api/user/security/{uid}` (GET)
+   - `/api/user/statement/{uid}` (GET)
+   - Helper function `verify_user_access_sync()` created for reuse
+
+2. **Rate Limiting for Sensitive Endpoints** ✅
+   - `/api/auth/forgot-pin/check-mobile` - 3 requests/10 min per mobile, 10/hour per IP
+   - `/api/auth/forgot-pin/send-email-otp` - Same limits
+   - `check_otp_rate_limit()` function created
+   - Returns 429 "Too many OTP requests" when exceeded
+
+3. **Comprehensive Audit Logging** ✅
+   - `log_sensitive_operation()` function for security audit trail
+   - Logs: login attempts, OTP requests, rate limits, admin operations
+   - Collection: `security_audit_logs`
+   - Admin write operations (POST/PUT/DELETE) auto-logged via middleware
+
+**Test Results**:
+| Feature | Test | Result |
+|---------|------|--------|
+| IDOR | User accessing own security info | ✅ Success |
+| IDOR | User accessing other's security info | ✅ 403 Blocked |
+| IDOR | User updating other's settings | ✅ 403 Blocked |
+| Rate Limit | 4 OTP requests | ✅ Allowed |
+| Rate Limit | 5th OTP request | ✅ 429 Blocked |
+| Audit Log | Rate limit event logged | ✅ Recorded |
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected

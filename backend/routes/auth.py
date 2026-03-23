@@ -855,9 +855,34 @@ async def forgot_password(email: str):
 # ========== FORGOT PIN WITH OTP ==========
 
 @router.post("/forgot-pin/check-mobile")
-async def forgot_pin_check_mobile(request: ForgotPinRequest):
-    """Check if mobile number exists and send OTP"""
-    mobile = request.mobile.strip()
+async def forgot_pin_check_mobile(request_data: ForgotPinRequest, request: Request):
+    """Check if mobile number exists and send OTP
+    SECURITY: Rate limited to prevent abuse
+    """
+    # Import rate limit helper from server
+    import sys
+    sys.path.insert(0, '/app/backend')
+    
+    mobile = request_data.mobile.strip()
+    
+    # Get client IP for rate limiting
+    client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
+    
+    # Check rate limit (3 per 10 min per mobile, 10 per hour per IP)
+    from server import check_otp_rate_limit, log_sensitive_operation
+    allowed, rate_msg = check_otp_rate_limit(mobile, client_ip)
+    if not allowed:
+        # Log rate limit hit
+        asyncio.create_task(log_sensitive_operation(
+            operation_type="otp_rate_limited",
+            target_uid=mobile,
+            ip_address=client_ip,
+            success=False,
+            error_message=rate_msg
+        ))
+        raise HTTPException(status_code=429, detail=rate_msg)
     
     if not mobile.startswith("91") and not mobile.startswith("+91"):
         mobile = "91" + mobile
@@ -1027,11 +1052,31 @@ class ForgotPinEmailRequest(BaseModel):
     email: str
 
 @router.post("/forgot-pin/send-email-otp")
-async def forgot_pin_send_email_otp(request: ForgotPinEmailRequest):
-    """Send OTP to user's email for PIN reset"""
+async def forgot_pin_send_email_otp(request_data: ForgotPinEmailRequest, request: Request):
+    """Send OTP to user's email for PIN reset
+    SECURITY: Rate limited to prevent abuse
+    """
     import random
     
-    email = request.email.strip().lower()
+    email = request_data.email.strip().lower()
+    
+    # Get client IP for rate limiting
+    client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
+    
+    # Check rate limit
+    from server import check_otp_rate_limit, log_sensitive_operation
+    allowed, rate_msg = check_otp_rate_limit(email, client_ip)
+    if not allowed:
+        asyncio.create_task(log_sensitive_operation(
+            operation_type="email_otp_rate_limited",
+            target_uid=email,
+            ip_address=client_ip,
+            success=False,
+            error_message=rate_msg
+        ))
+        raise HTTPException(status_code=429, detail=rate_msg)
     
     # Find user by email
     user = await db.users.find_one({"email": email})
