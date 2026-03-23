@@ -4225,15 +4225,16 @@ async def get_base_rate():
 
 async def check_user_active_status(user_uid: str, user_data: dict = None) -> tuple:
     """
-    Check if a user is ACTIVE based on multiple criteria:
-    1. Has active mining session (mining_active = True AND session not expired)
-    2. Collected bonus in last 24 hours (mining transaction)
-    3. Played Tap Game or Rain Drop in last 24 hours
+    Check if a user is ACTIVE for referral counting.
+    
+    STRICT CRITERIA - ALL must be TRUE:
+    1. Elite Subscription (subscription_plan = "elite")
+    2. Subscription NOT Expired (subscription_expiry > now)
+    3. Real-time Mining Active (mining_active = True AND session_end > now)
     
     Returns: (is_active: bool, active_reason: str)
     """
     now = datetime.now(timezone.utc)
-    twenty_four_hours_ago = now - timedelta(hours=24)
     
     # Get user data if not provided
     if user_data is None:
@@ -4241,23 +4242,72 @@ async def check_user_active_status(user_uid: str, user_data: dict = None) -> tup
         if not user_data:
             return False, "user_not_found"
     
-    # ========== UPDATED: Active = Elite + Mining Active Flag (ignore session end) ==========
-    subscription_plan = (user_data.get("subscription_plan") or "").lower()
+    # ========== CONDITION 1: Elite Subscription ==========
+    subscription_plan = (user_data.get("subscription_plan") or "").lower().strip()
     is_elite = subscription_plan == "elite"
     
-    # Check mining_active flag only (ignore session end time)
+    if not is_elite:
+        return False, "not_elite_plan"
+    
+    # ========== CONDITION 2: Subscription NOT Expired ==========
+    subscription_expiry = user_data.get("subscription_expiry")
+    is_subscription_active = False
+    
+    if subscription_expiry:
+        try:
+            if isinstance(subscription_expiry, str):
+                expiry_dt = datetime.fromisoformat(subscription_expiry.replace('Z', '+00:00'))
+            elif isinstance(subscription_expiry, datetime):
+                expiry_dt = subscription_expiry
+            else:
+                expiry_dt = None
+            
+            if expiry_dt:
+                if expiry_dt.tzinfo is None:
+                    expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+                
+                is_subscription_active = expiry_dt > now
+        except Exception as e:
+            logging.warning(f"Error parsing subscription_expiry for {user_uid}: {e}")
+            is_subscription_active = False
+    
+    if not is_subscription_active:
+        return False, "elite_but_subscription_expired"
+    
+    # ========== CONDITION 3: Real-time Mining Active ==========
     mining_active = user_data.get("mining_active")
     is_mining_flag = mining_active is True or mining_active == "true" or mining_active == True
     
-    # Active only if Elite AND mining_active flag is True
-    if is_elite and is_mining_flag:
-        return True, "elite_and_mining_flag_true"
-    elif is_elite:
-        return False, "elite_but_mining_flag_false"
-    elif is_mining_flag:
-        return False, "mining_but_not_elite"
+    if not is_mining_flag:
+        return False, "elite_active_but_mining_not_started"
     
-    return False, "not_elite_not_mining"
+    # Check mining session end time (real-time check)
+    session_end = user_data.get("mining_session_end")
+    is_session_active = False
+    
+    if session_end:
+        try:
+            if isinstance(session_end, str):
+                session_end_dt = datetime.fromisoformat(session_end.replace('Z', '+00:00'))
+            elif isinstance(session_end, datetime):
+                session_end_dt = session_end
+            else:
+                session_end_dt = None
+            
+            if session_end_dt:
+                if session_end_dt.tzinfo is None:
+                    session_end_dt = session_end_dt.replace(tzinfo=timezone.utc)
+                
+                is_session_active = session_end_dt > now
+        except Exception as e:
+            logging.warning(f"Error parsing mining_session_end for {user_uid}: {e}")
+            is_session_active = False
+    
+    if not is_session_active:
+        return False, "elite_active_but_mining_session_expired"
+    
+    # ========== ALL CONDITIONS MET ==========
+    return True, "elite_active_subscription_and_realtime_mining"
 
 
 # Legacy: Keep old conditions commented for reference
@@ -4502,13 +4552,12 @@ async def count_active_referrals_by_level(user_id: str):
     """
     Count active referrals at each level (up to 5 levels)
     
-    ⚠️ ANTI-FRAUD: Only PAID subscribers count!
-    Explorer (FREE) users do NOT contribute to referral count.
+    ⚠️ STRICT CRITERIA - User counts as active referral ONLY IF ALL TRUE:
+    1. Elite Subscription (subscription_plan = "elite")
+    2. Subscription NOT Expired (subscription_expiry > now)
+    3. Real-time Mining Active (mining_active = True AND session_end > now)
     
-    Active = ANY of:
-      1. Active mining session
-      2. Bonus collected in last 24h
-      3. Tap Game or Rain Drop played in last 24h
+    Explorer/FREE users NEVER count.
     """
     referrals_by_level = await get_multi_level_referrals(user_id, max_levels=5)
     active_counts = {
@@ -4519,31 +4568,25 @@ async def count_active_referrals_by_level(user_id: str):
         'level_5': 0
     }
     
-    # Free/Explorer plan identifiers
-    FREE_PLANS = ['explorer', 'free', '', None]
-    
     print(f"🔍 Checking active referrals for user {user_id}")
+    print(f"   STRICT CRITERIA: Elite + Active Subscription + Real-time Mining")
     
     for level, users in referrals_by_level.items():
         print(f"  Level {level}: {len(users)} total referrals")
         for user in users:
             user_uid = user.get("uid")
-            user_plan = (user.get("subscription_plan") or "").lower().strip()
+            user_email = user.get("email", "N/A")
             
-            # Skip FREE users - they don't count for referral bonus
-            if user_plan in FREE_PLANS or user_plan == "":
-                print(f"    🚫 FREE user skipped: {user.get('email')} (plan: {user_plan})")
-                continue
-            
+            # Use the strict check function
             is_active, active_reason = await check_user_active_status(user_uid, user)
             
             if is_active:
                 active_counts[level] += 1
-                print(f"    ✅ Active PAID: {user.get('email')} (plan: {user_plan}, reason: {active_reason})")
+                print(f"    ✅ ACTIVE: {user_email} - {active_reason}")
             else:
-                print(f"    ⏰ Inactive PAID: {user.get('email')}")
+                print(f"    ❌ INACTIVE: {user_email} - {active_reason}")
     
-    print(f"✅ Active PAID referrals count: {active_counts}")
+    print(f"✅ Final active referrals count: {active_counts}")
     return active_counts
 
 async def count_active_referrals_by_level_with_weights(user_id: str):
