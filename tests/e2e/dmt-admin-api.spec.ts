@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://redeem-system-v2.preview.emergentagent.com';
+const BASE_URL = 'https://fintech-secure-3.preview.emergentagent.com';
 
 // Test data
 const TEST_USER_ID = 'test_playwright_user_' + Date.now();

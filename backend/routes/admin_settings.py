@@ -1,12 +1,16 @@
 """
 Admin Settings Routes - System settings and configuration
 Extracted from server.py for better code organization
+SECURITY: All endpoints require admin authentication
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from datetime import datetime, timezone
 from typing import Optional
 import logging
+
+# Import auth middleware
+from middleware.auth import get_current_admin
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["Admin Settings"])
@@ -31,8 +35,8 @@ def set_helpers(helpers: dict):
 # ========== PRC RATE SETTINGS ==========
 
 @router.get("/settings/prc-rate")
-async def get_prc_rate_settings():
-    """Get PRC rate settings including manual override"""
+async def get_prc_rate_settings(admin: dict = Depends(get_current_admin)):
+    """Get PRC rate settings including manual override - ADMIN ONLY"""
     override = await db.app_settings.find_one({"key": "prc_rate_manual_override"}, {"_id": 0})
     current_rate = await db.app_settings.find_one({"key": "current_prc_rate"}, {"_id": 0})
     
@@ -44,8 +48,8 @@ async def get_prc_rate_settings():
 
 
 @router.post("/settings/prc-rate")
-async def update_prc_rate_settings(request: Request):
-    """Update PRC rate settings"""
+async def update_prc_rate_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update PRC rate settings - ADMIN ONLY"""
     data = await request.json()
     now = datetime.now(timezone.utc).isoformat()
     
@@ -70,8 +74,8 @@ async def update_prc_rate_settings(request: Request):
 # ========== REDEEM LIMIT SETTINGS ==========
 
 @router.get("/settings/redeem-limit")
-async def get_redeem_limit_settings():
-    """Get monthly redeem limit settings"""
+async def get_redeem_limit_settings(admin: dict = Depends(get_current_admin)):
+    """Get monthly redeem limit settings - ADMIN ONLY"""
     settings = await db.settings.find_one({}, {"_id": 0, "monthly_redeem_settings": 1})
     
     default_settings = {
@@ -87,8 +91,8 @@ async def get_redeem_limit_settings():
 
 
 @router.post("/settings/redeem-limit")
-async def update_redeem_limit_settings(request: Request):
-    """Update monthly redeem limit settings"""
+async def update_redeem_limit_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update monthly redeem limit settings - ADMIN ONLY"""
     data = await request.json()
     now = datetime.now(timezone.utc).isoformat()
     
@@ -116,8 +120,8 @@ async def update_redeem_limit_settings(request: Request):
 # ========== MINING RATE SETTINGS ==========
 
 @router.get("/settings/mining-rates")
-async def get_mining_rate_settings():
-    """Get mining rate settings for all plans"""
+async def get_mining_rate_settings(admin: dict = Depends(get_current_admin)):
+    """Get mining rate settings for all plans - ADMIN ONLY"""
     settings = await db.app_settings.find_one({"key": "mining_rates"}, {"_id": 0})
     
     default_rates = {
@@ -133,8 +137,8 @@ async def get_mining_rate_settings():
 
 
 @router.post("/settings/mining-rates")
-async def update_mining_rate_settings(request: Request):
-    """Update mining rate settings for all plans"""
+async def update_mining_rate_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update mining rate settings for all plans - ADMIN ONLY"""
     data = await request.json()
     now = datetime.now(timezone.utc).isoformat()
     
@@ -160,15 +164,15 @@ async def update_mining_rate_settings(request: Request):
 # ========== GENERAL SETTINGS (Generic routes - must be AFTER specific routes) ==========
 
 @router.get("/settings")
-async def get_all_settings():
-    """Get all system settings"""
+async def get_all_settings(admin: dict = Depends(get_current_admin)):
+    """Get all system settings - ADMIN ONLY"""
     settings = await db.settings.find({}, {"_id": 0}).to_list(100)
     return {"settings": {s.get("key"): s for s in settings}}
 
 
 @router.get("/settings/{key}")
-async def get_setting(key: str):
-    """Get specific setting by key"""
+async def get_setting(key: str, admin: dict = Depends(get_current_admin)):
+    """Get specific setting by key - ADMIN ONLY"""
     setting = await db.settings.find_one({"key": key}, {"_id": 0})
     if not setting:
         return {"key": key, "value": None, "exists": False}
@@ -176,8 +180,8 @@ async def get_setting(key: str):
 
 
 @router.post("/settings/{key}")
-async def update_setting(key: str, request: Request):
-    """Update or create a setting"""
+async def update_setting(key: str, request: Request, admin: dict = Depends(get_current_admin)):
+    """Update or create a setting - ADMIN ONLY"""
     data = await request.json()
     admin_id = data.get("admin_id")
     value = data.get("value")
@@ -208,8 +212,8 @@ async def update_setting(key: str, request: Request):
 
 
 @router.delete("/settings/{key}")
-async def delete_setting(key: str, admin_id: str):
-    """Delete a setting"""
+async def delete_setting(key: str, admin_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a setting - ADMIN ONLY"""
     result = await db.settings.delete_one({"key": key})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Setting not found")
@@ -220,8 +224,8 @@ async def delete_setting(key: str, admin_id: str):
 # ========== PRC ECONOMY SETTINGS ==========
 
 @router.get("/prc-economy/settings")
-async def get_prc_economy_settings():
-    """Get PRC economy settings"""
+async def get_prc_economy_settings(admin: dict = Depends(get_current_admin)):
+    """Get PRC economy settings - ADMIN ONLY"""
     settings = await db.settings.find_one({"key": "prc_economy"}, {"_id": 0})
     
     if not settings:
@@ -239,14 +243,16 @@ async def get_prc_economy_settings():
             "prc_to_inr_rate": 1.0
         }
         await db.settings.insert_one(default_settings)
+        # Return without _id
+        default_settings.pop("_id", None)
         return default_settings
     
     return settings
 
 
 @router.post("/prc-economy/settings")
-async def update_prc_economy_settings(request: Request):
-    """Update PRC economy settings"""
+async def update_prc_economy_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update PRC economy settings - ADMIN ONLY"""
     data = await request.json()
     admin_id = data.get("admin_id")
     
@@ -272,8 +278,8 @@ async def update_prc_economy_settings(request: Request):
 
 
 @router.get("/prc-economy/stats")
-async def get_prc_economy_stats():
-    """Get PRC economy statistics"""
+async def get_prc_economy_stats(admin: dict = Depends(get_current_admin)):
+    """Get PRC economy statistics - ADMIN ONLY"""
     try:
         # Total PRC in circulation
         total_prc = await db.users.aggregate([
@@ -301,15 +307,15 @@ async def get_prc_economy_stats():
 # ========== VIDEO ADS SETTINGS ==========
 
 @router.get("/video-ads/settings")
-async def get_video_ads_settings():
-    """Get video ads settings"""
+async def get_video_ads_settings(admin: dict = Depends(get_current_admin)):
+    """Get video ads settings - ADMIN ONLY"""
     settings = await db.settings.find_one({"key": "video_ads"}, {"_id": 0})
     return settings or {"key": "video_ads", "enabled": False, "reward_per_view": 0.1}
 
 
 @router.post("/video-ads/settings")
-async def update_video_ads_settings(request: Request):
-    """Update video ads settings"""
+async def update_video_ads_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update video ads settings - ADMIN ONLY"""
     data = await request.json()
     admin_id = data.get("admin_id")
     
@@ -331,15 +337,15 @@ async def update_video_ads_settings(request: Request):
 
 
 @router.get("/video-ads/list")
-async def get_video_ads_list():
-    """Get list of video ads"""
+async def get_video_ads_list(admin: dict = Depends(get_current_admin)):
+    """Get list of video ads - ADMIN ONLY"""
     ads = await db.video_ads.find({"is_active": True}, {"_id": 0}).to_list(100)
     return {"ads": ads, "count": len(ads)}
 
 
 @router.post("/video-ads")
-async def add_video_ad(request: Request):
-    """Add a new video ad"""
+async def add_video_ad(request: Request, admin: dict = Depends(get_current_admin)):
+    """Add a new video ad - ADMIN ONLY"""
     data = await request.json()
     
     ad = {
@@ -359,8 +365,8 @@ async def add_video_ad(request: Request):
 
 
 @router.delete("/video-ads/{ad_id}")
-async def delete_video_ad(ad_id: str):
-    """Delete a video ad"""
+async def delete_video_ad(ad_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a video ad - ADMIN ONLY"""
     result = await db.video_ads.update_one(
         {"ad_id": ad_id},
         {"$set": {"is_active": False}}
@@ -374,8 +380,8 @@ async def delete_video_ad(ad_id: str):
 # ========== REGISTRATION SETTINGS ==========
 
 @router.get("/registration/settings")
-async def get_registration_settings():
-    """Get registration settings"""
+async def get_registration_settings(admin: dict = Depends(get_current_admin)):
+    """Get registration settings - ADMIN ONLY"""
     settings = await db.settings.find_one({"key": "registration"}, {"_id": 0})
     return settings or {
         "key": "registration",
@@ -386,8 +392,8 @@ async def get_registration_settings():
 
 
 @router.post("/registration/settings")
-async def update_registration_settings(request: Request):
-    """Update registration settings"""
+async def update_registration_settings(request: Request, admin: dict = Depends(get_current_admin)):
+    """Update registration settings - ADMIN ONLY"""
     data = await request.json()
     admin_id = data.get("admin_id")
     
@@ -414,9 +420,10 @@ async def update_registration_settings(request: Request):
 async def get_contact_submissions(
     status: str = None,
     page: int = 1,
-    limit: int = 50
+    limit: int = 50,
+    admin: dict = Depends(get_current_admin)
 ):
-    """Get contact form submissions"""
+    """Get contact form submissions - ADMIN ONLY"""
     query = {}
     if status:
         query["status"] = status
@@ -430,8 +437,8 @@ async def get_contact_submissions(
 
 
 @router.post("/contact-submissions/{submission_id}/respond")
-async def respond_to_submission(submission_id: str, request: Request):
-    """Respond to a contact submission"""
+async def respond_to_submission(submission_id: str, request: Request, admin: dict = Depends(get_current_admin)):
+    """Respond to a contact submission - ADMIN ONLY"""
     data = await request.json()
     admin_id = data.get("admin_id")
     response = data.get("response")
@@ -453,8 +460,8 @@ async def respond_to_submission(submission_id: str, request: Request):
 
 
 @router.delete("/contact-submissions/{submission_id}")
-async def delete_submission(submission_id: str):
-    """Delete a contact submission"""
+async def delete_submission(submission_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a contact submission - ADMIN ONLY"""
     result = await db.contact_submissions.delete_one({"submission_id": submission_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Submission not found")

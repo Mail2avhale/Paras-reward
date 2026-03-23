@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://redeem-system-v2.preview.emergentagent.com';
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://fintech-secure-3.preview.emergentagent.com';
 
 // Test user with verified KYC and active subscription
 const TEST_USER_VERIFIED = {

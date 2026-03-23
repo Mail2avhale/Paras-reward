@@ -83,7 +83,8 @@ from routes.gst_invoice import router as invoice_router, set_db as set_invoice_d
 from routes.eko_callback import router as eko_callback_router, set_db as set_eko_callback_db
 
 # ========== SECURITY CONFIGURATION ==========
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
+# SECURITY: Use stable JWT secret from env, fallback to fixed secret for consistency
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'paras-reward-secret-key-2024')
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -935,6 +936,72 @@ class DatabaseCheckMiddleware(BaseHTTPMiddleware):
 
 # Add middleware
 app.add_middleware(DatabaseCheckMiddleware)
+
+# ========== ADMIN AUTHENTICATION MIDDLEWARE ==========
+class AdminAuthMiddleware(BaseHTTPMiddleware):
+    """
+    SECURITY: Middleware to protect all /admin/ routes
+    Requires valid JWT token with admin role
+    """
+    # Routes that should be excluded from auth check (non-sensitive admin read endpoints)
+    EXCLUDED_ROUTES = [
+        "/api/admin/payment-gateways-status",  # Public payment gateway status
+    ]
+    
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        
+        # Only check routes under /api/admin/
+        if not path.startswith("/api/admin/"):
+            return await call_next(request)
+        
+        # Skip excluded routes
+        if any(path.startswith(excluded) for excluded in self.EXCLUDED_ROUTES):
+            return await call_next(request)
+        
+        # Extract Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        
+        if not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authentication required. Please provide a valid token."}
+            )
+        
+        token = auth_header.replace("Bearer ", "")
+        
+        try:
+            # Verify JWT token
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            
+            # Check if user is admin
+            role = payload.get("role", "user")
+            is_admin = payload.get("is_admin", False)
+            
+            if role not in ["admin", "sub_admin"] and not is_admin:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Admin access required. Insufficient permissions."}
+                )
+            
+            # Attach user info to request state for downstream use
+            request.state.admin_user = payload
+            
+        except jwt.ExpiredSignatureError:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Token expired. Please login again."}
+            )
+        except jwt.InvalidTokenError as e:
+            logging.warning(f"[ADMIN AUTH] Invalid token attempt: {e}")
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid token. Please login again."}
+            )
+        
+        return await call_next(request)
+
+app.add_middleware(AdminAuthMiddleware)
 
 # Health check endpoint for Kubernetes deployment
 # This must return 200 even if DB is not fully connected

@@ -144,13 +144,15 @@ const LoginNew = ({ onLogin }) => {
 
       const response = await axios.post(
         `${API}/auth/login`,
-        null,
         {
-          params: {
-            identifier: loginData.identifier,
-            password: loginData.pin,
-            device_id: loginData.device_id,
-            ip_address: loginData.ip_address
+          identifier: loginData.identifier,
+          password: loginData.pin,
+          device_id: loginData.device_id,
+          ip_address: loginData.ip_address
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
           }
         }
       );

@@ -26,7 +26,7 @@ python make_admin.py
 
 1. **Visit the setup page:**
    ```
-   https://redeem-system-v2.preview.emergentagent.com/setup
+   https://fintech-secure-3.preview.emergentagent.com/setup
    ```
 
 2. **Create first admin:**

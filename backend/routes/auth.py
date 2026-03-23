@@ -443,23 +443,18 @@ async def set_new_pin(request: Request):
 # ========== LOGIN ==========
 
 @router.post("/login")
-async def login(
-    request: Request,
-    identifier: Optional[str] = None,
-    password: Optional[str] = None,
-    device_id: Optional[str] = None,
-    ip_address: Optional[str] = None
-):
-    """User login with email/mobile and PIN/password - OPTIMIZED"""
-    # Support both query params and JSON body
-    if not identifier or not password:
-        try:
-            data = await request.json()
-            identifier = data.get("identifier") or data.get("email") or data.get("mobile")
-            password = data.get("password") or data.get("pin")
-            device_id = data.get("device_id") or device_id
-        except Exception:
-            pass
+async def login(request: Request):
+    """User login with email/mobile and PIN/password - SECURE (JSON body only)"""
+    # SECURITY: Only accept credentials via JSON body, NOT query params
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body. Send JSON with identifier and password.")
+    
+    identifier = data.get("identifier") or data.get("email") or data.get("mobile")
+    password = data.get("password") or data.get("pin")
+    device_id = data.get("device_id")
+    ip_address = data.get("ip_address")
     
     if not identifier or not password:
         raise HTTPException(status_code=400, detail="Email/mobile and PIN are required")
@@ -531,7 +526,8 @@ async def login(
         )
     
     # Verify password - RUN IN THREAD POOL to avoid blocking event loop
-    stored_password = user.get("pin_hash") or user.get("password_hash") or user.get("password")
+    # SECURITY FIX: Check all possible password/pin field names for compatibility
+    stored_password = user.get("pin_hash") or user.get("hashed_pin") or user.get("password_hash") or user.get("password")
     logging.info(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}")
     print(f"[LOGIN DEBUG] User found: {user.get('uid')}, stored_password exists: {bool(stored_password)}", flush=True)
     if stored_password:
@@ -778,9 +774,11 @@ async def login(
 
 @router.post("/forgot-password")
 async def forgot_password(email: str):
-    """Request password reset"""
+    """Request password reset - SECURE (token not exposed)"""
+    # SECURITY: Always return same message to prevent email enumeration
     user = await db.users.find_one({"email": email})
     if not user:
+        # Same message whether user exists or not (prevents email enumeration)
         return {"message": "If the email exists, a reset link has been sent"}
     
     reset_token = generate_reset_token()
@@ -791,7 +789,12 @@ async def forgot_password(email: str):
         {"$set": {"reset_token": reset_token, "reset_token_expiry": reset_expiry.isoformat()}}
     )
     
-    return {"message": "Reset token generated", "reset_token": reset_token}
+    # SECURITY: Do NOT return reset_token in response!
+    # Token should only be sent via email/SMS
+    # TODO: Implement actual email sending with reset link
+    logging.info(f"[SECURITY] Password reset requested for: {email}")
+    
+    return {"message": "If the email exists, a reset link has been sent"}
 
 
 # ========== FORGOT PIN WITH OTP ==========

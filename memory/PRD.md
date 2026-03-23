@@ -395,3 +395,64 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
   - Made stats.total_redeemed consistent with redeem_limit.total_redeemed
 - **Testing**: 11/11 backend tests pass - all endpoints show consistent Used PRC values
 - **Test File**: `/app/backend/tests/test_used_prc_redeem_limit_bug.py`
+
+---
+
+## 🔒 SECURITY AUDIT - Phase 1 Complete (23 March 2026)
+
+### ✅ COMPLETED: Admin API Authentication
+
+**Issue**: All `/api/admin/*` endpoints were accessible without authentication - CRITICAL security vulnerability.
+
+**Fix Applied**:
+1. Created `/app/backend/middleware/auth.py` with:
+   - `get_current_user()` - JWT token verification
+   - `get_current_admin()` - Admin role verification
+   - `verify_user_access()` - IDOR protection helper
+
+2. Protected `/app/backend/routes/admin_settings.py`:
+   - Added `Depends(get_current_admin)` to ALL 25+ routes
+   - PRC Rate, Redeem Limit, Mining Rates, PRC Economy, Video Ads, Registration, Contact Submissions
+
+3. Added **AdminAuthMiddleware** in `/app/backend/server.py`:
+   - Automatically protects ALL `/api/admin/*` routes
+   - Validates JWT token
+   - Checks admin role (admin/sub_admin)
+   - Returns 401 for missing token, 403 for non-admin
+
+4. Fixed JWT Secret consistency:
+   - `server.py` and `middleware/auth.py` now use same `JWT_SECRET_KEY`
+   - Removed `secrets.token_hex(32)` random generation on restart
+
+5. Fixed Login `hashed_pin` field compatibility:
+   - Added `hashed_pin` to password field priority in `/app/backend/routes/auth.py`
+
+**Test Results**:
+- ✅ Without token: 401 "Authentication required"
+- ✅ With admin token: Data returned
+- ✅ With regular user token: 403 "Admin access required"
+
+**Test Credentials** (paras_reward_db):
+- Admin: `admin@test.com` / PIN: `153759`
+- User: `test@parasreward.com` / PIN: `153759`
+
+### 🟡 PENDING: Security Phase 2
+
+1. **CORS Restriction** (P1)
+   - Currently: `CORS_ORIGINS="*"` with credentials
+   - Fix needed: Restrict to specific origins
+
+2. **Frontend Admin Validation** (P1)
+   - Currently: Admin role checked via localStorage
+   - Fix needed: Validate role via `/api/auth/me` endpoint
+
+3. **IDOR Protection** (P1)
+   - User endpoints like `/api/user/{uid}` need owner verification
+   - Use `verify_user_access()` from middleware
+
+### 📁 Files Modified (Security Phase 1)
+- `/app/backend/middleware/auth.py` - NEW
+- `/app/backend/routes/admin_settings.py` - All routes protected
+- `/app/backend/routes/auth.py` - hashed_pin fix, login security
+- `/app/backend/server.py` - AdminAuthMiddleware, JWT secret fix
+

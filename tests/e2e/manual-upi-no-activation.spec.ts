@@ -14,7 +14,7 @@ import { dismissToasts } from '../fixtures/helpers';
  * 4. Only Razorpay or Admin approval activates subscriptions
  */
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://redeem-system-v2.preview.emergentagent.com';
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'https://fintech-secure-3.preview.emergentagent.com';
 
 // Admin credentials for login
 const ADMIN_UID = '8175c02a-4fbd-409c-8d47-d864e979f59f';
