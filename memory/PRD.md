@@ -593,6 +593,36 @@ If issue persists in production, call `/api/admin/user-360-debug?query={uid}` to
 - `/app/backend/routes/unified_redeem_v2.py` - Enhanced error logging and user message
 - `/app/backend/server.py` - Added set_bbps_db() call
 
+### ✅ ADDED: FASTag Flexible Amount Support (23 March 2026)
+
+**User Request**: "User fastag flexible amount ने recharge करू शकतो का?"
+
+**Answer**: Yes! FASTag supports flexible amount recharge.
+
+**Implementation**:
+1. **Frontend Changes** (`RedeemPageV2.js`):
+   - FASTag bill fetch shows "Current Balance" instead of "Bill Amount"
+   - Amount field shows hint: "Enter any amount (min ₹100)"
+   - Bill fetch does NOT auto-fill amount for FASTag (user enters manually)
+   - Cyan colored hint: "💡 FASTag Recharge: Enter any amount (min ₹100)"
+
+2. **Backend Changes** (`unified_redeem_v2.py`):
+   - Added FASTag-specific validation
+   - Minimum amount check: ₹100
+   - Vehicle number required validation
+
+**User Flow**:
+1. Select FASTag provider (IDBI, ICICI, etc.)
+2. Enter Vehicle Number
+3. Click "Fetch Bill" → Shows current FASTag balance
+4. Enter any recharge amount (₹100 or more)
+5. Click "Pay Now"
+
+**Why Flexible Amount?**
+- FASTag = Prepaid wallet (not a bill)
+- User adds money to FASTag wallet
+- Similar to mobile prepaid recharge
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected

@@ -1016,6 +1016,16 @@ async def create_redeem_request(request: RedeemRequestCreate):
         if not details.get("account_holder"):
             raise HTTPException(status_code=400, detail="Account holder name is required")
     
+    elif request.service_type == "fastag":
+        # FASTag validation - flexible amount (min ₹100)
+        if not details.get("vehicle_number"):
+            raise HTTPException(status_code=400, detail="Vehicle number is required for FASTag recharge")
+        if not details.get("operator"):
+            raise HTTPException(status_code=400, detail="FASTag provider selection is required")
+        # Minimum amount validation for FASTag
+        if request.amount < 100:
+            raise HTTPException(status_code=400, detail="Minimum FASTag recharge amount is ₹100")
+    
     # ═══════════════════════════════════════════════════════════════
     # STEP 8: WEEKLY ONE SERVICE LIMIT CHECK (Before calculating charges)
     # ═══════════════════════════════════════════════════════════════

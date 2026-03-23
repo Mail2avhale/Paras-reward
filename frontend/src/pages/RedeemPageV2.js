@@ -1278,13 +1278,16 @@ const RedeemPageV2 = ({ user }) => {
           billPeriod: 'N/A'
         });
         
-        // Auto-fill amount from bill
-        if (data.bill_amount) {
+        // Auto-fill amount from bill (except FASTag - user can enter flexible amount)
+        if (data.bill_amount && selectedService !== 'fastag') {
           setFormData(prev => ({
             ...prev,
             amount: String(data.bill_amount)
           }));
           toast.success(`Bill fetched! Amount: ₹${data.bill_amount}`);
+        } else if (selectedService === 'fastag') {
+          // For FASTag, show current balance but don't auto-fill amount
+          toast.success(`FASTag verified! Current balance: ₹${data.bill_amount || 0}. Enter any recharge amount (min ₹100)`);
         }
       } else {
         // Error from Eko
@@ -2018,7 +2021,9 @@ const RedeemPageV2 = ({ user }) => {
                       <div className="animate-fadeIn bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-2xl p-4 space-y-3">
                         <div className="flex items-center gap-2 mb-3">
                           <CheckCircle className="h-5 w-5 text-green-400" />
-                          <span className="text-green-400 font-semibold">Bill Details Found!</span>
+                          <span className="text-green-400 font-semibold">
+                            {selectedService === 'fastag' ? 'FASTag Verified!' : 'Bill Details Found!'}
+                          </span>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
@@ -2026,16 +2031,25 @@ const RedeemPageV2 = ({ user }) => {
                             <p className="text-white font-medium">{billDetails.customerName}</p>
                           </div>
                           <div>
-                            <p className="text-gray-400">Bill Amount</p>
+                            <p className="text-gray-400">
+                              {selectedService === 'fastag' ? 'Current Balance' : 'Bill Amount'}
+                            </p>
                             <p className="text-2xl font-bold text-amber-400">₹{billDetails.billAmount}</p>
                           </div>
-                          {billDetails.dueDate !== 'N/A' && (
+                          {billDetails.dueDate !== 'N/A' && selectedService !== 'fastag' && (
                             <div>
                               <p className="text-gray-400">Due Date</p>
                               <p className="text-white">{billDetails.dueDate}</p>
                             </div>
                           )}
                         </div>
+                        {selectedService === 'fastag' && (
+                          <div className="mt-3 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                            <p className="text-cyan-400 text-xs">
+                              💡 FASTag Recharge: Enter any amount (min ₹100) to add to your FASTag wallet
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -2056,8 +2070,9 @@ const RedeemPageV2 = ({ user }) => {
                         <Label className="text-gray-300 text-sm mb-2 block">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold mr-2">3</span>
                           Amount (₹) *
-                          {billDetails && <span className="text-green-400 text-xs ml-2">(Auto-filled from bill)</span>}
-                          {!supportsBillFetch && !billDetails && <span className="text-amber-400 text-xs ml-2">(Enter manually)</span>}
+                          {billDetails && selectedService !== 'fastag' && <span className="text-green-400 text-xs ml-2">(Auto-filled from bill)</span>}
+                          {selectedService === 'fastag' && <span className="text-cyan-400 text-xs ml-2">(Enter any amount - Min ₹100)</span>}
+                          {!supportsBillFetch && !billDetails && selectedService !== 'fastag' && <span className="text-amber-400 text-xs ml-2">(Enter manually)</span>}
                         </Label>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-amber-400">₹</span>
@@ -2065,12 +2080,18 @@ const RedeemPageV2 = ({ user }) => {
                             type="number"
                             value={formData.amount}
                             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                            placeholder="0.00"
-                            min="1"
+                            placeholder={selectedService === 'fastag' ? "100" : "0.00"}
+                            min={selectedService === 'fastag' ? "100" : "1"}
                             className="pl-12 h-14 text-xl font-semibold bg-gray-800/50 border-gray-700/50 text-white rounded-xl"
                             data-testid="amount-input"
                           />
                         </div>
+                        {/* FASTag flexible amount hint */}
+                        {selectedService === 'fastag' && (
+                          <p className="text-xs text-cyan-400 mt-2 flex items-center gap-1">
+                            💡 FASTag supports flexible recharge. You can add any amount (minimum ₹100) to your FASTag wallet.
+                          </p>
+                        )}
                       </div>
                     )}
                   </>
