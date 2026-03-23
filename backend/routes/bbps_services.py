@@ -553,6 +553,55 @@ async def debug_config():
     }
 
 
+@router.get("/debug-fastag-errors")
+async def debug_fastag_errors(limit: int = 10):
+    """
+    Debug endpoint to check recent FASTag payment failures.
+    Returns detailed error info for debugging.
+    """
+    if db is None:
+        return {
+            "success": False,
+            "error": "Database not initialized"
+        }
+    
+    try:
+        # Find recent failed FASTag transactions
+        failed_requests = await db.redeem_requests.find({
+            "service_type": {"$in": ["fastag", "fastag_recharge"]},
+            "status": {"$in": ["failed", "FAILED", "rejected"]}
+        }).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        debug_data = []
+        for req in failed_requests:
+            debug_data.append({
+                "request_id": req.get("request_id"),
+                "created_at": req.get("created_at"),
+                "operator": req.get("details", {}).get("operator") or req.get("operator"),
+                "operator_id": req.get("details", {}).get("operator_id"),
+                "vehicle_number": req.get("details", {}).get("vehicle_number", "")[-4:] if req.get("details", {}).get("vehicle_number") else "",
+                "amount": req.get("amount_inr"),
+                "status": req.get("status"),
+                "eko_status": req.get("eko_status"),
+                "error_message": req.get("error_message") or req.get("eko_message"),
+                "eko_response": req.get("eko_response", {}).get("message") if req.get("eko_response") else None,
+                "eko_error_code": req.get("eko_response", {}).get("status") if req.get("eko_response") else None,
+                "had_bill_fetch_response": bool(req.get("details", {}).get("bill_fetch_response") or req.get("details", {}).get("billfetchresponse"))
+            })
+        
+        return {
+            "success": True,
+            "total_failed": len(debug_data),
+            "transactions": debug_data,
+            "note": "Check 'error_message' and 'eko_error_code' for root cause. 'had_bill_fetch_response'=False may indicate bill fetch data not passed."
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 # ==================== BBPS SERVICE ACTIVATION ====================
 
 @router.put("/activate-service")

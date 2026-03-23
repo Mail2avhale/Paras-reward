@@ -552,6 +552,47 @@ is_paid_subscriber(user)  # Returns True for Elite + Legacy plans
 **Production Debugging**:
 If issue persists in production, call `/api/admin/user-360-debug?query={uid}` to get step-by-step diagnostics.
 
+### 🔴 INVESTIGATED: FASTag Recharge Failure (23 March 2026)
+
+**Issue Reported**: FASTag recharge fails and PRC is refunded even after successful bill fetch.
+
+**Investigation Summary**:
+1. Bill fetch works correctly (Customer Name, Amount displayed)
+2. Payment call is made to Eko API
+3. Payment fails → PRC is refunded
+4. User sees "X PRC has been refunded to your account"
+
+**Root Cause Analysis**:
+- Code flow is correct: Frontend → unified_redeem_v2.py → bbps_services.py pay_bill()
+- `billfetchresponse` is properly passed when available
+- Eko API credentials are valid (verified via /api/bbps/debug-config)
+
+**Possible Causes** (Need Production Logs):
+1. **Eko API Error**: Specific error from Eko not visible in test environment
+2. **Operator ID Mismatch**: IDBI Bank Fastag (ID 431) not in backend mapping
+3. **Invalid billfetchresponse format**: May not be correctly parsed from bill fetch
+4. **Vehicle Number Format**: May need specific format validation
+
+**Debug Endpoints Added**:
+- `GET /api/bbps/debug-fastag-errors` - Shows last 10 failed FASTag transactions with error details
+- `GET /api/bbps/debug-config` - Shows Eko API configuration status
+
+**Improvements Made**:
+1. Better error logging in `unified_redeem_v2.py` - logs full Eko response on failure
+2. User-facing error message now shows actual Eko error instead of generic message
+3. Debug endpoint for production investigation
+
+**Production Debugging Steps**:
+1. Deploy code to production
+2. Call `/api/bbps/debug-fastag-errors` after a failed FASTag recharge
+3. Check `error_message` and `eko_error_code` in response
+4. Check `had_bill_fetch_response` - if false, bill fetch data not passed correctly
+
+**Files Modified**:
+- `/app/backend/routes/bbps_services.py` - Added debug-fastag-errors endpoint, db initialization
+- `/app/backend/routes/unified_redeem_v2.py` - Enhanced error logging and user message
+- `/app/backend/server.py` - Added set_bbps_db() call
+
 ### 📁 Files Modified (Security Phase 1)
 - `/app/backend/middleware/auth.py` - NEW
 - `/app/backend/routes/admin_settings.py` - All routes protected

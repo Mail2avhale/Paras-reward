@@ -66,7 +66,7 @@ from routes.notifications import router as notifications_router, set_db as set_n
 from routes.razorpay_payments import router as razorpay_router, set_db as set_razorpay_db
 from routes.unified_redeem_v2 import router as redeem_v2_router, set_db as set_redeem_v2_db, set_redeem_limit_check, set_weekly_one_service_check as set_redeem_v2_weekly_check
 from routes.error_monitor import router as monitor_router, set_db as set_monitor_db, log_error, log_payment_event, log_api_call
-from routes.bbps_services import router as bbps_router
+from routes.bbps_services import router as bbps_router, set_db as set_bbps_db
 from routes.manual_bank_transfer import router as bank_transfer_router, set_db as set_bank_transfer_db, set_redeem_limit_check as set_bank_transfer_limit_check, set_weekly_one_service_check as set_bank_transfer_weekly_check
 # DMT/Eko routes REMOVED - V3 API not working with current Eko account
 from routes.kyc import router as kyc_router, set_db as set_kyc_db
@@ -45379,6 +45379,7 @@ set_kyc_db(db)
 api_router.include_router(kyc_router)
 
 # BBPS Services Router (Clean Implementation)
+set_bbps_db(db)
 api_router.include_router(bbps_router)
 
 # DMT/Eko COMPLETELY REMOVED - V3 API not working with current Eko account

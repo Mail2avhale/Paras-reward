@@ -1325,6 +1325,11 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 }
             else:
                 # FAILED - Refund PRC using WalletService
+                # LOG DETAILED ERROR INFO FOR DEBUGGING
+                logging.error(f"[REDEEM FAILED] Service: {request.service_type}, User: {request.user_id}")
+                logging.error(f"[REDEEM FAILED] Eko Response: {eko_result}")
+                logging.error(f"[REDEEM FAILED] Details: operator={request.details.get('operator')}, account={request.details.get('vehicle_number') or request.details.get('consumer_number')}")
+                
                 refund_result = WalletService.credit(
                     user_id=request.user_id,
                     amount=total_prc_required,
@@ -1386,11 +1391,12 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 
                 return {
                     "success": False,
-                    "message": f"❌ Payment failed: Invalid Account ID or Consumer Code. Please check the format and try again. {total_prc_required} PRC refunded.",
+                    "message": f"❌ Payment failed: {eko_result.get('user_message') or eko_result.get('message') or 'Unknown error'}. {total_prc_required} PRC refunded.",
                     "request_id": request_id,
                     "status": STATUS_FAILED,
                     "error": eko_result.get("message"),
                     "error_detail": eko_result.get("message"),  # Keep original for debugging
+                    "error_code": eko_result.get("error_code"),
                     "prc_refunded": total_prc_required,
                     "new_balance": refund_balance
                 }
