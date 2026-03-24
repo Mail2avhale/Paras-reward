@@ -20092,46 +20092,57 @@ async def get_user_360_view(query: str, request: Request):
     
     query = query.strip()
     
-    # Escape regex special characters to prevent injection and errors
-    import re as regex_module
-    escaped_query = regex_module.escape(query)
-    
-    # Build search query for multiple identifiers
-    search_conditions = [
-        {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-        {"mobile": query},
-        {"uid": query},
-        {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
-        {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}}
-    ]
-    
-    # For Aadhaar, search by last 4 digits
-    if query.isdigit() and len(query) == 4:
-        search_conditions.append({"aadhaar_number": {"$regex": f"{escaped_query}$"}})
-    elif len(query) == 12 and query.isdigit():
-        search_conditions.append({"aadhaar_number": query})
-    
-    # Find user
     try:
-        user = await db.users.find_one({"$or": search_conditions})
-        logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
-    except Exception as e:
-        logging.error(f"[USER360] Search error: {str(e)} for query: {query}")
-        raise HTTPException(status_code=500, detail=f"Search error: {str(e)[:100]}")
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Safely get uid with fallback
-    uid = user.get("uid")
-    if not uid:
-        logging.error(f"User 360: User found but no uid field! Query: {query}")
-        raise HTTPException(status_code=500, detail="User data corrupted - missing uid")
-    
-    # Remove sensitive data from user
-    user.pop("password_hash", None)
-    user.pop("reset_token", None)
-    user.pop("_id", None)
+        # Escape regex special characters to prevent injection and errors
+        import re as regex_module
+        escaped_query = regex_module.escape(query)
+        
+        # Build search query for multiple identifiers
+        search_conditions = [
+            {"email": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+            {"mobile": query},
+            {"uid": query},
+            {"referral_code": {"$regex": f"^{escaped_query}$", "$options": "i"}},
+            {"pan_number": {"$regex": f"^{escaped_query}$", "$options": "i"}}
+        ]
+        
+        # For Aadhaar, search by last 4 digits
+        if query.isdigit() and len(query) == 4:
+            search_conditions.append({"aadhaar_number": {"$regex": f"{escaped_query}$"}})
+        elif len(query) == 12 and query.isdigit():
+            search_conditions.append({"aadhaar_number": query})
+        
+        # Find user
+        try:
+            user = await db.users.find_one({"$or": search_conditions})
+            logging.info(f"[USER360] User search result: {'found' if user else 'not found'} for query: {query}")
+        except Exception as e:
+            logging.error(f"[USER360] Search error: {str(e)} for query: {query}")
+            raise HTTPException(status_code=500, detail=f"Database search error: {str(e)[:100]}")
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Safely get uid with fallback
+        uid = user.get("uid")
+        if not uid:
+            logging.error(f"User 360: User found but no uid field! Query: {query}")
+            raise HTTPException(status_code=500, detail="User data corrupted - missing uid")
+        
+        logging.info(f"[USER360] Processing user: {uid}")
+        
+        # Remove sensitive data from user
+        user.pop("password_hash", None)
+        user.pop("pin_hash", None)
+        user.pop("hashed_pin", None)
+        user.pop("password", None)
+        user.pop("reset_token", None)
+        user.pop("_id", None)
+    except HTTPException:
+        raise
+    except Exception as setup_error:
+        logging.error(f"[USER360] Setup error for query '{query}': {str(setup_error)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Setup error: {str(setup_error)[:100]}")
     
     # Helper function to convert ObjectIds and datetimes to serializable format
     def sanitize_mongo_doc(doc, depth=0):
@@ -20730,9 +20741,10 @@ async def get_user_360_view(query: str, request: Request):
                 "status": "clean" if fraud_score == 0 else "suspicious" if fraud_score < 50 else "high_risk"
             }
         }
+        logging.info(f"[USER360] Successfully returning data for user: {uid}")
         return response_data
     except Exception as e:
-        logging.error(f"User 360 serialization error for {uid}: {str(e)}")
+        logging.error(f"[USER360] Serialization error for {uid}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Data serialization error: {str(e)[:100]}")
 
 
