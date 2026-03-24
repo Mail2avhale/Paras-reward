@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import ManagerPermissions from '../components/ManagerPermissions';
 import {
   Search, User, Mail, Phone, MapPin, Calendar, Shield, Crown,
   Coins, TrendingUp, TrendingDown, Users, Gift, CreditCard, Clock,
@@ -266,6 +267,7 @@ const AdminUser360New = ({ user: adminUser }) => {
   const [showDiagnose, setShowDiagnose] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showKYCAction, setShowKYCAction] = useState(false);
+  const [showPermissions, setShowPermissions] = useState(false);
   
   // Form States
   const [selectedRole, setSelectedRole] = useState('user');
@@ -293,7 +295,7 @@ const AdminUser360New = ({ user: adminUser }) => {
   // Subscription Form
   const [subscriptionForm, setSubscriptionForm] = useState({
     plan: 'explorer',
-    duration: 30,
+    duration: 28,  // Default 28 days
     expiryMode: 'auto',
     manualExpiry: '',
     isFree: true,
@@ -699,8 +701,6 @@ const AdminUser360New = ({ user: adminUser }) => {
               className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
               <option value="">All Plans</option>
               <option value="elite">Elite</option>
-              <option value="growth">Growth</option>
-              <option value="startup">Startup</option>
               <option value="explorer">Explorer</option>
             </select>
             <select value={filterKYC} onChange={(e) => { setFilterKYC(e.target.value); setUserListPage(1); }}
@@ -901,6 +901,13 @@ const AdminUser360New = ({ user: adminUser }) => {
                         <XCircle className="h-4 w-4 mr-1" />Reject KYC
                       </Button>
                     </>
+                  )}
+                  
+                  {/* Manage Permissions - Only for Manager role */}
+                  {userData.user?.role === 'manager' && (
+                    <Button onClick={() => setShowPermissions(true)} disabled={actionLoading} className="bg-indigo-600 hover:bg-indigo-700">
+                      <Lock className="h-4 w-4 mr-1" />Manage Permissions
+                    </Button>
                   )}
                   
                   {/* Delete User */}
@@ -1165,8 +1172,8 @@ const AdminUser360New = ({ user: adminUser }) => {
       {/* Role Change Modal */}
       <Modal show={showRoleChange} onClose={() => setShowRoleChange(false)} title="Change User Role">
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            {['user', 'sub_admin', 'admin'].map(role => (
+          <div className="grid grid-cols-2 gap-2">
+            {['user', 'manager', 'sub_admin', 'admin'].map(role => (
               <button key={role} onClick={() => setSelectedRole(role)}
                 className={`p-3 rounded-lg border text-center capitalize ${
                   selectedRole === role ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-gray-700 bg-gray-800 text-gray-400'
@@ -1176,6 +1183,12 @@ const AdminUser360New = ({ user: adminUser }) => {
           {selectedRole === 'admin' && (
             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />Admin role gives full system access!
+            </div>
+          )}
+          {selectedRole === 'manager' && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
+              <p className="flex items-center gap-2 mb-2"><Shield className="h-4 w-4" />Manager has restricted admin access</p>
+              <p className="text-xs text-gray-400">Role change केल्यानंतर, User 360 मधून "Manage Permissions" button वापरून permissions set करा</p>
             </div>
           )}
           <div className="flex gap-3">
@@ -1352,10 +1365,17 @@ const AdminUser360New = ({ user: adminUser }) => {
           
           <div>
             <Label className="text-gray-400">Select Plan</Label>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {['explorer', 'startup', 'growth', 'elite'].map(plan => (
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {['explorer', 'elite'].map(plan => (
                 <button key={plan} onClick={() => setSubscriptionForm({...subscriptionForm, plan})}
-                  className={`p-3 rounded-lg capitalize ${subscriptionForm.plan === plan ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}>{plan}</button>
+                  className={`p-4 rounded-lg capitalize font-semibold ${
+                    subscriptionForm.plan === plan 
+                      ? plan === 'elite' ? 'bg-amber-600 text-white' : 'bg-purple-600 text-white' 
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}>
+                  {plan === 'elite' && <Crown className="h-4 w-4 inline mr-2" />}
+                  {plan}
+                </button>
               ))}
             </div>
           </div>
@@ -1363,7 +1383,7 @@ const AdminUser360New = ({ user: adminUser }) => {
           <div>
             <Label className="text-gray-400">Duration (Days)</Label>
             <div className="grid grid-cols-4 gap-2 mt-2">
-              {[30, 90, 180, 365].map(days => (
+              {[28, 90, 180, 365].map(days => (
                 <button key={days} onClick={() => setSubscriptionForm({...subscriptionForm, duration: days})}
                   className={`p-2 rounded-lg ${subscriptionForm.duration === days ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}>
                   {days === 365 ? '1 Year' : `${days} Days`}
@@ -1494,6 +1514,21 @@ const AdminUser360New = ({ user: adminUser }) => {
             </Button>
           </div>
         </div>
+      </Modal>
+      
+      {/* Manager Permissions Modal */}
+      <Modal show={showPermissions} onClose={() => setShowPermissions(false)} title="Manager Permissions" size="2xl">
+        {userData?.user?.uid && (
+          <ManagerPermissions 
+            userId={userData.user.uid}
+            userName={userData.user.name || userData.user.email}
+            onClose={() => setShowPermissions(false)}
+            onSave={() => {
+              setShowPermissions(false);
+              toast.success('Permissions updated');
+            }}
+          />
+        )}
       </Modal>
     </div>
   );

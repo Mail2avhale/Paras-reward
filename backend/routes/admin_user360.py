@@ -337,7 +337,7 @@ async def perform_user_action(uid: str, request: UserActionRequest):
         })
         
     elif request.action == "update_plan":
-        valid_plans = ["free", "explorer", "startup", "growth", "elite"]
+        valid_plans = ["explorer", "elite"]  # Only 2 plans now (March 2026)
         if request.value not in valid_plans:
             raise HTTPException(status_code=400, detail=f"Invalid plan. Must be one of: {valid_plans}")
         
@@ -383,13 +383,20 @@ async def perform_user_action(uid: str, request: UserActionRequest):
     
     # Change user role
     elif request.action == "change_role":
-        valid_roles = ["user", "sub_admin", "admin"]
+        valid_roles = ["user", "manager", "sub_admin", "admin"]
         new_role = request.new_role or request.value
         if new_role not in valid_roles:
             raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
         
         update_data["role"] = new_role
         update_data["role_updated_at"] = timestamp
+        
+        # If changed to manager, set default permissions
+        if new_role == "manager":
+            update_data["allowed_pages"] = [
+                "dashboard", "members", "users", "user360", "subscription_payment", "kyc", 
+                "gift_vouchers", "bank-transfers", "razorpay-subs", "bbps-dashboard", "eko-services"
+            ]
     
     # Change referral (new referrer UID)
     elif request.action == "change_referral":
