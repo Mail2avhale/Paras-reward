@@ -631,41 +631,35 @@ If issue persists in production, call `/api/admin/user-360-debug?query={uid}` to
 
 ---
 
-## ✅ Admin User 360 Restructure Complete (24 March 2026)
+## ✅ Admin User 360 Full Restructure Complete (24 March 2026)
 
 ### What Was Done:
 1. **Backend Actions Extended** (`/app/backend/routes/admin_user360.py`):
-   - `block_user` / `unblock_user` - Block/unblock user (alias for ban/unban)
-   - `reset_pin` - Generates new 6-digit PIN, returns `new_pin` in response
-   - `change_role` - Change user role (user/sub_admin/admin)
-   - `change_referral` - Change/remove referrer (supports "remove" keyword)
-   - `delete_user` - Permanently delete user (archives to `deleted_users_archive` collection first)
+   - `block_user` / `unblock_user` - Block/unblock user
+   - `reset_pin` - Generates new 6-digit PIN
+   - `change_role` - user/sub_admin/admin
+   - `change_referral` - Change/remove referrer
+   - `delete_user` - Archive and delete permanently
 
-2. **Frontend New Page** (`/app/frontend/src/pages/AdminUser360New.js`):
-   - Clean, modular UI with all advanced admin features
-   - AdminActionsPanel with 6 buttons: Block, Reset PIN, Change Role, Adjust Balance, Change Referral, Delete User
-   - Modal dialogs for each action with proper validation
-   - Route: `/admin/user360`
+2. **NEW Frontend Page** (`/app/frontend/src/pages/AdminUser360New.js` - ~1100 lines):
+   - **Browse Mode** - View all users with filters (Role, Plan, KYC)
+   - **Search Mode** - UID, email, mobile, PAN, Aadhaar
+   - **UserProfileCard** - Complete user info
+   - **Stats Row** - Mined, Redeemed, Referrals, Risk Score
+   - **Admin Actions** (12+ buttons): Block, Mining Toggle, Reset PIN, Change Role, Adjust Balance, Change Referral, Subscription, Auto Diagnose, KYC Actions, Delete User
+   - **Edit Profile Modal** - Personal, Contact, Address, KYC, Bank, Nominee
+   - **6 Data Tabs** - Transactions, Redemptions, Referrals, Sub History, Logins, KYC Data
+   - **Admin Notes**
 
-3. **Routes Updated** (`/app/frontend/src/App.js`):
-   - `/admin/user360` → New AdminUser360New component
-   - `/admin/user-360` → Original AdminUser360 component (preserved)
+3. **OLD File Deleted** (`AdminUser360.js` - 3740 lines removed)
 
-### Test Results (iteration_143):
-- Backend: 15/15 tests passed
-- Frontend: All E2E flows passed
-- Test File: `/app/backend/tests/test_admin_user360_actions.py`
+4. **Routes Updated**:
+   - `/admin/user360` → New AdminUser360New
+   - `/admin/user-360` → Redirects to `/admin/user360`
+   - Sidebar updated
 
-### API Endpoint:
-```
-POST /api/admin/user360/action/{uid}
-Body: {
-  "action": "block_user|unblock_user|reset_pin|change_role|change_referral|delete_user|add_prc|deduct_prc",
-  "value": <optional>,
-  "reason": <optional>,
-  "new_role": "user|sub_admin|admin",  // for change_role
-  "new_referrer": "uid or 'remove'"     // for change_referral
-}
-```
+### Test Results (iteration_144):
+- Frontend: 100% success rate (24 features tested)
 
 ---
+

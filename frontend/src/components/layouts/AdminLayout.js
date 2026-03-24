@@ -20,7 +20,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const MENU_TO_PERMISSION = {
   'dashboard': 'dashboard',
   'users': 'users',
-  'user-360': 'users',
+  'user360': 'users',
   'user-controls': 'user_360',
   'members': 'members',
   'analytics': 'analytics',
@@ -160,7 +160,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
-    { id: 'user-360', label: 'User 360° View', icon: Eye, path: '/admin/user-360' },
+    { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
     // Orders removed - Marketplace deprecated (December 2025)
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated
@@ -253,7 +253,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     '/admin/subscriptions': 'subscription_payment',
     '/admin/kyc': 'kyc',
     '/admin/users': 'users',
-    '/admin/user-360': 'users',
+    '/admin/user360': 'users',
     '/admin/members': 'users',
     // '/admin/orders': 'orders', // Marketplace deprecated
     // marketplace removed

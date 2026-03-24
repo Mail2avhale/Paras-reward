@@ -236,7 +236,7 @@ const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* web
 // AdvancedUserManagement removed - functionality merged into AdminUser360
 // AdminDeliveryPartners removed - feature deprecated
 // AdminLuxuryClaims - REMOVED (deprecated feature)
-const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
+// OLD AdminUser360.js deleted - replaced by AdminUser360New.js (24 March 2026)
 const AdminUser360New = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360New"));
 // AdminRecurringDeposits - REMOVED (deprecated feature)
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
@@ -421,8 +421,8 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/accounts-payable" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminAccountsPayable user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/financial-ratios" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminFinancialRatios user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/prc-economy" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminPRCEconomyDashboard user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
-                <Route path="/admin/user-controls" element={<Navigate to="/admin/user-360" />} />
-                <Route path="/admin/user-360" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUser360 user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/user-controls" element={<Navigate to="/admin/user360" />} />
+                <Route path="/admin/user-360" element={<Navigate to="/admin/user360" />} />
                 <Route path="/admin/user360" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUser360New user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} />
                 {/* AdminPRCBurnControl - REMOVED, redirect to admin */}
