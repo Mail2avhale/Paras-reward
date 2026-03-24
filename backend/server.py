@@ -49,6 +49,7 @@ from routes.admin_delivery import router as admin_delivery_router, set_db as set
 from routes.admin_system import router as admin_system_router, set_db as set_admin_system_db, set_cache as set_admin_system_cache, set_helpers as set_admin_system_helpers
 from routes.admin_finance import router as admin_finance_router, set_db as set_admin_finance_db, set_cache as set_admin_finance_cache
 from routes.admin_users import router as admin_users_router, set_db as set_admin_users_db, set_cache as set_admin_users_cache, set_helpers as set_admin_users_helpers
+from routes.admin_user360 import router as admin_user360_router, set_db as set_admin_user360_db
 from routes.admin_fraud import router as admin_fraud_router, set_db as set_admin_fraud_db, set_helpers as set_admin_fraud_helpers
 from routes.admin_reports import router as admin_reports_router, set_db as set_admin_reports_db, set_cache as set_admin_reports_cache
 from routes.admin_accounting import router as admin_accounting_router, set_db as set_admin_accounting_db
@@ -45282,6 +45283,10 @@ set_admin_users_helpers({
     'hash_password': hash_password
 })
 api_router.include_router(admin_users_router)
+
+# Include admin user 360 router (NEW - Restructured)
+set_admin_user360_db(db)
+api_router.include_router(admin_user360_router)
 
 # Include admin fraud router (refactored)
 set_admin_fraud_db(db)

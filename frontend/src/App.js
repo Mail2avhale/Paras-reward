@@ -236,7 +236,7 @@ const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* web
 // AdvancedUserManagement removed - functionality merged into AdminUser360
 // AdminDeliveryPartners removed - feature deprecated
 // AdminLuxuryClaims - REMOVED (deprecated feature)
-const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360"));
+const AdminUser360 = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360New"));
 // AdminRecurringDeposits - REMOVED (deprecated feature)
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 // AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
