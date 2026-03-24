@@ -40461,64 +40461,55 @@ async def update_accounting_settings(request: Request):
 
 # Default permissions for manager role
 DEFAULT_MANAGER_PERMISSIONS = [
-    "dashboard", "members", "users", "user-360", "subscription_payment", "kyc", 
-    "bill_payments", "gift_vouchers", "unified-payments",
-    # Added: Manager can now access these payment pages
+    "dashboard", "members", "users", "user360", "subscription_payment", "kyc", 
+    "gift_vouchers",
+    # Manager can access these payment pages
     "bank-transfers", "razorpay-subs", "bbps-dashboard", "eko-services"
 ]
 
-# All available admin pages/permissions
+# All available admin pages/permissions (Cleaned - March 2026)
 ALL_ADMIN_PERMISSIONS = [
+    # General
     {"id": "dashboard", "label": "Dashboard", "category": "General"},
     {"id": "members", "label": "Members Dashboard", "category": "General"},
-    {"id": "user-360", "label": "User 360° View", "category": "General"},
+    {"id": "user360", "label": "User 360° View", "category": "General"},
     {"id": "users", "label": "Users Management", "category": "General"},
     {"id": "analytics", "label": "Analytics", "category": "General"},
-    {"id": "kyc", "label": "KYC Verification", "category": "General"},
-    {"id": "orders", "label": "Orders", "category": "Operations"},
-    {"id": "marketplace", "label": "Marketplace", "category": "Operations"},
-    {"id": "video_ads", "label": "Video Ads", "category": "Operations"},
-    {"id": "prc_rain", "label": "PRC Rain Drop", "category": "Operations"},
+    {"id": "performance-report", "label": "Admin Performance", "category": "General"},
+    
+    # Operations
+    {"id": "kyc", "label": "KYC Verification", "category": "Operations"},
     {"id": "support", "label": "Support Tickets", "category": "Operations"},
     {"id": "contact-submissions", "label": "Contact Inquiries", "category": "Operations"},
-    {"id": "fraud", "label": "Fraud Alerts", "category": "Security"},
-    {"id": "fraud-dashboard", "label": "Fraud Dashboard", "category": "Security"},
-    {"id": "security", "label": "Security Dashboard", "category": "Security"},
-    {"id": "company_wallets", "label": "Company Wallets", "category": "Finance"},
-    {"id": "company-wallets", "label": "Company Wallets", "category": "Finance"},
-    {"id": "ads_income", "label": "Ads Income", "category": "Finance"},
-    {"id": "fixed_expenses", "label": "Fixed Expenses", "category": "Finance"},
-    {"id": "user_ledger", "label": "User Ledger", "category": "Finance"},
-    {"id": "user-ledger", "label": "User Ledger", "category": "Finance"},
-    {"id": "redeem_settings", "label": "Redeem Settings", "category": "Finance"},
-    {"id": "capital", "label": "Capital & Liabilities", "category": "Finance"},
-    {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
-    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
-    {"id": "subscription_payment", "label": "Subscription Payment", "category": "Payments"},
-    {"id": "subscriptions", "label": "Subscriptions", "category": "Payments"},
-    {"id": "withdrawals", "label": "Withdrawals", "category": "Payments"},
-    {"id": "unified-payments", "label": "Unified Payments (All)", "category": "Payments"},
-    {"id": "bank-withdrawals", "label": "Bank Withdrawals", "category": "Payments"},
+    {"id": "popup-messages", "label": "Popup Messages", "category": "Operations"},
+    {"id": "error-monitor", "label": "System Monitor", "category": "Operations"},
+    
+    # Payments - Active
+    {"id": "subscriptions", "label": "Subscription Payments", "category": "Payments"},
     {"id": "bank-transfers", "label": "Redeem to Bank", "category": "Payments"},
     {"id": "razorpay-subs", "label": "Razorpay Payments", "category": "Payments"},
     {"id": "bbps-dashboard", "label": "BBPS Instant", "category": "Payments"},
     {"id": "eko-services", "label": "Eko Direct Services", "category": "Payments"},
-    {"id": "gift_vouchers", "label": "Gift Vouchers", "category": "Payments"},
     {"id": "gift-vouchers", "label": "Gift Vouchers", "category": "Payments"},
-    {"id": "bill_payments", "label": "Bill Payments", "category": "Payments"},
-    {"id": "bill-payments", "label": "Bill Payments", "category": "Payments"},
-    {"id": "recurring-deposits", "label": "PRC Savings Vault", "category": "Payments"},
-    {"id": "prc-burn-control", "label": "PRC Burn Control", "category": "Controls"},
-    {"id": "system_settings", "label": "System Settings", "category": "Settings"},
-    {"id": "settings-hub", "label": "Settings Hub", "category": "Settings"},
-    {"id": "audit", "label": "Audit Service", "category": "Settings"},
-    {"id": "data-backup", "label": "Data Backup", "category": "Settings"},
-    {"id": "prc_analytics", "label": "PRC Analytics", "category": "Analytics"},
-    {"id": "prc-analytics", "label": "PRC Analytics", "category": "Analytics"},
-    {"id": "profit_loss", "label": "Profit & Loss", "category": "Analytics"},
-    {"id": "profit-loss", "label": "Profit & Loss", "category": "Analytics"},
-    {"id": "liquidity", "label": "Liquidity Status", "category": "Analytics"},
-    {"id": "performance-report", "label": "Admin Performance", "category": "Analytics"}
+    
+    # Finance
+    {"id": "accounting", "label": "Accounting Dashboard", "category": "Finance"},
+    {"id": "company-wallets", "label": "Company Wallets", "category": "Finance"},
+    {"id": "prc-analytics", "label": "PRC Analytics", "category": "Finance"},
+    {"id": "prc-ledger", "label": "PRC Ledger", "category": "Finance"},
+    {"id": "profit-loss", "label": "Profit & Loss", "category": "Finance"},
+    {"id": "user-ledger", "label": "User Ledger", "category": "Finance"},
+    {"id": "liquidity", "label": "Liquidity Status", "category": "Finance"},
+    
+    # Security
+    {"id": "fraud-dashboard", "label": "Fraud Dashboard", "category": "Security"},
+    {"id": "fraud-alerts", "label": "Fraud Alerts", "category": "Security"},
+    {"id": "security", "label": "Security Dashboard", "category": "Security"},
+    {"id": "prc-economy", "label": "PRC Token Economy", "category": "Security"},
+    {"id": "data-backup", "label": "Data Backup & Archive", "category": "Security"},
+    
+    # Settings
+    {"id": "settings-hub", "label": "All Settings", "category": "Settings"},
 ]
 
 @api_router.get("/admin/permissions/list")

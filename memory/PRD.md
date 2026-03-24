@@ -663,3 +663,40 @@ If issue persists in production, call `/api/admin/user-360-debug?query={uid}` to
 
 ---
 
+## ✅ Admin Pages & Manager Permissions Cleanup (24 March 2026)
+
+### What Was Done:
+1. **Backend Permissions Cleaned** (`/app/backend/server.py`):
+   - Removed 24 deprecated pages from `ALL_ADMIN_PERMISSIONS`
+   - Updated `DEFAULT_MANAGER_PERMISSIONS` with only active pages
+   - Total: 30 clean permissions organized by category
+
+2. **Frontend AdminLayout Updated** (`/app/frontend/src/components/layouts/AdminLayout.js`):
+   - Cleaned `MENU_TO_PERMISSION` mapping
+   - Cleaned `ROUTE_TO_PERMISSION` mapping
+   - Removed all deprecated page references
+
+3. **Popup Messages Auth Fixed** (`/app/frontend/src/pages/Admin/AdminPopupMessages.js`):
+   - Added Authorization headers to all API calls (fetchPopups, handleSubmit, handleToggle, handleDelete)
+
+### Removed Deprecated Pages:
+- Orders, Marketplace (December 2025)
+- Bill Payments, Unified Payments (rejected/refunded)
+- Recurring Deposits (feature deprecated)
+- PRC Burn Control (old system)
+- Video Ads, PRC Rain Drop (moved to Settings)
+- Ads Income, Fixed Expenses, Capital (unused)
+- All duplicate entries (underscores vs dashes)
+
+### Current Permissions Categories:
+| Category | Count | Pages |
+|----------|-------|-------|
+| General | 6 | Dashboard, Members, User 360, Users, Analytics, Admin Performance |
+| Operations | 5 | KYC, Support, Contact, Popup Messages, System Monitor |
+| Payments | 6 | Subscriptions, Bank Transfers, Razorpay, BBPS, Eko, Gift Vouchers |
+| Finance | 7 | Accounting, Company Wallets, PRC Analytics, PRC Ledger, P&L, User Ledger, Liquidity |
+| Security | 5 | Fraud Dashboard, Fraud Alerts, Security, PRC Economy, Data Backup |
+| Settings | 1 | All Settings |
+
+---
+

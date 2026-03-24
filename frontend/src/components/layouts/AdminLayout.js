@@ -16,47 +16,55 @@ import {
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_appreward-portal/artifacts/8iqee76c_IMG-20251230-WA0006.jpg";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Mapping of menu item IDs to permission IDs
+// Mapping of menu item IDs to permission IDs (Cleaned - March 2026)
 const MENU_TO_PERMISSION = {
+  // General
   'dashboard': 'dashboard',
   'users': 'users',
-  'user360': 'users',
-  'user-controls': 'user_360',
+  'user360': 'user360',
   'members': 'members',
   'analytics': 'analytics',
+  'performance-report': 'performance-report',
+  
+  // Operations
   'kyc': 'kyc',
-  // 'orders': 'orders', // Marketplace deprecated
-  // 'marketplace': 'marketplace', // Marketplace deprecated
-  'video-ads': 'video_ads',
-  // 'stockists': 'stockist', // Removed - stockist system deprecated
   'support': 'support',
-  'fraud-alerts': 'fraud',
-  'fraud-dashboard': 'fraud',
-  'accounting': 'accounting',
-  'profit-loss': 'profit_loss',
-  'company-wallets': 'company_wallets',
-  'capital': 'capital',
-  'user-ledger': 'user_ledger',
-  'ads-income': 'ads_income',
-  'fixed-expenses': 'fixed_expenses',
-  'prc-analytics': 'prc_analytics',
-  'prc-economy': 'prc_economy',
-  'liquidity': 'liquidity',
-  'audit': 'audit',
-  'subscriptions': 'subscription_payment',  // Replaces vip_payment
-  'withdrawals': 'withdrawals',
-  'gift-vouchers': 'gift_vouchers',  // Fixed: was 'gift-voucher'
-  'bill-payments': 'bill_payments',   // Fixed: was 'bill-payment'
-  'payment-settings': 'system_settings',
-  'system-settings': 'system_settings',
-  'web-settings': 'system_settings',
-  'social-settings': 'system_settings',
-  'redeem-settings': 'redeem_settings',
-  // Manager accessible pages
+  'contact-submissions': 'contact-submissions',
+  'popup-messages': 'popup-messages',
+  'error-monitor': 'error-monitor',
+  
+  // Payments - Active
+  'subscriptions': 'subscriptions',
   'bank-transfers': 'bank-transfers',
   'razorpay-subs': 'razorpay-subs',
   'bbps-dashboard': 'bbps-dashboard',
-  'eko-services': 'eko-services'
+  'eko-services': 'eko-services',
+  'gift-vouchers': 'gift-vouchers',
+  
+  // Finance
+  'accounting': 'accounting',
+  'company-wallets': 'company-wallets',
+  'prc-analytics': 'prc-analytics',
+  'prc-ledger': 'prc-ledger',
+  'profit-loss': 'profit-loss',
+  'user-ledger': 'user-ledger',
+  'liquidity': 'liquidity',
+  
+  // Security
+  'fraud-alerts': 'fraud-alerts',
+  'fraud-dashboard': 'fraud-dashboard',
+  'security-dashboard': 'security',
+  'prc-economy': 'prc-economy',
+  'data-backup': 'data-backup',
+  
+  // Settings
+  'settings-hub': 'settings-hub',
+  'payment-settings': 'settings-hub',
+  'system-settings': 'settings-hub',
+  'web-settings': 'settings-hub',
+  'social-settings': 'settings-hub',
+  'redeem-settings': 'settings-hub',
+  'video-ads': 'settings-hub'
 };
 
 const AdminLayout = ({ children, user, onLogout }) => {
@@ -246,20 +254,47 @@ const AdminLayout = ({ children, user, onLogout }) => {
     }
   };
 
-  // Map route paths to permission IDs
+  // Map route paths to permission IDs (Cleaned - March 2026)
   const ROUTE_TO_PERMISSION = {
-    '/admin/bill-payments': 'bill_payments',
-    '/admin/gift-vouchers': 'gift_vouchers',
-    '/admin/subscriptions': 'subscription_payment',
-    '/admin/kyc': 'kyc',
-    '/admin/users': 'users',
-    '/admin/user360': 'users',
-    '/admin/members': 'users',
-    // '/admin/orders': 'orders', // Marketplace deprecated
-    // marketplace removed
-    '/admin/support': 'support',
-    '/admin/fraud-dashboard': 'fraud',
+    // General
+    '/admin/members': 'members',
+    '/admin/user360': 'user360',
     '/admin/analytics': 'analytics',
+    '/admin/performance-report': 'performance-report',
+    
+    // Operations
+    '/admin/kyc': 'kyc',
+    '/admin/support': 'support',
+    '/admin/contact-submissions': 'contact-submissions',
+    '/admin/popup-messages': 'popup-messages',
+    '/admin/error-monitor': 'error-monitor',
+    
+    // Payments
+    '/admin/subscriptions': 'subscriptions',
+    '/admin/bank-transfers': 'bank-transfers',
+    '/admin/razorpay-subscriptions': 'razorpay-subs',
+    '/admin/bbps': 'bbps-dashboard',
+    '/admin/eko-services': 'eko-services',
+    '/admin/gift-vouchers': 'gift-vouchers',
+    
+    // Finance
+    '/admin/accounting': 'accounting',
+    '/admin/company-wallets': 'company-wallets',
+    '/admin/prc-analytics': 'prc-analytics',
+    '/admin/prc-ledger': 'prc-ledger',
+    '/admin/profit-loss': 'profit-loss',
+    '/admin/user-ledger': 'user-ledger',
+    '/admin/liquidity': 'liquidity',
+    
+    // Security
+    '/admin/fraud-dashboard': 'fraud-dashboard',
+    '/admin/fraud-alerts': 'fraud-alerts',
+    '/admin/security': 'security',
+    '/admin/prc-economy': 'prc-economy',
+    '/admin/data-backup': 'data-backup',
+    
+    // Settings
+    '/admin/settings-hub': 'settings-hub',
   };
 
   // Check route permissions and redirect if unauthorized
