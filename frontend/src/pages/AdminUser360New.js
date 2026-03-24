@@ -392,29 +392,20 @@ const AdminUser360New = ({ user: adminUser }) => {
     setActionLoading(true);
     try {
       // Try new endpoint first
-      let response;
-      try {
-        response = await axios.post(`${API}/admin/user360/action/${userData.user.uid}`, {
-          action, ...params, admin_id: adminUser?.uid
-        }, {
-          headers: { Authorization: `Bearer ${adminUser?.token}` }
-        });
-      } catch (e) {
-        // Fallback to old endpoint
-        response = await axios.post(`${API}/admin/user-360/action`, {
-          user_id: userData.user.uid,
-          action, admin_id: adminUser?.uid, ...params
-        }, {
-          headers: { Authorization: `Bearer ${adminUser?.token}` }
-        });
-      }
+      const response = await axios.post(`${API}/admin/user360/action/${userData.user.uid}`, {
+        action, ...params, admin_id: adminUser?.uid
+      }, {
+        headers: { Authorization: `Bearer ${adminUser?.token}` }
+      });
       
       toast.success(response.data?.message || `Action '${action}' completed`);
       await refreshUserData();
       return response.data;
       
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Action failed');
+      console.error('Action error:', err.response?.data || err.message);
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Operation failed';
+      toast.error(errorMsg);
       return null;
     } finally {
       setActionLoading(false);
