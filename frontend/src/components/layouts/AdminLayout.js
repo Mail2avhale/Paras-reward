@@ -169,6 +169,7 @@ const AdminLayout = ({ children, user, onLogout }) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin' },
     { id: 'members', label: 'Members Dashboard', icon: Users, path: '/admin/members' },
     { id: 'user360', label: 'User 360° View', icon: Eye, path: '/admin/user360' },
+    { id: 'failed-transactions', label: 'Failed Transactions', icon: AlertTriangle, path: '/admin/failed-transactions' },
     // Orders removed - Marketplace deprecated (December 2025)
     // Delivery Partners removed - feature deprecated
     // Marketplace removed - feature deprecated

@@ -238,6 +238,7 @@ const AdminPRCEconomyDashboard = IS_USER_BUILD ? null : lazy(() => import(/* web
 // AdminLuxuryClaims - REMOVED (deprecated feature)
 // OLD AdminUser360.js deleted - replaced by AdminUser360New.js (24 March 2026)
 const AdminUser360New = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminUser360New"));
+const AdminFailedTransactions = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminFailedTransactions"));
 // AdminRecurringDeposits - REMOVED (deprecated feature)
 const AdminPerformanceReport = IS_USER_BUILD ? null : lazy(() => import(/* webpackChunkName: "admin" */ "@/pages/AdminPerformanceReport"));
 // AdminUnifiedPayments - REMOVED (all pending rejected + refunded)
@@ -424,6 +425,7 @@ function AppContent({ user, handleLogin, handleLogout }) {
                 <Route path="/admin/user-controls" element={<Navigate to="/admin/user360" />} />
                 <Route path="/admin/user-360" element={<Navigate to="/admin/user360" />} />
                 <Route path="/admin/user360" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminUser360New user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
+                <Route path="/admin/failed-transactions" element={canAccessAdmin(user) ? <Suspense fallback={<LoadingFallback />}><AdminLayout user={user} onLogout={handleLogout}><AdminFailedTransactions user={user} /></AdminLayout></Suspense> : <Navigate to="/dashboard" />} />
                 <Route path="/admin/vip-plans" element={<Navigate to="/admin/subscriptions" replace />} />
                 {/* AdminPRCBurnControl - REMOVED, redirect to admin */}
                 <Route path="/admin/prc-burn-control" element={<Navigate to="/admin" replace />} />
