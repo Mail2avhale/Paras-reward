@@ -48,7 +48,12 @@ const AdminPopupMessages = ({ user }) => {
 
   const fetchPopups = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/popup/all`);
+      const res = await fetch(`${API_URL}/api/admin/popup/all`, {
+        headers: { 
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await res.json();
       if (data.success) {
         setPopups(data.data || []);
@@ -77,7 +82,10 @@ const AdminPopupMessages = ({ user }) => {
       
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
         body: JSON.stringify(formData)
       });
       
@@ -102,7 +110,11 @@ const AdminPopupMessages = ({ user }) => {
   const handleToggle = async (popupId) => {
     try {
       const res = await fetch(`${API_URL}/api/admin/popup/toggle/${popupId}`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json'
+        }
       });
       const data = await res.json();
       
@@ -122,7 +134,11 @@ const AdminPopupMessages = ({ user }) => {
     
     try {
       const res = await fetch(`${API_URL}/api/admin/popup/delete/${popupId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json'
+        }
       });
       const data = await res.json();
       
